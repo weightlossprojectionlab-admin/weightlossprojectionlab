@@ -54,6 +54,7 @@ export interface NudgeQueue {
   status: 'pending' | 'sent' | 'acted' | 'expired' | 'skipped';
   channel: 'push' | 'email' | 'in_app';
   copyKey: string; // Reference to message template
+  content?: string; // Optional rendered message content for display
   abVariant: string;
   sentAt: Timestamp | null;
   actedAt: Timestamp | null;
