@@ -35,7 +35,7 @@ export default function MissionsPage() {
     );
   }
 
-  const { missions, history, seasonalChallenges } = missionsData;
+  const { active: missions, completed: history, seasonal: seasonalChallenges } = missionsData;
 
   // Calculate stats
   const activeMissions = missions.filter(m => m.status === 'active');
