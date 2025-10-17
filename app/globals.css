@@ -1,0 +1,318 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Base colors */
+  --background: 0 0% 100%;
+  --foreground: 210 11% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 11% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 11% 15%;
+
+  /* Health & Wellness Primary - Fresh Green */
+  --primary: 142 71% 45%;
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 142 71% 40%;
+  --primary-light: 142 50% 85%;
+  --primary-dark: 142 71% 35%;
+
+  /* Secondary - Warm Orange/Amber */
+  --secondary: 32 95% 44%;
+  --secondary-foreground: 0 0% 100%;
+  --secondary-hover: 32 95% 39%;
+  --secondary-light: 32 95% 85%;
+  --secondary-dark: 32 95% 34%;
+
+  /* Accent - Trust Blue */
+  --accent: 214 84% 56%;
+  --accent-foreground: 0 0% 100%;
+  --accent-hover: 214 84% 51%;
+  --accent-light: 214 84% 85%;
+  --accent-dark: 214 84% 46%;
+
+  /* Success - Vibrant Green */
+  --success: 120 61% 50%;
+  --success-foreground: 0 0% 100%;
+  --success-light: 120 61% 90%;
+  --success-dark: 120 61% 40%;
+
+  /* Warning - Amber */
+  --warning: 43 96% 56%;
+  --warning-foreground: 210 11% 15%;
+  --warning-light: 43 96% 90%;
+  --warning-dark: 43 96% 46%;
+
+  /* Error - Soft Red */
+  --error: 0 72% 51%;
+  --error-foreground: 0 0% 100%;
+  --error-light: 0 72% 90%;
+  --error-dark: 0 72% 41%;
+
+  /* Neutral Grays */
+  --muted: 210 11% 96%;
+  --muted-foreground: 210 11% 46%;
+  --muted-dark: 210 11% 71%;
+
+  /* Borders and inputs */
+  --border: 210 11% 91%;
+  --input: 210 11% 91%;
+  --ring: 142 71% 45%;
+
+  /* Destructive (legacy compatibility) */
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Layout */
+  --radius: 0.5rem;
+
+  /* Health-specific colors */
+  --health-bg: 142 25% 97%;
+  --nutrition-accent: 32 95% 44%;
+  --activity-accent: 214 84% 56%;
+  --weight-accent: 142 71% 45%;
+  --progress-bg: 210 11% 98%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Base colors - Dark theme */
+    --background: 210 11% 7%;
+    --foreground: 210 11% 93%;
+    --card: 210 11% 10%;
+    --card-foreground: 210 11% 93%;
+    --popover: 210 11% 10%;
+    --popover-foreground: 210 11% 93%;
+
+    /* Health & Wellness Primary - Brighter for dark */
+    --primary: 142 71% 55%;
+    --primary-foreground: 210 11% 7%;
+    --primary-hover: 142 71% 60%;
+    --primary-light: 142 40% 20%;
+    --primary-dark: 142 71% 45%;
+
+    /* Secondary - Brighter orange for dark */
+    --secondary: 32 95% 54%;
+    --secondary-foreground: 210 11% 7%;
+    --secondary-hover: 32 95% 59%;
+    --secondary-light: 32 60% 20%;
+    --secondary-dark: 32 95% 44%;
+
+    /* Accent - Brighter blue for dark */
+    --accent: 214 84% 66%;
+    --accent-foreground: 210 11% 7%;
+    --accent-hover: 214 84% 71%;
+    --accent-light: 214 50% 20%;
+    --accent-dark: 214 84% 56%;
+
+    /* Success - Brighter green for dark */
+    --success: 120 61% 60%;
+    --success-foreground: 210 11% 7%;
+    --success-light: 120 40% 20%;
+    --success-dark: 120 61% 50%;
+
+    /* Warning - Brighter amber for dark */
+    --warning: 43 96% 66%;
+    --warning-foreground: 210 11% 7%;
+    --warning-light: 43 60% 20%;
+    --warning-dark: 43 96% 56%;
+
+    /* Error - Brighter red for dark */
+    --error: 0 72% 61%;
+    --error-foreground: 210 11% 7%;
+    --error-light: 0 40% 20%;
+    --error-dark: 0 72% 51%;
+
+    /* Neutral Grays - Dark theme */
+    --muted: 210 11% 15%;
+    --muted-foreground: 210 11% 65%;
+    --muted-dark: 210 11% 25%;
+
+    /* Borders and inputs - Dark theme */
+    --border: 210 11% 20%;
+    --input: 210 11% 20%;
+    --ring: 142 71% 55%;
+
+    /* Destructive (legacy compatibility) */
+    --destructive: 0 72% 61%;
+    --destructive-foreground: 210 11% 7%;
+
+    /* Health-specific colors - Dark theme */
+    --health-bg: 142 15% 8%;
+    --nutrition-accent: 32 95% 54%;
+    --activity-accent: 214 84% 66%;
+    --weight-accent: 142 71% 55%;
+    --progress-bg: 210 11% 5%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Mobile-first responsive typography */
+  h1 {
+    @apply text-2xl font-bold leading-tight md:text-3xl lg:text-4xl;
+  }
+
+  h2 {
+    @apply text-xl font-semibold leading-tight md:text-2xl lg:text-3xl;
+  }
+
+  h3 {
+    @apply text-lg font-medium leading-tight md:text-xl lg:text-2xl;
+  }
+
+  /* Ensure minimum touch target size */
+  button, input, select, textarea, a {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    :root {
+      --border: 0 0% 0%;
+      --ring: 0 0% 0%;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Mobile-optimized focus styles */
+  .focus-visible:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Touch-friendly button styles */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground;
+    @apply hover:bg-[hsl(var(--primary-hover))] active:bg-[hsl(var(--primary-dark))];
+    @apply shadow-sm hover:shadow-md active:shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground;
+    @apply hover:bg-[hsl(var(--secondary-hover))] active:bg-[hsl(var(--secondary-dark))];
+    @apply shadow-sm hover:shadow-md active:shadow-sm;
+  }
+
+  .btn-accent {
+    @apply bg-accent text-accent-foreground;
+    @apply hover:bg-[hsl(var(--accent-hover))] active:bg-[hsl(var(--accent-dark))];
+    @apply shadow-sm hover:shadow-md active:shadow-sm;
+  }
+
+  .btn-success {
+    @apply bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))];
+    @apply hover:bg-[hsl(var(--success-dark))] active:bg-[hsl(var(--success-dark))];
+    @apply shadow-sm hover:shadow-md active:shadow-sm;
+  }
+
+  .btn-warning {
+    @apply bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))];
+    @apply hover:bg-[hsl(var(--warning-dark))] active:bg-[hsl(var(--warning-dark))];
+    @apply shadow-sm hover:shadow-md active:shadow-sm;
+  }
+
+  .btn-error {
+    @apply bg-[hsl(var(--error))] text-[hsl(var(--error-foreground))];
+    @apply hover:bg-[hsl(var(--error-dark))] active:bg-[hsl(var(--error-dark))];
+    @apply shadow-sm hover:shadow-md active:shadow-sm;
+  }
+
+  .btn-outline {
+    @apply border-2 border-primary bg-transparent text-primary;
+    @apply hover:bg-primary hover:text-primary-foreground;
+    @apply active:bg-[hsl(var(--primary-dark))] active:text-primary-foreground;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-primary;
+    @apply hover:bg-[hsl(var(--primary-light))];
+    @apply active:bg-[hsl(var(--primary-light))];
+  }
+
+  /* Mobile-optimized form styles */
+  .form-input {
+    @apply flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm;
+    @apply ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium;
+    @apply placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2;
+    @apply focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply min-h-[44px] transition-all duration-200;
+    @apply hover:border-[hsl(var(--primary-hover))] focus:border-primary;
+  }
+
+  /* Health-specific component styles */
+  .health-card {
+    @apply bg-card rounded-lg p-6 shadow-sm border border-border;
+    @apply hover:shadow-md transition-shadow duration-200;
+  }
+
+  .progress-bar {
+    @apply w-full bg-[hsl(var(--muted))] rounded-full h-2 overflow-hidden;
+  }
+
+  .progress-bar-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+  }
+
+  .progress-bar-primary {
+    @apply bg-primary;
+  }
+
+  .progress-bar-success {
+    @apply bg-[hsl(var(--success))];
+  }
+
+  .progress-bar-warning {
+    @apply bg-[hsl(var(--warning))];
+  }
+
+  .progress-bar-accent {
+    @apply bg-accent;
+  }
+
+  /* Notification styles */
+  .notification {
+    @apply rounded-lg p-4 border;
+  }
+
+  .notification-success {
+    @apply bg-[hsl(var(--success-light))] border-[hsl(var(--success))] text-[hsl(var(--success-dark))];
+  }
+
+  .notification-warning {
+    @apply bg-[hsl(var(--warning-light))] border-[hsl(var(--warning))] text-[hsl(var(--warning-dark))];
+  }
+
+  .notification-error {
+    @apply bg-[hsl(var(--error-light))] border-[hsl(var(--error))] text-[hsl(var(--error-dark))];
+  }
+
+  .notification-info {
+    @apply bg-[hsl(var(--accent-light))] border-[hsl(var(--accent))] text-[hsl(var(--accent-dark))];
+  }
+}

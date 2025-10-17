@@ -1,0 +1,523 @@
+{
+  "product": {
+    "name": "Weight Loss Progress Lab (WLPL)",
+    "version": "1.0.0",
+    "tagline": "AI-powered weight loss tracking with biometric authentication and meal analysis",
+    "description": "A comprehensive health and fitness application that helps users track their weight loss journey through intelligent logging, AI-powered nutrition analysis, and seamless biometric authentication.",
+    "target_audience": "Health-conscious individuals seeking to lose weight with data-driven insights and minimal manual effort",
+    "market_category": "Health & Fitness / Weight Loss / Nutrition Tracking"
+  },
+  "business_objectives": {
+    "primary_goals": [
+      "Provide effortless weight loss tracking with minimal user input",
+      "Deliver AI-powered nutrition insights from meal photos",
+      "Eliminate authentication friction with biometric-first approach",
+      "Maintain strict data privacy and user trust",
+      "Create engaging gamification to sustain user motivation"
+    ],
+    "success_metrics": {
+      "user_engagement": {
+        "daily_active_users": "Target 70% of registered users",
+        "retention_30_day": "Target 60% retention rate",
+        "session_duration": "Target 3-5 minutes per session",
+        "weekly_logging_frequency": "Target 5+ logs per week"
+      },
+      "technical_performance": {
+        "biometric_adoption": "Target 85% of eligible users",
+        "ai_analysis_accuracy": "Target 90% nutrition estimation accuracy",
+        "page_load_speed": "Target <2 seconds",
+        "authentication_success": "Target 99% first-attempt success"
+      },
+      "business_impact": {
+        "user_goal_achievement": "Target 40% of users reaching weight goals",
+        "support_ticket_reduction": "Target 50% reduction vs password-only auth",
+        "data_quality": "Target 95% complete user profiles"
+      }
+    }
+  },
+  "user_personas": {
+    "primary_persona": {
+      "name": "Health-Focused Professional",
+      "demographics": {
+        "age_range": "25-45",
+        "income": "$50k-150k",
+        "education": "College educated",
+        "tech_comfort": "High - uses multiple health apps"
+      },
+      "characteristics": [
+        "Busy lifestyle with limited time for complex tracking",
+        "Values data-driven insights and progress visualization",
+        "Concerned about privacy and data security",
+        "Owns modern smartphone with biometric capabilities",
+        "Has tried other fitness/diet apps with mixed success"
+      ],
+      "pain_points": [
+        "Manual food logging is time-consuming and tedious",
+        "Forgotten passwords disrupt habit formation",
+        "Inconsistent data across multiple health apps",
+        "Difficulty understanding nutrition without expertise",
+        "Motivation drops without clear progress indicators"
+      ],
+      "goals": [
+        "Lose 10-50 pounds sustainably over 6-12 months",
+        "Understand nutrition impact on weight loss",
+        "Build consistent healthy habits",
+        "Track progress with minimal daily effort",
+        "Maintain privacy of sensitive health data"
+      ]
+    },
+    "secondary_persona": {
+      "name": "Tech-Savvy Health Enthusiast",
+      "demographics": {
+        "age_range": "18-35",
+        "income": "$35k-100k",
+        "education": "High school to college",
+        "tech_comfort": "Very high - early adopter"
+      },
+      "characteristics": [
+        "Comfortable with cutting-edge technology",
+        "Enjoys gamification and social features",
+        "Shares health journey on social media",
+        "Uses wearables and health devices",
+        "Values convenience and automation"
+      ]
+    }
+  },
+  "core_features": {
+    "authentication_system": {
+      "priority": "P0 - Critical",
+      "description": "Biometric-first authentication with intelligent fallback strategies",
+      "features": {
+        "biometric_authentication": {
+          "supported_methods": ["Touch ID", "Face ID", "Windows Hello", "Android Fingerprint"],
+          "device_compatibility": "iOS 14+, Android 8+, Windows 10+, Modern browsers with WebAuthn",
+          "security_features": [
+            "WebAuthn standard implementation",
+            "Device-based credential storage",
+            "Server-side validation",
+            "Audit logging",
+            "Rate limiting"
+          ]
+        },
+        "multi_provider_auth": {
+          "email_password": "Standard Firebase Auth with secure password requirements",
+          "google_oauth": "OAuth 2.0 with scope limitations (email, profile)",
+          "magic_links": "Passwordless email authentication for fallback"
+        },
+        "account_management": {
+          "duplicate_prevention": "Biometric fingerprinting prevents multiple accounts per user",
+          "account_linking": "Seamless merger of accounts created with different auth methods",
+          "device_management": "Add/remove biometric devices, view active sessions",
+          "recovery_options": "Multiple account recovery paths for lost device scenarios"
+        }
+      },
+      "user_flows": {
+        "registration": [
+          "User signs up with email/password or Google OAuth",
+          "Immediate biometric setup prompt with clear benefits",
+          "Device biometric enrollment using existing Touch ID/Face ID",
+          "Success confirmation and direct dashboard access"
+        ],
+        "login": [
+          "Primary: Large biometric authentication button",
+          "Secondary: Email magic link option",
+          "Tertiary: Password entry (only if user specifically requested)",
+          "Progressive fallback with clear error messaging"
+        ]
+      }
+    },
+    "weight_tracking": {
+      "priority": "P0 - Critical",
+      "description": "Simple, consistent weight logging with trend analysis",
+      "features": {
+        "weight_logging": {
+          "input_methods": ["Manual entry", "Smart scale integration (planned)", "Voice input (planned)"],
+          "units": ["Pounds (lbs)", "Kilograms (kg)"],
+          "validation": "Reasonable range validation with outlier detection",
+          "scheduling": "Optional daily/weekly reminder notifications"
+        },
+        "progress_visualization": {
+          "chart_types": ["Line chart with trend line", "Progress to goal indicator", "Weekly/monthly averages"],
+          "time_ranges": ["7 days", "30 days", "90 days", "1 year", "All time"],
+          "milestones": "Automatic celebration of weight loss milestones",
+          "export_options": "CSV export for external analysis"
+        },
+        "goal_management": {
+          "goal_setting": "Target weight with realistic timeline calculation",
+          "progress_tracking": "Visual progress indicators and estimated completion",
+          "adaptive_goals": "AI-suggested goal adjustments based on progress patterns"
+        }
+      }
+    },
+    "meal_tracking": {
+      "priority": "P0 - Critical",
+      "description": "AI-powered meal analysis with minimal user input",
+      "features": {
+        "photo_analysis": {
+          "ai_provider": "OpenAI GPT-4 Vision API",
+          "analysis_capabilities": [
+            "Food identification and portion estimation",
+            "Calorie calculation with confidence intervals",
+            "Macronutrient breakdown (carbs, protein, fat)",
+            "Nutritional highlights and concerns",
+            "Meal timing optimization suggestions"
+          ],
+          "image_requirements": "Standard smartphone camera quality, multiple angles supported",
+          "processing_time": "Target <10 seconds for analysis"
+        },
+        "manual_logging": {
+          "quick_entry": "Search-based food database for common items",
+          "portion_sizing": "Visual portion guides and common measurements",
+          "meal_categories": ["Breakfast", "Lunch", "Dinner", "Snacks"],
+          "custom_foods": "User-defined foods and recipes"
+        },
+        "nutrition_insights": {
+          "daily_summaries": "Calorie and macro totals with visual breakdowns",
+          "weekly_patterns": "Meal timing and nutrition trend analysis",
+          "recommendations": "AI-generated suggestions for nutrition optimization",
+          "correlation_analysis": "Meal impact on weight loss progress"
+        }
+      }
+    },
+    "activity_tracking": {
+      "priority": "P1 - Important",
+      "description": "Step counting and activity monitoring with device integration",
+      "features": {
+        "step_tracking": {
+          "data_sources": ["Device accelerometer", "Apple Health", "Google Fit", "Manual entry"],
+          "goal_management": "Daily step goals with progress tracking",
+          "streak_tracking": "Consecutive days meeting step goals",
+          "activity_insights": "Weekly activity patterns and suggestions"
+        },
+        "health_app_integration": {
+          "ios_healthkit": "Read steps, workouts, and weight data",
+          "android_googlefit": "Sync activity and health metrics",
+          "permissions": "Granular permission requests with clear explanations"
+        }
+      }
+    },
+    "gamification_system": {
+      "priority": "P1 - Important",
+      "description": "Motivation through achievements, streaks, and friendly competition",
+      "features": {
+        "achievement_system": {
+          "categories": ["Weight Loss Milestones", "Consistency Streaks", "Healthy Choices", "Activity Goals"],
+          "badge_design": "Visual badges with progress indicators",
+          "sharing": "Optional social sharing of achievements"
+        },
+        "streak_tracking": {
+          "logging_streaks": "Consecutive days of complete data logging",
+          "goal_streaks": "Consecutive days meeting daily goals",
+          "recovery_system": "Streak recovery options for missed days"
+        },
+        "leaderboards": {
+          "scope": "Anonymous weekly challenges with privacy protection",
+          "categories": ["Weight Loss Progress", "Consistency Score", "Activity Level"],
+          "opt_in": "Completely optional participation"
+        }
+      }
+    },
+    "ai_coaching": {
+      "priority": "P2 - Nice to Have",
+      "description": "Personalized recommendations and insights based on user data",
+      "features": {
+        "personalized_insights": {
+          "weekly_reports": "Progress summaries with actionable insights",
+          "pattern_recognition": "Identification of successful habits and problem areas",
+          "recommendation_engine": "Personalized tips based on user behavior and goals"
+        },
+        "smart_reminders": {
+          "optimal_timing": "ML-based optimal reminder timing for each user",
+          "contextual_content": "Reminders tailored to user's current progress and challenges",
+          "adaptive_frequency": "Self-adjusting reminder frequency based on user response"
+        }
+      }
+    }
+  },
+  "technical_requirements": {
+    "architecture": {
+      "frontend": {
+        "framework": "Next.js 15.4.6",
+        "ui_library": "React 19.1.0",
+        "styling": "Tailwind CSS 4.0 with custom health-focused color scheme",
+        "state_management": "React hooks with Context API",
+        "routing": "Next.js App Router",
+        "build_system": "Turbopack for fast development builds"
+      },
+      "backend": {
+        "runtime": "Next.js API Routes",
+        "database": "Firebase Firestore with hierarchical collections",
+        "authentication": "Firebase Auth with WebAuthn integration",
+        "file_storage": "Firebase Storage for meal photos",
+        "ai_integration": "OpenAI API for meal photo analysis"
+      },
+      "deployment": {
+        "hosting": "Vercel (recommended) or Firebase Hosting",
+        "cdn": "Global CDN for fast image delivery",
+        "monitoring": "Error tracking and performance monitoring",
+        "ssl": "HTTPS enforcement for WebAuthn compliance"
+      }
+    },
+    "security_requirements": {
+      "data_protection": {
+        "encryption": "End-to-end encryption for sensitive health data",
+        "storage": "Firebase Security Rules with user-based access control",
+        "transmission": "TLS 1.3 for all data transmission",
+        "biometric_data": "Never stored - only cryptographic keys"
+      },
+      "privacy_compliance": {
+        "gdpr": "Full GDPR compliance with data export and deletion",
+        "hipaa_ready": "Architecture supports HIPAA compliance for enterprise",
+        "data_minimization": "Collect only necessary data for app functionality",
+        "user_control": "Complete user control over data sharing and retention"
+      },
+      "authentication_security": {
+        "webauthn": "FIDO2/WebAuthn standard implementation",
+        "rate_limiting": "API rate limiting to prevent abuse",
+        "audit_logging": "Complete audit trail for security events",
+        "session_management": "Secure session handling with automatic expiration"
+      }
+    },
+    "performance_requirements": {
+      "response_times": {
+        "page_load": "<2 seconds for initial page load",
+        "navigation": "<500ms for page transitions",
+        "ai_analysis": "<10 seconds for meal photo analysis",
+        "biometric_auth": "<3 seconds for authentication completion"
+      },
+      "scalability": {
+        "concurrent_users": "Support 10,000+ concurrent users",
+        "data_growth": "Scalable architecture for millions of log entries",
+        "geographic_distribution": "Global deployment with regional data centers"
+      },
+      "reliability": {
+        "uptime": "99.9% uptime SLA",
+        "data_durability": "99.999% data durability with Firebase",
+        "backup_recovery": "Automated backups with point-in-time recovery"
+      }
+    },
+    "compatibility_requirements": {
+      "mobile_browsers": {
+        "ios_safari": "iOS 14+ Safari with WebAuthn support",
+        "android_chrome": "Android 8+ Chrome with biometric support",
+        "progressive_web_app": "PWA support for mobile app-like experience"
+      },
+      "desktop_browsers": {
+        "chrome": "Chrome 90+ with WebAuthn support",
+        "firefox": "Firefox 90+ with WebAuthn support",
+        "safari": "Safari 14+ with WebAuthn support",
+        "edge": "Edge 90+ with Windows Hello integration"
+      },
+      "accessibility": {
+        "wcag_compliance": "WCAG 2.1 AA compliance",
+        "screen_readers": "Full screen reader support",
+        "keyboard_navigation": "Complete keyboard navigation support",
+        "color_contrast": "High contrast mode support"
+      }
+    }
+  },
+  "user_experience_requirements": {
+    "design_principles": {
+      "simplicity": "Minimize cognitive load with clear, intuitive interfaces",
+      "consistency": "Consistent design language across all features",
+      "accessibility": "Inclusive design for users with diverse abilities",
+      "performance": "Fast, responsive interactions with immediate feedback",
+      "trust": "Transparent communication about data usage and security"
+    },
+    "mobile_first": {
+      "responsive_design": "Optimized for mobile devices with touch-friendly interactions",
+      "offline_capability": "Core features work offline with sync when connected",
+      "app_like_experience": "PWA features for native app feel",
+      "gesture_support": "Intuitive touch gestures for common actions"
+    },
+    "onboarding_experience": {
+      "goal_setting": "Guided setup of weight loss goals and preferences",
+      "feature_introduction": "Progressive disclosure of features with contextual help",
+      "biometric_setup": "Clear explanation and setup of biometric authentication",
+      "first_log": "Guided first meal and weight logging experience"
+    }
+  },
+  "data_model": {
+    "user_profile": {
+      "fields": {
+        "uid": "Unique Firebase user identifier",
+        "email": "User's email address",
+        "name": "Display name",
+        "preferences": "App preferences and settings",
+        "goals": "Weight loss goals and target dates",
+        "createdAt": "Account creation timestamp",
+        "lastActiveAt": "Last app usage timestamp"
+      },
+      "biometric_data": {
+        "primaryAuthMethod": "Preferred authentication method",
+        "biometricFingerprints": "Array of hashed WebAuthn public keys",
+        "devices": "Array of registered biometric devices",
+        "authProviders": "List of linked authentication providers"
+      }
+    },
+    "weight_logs": {
+      "collection_path": "users/{userId}/weightLogs/{logId}",
+      "fields": {
+        "weight": "Weight value as number",
+        "unit": "Unit of measurement (kg/lbs)",
+        "loggedAt": "Timestamp of weight measurement",
+        "notes": "Optional user notes",
+        "source": "Data source (manual/scale/import)"
+      }
+    },
+    "meal_logs": {
+      "collection_path": "users/{userId}/mealLogs/{logId}",
+      "fields": {
+        "mealType": "breakfast/lunch/dinner/snack",
+        "photoUrl": "URL to uploaded meal photo",
+        "aiAnalysis": "AI-generated nutrition analysis",
+        "manualEntries": "User-added food items",
+        "totalCalories": "Calculated total calories",
+        "macros": "Carbs, protein, fat breakdown",
+        "loggedAt": "Meal timestamp"
+      }
+    },
+    "step_logs": {
+      "collection_path": "users/{userId}/stepLogs/{logId}",
+      "fields": {
+        "steps": "Step count as number",
+        "date": "Date of step count (YYYY-MM-DD)",
+        "source": "Data source (device/health-app/manual)",
+        "loggedAt": "Timestamp of data entry"
+      }
+    }
+  },
+  "integration_requirements": {
+    "third_party_apis": {
+      "openai": {
+        "purpose": "Meal photo analysis and nutrition estimation",
+        "api_version": "GPT-4 Vision API",
+        "rate_limits": "Manage API costs with request batching",
+        "fallback": "Manual entry when API unavailable"
+      },
+      "health_platforms": {
+        "apple_healthkit": "Read weight, steps, and workout data",
+        "google_fit": "Sync activity and health metrics",
+        "permission_model": "Granular permissions with clear explanations"
+      }
+    },
+    "external_devices": {
+      "smart_scales": {
+        "priority": "P2 - Future feature",
+        "integration": "API-based integration with major scale manufacturers",
+        "data_sync": "Automatic weight data synchronization"
+      },
+      "fitness_trackers": {
+        "priority": "P2 - Future feature",
+        "support": "Fitbit, Garmin, Apple Watch integration",
+        "data_types": "Steps, heart rate, workout data"
+      }
+    }
+  },
+  "testing_strategy": {
+    "unit_testing": {
+      "framework": "Jest with React Testing Library",
+      "coverage_target": "90% code coverage",
+      "focus_areas": ["Authentication flows", "Data validation", "AI integration", "WebAuthn implementation"]
+    },
+    "integration_testing": {
+      "api_testing": "Comprehensive API endpoint testing",
+      "database_testing": "Firebase Firestore integration testing",
+      "third_party_apis": "Mock-based testing for external APIs"
+    },
+    "end_to_end_testing": {
+      "framework": "Playwright for cross-browser testing",
+      "critical_paths": ["Registration and biometric setup", "Complete logging workflow", "Data visualization", "Account management"],
+      "device_testing": "Mobile and desktop browser testing"
+    },
+    "security_testing": {
+      "authentication": "WebAuthn implementation security testing",
+      "data_protection": "Encryption and access control testing",
+      "penetration_testing": "Regular security audits"
+    }
+  },
+  "analytics_and_monitoring": {
+    "user_analytics": {
+      "engagement_metrics": "Daily/weekly/monthly active users",
+      "feature_usage": "Track usage of core features",
+      "conversion_funnels": "Registration to active user conversion",
+      "retention_analysis": "Cohort analysis for user retention"
+    },
+    "technical_monitoring": {
+      "performance_metrics": "Page load times, API response times",
+      "error_tracking": "Application errors and debugging information",
+      "uptime_monitoring": "Service availability monitoring",
+      "resource_usage": "Database and API usage monitoring"
+    },
+    "business_intelligence": {
+      "goal_achievement": "Track user success in reaching weight loss goals",
+      "feature_effectiveness": "Measure impact of different features on user outcomes",
+      "support_metrics": "Customer support ticket volume and resolution times"
+    }
+  },
+  "compliance_and_legal": {
+    "privacy_regulations": {
+      "gdpr": "Full compliance with EU General Data Protection Regulation",
+      "ccpa": "California Consumer Privacy Act compliance",
+      "health_data": "Appropriate handling of sensitive health information"
+    },
+    "accessibility_standards": {
+      "wcag": "Web Content Accessibility Guidelines 2.1 AA compliance",
+      "ada": "Americans with Disabilities Act compliance considerations"
+    },
+    "platform_requirements": {
+      "app_stores": "Compliance with Apple App Store and Google Play Store guidelines",
+      "web_standards": "W3C web standards compliance"
+    }
+  },
+  "launch_plan": {
+    "mvp_features": [
+      "Biometric-first authentication with email/Google fallback",
+      "Weight logging with progress visualization",
+      "AI-powered meal photo analysis",
+      "Basic step tracking",
+      "Simple gamification (streaks and achievements)",
+      "User profile and account management"
+    ],
+    "post_launch_roadmap": {
+      "v1.1": [
+        "Smart scale integrations",
+        "Enhanced AI coaching insights",
+        "Social features and challenges",
+        "Advanced nutrition analysis"
+      ],
+      "v1.2": [
+        "Fitness tracker integrations",
+        "Meal planning recommendations",
+        "Progress sharing and community features",
+        "Advanced analytics dashboard"
+      ],
+      "v1.3": [
+        "Healthcare provider integration",
+        "Prescription medication tracking",
+        "Telehealth integration",
+        "Enterprise/B2B features"
+      ]
+    }
+  },
+  "success_criteria": {
+    "user_metrics": {
+      "registration_to_active": "70% of registered users become active (log data for 7+ days)",
+      "biometric_adoption": "85% of eligible users set up biometric authentication",
+      "retention_30_day": "60% of users still active after 30 days",
+      "goal_achievement": "40% of users reach their stated weight loss goals"
+    },
+    "technical_metrics": {
+      "performance": "90% of users experience <2 second page loads",
+      "reliability": "99.9% uptime with <0.1% data loss",
+      "security": "Zero security incidents involving user data",
+      "ai_accuracy": "90% user satisfaction with AI meal analysis"
+    },
+    "business_metrics": {
+      "user_growth": "Sustainable month-over-month user growth",
+      "engagement": "Average 5+ app sessions per week per active user",
+      "support_efficiency": "50% reduction in authentication-related support tickets",
+      "market_position": "Top 10 ranking in health app category"
+    }
+  }
+}

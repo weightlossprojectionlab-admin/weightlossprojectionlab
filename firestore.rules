@@ -1,0 +1,110 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only access their own data
+    match /users/{userId} {
+      // Allow users to read and write their own profile
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Weight logs - user can only access their own
+      match /weightLogs/{logId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        // Validation for weight log writes
+        allow create: if request.auth != null
+          && request.auth.uid == userId
+          && validateWeightLog(request.resource.data);
+
+        allow update: if request.auth != null
+          && request.auth.uid == userId
+          && validateWeightLog(request.resource.data);
+      }
+
+      // Meal logs - user can only access their own
+      match /mealLogs/{logId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        // Validation for meal log writes
+        allow create: if request.auth != null
+          && request.auth.uid == userId
+          && validateMealLog(request.resource.data);
+
+        allow update: if request.auth != null
+          && request.auth.uid == userId
+          && validateMealLog(request.resource.data);
+      }
+
+      // Step logs - user can only access their own
+      match /stepLogs/{logId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        // Validation for step log writes
+        allow create: if request.auth != null
+          && request.auth.uid == userId
+          && validateStepLog(request.resource.data);
+
+        allow update: if request.auth != null
+          && request.auth.uid == userId
+          && validateStepLog(request.resource.data);
+      }
+
+      // Biometric credentials - user can only access their own
+      match /biometricCredentials/{credentialId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        // Validation for biometric credential writes
+        allow create: if request.auth != null
+          && request.auth.uid == userId
+          && validateBiometricCredential(request.resource.data);
+
+        allow update: if request.auth != null
+          && request.auth.uid == userId
+          && validateBiometricCredential(request.resource.data);
+      }
+    }
+
+    // Global biometric fingerprints collection for duplicate detection
+    // Only server-side operations can access this
+    match /biometricFingerprints/{fingerprintId} {
+      allow read, write: if false; // Only server-side operations via Admin SDK
+    }
+
+    // Validation functions
+    function validateWeightLog(data) {
+      return data.keys().hasAll(['weight', 'unit', 'loggedAt']) &&
+             data.weight is number &&
+             data.weight > 0 &&
+             data.unit in ['kg', 'lbs'] &&
+             data.loggedAt is timestamp;
+    }
+
+    function validateMealLog(data) {
+      return data.keys().hasAll(['mealType', 'totalCalories', 'loggedAt']) &&
+             data.mealType in ['breakfast', 'lunch', 'dinner', 'snack'] &&
+             data.totalCalories is number &&
+             data.totalCalories >= 0 &&
+             data.loggedAt is timestamp;
+    }
+
+    function validateStepLog(data) {
+      return data.keys().hasAll(['steps', 'date', 'loggedAt']) &&
+             data.steps is number &&
+             data.steps >= 0 &&
+             data.date is string &&
+             data.loggedAt is timestamp;
+    }
+
+    function validateBiometricCredential(data) {
+      return data.keys().hasAll(['credentialId', 'publicKey', 'createdAt']) &&
+             data.credentialId is string &&
+             data.publicKey is string &&
+             data.createdAt is timestamp;
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

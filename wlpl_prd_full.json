@@ -1,0 +1,1295 @@
+{
+  "meta_schema": {
+    "type": "object",
+    "required": [
+      "version",
+      "release_name",
+      "release_date",
+      "updated_by",
+      "change_summary"
+    ],
+    "properties": {
+      "version": {
+        "type": "string",
+        "description": "Semantic version of PRD"
+      },
+      "release_name": {
+        "type": "string"
+      },
+      "release_date": {
+        "type": "string",
+        "format": "date"
+      },
+      "updated_by": {
+        "type": "string"
+      },
+      "change_summary": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "meta": {
+    "version": "1.3.6",
+    "release_name": "Trust & Safety + AI Governance",
+    "release_date": "2025-10-07",
+    "updated_by": "WLPL Product Ops",
+    "change_summary": [
+      "Added coaching metered billing and Zoom integration (v1.3.1)",
+      "Introduced group billing cost-sharing logic (v1.3.2)",
+      "Refined exit and membership fairness rules (v1.3.3)",
+      "Optimized Stripe transaction flow for admin-led billing (v1.3.4)",
+      "Added secure Stripe invite payment link flow (v1.3.5)",
+      "Implemented scam prevention and verification framework (v1.3.6)",
+      "Added AI & Data Governance, AISA, T&S moderation, refunds/cancellations/disputes"
+    ]
+  },
+  "product_schema": {
+    "type": "object",
+    "required": [
+      "name",
+      "version",
+      "tagline",
+      "description",
+      "target_audience",
+      "market_category"
+    ],
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "version": {
+        "type": "string"
+      },
+      "tagline": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "target_audience": {
+        "type": "string"
+      },
+      "market_category": {
+        "type": "string"
+      }
+    }
+  },
+  "product": {
+    "name": "Weight Loss Progress Lab (WLPL)",
+    "version": "1.3.6",
+    "tagline": "AI-powered weight loss tracking with biometric authentication and coaching",
+    "description": "A comprehensive health and fitness application that helps users track their weight loss journey through intelligent logging, AI-powered coaching & nutrition analysis, and seamless biometric authentication.",
+    "target_audience": "Health-conscious individuals seeking to lose weight with data-driven insights and minimal manual effort",
+    "market_category": "Health & Fitness / Weight Loss / Nutrition Tracking"
+  },
+  "business_objectives_schema": {
+    "type": "object",
+    "required": [
+      "primary_goals",
+      "success_metrics"
+    ],
+    "properties": {
+      "primary_goals": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "success_metrics": {
+        "type": "object",
+        "properties": {
+          "user_engagement": {
+            "type": "object"
+          },
+          "technical_performance": {
+            "type": "object"
+          },
+          "business_impact": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "business_objectives": {
+    "primary_goals": [
+      "Provide effortless weight loss tracking with minimal user input",
+      "Deliver AI-powered nutrition insights from meal photos",
+      "Eliminate authentication friction with biometric-first approach",
+      "Maintain strict data privacy and user trust",
+      "Create engaging gamification to sustain user motivation"
+    ],
+    "success_metrics": {
+      "user_engagement": {
+        "daily_active_users": "Target 70% of registered users",
+        "retention_30_day": "Target 60% retention rate",
+        "session_duration": "Target 3-5 minutes per session",
+        "weekly_logging_frequency": "Target 5+ logs per week"
+      },
+      "technical_performance": {
+        "biometric_adoption": "Target 85% of eligible users",
+        "ai_analysis_accuracy": "Target 90% nutrition estimation accuracy",
+        "page_load_speed": "Target <2 seconds",
+        "authentication_success": "Target 99% first-attempt success"
+      },
+      "business_impact": {
+        "user_goal_achievement": "Target 40% of users reaching weight goals",
+        "support_ticket_reduction": "Target 50% reduction vs password-only auth",
+        "data_quality": "Target 95% complete user profiles"
+      }
+    }
+  },
+  "user_personas_schema": {
+    "type": "object",
+    "properties": {
+      "primary_persona": {
+        "type": "object"
+      },
+      "secondary_persona": {
+        "type": "object"
+      }
+    }
+  },
+  "user_personas": {
+    "primary_persona": {
+      "name": "Health-Focused Professional",
+      "demographics": {
+        "age_range": "25-45",
+        "income": "$50k-150k",
+        "education": "College educated",
+        "tech_comfort": "High - uses multiple health apps"
+      },
+      "characteristics": [
+        "Busy lifestyle with limited time for complex tracking",
+        "Values data-driven insights and progress visualization",
+        "Concerned about privacy and data security",
+        "Owns modern smartphone with biometric capabilities",
+        "Has tried other fitness/diet apps with mixed success"
+      ],
+      "pain_points": [
+        "Manual food logging is time-consuming and tedious",
+        "Forgotten passwords disrupt habit formation",
+        "Inconsistent data across multiple health apps",
+        "Difficulty understanding nutrition without expertise",
+        "Motivation drops without clear progress indicators"
+      ],
+      "goals": [
+        "Lose 10-50 pounds sustainably over 6-12 months",
+        "Understand nutrition impact on weight loss",
+        "Build consistent healthy habits",
+        "Track progress with minimal daily effort",
+        "Maintain privacy of sensitive health data"
+      ]
+    },
+    "secondary_persona": {
+      "name": "Tech-Savvy Health Enthusiast",
+      "demographics": {
+        "age_range": "18-35",
+        "income": "$35k-100k",
+        "education": "High school to college",
+        "tech_comfort": "Very high - early adopter"
+      },
+      "characteristics": [
+        "Comfortable with cutting-edge technology",
+        "Enjoys gamification and social features",
+        "Shares health journey on social media",
+        "Uses wearables and health devices",
+        "Values convenience and automation"
+      ]
+    }
+  },
+  "core_features_schema": {
+    "type": "object",
+    "properties": {
+      "authentication_system": {
+        "type": "object"
+      },
+      "weight_tracking": {
+        "type": "object"
+      },
+      "meal_tracking": {
+        "type": "object"
+      },
+      "activity_tracking": {
+        "type": "object"
+      },
+      "gamification_system": {
+        "type": "object"
+      },
+      "coaching_system": {
+        "type": "object"
+      },
+      "community_and_groups": {
+        "type": "object"
+      },
+      "ai_coaching": {
+        "type": "object"
+      }
+    }
+  },
+  "core_features": {
+    "authentication_system": {
+      "priority": "P0 - Critical",
+      "description": "Biometric-first authentication with intelligent fallback strategies",
+      "features": {
+        "biometric_authentication": {
+          "supported_methods": [
+            "Touch ID",
+            "Face ID",
+            "Windows Hello",
+            "Android Fingerprint"
+          ],
+          "device_compatibility": "iOS 14+, Android 8+, Windows 10+, Modern browsers with WebAuthn",
+          "security_features": [
+            "WebAuthn standard implementation",
+            "Device-based credential storage",
+            "Server-side validation",
+            "Audit logging",
+            "Rate limiting"
+          ]
+        },
+        "multi_provider_auth": {
+          "email_password": "Standard Firebase Auth with secure password requirements",
+          "google_oauth": "OAuth 2.0 with scope limitations (email, profile)",
+          "magic_links": "Passwordless email authentication for fallback"
+        },
+        "account_management": {
+          "duplicate_prevention": "Biometric fingerprinting prevents multiple accounts per user",
+          "account_linking": "Seamless merger of accounts created with different auth methods",
+          "device_management": "Add/remove biometric devices, view active sessions",
+          "recovery_options": "Multiple account recovery paths for lost device scenarios"
+        }
+      }
+    },
+    "weight_tracking": {
+      "priority": "P0 - Critical",
+      "description": "Simple, consistent weight logging with trend analysis",
+      "features": {
+        "weight_logging": {
+          "input_methods": [
+            "Manual entry",
+            "Smart scale integration (planned)",
+            "Voice input (planned)"
+          ],
+          "units": [
+            "Pounds (lbs)",
+            "Kilograms (kg)"
+          ],
+          "validation": "Reasonable range validation with outlier detection",
+          "scheduling": "Optional daily/weekly reminder notifications"
+        },
+        "progress_visualization": {
+          "chart_types": [
+            "Line chart with trend line",
+            "Progress to goal indicator",
+            "Weekly/monthly averages"
+          ],
+          "time_ranges": [
+            "7 days",
+            "30 days",
+            "90 days",
+            "1 year",
+            "All time"
+          ],
+          "milestones": "Automatic celebration of weight loss milestones",
+          "export_options": "CSV export"
+        },
+        "goal_management": {
+          "goal_setting": "Target weight with realistic timeline calculation",
+          "progress_tracking": "Visual progress and ETA",
+          "adaptive_goals": "AI-suggested adjustments"
+        }
+      }
+    },
+    "meal_tracking": {
+      "priority": "P0 - Critical",
+      "description": "AI-powered meal analysis with minimal user input",
+      "features": {
+        "photo_analysis": {
+          "ai_provider": "OpenAI GPT-4 Vision API",
+          "analysis_capabilities": [
+            "Food identification and portion estimation",
+            "Calorie calculation with confidence intervals",
+            "Macronutrient breakdown",
+            "Nutritional highlights and concerns",
+            "Meal timing suggestions"
+          ],
+          "processing_time": "Target <10 seconds"
+        },
+        "manual_logging": {
+          "quick_entry": "Search-based food database",
+          "portion_sizing": "Visual guides",
+          "meal_categories": [
+            "Breakfast",
+            "Lunch",
+            "Dinner",
+            "Snacks"
+          ]
+        },
+        "nutrition_insights": {
+          "daily_summaries": "Calorie and macro totals",
+          "weekly_patterns": "Trend analysis",
+          "recommendations": "AI-generated suggestions"
+        }
+      }
+    },
+    "activity_tracking": {
+      "priority": "P1 - Important",
+      "features": {
+        "step_tracking": {
+          "data_sources": [
+            "Device accelerometer",
+            "Apple Health",
+            "Google Fit",
+            "Manual entry"
+          ],
+          "goal_management": "Daily step goals",
+          "streak_tracking": "Consecutive days meeting step goals"
+        },
+        "health_app_integration": {
+          "ios_healthkit": "Read steps, workouts, weight",
+          "android_googlefit": "Sync activity and health metrics"
+        }
+      }
+    },
+    "gamification_system": {
+      "priority": "P1 - Important",
+      "features": {
+        "achievement_system": {
+          "categories": [
+            "Weight Loss Milestones",
+            "Consistency Streaks",
+            "Healthy Choices",
+            "Activity Goals"
+          ],
+          "badge_design": "Visual badges with progress indicators"
+        },
+        "streak_tracking": {
+          "logging_streaks": "Consecutive days of logging"
+        },
+        "leaderboards": {
+          "scope": "Anonymous weekly challenges",
+          "categories": [
+            "Weight Loss Progress",
+            "Consistency Score",
+            "Activity Level"
+          ],
+          "opt_in": "Optional"
+        }
+      }
+    },
+    "coaching_system": {
+      "priority": "P0 - Critical",
+      "features": {
+        "ai_coach": {
+          "tone": "Supportive, body-positive, non-judgmental",
+          "adaptive_goals": true
+        },
+        "human_coach": {
+          "billing_model": "stripe_metered",
+          "unit": "minute",
+          "rounding": "ceil_to_1min",
+          "min_block_minutes": 10,
+          "max_overrun_percent": 10,
+          "dispute_window_days": 7
+        },
+        "booking": {
+          "durations": [
+            15,
+            30,
+            60
+          ]
+        },
+        "zoom_integration": {
+          "oauth_app": true,
+          "webhooks": [
+            "meeting.started",
+            "meeting.ended",
+            "recording.completed"
+          ]
+        }
+      }
+    },
+    "community_and_groups": {
+      "priority": "P0 - Critical",
+      "description": "Groups for shared meals, workouts, recipes, chat/video, challenges",
+      "billing": {
+        "model": "admin_subscription_single_invoice",
+        "member_limit_default": 10,
+        "exit_policy": "leaver_pays_through_cycle_end",
+        "replacement_window_days": 7
+      },
+      "invitation_payment_links": {
+        "method": "WLPL-hosted Stripe Checkout",
+        "link_validity_hours": 24,
+        "security": [
+          "signed_links",
+          "domain_restriction"
+        ]
+      },
+      "scam_prevention_initiative": {
+        "verification_required_for_paid_groups": true,
+        "blocked_keywords": [
+          "cashapp",
+          "venmo",
+          "paypal",
+          "btc",
+          "crypto"
+        ],
+        "reporting_enabled": true
+      },
+      "group_reputation_growth": {
+        "tiers": {
+          "tier1": {
+            "cap": 10,
+            "requirements": [
+              "verified_admin"
+            ]
+          },
+          "tier2": {
+            "cap": 25,
+            "requirements": [
+              "gti>=60"
+            ]
+          },
+          "tier3": {
+            "cap": 50,
+            "requirements": [
+              "gti>=80",
+              "no_reports_30d"
+            ]
+          },
+          "tier4": {
+            "cap": 100,
+            "requirements": [
+              "wlpl_certified",
+              "gti>=90"
+            ]
+          }
+        }
+      },
+      "group_types_and_payouts": {
+        "types": {
+          "coaching": {
+            "requires": [
+              "wlpl_verified_coach",
+              "stripe_connect"
+            ],
+            "revenue_split": {
+              "coach": 0.9,
+              "wlpl": 0.1
+            },
+            "visibility": "discoverable"
+          },
+          "family": {
+            "requires": [
+              "verified_user"
+            ],
+            "revenue_split": {
+              "coach": 0.0,
+              "wlpl": 1.0
+            },
+            "visibility": "private"
+          }
+        }
+      }
+    },
+    "ai_coaching": {
+      "priority": "P2 - Nice to Have",
+      "features": {
+        "personalized_insights": {
+          "weekly_reports": true,
+          "pattern_recognition": true
+        },
+        "smart_reminders": {
+          "optimal_timing": true,
+          "contextual_content": true
+        }
+      }
+    }
+  },
+  "technical_requirements_schema": {
+    "type": "object",
+    "properties": {
+      "architecture": {
+        "type": "object"
+      },
+      "security_requirements": {
+        "type": "object"
+      },
+      "performance_requirements": {
+        "type": "object"
+      },
+      "compatibility_requirements": {
+        "type": "object"
+      }
+    }
+  },
+  "technical_requirements": {
+    "architecture": {
+      "frontend": {
+        "framework": "Next.js 15.4.6",
+        "ui_library": "React 19.1.0",
+        "styling": "Tailwind CSS 4.0",
+        "state_management": "React hooks + Context API",
+        "routing": "Next.js App Router",
+        "build_system": "Turbopack"
+      },
+      "backend": {
+        "runtime": "Next.js API Routes",
+        "database": "Firebase Firestore",
+        "authentication": "Firebase Auth + WebAuthn",
+        "file_storage": "Firebase Storage",
+        "ai_integration": "OpenAI API (vision, text)"
+      },
+      "deployment": {
+        "hosting": "Vercel or Firebase Hosting",
+        "cdn": "Global CDN",
+        "monitoring": "Error & performance tracking",
+        "ssl": "HTTPS enforcement"
+      }
+    },
+    "security_requirements": {
+      "data_protection": {
+        "encryption": "End-to-end for sensitive health data",
+        "storage": "Firebase Security Rules with user-based access",
+        "transmission": "TLS 1.3",
+        "biometric_data": "Only cryptographic keys; no raw biometrics stored"
+      },
+      "privacy_compliance": {
+        "gdpr": "Full compliance with export/deletion",
+        "hipaa_ready": "Architecture supports HIPAA for enterprise",
+        "data_minimization": "Only necessary data",
+        "user_control": "Data sharing & retention controls"
+      },
+      "authentication_security": {
+        "webauthn": "FIDO2/WebAuthn",
+        "rate_limiting": "API rate limiting",
+        "audit_logging": "Complete auth trail",
+        "session_management": "Secure with auto-expiration"
+      }
+    },
+    "performance_requirements": {
+      "response_times": {
+        "page_load": "<2s",
+        "navigation": "<500ms",
+        "ai_analysis": "<10s",
+        "biometric_auth": "<3s"
+      },
+      "scalability": {
+        "concurrent_users": "10,000+",
+        "data_growth": "Millions of logs",
+        "geographic_distribution": "Global/regional"
+      },
+      "reliability": {
+        "uptime": "99.9%",
+        "data_durability": "99.999%",
+        "backup_recovery": "Automated PITR"
+      }
+    },
+    "compatibility_requirements": {
+      "mobile_browsers": {
+        "ios_safari": "iOS 14+",
+        "android_chrome": "Android 8+",
+        "pwa": "Supported"
+      },
+      "desktop_browsers": {
+        "chrome": "90+",
+        "firefox": "90+",
+        "safari": "14+",
+        "edge": "90+"
+      },
+      "accessibility": {
+        "wcag": "2.1 AA",
+        "screen_readers": "Supported",
+        "keyboard_navigation": "Complete",
+        "color_contrast": "High contrast mode"
+      }
+    }
+  },
+  "user_experience_requirements_schema": {
+    "type": "object"
+  },
+  "user_experience_requirements": {
+    "design_principles": {
+      "simplicity": "Minimize cognitive load",
+      "consistency": "Consistent design language",
+      "accessibility": "Inclusive design",
+      "performance": "Responsive interactions",
+      "trust": "Transparent data usage"
+    },
+    "mobile_first": {
+      "responsive_design": true,
+      "offline_capability": true,
+      "pwa_features": true,
+      "gesture_support": true
+    },
+    "onboarding_experience": {
+      "goal_setting": "Guided setup",
+      "feature_introduction": "Progressive disclosure",
+      "biometric_setup": "Biometric-first auth",
+      "first_log": "Guided first entries"
+    }
+  },
+  "data_model_schema": {
+    "type": "object"
+  },
+  "data_model": {
+    "user_profile": {
+      "fields": {
+        "uid": "string",
+        "email": "string",
+        "name": "string",
+        "preferences": "map",
+        "goals": "map",
+        "createdAt": "timestamp",
+        "lastActiveAt": "timestamp"
+      },
+      "biometric_data": {
+        "primaryAuthMethod": "enum",
+        "biometricFingerprints": "string[]",
+        "devices": "array",
+        "authProviders": "array"
+      }
+    },
+    "weight_logs": {
+      "collection_path": "users/{userId}/weightLogs/{logId}",
+      "fields": {
+        "weight": "number",
+        "unit": "string",
+        "loggedAt": "timestamp",
+        "notes": "string?",
+        "source": "enum"
+      }
+    },
+    "meal_logs": {
+      "collection_path": "users/{userId}/mealLogs/{logId}",
+      "fields": {
+        "mealType": "enum",
+        "photoUrl": "string",
+        "aiAnalysis": "map",
+        "manualEntries": "array",
+        "totalCalories": "number",
+        "macros": "map",
+        "loggedAt": "timestamp"
+      }
+    },
+    "step_logs": {
+      "collection_path": "users/{userId}/stepLogs/{logId}",
+      "fields": {
+        "steps": "number",
+        "date": "string (YYYY-MM-DD)",
+        "source": "enum",
+        "loggedAt": "timestamp"
+      }
+    }
+  },
+  "integration_requirements_schema": {
+    "type": "object"
+  },
+  "integration_requirements": {
+    "third_party_apis": {
+      "openai": {
+        "purpose": "Meal photo analysis and coaching intelligence",
+        "rate_limits": "Batch requests where possible",
+        "fallback": "Manual entry when unavailable"
+      },
+      "health_platforms": {
+        "apple_healthkit": "Read steps, workouts, weight",
+        "google_fit": "Sync activity and health metrics"
+      }
+    },
+    "external_devices": {
+      "smart_scales": {
+        "priority": "P2",
+        "integration": "API-based"
+      },
+      "fitness_trackers": {
+        "priority": "P2",
+        "support": [
+          "Fitbit",
+          "Garmin",
+          "Apple Watch"
+        ]
+      }
+    }
+  },
+  "testing_strategy_schema": {
+    "type": "object"
+  },
+  "testing_strategy": {
+    "unit_testing": {
+      "framework": "Jest + RTL",
+      "coverage_target": "90%"
+    },
+    "integration_testing": {
+      "api_testing": true,
+      "database_testing": true,
+      "third_party_apis": "Mocks"
+    },
+    "end_to_end_testing": {
+      "framework": "Playwright",
+      "critical_paths": [
+        "Registration",
+        "Biometric setup",
+        "Logging",
+        "Account management"
+      ]
+    },
+    "security_testing": {
+      "authentication": "WebAuthn tests",
+      "data_protection": true,
+      "penetration_testing": "Regular"
+    }
+  },
+  "analytics_and_monitoring_schema": {
+    "type": "object"
+  },
+  "analytics_and_monitoring": {
+    "user_analytics": {
+      "engagement_metrics": [
+        "DAU/WAU/MAU"
+      ],
+      "feature_usage": true,
+      "conversion_funnels": true,
+      "retention_analysis": "Cohort"
+    },
+    "technical_monitoring": {
+      "performance_metrics": [
+        "page load",
+        "API response"
+      ],
+      "error_tracking": true,
+      "uptime_monitoring": true,
+      "resource_usage": true
+    },
+    "business_intelligence": {
+      "goal_achievement": true,
+      "feature_effectiveness": true,
+      "support_metrics": true
+    }
+  },
+  "compliance_and_legal_schema": {
+    "type": "object"
+  },
+  "compliance_and_legal": {
+    "privacy_regulations": {
+      "gdpr": "Full compliance",
+      "ccpa": "Compliance",
+      "health_data": "Appropriate handling of sensitive health info"
+    },
+    "accessibility_standards": {
+      "wcag": "2.1 AA",
+      "ada": "Considerations"
+    },
+    "platform_requirements": {
+      "app_stores": "Apple/Google guidelines",
+      "web_standards": "W3C"
+    },
+    "trust_and_safety_compliance": {
+      "stripe_payment_compliance": "Stripe-only payments",
+      "user_verification": "Required for monetized or public groups",
+      "off_platform_transaction_policy": "Prohibited",
+      "moderation_response_sla": "24 hours for scam/fraud"
+    }
+  },
+  "ai_and_data_governance_schema": {
+    "type": "object"
+  },
+  "ai_and_data_governance": {
+    "data_sensitivity": {
+      "classification_levels": [
+        "Public",
+        "PII",
+        "PHI",
+        "Financial"
+      ],
+      "examples": {
+        "Public": [
+          "Leaderboard stats",
+          "Aggregated analytics"
+        ],
+        "PII": [
+          "Email",
+          "Name",
+          "Contact info"
+        ],
+        "PHI": [
+          "Weight logs",
+          "Meal data",
+          "Health metrics"
+        ],
+        "Financial": [
+          "Stripe payment records",
+          "Payout history"
+        ]
+      },
+      "tagging_policy": "All Firestore collections include a dataSensitivity field",
+      "access_matrix": {
+        "AISA": [
+          "Public",
+          "PII_limited",
+          "Financial_summary_only"
+        ],
+        "trust_safety_agents": [
+          "PII",
+          "Financial"
+        ],
+        "developers": [
+          "Public_only"
+        ],
+        "coaches": [
+          "Public",
+          "PHI_own_clients"
+        ],
+        "auditors": [
+          "Financial_summary_only"
+        ]
+      },
+      "enforcement": {
+        "firebase_security_rules": true,
+        "audit_trail": "All access logged"
+      }
+    },
+    "ai_decision_governance": {
+      "version_control": {
+        "policy_docs": "Versioned under /policy_docs/{versionId}",
+        "models": "Version-locked (wlpl-support-v1,v2)",
+        "changelog_tracking": true
+      },
+      "decision_review": {
+        "auto_resolve_threshold": 0.8,
+        "review_window_days": 7,
+        "manual_override_allowed": true,
+        "reversal_logging": true,
+        "escalation_process": "Confidence < 0.6 auto-escalates"
+      },
+      "explainability": {
+        "required_fields": [
+          "decision",
+          "confidence_score",
+          "rationale",
+          "policy_reference",
+          "executedBy"
+        ],
+        "retention_period_days": 365,
+        "audit_access": "Read-only for compliance"
+      }
+    },
+    "ai_transparency_and_consent": {
+      "user_notification": "AI-powered support & insights disclosed",
+      "consent_requirements": {
+        "policy_reference": "WLPL Privacy Policy v2.0",
+        "data_usage": "AI accesses anonymized relevant records",
+        "opt_out": "Human review on request"
+      },
+      "language_localization": {
+        "auto_detect_language": true,
+        "supported_languages": [
+          "en",
+          "es",
+          "fr",
+          "pt",
+          "hi",
+          "ja",
+          "ko"
+        ],
+        "fallback_behavior": "If confidence <0.8, revert to English and escalate"
+      },
+      "ethical_commitments": {
+        "no_personalization_without_consent": true,
+        "no_profiling_for_ads": true,
+        "bias_audits": "Quarterly",
+        "transparency_portal": "Public AI actions summary"
+      }
+    }
+  },
+  "trust_safety_moderation_schema": {
+    "type": "object"
+  },
+  "trust_safety_moderation": {
+    "roles": [
+      "ts_agent",
+      "ts_lead",
+      "auditor",
+      "system"
+    ],
+    "lifecycle": {
+      "states": [
+        "new",
+        "triage",
+        "awaiting_evidence",
+        "under_review",
+        "needs_manager",
+        "resolved",
+        "closed"
+      ],
+      "sla_hours": {
+        "first_response": 4,
+        "resolution": 72
+      },
+      "auto_escalation": true
+    },
+    "automation": {
+      "risk_score": {
+        "range": "0-100",
+        "signals": [
+          "client_no_show",
+          "coach_no_show",
+          "dup_payment",
+          "short_duration",
+          "prior_disputes"
+        ],
+        "recommendations": {
+          ">=70": "refund_full",
+          "40-69": "refund_partial",
+          "<40": "deny"
+        }
+      },
+      "payout_hold_hours": 72,
+      "coach_strikes": {
+        "enabled": true,
+        "threshold": 3,
+        "window_days": 180,
+        "suspend_on_threshold": true
+      }
+    },
+    "evidence": {
+      "stripe": [
+        "payment_intent",
+        "invoice",
+        "refunds"
+      ],
+      "zoom": [
+        "meeting_id",
+        "start_end",
+        "participants",
+        "duration"
+      ],
+      "app": [
+        "booking_snapshot",
+        "notifications",
+        "activity_windows"
+      ],
+      "chat_digest": "sanitized_snippets"
+    },
+    "api": {
+      "routes": [
+        {
+          "path": "/api/ts/disputes/create",
+          "method": "POST"
+        },
+        {
+          "path": "/api/ts/disputes/:id/triage",
+          "method": "POST"
+        },
+        {
+          "path": "/api/ts/disputes/:id/resolve",
+          "method": "POST"
+        },
+        {
+          "path": "/api/ts/disputes/:id/escalate",
+          "method": "POST"
+        }
+      ],
+      "webhooks": [
+        "stripe",
+        "zoom"
+      ],
+      "schedulers": [
+        "tsCheckSLAs",
+        "tsDecayStrikes"
+      ]
+    },
+    "dashboard": {
+      "queues": [
+        "new",
+        "sla_risk",
+        "high_score",
+        "awaiting_evidence",
+        "escalated",
+        "closed"
+      ],
+      "filters": [
+        "reason",
+        "coach",
+        "client",
+        "date",
+        "score_range"
+      ],
+      "actions": [
+        "issue_refund",
+        "partial_refund",
+        "deny",
+        "add_strike",
+        "remove_hold",
+        "close"
+      ]
+    },
+    "audit": {
+      "immutable": true,
+      "retention_days": 365
+    },
+    "privacy": {
+      "redact_pii_in_chat": true,
+      "role_based_access": true,
+      "encryption_at_rest": true
+    },
+    "kpis": [
+      "mttr_hours",
+      "auto_resolve_rate",
+      "reversal_rate",
+      "csat"
+    ]
+  },
+  "refunds_cancellations_disputes_schema": {
+    "type": "object"
+  },
+  "refunds_cancellations_disputes": {
+    "refund_policy": {
+      "session": {
+        "full_refund": "cancelled >= 24h before start",
+        "partial_refund": "cancelled < 24h before start",
+        "no_refund": "client_no_show"
+      },
+      "coach_no_show": {
+        "refund": 100,
+        "penalty_deduction": true,
+        "strike_threshold": 3
+      },
+      "ai_features": {
+        "low_confidence_refund": true,
+        "system_error_credit": true
+      }
+    },
+    "cancellation_flow": {
+      "client_ui": [
+        "Dynamic eligibility message",
+        "Confirm modal"
+      ],
+      "backend_action": "/api/refunds/process"
+    },
+    "dispute_flow": {
+      "api_routes": [
+        "/api/disputes/create",
+        "/api/disputes/review"
+      ],
+      "sla_hours": 48,
+      "auto_precheck": [
+        "payment_status",
+        "zoom_logs"
+      ],
+      "resolution_outcomes": [
+        "full_refund",
+        "partial_refund",
+        "deny"
+      ],
+      "firestore_collection": "disputes/{disputeId}"
+    },
+    "payout_protection": {
+      "payout_hold_hours": 72,
+      "auto_deduction": true,
+      "three_strike_rule": true,
+      "admin_override": true
+    }
+  },
+  "coach_onboarding_flow_schema": {
+    "type": "object"
+  },
+  "coach_onboarding_flow": {
+    "phases": {
+      "application": {
+        "status": "pending_review"
+      },
+      "identity_verification": {
+        "provider": "Stripe Identity",
+        "biometric_link": true
+      },
+      "qualification_review": {
+        "optional": true
+      },
+      "profile_setup": {
+        "required_fields": [
+          "displayName",
+          "bio",
+          "specialties",
+          "pricing_model"
+        ]
+      },
+      "stripe_connect_setup": {
+        "account_type": "express",
+        "result_field": "charges_enabled"
+      },
+      "approval": {
+        "custom_claim": "coach: true"
+      },
+      "activation": {
+        "permissions_granted": [
+          "create_coaching_groups",
+          "earn_payouts",
+          "access_zoom_integration"
+        ]
+      }
+    },
+    "security": {
+      "kyc_required": true,
+      "gdpr_compliant": true,
+      "data_storage": "verification results only"
+    }
+  },
+  "coach_earnings_and_billing_schema": {
+    "type": "object"
+  },
+  "coach_earnings_and_billing": {
+    "payment_models": {
+      "group_subscription": {
+        "billing_type": "recurring",
+        "interval": "monthly",
+        "revenue_split": {
+          "coach": 0.9,
+          "wlpl": 0.1
+        }
+      },
+      "coaching_session": {
+        "billing_type": "metered",
+        "metric": "minutes",
+        "revenue_split": {
+          "coach": 0.85,
+          "wlpl": 0.15
+        },
+        "integration": "zoom_to_stripe_usage"
+      },
+      "ai_feature_addon": {
+        "billing_type": "per_use",
+        "unit_price": 0.5,
+        "revenue_split": {
+          "coach": 0.8,
+          "wlpl": 0.2
+        }
+      }
+    },
+    "payouts": {
+      "frequency": "weekly",
+      "method": "stripe_connect_transfer",
+      "minimum_payout": 10.0
+    },
+    "fraud_prevention": {
+      "usage_validation": "Zoom vs attendance",
+      "duplicate_session_check": true,
+      "refund_policy": "WLPL-managed"
+    }
+  },
+  "client_coach_interaction_flow_schema": {
+    "type": "object"
+  },
+  "client_coach_interaction_flow": {
+    "phases": {
+      "discover": {
+        "search_filters": [
+          "specialty",
+          "availability",
+          "price",
+          "rating"
+        ],
+        "visibility_rule": "verified_only"
+      },
+      "profile_view": {
+        "display_fields": [
+          "name",
+          "bio",
+          "certifications",
+          "price",
+          "rating",
+          "availability"
+        ],
+        "cta": "Book Session"
+      },
+      "booking": {
+        "workflow": "Select time \u2192 Stripe Checkout \u2192 Zoom creation",
+        "payment_type": "one_time",
+        "firestore_collection": "bookings/{bookingId}"
+      },
+      "session": {
+        "integration": "Zoom API",
+        "auth_required": "biometric",
+        "data_capture": [
+          "duration",
+          "attendance",
+          "notes"
+        ]
+      },
+      "feedback": {
+        "rating_scale": "1-5",
+        "text_feedback": true,
+        "impact": [
+          "coach_rating",
+          "trust_index"
+        ]
+      }
+    },
+    "security": {
+      "meeting_access": "tokenized URLs",
+      "payment_protection": "Stripe-only"
+    }
+  },
+  "launch_plan_schema": {
+    "type": "object"
+  },
+  "launch_plan": {
+    "mvp_features": [
+      "Biometric-first authentication with email/Google fallback",
+      "Weight logging with progress visualization",
+      "AI-powered meal photo analysis",
+      "Basic step tracking",
+      "Simple gamification (streaks and achievements)",
+      "User profile and account management",
+      "Community groups (family + coaching foundation)"
+    ],
+    "post_launch_roadmap": {
+      "v1.1": [
+        "Smart scale integrations",
+        "Enhanced AI coaching",
+        "Social challenges",
+        "Advanced nutrition analysis"
+      ],
+      "v1.2": [
+        "Fitness tracker integrations",
+        "Meal planning",
+        "Community features",
+        "Advanced analytics dashboard"
+      ],
+      "v1.3": [
+        "Healthcare provider integration",
+        "Medication tracking",
+        "Telehealth integration",
+        "Enterprise/B2B features"
+      ]
+    }
+  },
+  "success_criteria_schema": {
+    "type": "object"
+  },
+  "success_criteria": {
+    "user_metrics": {
+      "registration_to_active": "70% register\u2192active (7+ days of data)",
+      "biometric_adoption": "85% of eligible users",
+      "retention_30_day": "60%",
+      "goal_achievement": "40% reach weight goals"
+    },
+    "technical_metrics": {
+      "performance": "90% <2s page loads",
+      "reliability": "99.9% uptime",
+      "security": "Zero security incidents",
+      "ai_accuracy": "90% satisfaction with AI meal analysis"
+    },
+    "business_metrics": {
+      "user_growth": "Sustained MoM growth",
+      "engagement": "5+ sessions/week per active user",
+      "support_efficiency": "50% reduction in auth-related tickets",
+      "market_position": "Top 10 health app category"
+    }
+  }
+}

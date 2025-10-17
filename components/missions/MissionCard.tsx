@@ -1,0 +1,106 @@
+// Mission Card Component
+// PRD Reference: retention_loop_system (PRD v1.3.7)
+// Displays individual mission information
+
+'use client';
+
+import { CheckCircleIcon, ClockIcon, TrophyIcon } from '@heroicons/react/24/outline';
+import type { UserMission } from '@/schemas/firestore/missions';
+
+interface MissionCardProps {
+  mission: UserMission;
+  onComplete?: (missionId: string) => void;
+}
+
+export default function MissionCard({ mission, onComplete }: MissionCardProps) {
+  const progress = mission.progress || 0;
+  const target = mission.target || 100;
+  const progressPercent = Math.min((progress / target) * 100, 100);
+  const isCompleted = mission.status === 'completed';
+  const isActive = mission.status === 'active';
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'easy':
+        return 'bg-green-100 text-green-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'hard':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className={`border rounded-lg p-5 transition-all hover:shadow-md ${
+      isCompleted ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+    }`}>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+            <span>{mission.title}</span>
+            {isCompleted && <CheckCircleIcon className="h-5 w-5 text-green-600" />}
+          </h3>
+          {mission.description && (
+            <p className="text-sm text-gray-600 mt-1">{mission.description}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Metadata */}
+      <div className="flex items-center space-x-3 mb-4">
+        {mission.difficulty && (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDifficultyColor(mission.difficulty)}`}>
+            {mission.difficulty}
+          </span>
+        )}
+        {mission.xpReward && (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            <TrophyIcon className="h-3 w-3 mr-1" />
+            {mission.xpReward} XP
+          </span>
+        )}
+        {mission.expiresAt && !isCompleted && (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+            <ClockIcon className="h-3 w-3 mr-1" />
+            Expires {new Date(mission.expiresAt).toLocaleDateString()}
+          </span>
+        )}
+      </div>
+
+      {/* Progress Bar */}
+      {!isCompleted && target > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-medium text-gray-700">Progress</span>
+            <span className="text-sm text-gray-600">{progress} / {target}</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+            <div
+              className="h-full bg-blue-600 rounded-full transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Action Button */}
+      {isActive && onComplete && progressPercent >= 100 && (
+        <button
+          onClick={() => onComplete(mission.id)}
+          className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+        >
+          Complete Mission
+        </button>
+      )}
+
+      {isCompleted && mission.completedAt && (
+        <div className="text-sm text-green-700 font-medium">
+          ✓ Completed {new Date(mission.completedAt).toLocaleDateString()}
+        </div>
+      )}
+    </div>
+  );
+}
