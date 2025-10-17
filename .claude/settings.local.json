@@ -15,7 +15,10 @@
       "Bash(if exist .next rmdir /s /q .next)",
       "Bash(winget install:*)",
       "Bash(git --version)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(set CI=true)",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

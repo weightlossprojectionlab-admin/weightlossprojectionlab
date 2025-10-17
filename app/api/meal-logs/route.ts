@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
-import { Timestamp } from 'firebase/firestore'
+import { Timestamp } from 'firebase-admin/firestore'
 
 interface AIAnalysis {
   foods: Array<{
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
       manualEntries: manualEntries || undefined,
       totalCalories,
       macros,
-      loggedAt: loggedAt ? new Date(loggedAt) : new Date(),
+      loggedAt: loggedAt ? Timestamp.fromDate(new Date(loggedAt)) : Timestamp.now(),
       source,
       notes: notes || undefined
     }
@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
     const createdLog = {
       id: docRef.id,
       ...mealLogData,
-      loggedAt: mealLogData.loggedAt.toISOString()
+      loggedAt: mealLogData.loggedAt.toDate().toISOString()
     }
 
     return NextResponse.json({

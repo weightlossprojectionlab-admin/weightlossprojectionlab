@@ -9,19 +9,19 @@ import { useAuth } from '@/hooks/useAuth';
 import PerkCard from '@/components/perks/PerkCard';
 import RedemptionForm from '@/components/perks/RedemptionForm';
 import EligibilityBadge from '@/components/perks/EligibilityBadge';
-import type { SponsorPerk } from '@/types/perks';
+import type { Perk } from '@/types/perks';
 
 const PERKS_ENABLED = process.env.NEXT_PUBLIC_PERKS_ENABLED === 'true';
 const XP_THRESHOLD = 10000; // 10K XP required for perks
 
 export default function PerksPage() {
   const { user } = useAuth();
-  const [selectedPerk, setSelectedPerk] = useState<SponsorPerk | null>(null);
+  const [selectedPerk, setSelectedPerk] = useState<Perk | null>(null);
   const [showRedemptionForm, setShowRedemptionForm] = useState(false);
 
   // TODO: Replace with actual data fetching
   const userXP = 0; // Get from user profile
-  const perks: SponsorPerk[] = [];
+  const perks: Perk[] = [];
   const redeemedPerkIds: string[] = [];
   const isLoading = false;
   const error = null;
@@ -29,7 +29,7 @@ export default function PerksPage() {
   const isEligible = userXP >= XP_THRESHOLD;
 
   const handleRedeem = async (perkId: string) => {
-    const perk = perks.find(p => p.id === perkId);
+    const perk = perks.find(p => p.perkId === perkId);
     if (perk) {
       setSelectedPerk(perk);
       setShowRedemptionForm(true);
@@ -132,15 +132,15 @@ export default function PerksPage() {
       {perks.length > 0 ? (
         <div className="space-y-6">
           {/* Available Perks */}
-          {perks.some(p => !redeemedPerkIds.includes(p.id) && (!p.expiresAt || new Date(p.expiresAt) > new Date())) && (
+          {perks.some(p => !redeemedPerkIds.includes(p.perkId) && (!p.expiresAt || new Date(p.expiresAt.seconds * 1000) > new Date())) && (
             <div>
               <h2 className="text-xl font-bold mb-4">Available Perks</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {perks
-                  .filter(p => !redeemedPerkIds.includes(p.id) && (!p.expiresAt || new Date(p.expiresAt) > new Date()))
+                  .filter(p => !redeemedPerkIds.includes(p.perkId) && (!p.expiresAt || new Date(p.expiresAt.seconds * 1000) > new Date()))
                   .map((perk) => (
                     <PerkCard
-                      key={perk.id}
+                      key={perk.perkId}
                       perk={perk}
                       isEligible={isEligible}
                       isRedeemed={false}
@@ -157,10 +157,10 @@ export default function PerksPage() {
               <h2 className="text-xl font-bold mb-4">Redeemed Perks</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {perks
-                  .filter(p => redeemedPerkIds.includes(p.id))
+                  .filter(p => redeemedPerkIds.includes(p.perkId))
                   .map((perk) => (
                     <PerkCard
-                      key={perk.id}
+                      key={perk.perkId}
                       perk={perk}
                       isEligible={isEligible}
                       isRedeemed={true}

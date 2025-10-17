@@ -141,6 +141,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get stepLogs collection reference
+    const stepLogsRef = adminDb.collection('users').doc(userId).collection('stepLogs')
+
     // Check if step log already exists for this date
     const existingLogQuery = stepLogsRef
       .where('date', '==', date)
@@ -186,7 +189,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Add to Firestore
-    const stepLogsRef = adminDb.collection('users').doc(userId).collection('stepLogs')
     const docRef = await stepLogsRef.add(stepLogData)
 
     // Return the created log with the ID

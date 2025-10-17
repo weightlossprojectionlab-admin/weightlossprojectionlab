@@ -40,7 +40,7 @@ export default function MissionsPage() {
   // Calculate stats
   const activeMissions = missions.filter(m => m.status === 'active');
   const completedMissions = missions.filter(m => m.status === 'completed');
-  const totalXP = history?.reduce((sum, h) => sum + (h.xpEarned || 0), 0) || 0;
+  const totalXP = history?.reduce((sum, h) => sum + (h.xpReward || 0), 0) || 0;
   const currentLevel = Math.floor(totalXP / 1000) + 1; // Simple level calculation
   const currentStreak = 0; // TODO: Calculate from user activity
 
@@ -72,10 +72,10 @@ export default function MissionsPage() {
       </div>
 
       {/* Seasonal Challenges */}
-      {seasonalChallenges && seasonalChallenges.length > 0 && (
+      {seasonalChallenges && (
         <div className="mb-6">
           <SeasonalChallenges
-            challenges={seasonalChallenges}
+            challenges={[seasonalChallenges]}
             onJoinChallenge={handleJoinChallenge}
           />
         </div>
@@ -99,13 +99,13 @@ export default function MissionsPage() {
               {history.slice(0, 5).map((item, index) => (
                 <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{item.missionTitle}</p>
+                    <p className="text-sm font-medium text-gray-900">{item.title}</p>
                     <p className="text-xs text-gray-500">
-                      {new Date(item.completedAt).toLocaleDateString()}
+                      {item.completedAt ? new Date((item.completedAt as any).seconds * 1000).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-purple-600">+{item.xpEarned} XP</p>
+                    <p className="text-sm font-bold text-purple-600">+{item.xpReward} XP</p>
                   </div>
                 </div>
               ))}
