@@ -141,3 +141,17 @@ export interface CoachStrike {
   removedBy?: string;
   removedReason?: string;
 }
+
+// Dispute case extends ModerationCase with risk assessment data
+export interface DisputeCase extends Omit<ModerationCase, 'caseId'> {
+  id: string;              // Alias for caseId for consistency
+  caseId?: string;         // Optional to maintain compatibility
+  signals: RiskSignal[];   // Risk signals from assessment
+  recommendation: 'refund_full' | 'refund_partial' | 'deny' | 'review_manual';
+  confidence: number;      // 0.0-1.0
+  createdAt: any;          // Allow both Timestamp and Date
+  updatedAt: any;
+  resolvedAt?: any;
+  slaDeadline: any;
+  firstResponseAt?: any;
+}
