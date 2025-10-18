@@ -1,48 +1,84 @@
-import { initializeApp, getApps, cert } from 'firebase-admin/app'
-import { getAuth } from 'firebase-admin/auth'
-import { getFirestore } from 'firebase-admin/firestore'
+import { initializeApp, getApps, cert, type App } from 'firebase-admin/app'
+import { getAuth, type Auth } from 'firebase-admin/auth'
+import { getFirestore, type Firestore } from 'firebase-admin/firestore'
 
-// Initialize Firebase Admin SDK
-const initializeFirebaseAdmin = () => {
-  if (getApps().length === 0) {
-    try {
-      // Parse the private key from environment variable
-      const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n')
+// Lazy initialization - only initialize when actually used
+let adminApp: App | null = null
+let adminAuthInstance: Auth | null = null
+let adminDbInstance: Firestore | null = null
 
-      if (!privateKey || !process.env.FIREBASE_ADMIN_PROJECT_ID || !process.env.FIREBASE_ADMIN_CLIENT_EMAIL) {
-        throw new Error('Missing Firebase Admin SDK environment variables')
-      }
-
-      const app = initializeApp({
-        credential: cert({
-          projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-          privateKey: privateKey,
-        }),
-        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-      })
-
-      console.log('Firebase Admin SDK initialized successfully')
-      return app
-    } catch (error) {
-      console.error('Failed to initialize Firebase Admin SDK:', error)
-      throw error
-    }
+const initializeFirebaseAdmin = (): App => {
+  if (adminApp) {
+    return adminApp
   }
-  return getApps()[0]
+
+  if (getApps().length > 0) {
+    adminApp = getApps()[0]
+    return adminApp
+  }
+
+  try {
+    // Parse the private key from environment variable
+    const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n')
+
+    if (!privateKey || !process.env.FIREBASE_ADMIN_PROJECT_ID || !process.env.FIREBASE_ADMIN_CLIENT_EMAIL) {
+      throw new Error('Missing Firebase Admin SDK environment variables')
+    }
+
+    adminApp = initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        privateKey: privateKey,
+      }),
+      projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+    })
+
+    console.log('Firebase Admin SDK initialized successfully')
+    return adminApp
+  } catch (error) {
+    console.error('Failed to initialize Firebase Admin SDK:', error)
+    throw error
+  }
 }
 
-// Initialize the admin app
-const adminApp = initializeFirebaseAdmin()
+// Lazy getters for admin services
+export const getAdminAuth = (): Auth => {
+  if (!adminAuthInstance) {
+    const app = initializeFirebaseAdmin()
+    adminAuthInstance = getAuth(app)
+  }
+  return adminAuthInstance
+}
 
-// Export admin services
-export const adminAuth = getAuth(adminApp)
-export const adminDb = getFirestore(adminApp)
+export const getAdminDb = (): Firestore => {
+  if (!adminDbInstance) {
+    const app = initializeFirebaseAdmin()
+    adminDbInstance = getFirestore(app)
+  }
+  return adminDbInstance
+}
+
+// Export lazy getters with backwards compatibility
+export const adminAuth = new Proxy({} as Auth, {
+  get: (target, prop) => {
+    const auth = getAdminAuth()
+    return (auth as any)[prop]
+  }
+})
+
+export const adminDb = new Proxy({} as Firestore, {
+  get: (target, prop) => {
+    const db = getAdminDb()
+    return (db as any)[prop]
+  }
+})
 
 // Helper functions for common operations
 export const verifyIdToken = async (idToken: string) => {
   try {
-    const decodedToken = await adminAuth.verifyIdToken(idToken)
+    const auth = getAdminAuth()
+    const decodedToken = await auth.verifyIdToken(idToken)
     return decodedToken
   } catch (error) {
     console.error('Error verifying ID token:', error)
@@ -52,7 +88,8 @@ export const verifyIdToken = async (idToken: string) => {
 
 export const createCustomToken = async (uid: string, additionalClaims?: object) => {
   try {
-    const customToken = await adminAuth.createCustomToken(uid, additionalClaims)
+    const auth = getAdminAuth()
+    const customToken = await auth.createCustomToken(uid, additionalClaims)
     return customToken
   } catch (error) {
     console.error('Error creating custom token:', error)
@@ -62,7 +99,8 @@ export const createCustomToken = async (uid: string, additionalClaims?: object) 
 
 export const getUserByEmail = async (email: string) => {
   try {
-    const userRecord = await adminAuth.getUserByEmail(email)
+    const auth = getAdminAuth()
+    const userRecord = await auth.getUserByEmail(email)
     return userRecord
   } catch (error) {
     if ((error as any).code === 'auth/user-not-found') {
@@ -80,7 +118,8 @@ export const createUser = async (userData: {
   emailVerified?: boolean
 }) => {
   try {
-    const userRecord = await adminAuth.createUser(userData)
+    const auth = getAdminAuth()
+    const userRecord = await auth.createUser(userData)
     return userRecord
   } catch (error) {
     console.error('Error creating user:', error)
@@ -94,7 +133,8 @@ export const updateUser = async (uid: string, userData: {
   emailVerified?: boolean
 }) => {
   try {
-    const userRecord = await adminAuth.updateUser(uid, userData)
+    const auth = getAdminAuth()
+    const userRecord = await auth.updateUser(uid, userData)
     return userRecord
   } catch (error) {
     console.error('Error updating user:', error)
@@ -104,7 +144,8 @@ export const updateUser = async (uid: string, userData: {
 
 export const deleteUser = async (uid: string) => {
   try {
-    await adminAuth.deleteUser(uid)
+    const auth = getAdminAuth()
+    await auth.deleteUser(uid)
     console.log('Successfully deleted user:', uid)
   } catch (error) {
     console.error('Error deleting user:', error)
@@ -115,7 +156,8 @@ export const deleteUser = async (uid: string) => {
 // Firestore helper functions
 export const createUserProfile = async (uid: string, profileData: any) => {
   try {
-    await adminDb.collection('users').doc(uid).set({
+    const db = getAdminDb()
+    await db.collection('users').doc(uid).set({
       ...profileData,
       createdAt: new Date(),
       lastActiveAt: new Date(),
@@ -129,7 +171,8 @@ export const createUserProfile = async (uid: string, profileData: any) => {
 
 export const getUserProfile = async (uid: string) => {
   try {
-    const doc = await adminDb.collection('users').doc(uid).get()
+    const db = getAdminDb()
+    const doc = await db.collection('users').doc(uid).get()
     if (doc.exists) {
       return { id: doc.id, ...doc.data() }
     }
@@ -142,7 +185,8 @@ export const getUserProfile = async (uid: string) => {
 
 export const updateUserProfile = async (uid: string, updateData: any) => {
   try {
-    await adminDb.collection('users').doc(uid).update({
+    const db = getAdminDb()
+    await db.collection('users').doc(uid).update({
       ...updateData,
       lastActiveAt: new Date(),
     })
@@ -153,4 +197,7 @@ export const updateUserProfile = async (uid: string, updateData: any) => {
   }
 }
 
-export default adminApp
+// Export getter for admin app
+export const getAdminApp = (): App => initializeFirebaseAdmin()
+
+export default getAdminApp

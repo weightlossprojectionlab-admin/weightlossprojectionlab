@@ -20,6 +20,7 @@ export interface Group {
   maxMembers?: number; // Maximum allowed members (default 50)
   privacy?: 'public' | 'private'; // Group privacy setting
   description?: string; // Group description
+  tags?: string[]; // Search tags for group discovery
   activeMissionId?: string; // ID of currently active group mission
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;

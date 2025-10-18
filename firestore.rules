@@ -2,107 +2,222 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only access their own data
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isModerator() {
+      return isAuthenticated() &&
+             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'moderator' ||
+              isAdmin());
+    }
+
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+
     match /users/{userId} {
-      // Allow users to read and write their own profile
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Read: Users can read their own profile, admins can read all
+      allow read: if isOwner(userId) || isAdmin();
 
-      // Weight logs - user can only access their own
+      // Create: Users can create their own profile
+      allow create: if isOwner(userId);
+
+      // Update: Users can update their own profile (except role field)
+      allow update: if isOwner(userId) &&
+                      (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
+
+      // Admins can update any user
+      allow update: if isAdmin();
+
+      // Delete: Only admins
+      allow delete: if isAdmin();
+
+      // --- Legacy subcollections (from original rules) ---
+
+      // Weight logs
       match /weightLogs/{logId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-
-        // Validation for weight log writes
-        allow create: if request.auth != null
-          && request.auth.uid == userId
-          && validateWeightLog(request.resource.data);
-
-        allow update: if request.auth != null
-          && request.auth.uid == userId
-          && validateWeightLog(request.resource.data);
+        allow read, write: if isOwner(userId);
       }
 
-      // Meal logs - user can only access their own
+      // Meal logs
       match /mealLogs/{logId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-
-        // Validation for meal log writes
-        allow create: if request.auth != null
-          && request.auth.uid == userId
-          && validateMealLog(request.resource.data);
-
-        allow update: if request.auth != null
-          && request.auth.uid == userId
-          && validateMealLog(request.resource.data);
+        allow read, write: if isOwner(userId);
       }
 
-      // Step logs - user can only access their own
+      // Step logs
       match /stepLogs/{logId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-
-        // Validation for step log writes
-        allow create: if request.auth != null
-          && request.auth.uid == userId
-          && validateStepLog(request.resource.data);
-
-        allow update: if request.auth != null
-          && request.auth.uid == userId
-          && validateStepLog(request.resource.data);
+        allow read, write: if isOwner(userId);
       }
 
-      // Biometric credentials - user can only access their own
+      // Biometric credentials
       match /biometricCredentials/{credentialId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
+      }
 
-        // Validation for biometric credential writes
-        allow create: if request.auth != null
-          && request.auth.uid == userId
-          && validateBiometricCredential(request.resource.data);
+      // --- Phase 3 subcollections ---
 
-        allow update: if request.auth != null
-          && request.auth.uid == userId
-          && validateBiometricCredential(request.resource.data);
+      // User missions (active)
+      match /missions_active/{missionId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+
+      // User missions (history)
+      match /missions_history/{missionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        // No updates or deletes on history
+      }
+
+      // User coaching data
+      match /coaching/{docId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+
+      // User nudges queue
+      match /nudges_queue/{nudgeId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+
+      // User perks (redeemed)
+      match /perks_redeemed/{perkId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        // No updates or deletes
       }
     }
 
-    // Global biometric fingerprints collection for duplicate detection
-    // Only server-side operations can access this
+    // ============================================
+    // GROUPS COLLECTION
+    // ============================================
+
+    match /groups/{groupId} {
+      // Read: Anyone can read public groups, members can read private groups
+      allow read: if resource.data.visibility == 'public' ||
+                     (isAuthenticated() && request.auth.uid in resource.data.members);
+
+      // Create: Any authenticated user can create a group
+      allow create: if isAuthenticated() &&
+                      request.resource.data.createdBy == request.auth.uid &&
+                      request.resource.data.members.hasAll([request.auth.uid]);
+
+      // Update: Group creator or admins can update
+      allow update: if isAuthenticated() &&
+                      (resource.data.createdBy == request.auth.uid || isAdmin());
+
+      // Delete: Only creator or admins
+      allow delete: if isAuthenticated() &&
+                      (resource.data.createdBy == request.auth.uid || isAdmin());
+
+      // Group missions subcollection
+      match /missions/{missionId} {
+        allow read: if get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
+        allow write: if get(/databases/$(database)/documents/groups/$(groupId)).data.createdBy == request.auth.uid || isAdmin();
+      }
+
+      // Group members progress
+      match /members_progress/{userId} {
+        allow read: if get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
+        allow write: if isOwner(userId);
+      }
+    }
+
+    // ============================================
+    // MISSIONS & CHALLENGES
+    // ============================================
+
+    // Missions catalog (global missions available to users)
+    match /missions_catalog/{missionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Seasonal challenges
+    match /seasonal_challenges/{challengeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // PERKS (Sponsor Perks)
+    // ============================================
+
+    match /perks/{perkId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // TRUST & SAFETY
+    // ============================================
+
+    match /dispute_cases/{caseId} {
+      // Read: Case participants or moderators/admins
+      allow read: if isAuthenticated() &&
+                     (request.auth.uid in resource.data.involvedUserIds ||
+                      isModerator());
+
+      // Create: Any authenticated user can create a case
+      allow create: if isAuthenticated() &&
+                      request.resource.data.reporterId == request.auth.uid;
+
+      // Update: Only moderators/admins
+      allow update: if isModerator();
+
+      // Delete: Only admins
+      allow delete: if isAdmin();
+
+      // Case actions (audit trail)
+      match /actions/{actionId} {
+        allow read: if isModerator();
+        allow create: if isModerator();
+        // No updates or deletes on audit trail
+      }
+    }
+
+    // ============================================
+    // SYSTEM COLLECTIONS
+    // ============================================
+
+    // Global biometric fingerprints (server-side only)
     match /biometricFingerprints/{fingerprintId} {
-      allow read, write: if false; // Only server-side operations via Admin SDK
+      allow read, write: if false;
     }
 
-    // Validation functions
-    function validateWeightLog(data) {
-      return data.keys().hasAll(['weight', 'unit', 'loggedAt']) &&
-             data.weight is number &&
-             data.weight > 0 &&
-             data.unit in ['kg', 'lbs'] &&
-             data.loggedAt is timestamp;
+    // AI decision logs (admin read-only)
+    match /ai_decision_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
-    function validateMealLog(data) {
-      return data.keys().hasAll(['mealType', 'totalCalories', 'loggedAt']) &&
-             data.mealType in ['breakfast', 'lunch', 'dinner', 'snack'] &&
-             data.totalCalories is number &&
-             data.totalCalories >= 0 &&
-             data.loggedAt is timestamp;
+    // Analytics events
+    match /analytics_events/{eventId} {
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid;
+      allow read: if isAdmin();
     }
 
-    function validateStepLog(data) {
-      return data.keys().hasAll(['steps', 'date', 'loggedAt']) &&
-             data.steps is number &&
-             data.steps >= 0 &&
-             data.date is string &&
-             data.loggedAt is timestamp;
-    }
+    // ============================================
+    // DEFAULT DENY
+    // ============================================
 
-    function validateBiometricCredential(data) {
-      return data.keys().hasAll(['credentialId', 'publicKey', 'createdAt']) &&
-             data.credentialId is string &&
-             data.publicKey is string &&
-             data.createdAt is timestamp;
-    }
-
-    // Deny all other access
     match /{document=**} {
       allow read, write: if false;
     }
