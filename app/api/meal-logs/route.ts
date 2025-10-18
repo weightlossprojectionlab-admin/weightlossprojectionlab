@@ -184,16 +184,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Create meal log data
-    const mealLogData: MealLog = {
+    // Note: Firestore doesn't accept undefined values, so only add fields that exist
+    const mealLogData: any = {
       mealType,
-      photoUrl: photoUrl || undefined,
-      aiAnalysis: aiAnalysis || undefined,
-      manualEntries: manualEntries || undefined,
       totalCalories,
       macros,
       loggedAt: loggedAt ? Timestamp.fromDate(new Date(loggedAt)) : Timestamp.now(),
       source,
-      notes: notes || undefined
+    }
+
+    // Only add optional fields if they have values
+    if (photoUrl) {
+      mealLogData.photoUrl = photoUrl
+    }
+    if (aiAnalysis) {
+      mealLogData.aiAnalysis = aiAnalysis
+    }
+    if (manualEntries && manualEntries.length > 0) {
+      mealLogData.manualEntries = manualEntries
+    }
+    if (notes) {
+      mealLogData.notes = notes
     }
 
     // Add to Firestore
