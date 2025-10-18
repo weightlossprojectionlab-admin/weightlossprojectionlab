@@ -18,32 +18,30 @@ const initializeFirebaseAdmin = (): App => {
   }
 
   try {
-    // Method 1: Use base64-encoded service account JSON (preferred for Netlify)
-    if (process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64) {
-      console.log('🔑 Using base64-encoded service account')
-      const serviceAccountJson = Buffer.from(
-        process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64,
-        'base64'
-      ).toString('utf-8')
+    console.log('🔑 Initializing Firebase Admin SDK...')
 
-      const serviceAccount = JSON.parse(serviceAccountJson)
-
-      adminApp = initializeApp({
-        credential: cert(serviceAccount),
-        projectId: serviceAccount.project_id,
-      })
-
-      console.log('✅ Firebase Admin SDK initialized successfully (base64 method)')
-      return adminApp
+    if (!process.env.FIREBASE_ADMIN_PROJECT_ID || !process.env.FIREBASE_ADMIN_CLIENT_EMAIL || !process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
+      throw new Error('Missing Firebase Admin SDK environment variables: FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, or FIREBASE_ADMIN_PRIVATE_KEY')
     }
 
-    // Method 2: Use individual environment variables (fallback)
-    console.log('🔑 Using individual environment variables')
-    const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n')
+    // Handle private key with multiple replacement strategies
+    let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY
 
-    if (!privateKey || !process.env.FIREBASE_ADMIN_PROJECT_ID || !process.env.FIREBASE_ADMIN_CLIENT_EMAIL) {
-      throw new Error('Missing Firebase Admin SDK environment variables. Set either FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64 or FIREBASE_ADMIN_PRIVATE_KEY + FIREBASE_ADMIN_PROJECT_ID + FIREBASE_ADMIN_CLIENT_EMAIL')
+    // Remove quotes if present
+    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+      privateKey = privateKey.slice(1, -1)
     }
+
+    // Replace escaped newlines with actual newlines
+    // Handle both \\n (double backslash) and \n (single backslash)
+    privateKey = privateKey.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n')
+
+    console.log('Private key format check:', {
+      startsWithBegin: privateKey.startsWith('-----BEGIN'),
+      endsWithEnd: privateKey.endsWith('-----'),
+      hasNewlines: privateKey.includes('\n'),
+      length: privateKey.length
+    })
 
     adminApp = initializeApp({
       credential: cert({
@@ -54,10 +52,14 @@ const initializeFirebaseAdmin = (): App => {
       projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
     })
 
-    console.log('✅ Firebase Admin SDK initialized successfully (individual vars method)')
+    console.log('✅ Firebase Admin SDK initialized successfully')
     return adminApp
   } catch (error) {
     console.error('❌ Failed to initialize Firebase Admin SDK:', error)
+    if (error instanceof Error) {
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
     throw error
   }
 }
