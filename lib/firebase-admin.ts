@@ -27,13 +27,23 @@ const initializeFirebaseAdmin = (): App => {
     // Handle private key with proper formatting
     let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY
 
+    console.log('Raw private key info:', {
+      length: privateKey.length,
+      first50: privateKey.substring(0, 50),
+      hasLiteralBackslashN: privateKey.includes('\\n'),
+      hasActualNewline: privateKey.includes('\n'),
+      charCodeAt40: privateKey.charCodeAt(40),
+      charCodeAt41: privateKey.charCodeAt(41)
+    })
+
     // Remove quotes if present
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
       privateKey = privateKey.slice(1, -1)
     }
 
     // Replace escaped newlines with actual newlines
-    privateKey = privateKey.replace(/\\n/g, '\n')
+    // Try both literal string "\n" and escaped "\\n"
+    privateKey = privateKey.split('\\n').join('\n')
 
     // Trim any extra whitespace but ensure it ends with a single newline
     privateKey = privateKey.trim()
