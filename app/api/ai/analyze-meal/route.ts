@@ -40,9 +40,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { imageData, mealType } = body
 
+    console.log('Received request:', {
+      hasImageData: !!imageData,
+      imageDataType: typeof imageData,
+      imageDataLength: imageData?.length,
+      mealType
+    })
+
     if (!imageData) {
       return NextResponse.json(
         { error: 'Image data is required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate image data is a string
+    if (typeof imageData !== 'string') {
+      return NextResponse.json(
+        { error: 'Image data must be a string' },
         { status: 400 }
       )
     }
