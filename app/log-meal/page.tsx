@@ -24,8 +24,11 @@ function LogMealContent() {
     { id: 'snack', label: 'Snack', emoji: '🍎' },
   ] as const
 
-  // Cleanup on component unmount
+  // Cleanup on component unmount only
   useEffect(() => {
+    // Save current imageObjectUrl for cleanup
+    const currentObjectUrl = imageObjectUrl
+
     return () => {
       // Abort any pending fetch requests
       if (abortControllerRef.current) {
@@ -38,11 +41,12 @@ function LogMealContent() {
       }
 
       // Revoke object URL to free memory
-      if (imageObjectUrl) {
-        URL.revokeObjectURL(imageObjectUrl)
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl)
       }
     }
-  }, [imageObjectUrl])
+    // Empty deps array = only run on mount/unmount, not on imageObjectUrl changes
+  }, [])
 
   const handleCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
