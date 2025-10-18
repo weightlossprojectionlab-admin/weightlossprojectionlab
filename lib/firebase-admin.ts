@@ -24,7 +24,7 @@ const initializeFirebaseAdmin = (): App => {
       throw new Error('Missing Firebase Admin SDK environment variables: FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, or FIREBASE_ADMIN_PRIVATE_KEY')
     }
 
-    // Handle private key with multiple replacement strategies
+    // Handle private key with proper formatting
     let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY
 
     // Remove quotes if present
@@ -33,14 +33,22 @@ const initializeFirebaseAdmin = (): App => {
     }
 
     // Replace escaped newlines with actual newlines
-    // Handle both \\n (double backslash) and \n (single backslash)
-    privateKey = privateKey.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n')
+    privateKey = privateKey.replace(/\\n/g, '\n')
+
+    // Trim any extra whitespace but ensure it ends with a single newline
+    privateKey = privateKey.trim()
+    if (!privateKey.endsWith('\n')) {
+      privateKey += '\n'
+    }
 
     console.log('Private key format check:', {
       startsWithBegin: privateKey.startsWith('-----BEGIN'),
-      endsWithEnd: privateKey.endsWith('-----'),
+      endsWithEnd: privateKey.trim().endsWith('-----'),
       hasNewlines: privateKey.includes('\n'),
-      length: privateKey.length
+      length: privateKey.length,
+      firstLine: privateKey.split('\n')[0],
+      lastLine: privateKey.trim().split('\n').pop(),
+      lineCount: privateKey.split('\n').length
     })
 
     adminApp = initializeApp({
