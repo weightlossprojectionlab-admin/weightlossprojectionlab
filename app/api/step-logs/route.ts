@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
-import { Timestamp } from 'firebase/firestore'
+import { Timestamp } from 'firebase-admin/firestore'
 
 interface StepLog {
   steps: number
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
         steps,
         goal: goal || undefined,
         notes: notes || undefined,
-        loggedAt: loggedAt ? new Date(loggedAt) : new Date()
+        loggedAt: loggedAt ? Timestamp.fromDate(new Date(loggedAt)) : Timestamp.now()
       }
 
       await existingDoc.ref.update(updateData)
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
         date,
         source: stepSource,
         ...updateData,
-        loggedAt: updateData.loggedAt.toISOString()
+        loggedAt: updateData.loggedAt.toDate().toISOString()
       }
 
       return NextResponse.json({
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
       steps,
       date,
       source: stepSource,
-      loggedAt: loggedAt ? new Date(loggedAt) : new Date(),
+      loggedAt: loggedAt ? Timestamp.fromDate(new Date(loggedAt)) : Timestamp.now(),
       goal: goal || undefined,
       notes: notes || undefined
     }
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
     const createdLog = {
       id: docRef.id,
       ...stepLogData,
-      loggedAt: stepLogData.loggedAt.toISOString()
+      loggedAt: stepLogData.loggedAt.toDate().toISOString()
     }
 
     return NextResponse.json({

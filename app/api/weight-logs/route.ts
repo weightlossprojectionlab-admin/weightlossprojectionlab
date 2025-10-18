@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
-import { collection, addDoc, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore'
+import { Timestamp } from 'firebase-admin/firestore'
 
 interface WeightLog {
   weight: number
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     const weightLogData: WeightLog = {
       weight,
       unit,
-      loggedAt: loggedAt ? new Date(loggedAt) : new Date(),
+      loggedAt: loggedAt ? Timestamp.fromDate(new Date(loggedAt)) : Timestamp.now(),
       notes: notes || undefined,
       source: 'manual'
     }
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
     const createdLog = {
       id: docRef.id,
       ...weightLogData,
-      loggedAt: weightLogData.loggedAt.toISOString()
+      loggedAt: weightLogData.loggedAt.toDate().toISOString()
     }
 
     return NextResponse.json({
