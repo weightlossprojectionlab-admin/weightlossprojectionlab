@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { mealLogOperations } from '@/lib/firebase-operations'
@@ -9,9 +9,13 @@ import { uploadMealPhoto } from '@/lib/storage-upload'
 function LogMealContent() {
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast')
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
+  const [imageObjectUrl, setImageObjectUrl] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [aiAnalysis, setAiAnalysis] = useState<any>(null)
   const [manualEntry, setManualEntry] = useState(false)
+
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const fileReaderRef = useRef<FileReader | null>(null)
 
   const mealTypes = [
     { id: 'breakfast', label: 'Breakfast', emoji: '🌅' },
@@ -20,22 +24,66 @@ function LogMealContent() {
     { id: 'snack', label: 'Snack', emoji: '🍎' },
   ] as const
 
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      // Abort any pending fetch requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+
+      // Abort FileReader if still reading
+      if (fileReaderRef.current) {
+        fileReaderRef.current.abort()
+      }
+
+      // Revoke object URL to free memory
+      if (imageObjectUrl) {
+        URL.revokeObjectURL(imageObjectUrl)
+      }
+    }
+  }, [imageObjectUrl])
+
   const handleCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Convert file to base64 for preview and AI analysis
+    // Clean up previous object URL to prevent memory leak
+    if (imageObjectUrl) {
+      URL.revokeObjectURL(imageObjectUrl)
+    }
+
+    // Create object URL for preview (much lighter than base64)
+    const objectUrl = URL.createObjectURL(file)
+    setImageObjectUrl(objectUrl)
+
+    // Convert file to base64 for AI analysis only
     const reader = new FileReader()
+    fileReaderRef.current = reader
+
     reader.onloadend = () => {
       const base64Image = reader.result as string
       setCapturedImage(base64Image)
       analyzeImage(base64Image)
+      // Clear reference after use
+      fileReaderRef.current = null
     }
+
+    reader.onerror = () => {
+      console.error('FileReader error')
+      alert('Failed to read image file')
+      fileReaderRef.current = null
+    }
+
     reader.readAsDataURL(file)
   }
 
   const analyzeImage = async (imageData: string) => {
     setAnalyzing(true)
+
+    // Create AbortController for this request
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
 
     try {
       console.log('🔍 Starting AI analysis...')
@@ -51,7 +99,8 @@ function LogMealContent() {
         body: JSON.stringify({
           imageData,
           mealType: selectedMealType
-        })
+        }),
+        signal: abortController.signal
       })
 
       console.log('Response status:', response.status)
@@ -75,11 +124,18 @@ function LogMealContent() {
       }
 
     } catch (error) {
+      // Don't show error if request was aborted
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Analysis request aborted')
+        return
+      }
+
       console.error('💥 Analysis error:', error)
       console.error('Error details:', error instanceof Error ? error.message : String(error))
       alert(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or enter manually.`)
     } finally {
       setAnalyzing(false)
+      abortControllerRef.current = null
     }
   }
 
@@ -115,7 +171,11 @@ function LogMealContent() {
       console.log('✅ Meal logged successfully:', response.data)
       alert('Meal logged successfully!')
 
-      // Reset form
+      // Clean up and reset form
+      if (imageObjectUrl) {
+        URL.revokeObjectURL(imageObjectUrl)
+        setImageObjectUrl(null)
+      }
       setCapturedImage(null)
       setAiAnalysis(null)
       setManualEntry(false)
@@ -203,7 +263,7 @@ function LogMealContent() {
               <div className="space-y-4">
                 <div className="relative">
                   <img
-                    src={capturedImage}
+                    src={imageObjectUrl || capturedImage}
                     alt="Captured meal"
                     className="w-full h-64 object-cover rounded-lg"
                   />
