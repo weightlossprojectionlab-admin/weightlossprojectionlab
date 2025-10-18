@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Mock OpenAI response for now - replace with actual OpenAI integration
-const mockAnalyzeMeal = async (imageData: string) => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1500))
-
-  // Return mock analysis based on common foods
+// Fallback mock data if OpenAI fails
+const getMockAnalysis = () => {
   const mockFoods = [
     { foods: ['Grilled chicken breast', 'Brown rice', 'Steamed broccoli'], calories: 420, protein: 35, carbs: 45, fat: 8, fiber: 6 },
     { foods: ['Salmon fillet', 'Quinoa', 'Roasted vegetables'], calories: 485, protein: 38, carbs: 42, fat: 18, fiber: 8 },
@@ -18,20 +14,21 @@ const mockAnalyzeMeal = async (imageData: string) => {
 
   return {
     foodItems: randomFood.foods,
-    estimatedCalories: randomFood.calories + Math.floor(Math.random() * 100) - 50, // Add some variance
+    estimatedCalories: randomFood.calories + Math.floor(Math.random() * 100) - 50,
     macros: {
       protein: randomFood.protein + Math.floor(Math.random() * 10) - 5,
       carbs: randomFood.carbs + Math.floor(Math.random() * 10) - 5,
       fat: randomFood.fat + Math.floor(Math.random() * 5) - 2,
       fiber: randomFood.fiber + Math.floor(Math.random() * 3) - 1
     },
-    confidence: Math.floor(Math.random() * 25) + 75, // 75-100%
+    confidence: Math.floor(Math.random() * 25) + 75,
     suggestions: [
       'Great balanced meal!',
       'Consider adding more vegetables for extra nutrients',
       'Good protein source for muscle maintenance',
       'Try to include healthy fats like avocado or nuts'
-    ].slice(0, Math.floor(Math.random() * 3) + 1)
+    ].slice(0, Math.floor(Math.random() * 3) + 1),
+    isMockData: true
   }
 }
 
@@ -70,56 +67,93 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Replace with actual OpenAI Vision API call
-    /*
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-vision-preview',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Analyze this ${mealType || 'meal'} photo and provide:
-                1. List of visible food items
-                2. Estimated portion sizes
-                3. Calorie estimate (be conservative)
-                4. Macro breakdown (protein/carbs/fat/fiber in grams)
-                5. Confidence level (0-100%)
-                6. Healthy suggestions
+    // Use OpenAI Vision API for real analysis
+    let analysis
 
-                Focus on accuracy over creativity. Use standard portion sizes.
-                Return as JSON with keys: foodItems, estimatedCalories, macros, confidence, suggestions`
-              },
+    try {
+      if (!process.env.OPENAI_API_KEY) {
+        console.warn('⚠️ OPENAI_API_KEY not set, using mock data')
+        analysis = getMockAnalysis()
+      } else {
+        console.log('🤖 Calling OpenAI Vision API...')
+
+        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [
               {
-                type: 'image_url',
-                image_url: {
-                  url: imageData
-                }
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: `Analyze this ${mealType || 'meal'} photo and provide a detailed nutritional analysis.
+
+Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
+{
+  "foodItems": ["item1", "item2", ...],
+  "estimatedCalories": number,
+  "macros": {
+    "protein": number,
+    "carbs": number,
+    "fat": number,
+    "fiber": number
+  },
+  "confidence": number (0-100),
+  "suggestions": ["suggestion1", "suggestion2", ...]
+}
+
+Guidelines:
+- List all visible food items with approximate portions
+- Be conservative with calorie estimates (better to underestimate)
+- Use standard portion sizes from nutrition databases
+- Confidence should reflect image quality and food visibility
+- Provide 1-3 actionable, positive suggestions
+- All macro values in grams`
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: imageData
+                    }
+                  }
+                ]
               }
-            ]
-          }
-        ],
-        max_tokens: 500
-      })
-    })
+            ],
+            max_tokens: 800,
+            temperature: 0.3
+          })
+        })
 
-    if (!openaiResponse.ok) {
-      throw new Error('OpenAI API request failed')
+        if (!openaiResponse.ok) {
+          const errorText = await openaiResponse.text()
+          console.error('OpenAI API error:', errorText)
+          throw new Error(`OpenAI API failed: ${openaiResponse.status}`)
+        }
+
+        const result = await openaiResponse.json()
+        console.log('✅ OpenAI response received')
+
+        const content = result.choices[0].message.content.trim()
+
+        // Remove markdown code blocks if present
+        const jsonContent = content
+          .replace(/^```json\s*/i, '')
+          .replace(/^```\s*/i, '')
+          .replace(/\s*```$/i, '')
+          .trim()
+
+        analysis = JSON.parse(jsonContent)
+        console.log('✅ Analysis parsed successfully:', analysis)
+      }
+    } catch (error) {
+      console.error('❌ OpenAI analysis failed, using mock data:', error)
+      analysis = getMockAnalysis()
     }
-
-    const result = await openaiResponse.json()
-    const analysis = JSON.parse(result.choices[0].message.content)
-    */
-
-    // Use mock analysis for now
-    const analysis = await mockAnalyzeMeal(imageData)
 
     return NextResponse.json({
       success: true,

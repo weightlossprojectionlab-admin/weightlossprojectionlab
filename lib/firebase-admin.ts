@@ -18,11 +18,31 @@ const initializeFirebaseAdmin = (): App => {
   }
 
   try {
-    // Parse the private key from environment variable
+    // Method 1: Use base64-encoded service account JSON (preferred for Netlify)
+    if (process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64) {
+      console.log('🔑 Using base64-encoded service account')
+      const serviceAccountJson = Buffer.from(
+        process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64,
+        'base64'
+      ).toString('utf-8')
+
+      const serviceAccount = JSON.parse(serviceAccountJson)
+
+      adminApp = initializeApp({
+        credential: cert(serviceAccount),
+        projectId: serviceAccount.project_id,
+      })
+
+      console.log('✅ Firebase Admin SDK initialized successfully (base64 method)')
+      return adminApp
+    }
+
+    // Method 2: Use individual environment variables (fallback)
+    console.log('🔑 Using individual environment variables')
     const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n')
 
     if (!privateKey || !process.env.FIREBASE_ADMIN_PROJECT_ID || !process.env.FIREBASE_ADMIN_CLIENT_EMAIL) {
-      throw new Error('Missing Firebase Admin SDK environment variables')
+      throw new Error('Missing Firebase Admin SDK environment variables. Set either FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64 or FIREBASE_ADMIN_PRIVATE_KEY + FIREBASE_ADMIN_PROJECT_ID + FIREBASE_ADMIN_CLIENT_EMAIL')
     }
 
     adminApp = initializeApp({
@@ -34,10 +54,10 @@ const initializeFirebaseAdmin = (): App => {
       projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
     })
 
-    console.log('Firebase Admin SDK initialized successfully')
+    console.log('✅ Firebase Admin SDK initialized successfully (individual vars method)')
     return adminApp
   } catch (error) {
-    console.error('Failed to initialize Firebase Admin SDK:', error)
+    console.error('❌ Failed to initialize Firebase Admin SDK:', error)
     throw error
   }
 }
