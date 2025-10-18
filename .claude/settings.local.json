@@ -10,7 +10,8 @@
       "Bash(npx eslint:*)",
       "Bash(del C:Userspercywlplweightlossprojectlab.eslintrc.json)",
       "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

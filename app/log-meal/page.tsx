@@ -5,6 +5,7 @@ import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { mealLogOperations } from '@/lib/firebase-operations'
 import { checkCameraPermission, requestCameraPermission, getSettingsInstructions, isMobile } from '@/lib/permissions'
+import { debugCamera } from '@/lib/camera-debug'
 
 function LogMealContent() {
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast')
@@ -31,6 +32,18 @@ function LogMealContent() {
     setShowPermissionHelp(false)
 
     try {
+      // Run diagnostics in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Running camera diagnostics...')
+        const diagnostics = await debugCamera.runFullDiagnostics()
+        console.log('📋 Diagnostics report:', debugCamera.generateReport())
+
+        // Show diagnostics errors if any
+        if (diagnostics.errors.length > 0) {
+          console.error('⚠️ Camera diagnostics found issues:', diagnostics.errors)
+        }
+      }
+
       // First, check camera permission status
       const permissionCheck = await checkCameraPermission()
 
@@ -76,7 +89,15 @@ function LogMealContent() {
       // Permission granted, set up video stream
       if (videoRef.current && result.stream) {
         videoRef.current.srcObject = result.stream
-        setCameraActive(true)
+        // Ensure video plays (important for iOS)
+        try {
+          await videoRef.current.play()
+          setCameraActive(true)
+          console.log('✅ Camera started successfully')
+        } catch (playError) {
+          console.error('Video play error:', playError)
+          setCameraPermissionError('Camera stream obtained but video failed to play. Please try again.')
+        }
       }
     } catch (error) {
       console.error('Error accessing camera:', error)
@@ -277,6 +298,7 @@ function LogMealContent() {
                     ref={videoRef}
                     autoPlay
                     playsInline
+                    muted
                     className="w-full h-64 object-cover"
                     aria-label="Camera preview"
                   />
