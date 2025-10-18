@@ -63,15 +63,25 @@ function LogMealContent() {
 
     reader.onloadend = () => {
       const base64Image = reader.result as string
+
+      // Validate that we got a valid base64 string
+      if (!base64Image || typeof base64Image !== 'string') {
+        console.error('FileReader result is invalid:', base64Image)
+        alert('Failed to read image data. Please try again.')
+        fileReaderRef.current = null
+        return
+      }
+
+      console.log('FileReader success, image length:', base64Image.length)
       setCapturedImage(base64Image)
       analyzeImage(base64Image)
       // Clear reference after use
       fileReaderRef.current = null
     }
 
-    reader.onerror = () => {
-      console.error('FileReader error')
-      alert('Failed to read image file')
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error)
+      alert('Failed to read image file. Please try again.')
       fileReaderRef.current = null
     }
 
