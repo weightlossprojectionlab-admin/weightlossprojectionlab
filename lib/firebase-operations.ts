@@ -26,7 +26,11 @@ const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) 
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-    throw new Error(errorData.error || `HTTP ${response.status}`)
+    console.error('API Error:', errorData)
+
+    // Include detailed error message if available
+    const errorMessage = errorData.details || errorData.error || `HTTP ${response.status}`
+    throw new Error(errorMessage)
   }
 
   return response.json()
