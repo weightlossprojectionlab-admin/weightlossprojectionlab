@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { mealLogOperations } from '@/lib/firebase-operations'
+import { uploadMealPhoto } from '@/lib/storage-upload'
 
 function LogMealContent() {
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast')
@@ -37,7 +38,10 @@ function LogMealContent() {
     setAnalyzing(true)
 
     try {
-      console.log('Analyzing image with AI...')
+      console.log('🔍 Starting AI analysis...')
+      console.log('Image data length:', imageData.length)
+      console.log('Image data prefix:', imageData.substring(0, 30))
+      console.log('Meal type:', selectedMealType)
 
       const response = await fetch('/api/ai/analyze-meal', {
         method: 'POST',
@@ -50,21 +54,30 @@ function LogMealContent() {
         })
       })
 
+      console.log('Response status:', response.status)
+      console.log('Response ok:', response.ok)
+
       if (!response.ok) {
-        throw new Error('Analysis request failed')
+        const errorText = await response.text()
+        console.error('API error response:', errorText)
+        throw new Error(`Analysis request failed: ${response.status} ${errorText}`)
       }
 
       const result = await response.json()
+      console.log('Analysis result:', result)
 
       if (result.success) {
+        console.log('✅ Analysis successful:', result.data)
         setAiAnalysis(result.data)
       } else {
+        console.error('❌ Analysis failed:', result.error)
         throw new Error(result.error || 'Analysis failed')
       }
 
     } catch (error) {
-      console.error('Analysis error:', error)
-      alert('Analysis failed. Please try again or enter manually.')
+      console.error('💥 Analysis error:', error)
+      console.error('Error details:', error instanceof Error ? error.message : String(error))
+      alert(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or enter manually.`)
     } finally {
       setAnalyzing(false)
     }
@@ -72,16 +85,34 @@ function LogMealContent() {
 
   const saveMeal = async () => {
     try {
+      console.log('💾 Starting meal save...')
+
+      let photoUrl: string | undefined = undefined
+
+      // Upload photo to Firebase Storage if we have one
+      if (capturedImage) {
+        console.log('📤 Uploading photo to Storage...')
+        try {
+          photoUrl = await uploadMealPhoto(capturedImage)
+          console.log('✅ Photo uploaded:', photoUrl)
+        } catch (uploadError) {
+          console.error('❌ Photo upload failed:', uploadError)
+          // Continue saving even if photo upload fails
+          alert('Photo upload failed, but saving meal data anyway.')
+        }
+      }
+
       // Save to Firebase using real API
+      console.log('💾 Saving meal log to Firestore...')
       const response = await mealLogOperations.createMealLog({
         mealType: selectedMealType,
-        photoUrl: capturedImage || undefined,
+        photoUrl: photoUrl || undefined,
         aiAnalysis: aiAnalysis || undefined,
         manualEntries: manualEntry ? [{ food: 'Manual entry', calories: 0, quantity: '1 serving' }] : undefined,
         loggedAt: new Date().toISOString()
       })
 
-      console.log('Meal logged successfully:', response.data)
+      console.log('✅ Meal logged successfully:', response.data)
       alert('Meal logged successfully!')
 
       // Reset form
@@ -90,8 +121,9 @@ function LogMealContent() {
       setManualEntry(false)
 
     } catch (error) {
-      console.error('Save error:', error)
-      alert('Failed to save meal. Please try again.')
+      console.error('💥 Save error:', error)
+      console.error('Error details:', error instanceof Error ? error.message : String(error))
+      alert(`Failed to save meal: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`)
     }
   }
 

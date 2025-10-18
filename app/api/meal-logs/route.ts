@@ -165,7 +165,8 @@ export async function POST(request: NextRequest) {
     let source: 'photo' | 'manual' | 'hybrid' = 'manual'
 
     if (aiAnalysis) {
-      totalCalories += aiAnalysis.totalCalories || 0
+      // Handle both totalCalories and estimatedCalories from AI
+      totalCalories += aiAnalysis.totalCalories || aiAnalysis.estimatedCalories || 0
       macros.carbs += aiAnalysis.macros?.carbs || 0
       macros.protein += aiAnalysis.macros?.protein || 0
       macros.fat += aiAnalysis.macros?.fat || 0
