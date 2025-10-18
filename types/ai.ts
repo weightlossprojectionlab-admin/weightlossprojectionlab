@@ -85,7 +85,7 @@ export interface AIOrchestrationResponse {
 export interface PII_RedactionResult {
   redactedText: string;
   redactions: {
-    type: 'email' | 'phone' | 'ssn' | 'name' | 'address';
+    type: 'email' | 'phone' | 'ssn' | 'name' | 'address' | 'creditCard' | 'ipAddress';
     original: string;
     replacement: string;
     position: number;

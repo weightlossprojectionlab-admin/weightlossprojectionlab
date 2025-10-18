@@ -164,7 +164,8 @@ export default function TrustSafetyAdminPage() {
                   score: selectedCase.riskScore,
                   signals: selectedCase.signals || [],
                   recommendation: selectedCase.recommendation,
-                  confidence: selectedCase.confidence
+                  confidence: selectedCase.confidence,
+                  rationale: selectedCase.rationale || 'No rationale provided'
                 }}
                 showDetails={true}
               />

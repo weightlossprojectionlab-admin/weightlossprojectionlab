@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine auth provider from token
-    const authProviders = []
+    const authProviders: ('email' | 'google.com')[] = []
     if (decodedToken.firebase?.sign_in_provider === 'google.com') {
       authProviders.push('google.com')
     } else {

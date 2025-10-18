@@ -5,6 +5,7 @@
 import useSWR from 'swr';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { timestampToDate } from '@/lib/timestamp';
 import type { UserMission, MissionHistory, SeasonalChallenge } from '@/schemas/firestore/missions';
 import type { GroupMission } from '@/schemas/firestore/groups';
 
@@ -106,7 +107,7 @@ export function calculateMissionProgress(missionsData: MissionsData): number {
   if (active.length === 0) return 0;
 
   const totalProgress = active.reduce(
-    (sum, mission) => sum + (mission.progress / mission.targetValue),
+    (sum, mission) => sum + (mission.progress / mission.targetProgress),
     0
   );
 
@@ -121,7 +122,7 @@ export function getExpiringSoonMissions(missionsData: MissionsData): UserMission
   tomorrow.setHours(tomorrow.getHours() + 24);
 
   return missionsData.active.filter((mission) => {
-    const expiresAt = new Date(mission.expiresAt.seconds * 1000);
+    const expiresAt = timestampToDate(mission.expiresAt);
     return expiresAt <= tomorrow && mission.status === 'active';
   });
 }

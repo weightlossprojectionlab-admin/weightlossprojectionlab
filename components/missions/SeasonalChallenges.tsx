@@ -5,6 +5,7 @@
 'use client';
 
 import { SparklesIcon, CalendarIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { timestampToDate, formatTimestamp } from '@/lib/timestamp';
 import type { SeasonalChallenge } from '@/schemas/firestore/missions';
 
 interface SeasonalChallengesProps {
@@ -32,12 +33,13 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {challenges.map((challenge) => {
-          const startDate = new Date(challenge.startDate);
-          const endDate = new Date(challenge.endDate);
+          const startDate = timestampToDate(challenge.startDate);
+          const endDate = timestampToDate(challenge.endDate);
           const now = new Date();
           const isActive = now >= startDate && now <= endDate;
           const isUpcoming = now < startDate;
           const isEnded = now > endDate;
+          const challengeId = challenge.id || challenge.seasonId;
 
           const daysRemaining = isActive
             ? Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
@@ -45,7 +47,7 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
 
           return (
             <div
-              key={challenge.id}
+              key={challengeId}
               className={`border rounded-lg p-6 ${
                 isActive
                   ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200'
@@ -57,7 +59,7 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-gray-900 mb-1">{challenge.title}</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">{challenge.title || challenge.name}</h3>
                   {challenge.description && (
                     <p className="text-sm text-gray-600">{challenge.description}</p>
                   )}
@@ -79,7 +81,7 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
               <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600">
                 <div className="flex items-center space-x-1">
                   <CalendarIcon className="h-4 w-4" />
-                  <span>{startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}</span>
+                  <span>{formatTimestamp(challenge.startDate)} - {formatTimestamp(challenge.endDate)}</span>
                 </div>
                 {isActive && (
                   <span className="font-medium text-purple-700">
@@ -118,7 +120,7 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
               {/* Action Button */}
               {isActive && onJoinChallenge && (
                 <button
-                  onClick={() => onJoinChallenge(challenge.id)}
+                  onClick={() => onJoinChallenge(challengeId)}
                   className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
                 >
                   Join Challenge

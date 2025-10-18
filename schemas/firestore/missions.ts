@@ -14,6 +14,7 @@ export type MissionStatus = 'active' | 'completed' | 'failed' | 'expired';
  */
 export interface UserMission {
   missionId: string;
+  id?: string; // Alias for missionId for UI components
   type: MissionType;
   title: string;
   description: string;
@@ -21,6 +22,7 @@ export interface UserMission {
   progress: number;
   targetProgress: number;
   status: MissionStatus;
+  difficulty?: 'easy' | 'medium' | 'hard'; // Optional difficulty indicator
   expiresAt: Timestamp | FieldValue;
   completedAt: Timestamp | null;
   createdAt: Timestamp | FieldValue;
@@ -56,12 +58,19 @@ export interface WeeklyMissionTemplate {
  */
 export interface SeasonalChallenge {
   seasonId: string;
-  name: string;
-  description: string;
+  id?: string; // Alias for seasonId for UI components
+  name?: string; // Deprecated, use title instead
+  title?: string; // Challenge title
+  description?: string; // Challenge description
   startDate: Timestamp | FieldValue;
   endDate: Timestamp | FieldValue;
-  milestones: ChallengeMilestone[];
-  badgeId: string;
+  milestones?: ChallengeMilestone[];
+  badgeId?: string;
+  rewards?: {
+    xp?: number;
+    badge?: string;
+  };
+  participantCount?: number; // Number of participants
   createdAt: Timestamp | FieldValue;
 }
 

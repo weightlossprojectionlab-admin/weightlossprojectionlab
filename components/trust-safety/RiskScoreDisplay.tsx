@@ -5,10 +5,10 @@
 'use client';
 
 import { ExclamationTriangleIcon, ShieldCheckIcon, ShieldExclamationIcon } from '@heroicons/react/24/outline';
-import type { RiskAssessment } from '@/types/trust-safety';
+import type { RiskScoreResult } from '@/types/trust-safety';
 
 interface RiskScoreDisplayProps {
-  assessment: RiskAssessment;
+  assessment: RiskScoreResult;
   showDetails?: boolean;
 }
 

@@ -35,8 +35,9 @@ export default function GroupsList({
     if (!matchesSearch) return false;
 
     // Type filter
+    const groupId = group.id || group.groupId;
     if (filter === 'my-groups') {
-      return userGroupIds.includes(group.id);
+      return userGroupIds.includes(groupId);
     } else if (filter === 'public') {
       return group.privacy === 'public';
     }
@@ -44,7 +45,7 @@ export default function GroupsList({
     return true;
   });
 
-  const myGroupsCount = groups.filter(g => userGroupIds.includes(g.id)).length;
+  const myGroupsCount = groups.filter(g => userGroupIds.includes(g.id || g.groupId)).length;
   const publicGroupsCount = groups.filter(g => g.privacy === 'public').length;
 
   if (groups.length === 0) {
@@ -119,16 +120,19 @@ export default function GroupsList({
       {/* Groups Grid */}
       {filteredGroups.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredGroups.map((group) => (
-            <GroupCard
-              key={group.id}
-              group={group}
-              isMember={userGroupIds.includes(group.id)}
-              onJoin={onJoinGroup}
-              onLeave={onLeaveGroup}
-              onClick={onViewGroup}
-            />
-          ))}
+          {filteredGroups.map((group) => {
+            const groupId = group.id || group.groupId;
+            return (
+              <GroupCard
+                key={groupId}
+                group={group}
+                isMember={userGroupIds.includes(groupId)}
+                onJoin={onJoinGroup}
+                onLeave={onLeaveGroup}
+                onClick={onViewGroup}
+              />
+            );
+          })}
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">

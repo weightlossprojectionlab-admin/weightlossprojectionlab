@@ -40,10 +40,10 @@ export default function CaseList({ cases, onViewCase }: CaseListProps) {
   });
 
   // Calculate stats
-  const pendingCount = cases.filter(c => c.status === 'pending').length;
-  const underReviewCount = cases.filter(c => c.status === 'under_review').length;
-  const escalatedCount = cases.filter(c => c.status === 'escalated').length;
-  const resolvedCount = cases.filter(c => c.status === 'resolved').length;
+  const pendingCount = cases.filter(c => c.status === 'new' || c.status === 'triage').length;
+  const underReviewCount = cases.filter(c => c.status === 'under_review' || c.status === 'awaiting_evidence').length;
+  const escalatedCount = cases.filter(c => c.status === 'needs_manager').length;
+  const resolvedCount = cases.filter(c => c.status === 'resolved' || c.status === 'closed').length;
 
   // Calculate overdue cases
   const overdueCount = cases.filter(c => {

@@ -337,7 +337,7 @@ export async function checkInactiveMember(groupId: string): Promise<void> {
       if (!memberDoc.exists) continue;
 
       const memberData = memberDoc.data() as GroupMember;
-      const lastActive = memberData.lastActiveAt.toDate();
+      const lastActive = (memberData.lastActiveAt as any).toDate();
 
       if (lastActive < inactiveThreshold) {
         // Member is inactive, create recovery mission
@@ -458,7 +458,7 @@ export async function recordSupportAction(
 
       if (targetMemberDoc.exists) {
         const targetMember = targetMemberDoc.data() as GroupMember;
-        const lastActive = targetMember.lastActiveAt.toDate();
+        const lastActive = (targetMember.lastActiveAt as any).toDate();
         const recentlyActive =
           Date.now() - lastActive.getTime() < 24 * 60 * 60 * 1000; // Last 24 hours
 

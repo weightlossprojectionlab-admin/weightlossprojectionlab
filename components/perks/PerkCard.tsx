@@ -5,18 +5,20 @@
 'use client';
 
 import { GiftIcon, TagIcon, CalendarIcon } from '@heroicons/react/24/outline';
-import type { SponsorPerk } from '@/types/perks';
+import { timestampToDate, formatTimestamp } from '@/lib/timestamp';
+import type { Perk } from '@/types/perks';
 
 interface PerkCardProps {
-  perk: SponsorPerk;
+  perk: Perk;
   isEligible?: boolean;
   isRedeemed?: boolean;
   onRedeem?: (perkId: string) => void;
 }
 
 export default function PerkCard({ perk, isEligible = false, isRedeemed = false, onRedeem }: PerkCardProps) {
-  const isExpired = perk.expiresAt ? new Date(perk.expiresAt) < new Date() : false;
+  const isExpired = perk.expiresAt ? timestampToDate(perk.expiresAt) < new Date() : false;
   const isAvailable = !isRedeemed && !isExpired && isEligible;
+  const perkId = perk.id || perk.perkId;
 
   return (
     <div className={`border rounded-lg p-5 transition-all hover:shadow-md ${
@@ -76,7 +78,7 @@ export default function PerkCard({ perk, isEligible = false, isRedeemed = false,
         <div className="flex items-center space-x-2 mb-4 text-sm">
           <CalendarIcon className="h-4 w-4 text-gray-500" />
           <span className={isExpired ? 'text-red-600' : 'text-gray-600'}>
-            {isExpired ? 'Expired' : 'Expires'} {new Date(perk.expiresAt).toLocaleDateString()}
+            {isExpired ? 'Expired' : 'Expires'} {formatTimestamp(perk.expiresAt)}
           </span>
         </div>
       )}
@@ -105,7 +107,7 @@ export default function PerkCard({ perk, isEligible = false, isRedeemed = false,
       {/* Action Button */}
       {isAvailable && onRedeem && (
         <button
-          onClick={() => onRedeem(perk.id)}
+          onClick={() => onRedeem(perkId)}
           className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
         >
           Redeem Perk

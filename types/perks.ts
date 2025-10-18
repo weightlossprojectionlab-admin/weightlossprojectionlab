@@ -9,25 +9,29 @@ export type RedemptionStatus = 'active' | 'used' | 'expired' | 'revoked';
 
 export interface Perk {
   perkId: string;
+  id?: string;             // Alias for perkId for UI components
   partnerId: string;
-  partnerName: string;
+  partnerName?: string;    // Optional alias for partnerName
+  sponsorName?: string;    // Display name for sponsor
   partnerLogo?: string;
   title: string;
-  description: string;
-  value: string;           // "$10 off", "Free month", "20% discount"
-  tier: PerkTier;
-  redemptionType: RedemptionType;
+  description?: string;
+  value?: string;          // "$10 off", "Free month", "20% discount"
+  discountCode?: string;   // Optional discount code for display
+  xpRequired?: number;     // XP required to unlock this perk
+  tier?: PerkTier;
+  redemptionType?: RedemptionType;
   redemptionUrl?: string;
   webhookUrl?: string;
   termsUrl?: string;
-  maxRedemptionsPerUser: number;
+  maxRedemptionsPerUser?: number;
   totalAvailable?: number;
   remainingCount?: number;
-  expiresAt: Timestamp;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  enabled: boolean;
-  category: string;        // "Fitness", "Nutrition", "Wellness", etc.
+  expiresAt?: Timestamp;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+  enabled?: boolean;
+  category?: string;       // "Fitness", "Nutrition", "Wellness", etc.
   imageUrl?: string;
 }
 

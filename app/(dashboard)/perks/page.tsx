@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { timestampToDate } from '@/lib/timestamp';
 import PerkCard from '@/components/perks/PerkCard';
 import RedemptionForm from '@/components/perks/RedemptionForm';
 import EligibilityBadge from '@/components/perks/EligibilityBadge';
@@ -132,12 +133,12 @@ export default function PerksPage() {
       {perks.length > 0 ? (
         <div className="space-y-6">
           {/* Available Perks */}
-          {perks.some(p => !redeemedPerkIds.includes(p.perkId) && (!p.expiresAt || new Date(p.expiresAt.seconds * 1000) > new Date())) && (
+          {perks.some(p => !redeemedPerkIds.includes(p.perkId) && (!p.expiresAt || timestampToDate(p.expiresAt) > new Date())) && (
             <div>
               <h2 className="text-xl font-bold mb-4">Available Perks</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {perks
-                  .filter(p => !redeemedPerkIds.includes(p.perkId) && (!p.expiresAt || new Date(p.expiresAt.seconds * 1000) > new Date()))
+                  .filter(p => !redeemedPerkIds.includes(p.perkId) && (!p.expiresAt || timestampToDate(p.expiresAt) > new Date()))
                   .map((perk) => (
                     <PerkCard
                       key={perk.perkId}

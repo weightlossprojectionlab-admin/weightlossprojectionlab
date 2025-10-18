@@ -129,7 +129,7 @@ export const registerBiometric = async (userId: string, userEmail: string): Prom
   const challenge = generateChallenge()
 
   const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
-    challenge,
+    challenge: challenge as BufferSource,
     rp: {
       name: 'Weight Loss Progress Lab',
       id: window.location.hostname,
@@ -215,7 +215,7 @@ export const authenticateBiometric = async (userId: string): Promise<boolean> =>
   const challenge = generateChallenge()
 
   const publicKeyCredentialRequestOptions: PublicKeyCredentialRequestOptions = {
-    challenge,
+    challenge: challenge as BufferSource,
     allowCredentials: [
       {
         id: base64urlToArrayBuffer(credentialId),

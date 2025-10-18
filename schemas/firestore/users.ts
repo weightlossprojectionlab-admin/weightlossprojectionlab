@@ -23,6 +23,10 @@ export interface CoachingStatus {
   humanCoachUnlockedAt: Timestamp | null;
   lastAnalyzedAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
+  eligibilityScore?: number; // 0-100 score for UI display
+  readinessSignals?: string[]; // Array of active readiness signals
+  activeAICoach?: string; // Name of active AI coach (e.g., 'AISA')
+  lastCoachInteraction?: Timestamp | FieldValue; // Last time user interacted with coach
 }
 
 /**
@@ -39,6 +43,11 @@ export interface AICoachPlan {
   nextReviewAt: Timestamp | FieldValue;
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
+  dailyActions?: string[]; // Daily action items for the user
+  motivationalMessage?: string; // Personalized motivational message
+  goalFocus?: string; // This week's primary goal focus
+  generatedAt?: Timestamp | FieldValue; // When the plan was generated
+  confidence?: number; // AI confidence score (0-1)
 }
 
 /**

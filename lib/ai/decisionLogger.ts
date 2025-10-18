@@ -22,7 +22,7 @@ export async function logAIDecision(
 
     const logEntry: AIDecisionLog = {
       decisionId,
-      timestamp: Timestamp.now(),
+      timestamp: Timestamp.now() as any,
       ...decision,
     };
 

@@ -6,6 +6,7 @@
 
 import { CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
 import type { CoachingStatus as CoachingStatusType } from '@/schemas/firestore/users';
+import { formatTimestamp } from '@/lib/timestamp';
 
 interface CoachingStatusProps {
   status: CoachingStatusType | null;
@@ -81,7 +82,7 @@ export default function CoachingStatus({ status, isEligible, hasActiveCoach }: C
       {/* Last Coach Interaction */}
       {status.lastCoachInteraction && (
         <div className="mt-3 text-sm text-gray-600">
-          Last interaction: {new Date(status.lastCoachInteraction).toLocaleDateString()}
+          Last interaction: {formatTimestamp(status.lastCoachInteraction)}
         </div>
       )}
 

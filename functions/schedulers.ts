@@ -113,58 +113,16 @@ export const SCHEDULERS = {
 
 /**
  * Example: Firebase Functions implementation
- * Uncomment and adapt when deploying to Firebase Functions
+ * These are example implementations commented out for reference.
+ * Uncomment and adapt when deploying to Firebase Functions.
+ *
+ * Example functions would use firebase-functions and schedule jobs like:
+ * - scheduledAnalyzeUserProgress: runs at 02:00 UTC daily
+ * - scheduledDeliverNudges: runs every 10 minutes
+ * - scheduledAssignWeeklyMissions: runs Monday 07:00 UTC
+ * - scheduledCalculateTrustScores: runs at 03:00 UTC daily
+ * - scheduledCheckInactiveMembers: runs at 09:00 UTC daily
  */
-/*
-import * as functions from 'firebase-functions';
-
-// Nightly user progress analysis (02:00 UTC)
-export const scheduledAnalyzeUserProgress = functions.pubsub
-  .schedule('0 2 * * *')
-  .timeZone('UTC')
-  .onRun(async (context) => {
-    // Get all users and process
-    const usersSnapshot = await adminDb.collection('users').get();
-    const promises = usersSnapshot.docs.map(doc =>
-      analyzeUserProgress(doc.id).catch(err => {
-        console.error(`Failed for ${doc.id}:`, err);
-      })
-    );
-    await Promise.all(promises);
-  });
-
-// Nudge delivery (every 10 minutes)
-export const scheduledDeliverNudges = functions.pubsub
-  .schedule('*/10 * * * *')
-  .timeZone('UTC')
-  .onRun(async (context) => {
-    await deliverNudges();
-  });
-
-// Weekly mission assignment (Monday 07:00 UTC)
-export const scheduledAssignWeeklyMissions = functions.pubsub
-  .schedule('0 7 * * 1')
-  .timeZone('UTC')
-  .onRun(async (context) => {
-    await assignWeeklyMissionsToAllUsers();
-  });
-
-// Daily trust score calculation (03:00 UTC)
-export const scheduledCalculateTrustScores = functions.pubsub
-  .schedule('0 3 * * *')
-  .timeZone('UTC')
-  .onRun(async (context) => {
-    await calculateAllTrustScores();
-  });
-
-// Check inactive members (09:00 UTC)
-export const scheduledCheckInactiveMembers = functions.pubsub
-  .schedule('0 9 * * *')
-  .timeZone('UTC')
-  .onRun(async (context) => {
-    await checkAllInactiveMembers();
-  });
-*/
 
 /**
  * Manual trigger functions for testing

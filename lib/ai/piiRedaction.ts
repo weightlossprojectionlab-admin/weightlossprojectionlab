@@ -93,7 +93,7 @@ export function redactFields<T extends Record<string, any>>(
   data: T,
   fieldsToRedact: string[]
 ): T {
-  const redacted = { ...data };
+  const redacted = { ...data } as any;
 
   for (const field of fieldsToRedact) {
     if (field in redacted && typeof redacted[field] === 'string') {
@@ -102,7 +102,7 @@ export function redactFields<T extends Record<string, any>>(
     }
   }
 
-  return redacted;
+  return redacted as T;
 }
 
 /**

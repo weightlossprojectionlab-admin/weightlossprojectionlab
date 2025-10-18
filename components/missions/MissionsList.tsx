@@ -5,6 +5,7 @@
 'use client';
 
 import { useState } from 'react';
+import { timestampToDate } from '@/lib/timestamp';
 import MissionCard from './MissionCard';
 import type { UserMission } from '@/schemas/firestore/missions';
 
@@ -39,7 +40,7 @@ export default function MissionsList({
                (difficultyOrder[a.difficulty as keyof typeof difficultyOrder] || 0);
       case 'recent':
       default:
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return timestampToDate(b.createdAt).getTime() - timestampToDate(a.createdAt).getTime();
     }
   });
 
@@ -129,13 +130,16 @@ export default function MissionsList({
       {/* Missions Grid */}
       {sortedMissions.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sortedMissions.map((mission) => (
-            <MissionCard
-              key={mission.id}
-              mission={mission}
-              onComplete={onCompleteMission}
-            />
-          ))}
+          {sortedMissions.map((mission) => {
+            const missionId = mission.id || mission.missionId;
+            return (
+              <MissionCard
+                key={missionId}
+                mission={mission}
+                onComplete={onCompleteMission}
+              />
+            );
+          })}
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">

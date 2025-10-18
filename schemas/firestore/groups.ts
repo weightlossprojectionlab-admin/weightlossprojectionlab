@@ -14,8 +14,13 @@ export type GroupMissionStatus = 'active' | 'completed' | 'failed' | 'expired';
  */
 export interface Group {
   groupId: string;
+  id?: string; // Alias for groupId for UI components
   name: string;
   memberIds: string[];
+  maxMembers?: number; // Maximum allowed members (default 50)
+  privacy?: 'public' | 'private'; // Group privacy setting
+  description?: string; // Group description
+  activeMissionId?: string; // ID of currently active group mission
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
 }

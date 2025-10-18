@@ -93,6 +93,7 @@ export interface RiskSignal {
     | 'off_platform_mention';
   weight: number;
   detected: boolean;
+  description?: string;    // Human-readable description of the signal
   metadata?: Record<string, any>;
 }
 
@@ -149,6 +150,7 @@ export interface DisputeCase extends Omit<ModerationCase, 'caseId'> {
   signals: RiskSignal[];   // Risk signals from assessment
   recommendation: 'refund_full' | 'refund_partial' | 'deny' | 'review_manual';
   confidence: number;      // 0.0-1.0
+  rationale?: string;      // Explanation for the recommendation
   createdAt: any;          // Allow both Timestamp and Date
   updatedAt: any;
   resolvedAt?: any;

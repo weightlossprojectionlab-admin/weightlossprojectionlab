@@ -6,10 +6,10 @@
 
 import { useState } from 'react';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
-import type { SponsorPerk } from '@/types/perks';
+import type { Perk } from '@/types/perks';
 
 interface RedemptionFormProps {
-  perk: SponsorPerk;
+  perk: Perk;
   onRedeem: (perkId: string, email: string) => Promise<{ success: boolean; message: string }>;
   onCancel?: () => void;
 }
@@ -18,6 +18,7 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const perkId = perk.id || perk.perkId;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +28,7 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
     setResult(null);
 
     try {
-      const response = await onRedeem(perk.id, email);
+      const response = await onRedeem(perkId, email);
       setResult(response);
 
       if (response.success) {

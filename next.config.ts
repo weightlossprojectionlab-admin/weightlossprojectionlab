@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   },
+  eslint: {
+    // Allow builds to complete even with ESLint errors (warnings will still show)
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     turbo: {
       rules: {

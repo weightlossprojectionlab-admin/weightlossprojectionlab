@@ -6,6 +6,7 @@
 
 import { CalendarIcon, ClockIcon } from '@heroicons/react/24/outline';
 import type { AICoachPlan as AICoachPlanType } from '@/schemas/firestore/users';
+import { timestampToDate, formatTimestamp } from '@/lib/timestamp';
 
 interface AICoachPlanProps {
   plan: AICoachPlanType | null;
@@ -27,7 +28,7 @@ export default function AICoachPlan({ plan }: AICoachPlanProps) {
   }
 
   const currentDate = new Date();
-  const planEndDate = new Date(plan.endDate);
+  const planEndDate = timestampToDate(plan.endDate);
   const isExpired = currentDate > planEndDate;
 
   return (
@@ -37,7 +38,7 @@ export default function AICoachPlan({ plan }: AICoachPlanProps) {
         <div>
           <h3 className="text-xl font-bold text-gray-900 mb-1">Your Weekly Plan</h3>
           <p className="text-sm text-gray-600">
-            {new Date(plan.startDate).toLocaleDateString()} - {new Date(plan.endDate).toLocaleDateString()}
+            {formatTimestamp(plan.startDate)} - {formatTimestamp(plan.endDate)}
           </p>
         </div>
         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
@@ -72,7 +73,7 @@ export default function AICoachPlan({ plan }: AICoachPlanProps) {
       {plan.motivationalMessage && (
         <div className="mt-6 pt-6 border-t border-gray-200">
           <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
-            <p className="text-sm text-blue-900 italic">"{plan.motivationalMessage}"</p>
+            <p className="text-sm text-blue-900 italic">&ldquo;{plan.motivationalMessage}&rdquo;</p>
           </div>
         </div>
       )}
@@ -80,7 +81,7 @@ export default function AICoachPlan({ plan }: AICoachPlanProps) {
       {/* Goal Focus */}
       {plan.goalFocus && (
         <div className="mt-4">
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">This Week's Focus</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">This Week&apos;s Focus</h4>
           <p className="text-sm text-gray-900">{plan.goalFocus}</p>
         </div>
       )}
@@ -89,7 +90,7 @@ export default function AICoachPlan({ plan }: AICoachPlanProps) {
       <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
         <div className="flex items-center space-x-1">
           <ClockIcon className="h-4 w-4" />
-          <span>Generated {new Date(plan.generatedAt).toLocaleDateString()}</span>
+          <span>Generated {formatTimestamp(plan.generatedAt)}</span>
         </div>
         {plan.confidence && (
           <span>Confidence: {Math.round(plan.confidence * 100)}%</span>

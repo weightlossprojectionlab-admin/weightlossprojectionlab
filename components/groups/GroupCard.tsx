@@ -5,6 +5,7 @@
 'use client';
 
 import { UsersIcon, LockClosedIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
+import { formatTimestamp } from '@/lib/timestamp';
 import type { Group } from '@/schemas/firestore/groups';
 
 interface GroupCardProps {
@@ -20,11 +21,12 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
   const maxMembers = group.maxMembers || 50;
   const isFull = memberCount >= maxMembers;
   const isPrivate = group.privacy === 'private';
+  const groupIdToUse = group.id || group.groupId;
 
   return (
     <div
       className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-lg transition-all cursor-pointer"
-      onClick={() => onClick?.(group.id)}
+      onClick={() => onClick?.(groupIdToUse)}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
@@ -51,7 +53,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
         </div>
         {group.createdAt && (
           <span className="text-xs">
-            Created {new Date(group.createdAt).toLocaleDateString()}
+            Created {formatTimestamp(group.createdAt)}
           </span>
         )}
       </div>
@@ -87,7 +89,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onClick?.(group.id);
+                onClick?.(groupIdToUse);
               }}
               className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
             >
@@ -97,7 +99,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onLeave(group.id);
+                  onLeave(groupIdToUse);
                 }}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
               >
@@ -111,7 +113,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onJoin(group.id);
+                  onJoin(groupIdToUse);
                 }}
                 className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
               >
@@ -128,7 +130,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onClick?.(group.id);
+                  onClick?.(groupIdToUse);
                 }}
                 className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
               >

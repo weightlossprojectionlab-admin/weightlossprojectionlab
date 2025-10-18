@@ -1,7 +1,7 @@
-import { initializeApp, getApps } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
-import { getStorage } from 'firebase/storage'
+import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
+import { getAuth, type Auth } from 'firebase/auth'
+import { getFirestore, type Firestore } from 'firebase/firestore'
+import { getStorage, type FirebaseStorage } from 'firebase/storage'
 
 // Firebase configuration with fallback values
 const firebaseConfig = {
@@ -24,7 +24,9 @@ try {
 }
 
 // Initialize Firebase services with error handling
-let auth, db, storage
+let auth: Auth
+let db: Firestore
+let storage: FirebaseStorage
 
 try {
   auth = getAuth(app)

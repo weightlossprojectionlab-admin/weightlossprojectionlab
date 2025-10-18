@@ -5,6 +5,7 @@
 'use client';
 
 import { CheckCircleIcon, ClockIcon, TrophyIcon } from '@heroicons/react/24/outline';
+import { formatTimestamp } from '@/lib/timestamp';
 import type { UserMission } from '@/schemas/firestore/missions';
 
 interface MissionCardProps {
@@ -14,10 +15,11 @@ interface MissionCardProps {
 
 export default function MissionCard({ mission, onComplete }: MissionCardProps) {
   const progress = mission.progress || 0;
-  const target = mission.target || 100;
+  const target = mission.targetProgress || 100;
   const progressPercent = Math.min((progress / target) * 100, 100);
   const isCompleted = mission.status === 'completed';
   const isActive = mission.status === 'active';
+  const missionId = mission.id || mission.missionId;
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -65,7 +67,7 @@ export default function MissionCard({ mission, onComplete }: MissionCardProps) {
         {mission.expiresAt && !isCompleted && (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
             <ClockIcon className="h-3 w-3 mr-1" />
-            Expires {new Date(mission.expiresAt).toLocaleDateString()}
+            Expires {formatTimestamp(mission.expiresAt)}
           </span>
         )}
       </div>
@@ -89,7 +91,7 @@ export default function MissionCard({ mission, onComplete }: MissionCardProps) {
       {/* Action Button */}
       {isActive && onComplete && progressPercent >= 100 && (
         <button
-          onClick={() => onComplete(mission.id)}
+          onClick={() => onComplete(missionId)}
           className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
         >
           Complete Mission
@@ -98,7 +100,7 @@ export default function MissionCard({ mission, onComplete }: MissionCardProps) {
 
       {isCompleted && mission.completedAt && (
         <div className="text-sm text-green-700 font-medium">
-          ✓ Completed {new Date(mission.completedAt).toLocaleDateString()}
+          ✓ Completed {formatTimestamp(mission.completedAt)}
         </div>
       )}
     </div>
