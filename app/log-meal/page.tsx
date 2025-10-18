@@ -46,7 +46,29 @@ function LogMealContent() {
 
   const handleCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file) {
+      console.log('No file selected')
+      return
+    }
+
+    console.log('File selected:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      lastModified: file.lastModified
+    })
+
+    // Validate file is an image
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image too large. Please select an image under 10MB.')
+      return
+    }
 
     // Clean up previous object URL to prevent memory leak
     if (imageObjectUrl) {
@@ -60,6 +82,8 @@ function LogMealContent() {
     // Convert file to base64 for AI analysis only
     const reader = new FileReader()
     fileReaderRef.current = reader
+
+    console.log('Starting FileReader...')
 
     reader.onloadend = () => {
       const base64Image = reader.result as string
@@ -80,12 +104,29 @@ function LogMealContent() {
     }
 
     reader.onerror = (error) => {
-      console.error('FileReader error:', error)
-      alert('Failed to read image file. Please try again.')
+      console.error('FileReader error event:', error)
+      console.error('FileReader error details:', {
+        error: reader.error,
+        errorName: reader.error?.name,
+        errorMessage: reader.error?.message,
+        readyState: reader.readyState
+      })
+      alert(`Failed to read image file: ${reader.error?.message || 'Unknown error'}. Please try again.`)
       fileReaderRef.current = null
     }
 
+    reader.onabort = () => {
+      console.warn('FileReader aborted')
+      fileReaderRef.current = null
+    }
+
+    reader.onload = () => {
+      console.log('FileReader onload fired')
+    }
+
+    console.log('Calling readAsDataURL...')
     reader.readAsDataURL(file)
+    console.log('readAsDataURL called, readyState:', reader.readyState)
   }
 
   const analyzeImage = async (imageData: string) => {
