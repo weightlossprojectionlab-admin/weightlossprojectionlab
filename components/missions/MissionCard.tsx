@@ -24,29 +24,29 @@ export default function MissionCard({ mission, onComplete }: MissionCardProps) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'easy':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success-light text-success-dark';
       case 'medium':
         return 'bg-yellow-100 text-yellow-800';
       case 'hard':
-        return 'bg-red-100 text-red-800';
+        return 'bg-error-light text-error-dark';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-foreground';
     }
   };
 
   return (
     <div className={`border rounded-lg p-5 transition-all hover:shadow-md ${
-      isCompleted ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+      isCompleted ? 'bg-success-light border-success' : 'bg-white border-border'
     }`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+          <h3 className="text-lg font-semibold text-foreground flex items-center space-x-2">
             <span>{mission.title}</span>
-            {isCompleted && <CheckCircleIcon className="h-5 w-5 text-green-600" />}
+            {isCompleted && <CheckCircleIcon className="h-5 w-5 text-success-dark" />}
           </h3>
           {mission.description && (
-            <p className="text-sm text-gray-600 mt-1">{mission.description}</p>
+            <p className="text-sm text-muted-foreground mt-1">{mission.description}</p>
           )}
         </div>
       </div>
@@ -76,12 +76,12 @@ export default function MissionCard({ mission, onComplete }: MissionCardProps) {
       {!isCompleted && target > 0 && (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm font-medium text-gray-700">Progress</span>
-            <span className="text-sm text-gray-600">{progress} / {target}</span>
+            <span className="text-sm font-medium text-foreground">Progress</span>
+            <span className="text-sm text-muted-foreground">{progress} / {target}</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+          <div className="w-full bg-muted-dark rounded-full h-2.5 overflow-hidden">
             <div
-              className="h-full bg-blue-600 rounded-full transition-all duration-500"
+              className="h-full bg-primary rounded-full transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -92,14 +92,14 @@ export default function MissionCard({ mission, onComplete }: MissionCardProps) {
       {isActive && onComplete && progressPercent >= 100 && (
         <button
           onClick={() => onComplete(missionId)}
-          className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          className="w-full bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-hover transition-colors"
         >
           Complete Mission
         </button>
       )}
 
       {isCompleted && mission.completedAt && (
-        <div className="text-sm text-green-700 font-medium">
+        <div className="text-sm text-success-dark font-medium">
           ✓ Completed {formatTimestamp(mission.completedAt)}
         </div>
       )}

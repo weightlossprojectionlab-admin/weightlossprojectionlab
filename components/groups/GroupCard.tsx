@@ -25,28 +25,28 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
 
   return (
     <div
-      className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-lg transition-all cursor-pointer"
+      className="bg-white border border-border rounded-lg p-5 hover:shadow-lg transition-all cursor-pointer"
       onClick={() => onClick?.(groupIdToUse)}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-1">
-            <h3 className="text-lg font-bold text-gray-900">{group.name}</h3>
+            <h3 className="text-lg font-bold text-foreground">{group.name}</h3>
             {isPrivate ? (
-              <LockClosedIcon className="h-4 w-4 text-gray-500" title="Private Group" />
+              <LockClosedIcon className="h-4 w-4 text-muted-foreground" title="Private Group" />
             ) : (
-              <GlobeAltIcon className="h-4 w-4 text-gray-500" title="Public Group" />
+              <GlobeAltIcon className="h-4 w-4 text-muted-foreground" title="Public Group" />
             )}
           </div>
           {group.description && (
-            <p className="text-sm text-gray-600 line-clamp-2">{group.description}</p>
+            <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
           )}
         </div>
       </div>
 
       {/* Stats */}
-      <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600">
+      <div className="flex items-center space-x-4 mb-4 text-sm text-muted-foreground">
         <div className="flex items-center space-x-1">
           <UsersIcon className="h-4 w-4" />
           <span>{memberCount} / {maxMembers} members</span>
@@ -60,11 +60,11 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
 
       {/* Mission Info */}
       {group.activeMissionId && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-          <div className="text-xs font-semibold text-blue-900 uppercase tracking-wide mb-1">
+        <div className="bg-accent-light border border-accent rounded-lg p-3 mb-4">
+          <div className="text-xs font-semibold text-accent-dark uppercase tracking-wide mb-1">
             Active Mission
           </div>
-          <div className="text-sm text-blue-800">
+          <div className="text-sm text-accent-dark">
             Group mission in progress
           </div>
         </div>
@@ -72,10 +72,10 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
 
       {/* Member Status Bar */}
       <div className="mb-4">
-        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div className="w-full bg-muted-dark rounded-full h-2 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all ${
-              isFull ? 'bg-red-500' : 'bg-green-500'
+              isFull ? 'bg-error-dark' : 'bg-success'
             }`}
             style={{ width: `${Math.min((memberCount / maxMembers) * 100, 100)}%` }}
           />
@@ -91,7 +91,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
                 e.stopPropagation();
                 onClick?.(groupIdToUse);
               }}
-              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="flex-1 bg-accent-dark text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-dark transition-colors"
             >
               View Group
             </button>
@@ -101,7 +101,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
                   e.stopPropagation();
                   onLeave(groupIdToUse);
                 }}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors"
               >
                 Leave
               </button>
@@ -115,14 +115,14 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
                   e.stopPropagation();
                   onJoin(groupIdToUse);
                 }}
-                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                className="flex-1 bg-success text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-success-dark transition-colors"
               >
                 {isPrivate ? 'Request to Join' : 'Join Group'}
               </button>
             ) : isFull ? (
               <button
                 disabled
-                className="flex-1 bg-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed"
+                className="flex-1 bg-muted-dark text-muted-foreground px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed"
               >
                 Group Full
               </button>
@@ -132,7 +132,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
                   e.stopPropagation();
                   onClick?.(groupIdToUse);
                 }}
-                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                className="flex-1 bg-muted text-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted-dark transition-colors"
               >
                 View Details
               </button>

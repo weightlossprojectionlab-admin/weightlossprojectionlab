@@ -27,7 +27,7 @@ function MealGalleryContent() {
   ] as const
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-background">
       <PageHeader
         title="Meal Gallery"
         backHref="/dashboard"
@@ -37,13 +37,13 @@ function MealGalleryContent() {
         {/* Filter Controls */}
         <div className="mb-6 card">
           <div className="flex items-center space-x-2 overflow-x-auto">
-            <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter:</span>
+            <span className="text-sm font-medium text-foreground whitespace-nowrap">Filter:</span>
             <button
               onClick={() => setFilterMealType('all')}
               className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
                 filterMealType === 'all'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-primary text-white'
+                  : 'bg-muted text-foreground hover:bg-muted-dark'
               }`}
             >
               All ({mealsWithPhotos.length})
@@ -56,8 +56,8 @@ function MealGalleryContent() {
                   onClick={() => setFilterMealType(type.id)}
                   className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
                     filterMealType === type.id
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-primary text-white'
+                      : 'bg-muted text-foreground hover:bg-muted-dark'
                   }`}
                 >
                   {type.emoji} {type.label} ({count})
@@ -76,16 +76,16 @@ function MealGalleryContent() {
           </div>
         ) : mealsWithPhotos.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-lg">
-            <div className="w-20 h-20 mx-auto mb-4 bg-indigo-50 rounded-full flex items-center justify-center">
+            <div className="w-20 h-20 mx-auto mb-4 bg-primary-light rounded-full flex items-center justify-center">
               <span className="text-4xl">📸</span>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No meal photos yet</h3>
-            <p className="text-sm text-gray-600 mb-6">
+            <h3 className="text-lg font-medium text-foreground mb-2">No meal photos yet</h3>
+            <p className="text-sm text-muted-foreground mb-6">
               Start logging meals with photos to build your gallery!
             </p>
             <Link
               href="/log-meal"
-              className="inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700"
+              className="inline-block bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary-hover"
             >
               Log Your First Meal
             </Link>
@@ -104,7 +104,7 @@ function MealGalleryContent() {
                 <div
                   key={meal.id}
                   onClick={() => setSelectedMeal(meal)}
-                  className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
+                  className="group relative aspect-square bg-muted rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
                 >
                   <img
                     src={meal.photoUrl}
@@ -150,7 +150,7 @@ function MealGalleryContent() {
 
             <div className="grid md:grid-cols-2">
               {/* Image */}
-              <div className="bg-gray-900">
+              <div className="bg-background">
                 <img
                   src={selectedMeal.photoUrl}
                   alt={`${selectedMeal.mealType} meal`}
@@ -161,17 +161,17 @@ function MealGalleryContent() {
               {/* Details */}
               <div className="p-6 overflow-y-auto max-h-[70vh]">
                 {selectedMeal.title && (
-                  <h2 className="text-2xl font-bold text-gray-900 mb-3">{selectedMeal.title}</h2>
+                  <h2 className="text-2xl font-bold text-foreground mb-3">{selectedMeal.title}</h2>
                 )}
                 <div className="flex items-center space-x-2 mb-4">
                   <span className="text-3xl">
                     {mealTypes.find(t => t.id === selectedMeal.mealType)?.emoji || '🍽️'}
                   </span>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-700 capitalize">
+                    <h3 className="text-lg font-semibold text-foreground capitalize">
                       {selectedMeal.mealType}
                     </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       {new Date(selectedMeal.loggedAt).toLocaleDateString('en-US', {
                         weekday: 'long',
                         month: 'long',
@@ -186,26 +186,26 @@ function MealGalleryContent() {
 
                 {/* Nutrition */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
-                  <div className="bg-indigo-50 rounded-lg p-3">
-                    <div className="text-xs text-gray-600 mb-1">Calories</div>
-                    <div className="text-2xl font-bold text-indigo-600">
+                  <div className="bg-primary-light rounded-lg p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Calories</div>
+                    <div className="text-2xl font-bold text-primary">
                       {selectedMeal.totalCalories || 0}
                     </div>
                   </div>
-                  <div className="bg-green-50 rounded-lg p-3">
-                    <div className="text-xs text-gray-600 mb-1">Protein</div>
-                    <div className="text-2xl font-bold text-green-600">
+                  <div className="bg-success-light rounded-lg p-3">
+                    <div className="text-xs text-muted-foreground mb-1">Protein</div>
+                    <div className="text-2xl font-bold text-success">
                       {selectedMeal.macros?.protein || 0}g
                     </div>
                   </div>
                   <div className="bg-orange-50 rounded-lg p-3">
-                    <div className="text-xs text-gray-600 mb-1">Carbs</div>
+                    <div className="text-xs text-muted-foreground mb-1">Carbs</div>
                     <div className="text-2xl font-bold text-orange-600">
                       {selectedMeal.macros?.carbs || 0}g
                     </div>
                   </div>
                   <div className="bg-yellow-50 rounded-lg p-3">
-                    <div className="text-xs text-gray-600 mb-1">Fat</div>
+                    <div className="text-xs text-muted-foreground mb-1">Fat</div>
                     <div className="text-2xl font-bold text-yellow-600">
                       {selectedMeal.macros?.fat || 0}g
                     </div>
@@ -215,10 +215,10 @@ function MealGalleryContent() {
                 {/* Food Items */}
                 {selectedMeal.aiAnalysis?.foodItems && selectedMeal.aiAnalysis.foodItems.length > 0 && (
                   <div className="mb-6">
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">Detected Foods</h3>
+                    <h3 className="text-sm font-medium text-foreground mb-2">Detected Foods</h3>
                     <ul className="space-y-1">
                       {selectedMeal.aiAnalysis.foodItems.map((item: any, idx: number) => (
-                        <li key={idx} className="text-sm text-gray-600">• {typeof item === 'string' ? item : item.name}</li>
+                        <li key={idx} className="text-sm text-muted-foreground">• {typeof item === 'string' ? item : item.name}</li>
                       ))}
                     </ul>
                   </div>
@@ -227,10 +227,10 @@ function MealGalleryContent() {
                 {/* AI Suggestions */}
                 {selectedMeal.aiAnalysis?.suggestions && selectedMeal.aiAnalysis.suggestions.length > 0 && (
                   <div className="mb-6">
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">AI Suggestions</h3>
+                    <h3 className="text-sm font-medium text-foreground mb-2">AI Suggestions</h3>
                     <ul className="space-y-1">
                       {selectedMeal.aiAnalysis.suggestions.map((suggestion: string, idx: number) => (
-                        <li key={idx} className="text-sm text-green-600">💡 {suggestion}</li>
+                        <li key={idx} className="text-sm text-success">💡 {suggestion}</li>
                       ))}
                     </ul>
                   </div>
@@ -239,8 +239,8 @@ function MealGalleryContent() {
                 {/* Notes */}
                 {selectedMeal.notes && (
                   <div className="mb-6">
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">Notes</h3>
-                    <p className="text-sm text-gray-600 italic">{selectedMeal.notes}</p>
+                    <h3 className="text-sm font-medium text-foreground mb-2">Notes</h3>
+                    <p className="text-sm text-muted-foreground italic">{selectedMeal.notes}</p>
                   </div>
                 )}
 
@@ -248,7 +248,7 @@ function MealGalleryContent() {
                 <div className="flex space-x-3">
                   <Link
                     href="/log-meal"
-                    className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg text-center hover:bg-indigo-700"
+                    className="flex-1 bg-primary text-white px-4 py-2 rounded-lg text-center hover:bg-primary-hover"
                   >
                     Go to Meal Log
                   </Link>

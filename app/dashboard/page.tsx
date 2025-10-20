@@ -160,8 +160,8 @@ function DashboardContent() {
       <div className="container-narrow py-6 space-y-6">
         {loading || loadingMeals ? (
           <div className="text-center py-12">
-            <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-gray-600 mt-4">Loading your dashboard...</p>
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+            <p className="text-muted-foreground mt-4">Loading your dashboard...</p>
           </div>
         ) : (
           <>
@@ -228,7 +228,7 @@ function DashboardContent() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-gray-500 mb-4">Weight data will be set during onboarding</p>
+                  <p className="text-muted-foreground mb-4">Weight data will be set during onboarding</p>
                 </div>
               )}
             </div>

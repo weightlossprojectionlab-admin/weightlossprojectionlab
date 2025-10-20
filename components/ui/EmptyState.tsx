@@ -20,10 +20,10 @@ export function EmptyState({
   secondaryActionHref
 }: EmptyStateProps) {
   return (
-    <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+    <div className="bg-gradient-to-r from-muted to-muted-dark border-2 border-dashed border-border rounded-lg p-8 text-center">
       <div className="text-5xl mb-3 opacity-40">{icon}</div>
-      <h3 className="text-lg font-bold text-gray-700 mb-2">{title}</h3>
-      <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">{description}</p>
+      <h3 className="text-lg font-bold text-foreground mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">{description}</p>
 
       {(actionLabel || secondaryActionLabel) && (
         <div className="flex flex-col sm:flex-row gap-3 justify-center">

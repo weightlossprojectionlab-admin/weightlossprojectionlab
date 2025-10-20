@@ -505,7 +505,7 @@ export default function AuthPage() {
               >
                 {biometricLoading ? (
                   <span className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin w-5 h-5 border-2 border-gray-600 border-t-transparent rounded-full" />
+                    <div className="animate-spin w-5 h-5 border-2 border-muted-foreground border-t-transparent rounded-full" />
                     <span>Authenticating...</span>
                   </span>
                 ) : (
@@ -538,7 +538,7 @@ export default function AuthPage() {
             >
               {loading ? (
                 <span className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin w-5 h-5 border-2 border-accent border-t-transparent rounded-full" />
+                  <div className="animate-spin w-5 h-5 border-2 border-accent-dark border-t-transparent rounded-full" />
                   <span>Signing in...</span>
                 </span>
               ) : (

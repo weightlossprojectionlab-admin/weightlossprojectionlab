@@ -98,10 +98,10 @@ export default function PermissionRequestModal({
             <>
               {/* Benefits */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Benefits:</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">Benefits:</h3>
                 <ul className="space-y-2">
                   {rationale.benefits.map((benefit, index) => (
-                    <li key={index} className="flex items-start space-x-2 text-sm text-gray-700">
+                    <li key={index} className="flex items-start space-x-2 text-sm text-foreground">
                       <span className="text-success mt-0.5">✓</span>
                       <span>{benefit}</span>
                     </li>
@@ -124,8 +124,8 @@ export default function PermissionRequestModal({
 
               {/* Mobile Reminder */}
               {mobile && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-xs text-blue-800">
+                <div className="bg-accent-light border border-accent rounded-lg p-4">
+                  <p className="text-xs text-accent-dark">
                     <strong>Note:</strong> Your browser will show a permission prompt. Please tap "Allow" to enable {typeName.toLowerCase()}.
                   </p>
                 </div>
@@ -163,7 +163,7 @@ export default function PermissionRequestModal({
                 <button
                   onClick={onClose}
                   disabled={isRequesting}
-                  className="w-full text-sm text-gray-600 hover:text-gray-800 py-2"
+                  className="w-full text-sm text-muted-foreground hover:text-foreground py-2"
                   aria-label="Close dialog"
                 >
                   Maybe later
@@ -187,13 +187,13 @@ export default function PermissionRequestModal({
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">How to Enable:</h3>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-700 whitespace-pre-line">{instructions}</p>
+                  <h3 className="text-sm font-semibold text-foreground mb-2">How to Enable:</h3>
+                  <div className="bg-muted rounded-lg p-4">
+                    <p className="text-sm text-foreground whitespace-pre-line">{instructions}</p>
                   </div>
                 </div>
 
-                <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+                <ol className="text-sm text-foreground space-y-2 list-decimal list-inside">
                   <li>Follow the instructions above to access your settings</li>
                   <li>Find the {typeName.toLowerCase()} permission setting</li>
                   <li>Enable/Allow {typeName.toLowerCase()} access</li>
@@ -221,7 +221,7 @@ export default function PermissionRequestModal({
 
                   <button
                     onClick={onClose}
-                    className="w-full text-sm text-gray-600 hover:text-gray-800 py-2"
+                    className="w-full text-sm text-muted-foreground hover:text-foreground py-2"
                     aria-label="Close dialog"
                   >
                     Close

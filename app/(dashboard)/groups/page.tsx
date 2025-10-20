@@ -44,8 +44,8 @@ export default function GroupsPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading groups...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-dark mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading groups...</p>
         </div>
       </div>
     );
@@ -54,9 +54,9 @@ export default function GroupsPage() {
   if (error) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h2 className="text-red-800 font-semibold mb-2">Error Loading Groups</h2>
-          <p className="text-red-600">{error}</p>
+        <div className="bg-error-light border border-error rounded-lg p-4">
+          <h2 className="text-error-dark font-semibold mb-2">Error Loading Groups</h2>
+          <p className="text-error-dark">{error}</p>
         </div>
       </div>
     );
@@ -68,11 +68,11 @@ export default function GroupsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold">Groups</h1>
-          <p className="text-gray-600 mt-1">Join groups to connect with others and complete missions together</p>
+          <p className="text-muted-foreground mt-1">Join groups to connect with others and complete missions together</p>
         </div>
         <button
           onClick={handleCreateGroup}
-          className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center space-x-2 px-4 py-2 bg-accent-dark text-white rounded-lg font-medium hover:bg-accent-dark transition-colors"
         >
           <PlusIcon className="h-5 w-5" />
           <span>Create Group</span>
@@ -81,23 +81,23 @@ export default function GroupsPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-600 mb-1">My Groups</div>
-          <div className="text-2xl font-bold text-gray-900">{userGroupIds.length}</div>
+        <div className="bg-white border border-border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-1">My Groups</div>
+          <div className="text-2xl font-bold text-foreground">{userGroupIds.length}</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-600 mb-1">Total Groups</div>
-          <div className="text-2xl font-bold text-gray-900">{groups.length}</div>
+        <div className="bg-white border border-border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-1">Total Groups</div>
+          <div className="text-2xl font-bold text-foreground">{groups.length}</div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-600 mb-1">Public Groups</div>
-          <div className="text-2xl font-bold text-gray-900">
+        <div className="bg-white border border-border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-1">Public Groups</div>
+          <div className="text-2xl font-bold text-foreground">
             {groups.filter(g => g.privacy === 'public').length}
           </div>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-600 mb-1">Total Members</div>
-          <div className="text-2xl font-bold text-gray-900">
+        <div className="bg-white border border-border rounded-lg p-4">
+          <div className="text-sm text-muted-foreground mb-1">Total Members</div>
+          <div className="text-2xl font-bold text-foreground">
             {groups.reduce((sum, g) => sum + (g.memberIds?.length || 0), 0)}
           </div>
         </div>
@@ -113,9 +113,9 @@ export default function GroupsPage() {
       />
 
       {/* Info Box */}
-      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-blue-900 mb-2">About Groups</h3>
-        <ul className="space-y-2 text-sm text-blue-800">
+      <div className="mt-8 bg-accent-light border border-accent rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-accent-dark mb-2">About Groups</h3>
+        <ul className="space-y-2 text-sm text-accent-dark">
           <li>• Join groups to connect with others on similar weight loss journeys</li>
           <li>• Complete group missions to earn bonus XP</li>
           <li>• Private groups require approval to join</li>

@@ -48,7 +48,7 @@ export default function JoinGroupButton({
     return (
       <button
         disabled
-        className={`inline-flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg font-medium cursor-default ${className}`}
+        className={`inline-flex items-center space-x-2 px-4 py-2 bg-success-light text-success-dark rounded-lg font-medium cursor-default ${className}`}
       >
         <CheckIcon className="h-5 w-5" />
         <span>Member</span>
@@ -60,7 +60,7 @@ export default function JoinGroupButton({
     return (
       <button
         disabled
-        className={`inline-flex items-center space-x-2 px-4 py-2 bg-gray-300 text-gray-600 rounded-lg font-medium cursor-not-allowed ${className}`}
+        className={`inline-flex items-center space-x-2 px-4 py-2 bg-muted-dark text-muted-foreground rounded-lg font-medium cursor-not-allowed ${className}`}
       >
         <span>Group Full</span>
       </button>
@@ -73,8 +73,8 @@ export default function JoinGroupButton({
       disabled={isLoading}
       className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
         isLoading
-          ? 'bg-blue-400 text-white cursor-wait'
-          : 'bg-blue-600 text-white hover:bg-blue-700'
+          ? 'bg-accent-dark text-white cursor-wait'
+          : 'bg-accent-dark text-white hover:bg-accent-dark'
       } ${className}`}
     >
       <UserPlusIcon className="h-5 w-5" />

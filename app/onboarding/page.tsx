@@ -1256,24 +1256,24 @@ function StepThree({
           {/* Target Weight */}
           <div className="bg-white rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Target Weight</span>
+              <span className="text-sm font-medium text-foreground">Target Weight</span>
               <span className="text-2xl font-bold text-primary">{optimalTargets.targetWeight} {data.units === 'imperial' ? 'lbs' : 'kg'}</span>
             </div>
-            <p className="text-xs text-gray-600">{optimalTargets.reasoning.targetWeightReason}</p>
+            <p className="text-xs text-muted-foreground">{optimalTargets.reasoning.targetWeightReason}</p>
           </div>
 
           {/* Weekly Weight Loss Goal */}
           <div className="bg-white rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Weekly Rate</span>
+              <span className="text-sm font-medium text-foreground">Weekly Rate</span>
               <span className="text-2xl font-bold text-primary">{optimalTargets.weeklyWeightLossGoal.toFixed(1)} lbs/week</span>
             </div>
-            <p className="text-xs text-gray-600">{optimalTargets.reasoning.weeklyGoalReason}</p>
+            <p className="text-xs text-muted-foreground">{optimalTargets.reasoning.weeklyGoalReason}</p>
           </div>
 
           {/* Safety Notice */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-xs text-blue-800">
+          <div className="bg-accent-light border border-accent rounded-lg p-3">
+            <p className="text-xs text-accent-dark">
               <strong>🔒 These targets are locked</strong> to ensure your safety and success. They're based on your BMI, age, health conditions, and activity level using evidence-based formulas.
             </p>
           </div>
@@ -1282,7 +1282,7 @@ function StepThree({
 
       {/* Projection */}
       {projection && (
-        <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4">
+        <div className="bg-muted border-2 border-border rounded-lg p-4">
           <div className="font-medium mb-2">📊 Your Timeline</div>
           <div className="text-sm space-y-1">
             <p><span className="font-medium">Estimated time:</span> {projection.estimatedWeeks} weeks (~{Math.round(projection.estimatedWeeks / 4)} months)</p>
@@ -1329,14 +1329,14 @@ function StepFour({
       {/* Daily Calories - LOCKED (Auto-Calculated) */}
       <div className="bg-primary-light border-2 border-primary rounded-lg p-5">
         <label className="text-label block mb-3">
-          Daily Calorie Goal <span className="text-xs text-gray-500 ml-2">(Auto-Calculated)</span>
+          Daily Calorie Goal <span className="text-xs text-muted-foreground ml-2">(Auto-Calculated)</span>
         </label>
         <div className="flex items-center space-x-4 mb-2">
           <input
             type="number"
             value={data.dailyCalorieGoal || ''}
             readOnly
-            className="form-input flex-1 text-lg font-semibold bg-gray-50 cursor-not-allowed"
+            className="form-input flex-1 text-lg font-semibold bg-muted cursor-not-allowed"
             placeholder="Auto-calculated"
           />
           <span className="text-muted-foreground font-medium">calories/day</span>
@@ -1349,20 +1349,20 @@ function StepFour({
 
       {/* Daily Steps - LOCKED (Auto-Calculated) */}
       {optimalTargets && (
-        <div className="bg-white border-2 border-gray-300 rounded-lg p-5">
+        <div className="bg-white border-2 border-border rounded-lg p-5">
           <label className="text-label block mb-3">
-            Daily Steps Goal <span className="text-xs text-gray-500 ml-2">(Auto-Calculated)</span>
+            Daily Steps Goal <span className="text-xs text-muted-foreground ml-2">(Auto-Calculated)</span>
           </label>
           <div className="flex items-center space-x-4 mb-2">
             <input
               type="number"
               value={optimalTargets.dailySteps}
               readOnly
-              className="form-input flex-1 text-lg font-semibold bg-gray-50 cursor-not-allowed"
+              className="form-input flex-1 text-lg font-semibold bg-muted cursor-not-allowed"
             />
             <span className="text-muted-foreground font-medium">steps/day</span>
           </div>
-          <p className="text-xs text-gray-600">{optimalTargets.reasoning.stepsReason}</p>
+          <p className="text-xs text-muted-foreground">{optimalTargets.reasoning.stepsReason}</p>
         </div>
       )}
 
@@ -1449,18 +1449,18 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <h2 className="text-red-600">⚠️ Critical Safety Information</h2>
-        <p className="text-red-600 font-semibold mt-2">
+        <h2 className="text-error">⚠️ Critical Safety Information</h2>
+        <p className="text-error font-semibold mt-2">
           This step prevents dangerous meal suggestions. Please be thorough.
         </p>
-        <div className="bg-red-50 border-2 border-red-500 rounded-lg p-4 mt-4">
-          <h3 className="font-bold text-red-900 mb-2">Why This Matters</h3>
-          <ul className="text-sm text-red-800 space-y-1 text-left list-none">
+        <div className="bg-error-light border-2 border-error rounded-lg p-4 mt-4">
+          <h3 className="font-bold text-error-dark mb-2">Why This Matters</h3>
+          <ul className="text-sm text-error-dark space-y-1 text-left list-none">
             <li>❌ Skip allergies → We might suggest peanuts to someone with severe allergy</li>
             <li>❌ Skip diabetes → We might suggest 80g carb meals causing blood sugar spikes</li>
             <li>❌ Skip dietary needs → We might suggest meat to vegetarians</li>
           </ul>
-          <p className="text-sm text-red-900 font-bold mt-3 text-center">
+          <p className="text-sm text-error-dark font-bold mt-3 text-center">
             If you skip this step, meal suggestions will NOT be personalized or safe.
           </p>
         </div>
@@ -1629,7 +1629,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
               </button>
             ))}
           </div>
-          <p className="text-xs text-gray-600 mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             These conditions are common at your BMI category and affect your calorie targets for safe weight loss.
           </p>
         </div>
@@ -1708,14 +1708,14 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
       </div>
 
       {/* Accountability Message */}
-      <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
-        <h3 className="font-medium text-red-900 mb-2">⚠️ Why Honesty Matters</h3>
-        <ul className="text-sm text-red-800 space-y-1 list-disc list-inside">
+      <div className="bg-error-light border-2 border-error rounded-lg p-4">
+        <h3 className="font-medium text-error-dark mb-2">⚠️ Why Honesty Matters</h3>
+        <ul className="text-sm text-error-dark space-y-1 list-disc list-inside">
           <li>If you have diabetes and don't tell us, we might recommend dangerously low blood sugar levels</li>
           <li>If you drink 3 beers daily but don't report it, that's 450 hidden calories</li>
           <li>If you smoke and quit mid-journey, your metabolism will drop 250 cal/day unexpectedly</li>
         </ul>
-        <p className="text-sm text-red-900 font-bold mt-3">
+        <p className="text-sm text-error-dark font-bold mt-3">
           Be honest - it's for YOUR safety and YOUR results.
         </p>
       </div>

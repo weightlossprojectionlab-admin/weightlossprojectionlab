@@ -56,10 +56,10 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
   // Don't show if case is already resolved
   if (disputeCase.status === 'resolved') {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-        <CheckCircleIcon className="h-12 w-12 text-green-600 mx-auto mb-3" />
-        <h3 className="text-lg font-semibold text-green-900 mb-1">Case Resolved</h3>
-        <p className="text-sm text-green-700">
+      <div className="bg-success-light border border-success rounded-lg p-6 text-center">
+        <CheckCircleIcon className="h-12 w-12 text-success-dark mx-auto mb-3" />
+        <h3 className="text-lg font-semibold text-success-dark mb-1">Case Resolved</h3>
+        <p className="text-sm text-success-dark">
           This case was resolved on {new Date(disputeCase.resolvedAt!).toLocaleDateString()}
         </p>
       </div>
@@ -67,8 +67,8 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">Moderation Actions</h3>
+    <div className="bg-white border border-border rounded-lg p-6">
+      <h3 className="text-lg font-bold text-foreground mb-4">Moderation Actions</h3>
 
       {!showConfirm ? (
         <div className="space-y-3">
@@ -76,13 +76,13 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
           <button
             onClick={() => handleActionClick('refund_full')}
             disabled={disabled}
-            className="w-full flex items-center justify-between px-4 py-3 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-between px-4 py-3 bg-success-light border border-success rounded-lg hover:bg-success-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="flex items-center space-x-3">
-              <CurrencyDollarIcon className="h-6 w-6 text-green-600" />
+              <CurrencyDollarIcon className="h-6 w-6 text-success-dark" />
               <div className="text-left">
-                <div className="font-semibold text-green-900">Approve Full Refund</div>
-                <div className="text-xs text-green-700">100% refund to disputing party</div>
+                <div className="font-semibold text-success-dark">Approve Full Refund</div>
+                <div className="text-xs text-success-dark">100% refund to disputing party</div>
               </div>
             </div>
           </button>
@@ -91,13 +91,13 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
           <button
             onClick={() => handleActionClick('refund_partial')}
             disabled={disabled}
-            className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-between px-4 py-3 bg-accent-light border border-accent rounded-lg hover:bg-accent-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="flex items-center space-x-3">
-              <CurrencyDollarIcon className="h-6 w-6 text-blue-600" />
+              <CurrencyDollarIcon className="h-6 w-6 text-accent-dark" />
               <div className="text-left">
-                <div className="font-semibold text-blue-900">Approve Partial Refund</div>
-                <div className="text-xs text-blue-700">50% refund to both parties</div>
+                <div className="font-semibold text-accent-dark">Approve Partial Refund</div>
+                <div className="text-xs text-accent-dark">50% refund to both parties</div>
               </div>
             </div>
           </button>
@@ -106,13 +106,13 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
           <button
             onClick={() => handleActionClick('deny')}
             disabled={disabled}
-            className="w-full flex items-center justify-between px-4 py-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-between px-4 py-3 bg-error-light border border-error rounded-lg hover:bg-error-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="flex items-center space-x-3">
-              <XCircleIcon className="h-6 w-6 text-red-600" />
+              <XCircleIcon className="h-6 w-6 text-error-dark" />
               <div className="text-left">
-                <div className="font-semibold text-red-900">Deny Dispute</div>
-                <div className="text-xs text-red-700">No refund, maintain original transaction</div>
+                <div className="font-semibold text-error-dark">Deny Dispute</div>
+                <div className="text-xs text-error-dark">No refund, maintain original transaction</div>
               </div>
             </div>
           </button>
@@ -134,11 +134,11 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
 
           {/* Recommendation Hint */}
           {disputeCase.recommendation && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="text-xs font-semibold text-blue-900 uppercase tracking-wide mb-1">
+            <div className="mt-4 p-3 bg-accent-light border border-accent rounded-lg">
+              <div className="text-xs font-semibold text-accent-dark uppercase tracking-wide mb-1">
                 AI Recommendation
               </div>
-              <div className="text-sm text-blue-800 capitalize">
+              <div className="text-sm text-accent-dark capitalize">
                 {disputeCase.recommendation.replace(/_/g, ' ')}
                 {disputeCase.confidence && (
                   <span className="ml-2 text-xs">
@@ -163,7 +163,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
 
           {/* Notes */}
           <div>
-            <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="notes" className="block text-sm font-medium text-foreground mb-2">
               Admin Notes (Required)
             </label>
             <textarea
@@ -173,7 +173,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Provide reasoning for this decision..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               disabled={isLoading}
             />
           </div>
@@ -185,8 +185,8 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
               disabled={isLoading || !notes.trim()}
               className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                 isLoading || !notes.trim()
-                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-muted-dark text-muted-foreground cursor-not-allowed'
+                  : 'bg-primary text-white hover:bg-primary-hover'
               }`}
             >
               {isLoading ? 'Processing...' : 'Confirm Action'}
@@ -194,7 +194,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
             <button
               onClick={handleCancel}
               disabled={isLoading}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+              className="px-4 py-2 border border-border text-foreground rounded-lg font-medium hover:bg-muted transition-colors disabled:opacity-50"
             >
               Cancel
             </button>

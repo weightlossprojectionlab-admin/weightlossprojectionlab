@@ -28,8 +28,8 @@ export default function ConfirmModal({
   const variantStyles = {
     danger: {
       icon: '🗑️',
-      confirmButton: 'bg-red-600 hover:bg-red-700 text-white',
-      headerBg: 'bg-red-50'
+      confirmButton: 'bg-error hover:bg-error-dark text-white',
+      headerBg: 'bg-error-light'
     },
     warning: {
       icon: '⚠️',
@@ -38,8 +38,8 @@ export default function ConfirmModal({
     },
     info: {
       icon: 'ℹ️',
-      confirmButton: 'bg-indigo-600 hover:bg-indigo-700 text-white',
-      headerBg: 'bg-indigo-50'
+      confirmButton: 'bg-primary hover:bg-primary-hover text-white',
+      headerBg: 'bg-primary-light'
     }
   }
 
@@ -55,7 +55,7 @@ export default function ConfirmModal({
       {/* Backdrop */}
       <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
           aria-hidden="true"
           onClick={onClose}
         />
@@ -76,11 +76,11 @@ export default function ConfirmModal({
                 </span>
               </div>
               <div className="ml-4 mt-0 text-left">
-                <h3 className="text-lg font-medium leading-6 text-gray-900" id="modal-title">
+                <h3 className="text-lg font-medium leading-6 text-foreground" id="modal-title">
                   {title}
                 </h3>
                 <div className="mt-2">
-                  <p className="text-sm text-gray-500 whitespace-pre-line">
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">
                     {message}
                   </p>
                 </div>
@@ -89,7 +89,7 @@ export default function ConfirmModal({
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+          <div className="bg-muted px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
             <button
               type="button"
               onClick={handleConfirm}
@@ -100,7 +100,7 @@ export default function ConfirmModal({
             <button
               type="button"
               onClick={onClose}
-              className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm"
+              className="mt-3 inline-flex w-full justify-center rounded-md border border-border bg-card px-4 py-2 text-base font-medium text-foreground shadow-sm hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm"
             >
               {cancelText}
             </button>

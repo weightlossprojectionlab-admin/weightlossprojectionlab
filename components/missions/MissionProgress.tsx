@@ -31,11 +31,11 @@ export default function MissionProgress({
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold">Mission Progress</h2>
-          <p className="text-blue-100 text-sm mt-1">Keep up the great work!</p>
+          <p className="text-primary-light text-sm mt-1">Keep up the great work!</p>
         </div>
         <div className="text-right">
           <div className="text-3xl font-bold">Level {level}</div>
-          <div className="text-xs text-blue-100">{totalXP.toLocaleString()} Total XP</div>
+          <div className="text-xs text-primary-light">{totalXP.toLocaleString()} Total XP</div>
         </div>
       </div>
 
@@ -60,7 +60,7 @@ export default function MissionProgress({
           <div className="flex flex-col items-center text-center">
             <CheckCircleIcon className="h-8 w-8 mb-2" />
             <div className="text-2xl font-bold">{completedMissions}</div>
-            <div className="text-xs text-blue-100 mt-1">Completed</div>
+            <div className="text-xs text-primary-light mt-1">Completed</div>
           </div>
         </div>
 
@@ -69,7 +69,7 @@ export default function MissionProgress({
           <div className="flex flex-col items-center text-center">
             <TrophyIcon className="h-8 w-8 mb-2" />
             <div className="text-2xl font-bold">{activeMissions}</div>
-            <div className="text-xs text-blue-100 mt-1">Active</div>
+            <div className="text-xs text-primary-light mt-1">Active</div>
           </div>
         </div>
 
@@ -78,13 +78,13 @@ export default function MissionProgress({
           <div className="flex flex-col items-center text-center">
             <FireIcon className="h-8 w-8 mb-2 text-orange-300" />
             <div className="text-2xl font-bold">{currentStreak}</div>
-            <div className="text-xs text-blue-100 mt-1">Day Streak</div>
+            <div className="text-xs text-primary-light mt-1">Day Streak</div>
           </div>
         </div>
       </div>
 
       {/* Motivational Message */}
-      <div className="mt-6 text-center text-sm text-blue-100">
+      <div className="mt-6 text-center text-sm text-primary-light">
         {currentStreak >= 7 ? (
           <span>🔥 Amazing streak! You're on fire!</span>
         ) : completedMissions >= 10 ? (

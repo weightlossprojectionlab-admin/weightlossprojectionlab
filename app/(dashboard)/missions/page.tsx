@@ -17,8 +17,8 @@ export default function MissionsPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading missions...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-dark mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading missions...</p>
         </div>
       </div>
     );
@@ -27,9 +27,9 @@ export default function MissionsPage() {
   if (missionsData.error) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h2 className="text-red-800 font-semibold mb-2">Error Loading Missions</h2>
-          <p className="text-red-600">{missionsData.error.message}</p>
+        <div className="bg-error-light border border-error rounded-lg p-4">
+          <h2 className="text-error-dark font-semibold mb-2">Error Loading Missions</h2>
+          <p className="text-error-dark">{missionsData.error.message}</p>
         </div>
       </div>
     );
@@ -94,13 +94,13 @@ export default function MissionsPage() {
       {history && history.length > 0 && (
         <div className="mt-8">
           <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div className="bg-white border border-border rounded-lg p-4">
             <div className="space-y-2">
               {history.slice(0, 5).map((item, index) => (
                 <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm font-medium text-foreground">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">
                       {item.completedAt ? new Date((item.completedAt as any).seconds * 1000).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>

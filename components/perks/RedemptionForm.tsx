@@ -48,24 +48,24 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 max-w-md mx-auto">
+    <div className="bg-white rounded-lg border border-border p-6 max-w-md mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Redeem Perk</h3>
-        <p className="text-sm text-gray-600">{perk.title}</p>
+        <h3 className="text-xl font-bold text-foreground mb-2">Redeem Perk</h3>
+        <p className="text-sm text-muted-foreground">{perk.title}</p>
       </div>
 
       {/* Perk Details */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+      <div className="bg-accent-light border border-accent rounded-lg p-4 mb-6">
         {perk.value && (
           <div className="mb-2">
-            <span className="text-sm text-blue-700 font-medium">Value: </span>
-            <span className="text-lg font-bold text-blue-900">{perk.value}</span>
+            <span className="text-sm text-accent-dark font-medium">Value: </span>
+            <span className="text-lg font-bold text-accent-dark">{perk.value}</span>
           </div>
         )}
         {perk.sponsorName && (
           <div>
-            <span className="text-sm text-blue-700">Provided by {perk.sponsorName}</span>
+            <span className="text-sm text-accent-dark">Provided by {perk.sponsorName}</span>
           </div>
         )}
       </div>
@@ -74,7 +74,7 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
       {!result && (
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
               Email Address *
             </label>
             <input
@@ -84,10 +84,10 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={isLoading}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Redemption details will be sent to this email
             </p>
           </div>
@@ -107,8 +107,8 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
               disabled={isLoading || !email}
               className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                 isLoading || !email
-                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-muted-dark text-muted-foreground cursor-not-allowed'
+                  : 'bg-accent-dark text-white hover:bg-accent-dark'
               }`}
             >
               {isLoading ? 'Redeeming...' : 'Redeem Now'}
@@ -118,7 +118,7 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
                 type="button"
                 onClick={onCancel}
                 disabled={isLoading}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-border text-foreground rounded-lg font-medium hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
@@ -130,22 +130,22 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
       {/* Result Message */}
       {result && (
         <div className={`rounded-lg p-4 ${
-          result.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+          result.success ? 'bg-success-light border border-success' : 'bg-error-light border border-error'
         }`}>
           <div className="flex items-start space-x-3">
             {result.success ? (
-              <CheckCircleIcon className="h-6 w-6 text-green-600 flex-shrink-0" />
+              <CheckCircleIcon className="h-6 w-6 text-success-dark flex-shrink-0" />
             ) : (
-              <XCircleIcon className="h-6 w-6 text-red-600 flex-shrink-0" />
+              <XCircleIcon className="h-6 w-6 text-error-dark flex-shrink-0" />
             )}
             <div className="flex-1">
               <h4 className={`font-semibold mb-1 ${
-                result.success ? 'text-green-900' : 'text-red-900'
+                result.success ? 'text-success-dark' : 'text-error-dark'
               }`}>
                 {result.success ? 'Success!' : 'Error'}
               </h4>
               <p className={`text-sm ${
-                result.success ? 'text-green-700' : 'text-red-700'
+                result.success ? 'text-success-dark' : 'text-error-dark'
               }`}>
                 {result.message}
               </p>
@@ -155,7 +155,7 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
           {result.success && onCancel && (
             <button
               onClick={onCancel}
-              className="mt-4 w-full bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
+              className="mt-4 w-full bg-success text-white px-4 py-2 rounded-lg font-medium hover:bg-success transition-colors"
             >
               Done
             </button>
@@ -164,7 +164,7 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
           {!result.success && (
             <button
               onClick={() => setResult(null)}
-              className="mt-4 w-full bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors"
+              className="mt-4 w-full bg-error-dark text-white px-4 py-2 rounded-lg font-medium hover:bg-error-dark transition-colors"
             >
               Try Again
             </button>

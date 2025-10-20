@@ -211,7 +211,7 @@ function ProfileContent() {
             >
               ← Back
             </Link>
-            <h1 className="text-xl font-semibold text-gray-900">Profile & Settings</h1>
+            <h1 className="text-xl font-semibold text-foreground">Profile & Settings</h1>
           </div>
         </div>
       </header>
@@ -246,7 +246,7 @@ function ProfileContent() {
           <div className="bg-white rounded-lg p-6 shadow-sm border-2 border-error">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-medium text-gray-900">⚠️ Dietary Information</h2>
+                <h2 className="text-lg font-medium text-foreground">⚠️ Dietary Information</h2>
                 <p className="text-sm text-error">Please confirm (select "None" if you have no restrictions)</p>
               </div>
               {!editMode && (
@@ -400,7 +400,7 @@ function ProfileContent() {
                 </div>
 
                 {/* Save/Cancel Buttons */}
-                <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                <div className="flex space-x-3 pt-4 border-t border-border">
                   <button
                     onClick={handleSaveProfile}
                     disabled={saving}
@@ -420,7 +420,7 @@ function ProfileContent() {
             ) : (
               <div className="space-y-3 text-sm">
                 <div>
-                  <label className="text-gray-500 text-xs">Dietary Preferences</label>
+                  <label className="text-muted-foreground text-xs">Dietary Preferences</label>
                   <p className="font-medium">
                     {profileData?.preferences?.dietaryPreferences?.length > 0
                       ? profileData.preferences.dietaryPreferences.join(', ')
@@ -428,7 +428,7 @@ function ProfileContent() {
                   </p>
                 </div>
                 <div>
-                  <label className="text-gray-500 text-xs">Food Allergies</label>
+                  <label className="text-muted-foreground text-xs">Food Allergies</label>
                   <p className="font-medium">
                     {profileData?.profile?.foodAllergies?.length > 0
                       ? profileData.profile.foodAllergies.join(', ')
@@ -436,7 +436,7 @@ function ProfileContent() {
                   </p>
                 </div>
                 <div>
-                  <label className="text-gray-500 text-xs">Health Conditions</label>
+                  <label className="text-muted-foreground text-xs">Health Conditions</label>
                   <p className="font-medium">
                     {profileData?.profile?.healthConditions?.length > 0
                       ? profileData.profile.healthConditions.join(', ')
@@ -450,14 +450,14 @@ function ProfileContent() {
 
         {/* Account Information */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Account Information</h2>
+          <h2 className="text-lg font-medium text-foreground mb-4">Account Information</h2>
           <div className="space-y-3">
             <div>
-              <label className="text-sm text-gray-500">Email</label>
+              <label className="text-sm text-muted-foreground">Email</label>
               <p className="font-medium">{user?.email}</p>
             </div>
             <div>
-              <label className="text-sm text-gray-500">Account Created</label>
+              <label className="text-sm text-muted-foreground">Account Created</label>
               <p className="font-medium">
                 {user?.metadata?.creationTime ?
                   new Date(user.metadata.creationTime).toLocaleDateString() :
@@ -471,7 +471,7 @@ function ProfileContent() {
         {/* Biometric Authentication Settings */}
         {mounted && (
           <div className="bg-white rounded-lg p-6 shadow-sm">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
+            <h2 className="text-lg font-medium text-foreground mb-4">
               Biometric Authentication
             </h2>
 
@@ -498,7 +498,7 @@ function ProfileContent() {
                       <p className="font-medium">
                         Touch ID / Face ID
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         {biometricEnabled ? 'Enabled' : 'Disabled'}
                       </p>
                     </div>
@@ -506,7 +506,7 @@ function ProfileContent() {
                   <div className={`w-3 h-3 rounded-full ${biometricEnabled ? 'bg-success' : 'bg-muted'}`} />
                 </div>
 
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   {biometricEnabled ?
                     'You can sign in using your fingerprint or face recognition.' :
                     'Use your fingerprint or face recognition for quick and secure sign-in.'
@@ -559,19 +559,19 @@ function ProfileContent() {
 
         {/* Privacy & Data Settings */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Privacy & Data</h2>
+          <h2 className="text-lg font-medium text-foreground mb-4">Privacy & Data</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Data Export</p>
-                <p className="text-sm text-gray-500">Download your personal data</p>
+                <p className="text-sm text-muted-foreground">Download your personal data</p>
               </div>
               <button className="btn btn-secondary">
                 📥 Export
               </button>
             </div>
 
-            <div className="border-t border-gray-200 pt-4">
+            <div className="border-t border-border pt-4">
               <div className="bg-error-light border-2 border-error rounded-lg p-4 mb-3">
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">⚠️</span>
@@ -591,7 +591,7 @@ function ProfileContent() {
               >
                 {resetLoading ? (
                   <span className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full" />
+                    <div className="animate-spin w-5 h-5 border-2 border-error border-t-transparent rounded-full" />
                     <span>Resetting...</span>
                   </span>
                 ) : (
@@ -604,7 +604,7 @@ function ProfileContent() {
 
         {/* App Settings */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">App Settings</h2>
+          <h2 className="text-lg font-medium text-foreground mb-4">App Settings</h2>
           <div className="space-y-4">
             {/* Automatic Step Tracking */}
             <div className="flex items-center justify-between">
@@ -618,7 +618,7 @@ function ProfileContent() {
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   {stepTrackingEnabled ? 'Counting steps in background' : 'Count steps automatically using device sensors'}
                 </p>
               </div>
@@ -629,25 +629,25 @@ function ProfileContent() {
                   checked={stepTrackingEnabled}
                   onChange={handleToggleStepTracking}
                 />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Notifications</p>
-                <p className="text-sm text-gray-500">Daily reminders and achievements</p>
+                <p className="text-sm text-muted-foreground">Daily reminders and achievements</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" defaultChecked />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Weight Units</p>
-                <p className="text-sm text-gray-500">Pounds or kilograms</p>
+                <p className="text-sm text-muted-foreground">Pounds or kilograms</p>
               </div>
               <select className="form-input text-sm">
                 <option value="lbs">Pounds (lbs)</option>

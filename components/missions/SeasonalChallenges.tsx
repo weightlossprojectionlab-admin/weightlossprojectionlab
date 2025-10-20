@@ -18,8 +18,8 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
     return (
       <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-8 text-center">
         <SparklesIcon className="h-12 w-12 text-purple-400 mx-auto mb-3" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Seasonal Challenges</h3>
-        <p className="text-sm text-gray-600">Check back for special seasonal events and challenges!</p>
+        <h3 className="text-lg font-medium text-foreground mb-2">No Active Seasonal Challenges</h3>
+        <p className="text-sm text-muted-foreground">Check back for special seasonal events and challenges!</p>
       </div>
     );
   }
@@ -28,7 +28,7 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
     <div className="space-y-4">
       <div className="flex items-center space-x-2 mb-4">
         <SparklesIcon className="h-6 w-6 text-purple-600" />
-        <h2 className="text-xl font-bold text-gray-900">Seasonal Challenges</h2>
+        <h2 className="text-xl font-bold text-foreground">Seasonal Challenges</h2>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -52,16 +52,16 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
                 isActive
                   ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200'
                   : isUpcoming
-                  ? 'bg-blue-50 border-blue-200'
-                  : 'bg-gray-50 border-gray-200'
+                  ? 'bg-accent-light border-accent'
+                  : 'bg-muted border-border'
               }`}
             >
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-gray-900 mb-1">{challenge.title || challenge.name}</h3>
+                  <h3 className="text-lg font-bold text-foreground mb-1">{challenge.title || challenge.name}</h3>
                   {challenge.description && (
-                    <p className="text-sm text-gray-600">{challenge.description}</p>
+                    <p className="text-sm text-muted-foreground">{challenge.description}</p>
                   )}
                 </div>
                 <span
@@ -69,8 +69,8 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
                     isActive
                       ? 'bg-purple-600 text-white'
                       : isUpcoming
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-400 text-white'
+                      ? 'bg-primary text-white'
+                      : 'bg-muted-foreground text-white'
                   }`}
                 >
                   {isActive ? 'Active' : isUpcoming ? 'Upcoming' : 'Ended'}
@@ -78,7 +78,7 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
               </div>
 
               {/* Dates */}
-              <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600">
+              <div className="flex items-center space-x-4 mb-4 text-sm text-muted-foreground">
                 <div className="flex items-center space-x-1">
                   <CalendarIcon className="h-4 w-4" />
                   <span>{formatTimestamp(challenge.startDate)} - {formatTimestamp(challenge.endDate)}</span>
@@ -93,7 +93,7 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
               {/* Rewards */}
               {challenge.rewards && (
                 <div className="bg-white rounded-lg p-3 mb-4">
-                  <div className="text-sm font-medium text-gray-700 mb-2">Rewards:</div>
+                  <div className="text-sm font-medium text-foreground mb-2">Rewards:</div>
                   <div className="flex flex-wrap gap-2">
                     {challenge.rewards.xp && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
@@ -111,7 +111,7 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
 
               {/* Participants */}
               {challenge.participantCount !== undefined && (
-                <div className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
                   <UsersIcon className="h-4 w-4" />
                   <span>{challenge.participantCount.toLocaleString()} participants</span>
                 </div>
@@ -128,13 +128,13 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
               )}
 
               {isUpcoming && (
-                <div className="text-center text-sm text-blue-700 font-medium py-2">
+                <div className="text-center text-sm text-accent-dark font-medium py-2">
                   Coming Soon!
                 </div>
               )}
 
               {isEnded && (
-                <div className="text-center text-sm text-gray-500 font-medium py-2">
+                <div className="text-center text-sm text-muted-foreground font-medium py-2">
                   Challenge Ended
                 </div>
               )}
