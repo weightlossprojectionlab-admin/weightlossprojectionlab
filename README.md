@@ -6,10 +6,11 @@ An AI-powered weight loss tracking application built with Next.js 15, featuring 
 
 WLPL v2 is a simplified, mobile-first weight loss tracking app that focuses on core functionality without enterprise complexity. This version includes:
 
-- **AI-Powered Meal Analysis**: Take photos of meals for instant nutrition estimates using OpenAI Vision
+- **AI-Powered Meal Analysis**: Take photos of meals for instant nutrition estimates using Google Gemini Vision
 - **Biometric Authentication**: Secure login with Touch ID/Face ID using WebAuthn
 - **Mobile-First Design**: Fully responsive with WCAG 2.1 AA accessibility compliance
 - **Simplified Firebase Backend**: Clean, flat database structure without enterprise features
+- **Modern UX**: Toast notifications and custom confirmation modals for better user experience
 
 ## 🏗️ Architecture
 
@@ -22,13 +23,13 @@ WLPL v2 is a simplified, mobile-first weight loss tracking app that focuses on c
 ### Backend Stack
 - **Firebase Firestore** (simplified flat collections)
 - **Firebase Authentication** + WebAuthn for biometrics
-- **OpenAI GPT-4 Vision API** for meal image analysis
+- **Google Gemini 2.5 Flash API** for meal image analysis (free tier: 500 req/day)
 - **USDA FoodData Central API** for nutrition data
 
 ### Key Features
 - ✅ Biometric authentication (Touch ID/Face ID)
 - ✅ Camera-based meal logging with AI analysis
-- ✅ Weight tracking with unit conversion
+- ✅ Initial weight capture during onboarding (accountability model)
 - ✅ Step counting with device integration
 - ✅ Mobile-optimized dashboard
 - ✅ ARIA accessibility compliance
@@ -51,7 +52,6 @@ weightlossprojectlab/
 │   ├── auth/                 # Authentication pages
 │   ├── dashboard/            # Main dashboard
 │   ├── log-meal/             # Meal logging with camera
-│   ├── log-weight/           # Weight tracking
 │   ├── log-steps/            # Step counting
 │   └── api/                  # API routes
 │       └── ai/
@@ -71,7 +71,7 @@ weightlossprojectlab/
 - Node.js 18+
 - npm or yarn
 - Firebase project (configured)
-- OpenAI API key (for meal analysis)
+- Google Gemini API key (free tier available)
 
 ### Installation
 
@@ -81,11 +81,27 @@ weightlossprojectlab/
    ```
 
 2. **Environment Setup**
-   The `.env.local` file is already configured with your Firebase credentials. You need to add:
+
+   ⚠️ **IMPORTANT: Never commit `.env.local` to git!** It contains sensitive API keys.
+
+   Copy the example file and add your API keys:
    ```bash
-   # Add to .env.local
-   OPENAI_API_KEY=your-openai-api-key
+   cp .env.local.example .env.local
+   ```
+
+   Then edit `.env.local` and add your credentials:
+   ```bash
+   # Required: Google Gemini API key (get free key at https://makersuite.google.com/app/apikey)
+   GEMINI_API_KEY=your-gemini-api-key
+
+   # Optional: USDA Food Data API key
    USDA_API_KEY=your-usda-api-key
+
+   # Firebase credentials (get from Firebase Console)
+   NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+   # ... (see .env.local.example for full list)
    ```
 
 3. **Start Development Server**
@@ -95,6 +111,20 @@ weightlossprojectlab/
 
 4. **Open Browser**
    Navigate to `http://localhost:3000`
+
+### 🔐 Security Best Practices
+
+**API Key Management:**
+- ✅ `.env.local` is already in `.gitignore` - your keys are safe
+- ✅ Use `.env.local.example` as a template (safe to commit)
+- ❌ Never commit actual API keys to version control
+- ❌ Never share your `.env.local` file
+
+**Key Rotation (if compromised):**
+1. **Gemini API**: Revoke at https://makersuite.google.com/app/apikey
+2. **Firebase**: Generate new keys in Firebase Console > Project Settings > Service Accounts
+3. **Update `.env.local`** with new keys
+4. **Restart dev server**: `npm run dev`
 
 ### Available Scripts
 - `npm run dev` - Start development server with Turbopack
@@ -129,12 +159,6 @@ weightlossprojectlab/
 - Nutrition data display with confidence scoring
 - Meal type selection (breakfast, lunch, dinner, snack)
 
-### Weight Logging (`/log-weight`)
-- Simple weight entry with unit conversion
-- Progress visualization
-- Recent entries history
-- Helpful weigh-in tips
-
 ### Step Logging (`/log-steps`)
 - Device motion detection (basic)
 - Health app sync (HealthKit/Google Fit)
@@ -144,10 +168,11 @@ weightlossprojectlab/
 ## 🤖 AI Integration
 
 ### Meal Analysis API (`/api/ai/analyze-meal`)
-- Currently uses mock data for development
-- Ready for OpenAI GPT-4 Vision integration
+- **Powered by Google Gemini 2.5 Flash** (free tier: 10 req/min, 500 req/day)
+- Rate limiting implemented to stay within free tier
 - Returns: food items, calories, macros, confidence, suggestions
-- Error handling with fallback to manual entry
+- Error handling with fallback to mock data
+- Automatic fallback ensures app always works even when API limits reached
 
 ### Future AI Features
 - Personalized recommendations
@@ -181,26 +206,30 @@ weightlossprojectlab/
 - ✅ Project structure created
 - ✅ Firebase configuration completed
 - ✅ All main pages implemented
-- ✅ AI meal analysis API ready
+- ✅ **Google Gemini AI integration active** (migrated from OpenAI)
 - ✅ Mobile-first responsive design
 - ✅ Accessibility compliance
-- ⚠️ Dependencies need installation
-- ⚠️ Firebase Admin SDK needs testing
-- ⚠️ OpenAI API integration needs real key
+- ✅ **Modern UX with toast notifications and confirmation modals**
+- ✅ **Upload progress indicators**
+- ✅ Rate limiting to stay within free API tiers
+- ⚠️ Some code quality improvements needed (see code review findings)
+- ⚠️ WebAuthn biometric auth needs device testing
+- ⚠️ Health app integration needs platform-specific code
 
 ### Known Limitations
-- Mock data used for AI analysis (needs OpenAI key)
-- WebAuthn biometric auth needs device testing
-- Firebase data operations not yet implemented
-- Health app integration needs platform-specific code
+- Rate limited to 500 Gemini API requests per day (free tier)
+- WebAuthn biometric auth requires HTTPS and compatible devices
+- Health app integration (HealthKit/Google Fit) needs platform-specific native code
+- Some TypeScript `any` types need proper interfaces
 
 ### Next Steps
-1. Install dependencies successfully
-2. Add OpenAI API key for real meal analysis
-3. Implement Firebase data operations
-4. Test biometric authentication on devices
-5. Add comprehensive error handling
-6. Deploy to production
+1. ✅ ~~Migrate from OpenAI to Google Gemini~~ (DONE)
+2. ✅ ~~Add confirmation modals~~ (DONE)
+3. ✅ ~~Add upload progress spinners~~ (DONE)
+4. **Address critical security issues** (API endpoint authentication, CORS)
+5. Test biometric authentication on physical devices
+6. Implement image compression before upload
+7. Deploy to production with environment variables
 
 ## 📝 Agent Team
 
