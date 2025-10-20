@@ -197,6 +197,161 @@ border-border
 <div className="border border-border">
 ```
 
+### Color Contrast Guidelines
+
+**⚠️ CRITICAL: Understanding Color Suffixes**
+
+Our design system uses specific suffixes with semantic meanings. Using them incorrectly causes invisible text in light mode, dark mode, or both.
+
+#### Color Suffix Semantics
+
+```
+Base color (e.g., primary, accent, success)
+├─ DEFAULT: The main color (e.g., bg-primary)
+├─ -foreground: Text color for use ON the base color background
+│   └─ Example: text-primary-foreground on bg-primary
+├─ -light: LIGHT BACKGROUND color variant (NOT for text!)
+│   ├─ Light mode: 85% lightness (very light background)
+│   ├─ Dark mode: 20% lightness (very dark background)
+│   └─ Example: bg-primary-light for subtle backgrounds
+└─ -dark: DARKER variant for emphasis/hover states
+    └─ Example: bg-primary-dark, text-primary-dark
+```
+
+#### ❌ CRITICAL MISTAKE: Using -light Colors as Text
+
+**NEVER use `-light` suffix colors for text!**
+
+```tsx
+// ❌ WRONG - Invisible in both light and dark mode
+<div className="bg-gradient-to-r from-primary to-primary-dark">
+  <p className="text-primary-light">This text is invisible!</p>
+  // Light mode: 85% lightness text on colored bg = invisible
+  // Dark mode: 20% lightness text on colored bg = invisible
+</div>
+
+// ✅ CORRECT - Use -foreground for text on colored backgrounds
+<div className="bg-gradient-to-r from-primary to-primary-dark">
+  <p className="text-primary-foreground">Visible in both modes!</p>
+</div>
+```
+
+#### WCAG Contrast Requirements
+
+All text must meet **WCAG AA** standards (4.5:1 contrast ratio for normal text, 3:1 for large text).
+
+**✅ Approved Text/Background Combinations:**
+
+```tsx
+// Light backgrounds (bg-card, bg-background, bg-muted)
+text-foreground          // Dark text on light background (WCAG AAA)
+text-muted-foreground    // Medium gray on light background (WCAG AA)
+
+// Colored backgrounds (bg-primary, bg-accent, bg-success, etc.)
+text-primary-foreground  // White on primary background (WCAG AAA)
+text-accent-foreground   // White on accent background (WCAG AAA)
+text-success-foreground  // White on success background (WCAG AAA)
+
+// Light colored backgrounds (bg-*-light)
+text-primary-dark        // Dark color on primary-light background (WCAG AA)
+text-accent-dark         // Dark color on accent-light background (WCAG AA)
+text-success-dark        // Dark color on success-light background (WCAG AA)
+```
+
+**❌ Forbidden Combinations (Fail Contrast):**
+
+```tsx
+// ❌ Using -light colors as text
+text-primary-light       // Too light in light mode, too dark in dark mode
+text-accent-light        // Same problem
+text-success-light       // Same problem
+
+// ❌ Using base colors as text on light backgrounds
+text-primary             // Insufficient contrast on bg-card
+text-accent              // Insufficient contrast on bg-background
+
+// ❌ Using -foreground colors on light backgrounds
+text-primary-foreground  // White text on white background = invisible
+```
+
+#### Contrast Examples
+
+**✅ Good Contrast (Cards & Backgrounds):**
+```tsx
+// Default card
+<div className="bg-card text-foreground">
+  <h3 className="text-foreground">Visible title</h3>
+  <p className="text-muted-foreground">Visible subtitle</p>
+</div>
+
+// Info box
+<div className="bg-accent-light border border-accent rounded-lg p-4">
+  <p className="text-accent-dark">High contrast info message</p>
+</div>
+
+// Success message
+<div className="bg-success-light rounded-lg p-3">
+  <p className="text-success-dark">High contrast success message</p>
+</div>
+```
+
+**✅ Good Contrast (Colored Backgrounds):**
+```tsx
+// Primary button
+<button className="bg-primary text-primary-foreground">
+  Click Me
+</button>
+
+// Gradient header
+<div className="bg-gradient-to-r from-primary to-primary-dark text-white">
+  <h2 className="text-xl font-bold">Title</h2>
+  <p className="text-white">Subtitle text</p> {/* NOT text-primary-light! */}
+</div>
+
+// Badge
+<span className="bg-success text-success-foreground rounded px-2 py-1">
+  Active
+</span>
+```
+
+**❌ Bad Contrast (Common Mistakes):**
+```tsx
+// ❌ Using -light as text color
+<div className="bg-primary p-4">
+  <p className="text-primary-light">Invisible!</p>
+</div>
+
+// ❌ White text on white background
+<div className="bg-card p-4">
+  <p className="text-primary-foreground">Invisible in light mode!</p>
+</div>
+
+// ❌ Colored text on light background
+<div className="bg-card p-4">
+  <p className="text-primary">Low contrast, fails WCAG</p>
+</div>
+```
+
+#### Manual Theme Toggle Support
+
+The design system now supports manual theme switching via the `data-theme` attribute:
+
+```tsx
+// Set light mode manually (overrides system preference)
+document.documentElement.setAttribute('data-theme', 'light')
+
+// Set dark mode manually (overrides system preference)
+document.documentElement.setAttribute('data-theme', 'dark')
+
+// Remove manual theme (use system preference)
+document.documentElement.removeAttribute('data-theme')
+```
+
+**Theme Priority:**
+1. `data-theme="light"` → Force light mode
+2. `data-theme="dark"` → Force dark mode
+3. No `data-theme` → Follow system preference (`prefers-color-scheme`)
+
 ### Health-Specific Colors
 
 ```tsx

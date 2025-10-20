@@ -83,7 +83,7 @@ function LogStepsContent() {
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-card shadow-sm">
         <div className="mx-auto max-w-md px-4 py-4">
           <div className="flex items-center space-x-4">
             <Link
@@ -100,7 +100,7 @@ function LogStepsContent() {
 
       <div className="mx-auto max-w-md px-4 py-6 space-y-6">
         {/* Automatic Tracking Card - PRIMARY */}
-        <div className={`border rounded-lg p-6 shadow-sm ${isEnabled ? 'bg-success-light border-success' : 'bg-white border-border'}`}>
+        <div className={`border rounded-lg p-6 shadow-sm ${isEnabled ? 'bg-success-light border-success' : 'bg-card border-border'}`}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-foreground">Today's Steps</h2>
             {isEnabled && isTracking && (
@@ -207,7 +207,7 @@ function LogStepsContent() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
+        <div className="bg-card rounded-lg p-6 shadow-sm">
           <h3 className="text-lg font-medium text-foreground mb-4">Recent Activity</h3>
 
           {loadingLogs ? (

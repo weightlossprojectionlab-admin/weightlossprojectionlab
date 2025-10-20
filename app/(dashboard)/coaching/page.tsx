@@ -101,7 +101,7 @@ export default function CoachingPage() {
 
         {/* Pending Nudges/Actions */}
         {coachingData.actions.length > 0 && (
-          <div className="bg-white rounded-lg border border-border p-6 mt-6">
+          <div className="bg-card rounded-lg border border-border p-6 mt-6">
             <h2 className="text-xl font-semibold mb-4">Upcoming Reminders</h2>
             <div className="space-y-2">
               {coachingData.actions.map((nudge) => (

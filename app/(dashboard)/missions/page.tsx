@@ -94,7 +94,7 @@ export default function MissionsPage() {
       {history && history.length > 0 && (
         <div className="mt-8">
           <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
-          <div className="bg-white border border-border rounded-lg p-4">
+          <div className="bg-card border border-border rounded-lg p-4">
             <div className="space-y-2">
               {history.slice(0, 5).map((item, index) => (
                 <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">

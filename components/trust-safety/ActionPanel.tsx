@@ -67,7 +67,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
   }
 
   return (
-    <div className="bg-white border border-border rounded-lg p-6">
+    <div className="bg-card border border-border rounded-lg p-6">
       <h3 className="text-lg font-bold text-foreground mb-4">Moderation Actions</h3>
 
       {!showConfirm ? (

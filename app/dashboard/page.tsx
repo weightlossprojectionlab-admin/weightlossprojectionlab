@@ -561,7 +561,7 @@ function DashboardContent() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-4 mb-4">
+                <div className="bg-card rounded-lg p-4 mb-4">
                   <h3 className="font-medium text-amber-900 mb-2">💡 What This Means</h3>
                   <ul className="text-sm text-amber-800 space-y-1 list-disc list-inside">
                     <li>Your body may have adapted to your current calorie intake</li>

@@ -15,7 +15,7 @@ interface AICoachPlanProps {
 export default function AICoachPlan({ plan }: AICoachPlanProps) {
   if (!plan) {
     return (
-      <div className="bg-white border border-border rounded-lg p-6">
+      <div className="bg-card border border-border rounded-lg p-6">
         <div className="text-center py-8">
           <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
           <h3 className="text-lg font-medium text-foreground mb-2">No Active Plan</h3>
@@ -32,7 +32,7 @@ export default function AICoachPlan({ plan }: AICoachPlanProps) {
   const isExpired = currentDate > planEndDate;
 
   return (
-    <div className="bg-white border border-border rounded-lg p-6">
+    <div className="bg-card border border-border rounded-lg p-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>

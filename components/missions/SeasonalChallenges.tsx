@@ -92,7 +92,7 @@ export default function SeasonalChallenges({ challenges, onJoinChallenge }: Seas
 
               {/* Rewards */}
               {challenge.rewards && (
-                <div className="bg-white rounded-lg p-3 mb-4">
+                <div className="bg-card rounded-lg p-3 mb-4">
                   <div className="text-sm font-medium text-foreground mb-2">Rewards:</div>
                   <div className="flex flex-wrap gap-2">
                     {challenge.rewards.xp && (

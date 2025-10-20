@@ -48,7 +48,7 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
   };
 
   return (
-    <div className="bg-white rounded-lg border border-border p-6 max-w-md mx-auto">
+    <div className="bg-card rounded-lg border border-border p-6 max-w-md mx-auto">
       {/* Header */}
       <div className="mb-6">
         <h3 className="text-xl font-bold text-foreground mb-2">Redeem Perk</h3>

@@ -41,7 +41,7 @@ export default function CaseCard({ case: disputeCase, onClick }: CaseCardProps) 
   return (
     <div
       className={`border rounded-lg p-5 hover:shadow-md transition-all cursor-pointer ${
-        isHighPriority ? 'border-error bg-error-light' : 'bg-white border-border'
+        isHighPriority ? 'border-error bg-error-light' : 'bg-card border-border'
       }`}
       onClick={() => onClick?.(disputeCase.id)}
     >
@@ -85,7 +85,7 @@ export default function CaseCard({ case: disputeCase, onClick }: CaseCardProps) 
 
       {/* Recommendation */}
       {disputeCase.recommendation && (
-        <div className="bg-white border border-accent rounded-lg p-3 mb-4">
+        <div className="bg-card border border-accent rounded-lg p-3 mb-4">
           <div className="text-xs font-semibold text-accent-dark uppercase tracking-wide mb-1">
             Recommended Action
           </div>

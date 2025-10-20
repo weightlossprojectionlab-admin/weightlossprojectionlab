@@ -201,7 +201,7 @@ function ProfileContent() {
       <ConfirmDialog />
       <main className="min-h-screen bg-background">
         {/* Header */}
-        <header className="bg-white shadow-sm">
+        <header className="bg-card shadow-sm">
         <div className="mx-auto max-w-md px-4 py-4">
           <div className="flex items-center space-x-4">
             <Link
@@ -243,7 +243,7 @@ function ProfileContent() {
 
         {/* Safety Information - MOST IMPORTANT */}
         {profileData && (
-          <div className="bg-white rounded-lg p-6 shadow-sm border-2 border-error">
+          <div className="bg-card rounded-lg p-6 shadow-sm border-2 border-error">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-lg font-medium text-foreground">⚠️ Dietary Information</h2>
@@ -449,7 +449,7 @@ function ProfileContent() {
         )}
 
         {/* Account Information */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
+        <div className="bg-card rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground mb-4">Account Information</h2>
           <div className="space-y-3">
             <div>
@@ -470,7 +470,7 @@ function ProfileContent() {
 
         {/* Biometric Authentication Settings */}
         {mounted && (
-          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="bg-card rounded-lg p-6 shadow-sm">
             <h2 className="text-lg font-medium text-foreground mb-4">
               Biometric Authentication
             </h2>
@@ -558,7 +558,7 @@ function ProfileContent() {
         )}
 
         {/* Privacy & Data Settings */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
+        <div className="bg-card rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground mb-4">Privacy & Data</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -603,7 +603,7 @@ function ProfileContent() {
         </div>
 
         {/* App Settings */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
+        <div className="bg-card rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground mb-4">App Settings</h2>
           <div className="space-y-4">
             {/* Automatic Step Tracking */}
@@ -629,7 +629,7 @@ function ProfileContent() {
                   checked={stepTrackingEnabled}
                   onChange={handleToggleStepTracking}
                 />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
@@ -640,7 +640,7 @@ function ProfileContent() {
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" defaultChecked />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
@@ -658,7 +658,7 @@ function ProfileContent() {
         </div>
 
         {/* Sign Out */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
+        <div className="bg-card rounded-lg p-6 shadow-sm">
           <button
             onClick={handleSignOut}
             className="btn btn-secondary w-full text-error border-error hover:bg-error-light"

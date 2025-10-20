@@ -82,7 +82,7 @@ export default function RiskScoreDisplay({ assessment, showDetails = true }: Ris
 
       {/* Recommendation */}
       {recommendation && (
-        <div className="bg-white rounded-lg border border-border p-4 mb-4">
+        <div className="bg-card rounded-lg border border-border p-4 mb-4">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-1">
@@ -112,7 +112,7 @@ export default function RiskScoreDisplay({ assessment, showDetails = true }: Ris
             {signals
               .sort((a, b) => b.weight - a.weight)
               .map((signal, index) => (
-                <div key={index} className="bg-white rounded-lg border border-border p-3">
+                <div key={index} className="bg-card rounded-lg border border-border p-3">
                   <div className="flex items-start justify-between mb-1">
                     <span className="text-sm font-medium text-foreground capitalize">
                       {signal.signal.replace(/_/g, ' ')}

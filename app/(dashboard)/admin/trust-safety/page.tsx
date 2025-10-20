@@ -100,7 +100,7 @@ export default function TrustSafetyAdminPage() {
             {/* Case Details */}
             <div className="lg:col-span-2 space-y-6">
               {/* Case Info */}
-              <div className="bg-white border border-border rounded-lg p-6">
+              <div className="bg-card border border-border rounded-lg p-6">
                 <h2 className="text-xl font-bold mb-4">Case #{selectedCase.id.slice(0, 8)}</h2>
 
                 <div className="space-y-4">

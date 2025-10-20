@@ -36,7 +36,7 @@ export default function MissionCard({ mission, onComplete }: MissionCardProps) {
 
   return (
     <div className={`border rounded-lg p-5 transition-all hover:shadow-md ${
-      isCompleted ? 'bg-success-light border-success' : 'bg-white border-border'
+      isCompleted ? 'bg-success-light border-success' : 'bg-card border-border'
     }`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-3">

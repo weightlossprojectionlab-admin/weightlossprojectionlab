@@ -75,7 +75,7 @@ function MealGalleryContent() {
             ))}
           </div>
         ) : mealsWithPhotos.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-lg">
+          <div className="text-center py-20 bg-card rounded-lg">
             <div className="w-20 h-20 mx-auto mb-4 bg-primary-light rounded-full flex items-center justify-center">
               <span className="text-4xl">📸</span>
             </div>
@@ -138,7 +138,7 @@ function MealGalleryContent() {
           onClick={() => setSelectedMeal(null)}
         >
           <div
-            className="relative max-w-4xl w-full bg-white rounded-lg overflow-hidden"
+            className="relative max-w-4xl w-full bg-card rounded-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <button

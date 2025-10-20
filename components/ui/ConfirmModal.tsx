@@ -66,7 +66,7 @@ export default function ConfirmModal({
         </span>
 
         {/* Modal panel */}
-        <div className="inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
+        <div className="inline-block transform overflow-hidden rounded-lg bg-card text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
           {/* Header */}
           <div className={`px-6 pt-5 pb-4 ${styles.headerBg}`}>
             <div className="flex items-start">

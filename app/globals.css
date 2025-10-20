@@ -75,8 +75,9 @@
   --progress-bg: 210 11% 98%;
 }
 
+/* System dark mode preference (when no manual theme override) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     /* Base colors - Dark theme */
     --background: 210 11% 7%;
     --foreground: 210 11% 93%;
@@ -145,6 +146,148 @@
     --weight-accent: 142 71% 55%;
     --progress-bg: 210 11% 5%;
   }
+}
+
+/* Manual dark mode override - use: document.documentElement.setAttribute('data-theme', 'dark') */
+[data-theme="dark"] {
+  /* Base colors - Dark theme */
+  --background: 210 11% 7%;
+  --foreground: 210 11% 93%;
+  --card: 210 11% 10%;
+  --card-foreground: 210 11% 93%;
+  --popover: 210 11% 10%;
+  --popover-foreground: 210 11% 93%;
+
+  /* Health & Wellness Primary - Brighter for dark */
+  --primary: 142 71% 55%;
+  --primary-foreground: 210 11% 7%;
+  --primary-hover: 142 71% 60%;
+  --primary-light: 142 40% 20%;
+  --primary-dark: 142 71% 45%;
+
+  /* Secondary - Brighter orange for dark */
+  --secondary: 32 95% 54%;
+  --secondary-foreground: 210 11% 7%;
+  --secondary-hover: 32 95% 59%;
+  --secondary-light: 32 60% 20%;
+  --secondary-dark: 32 95% 44%;
+
+  /* Accent - Brighter blue for dark */
+  --accent: 214 84% 66%;
+  --accent-foreground: 210 11% 7%;
+  --accent-hover: 214 84% 71%;
+  --accent-light: 214 50% 20%;
+  --accent-dark: 214 84% 56%;
+
+  /* Success - Brighter green for dark */
+  --success: 120 61% 60%;
+  --success-foreground: 210 11% 7%;
+  --success-light: 120 40% 20%;
+  --success-dark: 120 61% 50%;
+
+  /* Warning - Brighter amber for dark */
+  --warning: 43 96% 66%;
+  --warning-foreground: 210 11% 7%;
+  --warning-light: 43 60% 20%;
+  --warning-dark: 43 96% 56%;
+
+  /* Error - Brighter red for dark */
+  --error: 0 72% 61%;
+  --error-foreground: 210 11% 7%;
+  --error-light: 0 40% 20%;
+  --error-dark: 0 72% 51%;
+
+  /* Neutral Grays - Dark theme */
+  --muted: 210 11% 15%;
+  --muted-foreground: 210 11% 65%;
+  --muted-dark: 210 11% 25%;
+
+  /* Borders and inputs - Dark theme */
+  --border: 210 11% 20%;
+  --input: 210 11% 20%;
+  --ring: 142 71% 55%;
+
+  /* Destructive (legacy compatibility) */
+  --destructive: 0 72% 61%;
+  --destructive-foreground: 210 11% 7%;
+
+  /* Health-specific colors - Dark theme */
+  --health-bg: 142 15% 8%;
+  --nutrition-accent: 32 95% 54%;
+  --activity-accent: 214 84% 66%;
+  --weight-accent: 142 71% 55%;
+  --progress-bg: 210 11% 5%;
+}
+
+/* Manual light mode override - use: document.documentElement.setAttribute('data-theme', 'light') */
+[data-theme="light"] {
+  /* Base colors */
+  --background: 0 0% 100%;
+  --foreground: 210 11% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 11% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 11% 15%;
+
+  /* Health & Wellness Primary - Fresh Green */
+  --primary: 142 71% 45%;
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 142 71% 40%;
+  --primary-light: 142 50% 85%;
+  --primary-dark: 142 71% 35%;
+
+  /* Secondary - Warm Orange/Amber */
+  --secondary: 32 95% 44%;
+  --secondary-foreground: 0 0% 100%;
+  --secondary-hover: 32 95% 39%;
+  --secondary-light: 32 95% 85%;
+  --secondary-dark: 32 95% 34%;
+
+  /* Accent - Trust Blue */
+  --accent: 214 84% 56%;
+  --accent-foreground: 0 0% 100%;
+  --accent-hover: 214 84% 51%;
+  --accent-light: 214 84% 85%;
+  --accent-dark: 214 84% 46%;
+
+  /* Success - Vibrant Green */
+  --success: 120 61% 50%;
+  --success-foreground: 0 0% 100%;
+  --success-light: 120 61% 90%;
+  --success-dark: 120 61% 40%;
+
+  /* Warning - Amber */
+  --warning: 43 96% 56%;
+  --warning-foreground: 210 11% 15%;
+  --warning-light: 43 96% 90%;
+  --warning-dark: 43 96% 46%;
+
+  /* Error - Soft Red */
+  --error: 0 72% 51%;
+  --error-foreground: 0 0% 100%;
+  --error-light: 0 72% 90%;
+  --error-dark: 0 72% 41%;
+
+  /* Neutral Grays */
+  --muted: 210 11% 96%;
+  --muted-foreground: 210 11% 46%;
+  --muted-dark: 210 11% 71%;
+
+  /* Borders and inputs */
+  --border: 210 11% 91%;
+  --input: 210 11% 91%;
+  --ring: 142 71% 45%;
+
+  /* Destructive (legacy compatibility) */
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Health-specific colors */
+  --health-bg: 142 25% 97%;
+  --nutrition-accent: 32 95% 44%;
+  --activity-accent: 214 84% 56%;
+  --weight-accent: 142 71% 45%;
+  --progress-bg: 210 11% 98%;
 }
 
 @layer base {

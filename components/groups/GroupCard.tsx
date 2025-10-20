@@ -25,7 +25,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
 
   return (
     <div
-      className="bg-white border border-border rounded-lg p-5 hover:shadow-lg transition-all cursor-pointer"
+      className="bg-card border border-border rounded-lg p-5 hover:shadow-lg transition-all cursor-pointer"
       onClick={() => onClick?.(groupIdToUse)}
     >
       {/* Header */}

@@ -114,7 +114,7 @@ export default function PerksPage() {
           <div className="relative max-w-2xl w-full">
             <button
               onClick={handleCancelRedemption}
-              className="absolute -top-2 -right-2 bg-white rounded-full p-2 shadow-lg hover:bg-muted transition-colors"
+              className="absolute -top-2 -right-2 bg-card rounded-full p-2 shadow-lg hover:bg-muted transition-colors"
             >
               <svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -172,7 +172,7 @@ export default function PerksPage() {
           )}
         </div>
       ) : (
-        <div className="bg-white border border-border rounded-lg p-12 text-center">
+        <div className="bg-card border border-border rounded-lg p-12 text-center">
           <div className="text-muted-foreground text-6xl mb-4">🎁</div>
           <h3 className="text-lg font-medium text-foreground mb-1">No Perks Available</h3>
           <p className="text-sm text-muted-foreground">

@@ -49,7 +49,7 @@ export default function MissionsList({
 
   if (missions.length === 0) {
     return (
-      <div className="bg-white border border-border rounded-lg p-12 text-center">
+      <div className="bg-card border border-border rounded-lg p-12 text-center">
         <div className="text-muted-foreground mb-3">
           <svg className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -65,7 +65,7 @@ export default function MissionsList({
     <div className="space-y-4">
       {/* Filters and Stats */}
       {showFilters && (
-        <div className="bg-white border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             {/* Stats */}
             <div className="flex items-center space-x-6">
@@ -142,7 +142,7 @@ export default function MissionsList({
           })}
         </div>
       ) : (
-        <div className="bg-white border border-border rounded-lg p-8 text-center">
+        <div className="bg-card border border-border rounded-lg p-8 text-center">
           <p className="text-muted-foreground">No missions found with the selected filter.</p>
         </div>
       )}

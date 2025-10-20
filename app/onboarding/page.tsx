@@ -1254,7 +1254,7 @@ function StepThree({
           </div>
 
           {/* Target Weight */}
-          <div className="bg-white rounded-lg p-4">
+          <div className="bg-card rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-foreground">Target Weight</span>
               <span className="text-2xl font-bold text-primary">{optimalTargets.targetWeight} {data.units === 'imperial' ? 'lbs' : 'kg'}</span>
@@ -1263,7 +1263,7 @@ function StepThree({
           </div>
 
           {/* Weekly Weight Loss Goal */}
-          <div className="bg-white rounded-lg p-4">
+          <div className="bg-card rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-foreground">Weekly Rate</span>
               <span className="text-2xl font-bold text-primary">{optimalTargets.weeklyWeightLossGoal.toFixed(1)} lbs/week</span>
@@ -1349,7 +1349,7 @@ function StepFour({
 
       {/* Daily Steps - LOCKED (Auto-Calculated) */}
       {optimalTargets && (
-        <div className="bg-white border-2 border-border rounded-lg p-5">
+        <div className="bg-card border-2 border-border rounded-lg p-5">
           <label className="text-label block mb-3">
             Daily Steps Goal <span className="text-xs text-muted-foreground ml-2">(Auto-Calculated)</span>
           </label>
@@ -1781,7 +1781,7 @@ function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data
             }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
                 data.notifications ? 'translate-x-6' : 'translate-x-1'
               }`}
             />

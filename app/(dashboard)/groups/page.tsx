@@ -81,21 +81,21 @@ export default function GroupsPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-4">
           <div className="text-sm text-muted-foreground mb-1">My Groups</div>
           <div className="text-2xl font-bold text-foreground">{userGroupIds.length}</div>
         </div>
-        <div className="bg-white border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-4">
           <div className="text-sm text-muted-foreground mb-1">Total Groups</div>
           <div className="text-2xl font-bold text-foreground">{groups.length}</div>
         </div>
-        <div className="bg-white border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-4">
           <div className="text-sm text-muted-foreground mb-1">Public Groups</div>
           <div className="text-2xl font-bold text-foreground">
             {groups.filter(g => g.privacy === 'public').length}
           </div>
         </div>
-        <div className="bg-white border border-border rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-4">
           <div className="text-sm text-muted-foreground mb-1">Total Members</div>
           <div className="text-2xl font-bold text-foreground">
             {groups.reduce((sum, g) => sum + (g.memberIds?.length || 0), 0)}

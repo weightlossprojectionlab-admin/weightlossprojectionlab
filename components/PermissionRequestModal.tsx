@@ -78,7 +78,7 @@ export default function PermissionRequestModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-card rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-gradient-to-r from-primary to-primary-dark p-6 text-white">
           <div className="flex items-center space-x-3">
@@ -87,7 +87,7 @@ export default function PermissionRequestModal({
             </span>
             <div>
               <h2 className="text-xl font-bold">{rationale.title}</h2>
-              <p className="text-sm text-primary-light mt-1">{rationale.description}</p>
+              <p className="text-sm text-white mt-1">{rationale.description}</p>
             </div>
           </div>
         </div>

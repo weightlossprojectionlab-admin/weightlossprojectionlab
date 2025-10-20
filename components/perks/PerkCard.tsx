@@ -23,8 +23,8 @@ export default function PerkCard({ perk, isEligible = false, isRedeemed = false,
   return (
     <div className={`border rounded-lg p-5 transition-all hover:shadow-md ${
       isRedeemed ? 'bg-muted border-border' :
-      isAvailable ? 'bg-white border-accent ring-2 ring-blue-100' :
-      'bg-white border-border opacity-75'
+      isAvailable ? 'bg-card border-accent ring-2 ring-blue-100' :
+      'bg-card border-border opacity-75'
     }`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-4">

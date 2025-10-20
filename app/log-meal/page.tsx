@@ -821,7 +821,7 @@ function LogMealContent() {
 
         {/* Meal Templates Panel */}
         {showTemplates && (
-          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="bg-card rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-medium text-foreground">Meal Templates</h2>
               <button
@@ -897,7 +897,7 @@ function LogMealContent() {
 
         {/* AI Analysis Results */}
         {aiAnalysis && (
-          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="bg-card rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-medium text-foreground">AI Analysis</h2>
             </div>
@@ -948,7 +948,7 @@ function LogMealContent() {
                           className={`p-2 rounded-lg border-2 transition-colors ${
                             selectedMealType === type.id
                               ? 'border-primary bg-primary-light text-primary-hover'
-                              : 'border-border hover:border-primary bg-white'
+                              : 'border-border hover:border-primary bg-card'
                           }`}
                         >
                           <div className="flex flex-col items-center space-y-1">
@@ -991,7 +991,7 @@ function LogMealContent() {
 
                       {/* Portion Adjustment Controls */}
                       {editingFoodItemIndex === index && (
-                        <div className="mb-3 p-3 bg-white rounded border border-indigo-200">
+                        <div className="mb-3 p-3 bg-card rounded border border-indigo-200">
                           <p className="text-xs text-foreground mb-2 font-medium">Adjust Portion Size</p>
                           <div className="flex items-center space-x-2 mb-3">
                             <button
@@ -1198,19 +1198,19 @@ function LogMealContent() {
               <span className="text-sm text-muted-foreground">{todaysSummary.mealCount} meal{todaysSummary.mealCount !== 1 ? 's' : ''}</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4">
+              <div className="bg-card rounded-lg p-4">
                 <div className="text-xs text-muted-foreground mb-1">Total Calories</div>
                 <div className="text-2xl font-bold text-primary">{Math.round(todaysSummary.calories)}</div>
               </div>
-              <div className="bg-white rounded-lg p-4">
+              <div className="bg-card rounded-lg p-4">
                 <div className="text-xs text-muted-foreground mb-1">Protein</div>
                 <div className="text-2xl font-bold text-success">{Math.round(todaysSummary.protein)}g</div>
               </div>
-              <div className="bg-white rounded-lg p-4">
+              <div className="bg-card rounded-lg p-4">
                 <div className="text-xs text-muted-foreground mb-1">Carbs</div>
                 <div className="text-2xl font-bold text-orange-600">{Math.round(todaysSummary.carbs)}g</div>
               </div>
-              <div className="bg-white rounded-lg p-4">
+              <div className="bg-card rounded-lg p-4">
                 <div className="text-xs text-muted-foreground mb-1">Fat</div>
                 <div className="text-2xl font-bold text-yellow-600">{Math.round(todaysSummary.fat)}g</div>
               </div>
@@ -1219,7 +1219,7 @@ function LogMealContent() {
         )}
 
         {/* Meal History */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
+        <div className="bg-card rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-foreground">Recent Meals</h2>
             {mealHistory.length > 0 && !multiSelectMode && (
@@ -1237,7 +1237,7 @@ function LogMealContent() {
                       className="fixed inset-0 z-10"
                       onClick={() => setShowExportMenu(false)}
                     />
-                    <div className="absolute right-0 top-8 z-20 bg-white border border-border rounded-lg shadow-lg py-2 min-w-[120px]">
+                    <div className="absolute right-0 top-8 z-20 bg-card border border-border rounded-lg shadow-lg py-2 min-w-[120px]">
                       <button
                         onClick={handleExportCSV}
                         className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted"
@@ -1646,7 +1646,7 @@ function LogMealContent() {
           <div className="relative max-w-5xl w-full">
             <button
               onClick={() => setSelectedPhotoUrl(null)}
-              className="absolute -top-12 right-0 bg-white/10 hover:bg-white/20 text-white w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
+              className="absolute -top-12 right-0 bg-card/10 hover:bg-card/20 text-white w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
               aria-label="Close photo"
             >
               ✕
@@ -1668,7 +1668,7 @@ function LogMealContent() {
           onClick={() => setShareModalData(null)}
         >
           <div
-            className="bg-white rounded-2xl max-w-md w-full shadow-2xl"
+            className="bg-card rounded-2xl max-w-md w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
