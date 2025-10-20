@@ -23,6 +23,10 @@ const customJestConfig = {
     '!**/node_modules/**',
     '!**/.next/**',
   ],
+  // Performance optimizations
+  maxWorkers: '50%', // Use 50% of available CPU cores
+  cache: true, // Enable caching
+  cacheDirectory: '<rootDir>/.next/jest-cache', // Cache location
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
