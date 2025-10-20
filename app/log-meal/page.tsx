@@ -1240,13 +1240,13 @@ function LogMealContent() {
                     <div className="absolute right-0 top-8 z-20 bg-white border border-border rounded-lg shadow-lg py-2 min-w-[120px]">
                       <button
                         onClick={handleExportCSV}
-                        className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-gray-100"
+                        className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted"
                       >
                         📄 CSV
                       </button>
                       <button
                         onClick={handleExportPDF}
-                        className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-gray-100"
+                        className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted"
                       >
                         📑 PDF
                       </button>
@@ -1266,7 +1266,7 @@ function LogMealContent() {
 
           {/* Multi-select actions */}
           {multiSelectMode && (
-            <div className="mb-4 p-3 bg-indigo-50 rounded-lg">
+            <div className="mb-4 p-3 bg-primary-light rounded-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <span className="text-sm font-medium text-foreground">
@@ -1331,7 +1331,7 @@ function LogMealContent() {
                 className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
                   filterMealType === 'all'
                     ? 'bg-primary text-white'
-                    : 'bg-gray-100 text-foreground hover:bg-muted'
+                    : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
                 All
@@ -1343,7 +1343,7 @@ function LogMealContent() {
                   className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
                     filterMealType === type.id
                       ? 'bg-primary text-white'
-                      : 'bg-gray-100 text-foreground hover:bg-muted'
+                      : 'bg-muted text-foreground hover:bg-muted'
                   }`}
                 >
                   {type.emoji} {type.label}
@@ -1367,7 +1367,7 @@ function LogMealContent() {
             </div>
           ) : mealHistory.length === 0 ? (
             <div className="text-center py-12 px-4">
-              <div className="w-20 h-20 mx-auto mb-4 bg-indigo-50 rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 mx-auto mb-4 bg-primary-light rounded-full flex items-center justify-center">
                 <span className="text-4xl">🍽️</span>
               </div>
               <h3 className="text-lg font-medium text-foreground mb-2">No meals logged yet</h3>
@@ -1427,7 +1427,7 @@ function LogMealContent() {
                     key={meal.id}
                     className={`border border-border rounded-lg p-4 hover:border-primary transition-colors ${
                       isDeleting ? 'opacity-50' : ''
-                    } ${isSelected ? 'border-primary bg-indigo-50' : ''}`}
+                    } ${isSelected ? 'border-primary bg-primary-light' : ''}`}
                   >
                     <div className="flex items-start space-x-3">
                       {/* Checkbox for multi-select mode */}
@@ -1566,7 +1566,7 @@ function LogMealContent() {
                                 onClick={() => setEditForm({ ...editForm, mealType: type.id })}
                                 className={`p-2 rounded border text-xs ${
                                   editForm.mealType === type.id
-                                    ? 'border-primary bg-indigo-50 text-primary-hover'
+                                    ? 'border-primary bg-primary-light text-primary-hover'
                                     : 'border-border hover:border-border'
                                 }`}
                               >
