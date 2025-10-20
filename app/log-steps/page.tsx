@@ -2,135 +2,82 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
-import { stepLogOperations, formatters } from '@/lib/firebase-operations'
+import { useStepTracking } from '@/components/StepTrackingProvider'
+import { useUserProfile } from '@/hooks/useUserProfile'
+import { stepLogOperations } from '@/lib/firebase-operations'
+
+interface StepLogData {
+  id: string
+  steps: number
+  date: string
+  loggedAt: string
+  source: string
+}
 
 function LogStepsContent() {
-  const [steps, setSteps] = useState('')
-  const [autoDetected, setAutoDetected] = useState<number | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [pedometer, setPedometer] = useState<any>(null)
+  // Get automatic tracking status from provider
+  const { todaysSteps, isTracking, isEnabled, enableTracking, disableTracking } = useStepTracking()
 
-  // Try to access device pedometer on mount
+  // Get user profile for goal steps
+  const { userProfile } = useUserProfile()
+
+  // State for recent activity
+  const [recentLogs, setRecentLogs] = useState<StepLogData[]>([])
+  const [loadingLogs, setLoadingLogs] = useState(true)
+
+  // Fetch recent step logs on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
-      // Check for permissions and pedometer support
-      checkPedometerSupport()
+    const fetchRecentLogs = async () => {
+      try {
+        const response = await stepLogOperations.getStepLogs({ limit: 7 })
+        setRecentLogs(response.data || [])
+      } catch (error) {
+        console.error('Error fetching recent logs:', error)
+      } finally {
+        setLoadingLogs(false)
+      }
     }
+
+    fetchRecentLogs()
   }, [])
 
-  const checkPedometerSupport = async () => {
+  const handleToggleTracking = async () => {
     try {
-      // Check if we can access device motion
-      if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
-        const permission = await (DeviceMotionEvent as any).requestPermission()
-        if (permission === 'granted') {
-          // Device motion is available
-          startStepDetection()
-        }
-      } else if ('DeviceMotionEvent' in window) {
-        // Android or older iOS - motion events available without permission
-        startStepDetection()
+      if (isEnabled) {
+        disableTracking()
+        toast.success('Automatic tracking disabled')
+      } else {
+        await enableTracking()
+        toast.success('Automatic tracking enabled! Your steps will be counted in the background.')
       }
-    } catch (error) {
-      console.log('Pedometer not available:', error)
+    } catch (err) {
+      toast.error('Failed to toggle tracking. Please check device permissions.')
     }
   }
 
-  const startStepDetection = () => {
-    // Simplified step detection - in real app, you'd use a proper library
-    const handleMotion = (event: DeviceMotionEvent) => {
-      // This is a very basic implementation
-      // Real step detection would need more sophisticated algorithms
-      try {
-        // Check for acceleration data with null safety
-        const acceleration = event.acceleration || event.accelerationIncludingGravity
-        if (acceleration && acceleration.x !== null && acceleration.y !== null && acceleration.z !== null) {
-          const magnitude = Math.sqrt(
-            Math.pow(acceleration.x || 0, 2) +
-            Math.pow(acceleration.y || 0, 2) +
-            Math.pow(acceleration.z || 0, 2)
-          )
+  // Format relative date (Today, Yesterday, X days ago)
+  const formatRelativeDate = (dateString: string) => {
+    const logDate = new Date(dateString)
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
 
-          // Very basic step detection threshold
-          if (magnitude > 12) {
-            setAutoDetected(prev => (prev || 0) + 1)
-          }
-        }
-      } catch (error) {
-        console.log('Motion detection error:', error)
-        // Silently handle motion detection errors
-      }
-    }
+    const logDateStr = logDate.toDateString()
+    const todayStr = today.toDateString()
+    const yesterdayStr = yesterday.toDateString()
 
-    window.addEventListener('devicemotion', handleMotion)
-    setPedometer(handleMotion)
+    if (logDateStr === todayStr) return 'Today'
+    if (logDateStr === yesterdayStr) return 'Yesterday'
 
-    // Simulate getting steps from health data
-    setTimeout(() => {
-      setAutoDetected(8420) // Mock step count
-    }, 2000)
+    const diffTime = today.getTime() - logDate.getTime()
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    return `${diffDays} days ago`
   }
 
-  const syncWithHealthApp = async () => {
-    setLoading(true)
-
-    try {
-      // TODO: Implement HealthKit (iOS) or Google Fit (Android) integration
-      console.log('Syncing with health app...')
-
-      // Simulate health app sync
-      await new Promise(resolve => setTimeout(resolve, 1500))
-
-      // Mock synced step count
-      const syncedSteps = Math.floor(Math.random() * 3000) + 7000
-      setSteps(syncedSteps.toString())
-      setAutoDetected(syncedSteps)
-
-    } catch (error) {
-      console.error('Health sync error:', error)
-      alert('Unable to sync with health app. Please enter manually.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!steps) {
-      alert('Please enter your step count')
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      // Save to Firebase using real API
-      const response = await stepLogOperations.createStepLog({
-        steps: parseInt(steps),
-        date: formatters.formatDate(new Date()),
-        source: autoDetected ? 'device' : 'manual',
-        loggedAt: new Date().toISOString()
-      })
-
-      console.log('Steps logged successfully:', response.data)
-      alert('Steps logged successfully!')
-
-      // Reset form
-      setSteps('')
-      setAutoDetected(null)
-
-    } catch (error) {
-      console.error('Save error:', error)
-      alert('Failed to save steps. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const goalSteps = 10000
-  const currentSteps = parseInt(steps) || autoDetected || 0
+  const goalSteps = userProfile?.goals?.dailySteps || 10000
+  const currentSteps = todaysSteps
   const progressPercentage = Math.min((currentSteps / goalSteps) * 100, 100)
 
   return (
@@ -152,131 +99,99 @@ function LogStepsContent() {
       </header>
 
       <div className="mx-auto max-w-md px-4 py-6 space-y-6">
-        {/* Auto Detection Card */}
-        {autoDetected && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center space-x-3">
-              <span className="text-2xl" role="img" aria-label="footprints">👣</span>
-              <div>
-                <p className="font-medium text-green-900">
-                  {autoDetected.toLocaleString()} steps detected
-                </p>
-                <p className="text-sm text-green-700">
-                  Automatically detected from your device
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setSteps(autoDetected.toString())}
-              className="mt-3 btn btn-primary w-full"
-              aria-label="Use detected step count"
-            >
-              Use This Count
-            </button>
-          </div>
-        )}
-
-        {/* Health App Sync */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Sync with Health App</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Get your step count automatically from Apple Health or Google Fit
-          </p>
-          <button
-            onClick={syncWithHealthApp}
-            disabled={loading}
-            className="btn btn-secondary w-full"
-            aria-label="Sync with health app"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center space-x-2">
-                <div className="animate-spin w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full" />
-                <span>Syncing...</span>
-              </span>
-            ) : (
-              <span className="flex items-center justify-center space-x-2">
-                <span role="img" aria-label="sync">🔄</span>
-                <span>Sync Health Data</span>
+        {/* Automatic Tracking Card - PRIMARY */}
+        <div className={`border rounded-lg p-6 shadow-sm ${isEnabled ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-gray-900">Today's Steps</h2>
+            {isEnabled && isTracking && (
+              <span className="flex items-center space-x-2 text-sm text-green-700">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+                <span>Tracking</span>
               </span>
             )}
-          </button>
-        </div>
+          </div>
 
-        {/* Manual Entry Form */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Manual Entry</h2>
+          {/* Step Count Display */}
+          <div className="text-center mb-6">
+            <div className="text-6xl font-bold text-gray-900 mb-2">
+              {currentSteps.toLocaleString()}
+            </div>
+            <p className="text-sm text-gray-600">
+              {isEnabled ? 'steps tracked automatically' : 'steps today'}
+            </p>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Steps Input */}
-            <div className="space-y-2">
-              <label htmlFor="steps" className="block text-sm font-medium text-gray-700">
-                Step Count
-              </label>
-              <input
-                id="steps"
-                type="number"
-                min="0"
-                max="100000"
-                value={steps}
-                onChange={(e) => setSteps(e.target.value)}
-                className="form-input text-lg font-semibold"
-                placeholder="0"
-                aria-label="Enter your step count"
+          {/* Progress Bar */}
+          <div className="space-y-3 mb-6">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Daily Goal</span>
+              <span className="font-medium">
+                {currentSteps.toLocaleString()} / {goalSteps.toLocaleString()}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div
+                className="bg-indigo-600 h-3 rounded-full transition-all duration-300"
+                style={{ width: `${progressPercentage}%` }}
+                role="progressbar"
+                aria-valuenow={progressPercentage}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Step progress: ${Math.round(progressPercentage)}%`}
               />
             </div>
-
-            {/* Progress Visualization */}
-            {currentSteps > 0 && (
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Progress to Goal</span>
-                  <span className="font-medium">
-                    {currentSteps.toLocaleString()} / {goalSteps.toLocaleString()}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-blue-600 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${progressPercentage}%` }}
-                    role="progressbar"
-                    aria-valuenow={progressPercentage}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`Step progress: ${Math.round(progressPercentage)}%`}
-                  />
-                </div>
-                <p className="text-sm text-gray-600">
-                  {currentSteps >= goalSteps ? (
-                    <span className="text-green-600 font-medium">🎉 Goal achieved!</span>
-                  ) : (
-                    <span>
-                      {(goalSteps - currentSteps).toLocaleString()} steps to reach your goal
-                    </span>
-                  )}
-                </p>
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading || !steps}
-              className="btn btn-primary w-full text-lg"
-              aria-label="Save step count"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                  <span>Saving...</span>
-                </span>
+            <p className="text-sm text-gray-600 text-center">
+              {currentSteps >= goalSteps ? (
+                <span className="text-green-600 font-medium">🎉 Goal achieved!</span>
               ) : (
-                <span className="flex items-center justify-center space-x-2">
-                  <span role="img" aria-label="footprints">👣</span>
-                  <span>Log Steps</span>
+                <span>
+                  {(goalSteps - currentSteps).toLocaleString()} steps to reach your goal
                 </span>
               )}
-            </button>
-          </form>
+            </p>
+          </div>
+
+          {/* Tracking Status & Controls */}
+          {isEnabled ? (
+            <div className="space-y-3">
+              <div className="bg-green-100 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800 mb-1">
+                  ✓ Automatic tracking enabled
+                </p>
+                <p className="text-xs text-green-700">
+                  Your steps are being counted automatically in the background whenever you move
+                </p>
+              </div>
+              <button
+                onClick={handleToggleTracking}
+                className="btn btn-secondary w-full"
+                aria-label="Disable automatic tracking"
+              >
+                Disable Automatic Tracking
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-900 mb-1">
+                  💡 Enable automatic tracking
+                </p>
+                <p className="text-xs text-blue-700">
+                  Let the app count your steps automatically throughout the day using your device sensors
+                </p>
+              </div>
+              <button
+                onClick={handleToggleTracking}
+                className="btn btn-primary w-full text-lg"
+                aria-label="Enable automatic tracking"
+              >
+                Enable Automatic Tracking
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Activity Tips */}
@@ -294,44 +209,56 @@ function LogStepsContent() {
         {/* Recent Activity */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
-          <div className="space-y-3">
-            {/* Mock recent entries - replace with real data */}
-            <div className="flex items-center justify-between py-2 border-b border-gray-100">
-              <div>
-                <p className="font-medium">8,420 steps</p>
-                <p className="text-sm text-gray-500">Yesterday</p>
-              </div>
-              <div className="text-right">
-                <span className="text-sm text-blue-600">84% of goal</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-gray-100">
-              <div>
-                <p className="font-medium">12,156 steps</p>
-                <p className="text-sm text-gray-500">2 days ago</p>
-              </div>
-              <div className="text-right">
-                <span className="text-sm text-green-600">✓ Goal reached</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <p className="font-medium">6,789 steps</p>
-                <p className="text-sm text-gray-500">3 days ago</p>
-              </div>
-              <div className="text-right">
-                <span className="text-sm text-orange-600">68% of goal</span>
-              </div>
-            </div>
-          </div>
 
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center mt-4 text-sm text-indigo-600 hover:text-indigo-500"
-            aria-label="View full activity history"
-          >
-            View full history →
-          </Link>
+          {loadingLogs ? (
+            <div className="text-center py-8">
+              <div className="animate-spin w-6 h-6 border-3 border-indigo-600 border-t-transparent rounded-full mx-auto"></div>
+              <p className="text-sm text-gray-500 mt-2">Loading activity...</p>
+            </div>
+          ) : recentLogs.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-2">No activity logged yet</p>
+              <p className="text-sm text-gray-400">Enable automatic tracking to start recording your steps</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {recentLogs.map((log, index) => {
+                  const goalProgress = Math.round((log.steps / goalSteps) * 100)
+                  const isLastItem = index === recentLogs.length - 1
+
+                  return (
+                    <div
+                      key={log.id}
+                      className={`flex items-center justify-between py-2 ${!isLastItem ? 'border-b border-gray-100' : ''}`}
+                    >
+                      <div>
+                        <p className="font-medium">{log.steps.toLocaleString()} steps</p>
+                        <p className="text-sm text-gray-500">{formatRelativeDate(log.date)}</p>
+                      </div>
+                      <div className="text-right">
+                        {goalProgress >= 100 ? (
+                          <span className="text-sm text-green-600">✓ Goal reached</span>
+                        ) : goalProgress >= 75 ? (
+                          <span className="text-sm text-blue-600">{goalProgress}% of goal</span>
+                        ) : (
+                          <span className="text-sm text-orange-600">{goalProgress}% of goal</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center mt-4 text-sm text-indigo-600 hover:text-indigo-500"
+                aria-label="View full activity history"
+              >
+                View full history →
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </main>

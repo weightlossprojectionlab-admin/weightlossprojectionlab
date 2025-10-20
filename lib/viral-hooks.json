@@ -1,0 +1,170 @@
+{
+  "dashboard": [
+    "POV: you found the app that made healthy eating effortless",
+    "this is why your meal prep game is actually top tier now",
+    "caught my {relation} using this at 3am and now I'm obsessed",
+    "the app that helped me lose {weight}lbs (nutritionists love this)",
+    "why everyone is quitting calorie counting for this",
+    "this notification just saved me from ordering takeout",
+    "your friends don't know about this nutrition hack",
+    "the tracking method that made me feel amazing",
+    "health influencers are hiding this tracking secret",
+    "why I deleted MyFitnessPal for this one",
+    "the algorithm thinks you need to see this",
+    "this app knows my eating habits better than I do",
+    "plot twist: tracking calories actually became fun",
+    "the meal logging that doesn't feel like work",
+    "this changed my entire morning routine in {days} days",
+    "I accidentally became consistent with this",
+    "why your health journey is about to accelerate",
+    "this app reads my nutrition needs (it's actually scary)",
+    "the tracking hack that feels like cheating",
+    "your food diary is about to look completely different"
+  ],
+  "loading": [
+    "analyzing your meal like a nutritionist...",
+    "the AI that knows food better than you do",
+    "this is smarter than my dietitian",
+    "reading your plate in 3...2...1...",
+    "your meal is getting the royal treatment",
+    "AI-powered nutrition is different",
+    "processing your food IQ test...",
+    "calculating macros like a pro chef",
+    "giving your meal the analysis it deserves"
+  ],
+  "milestones": {
+    "firstMeal": [
+      "POV: you just started your transformation",
+      "this is where everything changed",
+      "welcome to the nutrition revolution",
+      "your journey begins now"
+    ],
+    "weekStreak": [
+      "this changed my entire meal routine in 7 days",
+      "the 7-day transformation nobody talks about",
+      "POV: you're officially consistent",
+      "a week of wins unlocked"
+    ],
+    "monthStreak": [
+      "gen z cracked the code on 30-day challenges",
+      "the monthly habit that stuck",
+      "this is what 30 days of dedication looks like",
+      "your {month} nutrition wrapped"
+    ],
+    "meals50": [
+      "50 meals tracked and I'm just getting started",
+      "this app turned tracking into a game",
+      "the habit that became automatic"
+    ],
+    "meals100": [
+      "100 meals later and it's still not boring",
+      "the century club of nutrition tracking",
+      "this literally transformed my relationship with food"
+    ]
+  },
+  "emptyStates": {
+    "noMeals": [
+      "your first meal is one photo away",
+      "the journey to better health starts here",
+      "ready to track like never before?",
+      "this is where your transformation begins"
+    ],
+    "noHistory": [
+      "why everyone's nutrition game improved this month",
+      "the meal history that writes itself",
+      "your future self will thank you for starting"
+    ],
+    "noTemplates": [
+      "the meal prep hack that doesn't require planning",
+      "save your favorites and never think twice",
+      "your go-to meals deserve a shortcut"
+    ]
+  },
+  "notifications": [
+    "this notification stops me from skipping meals",
+    "the reminder that changed my eating habits",
+    "your body is asking for fuel",
+    "consistency is calling",
+    "time to nourish yourself",
+    "your {mealType} is waiting to be tracked",
+    "don't break the streak now",
+    "your nutrition wrapped drops in {days} days"
+  ],
+  "onboarding": [
+    "the app that made healthy eating feel effortless",
+    "welcome to nutrition tracking that actually works",
+    "this is different from everything you've tried",
+    "your food journey just got an upgrade",
+    "the tracking method that doesn't feel like tracking"
+  ],
+  "social": [
+    "POV: you found the nutrition tracking app everyone's talking about",
+    "this app made me stop guessing my calories",
+    "the meal tracking that doesn't feel like work",
+    "gen z figured out how to enjoy healthy eating",
+    "this changed how I think about food forever",
+    "the app that made nutrition tracking aesthetic",
+    "why I'm finally consistent with my health goals",
+    "the tracking method that actually stuck",
+    "this literally feels like having a nutritionist in my pocket",
+    "the health hack that everyone's gatekeeping",
+    "this app made me text my nutritionist less",
+    "gen z discovered the ultimate nutrition optimization",
+    "the tracking system that works with busy schedules",
+    "why meal planning finally became easy",
+    "this notification taught me to love healthy food",
+    "the app that gamified my entire nutrition",
+    "this literally automated my healthy habits",
+    "why tracking became addictive for me",
+    "the app that made me consistent for once",
+    "this notification changed my eating habits",
+    "the meal tracking that actually energizes you",
+    "why your health goals finally feel achievable",
+    "the app that turned food chaos into clarity",
+    "this literally made me excited about nutrition",
+    "the tracking hack that improved my energy levels",
+    "why I finally feel like I'm winning at health"
+  ],
+  "features": {
+    "aiAnalysis": [
+      "the AI that knows calories better than you",
+      "computer vision meets nutrition science",
+      "snap, analyze, track - it's that simple",
+      "the photo that tells you everything"
+    ],
+    "templates": [
+      "the meal prep hack that saves hours",
+      "your go-to meals, one tap away",
+      "why meal planning became effortless"
+    ],
+    "search": [
+      "find any meal in seconds",
+      "your food history, instantly searchable",
+      "the search that actually works"
+    ],
+    "export": [
+      "your nutrition data, beautifully exported",
+      "share your progress with anyone",
+      "the reports your nutritionist will love"
+    ],
+    "macros": [
+      "protein, carbs, fats - tracked perfectly",
+      "the macro breakdown that makes sense",
+      "hit your targets without thinking"
+    ]
+  },
+  "success": [
+    "saved successfully ✨",
+    "tracked and locked in 💪",
+    "another win for your health journey 🎯",
+    "you're on fire 🔥",
+    "consistency unlocked ✅",
+    "that's what I'm talking about 💯"
+  ],
+  "errors": [
+    "oops, something went wrong (but your streak is safe)",
+    "technical difficulties (we're on it)",
+    "try that one more time?",
+    "our bad, let's try again"
+  ]
+}

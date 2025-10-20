@@ -1,13 +1,25 @@
 'use client'
 
 import { auth } from './firebase'
+import type { AIAnalysis, UserPreferences, UserGoals, UserProfile } from '@/types'
 
-// Helper function to get auth token for API calls
+// Helper function to get auth token for API calls (with retry for race conditions)
 const getAuthToken = async () => {
-  const user = auth.currentUser
+  let user = auth.currentUser
+
   if (!user) {
-    throw new Error('User not authenticated')
+    // Wait briefly for Firebase Auth to initialize, then retry
+    console.log('⏳ Auth not ready, waiting 200ms and retrying...')
+    await new Promise(resolve => setTimeout(resolve, 200))
+    user = auth.currentUser
+
+    if (!user) {
+      console.error('❌ User still not authenticated after retry')
+      throw new Error('User not authenticated - please log in again')
+    }
   }
+
+  console.log('✅ Getting auth token for user:', user.uid)
   return await user.getIdToken()
 }
 
@@ -90,7 +102,7 @@ export const mealLogOperations = {
   async createMealLog(data: {
     mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
     photoUrl?: string
-    aiAnalysis?: any
+    aiAnalysis?: AIAnalysis
     manualEntries?: Array<{
       food: string
       calories: number
@@ -102,6 +114,31 @@ export const mealLogOperations = {
     return makeAuthenticatedRequest('/api/meal-logs', {
       method: 'POST',
       body: JSON.stringify(data),
+    })
+  },
+
+  // Update meal log
+  async updateMealLog(mealLogId: string, data: {
+    title?: string
+    mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+    notes?: string
+    aiAnalysis?: any
+    manualEntries?: Array<{
+      food: string
+      calories: number
+      quantity: string
+    }>
+  }) {
+    return makeAuthenticatedRequest(`/api/meal-logs/${mealLogId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
+  // Delete meal log
+  async deleteMealLog(mealLogId: string) {
+    return makeAuthenticatedRequest(`/api/meal-logs/${mealLogId}`, {
+      method: 'DELETE',
     })
   },
 }
@@ -141,14 +178,56 @@ export const stepLogOperations = {
   },
 }
 
+// Meal Template Operations
+export const mealTemplateOperations = {
+  // Get all meal templates
+  async getMealTemplates() {
+    return makeAuthenticatedRequest('/api/meal-templates')
+  },
+
+  // Create meal template
+  async createMealTemplate(data: {
+    name: string
+    mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+    foodItems: string[]
+    calories: number
+    macros: {
+      protein: number
+      carbs: number
+      fat: number
+      fiber: number
+    }
+    notes?: string
+  }) {
+    return makeAuthenticatedRequest('/api/meal-templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  // Delete meal template
+  async deleteMealTemplate(templateId: string) {
+    return makeAuthenticatedRequest(`/api/meal-templates/${templateId}`, {
+      method: 'DELETE',
+    })
+  },
+
+  // Increment template usage count
+  async recordTemplateUsage(templateId: string) {
+    return makeAuthenticatedRequest(`/api/meal-templates/${templateId}`, {
+      method: 'PUT',
+    })
+  },
+}
+
 // User Profile Operations
 export const userProfileOperations = {
   // Create user profile after signup
   async createUserProfile(data: {
     email: string
     name: string
-    preferences?: any
-    goals?: any
+    preferences?: UserPreferences
+    goals?: UserGoals
   }) {
     return makeAuthenticatedRequest('/api/user-profile', {
       method: 'POST',
@@ -161,11 +240,24 @@ export const userProfileOperations = {
     return makeAuthenticatedRequest('/api/user-profile')
   },
 
-  // Update user profile
-  async updateUserProfile(data: any) {
+  // Update user profile (including onboarding data)
+  async updateUserProfile(data: Partial<{
+    profile?: Partial<UserProfile>
+    goals?: Partial<UserGoals>
+    preferences?: Partial<UserPreferences>
+    name?: string
+    email?: string
+  }>) {
     return makeAuthenticatedRequest('/api/user-profile', {
       method: 'PUT',
       body: JSON.stringify(data),
+    })
+  },
+
+  // Reset all user data (nuclear option - deletes everything and starts fresh)
+  async resetAllData() {
+    return makeAuthenticatedRequest('/api/user-profile/reset', {
+      method: 'DELETE',
     })
   },
 }
@@ -220,27 +312,6 @@ export interface WeightLogData {
   source: string
 }
 
-export interface MealLogData {
-  id: string
-  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
-  photoUrl?: string
-  aiAnalysis?: any
-  manualEntries?: Array<{
-    food: string
-    calories: number
-    quantity: string
-  }>
-  totalCalories: number
-  macros: {
-    carbs: number
-    protein: number
-    fat: number
-  }
-  loggedAt: string
-  source: string
-  notes?: string
-}
-
 export interface StepLogData {
   id: string
   steps: number
@@ -250,3 +321,6 @@ export interface StepLogData {
   goal?: number
   notes?: string
 }
+
+// Re-export real-time hooks from hooks directory for backwards compatibility
+export { useMealLogsRealtime, type MealLogData } from '@/hooks/useMealLogs'

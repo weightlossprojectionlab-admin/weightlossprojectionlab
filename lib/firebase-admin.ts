@@ -1,11 +1,13 @@
 import { initializeApp, getApps, cert, type App } from 'firebase-admin/app'
 import { getAuth, type Auth } from 'firebase-admin/auth'
 import { getFirestore, type Firestore } from 'firebase-admin/firestore'
+import { getStorage, type Storage } from 'firebase-admin/storage'
 
 // Lazy initialization - only initialize when actually used
 let adminApp: App | null = null
 let adminAuthInstance: Auth | null = null
 let adminDbInstance: Firestore | null = null
+let adminStorageInstance: Storage | null = null
 
 const initializeFirebaseAdmin = (): App => {
   if (adminApp) {
@@ -27,15 +29,6 @@ const initializeFirebaseAdmin = (): App => {
     // Handle private key with proper formatting
     let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY
 
-    console.log('Raw private key info:', {
-      length: privateKey.length,
-      first50: privateKey.substring(0, 50),
-      hasLiteralBackslashN: privateKey.includes('\\n'),
-      hasActualNewline: privateKey.includes('\n'),
-      charCodeAt40: privateKey.charCodeAt(40),
-      charCodeAt41: privateKey.charCodeAt(41)
-    })
-
     // Remove quotes if present
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
       privateKey = privateKey.slice(1, -1)
@@ -51,16 +44,6 @@ const initializeFirebaseAdmin = (): App => {
       privateKey += '\n'
     }
 
-    console.log('Private key format check:', {
-      startsWithBegin: privateKey.startsWith('-----BEGIN'),
-      endsWithEnd: privateKey.trim().endsWith('-----'),
-      hasNewlines: privateKey.includes('\n'),
-      length: privateKey.length,
-      firstLine: privateKey.split('\n')[0],
-      lastLine: privateKey.trim().split('\n').pop(),
-      lineCount: privateKey.split('\n').length
-    })
-
     adminApp = initializeApp({
       credential: cert({
         projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
@@ -68,6 +51,7 @@ const initializeFirebaseAdmin = (): App => {
         privateKey: privateKey,
       }),
       projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_ADMIN_PROJECT_ID}.appspot.com`,
     })
 
     console.log('✅ Firebase Admin SDK initialized successfully')
@@ -99,6 +83,14 @@ export const getAdminDb = (): Firestore => {
   return adminDbInstance
 }
 
+export const getAdminStorage = (): Storage => {
+  if (!adminStorageInstance) {
+    const app = initializeFirebaseAdmin()
+    adminStorageInstance = getStorage(app)
+  }
+  return adminStorageInstance
+}
+
 // Export lazy getters with backwards compatibility
 export const adminAuth = new Proxy({} as Auth, {
   get: (target, prop) => {
@@ -111,6 +103,13 @@ export const adminDb = new Proxy({} as Firestore, {
   get: (target, prop) => {
     const db = getAdminDb()
     return (db as any)[prop]
+  }
+})
+
+export const adminStorage = new Proxy({} as Storage, {
+  get: (target, prop) => {
+    const storage = getAdminStorage()
+    return (storage as any)[prop]
   }
 })
 
@@ -194,7 +193,12 @@ export const deleteUser = async (uid: string) => {
 }
 
 // Firestore helper functions
-export const createUserProfile = async (uid: string, profileData: any) => {
+export const createUserProfile = async (uid: string, profileData: {
+  email: string
+  name?: string
+  preferences?: Record<string, unknown>
+  goals?: Record<string, unknown>
+}) => {
   try {
     const db = getAdminDb()
     await db.collection('users').doc(uid).set({
@@ -223,7 +227,7 @@ export const getUserProfile = async (uid: string) => {
   }
 }
 
-export const updateUserProfile = async (uid: string, updateData: any) => {
+export const updateUserProfile = async (uid: string, updateData: Record<string, unknown>) => {
   try {
     const db = getAdminDb()
     await db.collection('users').doc(uid).update({

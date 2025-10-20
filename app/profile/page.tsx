@@ -2,26 +2,56 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import { signOut } from '@/lib/auth'
 import { useAuth } from '@/hooks/useAuth'
 import AuthGuard from '@/components/auth/AuthGuard'
+import { useConfirm } from '@/hooks/useConfirm'
+import { useStepTracking } from '@/components/StepTrackingProvider'
+import { userProfileOperations } from '@/lib/firebase-operations'
 import {
   isBiometricSupported,
   registerBiometric,
   removeBiometricCredential,
   hasBiometricCredential
 } from '@/lib/webauthn'
+import { checkProfileCompleteness } from '@/lib/profile-completeness'
 
 function ProfileContent() {
   const { user } = useAuth()
+  const router = useRouter()
+  const { confirm, ConfirmDialog } = useConfirm()
+  const { isEnabled: stepTrackingEnabled, enableTracking, disableTracking, isTracking } = useStepTracking()
   const [biometricSupported, setBiometricSupported] = useState(false)
   const [biometricEnabled, setBiometricEnabled] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [profileData, setProfileData] = useState<any>(null)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     setMounted(true)
     checkBiometricStatus()
+  }, [user])
+
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return
+
+      try {
+        const profile = await userProfileOperations.getUserProfile()
+        setProfileData(profile.data)
+      } catch (error) {
+        console.error('Error fetching profile:', error)
+        toast.error('Failed to load profile data')
+      }
+    }
+
+    fetchProfile()
   }, [user])
 
   const checkBiometricStatus = async () => {
@@ -45,22 +75,45 @@ function ProfileContent() {
     try {
       await registerBiometric(user.uid, user.email || '')
       setBiometricEnabled(true)
-      alert('Biometric authentication enabled successfully!')
+      toast.success('Biometric authentication enabled successfully!')
     } catch (error: any) {
       console.error('Failed to enable biometrics:', error)
-      alert('Failed to set up biometric authentication: ' + error.message)
+      toast.error('Failed to set up biometric authentication: ' + error.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDisableBiometrics = () => {
+  const handleDisableBiometrics = async () => {
     if (!user) return
 
-    if (confirm('Are you sure you want to remove biometric authentication? You will need to use your password to sign in.')) {
+    const confirmed = await confirm({
+      title: 'Remove Biometric Authentication?',
+      message: 'You will need to use your password to sign in after removing biometric authentication.',
+      confirmText: 'Remove',
+      cancelText: 'Keep It',
+      variant: 'warning'
+    })
+
+    if (confirmed) {
       removeBiometricCredential(user.uid)
       setBiometricEnabled(false)
-      alert('Biometric authentication removed.')
+      toast.success('Biometric authentication removed.')
+    }
+  }
+
+  const handleToggleStepTracking = async () => {
+    try {
+      if (stepTrackingEnabled) {
+        disableTracking()
+        toast.success('Automatic step tracking disabled')
+      } else {
+        await enableTracking()
+        toast.success('Automatic step tracking enabled! Your steps will be counted in the background.')
+      }
+    } catch (error) {
+      console.error('Toggle step tracking error:', error)
+      toast.error('Failed to toggle step tracking. Please check device permissions.')
     }
   }
 
@@ -72,15 +125,88 @@ function ProfileContent() {
     }
   }
 
+  const handleResetAllData = async () => {
+    const confirmed = await confirm({
+      title: '⚠️ Reset All Data & Start Over?',
+      message: 'This will PERMANENTLY delete:\n\n• All meal logs and photos\n• All weight history\n• All step tracking data\n• Your entire profile and goals\n\nYou will start fresh from onboarding. This action CANNOT be undone!\n\nAre you absolutely sure?',
+      confirmText: 'Yes, Delete Everything',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    })
+
+    if (!confirmed) return
+
+    // Double confirmation for extra safety
+    const doubleConfirmed = await confirm({
+      title: 'Final Confirmation',
+      message: 'This is your last chance to cancel. All your data will be permanently deleted and cannot be recovered.\n\nType "DELETE" in your mind and click confirm if you are absolutely certain.',
+      confirmText: 'DELETE EVERYTHING',
+      cancelText: 'No, Keep My Data',
+      variant: 'danger'
+    })
+
+    if (!doubleConfirmed) return
+
+    setResetLoading(true)
+    try {
+      await userProfileOperations.resetAllData()
+      toast.success('All data has been reset. Redirecting to onboarding...')
+
+      // Wait a moment for the user to see the message
+      setTimeout(() => {
+        router.push('/onboarding')
+      }, 2000)
+    } catch (error) {
+      console.error('Reset all data error:', error)
+      toast.error('Failed to reset data. Please try again or contact support.')
+      setResetLoading(false)
+    }
+  }
+
+  const handleSaveProfile = async () => {
+    setSaving(true)
+    try {
+      await userProfileOperations.updateUserProfile({
+        preferences: profileData.preferences,
+        profile: profileData.profile
+      })
+
+      toast.success('Profile updated successfully!')
+      setEditMode(false)
+
+      // Refresh profile data
+      const updated = await userProfileOperations.getUserProfile()
+      setProfileData(updated.data)
+    } catch (error) {
+      console.error('Save profile error:', error)
+      toast.error('Failed to save profile. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancelEdit = async () => {
+    setEditMode(false)
+    // Refresh to reset any unsaved changes
+    try {
+      const profile = await userProfileOperations.getUserProfile()
+      setProfileData(profile.data)
+    } catch (error) {
+      console.error('Error refreshing profile:', error)
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
+    <>
+      <ConfirmDialog />
+      <main className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="bg-white shadow-sm">
         <div className="mx-auto max-w-md px-4 py-4">
           <div className="flex items-center space-x-4">
             <Link
               href="/dashboard"
-              className="text-indigo-600 hover:text-indigo-500"
+              className="text-primary hover:text-primary"
               aria-label="Back to dashboard"
             >
               ← Back
@@ -91,6 +217,237 @@ function ProfileContent() {
       </header>
 
       <div className="mx-auto max-w-md px-4 py-6 space-y-6">
+        {/* Profile Completeness Banner */}
+        {profileData && (() => {
+          const completeness = checkProfileCompleteness(profileData)
+          return !completeness.isSafe && (
+            <div className="bg-error-light border-2 border-error rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <span className="text-2xl">⚠️</span>
+                <div className="flex-1">
+                  <h3 className="font-bold text-error-dark mb-1">
+                    Confirm Your Dietary Information
+                  </h3>
+                  <p className="text-sm text-error-dark mb-3">
+                    We need to know if you have any dietary restrictions, allergies, or health conditions.
+                    <strong> Even if you have none, please confirm by selecting "None".</strong>
+                  </p>
+                  <p className="text-xs text-error-dark">
+                    Profile Completeness: {completeness.score}%
+                  </p>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Safety Information - MOST IMPORTANT */}
+        {profileData && (
+          <div className="bg-white rounded-lg p-6 shadow-sm border-2 border-error">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-medium text-gray-900">⚠️ Dietary Information</h2>
+                <p className="text-sm text-error">Please confirm (select "None" if you have no restrictions)</p>
+              </div>
+              {!editMode && (
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="btn btn-primary text-sm px-4 py-2"
+                >
+                  ✏️ Edit
+                </button>
+              )}
+            </div>
+
+            {editMode ? (
+              <div className="space-y-4">
+                {/* Dietary Preferences */}
+                <div>
+                  <label className="text-label block mb-2">
+                    Dietary Preferences
+                    <span className="text-xs text-muted-foreground ml-2">(Select all that apply, or "None")</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setProfileData(prev => ({
+                        ...prev,
+                        preferences: { ...prev.preferences, dietaryPreferences: [] }
+                      }))}
+                      className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
+                        profileData?.preferences?.dietaryPreferences?.length === 0
+                          ? 'border-success bg-success-light font-bold'
+                          : 'border-border hover:border-success/50'
+                      }`}
+                    >
+                      ✓ None
+                    </button>
+                    {['Vegan', 'Vegetarian', 'Keto', 'Paleo', 'Gluten-Free', 'Dairy-Free', 'Low-Carb'].map(pref => (
+                      <button
+                        key={pref}
+                        type="button"
+                        onClick={() => {
+                          const current = profileData?.preferences?.dietaryPreferences || []
+                          const updated = current.includes(pref)
+                            ? current.filter(p => p !== pref)
+                            : [...current, pref]
+                          setProfileData(prev => ({
+                            ...prev,
+                            preferences: { ...prev.preferences, dietaryPreferences: updated }
+                          }))
+                        }}
+                        className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
+                          profileData?.preferences?.dietaryPreferences?.includes(pref)
+                            ? 'border-primary bg-primary-light'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        {pref}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Food Allergies */}
+                <div>
+                  <label className="text-label block mb-2">
+                    Food Allergies
+                    <span className="text-xs text-muted-foreground ml-2">(Select all that apply, or "None")</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setProfileData(prev => ({
+                        ...prev,
+                        profile: { ...prev.profile, foodAllergies: [] }
+                      }))}
+                      className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
+                        profileData?.profile?.foodAllergies?.length === 0
+                          ? 'border-success bg-success-light font-bold'
+                          : 'border-border hover:border-success/50'
+                      }`}
+                    >
+                      ✓ None
+                    </button>
+                    {['Peanuts', 'Tree Nuts', 'Dairy', 'Eggs', 'Shellfish', 'Soy', 'Wheat/Gluten', 'Fish'].map(allergy => (
+                      <button
+                        key={allergy}
+                        type="button"
+                        onClick={() => {
+                          const current = profileData?.profile?.foodAllergies || []
+                          const updated = current.includes(allergy)
+                            ? current.filter(a => a !== allergy)
+                            : [...current, allergy]
+                          setProfileData(prev => ({
+                            ...prev,
+                            profile: { ...prev.profile, foodAllergies: updated }
+                          }))
+                        }}
+                        className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
+                          profileData?.profile?.foodAllergies?.includes(allergy)
+                            ? 'border-error bg-error-light'
+                            : 'border-border hover:border-error/50'
+                        }`}
+                      >
+                        {allergy}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Health Conditions */}
+                <div>
+                  <label className="text-label block mb-2">Health Conditions</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setProfileData(prev => ({
+                        ...prev,
+                        profile: { ...prev.profile, healthConditions: [] }
+                      }))}
+                      className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
+                        profileData?.profile?.healthConditions?.length === 0
+                          ? 'border-success bg-success-light font-bold'
+                          : 'border-border hover:border-success/50'
+                      }`}
+                    >
+                      ✓ None
+                    </button>
+                    {['Type 2 Diabetes', 'Heart Disease', 'High Blood Pressure', 'High Cholesterol'].map(condition => (
+                      <button
+                        key={condition}
+                        type="button"
+                        onClick={() => {
+                          const current = profileData?.profile?.healthConditions || []
+                          const updated = current.includes(condition)
+                            ? current.filter(c => c !== condition)
+                            : [...current, condition]
+                          setProfileData(prev => ({
+                            ...prev,
+                            profile: { ...prev.profile, healthConditions: updated }
+                          }))
+                        }}
+                        className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
+                          profileData?.profile?.healthConditions?.includes(condition)
+                            ? 'border-warning bg-warning-light'
+                            : 'border-border hover:border-warning/50'
+                        }`}
+                      >
+                        {condition}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Save/Cancel Buttons */}
+                <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={saving}
+                    className="btn btn-primary flex-1"
+                  >
+                    {saving ? 'Saving...' : '💾 Save Changes'}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={saving}
+                    className="btn btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 text-sm">
+                <div>
+                  <label className="text-gray-500 text-xs">Dietary Preferences</label>
+                  <p className="font-medium">
+                    {profileData?.preferences?.dietaryPreferences?.length > 0
+                      ? profileData.preferences.dietaryPreferences.join(', ')
+                      : 'None'}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-gray-500 text-xs">Food Allergies</label>
+                  <p className="font-medium">
+                    {profileData?.profile?.foodAllergies?.length > 0
+                      ? profileData.profile.foodAllergies.join(', ')
+                      : 'None'}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-gray-500 text-xs">Health Conditions</label>
+                  <p className="font-medium">
+                    {profileData?.profile?.healthConditions?.length > 0
+                      ? profileData.profile.healthConditions.join(', ')
+                      : 'None'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Account Information */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Account Information</h2>
@@ -146,7 +503,7 @@ function ProfileContent() {
                       </p>
                     </div>
                   </div>
-                  <div className={`w-3 h-3 rounded-full ${biometricEnabled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <div className={`w-3 h-3 rounded-full ${biometricEnabled ? 'bg-success' : 'bg-muted'}`} />
                 </div>
 
                 <p className="text-sm text-gray-600">
@@ -188,8 +545,8 @@ function ProfileContent() {
                 </div>
 
                 {biometricSupported && (
-                  <div className="bg-blue-50 rounded-lg p-3">
-                    <p className="text-xs text-blue-700">
+                  <div className="bg-accent-light rounded-lg p-3">
+                    <p className="text-xs text-accent-dark">
                       <strong>Compatible devices:</strong> iPhone with Touch/Face ID,
                       Android with fingerprint, Windows with Windows Hello
                     </p>
@@ -214,13 +571,32 @@ function ProfileContent() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Delete Account</p>
-                <p className="text-sm text-gray-500">Permanently delete your account</p>
+            <div className="border-t border-gray-200 pt-4">
+              <div className="bg-error-light border-2 border-error rounded-lg p-4 mb-3">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">⚠️</span>
+                  <div>
+                    <p className="font-medium text-error-dark mb-1">Reset All Data & Start Over</p>
+                    <p className="text-sm text-error-dark">
+                      If you entered false information during onboarding and want to start fresh with accurate data, use this option.
+                      This will permanently delete ALL your data including meals, weight logs, and progress.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <button className="btn btn-secondary text-red-600 border-red-200 hover:bg-red-50">
-                🗑️ Delete
+              <button
+                onClick={handleResetAllData}
+                disabled={resetLoading}
+                className="btn btn-secondary w-full text-error border-error hover:bg-error-light font-medium"
+              >
+                {resetLoading ? (
+                  <span className="flex items-center justify-center space-x-2">
+                    <div className="animate-spin w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full" />
+                    <span>Resetting...</span>
+                  </span>
+                ) : (
+                  '🔄 Reset All Data & Start Over'
+                )}
               </button>
             </div>
           </div>
@@ -230,6 +606,33 @@ function ProfileContent() {
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-medium text-gray-900 mb-4">App Settings</h2>
           <div className="space-y-4">
+            {/* Automatic Step Tracking */}
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center space-x-2">
+                  <p className="font-medium">Automatic Step Tracking</p>
+                  {isTracking && (
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">
+                  {stepTrackingEnabled ? 'Counting steps in background' : 'Count steps automatically using device sensors'}
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={stepTrackingEnabled}
+                  onChange={handleToggleStepTracking}
+                />
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Notifications</p>
@@ -237,7 +640,7 @@ function ProfileContent() {
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" defaultChecked />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
               </label>
             </div>
 
@@ -258,7 +661,7 @@ function ProfileContent() {
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <button
             onClick={handleSignOut}
-            className="btn btn-secondary w-full text-red-600 border-red-200 hover:bg-red-50"
+            className="btn btn-secondary w-full text-error border-error hover:bg-error-light"
             aria-label="Sign out of account"
           >
             🚪 Sign Out
@@ -273,6 +676,7 @@ function ProfileContent() {
         </div>
       </div>
     </main>
+    </>
   )
 }
 

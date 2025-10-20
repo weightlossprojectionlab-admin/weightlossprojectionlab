@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import type { User } from 'firebase/auth'
 import { signIn, signUp, signInWithGoogle, checkSignInMethods } from '@/lib/auth'
 import {
   isBiometricSupported,
@@ -13,8 +14,13 @@ import {
   checkBiometricPermissionStatus
 } from '@/lib/webauthn'
 import { checkBiometricPermission, getSettingsInstructions } from '@/lib/permissions'
+import { userProfileOperations } from '@/lib/firebase-operations'
+import { createDefaultProfile } from '@/lib/default-profile'
+import { useAuth } from '@/hooks/useAuth'
+import { determineUserDestination } from '@/lib/auth-router'
 
 export default function AuthPage() {
+  const { user: authUser, loading: authLoading } = useAuth()
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -26,9 +32,44 @@ export default function AuthPage() {
   const [biometricLoading, setBiometricLoading] = useState(false)
   const [showBiometricSetup, setShowBiometricSetup] = useState(false)
   const [signupSuccess, setSignupSuccess] = useState(false)
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [suggestedAuthMethod, setSuggestedAuthMethod] = useState<'google' | null>(null)
+  const [checkingAuth, setCheckingAuth] = useState(true)
   const router = useRouter()
+
+  // Check if user is already authenticated and redirect if needed
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      if (authLoading) {
+        console.log('⏳ Auth page: Waiting for auth to load...')
+        return
+      }
+
+      if (authUser) {
+        console.log('✅ User already authenticated on /auth page, checking destination...')
+
+        try {
+          const destination = await determineUserDestination(authUser, '/auth')
+
+          if (destination.type === 'dashboard') {
+            console.log('➡️ Redirecting to dashboard:', destination.reason)
+            router.push('/dashboard')
+          } else if (destination.type === 'onboarding') {
+            console.log('➡️ Redirecting to onboarding:', destination.reason)
+            router.push('/onboarding')
+          } else if (destination.type === 'stay') {
+            console.log('⚠️ User authenticated but destination is "stay" - allowing /auth access')
+          }
+        } catch (error) {
+          console.error('❌ Error checking auth destination:', error)
+        }
+      }
+
+      setCheckingAuth(false)
+    }
+
+    checkAuthStatus()
+  }, [authUser, authLoading, router])
 
   // Check for WebAuthn and biometric support on component mount
   useEffect(() => {
@@ -64,6 +105,21 @@ export default function AuthPage() {
       let user
       if (isSignUp) {
         user = await signUp(email, password)
+
+        // Create user profile in Firestore
+        if (user) {
+          try {
+            const profileData = createDefaultProfile(email, name || email.split('@')[0])
+            await userProfileOperations.createUserProfile(profileData)
+          } catch (profileError: any) {
+            // Log error but don't block signup flow
+            console.error('Error creating user profile:', profileError)
+            // If profile already exists (409), that's fine - just continue
+            if (profileError.message && !profileError.message.includes('409') && !profileError.message.includes('already exists')) {
+              setError('Account created but profile setup failed. Please contact support.')
+            }
+          }
+        }
       } else {
         user = await signIn(email, password)
       }
@@ -76,8 +132,12 @@ export default function AuthPage() {
         return // Don't redirect yet, show biometric setup option
       }
 
-      // For login, redirect to dashboard immediately
-      router.push('/dashboard')
+      // For signup, redirect to onboarding; for login, redirect to dashboard
+      if (isSignUp) {
+        router.push('/onboarding')
+      } else {
+        router.push('/dashboard')
+      }
 
     } catch (error: any) {
       console.error('Auth error:', error)
@@ -199,7 +259,7 @@ export default function AuthPage() {
       }
 
       await registerBiometric(currentUser.uid, currentUser.email || email)
-      router.push('/dashboard')
+      router.push('/onboarding')
     } catch (error: any) {
       console.error('Biometric setup error:', error)
 
@@ -216,7 +276,7 @@ export default function AuthPage() {
   }
 
   const handleSkipBiometrics = () => {
-    router.push('/dashboard')
+    router.push('/onboarding')
   }
 
   const handleGoogleSignIn = async () => {
@@ -226,8 +286,16 @@ export default function AuthPage() {
     try {
       const user = await signInWithGoogle()
 
-      // For Google sign-in, don't show biometric setup - go directly to dashboard
-      router.push('/dashboard')
+      // Use centralized router to determine destination
+      // Profile creation is handled automatically by determineUserDestination
+      // (creates profile if missing, then routes to onboarding or dashboard)
+      const destination = await determineUserDestination(user, '/auth')
+
+      if (destination.type === 'onboarding') {
+        router.push('/onboarding')
+      } else {
+        router.push('/dashboard')
+      }
 
     } catch (error: any) {
       console.error('Google sign in error:', error)
@@ -243,6 +311,18 @@ export default function AuthPage() {
     }
   }
 
+  // Show loading spinner while checking authentication status
+  if (authLoading || checkingAuth) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-health-bg to-primary-light px-4 py-8">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-health-bg to-primary-light px-4 py-8">
       <div className="w-full max-w-md space-y-8">
@@ -251,10 +331,10 @@ export default function AuthPage() {
           <Link href="/" className="text-2xl font-bold text-foreground">
             WLPL
           </Link>
-          <h2 className="mt-4 text-2xl font-bold tracking-tight text-foreground">
+          <h2 className="mt-4">
             {isSignUp ? 'Create your account' : 'Sign in to your account'}
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-body-sm text-muted-foreground">
             Track your weight loss journey with AI-powered insights
           </p>
         </div>
@@ -275,7 +355,7 @@ export default function AuthPage() {
               </div>
 
               <div>
-                <h2 className="text-xl font-semibold text-foreground">Account Created Successfully!</h2>
+                <h2>Account Created Successfully!</h2>
                 <p className="text-sm text-muted-foreground mt-2">
                   Welcome to WLPL! Your account is ready to use.
                 </p>
@@ -405,8 +485,17 @@ export default function AuthPage() {
               {loading ? 'Please wait...' : (isSignUp ? 'Create Account' : 'Sign In')}
             </button>
 
-            {/* Biometric Authentication */}
-            {mounted && biometricSupported && !isSignUp && (
+            {/* Biometric Authentication - DISABLED
+                TODO: Implement proper biometric sign-in flow
+                Requires:
+                1. Backend API endpoint to verify WebAuthn assertion
+                2. Store credential ID → Firebase UID mapping in Firestore
+                3. Use Firebase Admin SDK to create custom token after verification
+                4. Sign in with custom token on client
+
+                For now, biometric setup is available after email/Google sign-in
+            */}
+            {/* {mounted && biometricSupported && !isSignUp && (
               <button
                 type="button"
                 onClick={handleBiometricAuth}
@@ -428,7 +517,7 @@ export default function AuthPage() {
                   </>
                 )}
               </button>
-            )}
+            )} */}
 
             {/* OAuth Options */}
             <div className="relative">

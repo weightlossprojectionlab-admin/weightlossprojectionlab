@@ -11,7 +11,20 @@
       "Bash(del C:Userspercywlplweightlossprojectlab.eslintrc.json)",
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npm run dev:*)",
+      "Bash(rm:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(firebase projects:list:*)",
+      "Read(//c/Users/percy/Pictures/Screenshots/**)",
+      "Bash(netlify env:list:*)",
+      "Bash(netlify env:set:*)",
+      "Bash(taskkill:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Read(//c/Users/percy/Downloads/**)",
+      "Bash(timeout 180 npm run build)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

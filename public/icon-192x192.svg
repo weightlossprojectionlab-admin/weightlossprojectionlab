@@ -1,0 +1,27 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="192" height="192" fill="#4F46E5" rx="28.799999999999997"/>
+
+  <!-- Scale icon -->
+  <g transform="translate(96, 96)">
+    <!-- Scale base -->
+    <rect x="-48" y="38.400000000000006" width="96" height="15.36" fill="white" rx="3.84"/>
+
+    <!-- Scale platform -->
+    <rect x="-57.599999999999994" y="9.600000000000001" width="115.19999999999999" height="11.52" fill="white" rx="3.84"/>
+
+    <!-- Scale needle -->
+    <rect x="-2.88" y="-38.400000000000006" width="5.76" height="48" fill="white" rx="1.92"/>
+
+    <!-- Scale dial -->
+    <circle cx="0" cy="-28.799999999999997" r="34.56" fill="none" stroke="white" stroke-width="3.84"/>
+
+    <!-- Weight indicator -->
+    <text x="0" y="-19.200000000000003" font-family="Arial, sans-serif" font-size="23.04" font-weight="bold" fill="white" text-anchor="middle">
+      WLPL
+    </text>
+
+    <!-- Trend arrow -->
+    <path d="M 28.799999999999997 -48 L 48 -28.799999999999997 L 38.400000000000006 -28.799999999999997 L 38.400000000000006 -9.600000000000001 L 19.200000000000003 -9.600000000000001 L 19.200000000000003 -28.799999999999997 Z" fill="#10B981"/>
+  </g>
+</svg>

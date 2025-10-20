@@ -170,11 +170,45 @@ export const registerBiometric = async (userId: string, userEmail: string): Prom
     // Return the credential ID for storage
     const credentialId = arrayBufferToBase64url(credential.rawId)
 
-    // In a real app, you'd send this to your server to associate with the user
     console.log('Biometric credential registered:', credentialId)
 
-    // Store credential ID locally for demo purposes
-    localStorage.setItem(`biometric_${userId}`, credentialId)
+    // Save credential to Firebase
+    try {
+      const { auth } = await import('firebase/auth')
+      const { getAuth } = await import('firebase/auth')
+      const firebaseAuth = getAuth()
+      const currentUser = firebaseAuth.currentUser
+
+      if (!currentUser) {
+        throw new Error('No authenticated user found')
+      }
+
+      const token = await currentUser.getIdToken()
+
+      const response = await fetch('/api/user-profile/biometric', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ credentialId }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        console.error('Failed to save credential to Firebase:', error)
+        // Continue anyway, store in localStorage as fallback
+        localStorage.setItem(`biometric_${userId}`, credentialId)
+      } else {
+        console.log('Credential successfully saved to Firebase')
+        // Also store in localStorage for backward compatibility
+        localStorage.setItem(`biometric_${userId}`, credentialId)
+      }
+    } catch (firebaseError) {
+      console.error('Error saving to Firebase:', firebaseError)
+      // Fallback to localStorage only
+      localStorage.setItem(`biometric_${userId}`, credentialId)
+    }
 
     return credentialId
 
@@ -237,6 +271,30 @@ export const authenticateBiometric = async (userId: string): Promise<boolean> =>
     }
 
     console.log('Biometric authentication successful')
+
+    // Update last used timestamp in Firebase
+    try {
+      const { getAuth } = await import('firebase/auth')
+      const firebaseAuth = getAuth()
+      const currentUser = firebaseAuth.currentUser
+
+      if (currentUser && credentialId) {
+        const token = await currentUser.getIdToken()
+
+        await fetch('/api/user-profile/biometric', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ credentialId }),
+        })
+      }
+    } catch (updateError) {
+      console.error('Failed to update lastUsed timestamp:', updateError)
+      // Don't fail the authentication if timestamp update fails
+    }
+
     return true
 
   } catch (error: any) {
@@ -253,13 +311,77 @@ export const authenticateBiometric = async (userId: string): Promise<boolean> =>
 }
 
 // Check if user has registered biometric authentication
-export const hasBiometricCredential = (userId: string): boolean => {
-  const credentialId = localStorage.getItem(`biometric_${userId}`)
-  return !!credentialId
+export const hasBiometricCredential = async (userId: string): Promise<boolean> => {
+  try {
+    const { getAuth } = await import('firebase/auth')
+    const firebaseAuth = getAuth()
+    const currentUser = firebaseAuth.currentUser
+
+    if (!currentUser) {
+      // Fallback to localStorage if not authenticated
+      const credentialId = localStorage.getItem(`biometric_${userId}`)
+      return !!credentialId
+    }
+
+    const token = await currentUser.getIdToken()
+
+    const response = await fetch('/api/user-profile/biometric', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      // Fallback to localStorage on error
+      const credentialId = localStorage.getItem(`biometric_${userId}`)
+      return !!credentialId
+    }
+
+    const data = await response.json()
+    return data.count > 0
+  } catch (error) {
+    console.error('Error checking biometric credential:', error)
+    // Fallback to localStorage
+    const credentialId = localStorage.getItem(`biometric_${userId}`)
+    return !!credentialId
+  }
 }
 
 // Remove biometric credential
-export const removeBiometricCredential = (userId: string): void => {
+export const removeBiometricCredential = async (userId: string): Promise<void> => {
+  // First, try to remove from Firebase
+  try {
+    const { getAuth } = await import('firebase/auth')
+    const firebaseAuth = getAuth()
+    const currentUser = firebaseAuth.currentUser
+
+    if (currentUser) {
+      const token = await currentUser.getIdToken()
+
+      // Get the credential ID from localStorage (needed for DELETE request)
+      const credentialId = localStorage.getItem(`biometric_${userId}`)
+
+      if (credentialId) {
+        const response = await fetch('/api/user-profile/biometric', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ credentialId }),
+        })
+
+        if (!response.ok) {
+          console.error('Failed to remove credential from Firebase')
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error removing biometric credential from Firebase:', error)
+  }
+
+  // Always remove from localStorage
   localStorage.removeItem(`biometric_${userId}`)
 }
 
@@ -270,7 +392,7 @@ export const getBiometricStatus = async (userId: string): Promise<{
   deviceType: string
 }> => {
   const supported = await isBiometricSupported()
-  const enabled = hasBiometricCredential(userId)
+  const enabled = await hasBiometricCredential(userId)
 
   let deviceType = 'Unknown'
   if (typeof window !== 'undefined') {
@@ -287,6 +409,71 @@ export const getBiometricStatus = async (userId: string): Promise<{
   }
 
   return { supported, enabled, deviceType }
+}
+
+// Migrate localStorage credentials to Firebase
+export const migrateLocalStorageCredentials = async (userId: string): Promise<boolean> => {
+  try {
+    // Check if there's a credential in localStorage
+    const credentialId = localStorage.getItem(`biometric_${userId}`)
+
+    if (!credentialId) {
+      return false // Nothing to migrate
+    }
+
+    const { getAuth } = await import('firebase/auth')
+    const firebaseAuth = getAuth()
+    const currentUser = firebaseAuth.currentUser
+
+    if (!currentUser) {
+      console.log('Cannot migrate: No authenticated user')
+      return false
+    }
+
+    // Check if it already exists in Firebase
+    const token = await currentUser.getIdToken()
+
+    const checkResponse = await fetch('/api/user-profile/biometric', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+
+    if (checkResponse.ok) {
+      const data = await checkResponse.json()
+
+      // Check if this exact credential already exists
+      const credentialExists = data.credentials?.some((cred: any) => cred.id === credentialId)
+
+      if (credentialExists) {
+        console.log('Credential already exists in Firebase, skipping migration')
+        return true
+      }
+    }
+
+    // Migrate the credential
+    const response = await fetch('/api/user-profile/biometric', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ credentialId }),
+    })
+
+    if (response.ok) {
+      console.log('Successfully migrated localStorage credential to Firebase')
+      return true
+    } else {
+      const error = await response.json()
+      console.error('Failed to migrate credential:', error)
+      return false
+    }
+  } catch (error) {
+    console.error('Error migrating localStorage credentials:', error)
+    return false
+  }
 }
 
 // Get user-friendly error messages

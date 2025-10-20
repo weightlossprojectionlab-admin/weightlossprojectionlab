@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
+import { generateSearchKeywords } from '@/lib/meal-title-utils'
 
 interface AIAnalysis {
   foods: Array<{
@@ -14,6 +15,7 @@ interface AIAnalysis {
     carbs: number
     protein: number
     fat: number
+    fiber: number
   }
   nutritionalHighlights: string[]
   suggestions: string[]
@@ -34,6 +36,7 @@ interface MealLog {
     carbs: number
     protein: number
     fat: number
+    fiber: number
   }
   loggedAt: Timestamp
   source: 'photo' | 'manual' | 'hybrid'
@@ -161,15 +164,19 @@ export async function POST(request: NextRequest) {
 
     // Calculate totals
     let totalCalories = 0
-    let macros = { carbs: 0, protein: 0, fat: 0 }
+    let macros = { carbs: 0, protein: 0, fat: 0, fiber: 0 }
     let source: 'photo' | 'manual' | 'hybrid' = 'manual'
 
     if (aiAnalysis) {
-      // Handle both totalCalories and estimatedCalories from AI
-      totalCalories += aiAnalysis.totalCalories || aiAnalysis.estimatedCalories || 0
-      macros.carbs += aiAnalysis.macros?.carbs || 0
-      macros.protein += aiAnalysis.macros?.protein || 0
-      macros.fat += aiAnalysis.macros?.fat || 0
+      // Use totalCalories as canonical field (Gemini new format)
+      totalCalories += aiAnalysis.totalCalories || 0
+
+      // Use totalMacros as canonical field (Gemini new format)
+      const aiMacros = aiAnalysis.totalMacros || {}
+      macros.carbs += aiMacros.carbs || 0
+      macros.protein += aiMacros.protein || 0
+      macros.fat += aiMacros.fat || 0
+      macros.fiber += aiMacros.fiber || 0
       source = 'photo'
     }
 
@@ -205,6 +212,15 @@ export async function POST(request: NextRequest) {
     }
     if (notes) {
       mealLogData.notes = notes
+    }
+
+    // Generate title and search keywords if AI analysis has title
+    if (aiAnalysis?.title) {
+      mealLogData.title = aiAnalysis.title
+
+      // Generate search keywords from food items, title, and notes
+      const foodItems = aiAnalysis.foodItems || []
+      mealLogData.searchKeywords = generateSearchKeywords(foodItems, aiAnalysis.title, notes)
     }
 
     // Add to Firestore

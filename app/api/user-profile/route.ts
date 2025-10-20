@@ -84,10 +84,14 @@ export async function GET(request: NextRequest) {
       data: userProfile
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching user profile:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch user profile' },
+      {
+        error: 'Failed to fetch user profile',
+        details: error?.message || 'Unknown error',
+        code: error?.code || 'UNKNOWN_ERROR'
+      },
       { status: 500 }
     )
   }
@@ -157,7 +161,7 @@ export async function POST(request: NextRequest) {
       authProviders.push('email')
     }
 
-    // Create user profile data
+    // Create user profile data with onboarding defaults
     const userProfileData: Partial<UserProfile> = {
       email,
       name,
@@ -171,15 +175,24 @@ export async function POST(request: NextRequest) {
       lastActiveAt: new Date()
     }
 
-    // Save to Firestore
-    await adminDb.collection('users').doc(userId).set(userProfileData)
+    // Add onboarding tracking fields to profile object
+    const profileWithOnboarding = {
+      ...userProfileData,
+      profile: {
+        onboardingCompleted: false,
+        currentOnboardingStep: 1
+      }
+    }
+
+    // Save to Firestore with onboarding fields
+    await adminDb.collection('users').doc(userId).set(profileWithOnboarding)
 
     // Return the created profile
     const createdProfile = {
       id: userId,
-      ...userProfileData,
-      createdAt: userProfileData.createdAt?.toISOString(),
-      lastActiveAt: userProfileData.lastActiveAt?.toISOString()
+      ...profileWithOnboarding,
+      createdAt: profileWithOnboarding.createdAt?.toISOString(),
+      lastActiveAt: profileWithOnboarding.lastActiveAt?.toISOString()
     }
 
     return NextResponse.json({
@@ -188,10 +201,14 @@ export async function POST(request: NextRequest) {
       message: 'User profile created successfully'
     }, { status: 201 })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating user profile:', error)
     return NextResponse.json(
-      { error: 'Failed to create user profile' },
+      {
+        error: 'Failed to create user profile',
+        details: error?.message || 'Unknown error',
+        code: error?.code || 'UNKNOWN_ERROR'
+      },
       { status: 500 }
     )
   }
@@ -227,8 +244,8 @@ export async function PUT(request: NextRequest) {
     // Always update lastActiveAt
     updateData.lastActiveAt = new Date()
 
-    // Update user profile in Firestore
-    await adminDb.collection('users').doc(userId).update(updateData)
+    // Update user profile in Firestore (use set with merge to create if doesn't exist)
+    await adminDb.collection('users').doc(userId).set(updateData, { merge: true })
 
     // Get updated profile
     const updatedDoc = await adminDb.collection('users').doc(userId).get()
@@ -251,10 +268,14 @@ export async function PUT(request: NextRequest) {
       message: 'User profile updated successfully'
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating user profile:', error)
     return NextResponse.json(
-      { error: 'Failed to update user profile' },
+      {
+        error: 'Failed to update user profile',
+        details: error?.message || 'Unknown error',
+        code: error?.code || 'UNKNOWN_ERROR'
+      },
       { status: 500 }
     )
   }

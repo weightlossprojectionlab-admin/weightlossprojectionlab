@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Diagnostics Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .status {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 10px 10px 0;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        #video-container {
+            background: black;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px 0;
+            display: none;
+        }
+        #video-container.active {
+            display: block;
+        }
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .error {
+            color: #ff6b6b;
+            background: #ffe0e0;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #28a745;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>📸 Camera Diagnostics Tool</h1>
+
+    <div class="status">
+        <p><strong>Purpose:</strong> This page tests camera access and runs comprehensive diagnostics to identify any issues.</p>
+        <p><strong>Location:</strong> <code id="location"></code></p>
+        <p><strong>Protocol:</strong> <code id="protocol"></code></p>
+    </div>
+
+    <div>
+        <button onclick="runFullDiagnostics()">🔍 Run Full Diagnostics</button>
+        <button onclick="testCameraAccess()">📸 Test Camera Access</button>
+        <button onclick="testPermissionState()">🔐 Check Permissions</button>
+        <button onclick="clearOutput()">🗑️ Clear Output</button>
+    </div>
+
+    <div id="video-container">
+        <video id="video" autoplay playsinline muted></video>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        // Display current location info
+        document.getElementById('location').textContent = window.location.href;
+        document.getElementById('protocol').textContent = window.location.protocol;
+
+        const output = document.getElementById('output');
+        const video = document.getElementById('video');
+        const videoContainer = document.getElementById('video-container');
+        let currentStream = null;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = {
+                'info': '📋',
+                'success': '✅',
+                'error': '❌',
+                'warning': '⚠️'
+            }[type] || '📋';
+
+            output.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            output.textContent = '';
+        }
+
+        async function runFullDiagnostics() {
+            clearOutput();
+            log('Starting comprehensive camera diagnostics...', 'info');
+            log('='.repeat(60), 'info');
+
+            // 1. Environment Check
+            log('\n📍 ENVIRONMENT CHECK', 'info');
+            log(`Secure Context: ${window.isSecureContext}`, window.isSecureContext ? 'success' : 'error');
+            log(`Protocol: ${window.location.protocol}`, 'info');
+            log(`Hostname: ${window.location.hostname}`, 'info');
+            log(`User Agent: ${navigator.userAgent}`, 'info');
+
+            // 2. API Support Check
+            log('\n🔧 API SUPPORT CHECK', 'info');
+            log(`navigator.mediaDevices: ${!!navigator.mediaDevices}`, !!navigator.mediaDevices ? 'success' : 'error');
+            log(`getUserMedia: ${!!navigator.mediaDevices?.getUserMedia}`, !!navigator.mediaDevices?.getUserMedia ? 'success' : 'error');
+            log(`Permissions API: ${'permissions' in navigator}`, 'permissions' in navigator ? 'success' : 'warning');
+            log(`enumerateDevices: ${!!navigator.mediaDevices?.enumerateDevices}`, !!navigator.mediaDevices?.enumerateDevices ? 'success' : 'error');
+
+            // 3. Permission Check
+            if ('permissions' in navigator) {
+                log('\n🔐 PERMISSION STATE', 'info');
+                try {
+                    const result = await navigator.permissions.query({ name: 'camera' });
+                    log(`Permission: ${result.state}`, result.state === 'granted' ? 'success' : 'warning');
+                } catch (e) {
+                    log(`Permission query failed: ${e.message}`, 'warning');
+                }
+            }
+
+            // 4. Device Enumeration
+            if (navigator.mediaDevices?.enumerateDevices) {
+                log('\n📱 AVAILABLE DEVICES', 'info');
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const cameras = devices.filter(d => d.kind === 'videoinput');
+                    log(`Total devices: ${devices.length}`, 'info');
+                    log(`Camera devices: ${cameras.length}`, cameras.length > 0 ? 'success' : 'error');
+                    cameras.forEach((cam, i) => {
+                        log(`  ${i + 1}. ${cam.label || 'Unknown Camera'}`, 'info');
+                    });
+                } catch (e) {
+                    log(`Device enumeration failed: ${e.message}`, 'error');
+                }
+            }
+
+            // 5. Stream Test
+            log('\n🎥 CAMERA STREAM TEST', 'info');
+            await testCameraAccess();
+
+            log('\n='.repeat(60), 'info');
+            log('Diagnostics complete!', 'success');
+        }
+
+        async function testCameraAccess() {
+            log('Requesting camera access...', 'info');
+
+            // Stop any existing stream
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+                videoContainer.classList.remove('active');
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+
+                currentStream = stream;
+                video.srcObject = stream;
+                videoContainer.classList.add('active');
+
+                log('✅ Camera access GRANTED!', 'success');
+                log(`Stream active: ${stream.active}`, 'success');
+                log(`Video tracks: ${stream.getVideoTracks().length}`, 'success');
+
+                stream.getVideoTracks().forEach((track, i) => {
+                    log(`  Track ${i + 1}: ${track.label} (${track.readyState})`, 'success');
+                    log(`    Enabled: ${track.enabled}, Muted: ${track.muted}`, 'info');
+                });
+
+            } catch (error) {
+                videoContainer.classList.remove('active');
+                log(`❌ Camera access FAILED: ${error.name}`, 'error');
+                log(`Error message: ${error.message}`, 'error');
+
+                // Provide guidance based on error type
+                switch (error.name) {
+                    case 'NotAllowedError':
+                    case 'PermissionDeniedError':
+                        log('💡 User denied permission or permission blocked in settings', 'warning');
+                        log('💡 Check browser settings to allow camera access', 'warning');
+                        break;
+                    case 'NotFoundError':
+                    case 'DevicesNotFoundError':
+                        log('💡 No camera device found on this device', 'warning');
+                        break;
+                    case 'NotReadableError':
+                    case 'TrackStartError':
+                        log('💡 Camera already in use by another application', 'warning');
+                        break;
+                    case 'OverconstrainedError':
+                        log('💡 Camera constraints cannot be satisfied', 'warning');
+                        log('💡 Trying with basic constraints...', 'info');
+                        // Retry with basic constraints
+                        try {
+                            const basicStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                            currentStream = basicStream;
+                            video.srcObject = basicStream;
+                            videoContainer.classList.add('active');
+                            log('✅ Camera works with basic constraints!', 'success');
+                        } catch (e) {
+                            log(`❌ Basic constraints also failed: ${e.message}`, 'error');
+                        }
+                        break;
+                    case 'SecurityError':
+                        log('💡 Camera blocked for security reasons (HTTPS required)', 'error');
+                        break;
+                    default:
+                        log(`💡 Unknown error type: ${error.name}`, 'error');
+                }
+            }
+        }
+
+        async function testPermissionState() {
+            clearOutput();
+            log('Checking permission state...', 'info');
+
+            if (!('permissions' in navigator)) {
+                log('❌ Permissions API not supported (common on iOS Safari)', 'warning');
+                log('💡 Permission state can only be checked by requesting camera', 'info');
+                return;
+            }
+
+            try {
+                const result = await navigator.permissions.query({ name: 'camera' });
+                log(`Current state: ${result.state}`, 'info');
+
+                switch (result.state) {
+                    case 'granted':
+                        log('✅ Camera permission is GRANTED', 'success');
+                        break;
+                    case 'denied':
+                        log('❌ Camera permission is DENIED', 'error');
+                        log('💡 User must enable camera in browser settings', 'warning');
+                        break;
+                    case 'prompt':
+                        log('⚠️ Camera permission not yet requested', 'warning');
+                        log('💡 Permission dialog will appear when camera is requested', 'info');
+                        break;
+                }
+
+                // Listen for changes
+                result.addEventListener('change', () => {
+                    log(`Permission changed to: ${result.state}`, 'info');
+                });
+
+            } catch (error) {
+                log(`❌ Permission query failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Run diagnostics on page load
+        window.addEventListener('load', () => {
+            log('Camera Diagnostics Tool loaded', 'success');
+            log('Click "Run Full Diagnostics" to test camera functionality', 'info');
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>

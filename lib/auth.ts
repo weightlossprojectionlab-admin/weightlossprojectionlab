@@ -68,3 +68,6 @@ export const checkSignInMethods = async (email: string) => {
     throw error
   }
 }
+
+// Re-export auth instance for components that need direct access
+export { auth }
