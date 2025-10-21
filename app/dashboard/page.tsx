@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/auth/AuthGuard'
 import DashboardRouter from '@/components/auth/DashboardRouter'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { GoalsEditor } from '@/components/ui/GoalsEditor'
 import { PlateauDetectionEmpty } from '@/components/ui/EmptyState'
+import { RecipeModal } from '@/components/ui/RecipeModal'
 import { signOut, auth } from '@/lib/auth'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
@@ -15,10 +17,15 @@ import { useWeightProjection } from '@/hooks/useWeightProjection'
 import { getNextMealContext, getMealCTA } from '@/lib/meal-context'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
 import { Spinner } from '@/components/ui/Spinner'
+import { MealSuggestion } from '@/lib/meal-suggestions'
 
 function DashboardContent() {
+  const router = useRouter()
   const [showGoalsEditor, setShowGoalsEditor] = useState(false)
   const [signOutLoading, setSignOutLoading] = useState(false)
+  const [selectedRecipe, setSelectedRecipe] = useState<MealSuggestion | null>(null)
+  const [showRecipeModal, setShowRecipeModal] = useState(false)
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
   // Fetch all dashboard data with optimized hooks
   const {
     userProfile,
@@ -332,10 +339,26 @@ function DashboardContent() {
                           <div className="flex items-start space-x-2">
                             <span className="text-primary mt-0.5">•</span>
                             <div className="flex-1">
-                              <p className="font-medium text-foreground">{suggestion.name}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {suggestion.calories} cal • {suggestion.macros.protein}g protein • {suggestion.prepTime} min
-                              </p>
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <p className="font-medium text-foreground">{suggestion.name}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {suggestion.calories} cal • {suggestion.macros.protein}g protein • {suggestion.prepTime} min
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setSelectedRecipe(suggestion)
+                                    setShowRecipeModal(true)
+                                  }}
+                                  className="ml-2 text-xs text-primary hover:text-primary-hover font-medium whitespace-nowrap flex items-center space-x-1"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                  </svg>
+                                  <span>Recipe</span>
+                                </button>
+                              </div>
 
                               {/* ALWAYS show allergens (for self-filtering) */}
                               {suggestion.allergens && suggestion.allergens.length > 0 && (
@@ -594,32 +617,56 @@ function DashboardContent() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4">
-          <Link
-            href="/log-meal"
-            className="card-interactive flex flex-col items-center space-y-2 p-6"
+          <button
+            onClick={() => {
+              setNavigatingTo('log-meal')
+              router.push('/log-meal')
+            }}
+            disabled={!!navigatingTo}
+            className="card-interactive flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Log meal"
           >
-            <span className="text-2xl" role="img" aria-label="camera">📸</span>
+            {navigatingTo === 'log-meal' ? (
+              <Spinner size="md" className="text-primary" />
+            ) : (
+              <span className="text-2xl" role="img" aria-label="camera">📸</span>
+            )}
             <span className="text-sm font-medium">Log Meal</span>
-          </Link>
+          </button>
 
-          <Link
-            href="/meal-gallery"
-            className="card-interactive flex flex-col items-center space-y-2 p-6"
+          <button
+            onClick={() => {
+              setNavigatingTo('gallery')
+              router.push('/meal-gallery')
+            }}
+            disabled={!!navigatingTo}
+            className="card-interactive flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Meal gallery"
           >
-            <span className="text-2xl" role="img" aria-label="gallery">🖼️</span>
+            {navigatingTo === 'gallery' ? (
+              <Spinner size="md" className="text-primary" />
+            ) : (
+              <span className="text-2xl" role="img" aria-label="gallery">🖼️</span>
+            )}
             <span className="text-sm font-medium">Gallery</span>
-          </Link>
+          </button>
 
-          <Link
-            href="/profile"
-            className="card-interactive flex flex-col items-center space-y-2 p-6"
+          <button
+            onClick={() => {
+              setNavigatingTo('settings')
+              router.push('/profile')
+            }}
+            disabled={!!navigatingTo}
+            className="card-interactive flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Profile settings"
           >
-            <span className="text-2xl" role="img" aria-label="settings">⚙️</span>
+            {navigatingTo === 'settings' ? (
+              <Spinner size="md" className="text-primary" />
+            ) : (
+              <span className="text-2xl" role="img" aria-label="settings">⚙️</span>
+            )}
             <span className="text-sm font-medium">Settings</span>
-          </Link>
+          </button>
         </div>
 
         {/* AI Recommendations */}
@@ -647,6 +694,18 @@ function DashboardContent() {
         currentWeight={weightTrend.current}
         onSuccess={() => window.location.reload()}
       />
+
+      {/* Recipe Modal */}
+      {selectedRecipe && (
+        <RecipeModal
+          suggestion={selectedRecipe}
+          isOpen={showRecipeModal}
+          onClose={() => {
+            setShowRecipeModal(false)
+            setSelectedRecipe(null)
+          }}
+        />
+      )}
     </main>
   )
 }
