@@ -13,6 +13,7 @@ import { compressImage, formatFileSize } from '@/lib/image-compression'
 import { exportToCSV, exportToPDF } from '@/lib/export-utils'
 import { shareMeal, shareToPlatform, getPlatformInfo } from '@/lib/share-utils'
 import { MealCardSkeleton, TemplateCardSkeleton, SummaryCardSkeleton } from '@/components/ui/skeleton'
+import { Spinner } from '@/components/ui/Spinner'
 import type { AIAnalysis, MealTemplate } from '@/types'
 
 // Helper function to detect meal type based on current time
@@ -58,6 +59,10 @@ function LogMealContent() {
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null)
   const [sharingMealId, setSharingMealId] = useState<string | null>(null)
   const [shareModalData, setShareModalData] = useState<{ meal: any; imageBlob: Blob; caption: string } | null>(null)
+  const [savingTemplate, setSavingTemplate] = useState(false)
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null)
+  const [usingTemplateId, setUsingTemplateId] = useState<string | null>(null)
+  const [updatingMealId, setUpdatingMealId] = useState<string | null>(null)
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileReaderRef = useRef<FileReader | null>(null)
@@ -489,6 +494,7 @@ function LogMealContent() {
   }
 
   const saveEditedMeal = async (mealId: string) => {
+    setUpdatingMealId(mealId)
     try {
       await mealLogOperations.updateMealLog(mealId, {
         title: editForm.title || undefined,
@@ -502,6 +508,8 @@ function LogMealContent() {
     } catch (error) {
       console.error('Failed to update meal:', error)
       toast.error(`Failed to update meal: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setUpdatingMealId(null)
     }
   }
 
@@ -594,6 +602,7 @@ function LogMealContent() {
   }
 
   const useTemplate = async (template: MealTemplate) => {
+    setUsingTemplateId(template.id)
     try {
       // Record template usage
       await mealTemplateOperations.recordTemplateUsage(template.id)
@@ -619,6 +628,8 @@ function LogMealContent() {
     } catch (error) {
       console.error('Failed to use template:', error)
       toast.error(`Failed to log meal: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setUsingTemplateId(null)
     }
   }
 
@@ -628,6 +639,7 @@ function LogMealContent() {
       return
     }
 
+    setSavingTemplate(true)
     try {
       await mealTemplateOperations.createMealTemplate({
         name: templateName.trim(),
@@ -645,6 +657,8 @@ function LogMealContent() {
     } catch (error) {
       console.error('Failed to save template:', error)
       toast.error(`Failed to save template: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setSavingTemplate(false)
     }
   }
 
@@ -659,6 +673,7 @@ function LogMealContent() {
 
     if (!confirmed) return
 
+    setDeletingTemplateId(templateId)
     try {
       await mealTemplateOperations.deleteMealTemplate(templateId)
       toast.success('Template deleted successfully!')
@@ -666,6 +681,8 @@ function LogMealContent() {
     } catch (error) {
       console.error('Failed to delete template:', error)
       toast.error(`Failed to delete template: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setDeletingTemplateId(null)
     }
   }
 
@@ -870,10 +887,11 @@ function LogMealContent() {
                         </div>
                         <button
                           onClick={() => deleteTemplate(template.id, template.name)}
-                          className="text-error hover:text-error-dark ml-2"
+                          disabled={deletingTemplateId === template.id}
+                          className="text-error hover:text-error-dark ml-2 disabled:opacity-50 flex items-center justify-center min-w-[24px]"
                           aria-label="Delete template"
                         >
-                          🗑️
+                          {deletingTemplateId === template.id ? <Spinner size="sm" className="text-error" /> : '🗑️'}
                         </button>
                       </div>
                       <div className="mb-2">
@@ -883,9 +901,11 @@ function LogMealContent() {
                       </div>
                       <button
                         onClick={() => useTemplate(template)}
-                        className="w-full bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-hover"
+                        disabled={usingTemplateId === template.id}
+                        className={`w-full bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-hover inline-flex items-center justify-center space-x-2 ${usingTemplateId === template.id ? 'cursor-wait opacity-60' : ''}`}
                       >
-                        Use This Template
+                        {usingTemplateId === template.id && <Spinner size="sm" />}
+                        <span>{usingTemplateId === template.id ? 'Loading...' : 'Use This Template'}</span>
                       </button>
                     </div>
                   )
@@ -1169,9 +1189,11 @@ function LogMealContent() {
                     <div className="flex space-x-2">
                       <button
                         onClick={saveAsTemplate}
-                        className="flex-1 bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-hover"
+                        disabled={savingTemplate}
+                        className={`flex-1 bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-hover inline-flex items-center justify-center space-x-2 ${savingTemplate ? 'cursor-wait opacity-60' : ''}`}
                       >
-                        Save Template
+                        {savingTemplate && <Spinner size="sm" />}
+                        <span>{savingTemplate ? 'Saving...' : 'Save Template'}</span>
                       </button>
                       <button
                         onClick={() => {
@@ -1500,7 +1522,7 @@ function LogMealContent() {
                             title="Share to social media"
                           >
                             {sharingMealId === meal.id ? (
-                              <div className="animate-spin w-4 h-4 border-2 border-success border-t-transparent rounded-full"></div>
+                              <Spinner size="sm" className="text-success" />
                             ) : (
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -1528,7 +1550,7 @@ function LogMealContent() {
                             aria-label="Delete meal"
                           >
                             {isDeleting ? (
-                              <div className="animate-spin w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full"></div>
+                              <Spinner size="sm" className="text-error" />
                             ) : (
                               '🗑️'
                             )}
@@ -1591,9 +1613,11 @@ function LogMealContent() {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => saveEditedMeal(meal.id)}
-                            className="flex-1 bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-hover"
+                            disabled={updatingMealId === meal.id}
+                            className={`flex-1 bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-hover inline-flex items-center justify-center space-x-2 ${updatingMealId === meal.id ? 'cursor-wait opacity-60' : ''}`}
                           >
-                            Save Changes
+                            {updatingMealId === meal.id && <Spinner size="sm" />}
+                            <span>{updatingMealId === meal.id ? 'Saving...' : 'Save Changes'}</span>
                           </button>
                           <button
                             onClick={cancelEditing}

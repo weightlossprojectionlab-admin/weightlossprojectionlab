@@ -31,6 +31,7 @@ import {
   getMaxBirthDate,
   getMinBirthDate
 } from '@/lib/age-utils'
+import { Spinner } from '@/components/ui/Spinner'
 import type { UserProfile, UserGoals, UserPreferences } from '@/types'
 
 interface OnboardingData {
@@ -295,20 +296,25 @@ function OnboardingContent() {
   const nextStep = async () => {
     // Validate current step before proceeding
     if (validateStep(currentStep)) {
-      // Clear warnings when moving to next step
-      setWarnings([])
+      setLoading(true)
+      try {
+        // Clear warnings when moving to next step
+        setWarnings([])
 
-      // Calculate next step number
-      const nextStepNumber = Math.min(currentStep + 1, totalSteps)
+        // Calculate next step number
+        const nextStepNumber = Math.min(currentStep + 1, totalSteps)
 
-      // Auto-save progress with NEXT step (so resume works correctly)
-      await saveStepData(nextStepNumber)
+        // Auto-save progress with NEXT step (so resume works correctly)
+        await saveStepData(nextStepNumber)
 
-      if (currentStep === 3) {
-        // Calculate targets after goals step
-        calculateAndSetTargets()
+        if (currentStep === 3) {
+          // Calculate targets after goals step
+          calculateAndSetTargets()
+        }
+        setCurrentStep(nextStepNumber)
+      } finally {
+        setLoading(false)
       }
-      setCurrentStep(nextStepNumber)
     }
   }
 
@@ -677,17 +683,20 @@ function OnboardingContent() {
           {currentStep < totalSteps ? (
             <button
               onClick={nextStep}
-              className="btn btn-primary font-medium"
+              disabled={loading}
+              className={`btn btn-primary font-medium inline-flex items-center space-x-2 ${loading ? 'cursor-wait' : ''}`}
             >
-              Continue →
+              {loading && <Spinner size="sm" />}
+              <span>{loading ? 'Saving...' : 'Continue →'}</span>
             </button>
           ) : (
             <button
               onClick={handleComplete}
               disabled={loading}
-              className="btn btn-success font-medium"
+              className={`btn btn-success font-medium inline-flex items-center space-x-2 ${loading ? 'cursor-wait' : ''}`}
             >
-              {loading ? 'Saving...' : 'Complete Setup ✓'}
+              {loading && <Spinner size="sm" />}
+              <span>{loading ? 'Saving...' : 'Complete Setup ✓'}</span>
             </button>
           )}
         </div>

@@ -14,9 +14,11 @@ import { useStepTracking } from '@/components/StepTrackingProvider'
 import { useWeightProjection } from '@/hooks/useWeightProjection'
 import { getNextMealContext, getMealCTA } from '@/lib/meal-context'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
+import { Spinner } from '@/components/ui/Spinner'
 
 function DashboardContent() {
   const [showGoalsEditor, setShowGoalsEditor] = useState(false)
+  const [signOutLoading, setSignOutLoading] = useState(false)
   // Fetch all dashboard data with optimized hooks
   const {
     userProfile,
@@ -148,11 +150,20 @@ function DashboardContent() {
         title="Dashboard"
         actions={
           <button
-            onClick={() => signOut()}
-            className="text-sm text-accent hover:text-accent-hover"
+            onClick={async () => {
+              setSignOutLoading(true)
+              try {
+                await signOut()
+              } finally {
+                setSignOutLoading(false)
+              }
+            }}
+            disabled={signOutLoading}
+            className={`text-sm text-accent hover:text-accent-hover inline-flex items-center space-x-1 ${signOutLoading ? 'cursor-wait opacity-60' : ''}`}
             aria-label="Sign out"
           >
-            Sign Out
+            {signOutLoading && <Spinner size="sm" className="text-accent" />}
+            <span>{signOutLoading ? 'Signing Out...' : 'Sign Out'}</span>
           </button>
         }
       />
