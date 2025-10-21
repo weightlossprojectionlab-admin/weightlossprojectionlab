@@ -32,10 +32,10 @@
     }
   },
   "meta": {
-    "version": "1.3.6",
-    "release_name": "Trust & Safety + AI Governance",
-    "release_date": "2025-10-07",
-    "updated_by": "WLPL Product Ops",
+    "version": "1.5.0",
+    "release_name": "Pinterest-Hybrid Recipe Discovery Platform + Freemium Monetization",
+    "release_date": "2025-10-21",
+    "updated_by": "Claude Code Review",
     "change_summary": [
       "Added coaching metered billing and Zoom integration (v1.3.1)",
       "Introduced group billing cost-sharing logic (v1.3.2)",
@@ -43,7 +43,12 @@
       "Optimized Stripe transaction flow for admin-led billing (v1.3.4)",
       "Added secure Stripe invite payment link flow (v1.3.5)",
       "Implemented scam prevention and verification framework (v1.3.6)",
-      "Added AI & Data Governance, AISA, T&S moderation, refunds/cancellations/disputes"
+      "Added AI & Data Governance, AISA, T&S moderation, refunds/cancellations/disputes",
+      "Launched Recipe System with 28+ recipes, scaling, sharing, and SEO (v1.4.0)",
+      "Implemented Phase 1 performance optimizations: Firebase indexes, bundle reduction, loading states",
+      "Created comprehensive Design System documentation and dark mode accessibility fixes",
+      "Added viral social sharing with multi-platform support and Web Share API integration",
+      "Launched Pinterest-hybrid public recipe discovery platform with UGC, freemium model, and viral growth mechanics (v1.5.0)"
     ]
   },
   "product_schema": {
@@ -79,11 +84,11 @@
   },
   "product": {
     "name": "Weight Loss Progress Lab (WLPL)",
-    "version": "1.3.6",
-    "tagline": "AI-powered weight loss tracking with biometric authentication and coaching",
-    "description": "A comprehensive health and fitness application that helps users track their weight loss journey through intelligent logging, AI-powered coaching & nutrition analysis, and seamless biometric authentication.",
-    "target_audience": "Health-conscious individuals seeking to lose weight with data-driven insights and minimal manual effort",
-    "market_category": "Health & Fitness / Weight Loss / Nutrition Tracking"
+    "version": "1.5.0",
+    "tagline": "AI-powered weight loss tracking with Pinterest-style recipe discovery and freemium community",
+    "description": "A comprehensive health and fitness application that helps users track their weight loss journey through intelligent logging, Pinterest-hybrid recipe discovery platform with user-generated content, freemium monetization model, AI-powered nutrition analysis, human & AI coaching, and seamless biometric authentication. Features viral social sharing, creator profiles, and SEO-optimized recipe content for organic acquisition.",
+    "target_audience": "Health-conscious individuals seeking to lose weight with data-driven insights, recipe inspiration, and community support with minimal manual effort",
+    "market_category": "Health & Fitness / Weight Loss / Nutrition Tracking / Recipe Discovery"
   },
   "business_objectives_schema": {
     "type": "object",
@@ -509,6 +514,538 @@
           "contextual_content": true
         }
       }
+    },
+    "recipe_system": {
+      "priority": "P0 - Critical",
+      "description": "Comprehensive recipe database with scaling, sharing, and SEO optimization for organic acquisition",
+      "status": "Launched - 28 recipes live",
+      "features": {
+        "recipe_database": {
+          "total_recipes": 28,
+          "expansion_target": "200+ recipes",
+          "meal_types": ["breakfast", "lunch", "dinner", "snack"],
+          "recipe_details": {
+            "nutrition_info": "Full macros (protein, carbs, fat, fiber) and calorie counts",
+            "ingredients": "Precise measurements and quantities",
+            "recipe_steps": "Step-by-step cooking instructions (6 breakfast recipes completed)",
+            "cooking_tips": "Expert tips and variations",
+            "prep_time": "Estimated preparation time",
+            "serving_size": "Configurable servings (1-8)",
+            "dietary_tags": ["vegan", "vegetarian", "keto", "paleo", "gluten-free", "dairy-free", "high-protein", "low-carb", "pescatarian"],
+            "allergen_warnings": ["dairy", "gluten", "nuts", "shellfish", "soy", "eggs", "fish"]
+          }
+        },
+        "recipe_browsing": {
+          "route": "/recipes",
+          "filtering": {
+            "meal_type": "Filter by breakfast, lunch, dinner, snack",
+            "dietary_tags": "Multi-select dietary preference filtering",
+            "search": "Full-text search across recipe names, descriptions, and ingredients"
+          },
+          "ui": "Responsive card grid with quick stats preview",
+          "results_count": "Dynamic result count display"
+        },
+        "recipe_detail_pages": {
+          "route": "/recipes/[id]",
+          "rendering": "Static Site Generation (SSG) for all recipes",
+          "seo_optimization": {
+            "metadata": "Full OpenGraph and Twitter Card tags",
+            "keywords": "Dynamic keyword generation from recipe attributes",
+            "structured_data": "Recipe schema markup (planned)",
+            "url_structure": "SEO-friendly /recipes/{id} format"
+          },
+          "marketing_ctas": {
+            "top_banner": "Free trial signup with value proposition",
+            "bottom_cta": "Dual CTA (Start Tracking + Browse More Recipes)",
+            "social_proof": "Feature highlights (30-second logging, AI analysis, results)"
+          }
+        },
+        "recipe_modal": {
+          "component": "RecipeModal.tsx - Full-featured recipe viewer",
+          "recipe_scaling": {
+            "range": "1-8 servings",
+            "auto_calculation": "Real-time recalculation of ingredients, calories, macros, and prep time",
+            "reset_option": "One-click reset to original serving size"
+          },
+          "ingredient_substitutions": {
+            "engine": "Dietary-aware substitution suggestions",
+            "ui": "Click any ingredient to expand alternatives",
+            "details": "Substitution ratios, notes, and dietary tag matching"
+          },
+          "dual_modes": {
+            "recipe_view": "Full recipe with steps, tips, and nutrition",
+            "shopping_list": "Interactive checklist with scaled ingredient quantities"
+          },
+          "actions": {
+            "print": "Print-optimized recipe format",
+            "share": "Multi-platform social sharing (see social_sharing_system)"
+          }
+        },
+        "social_sharing_system": {
+          "priority": "P0 - Critical for viral growth",
+          "share_card_generation": {
+            "technology": "Canvas-based image generation",
+            "aspect_ratios": {
+              "1:1": "Square (1080x1080) - Instagram Feed",
+              "9:16": "Story (1080x1920) - Instagram/Facebook Stories",
+              "3:2": "Landscape (1080x720) - Twitter/Facebook Feed"
+            },
+            "design": {
+              "gradient_background": "Indigo to purple gradient for brand recognition",
+              "content": "Recipe name, description, calories, protein, prep time, macros, dietary tags",
+              "branding": "WLPL logo and tagline: 'Snap. Analyze. Track. All in 30 seconds.'",
+              "visual_hierarchy": "Bold typography with clear nutrition grid"
+            }
+          },
+          "sharing_channels": {
+            "web_share_api": {
+              "platform": "Mobile devices",
+              "features": "Native share sheet with image attachment",
+              "fallback": "Desktop fallback to download + platform menu"
+            },
+            "platform_urls": {
+              "facebook": "Direct share URL with pre-filled text",
+              "twitter": "Tweet composer with caption and link",
+              "pinterest": "Pin creation with recipe image",
+              "whatsapp": "Message pre-fill with recipe link"
+            }
+          },
+          "viral_caption_generation": {
+            "database": "viral-hooks.json with tested social hooks",
+            "template": "Hook + Recipe details + Dietary tags + CTA + Hashtags",
+            "hashtags": "#HealthyRecipes #MealPrep #NutritionTracking #HealthyEating #FitnessFood #MacroFriendly"
+          },
+          "clipboard_utilities": {
+            "copy_link": "Auto-copy share URL to clipboard on share",
+            "image_download": "Automatic image download with descriptive filename"
+          }
+        },
+        "recommendation_engine": {
+          "filtering": {
+            "meal_type": "Filter by meal type",
+            "calorie_range": "Filter by calorie budget (min/max)",
+            "dietary_preferences": "Match user's dietary tags",
+            "allergen_exclusion": "Automatically exclude user allergens",
+            "safety_warnings": "Display warnings if no dietary info provided"
+          },
+          "personalization": {
+            "shuffling_algorithm": "Deterministic seeded shuffle based on userId + date + mealType",
+            "daily_rotation": "Different suggestions each day for same user",
+            "variety": "Prevents suggestion fatigue"
+          },
+          "sorting": {
+            "calorie_proximity": "Sort by closeness to calorie target",
+            "max_results": "Configurable result limit (default 3)"
+          }
+        }
+      },
+      "content_strategy": {
+        "seo_acquisition": {
+          "target": "Rank for long-tail recipe keywords",
+          "examples": ["high-protein breakfast recipes", "keto lunch ideas under 500 calories", "quick healthy dinner recipes"],
+          "conversion_funnel": "Recipe view → Free signup CTA → Onboarding → Active user"
+        },
+        "expansion_roadmap": {
+          "phase_1": "Complete recipe steps and tips for all 28 existing recipes",
+          "phase_2": "Expand to 50 recipes with seasonal variety",
+          "phase_3": "Reach 200+ recipes with user-generated content",
+          "phase_4": "Add video tutorials and meal planning features"
+        },
+        "user_generated_content": {
+          "planned": true,
+          "features": "User photo uploads, recipe ratings, reviews, modifications"
+        }
+      },
+      "technical_implementation": {
+        "data_model": {
+          "location": "lib/meal-suggestions.ts",
+          "type": "Static JSON array (SSG-friendly)",
+          "migration_path": "Move to Firestore when UGC launches"
+        },
+        "supporting_libraries": {
+          "recipe_scaler": "lib/recipe-scaler.ts - Ingredient quantity and prep time calculations",
+          "ingredient_substitutions": "lib/ingredient-substitutions.ts - Smart substitution engine",
+          "share_utils": "lib/recipe-share-utils.ts - Canvas rendering and sharing logic",
+          "viral_hooks": "lib/viral-hooks.json - Tested social media hooks"
+        },
+        "routes": {
+          "index": "/recipes - Browse and filter all recipes",
+          "detail": "/recipes/[id] - Individual recipe pages (SSG)",
+          "static_generation": "generateStaticParams() generates all recipe paths at build time"
+        }
+      },
+      "analytics_tracking": {
+        "key_metrics": {
+          "recipe_views": "Track views by recipe ID",
+          "sharing_events": "Track shares by platform and aspect ratio",
+          "conversion_rate": "Recipe view → signup conversion",
+          "search_queries": "Track popular search terms",
+          "filter_usage": "Track which dietary filters are most used"
+        },
+        "optimization_targets": {
+          "recipe_view_to_signup": "Target 10% conversion rate",
+          "viral_coefficient": "Target 0.3 shares per recipe view",
+          "organic_traffic": "Target 30% of new users from recipe SEO"
+        }
+      }
+    },
+    "public_recipe_discovery_platform": {
+      "priority": "P0 - Critical (Growth Driver & Monetization)",
+      "description": "Pinterest-hybrid recipe discovery platform enabling user-generated content, freemium monetization, and viral growth through social sharing and SEO",
+      "status": "Phase 1 Foundation Complete - Core UI & Database Ready",
+      "vision": "Create a viral loop where users discover recipes, share their own meal logs as public recipes, and invite others through social sharing - driving organic growth and premium conversions",
+      "business_model": {
+        "freemium_tiers": {
+          "free": {
+            "price": "$0",
+            "recipe_views_per_month": 3,
+            "can_save_recipes": false,
+            "max_boards": 0,
+            "can_follow_creators": false,
+            "advanced_filters": false,
+            "can_submit_recipes": false,
+            "see_ads": true
+          },
+          "basic": {
+            "price": "$4.99/month",
+            "recipe_views_per_month": "unlimited",
+            "can_save_recipes": true,
+            "max_boards": "unlimited",
+            "can_follow_creators": true,
+            "advanced_filters": false,
+            "can_submit_recipes": true,
+            "see_ads": false,
+            "features": ["Unlimited recipe access", "Save to boards", "Follow creators", "Submit recipes", "Download shopping lists"]
+          },
+          "premium": {
+            "price": "$9.99/month",
+            "recipe_views_per_month": "unlimited",
+            "can_save_recipes": true,
+            "max_boards": "unlimited",
+            "can_follow_creators": true,
+            "advanced_filters": true,
+            "can_submit_recipes": true,
+            "see_ads": false,
+            "features": ["All Basic features", "Advanced macro/calorie filters", "Meal plan generator", "Recipe PDF export", "Ingredient substitutions", "Recipe scaling", "Creator analytics dashboard", "Priority support", "Premium badge"]
+          }
+        },
+        "conversion_strategy": {
+          "soft_paywall": "Show paywall on 4th recipe view for free users",
+          "trial_offer": "7-day free trial for premium tier",
+          "upgrade_prompts": ["Advanced filter gate", "Recipe submission gate", "Board limit reached", "Follow limit reached"]
+        },
+        "revenue_projections": {
+          "target_conversion_rate": "5-8% free → paid",
+          "avg_revenue_per_user": "$60/year (assumes 50% basic, 50% premium)",
+          "viral_coefficient_target": "1.2 (each user invites 1.2 others through sharing)"
+        }
+      },
+      "pinterest_inspired_ux": {
+        "masonry_grid": {
+          "layout": "CSS Grid with variable height cards",
+          "responsive_columns": {
+            "mobile": 1,
+            "tablet": 2,
+            "desktop": 3,
+            "wide": 4
+          },
+          "card_design": "Image-first (3:4 aspect ratio), minimal text overlay, hover effects",
+          "infinite_scroll": "Intersection Observer API loads more recipes when user scrolls near bottom",
+          "loading_states": "Skeleton cards with shimmer animation"
+        },
+        "recipe_card_features": {
+          "primary_image": "High-quality food photo (required, from meal log or upload)",
+          "hover_overlay": "Semi-transparent black overlay with Save and Share buttons",
+          "quick_stats": "Prep time, calories, protein - shown as icons below image",
+          "creator_attribution": "Small avatar + name below stats",
+          "save_count": "Social proof (e.g., '1.2k saves')",
+          "badges": "Featured, Verified Creator, Trending indicators"
+        },
+        "discovery_features": {
+          "tabs": ["For You (personalized)", "Trending", "New", "Following"],
+          "filters": {
+            "meal_type": ["All", "Breakfast", "Lunch", "Dinner", "Snack"],
+            "sort_options": ["Popular", "Newest", "Trending", "Most Saved", "Most Viewed"],
+            "advanced_filters_premium": "Calorie range, macro targets, exclude allergens, max prep time, difficulty, cuisine"
+          },
+          "search": "Full-text search across recipe names, descriptions, ingredients, tags"
+        }
+      },
+      "database_architecture": {
+        "firestore_collections": {
+          "publicRecipes": {
+            "description": "User-submitted public recipes with moderation",
+            "key_fields": ["id", "createdBy", "createdByName", "status (pending/approved/rejected)", "imageUrl", "imageAspectRatio", "imageBlurHash", "saves", "shares", "views", "impressions", "popularityScore", "freshnessBoost", "savesLast7Days", "sourceType (meal_log/custom/template)", "sourceMealLogId", "difficulty", "cuisine", "tags", "slug", "isFeatured", "createdAt"],
+            "indexes": [
+              "status + popularityScore DESC (main feed)",
+              "status + createdAt DESC (newest)",
+              "status + mealType + popularityScore DESC (filtered)",
+              "status + saves DESC (most saved)",
+              "createdBy + createdAt DESC (creator profile)"
+            ]
+          },
+          "recipeBoards": {
+            "description": "User-created boards (like Pinterest boards)",
+            "key_fields": ["id", "uid", "name", "description", "coverImages (4 recipe images)", "recipeIds", "recipeCount", "isPublic", "saves", "createdAt", "updatedAt"],
+            "indexes": ["uid + updatedAt DESC"]
+          },
+          "recipeSaves": {
+            "description": "Tracks which users saved which recipes",
+            "key_fields": ["id", "recipeId", "userId", "boardId (optional)", "savedAt"],
+            "indexes": ["userId + savedAt DESC", "recipeId + savedAt DESC"]
+          },
+          "userFollowing": {
+            "description": "Creator following relationships",
+            "key_fields": ["id", "followerId", "followingId", "followedAt"],
+            "indexes": ["followerId + followedAt DESC", "followingId + followedAt DESC"]
+          },
+          "recipeViewTracking": {
+            "description": "Track monthly views for freemium limits",
+            "key_fields": ["userId", "monthKey (YYYY-MM)", "viewedRecipeIds", "viewCount", "lastViewedAt"],
+            "reset_logic": "Cloud Function resets viewCount monthly"
+          }
+        },
+        "typescript_types": {
+          "location": "lib/types/public-recipes.ts",
+          "interfaces": ["PublicRecipe", "RecipeBoard", "RecipeSave", "UserFollowing", "CreatorProfile", "MembershipPermissions", "RecipeViewTracking", "RecipeNotification", "RecipeFilters", "RecipeScore", "UserBehavior"]
+        }
+      },
+      "user_content_submission": {
+        "meal_log_conversion": {
+          "trigger": "\"Share as Public Recipe\" button on meal log cards",
+          "workflow": [
+            "1. User clicks share button on existing meal log",
+            "2. RecipeSubmissionModal opens with pre-filled data",
+            "3. Auto-fill: name (from AI), description, calories, macros, photo from meal log",
+            "4. User adds: ingredients (manual or AI-suggested), recipe steps, cooking tips, difficulty, cuisine, tags",
+            "5. Preview mode shows how recipe will appear",
+            "6. Submit → status: pending, notification sent to admins",
+            "7. Admin approves → status: approved, appears in /discover, creator notified"
+          ],
+          "image_source": "Copy photoUrl from original meal log to Firebase Storage /recipes/{recipeId}/main.jpg"
+        },
+        "custom_recipe_creation": {
+          "route": "/submit-recipe",
+          "requirements": ["Basic membership or higher", "Required photo upload", "Minimum fields: name, description, ingredients, photo"],
+          "image_requirements": {
+            "min_resolution": "800x800px",
+            "max_file_size": "5MB",
+            "allowed_formats": ["jpg", "png", "webp"],
+            "moderation": "Auto-reject if NSFW or low quality detected"
+          }
+        },
+        "moderation_workflow": {
+          "admin_queue": "/admin/recipes/pending",
+          "approval_actions": ["Approve", "Reject with reason", "Request changes", "Feature on homepage"],
+          "rejection_reasons": ["Low quality photo", "Incomplete recipe", "Inappropriate content", "Duplicate", "Misleading nutrition info"],
+          "auto_approval_future": "After 10 approved recipes + verified badge, auto-approve future submissions"
+        }
+      },
+      "personalized_discovery_algorithm": {
+        "scoring_factors": {
+          "popularity_base": "popularityScore * 0.3 (saves + shares + engagement)",
+          "freshness_boost": "New recipes (< 7 days) get +5-35 points based on age",
+          "dietary_match": "+20 points per matching dietary tag",
+          "calorie_alignment": "+20 points if within 50 cal of user's meal target",
+          "browsing_history": "+10 points per similar saved recipe",
+          "creator_following": "+30 points if from followed creator",
+          "time_aware": "+15 points if meal type matches time of day (breakfast AM, dinner PM)",
+          "trending_velocity": "+5 points per recent save (last 7 days)"
+        },
+        "feed_composition": {
+          "for_you_tab": "Top 10 personalized + 3 trending + 2 new + 5 popular + 5 random (repeat)",
+          "trending_tab": "Sort by savesLast7Days DESC",
+          "new_tab": "Sort by createdAt DESC",
+          "following_tab": "Recipes from creators user follows, sorted by createdAt DESC"
+        },
+        "recommendation_reasons": {
+          "display": "Show why recipe is recommended (e.g., 'Matches your diet', 'Trending', 'From creator you follow')",
+          "transparency": "Help users understand personalization"
+        }
+      },
+      "social_features": {
+        "creator_profiles": {
+          "route": "/[username]",
+          "content": ["Avatar, bio, verified badge", "Stats (followers, recipes, total saves)", "Social links (Instagram, TikTok, YouTube)", "Recipe grid", "Public boards"],
+          "follow_system": "Follow button, follower/following counts, follower/following lists"
+        },
+        "boards_and_collections": {
+          "route": "/boards (user's boards), /boards/[boardId] (view board)",
+          "features": ["Create custom boards", "Add/remove recipes", "Public/private toggle", "Board covers (4-image grid)", "Others can save your boards"],
+          "pinterest_parity": "Full Pinterest-style board experience"
+        },
+        "notifications": {
+          "types": ["recipe_saved", "milestone_reached (100 saves, 1k views)", "new_follower", "recipe_featured", "recipe_approved/rejected", "new_recipe_from_following"],
+          "delivery": "In-app notification bell + email digest (weekly)",
+          "real_time": "Firestore listener for instant notifications"
+        },
+        "gamification": {
+          "creator_badges": {
+            "rising_star": "10 saves in first week",
+            "viral_chef": "1,000 saves on a recipe",
+            "breakfast_master": "50+ breakfast recipes",
+            "trusted_creator": "4.5+ avg rating, 100+ recipes"
+          },
+          "display": "Badges shown on creator profile and recipe cards"
+        }
+      },
+      "seo_and_content_strategy": {
+        "recipe_detail_pages": {
+          "route": "/recipe/[slug]",
+          "rendering": "Next.js ISR (Incremental Static Regeneration)",
+          "revalidation": "Revalidate every hour for top 100 recipes",
+          "static_generation": "Pre-render top 100 recipes at build time",
+          "dynamic_metadata": {
+            "title": "{Recipe Name} - Healthy Recipe | WLPL",
+            "description": "{Recipe description} - {Calories} calories, {Protein}g protein, {PrepTime} min prep",
+            "keywords": "Dynamic from meal type, dietary tags, cuisine"
+          },
+          "structured_data": {
+            "type": "schema.org Recipe markup",
+            "fields": ["name", "image", "author", "datePublished", "description", "recipeCuisine", "prepTime", "cookTime", "totalTime", "recipeYield", "recipeCategory", "keywords", "nutrition", "recipeIngredient", "recipeInstructions"],
+            "benefit": "Rich snippets in Google search results (star ratings, cook time, calories)"
+          },
+          "open_graph": "Recipe image, name, description for social sharing previews",
+          "twitter_cards": "Large image card with recipe details"
+        },
+        "sitemap_generation": {
+          "route": "/sitemap.xml",
+          "content": "All approved recipes (/recipe/[slug]), /discover, /pricing, top creator profiles",
+          "update_frequency": "Regenerate daily via cron"
+        },
+        "target_keywords": {
+          "long_tail": ["high protein breakfast recipes under 300 calories", "keto dinner ideas easy", "vegan lunch recipes meal prep", "quick healthy snacks low carb"],
+          "user_intent": "Informational (find recipes) → Transactional (sign up for tracking)"
+        },
+        "content_expansion_strategy": {
+          "ugc_driven": "User-submitted recipes provide constantly fresh content",
+          "quality_over_quantity": "Admin approval ensures high-quality recipes only",
+          "seasonal_content": "Feature seasonal recipes (summer salads, winter soups)",
+          "target": "1,000+ recipes within 6 months via UGC"
+        }
+      },
+      "image_strategy": {
+        "primary_source": "User-uploaded photos from meal logs",
+        "requirements": {
+          "quality_guidelines": "Clear, well-lit food photos",
+          "moderation": "Admin reviews for quality and appropriateness",
+          "fallback": "Placeholder image with recipe name overlay for recipes without photos"
+        },
+        "storage": {
+          "path": "Firebase Storage: /recipes/{recipeId}/main.jpg",
+          "optimization": "Generate multiple sizes (thumbnail, medium, large) on upload",
+          "blur_hash": "Generate blurhash for smooth loading placeholders"
+        },
+        "built_in_suggestions": {
+          "current_state": "28 meal suggestions in lib/meal-suggestions.ts have no images",
+          "decision": "Focus on UGC recipes for public discovery initially",
+          "future": "Add curated photos to top 10-20 popular built-in recipes later"
+        }
+      },
+      "viral_growth_mechanics": {
+        "social_sharing": {
+          "platforms": ["Pinterest", "Instagram Stories", "Facebook", "Twitter", "WhatsApp"],
+          "share_cards": "Generate Pinterest-optimized recipe cards (already built in recipe_system)",
+          "share_url": "https://wlpl.com/recipe/{slug}?ref={userId} (track referrals)",
+          "incentives": "Free premium month for every 10 referrals who sign up"
+        },
+        "save_counts": {
+          "display": "Show save count on recipe cards (social proof)",
+          "notifications": "Notify creator when recipe reaches save milestones"
+        },
+        "related_recipes": {
+          "algorithm": "Find recipes with similar meal type, calorie range, dietary tags",
+          "display": "Below recipe detail page (masonry grid of 6-12 related recipes)",
+          "goal": "Keep users browsing and discovering"
+        },
+        "embed_widgets": {
+          "planned": "Allow creators to embed recipes on their blogs",
+          "script": "<script src=\"wlpl.com/embed/recipe-{id}\"></script>",
+          "benefit": "Backlinks for SEO, traffic back to WLPL"
+        }
+      },
+      "technical_implementation": {
+        "components": {
+          "RecipeCard": "components/RecipeCard.tsx - Pinterest-style recipe card",
+          "RecipeGrid": "components/RecipeGrid.tsx - Masonry grid with infinite scroll",
+          "RecipeSubmissionModal": "components/RecipeSubmissionModal.tsx - Recipe upload form (TODO)",
+          "PaywallModal": "components/PaywallModal.tsx - Freemium upgrade prompt (TODO)",
+          "BoardSelector": "components/BoardSelector.tsx - Save to board dropdown (TODO)"
+        },
+        "pages": {
+          "discover": "app/discover/page.tsx - Main Pinterest-style browse",
+          "recipe_detail": "app/recipe/[slug]/page.tsx - Individual recipe page (TODO)",
+          "boards": "app/boards/page.tsx - User's boards (TODO)",
+          "board_detail": "app/boards/[boardId]/page.tsx - View board (TODO)",
+          "creator_profile": "app/[username]/page.tsx - Creator profile (TODO)",
+          "my_recipes": "app/my-recipes/page.tsx - User's submitted recipes (TODO)"
+        },
+        "firebase_operations": {
+          "location": "lib/firebase/public-recipes.ts (TODO)",
+          "functions": ["fetchPublicRecipes()", "getRecipeBySlug()", "saveRecipe()", "unsaveRecipe()", "getUserSavedRecipes()", "trackRecipeView()", "shareRecipe()"]
+        },
+        "hooks": {
+          "usePublicRecipes": "hooks/usePublicRecipes.ts - SWR hook for fetching recipes (TODO)",
+          "useRecipeSaves": "hooks/useRecipeSaves.ts - Manage saves (TODO)",
+          "useRecipeBoards": "hooks/useRecipeBoards.ts - Manage boards (TODO)"
+        }
+      },
+      "analytics_and_metrics": {
+        "platform_metrics": {
+          "dau_mau": "Daily/Monthly active users",
+          "time_on_platform": "Avg session duration",
+          "scroll_depth": "How far users scroll in discover feed",
+          "recipe_ctr": "Click-through rate from card to detail page",
+          "save_rate": "% of recipe views that result in saves",
+          "share_rate": "% of recipe views that result in shares",
+          "free_to_paid_conversion": "% of free users who upgrade",
+          "churn_rate": "% of paid users who cancel"
+        },
+        "creator_metrics": {
+          "impressions": "How many times recipe appeared in feed",
+          "views": "How many clicked through to detail page",
+          "saves": "How many saved recipe",
+          "shares": "How many shared recipe",
+          "save_rate": "Saves / Impressions",
+          "ctr": "Views / Impressions",
+          "follower_growth": "New followers over time"
+        },
+        "success_targets": {
+          "6_month_goals": {
+            "total_recipes": "1,000+ (via UGC)",
+            "dau": "5,000",
+            "free_to_paid_conversion": "6%",
+            "organic_traffic": "40% of new users from recipe SEO",
+            "viral_coefficient": "1.3"
+          }
+        }
+      },
+      "implementation_roadmap": {
+        "phase_1_foundation": {
+          "status": "✅ COMPLETE",
+          "deliverables": ["Firestore indexes", "TypeScript types", "RecipeCard component", "RecipeGrid component", "/discover page skeleton"]
+        },
+        "phase_2_core_functionality": {
+          "status": "🔨 IN PROGRESS",
+          "tasks": ["Firebase operations", "/recipe/[slug] pages", "Recipe submission flow", "Admin approval queue", "Freemium paywall"],
+          "timeline": "Week 1-2"
+        },
+        "phase_3_social_features": {
+          "status": "📋 PLANNED",
+          "tasks": ["Boards system", "Creator profiles", "Following system", "Notifications", "Advanced filters"],
+          "timeline": "Week 3-4"
+        },
+        "phase_4_growth_optimization": {
+          "status": "📋 PLANNED",
+          "tasks": ["Personalized recommendations", "SEO optimization", "Analytics dashboard", "Payment integration", "Viral mechanics"],
+          "timeline": "Week 5-6"
+        },
+        "phase_5_launch": {
+          "status": "📋 PLANNED",
+          "tasks": ["Testing", "Performance optimization", "Content moderation setup", "Marketing preparation", "Soft launch"],
+          "timeline": "Week 7-8"
+        }
+      }
     }
   },
   "technical_requirements_schema": {
@@ -588,6 +1125,102 @@
         "uptime": "99.9%",
         "data_durability": "99.999%",
         "backup_recovery": "Automated PITR"
+      },
+      "optimization_initiatives": {
+        "status": "Phase 1 completed - Ongoing optimization",
+        "phase_1_completed": {
+          "firebase_indexes": {
+            "description": "Firestore composite indexes for optimized queries",
+            "file": "firestore.indexes.json",
+            "indexes": [
+              "Users collection queries with sorting",
+              "Meal logs with date range filtering",
+              "Weight logs with temporal queries",
+              "Step logs with date-based retrieval"
+            ],
+            "impact": "50-80% faster query performance on dashboard and analytics pages"
+          },
+          "bundle_size_reduction": {
+            "actions": [
+              "Removed unused dependencies from package.json",
+              "Tree-shaking optimization for Next.js bundles",
+              "Code splitting for route-based chunks"
+            ],
+            "impact": "Reduced initial bundle size by ~15-20%",
+            "metrics": "Tracked via Vercel Analytics and Lighthouse"
+          },
+          "data_fetching_optimization": {
+            "file": "hooks/useDashboardData.ts",
+            "improvements": [
+              "Parallel data fetching for independent queries",
+              "React Query / SWR caching (planned)",
+              "Optimistic UI updates for instant feedback"
+            ],
+            "impact": "Faster dashboard load with perceived instant interactions"
+          },
+          "loading_states": {
+            "description": "Comprehensive loading indicators across all high-traffic user actions",
+            "components": [
+              "LoadingButton (components/ui/LoadingButton.tsx) - Reusable button with loading state",
+              "Spinner (components/ui/Spinner.tsx) - Consistent loading spinner component"
+            ],
+            "coverage": {
+              "dashboard": "Quick action cards with loading states",
+              "log_meal": "Photo upload, AI analysis, manual entry submission",
+              "log_steps": "Step logging and sync operations",
+              "profile": "Profile updates and settings changes",
+              "onboarding": "Multi-step onboarding flow",
+              "groups": "Join group actions",
+              "perks": "Perk redemption flow"
+            },
+            "impact": "Eliminated user confusion during async operations, improved perceived performance"
+          }
+        },
+        "phase_2_planned": {
+          "image_optimization": {
+            "priority": "High",
+            "actions": [
+              "Implement Next.js Image component throughout app",
+              "WebP format with AVIF fallback",
+              "Lazy loading for meal photos",
+              "Responsive images with srcset"
+            ],
+            "target": "50% reduction in image payload size"
+          },
+          "caching_strategy": {
+            "priority": "High",
+            "actions": [
+              "Implement React Query for server state management",
+              "Cache meal suggestions and recipes in memory",
+              "Service Worker caching for offline support",
+              "CDN caching for static recipe pages"
+            ],
+            "target": "Reduce API calls by 60%, enable offline recipe browsing"
+          },
+          "code_splitting": {
+            "priority": "Medium",
+            "actions": [
+              "Dynamic imports for heavy components (RecipeModal, AICoachPlan)",
+              "Route-based code splitting with Suspense",
+              "Vendor chunk optimization"
+            ],
+            "target": "Initial load under 100KB gzipped"
+          }
+        },
+        "monitoring": {
+          "tools": [
+            "Vercel Analytics for Core Web Vitals",
+            "Lighthouse CI in deployment pipeline",
+            "Firebase Performance Monitoring",
+            "Custom performance tracking for key user flows"
+          ],
+          "key_metrics": {
+            "LCP": "Largest Contentful Paint < 2.5s",
+            "FID": "First Input Delay < 100ms",
+            "CLS": "Cumulative Layout Shift < 0.1",
+            "TTFB": "Time to First Byte < 600ms"
+          }
+        }
       }
     },
     "compatibility_requirements": {
@@ -632,6 +1265,112 @@
       "feature_introduction": "Progressive disclosure",
       "biometric_setup": "Biometric-first auth",
       "first_log": "Guided first entries"
+    },
+    "design_system": {
+      "status": "Documented and implemented",
+      "documentation_file": "DESIGN_SYSTEM.md",
+      "purpose": "Ensure consistent theming, accessibility, and maintainability across the application",
+      "color_system": {
+        "semantic_tokens": {
+          "description": "CSS variables for semantic color usage",
+          "tokens": {
+            "foreground": "Primary text color (dark in light mode, light in dark mode)",
+            "background": "Page background color",
+            "muted_foreground": "Secondary text color for less important content",
+            "muted": "Muted background color for cards and sections",
+            "muted_hover": "Hover state for muted backgrounds",
+            "border": "Border color for UI elements",
+            "primary": "Brand primary color (health green/blue)",
+            "primary_hover": "Hover state for primary actions",
+            "primary_light": "Light tint of primary for backgrounds",
+            "accent": "Accent color for highlights and CTAs",
+            "success": "Success state color (green)",
+            "error": "Error state color (red)",
+            "warning": "Warning state color (orange)",
+            "info": "Info state color (blue)"
+          },
+          "dark_mode_support": "All tokens automatically adapt to dark mode via CSS variables",
+          "implementation": "Defined in app/globals.css with Tailwind CSS integration"
+        },
+        "usage_guidelines": {
+          "text_hierarchy": {
+            "primary_text": "Use 'text-foreground' for main content",
+            "secondary_text": "Use 'text-muted-foreground' for supporting text",
+            "interactive_text": "Use 'text-primary' for links and interactive elements"
+          },
+          "backgrounds": {
+            "page_background": "Use 'bg-background' for page-level backgrounds",
+            "card_background": "Use 'bg-muted' or 'bg-background' for cards",
+            "interactive_backgrounds": "Use 'bg-primary' for primary buttons, 'bg-accent' for CTAs"
+          },
+          "accessibility": {
+            "contrast_ratio": "All color combinations must meet WCAG AA contrast requirements (4.5:1 for text)",
+            "color_blindness": "Never use color alone to convey information",
+            "testing": "Test all UI in both light and dark modes"
+          }
+        }
+      },
+      "component_patterns": {
+        "loading_states": {
+          "components": [
+            "LoadingButton - Button with integrated loading spinner",
+            "Spinner - Standalone loading spinner with size variants"
+          ],
+          "usage": "All async actions must show loading state to prevent confusion",
+          "pattern": "Disable interaction + show spinner + provide feedback on completion"
+        },
+        "modal_dialogs": {
+          "pattern": "Fixed overlay with centered content, backdrop blur, and close button",
+          "examples": ["RecipeModal", "ConfirmModal", "PermissionRequestModal"],
+          "accessibility": "Focus trap, ESC key to close, ARIA labels"
+        },
+        "form_inputs": {
+          "pattern": "Consistent border, focus ring, and error states",
+          "validation": "Inline validation with error messages",
+          "labels": "Always include visible labels or ARIA labels"
+        }
+      },
+      "typography": {
+        "font_stack": "system-ui, -apple-system, sans-serif for best performance",
+        "scale": {
+          "xs": "0.75rem (12px) - Labels, captions",
+          "sm": "0.875rem (14px) - Secondary text",
+          "base": "1rem (16px) - Body text",
+          "lg": "1.125rem (18px) - Large body text",
+          "xl": "1.25rem (20px) - Headings",
+          "2xl": "1.5rem (24px) - Page titles",
+          "3xl": "1.875rem (30px) - Hero headings",
+          "4xl": "2.25rem (36px) - Marketing headlines"
+        },
+        "line_height": "1.5 for body text, 1.2 for headings"
+      },
+      "spacing_system": {
+        "scale": "Tailwind's default spacing scale (4px base unit)",
+        "usage": "Use consistent spacing for padding, margins, and gaps",
+        "responsive": "Adjust spacing at different breakpoints for optimal layouts"
+      },
+      "dark_mode_implementation": {
+        "trigger": "System preference detection with manual override",
+        "storage": "User preference stored in localStorage",
+        "implementation": "CSS variables with Tailwind dark: variant",
+        "fixes_applied": {
+          "commit": "796b9ee - Fix text visibility issues across light and dark modes",
+          "files_updated": 30,
+          "improvements": [
+            "Replaced hardcoded color values with semantic tokens",
+            "Fixed contrast issues in light and dark modes",
+            "Updated all components to use color tokens",
+            "Added high contrast mode support"
+          ]
+        }
+      },
+      "accessibility_standards": {
+        "wcag_level": "AA compliance (4.5:1 contrast for text, 3:1 for large text)",
+        "keyboard_navigation": "All interactive elements keyboard accessible",
+        "screen_readers": "Proper ARIA labels and semantic HTML",
+        "focus_indicators": "Visible focus rings on all interactive elements",
+        "motion_preferences": "Respect prefers-reduced-motion for animations"
+      }
     }
   },
   "data_model_schema": {
@@ -1246,26 +1985,45 @@
       "Basic step tracking",
       "Simple gamification (streaks and achievements)",
       "User profile and account management",
-      "Community groups (family + coaching foundation)"
+      "Community groups (family + coaching foundation)",
+      "Recipe system with 28+ recipes (v1.4.0 - LAUNCHED)",
+      "Social sharing with viral growth mechanics (v1.4.0 - LAUNCHED)",
+      "SEO-optimized recipe pages for organic acquisition (v1.4.0 - LAUNCHED)",
+      "Performance optimizations: Firebase indexes, loading states (v1.4.0 - LAUNCHED)",
+      "Design system with dark mode accessibility (v1.4.0 - LAUNCHED)"
     ],
     "post_launch_roadmap": {
-      "v1.1": [
+      "v1.4.1": [
+        "Complete recipe steps for all 28 existing recipes",
+        "Add recipe ratings and reviews",
+        "Implement recipe search improvements",
+        "Track recipe sharing analytics"
+      ],
+      "v1.5": [
+        "Expand to 50+ recipes with seasonal variety",
+        "User-generated recipe submissions",
+        "Meal planning calendar with recipe integration",
+        "Advanced recipe filters (cook time, difficulty, cuisine)",
+        "Recipe collections and favorites",
+        "Grocery list export to third-party apps"
+      ],
+      "v1.6": [
         "Smart scale integrations",
-        "Enhanced AI coaching",
-        "Social challenges",
-        "Advanced nutrition analysis"
+        "Enhanced AI coaching with recipe recommendations",
+        "Social challenges and recipe contests",
+        "Advanced nutrition analysis with meal timing",
+        "Recipe video tutorials",
+        "Fitness tracker integrations"
       ],
-      "v1.2": [
-        "Fitness tracker integrations",
-        "Meal planning",
-        "Community features",
-        "Advanced analytics dashboard"
-      ],
-      "v1.3": [
+      "v2.0": [
+        "200+ recipe database",
+        "AI-powered meal planning based on goals",
         "Healthcare provider integration",
         "Medication tracking",
         "Telehealth integration",
-        "Enterprise/B2B features"
+        "Enterprise/B2B features",
+        "Recipe structured data (schema.org) for rich snippets",
+        "Multi-language recipe support"
       ]
     }
   },
@@ -1277,19 +2035,42 @@
       "registration_to_active": "70% register\u2192active (7+ days of data)",
       "biometric_adoption": "85% of eligible users",
       "retention_30_day": "60%",
-      "goal_achievement": "40% reach weight goals"
+      "goal_achievement": "40% reach weight goals",
+      "recipe_engagement": {
+        "recipe_views_per_user": "Target 3+ recipe views per month per user",
+        "recipe_sharing": "Target 0.3 shares per recipe view (viral coefficient)",
+        "recipe_to_signup": "Target 10% conversion from recipe view to signup"
+      }
     },
     "technical_metrics": {
       "performance": "90% <2s page loads",
       "reliability": "99.9% uptime",
       "security": "Zero security incidents",
-      "ai_accuracy": "90% satisfaction with AI meal analysis"
+      "ai_accuracy": "90% satisfaction with AI meal analysis",
+      "core_web_vitals": {
+        "LCP": "Largest Contentful Paint < 2.5s (90th percentile)",
+        "FID": "First Input Delay < 100ms (90th percentile)",
+        "CLS": "Cumulative Layout Shift < 0.1 (90th percentile)",
+        "TTFB": "Time to First Byte < 600ms (median)"
+      },
+      "loading_state_coverage": "100% of async actions have loading indicators"
     },
     "business_metrics": {
       "user_growth": "Sustained MoM growth",
       "engagement": "5+ sessions/week per active user",
       "support_efficiency": "50% reduction in auth-related tickets",
-      "market_position": "Top 10 health app category"
+      "market_position": "Top 10 health app category",
+      "organic_acquisition": {
+        "seo_traffic": "Target 30% of new users from organic search (recipe SEO)",
+        "social_traffic": "Target 15% of new users from social sharing",
+        "recipe_page_ranking": "Rank in top 10 for 50+ long-tail recipe keywords within 6 months"
+      }
+    },
+    "content_metrics": {
+      "recipe_coverage": "Complete recipe steps for 100% of recipes within 3 months",
+      "recipe_expansion": "Reach 50 recipes within 6 months, 200 within 12 months",
+      "recipe_quality": "Maintain 4.5+ star average rating on recipes",
+      "user_generated_content": "Enable UGC submissions and reach 10% UGC ratio within 12 months"
     }
   }
 }
