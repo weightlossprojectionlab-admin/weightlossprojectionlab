@@ -24,7 +24,7 @@ export function useDashboardData() {
   const { mealLogs: allMeals, loading: loadingMeals } = useMealLogsRealtime({
     startDate: dateRange.sevenDaysAgo.toISOString(),
     endDate: dateRange.tomorrow.toISOString(),
-    limitCount: 100
+    limitCount: 30
   })
 
   // Filter today's meals from all meals
