@@ -7,6 +7,7 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import { useStepTracking } from '@/components/StepTrackingProvider'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { stepLogOperations } from '@/lib/firebase-operations'
+import { Spinner } from '@/components/ui/Spinner'
 
 interface StepLogData {
   id: string
@@ -26,6 +27,7 @@ function LogStepsContent() {
   // State for recent activity
   const [recentLogs, setRecentLogs] = useState<StepLogData[]>([])
   const [loadingLogs, setLoadingLogs] = useState(true)
+  const [togglingTracking, setTogglingTracking] = useState(false)
 
   // Fetch recent step logs on mount
   useEffect(() => {
@@ -44,6 +46,7 @@ function LogStepsContent() {
   }, [])
 
   const handleToggleTracking = async () => {
+    setTogglingTracking(true)
     try {
       if (isEnabled) {
         disableTracking()
@@ -54,6 +57,8 @@ function LogStepsContent() {
       }
     } catch (err) {
       toast.error('Failed to toggle tracking. Please check device permissions.')
+    } finally {
+      setTogglingTracking(false)
     }
   }
 
@@ -167,10 +172,12 @@ function LogStepsContent() {
               </div>
               <button
                 onClick={handleToggleTracking}
-                className="btn btn-secondary w-full"
+                disabled={togglingTracking}
+                className={`btn btn-secondary w-full inline-flex items-center justify-center space-x-2 ${togglingTracking ? 'cursor-wait' : ''}`}
                 aria-label="Disable automatic tracking"
               >
-                Disable Automatic Tracking
+                {togglingTracking && <Spinner size="sm" />}
+                <span>{togglingTracking ? 'Disabling...' : 'Disable Automatic Tracking'}</span>
               </button>
             </div>
           ) : (
@@ -185,10 +192,12 @@ function LogStepsContent() {
               </div>
               <button
                 onClick={handleToggleTracking}
-                className="btn btn-primary w-full text-lg"
+                disabled={togglingTracking}
+                className={`btn btn-primary w-full text-lg inline-flex items-center justify-center space-x-2 ${togglingTracking ? 'cursor-wait' : ''}`}
                 aria-label="Enable automatic tracking"
               >
-                Enable Automatic Tracking
+                {togglingTracking && <Spinner size="sm" />}
+                <span>{togglingTracking ? 'Enabling...' : 'Enable Automatic Tracking'}</span>
               </button>
             </div>
           )}

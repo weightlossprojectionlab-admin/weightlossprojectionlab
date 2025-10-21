@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { Spinner } from '@/components/ui/Spinner';
 import type { Perk } from '@/types/perks';
 
 interface RedemptionFormProps {
@@ -105,13 +106,14 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
             <button
               type="submit"
               disabled={isLoading || !email}
-              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`flex-1 inline-flex items-center justify-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                 isLoading || !email
                   ? 'bg-muted-dark text-muted-foreground cursor-not-allowed'
                   : 'bg-accent-dark text-white hover:bg-accent-dark'
-              }`}
+              } ${isLoading ? 'cursor-wait' : ''}`}
             >
-              {isLoading ? 'Redeeming...' : 'Redeem Now'}
+              {isLoading && <Spinner size="sm" />}
+              <span>{isLoading ? 'Redeeming...' : 'Redeem Now'}</span>
             </button>
             {onCancel && (
               <button

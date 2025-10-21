@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { UserPlusIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { Spinner } from '@/components/ui/Spinner';
 
 interface JoinGroupButtonProps {
   groupId: string;
@@ -77,7 +78,11 @@ export default function JoinGroupButton({
           : 'bg-accent-dark text-white hover:bg-accent-dark'
       } ${className}`}
     >
-      <UserPlusIcon className="h-5 w-5" />
+      {isLoading ? (
+        <Spinner size="sm" />
+      ) : (
+        <UserPlusIcon className="h-5 w-5" />
+      )}
       <span>
         {isLoading
           ? 'Joining...'

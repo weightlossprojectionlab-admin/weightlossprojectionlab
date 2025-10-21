@@ -17,6 +17,7 @@ import {
   hasBiometricCredential
 } from '@/lib/webauthn'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
+import { Spinner } from '@/components/ui/Spinner'
 
 function ProfileContent() {
   const { user } = useAuth()
@@ -31,6 +32,7 @@ function ProfileContent() {
   const [editMode, setEditMode] = useState(false)
   const [profileData, setProfileData] = useState<any>(null)
   const [saving, setSaving] = useState(false)
+  const [signOutLoading, setSignOutLoading] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -118,10 +120,14 @@ function ProfileContent() {
   }
 
   const handleSignOut = async () => {
+    setSignOutLoading(true)
     try {
       await signOut()
     } catch (error) {
       console.error('Sign out error:', error)
+      toast.error('Failed to sign out. Please try again.')
+    } finally {
+      setSignOutLoading(false)
     }
   }
 
@@ -404,9 +410,10 @@ function ProfileContent() {
                   <button
                     onClick={handleSaveProfile}
                     disabled={saving}
-                    className="btn btn-primary flex-1"
+                    className={`btn btn-primary flex-1 inline-flex items-center justify-center space-x-2 ${saving ? 'cursor-wait' : ''}`}
                   >
-                    {saving ? 'Saving...' : '💾 Save Changes'}
+                    {saving && <Spinner size="sm" />}
+                    <span>{saving ? 'Saving...' : '💾 Save Changes'}</span>
                   </button>
                   <button
                     onClick={handleCancelEdit}
@@ -661,10 +668,12 @@ function ProfileContent() {
         <div className="bg-card rounded-lg p-6 shadow-sm">
           <button
             onClick={handleSignOut}
-            className="btn btn-secondary w-full text-error border-error hover:bg-error-light"
+            disabled={signOutLoading}
+            className={`btn btn-secondary w-full text-error border-error hover:bg-error-light inline-flex items-center justify-center space-x-2 ${signOutLoading ? 'cursor-wait' : ''}`}
             aria-label="Sign out of account"
           >
-            🚪 Sign Out
+            {signOutLoading && <Spinner size="sm" className="text-error" />}
+            <span>{signOutLoading ? 'Signing Out...' : '🚪 Sign Out'}</span>
           </button>
         </div>
 

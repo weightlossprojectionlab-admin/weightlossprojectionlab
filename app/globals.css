@@ -397,7 +397,7 @@
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
-    @apply disabled:pointer-events-none disabled:opacity-50;
+    @apply disabled:pointer-events-none disabled:opacity-60 disabled:cursor-not-allowed;
     @apply min-h-[44px] min-w-[44px];
   }
 
