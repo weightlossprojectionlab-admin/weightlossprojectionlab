@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 ## Weight Loss Project Lab
 
-**Version:** 1.6.8
+**Version:** 1.6.9
 **Last Updated:** October 22, 2025
 **Author:** Product Team
 **Status:** Active Development
@@ -2288,15 +2288,15 @@ match /users/{userId}/mealLogs/{mealLogId} {
 26. **Aspect Ratio Optimization** - Platform-specific image formats (1:1, 9:16, 3:2)
 
 ### ✅ Recently Completed
-1. **Health App Integration** - Apple Health/Google Fit sync UI with setup instructions and preferences (v1.6.8)
-2. **Social Sharing** - Web Share API + platform links for sharing meals, progress, and achievements (v1.6.7)
-3. **Photo Gallery View** - Grid layout for browsing meal photos with filters and lightbox (v1.6.6)
-4. **Charts & Trends** - Interactive progress visualization (v1.6.5)
+1. **PWA Icons** - Complete icon set (72px-512px) in PNG format for universal installability (v1.6.9)
+2. **Health App Integration** - Apple Health/Google Fit sync UI with setup instructions and preferences (v1.6.8)
+3. **Social Sharing** - Web Share API + platform links for sharing meals, progress, and achievements (v1.6.7)
+4. **Photo Gallery View** - Grid layout for browsing meal photos with filters and lightbox (v1.6.6)
+5. **Charts & Trends** - Interactive progress visualization (v1.6.5)
 
 ### 📋 Planned Features
-1. **PWA Icons** - Add missing icon files for installability
-2. **Skeleton UI** - Replace loading spinners with skeleton components
-3. **Native Wrapper** - React Native/Capacitor for true health API access
+1. **Skeleton UI** - Replace loading spinners with skeleton components
+2. **Native Wrapper** - React Native/Capacitor for true health API access
 
 ---
 
