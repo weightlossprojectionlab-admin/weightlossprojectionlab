@@ -1,5 +1,5 @@
 {
-  "version": "1.6.1",
+  "version": "1.6.2",
   "updated": "2025-10-22",
   "title": "Weight Loss Project Lab",
   "executive_summary": {
@@ -94,10 +94,10 @@
     "backend_agents": {
       "implemented": [
         "Weekly Missions (v1.6.1)",
-        "Nudge Delivery (v1.6.1)"
+        "Nudge Delivery (v1.6.1)",
+        "AI Coach (v1.6.2)"
       ],
       "planned": [
-        "AI Coach",
         "Readiness Analyzer",
         "Inactive Detection (full email automation)"
       ]

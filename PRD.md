@@ -1298,16 +1298,32 @@ These represent **development team roles**, not AI agents:
 
 **User Story:** *As a user, I want the app to proactively help me stay on track with personalized coaching, reminders, and motivation.*
 
-**1. AI Coach**
+**1. AI Coach** ✅
 - **Purpose:** Personalized nutrition coaching and advice
 - **Functionality:**
   - Chatbot interface for nutrition questions
   - Analyzes meal patterns and suggests improvements
-  - Provides recipe recommendations based on goals
-  - Answers dietary questions in real-time
-- **Technology:** LLM integration (Gemini, GPT-4)
-- **Triggers:** User question, meal analysis completion, weekly review
-- **Status:** 🔵 Planned (Phase 3)
+  - Context-aware responses (includes user profile, recent meals, progress)
+  - Personalized greeting and suggested prompts
+  - Floating chat widget on dashboard
+  - Full conversation history with auto-scroll
+  - Optimistic UI updates for smooth UX
+- **Technology:** Gemini 1.5 Flash (Google AI), Firebase Auth
+- **Implementation:**
+  - `lib/ai-coach.ts` - Coach personality, context building, conversation management
+  - `app/api/ai/chat/route.ts` - Gemini API integration with rate limiting
+  - `hooks/useAIChat.ts` - Chat state management and message handling
+  - `components/ui/ChatInterface.tsx` - Full chat UI and floating widget
+  - Firestore collection: chat_messages (immutable conversation history)
+- **Features:**
+  - System prompt defines warm, encouraging coach personality
+  - Rate limiting: 10 req/min, 500 req/day (Gemini free tier)
+  - Context includes: user profile, recent 10 meals, today's progress, streak, level
+  - Suggested prompts adapt to user state (dietary preferences, meal history, streak)
+  - Greeting personalized by time of day and streak achievements
+- **Triggers:** User question via chat widget, suggested prompt clicks
+- **Status:** ✅ **IMPLEMENTED** (v1.6.2 - October 22, 2025)
+- **Complexity:** Medium (LLM integration, context building, conversation state)
 
 **2. Nudge Delivery System** ✅
 - **Purpose:** Behavioral prompts and reminders

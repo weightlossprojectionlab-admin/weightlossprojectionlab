@@ -12,6 +12,7 @@ import { RecipeModal } from '@/components/ui/RecipeModal'
 import { RecipeQueue } from '@/components/ui/RecipeQueue'
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
 import { NotificationPrompt } from '@/components/ui/NotificationPrompt'
+import { ChatWidget } from '@/components/ui/ChatInterface'
 import { useMissions } from '@/hooks/useMissions'
 import { MissionList } from '@/components/ui/MissionCard'
 import { XPBadge } from '@/components/ui/XPBadge'
@@ -228,7 +229,7 @@ function DashboardContent() {
 
                   {/* Projected Weight */}
                   {weightProjection.hasEnoughData && weightProjection.projectedWeight > 0 && (
-                    <div className="bg-primary-light border border-primary rounded-lg p-3">
+                    <div className="bg-purple-100 border border-primary rounded-lg p-3">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-primary-dark">Projected Weight</span>
                         <span className="text-xs text-muted-foreground">Based on recent data</span>
@@ -262,7 +263,7 @@ function DashboardContent() {
                   <p className="text-sm text-muted-foreground">
                     {weightTrend.goalProgress.toFixed(0)}% to goal
                   </p>
-                  <div className="bg-accent-light border border-accent rounded-lg p-3 mt-3">
+                  <div className="bg-indigo-100 border border-accent rounded-lg p-3 mt-3">
                     <p className="text-xs text-accent-dark">
                       💡 Your starting weight is locked from onboarding to ensure accountability. Track progress through meal logging and activity.
                     </p>
@@ -506,7 +507,7 @@ function DashboardContent() {
                                   {suggestion.dietaryTags.slice(0, 3).map(tag => (
                                     <span
                                       key={tag}
-                                      className="text-xs bg-primary-light text-primary px-2 py-0.5 rounded"
+                                      className="text-xs bg-purple-100 text-primary px-2 py-0.5 rounded"
                                     >
                                       {tag}
                                     </span>
@@ -581,7 +582,7 @@ function DashboardContent() {
                   />
                 </div>
                 {!isEnabled && (
-                  <div className="mt-3 bg-accent-light border border-accent rounded-lg p-3">
+                  <div className="mt-3 bg-indigo-100 border border-accent rounded-lg p-3">
                     <p className="text-xs text-accent-dark mb-2">
                       💡 Enable automatic step tracking to count your steps throughout the day
                     </p>
@@ -644,7 +645,7 @@ function DashboardContent() {
 
             {/* Weekly Insights Card - Only show when 7+ completed days of data */}
             {weightProjection.hasEnoughData && (
-              <div className="bg-gradient-to-r from-accent-light to-primary-light rounded-lg p-6 shadow-sm">
+              <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-6 shadow-sm">
                 <h2 className="mb-3 text-foreground">📊 Weekly Insights</h2>
                 <div className="space-y-4">
                   {/* Daily Average Deficit */}
@@ -831,7 +832,7 @@ function DashboardContent() {
 
         {/* AI Recommendations */}
         {aiRecommendations.length > 0 && (
-          <div className="bg-gradient-to-r from-accent-light to-primary-light rounded-lg p-6">
+          <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-6">
             <h2 className="mb-3">AI Coach</h2>
             <div className="space-y-3">
               {aiRecommendations.map((recommendation, index) => (
@@ -868,6 +869,9 @@ function DashboardContent() {
           userAllergies={userProfile?.profile?.foodAllergies}
         />
       )}
+
+      {/* AI Coach Chat Widget */}
+      <ChatWidget userId={userProfile?.userId} />
     </main>
   )
 }
