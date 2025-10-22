@@ -15,7 +15,7 @@ import {
   getGalleryStats,
   type PhotoGalleryItem
 } from '@/lib/photo-gallery-utils'
-import { Spinner } from '@/components/ui/Spinner'
+import { PhotoGridSkeleton } from '@/components/ui/skeleton'
 import toast from 'react-hot-toast'
 
 export default function GalleryPage() {
@@ -270,9 +270,7 @@ export default function GalleryPage() {
 
         {/* Gallery Content */}
         {loading ? (
-          <div className="flex justify-center py-20">
-            <Spinner />
-          </div>
+          <PhotoGridSkeleton count={12} />
         ) : viewMode === 'grid' ? (
           <PhotoGalleryGrid
             photos={filteredPhotos}

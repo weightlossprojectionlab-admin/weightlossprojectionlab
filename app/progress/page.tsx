@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { Spinner } from '@/components/ui/Spinner'
+import { ProgressPageSkeleton } from '@/components/ui/skeleton'
 import { WeightTrendChart } from '@/components/charts/WeightTrendChart'
 import { CalorieIntakeChart } from '@/components/charts/CalorieIntakeChart'
 import { MacroDistributionChart } from '@/components/charts/MacroDistributionChart'
@@ -126,7 +126,7 @@ function ProgressContent() {
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     timeRange === days
                       ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:bg-gray-700'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
                   }`}
                 >
                   {days === 7 ? '1 Week' : days === 30 ? '1 Month' : days === 60 ? '2 Months' : days === 90 ? '3 Months' : `${days} Days`}
@@ -192,11 +192,7 @@ function ProgressContent() {
         )}
 
         {/* Loading State */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <Spinner size="lg" />
-          </div>
-        )}
+        {loading && <ProgressPageSkeleton />}
 
         {/* Charts */}
         {!loading && (
