@@ -15,6 +15,8 @@ import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import { useStepTracking } from '@/components/StepTrackingProvider'
 import { useWeightProjection } from '@/hooks/useWeightProjection'
+import { useTrendProjection } from '@/hooks/useTrendProjection'
+import { formatProjectionDisplay } from '@/lib/weight-projection-agent'
 import { getNextMealContext, getMealCTA } from '@/lib/meal-context'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
 import { Spinner } from '@/components/ui/Spinner'
@@ -52,6 +54,10 @@ function DashboardContent() {
 
   // Calculate weight projection based on deficit (with plateau detection)
   const weightProjection = useWeightProjection(allMeals, stepsData, userProfile, weightTrend.current)
+
+  // Calculate trend-based projection using historical weight logs
+  const trendProjection = useTrendProjection(weightData, userProfile)
+  const projectionDisplay = trendProjection ? formatProjectionDisplay(trendProjection) : null
 
   // Get contextual meal recommendations with personalized suggestions
   const mealContext = getNextMealContext(
@@ -252,6 +258,105 @@ function DashboardContent() {
                 </div>
               )}
             </div>
+
+            {/* Weight Loss Projection (Trend-Based) */}
+            {trendProjection && trendProjection.status !== 'insufficient-data' && projectionDisplay && (
+              <div className="health-card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2>Goal Projection</h2>
+                  <span className={`text-xs font-medium px-2 py-1 rounded ${
+                    projectionDisplay.statusColor === 'green' ? 'bg-success-light text-success' :
+                    projectionDisplay.statusColor === 'yellow' ? 'bg-amber-100 text-amber-700' :
+                    projectionDisplay.statusColor === 'red' ? 'bg-error-light text-error' :
+                    'bg-muted text-muted-foreground'
+                  }`}>
+                    {trendProjection.status === 'on-track' && '✓ On Track'}
+                    {trendProjection.status === 'ahead' && '⚡ Ahead'}
+                    {trendProjection.status === 'behind' && '⚠️ Behind'}
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Estimated Completion</p>
+                    <p className="text-2xl font-bold text-foreground">{projectionDisplay.headline}</p>
+                    <p className="text-sm text-muted-foreground">{projectionDisplay.subtitle}</p>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs text-muted-foreground">Progress to Goal</span>
+                      <span className="text-xs font-medium text-foreground">
+                        {trendProjection.progressPercentage.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="progress-bar">
+                      <div
+                        className={`progress-bar-fill ${
+                          projectionDisplay.statusColor === 'green' ? 'progress-bar-success' :
+                          projectionDisplay.statusColor === 'yellow' ? 'bg-amber-500' :
+                          'progress-bar-error'
+                        }`}
+                        style={{ width: `${Math.min(projectionDisplay.progressBar, 100)}%` }}
+                        role="progressbar"
+                        aria-valuenow={projectionDisplay.progressBar}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label={`Goal progress: ${projectionDisplay.progressBar.toFixed(0)}%`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Status Message */}
+                  <div className={`rounded-lg p-3 ${
+                    projectionDisplay.statusColor === 'green' ? 'bg-success-light border border-success' :
+                    projectionDisplay.statusColor === 'yellow' ? 'bg-amber-50 border border-amber-300' :
+                    'bg-error-light border border-error'
+                  }`}>
+                    <p className={`text-sm ${
+                      projectionDisplay.statusColor === 'green' ? 'text-success-dark' :
+                      projectionDisplay.statusColor === 'yellow' ? 'text-amber-800' :
+                      'text-error-dark'
+                    }`}>
+                      {trendProjection.statusMessage}
+                    </p>
+
+                    {/* Recommended Adjustment */}
+                    {trendProjection.recommendedAdjustment && (
+                      <div className="mt-2 pt-2 border-t border-current/20">
+                        <p className="text-xs font-medium text-foreground">💡 Suggestion:</p>
+                        <p className="text-xs mt-1 opacity-90">{trendProjection.recommendedAdjustment}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Current Pace */}
+                  {trendProjection.actualWeeklyRate !== null && (
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Actual Pace</p>
+                        <p className="font-medium">{trendProjection.actualWeeklyRate.toFixed(1)} lbs/week</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Target Pace</p>
+                        <p className="font-medium">{trendProjection.weeklyGoalRate.toFixed(1)} lbs/week</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Goal Realism Check */}
+                  {!trendProjection.isGoalRealistic && (
+                    <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">
+                      <p className="text-xs text-amber-800">
+                        ⚠️ Your goal rate ({trendProjection.weeklyGoalRate.toFixed(1)} lbs/week) may not be sustainable.
+                        Healthy weight loss is 0.5-2 lbs/week.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Today's Nutrition */}
             <div className="health-card">
