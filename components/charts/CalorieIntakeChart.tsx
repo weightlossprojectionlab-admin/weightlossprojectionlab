@@ -1,9 +1,8 @@
 'use client'
 
-import {Bar
-
-BarChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts'
+import { Bar, BarChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts'
 import { CalorieDataPoint } from '@/lib/chart-data-aggregator'
+import { useTheme } from '@/hooks/useTheme'
 
 interface CalorieIntakeChartProps {
   data: CalorieDataPoint[]
@@ -11,6 +10,8 @@ interface CalorieIntakeChartProps {
 }
 
 export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
+  const { resolvedTheme } = useTheme()
+
   if (loading) {
     return (
       <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse flex items-center justify-center">
@@ -21,7 +22,7 @@ export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
 
   if (data.length === 0) {
     return (
-      <div className="w-full h-64 bg-gray-50 dark:bg-gray-950 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
+      <div className="w-full h-64 bg-gray-50 dark:bg-gray-950 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">No calorie data available</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">Log meals to track your calorie intake!</p>
@@ -42,29 +43,37 @@ export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
   // Calculate average goal (they should all be the same, but just in case)
   const avgGoal = data.length > 0 ? data[0].goal : 2000
 
+  // Theme-aware colors
+  const isDark = resolvedTheme === 'dark'
+  const gridColor = isDark ? '#374151' : '#e5e7eb'
+  const axisColor = isDark ? '#9ca3af' : '#6b7280'
+  const tooltipBg = isDark ? '#1f2937' : '#ffffff'
+  const tooltipBorder = isDark ? '#374151' : '#e5e7eb'
+  const tooltipText = isDark ? '#f9fafb' : '#111827'
+
   return (
     <div className="w-full">
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
           <XAxis
             dataKey="date"
-            stroke="#6b7280"
+            stroke={axisColor}
             style={{ fontSize: '12px' }}
           />
           <YAxis
-            stroke="#6b7280"
+            stroke={axisColor}
             style={{ fontSize: '12px' }}
-            label={{ value: 'Calories', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#6b7280' } }}
+            label={{ value: 'Calories', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: axisColor } }}
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: 'white',
-              border: '1px solid #e5e7eb',
+              backgroundColor: tooltipBg,
+              border: `1px solid ${tooltipBorder}`,
               borderRadius: '8px',
               padding: '8px 12px'
             }}
-            labelStyle={{ color: '#111827', fontWeight: 600 }}
+            labelStyle={{ color: tooltipText, fontWeight: 600 }}
             formatter={(value: number, name: string) => {
               if (name === 'calories') return [`${value} cal`, 'Intake']
               if (name === 'goal') return [`${value} cal`, 'Goal']

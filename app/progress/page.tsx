@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -244,7 +244,7 @@ function ProgressContent() {
               </a>
               <a
                 href="/dashboard"
-                className="px-6 py-3 bg-gray-100 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
               >
                 Go to Dashboard
               </a>
