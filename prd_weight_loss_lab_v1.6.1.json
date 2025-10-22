@@ -1,5 +1,5 @@
 {
-  "version": "1.6.4",
+  "version": "1.6.5",
   "updated": "2025-10-22",
   "title": "Weight Loss Project Lab",
   "executive_summary": {
@@ -70,8 +70,9 @@
     "pwa": "Implemented"
   },
   "status": {
-    "completed_features": 33,
+    "completed_features": 34,
     "newly_completed": [
+      "Charts & Trends (v1.6.5)",
       "Inactive Detection (v1.6.4)",
       "Readiness Analyzer (v1.6.3)",
       "AI Coach (v1.6.2)",
@@ -83,7 +84,7 @@
     ],
     "planned_features": [
       "Health Sync",
-      "Charts",
+      "Photo Gallery View",
       "Social Sharing"
     ]
   },

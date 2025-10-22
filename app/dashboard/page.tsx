@@ -174,7 +174,7 @@ function DashboardContent() {
   // Onboarding check is now handled by DashboardRouter
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Offline Indicator */}
       <OfflineIndicator />
 
@@ -204,20 +204,20 @@ function DashboardContent() {
         {loading || loadingMeals ? (
           <div className="text-center py-12">
             <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-muted-foreground mt-4">Loading your dashboard...</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-4">Loading your dashboard...</p>
           </div>
         ) : (
           <>
             {/* Weight Progress Card */}
-            <div className="health-card">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-md transition-shadow p-6">
               <h2 className="mb-4">Starting Weight</h2>
               {weightTrend.current > 0 ? (
                 <div className="space-y-3">
                   <div className="flex items-end space-x-2">
-                    <span className="text-3xl font-bold text-foreground">
+                    <span className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                       {weightTrend.current.toFixed(1)}
                     </span>
-                    <span className="text-sm text-muted-foreground mb-1">lbs</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400 mb-1">lbs</span>
                     {weightTrend.change !== 0 && (
                       <span className={`text-sm font-medium mb-1 ${
                         weightTrend.change < 0 ? 'text-success' : 'text-error'
@@ -229,17 +229,17 @@ function DashboardContent() {
 
                   {/* Projected Weight */}
                   {weightProjection.hasEnoughData && weightProjection.projectedWeight > 0 && (
-                    <div className="bg-purple-100 border border-primary rounded-lg p-3">
+                    <div className="bg-purple-100 dark:bg-purple-900/20 border border-primary rounded-lg p-3">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-medium text-primary-dark">Projected Weight</span>
-                        <span className="text-xs text-muted-foreground">Based on recent data</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">Based on recent data</span>
                       </div>
                       <div className="flex items-baseline space-x-2">
                         <span className="text-2xl font-bold text-primary">
                           {weightProjection.projectedWeight.toFixed(1)}
                         </span>
-                        <span className="text-xs text-muted-foreground">lbs</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">lbs</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
                           ({weightProjection.projectedWeightLoss > 0 ? '-' : '+'}{Math.abs(weightProjection.projectedWeightLoss).toFixed(1)} lbs)
                         </span>
                       </div>
@@ -260,10 +260,10 @@ function DashboardContent() {
                       aria-label={`Goal progress: ${weightTrend.goalProgress.toFixed(0)}%`}
                     />
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     {weightTrend.goalProgress.toFixed(0)}% to goal
                   </p>
-                  <div className="bg-indigo-100 border border-accent rounded-lg p-3 mt-3">
+                  <div className="bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-3 mt-3">
                     <p className="text-xs text-accent-dark">
                       💡 Your starting weight is locked from onboarding to ensure accountability. Track progress through meal logging and activity.
                     </p>
@@ -271,21 +271,21 @@ function DashboardContent() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">Weight data will be set during onboarding</p>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">Weight data will be set during onboarding</p>
                 </div>
               )}
             </div>
 
             {/* Weight Loss Projection (Trend-Based) */}
             {trendProjection && trendProjection.status !== 'insufficient-data' && projectionDisplay && (
-              <div className="health-card">
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-md transition-shadow p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2>Goal Projection</h2>
                   <span className={`text-xs font-medium px-2 py-1 rounded ${
                     projectionDisplay.statusColor === 'green' ? 'bg-success-light text-success' :
                     projectionDisplay.statusColor === 'yellow' ? 'bg-amber-100 text-amber-700' :
                     projectionDisplay.statusColor === 'red' ? 'bg-error-light text-error' :
-                    'bg-muted text-muted-foreground'
+                    'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                   }`}>
                     {trendProjection.status === 'on-track' && '✓ On Track'}
                     {trendProjection.status === 'ahead' && '⚡ Ahead'}
@@ -295,16 +295,16 @@ function DashboardContent() {
 
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Estimated Completion</p>
-                    <p className="text-2xl font-bold text-foreground">{projectionDisplay.headline}</p>
-                    <p className="text-sm text-muted-foreground">{projectionDisplay.subtitle}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Estimated Completion</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{projectionDisplay.headline}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{projectionDisplay.subtitle}</p>
                   </div>
 
                   {/* Progress Bar */}
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs text-muted-foreground">Progress to Goal</span>
-                      <span className="text-xs font-medium text-foreground">
+                      <span className="text-xs text-gray-600 dark:text-gray-400">Progress to Goal</span>
+                      <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                         {trendProjection.progressPercentage.toFixed(0)}%
                       </span>
                     </div>
@@ -342,7 +342,7 @@ function DashboardContent() {
                     {/* Recommended Adjustment */}
                     {trendProjection.recommendedAdjustment && (
                       <div className="mt-2 pt-2 border-t border-current/20">
-                        <p className="text-xs font-medium text-foreground">💡 Suggestion:</p>
+                        <p className="text-xs font-medium text-gray-900 dark:text-gray-100">💡 Suggestion:</p>
                         <p className="text-xs mt-1 opacity-90">{trendProjection.recommendedAdjustment}</p>
                       </div>
                     )}
@@ -350,13 +350,13 @@ function DashboardContent() {
 
                   {/* Current Pace */}
                   {trendProjection.actualWeeklyRate !== null && (
-                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                       <div>
-                        <p className="text-xs text-muted-foreground">Actual Pace</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Actual Pace</p>
                         <p className="font-medium">{trendProjection.actualWeeklyRate.toFixed(1)} lbs/week</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Target Pace</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Target Pace</p>
                         <p className="font-medium">{trendProjection.weeklyGoalRate.toFixed(1)} lbs/week</p>
                       </div>
                     </div>
@@ -375,8 +375,27 @@ function DashboardContent() {
               </div>
             )}
 
+            {/* Progress Charts Link */}
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold mb-1">📊 Visualize Your Progress</h3>
+                  <p className="text-sm text-purple-100">View interactive charts and detailed trends</p>
+                </div>
+                <a
+                  href="/progress"
+                  className="px-6 py-3 bg-white dark:bg-gray-900 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium flex items-center gap-2"
+                >
+                  <span>View Charts</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+
             {/* Today's Nutrition */}
-            <div className="health-card">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-md transition-shadow p-6">
               <h2 className="mb-4">Today's Nutrition</h2>
               <div className="space-y-4">
                 {/* Profile Completeness Warning */}
@@ -407,7 +426,7 @@ function DashboardContent() {
                 )}
 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Calories</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Calories</span>
                   <span className="font-medium">
                     {nutritionSummary.todayCalories} / {nutritionSummary.goalCalories}
                   </span>
@@ -427,28 +446,28 @@ function DashboardContent() {
                 {/* Macros */}
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
-                    <span className="text-xs text-muted-foreground">Protein</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Protein</span>
                     <p className="font-medium">{Math.round(nutritionSummary.macros.protein)}g</p>
                   </div>
                   <div>
-                    <span className="text-xs text-muted-foreground">Carbs</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Carbs</span>
                     <p className="font-medium">{Math.round(nutritionSummary.macros.carbs)}g</p>
                   </div>
                   <div>
-                    <span className="text-xs text-muted-foreground">Fat</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Fat</span>
                     <p className="font-medium">{Math.round(nutritionSummary.macros.fat)}g</p>
                   </div>
                   <div>
-                    <span className="text-xs text-muted-foreground">Fiber</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Fiber</span>
                     <p className="font-medium">{Math.round(nutritionSummary.macros.fiber)}g</p>
                   </div>
                 </div>
 
                 {/* Meal Suggestions with Allergen Warnings */}
                 {mealContext.suggestions.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-border">
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-muted-foreground">
+                      <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">
                         Try these {mealContext.nextMealLabel.toLowerCase()} ideas:
                       </h3>
                       {!profileCompleteness.isSafe && (
@@ -459,14 +478,14 @@ function DashboardContent() {
                     </div>
                     <div className="space-y-3">
                       {mealContext.suggestions.map(suggestion => (
-                        <div key={suggestion.id} className="bg-muted rounded-lg p-3 border border-border">
+                        <div key={suggestion.id} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 border border-gray-200">
                           <div className="flex items-start space-x-2">
                             <span className="text-primary mt-0.5">•</span>
                             <div className="flex-1">
                               <div className="flex justify-between items-start">
                                 <div className="flex-1">
-                                  <p className="font-medium text-foreground">{suggestion.name}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">
+                                  <p className="font-medium text-gray-900 dark:text-gray-100">{suggestion.name}</p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                                     {suggestion.calories} cal • {suggestion.macros.protein}g protein • {suggestion.prepTime} min
                                   </p>
                                 </div>
@@ -507,7 +526,7 @@ function DashboardContent() {
                                   {suggestion.dietaryTags.slice(0, 3).map(tag => (
                                     <span
                                       key={tag}
-                                      className="text-xs bg-purple-100 text-primary px-2 py-0.5 rounded"
+                                      className="text-xs bg-purple-100 dark:bg-purple-900/20 text-primary px-2 py-0.5 rounded"
                                     >
                                       {tag}
                                     </span>
@@ -538,8 +557,8 @@ function DashboardContent() {
                   </div>
                 )}
 
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-sm text-muted-foreground">
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     {nutritionSummary.mealsLogged} meal{nutritionSummary.mealsLogged !== 1 ? 's' : ''} logged today
                   </p>
                   <Link href="/log-meal" className="text-sm text-primary hover:text-primary-hover font-medium">
@@ -550,7 +569,7 @@ function DashboardContent() {
             </div>
 
             {/* Activity Summary */}
-            <div className="health-card">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-md transition-shadow p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2>Activity</h2>
                 {isEnabled && isTracking && (
@@ -565,7 +584,7 @@ function DashboardContent() {
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Steps Today {isEnabled ? '(Live)' : ''}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Steps Today {isEnabled ? '(Live)' : ''}</span>
                   <span className="font-medium">
                     {displaySteps.toLocaleString()} / {activitySummary.goalSteps.toLocaleString()}
                   </span>
@@ -582,7 +601,7 @@ function DashboardContent() {
                   />
                 </div>
                 {!isEnabled && (
-                  <div className="mt-3 bg-indigo-100 border border-accent rounded-lg p-3">
+                  <div className="mt-3 bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-3">
                     <p className="text-xs text-accent-dark mb-2">
                       💡 Enable automatic step tracking to count your steps throughout the day
                     </p>
@@ -592,7 +611,7 @@ function DashboardContent() {
                   </div>
                 )}
                 {isEnabled && (
-                  <div className="mt-4 pt-4 border-t border-border">
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <Link href="/log-steps" className="text-sm text-primary hover:text-primary-hover font-medium">
                       View step details →
                     </Link>
@@ -646,17 +665,17 @@ function DashboardContent() {
             {/* Weekly Insights Card - Only show when 7+ completed days of data */}
             {weightProjection.hasEnoughData && (
               <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-6 shadow-sm">
-                <h2 className="mb-3 text-foreground">📊 Weekly Insights</h2>
+                <h2 className="mb-3 text-gray-900 dark:text-gray-100">📊 Weekly Insights</h2>
                 <div className="space-y-4">
                   {/* Daily Average Deficit */}
-                  <div className="bg-card rounded-lg p-4">
+                  <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">Daily Avg Deficit</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Daily Avg Deficit</span>
                       <span className={`text-lg font-bold ${weightProjection.dailyAvgDeficit > 0 ? 'text-success' : 'text-error'}`}>
                         {weightProjection.dailyAvgDeficit.toFixed(0)} cal
                       </span>
                     </div>
-                    <p className="text-xs text-card-foreground">
+                    <p className="text-xs text-gray-900 dark:text-gray-100">
                       {weightProjection.dailyAvgDeficit > 0
                         ? `You're burning ${weightProjection.dailyAvgDeficit.toFixed(0)} more calories than you consume daily`
                         : `You're consuming ${Math.abs(weightProjection.dailyAvgDeficit).toFixed(0)} more calories than you burn daily`
@@ -665,14 +684,14 @@ function DashboardContent() {
                   </div>
 
                   {/* Projected Weekly Loss */}
-                  <div className="bg-card rounded-lg p-4">
+                  <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">Projected Weekly Loss</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Projected Weekly Loss</span>
                       <span className={`text-lg font-bold ${weightProjection.weeklyPace > 0 ? 'text-success' : 'text-error'}`}>
                         {weightProjection.weeklyPace.toFixed(1)} lbs/week
                       </span>
                     </div>
-                    <p className="text-xs text-card-foreground">
+                    <p className="text-xs text-gray-900 dark:text-gray-100">
                       {weightProjection.isOnTrack
                         ? '✓ On pace with your goal'
                         : `Target: ${userProfile?.goals?.weeklyWeightLossGoal || 1} lbs/week`
@@ -682,17 +701,17 @@ function DashboardContent() {
 
                   {/* Time to Goal */}
                   {weightProjection.daysToGoal > 0 && weightProjection.estimatedGoalDate && weightProjection.goalWeight > 0 && (
-                    <div className="bg-card rounded-lg p-4">
+                    <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">Est. Goal Date</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Est. Goal Date</span>
                         <span className="text-lg font-bold text-primary">
                           {weightProjection.estimatedGoalDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                       </div>
-                      <p className="text-xs text-card-foreground mb-1">
+                      <p className="text-xs text-gray-900 dark:text-gray-100 mb-1">
                         Reach <span className="font-bold text-primary">{weightProjection.goalWeight.toFixed(1)} lbs</span> in {weightProjection.daysToGoal} days ({Math.ceil(weightProjection.daysToGoal / 7)} weeks)
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         At current pace of {weightProjection.weeklyPace.toFixed(1)} lbs/week
                       </p>
                     </div>
@@ -719,7 +738,7 @@ function DashboardContent() {
                   </div>
                 </div>
 
-                <div className="bg-card rounded-lg p-4 mb-4">
+                <div className="bg-white dark:bg-gray-900 rounded-lg p-4 mb-4">
                   <h3 className="font-medium text-amber-900 mb-2">💡 What This Means</h3>
                   <ul className="text-sm text-amber-800 space-y-1 list-disc list-inside">
                     <li>Your body may have adapted to your current calorie intake</li>
@@ -747,7 +766,7 @@ function DashboardContent() {
               router.push('/log-meal')
             }}
             disabled={!!navigatingTo}
-            className="card-interactive flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Log meal"
           >
             {navigatingTo === 'log-meal' ? (
@@ -764,7 +783,7 @@ function DashboardContent() {
               router.push('/meal-gallery')
             }}
             disabled={!!navigatingTo}
-            className="card-interactive flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Meal gallery"
           >
             {navigatingTo === 'gallery' ? (
@@ -781,7 +800,7 @@ function DashboardContent() {
               router.push('/profile')
             }}
             disabled={!!navigatingTo}
-            className="card-interactive flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Profile settings"
           >
             {navigatingTo === 'settings' ? (
@@ -801,7 +820,7 @@ function DashboardContent() {
                   toast.success('App installed successfully!')
                 }
               }}
-              className="card-interactive flex flex-col items-center space-y-2 p-6"
+              className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6"
               aria-label="Install app"
             >
               <span className="text-2xl" role="img" aria-label="install">📱</span>
@@ -819,10 +838,10 @@ function DashboardContent() {
         )}
 
         {/* Weekly Missions */}
-        <div className="bg-card rounded-lg p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Weekly Missions</h2>
-            <span className="text-xs text-muted-foreground">Resets Monday</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">Resets Monday</span>
           </div>
           <MissionList missions={missions} loading={missionsLoading} />
         </div>
@@ -836,8 +855,8 @@ function DashboardContent() {
             <h2 className="mb-3">AI Coach</h2>
             <div className="space-y-3">
               {aiRecommendations.map((recommendation, index) => (
-                <div key={index} className="bg-card rounded-lg p-4">
-                  <p className="text-sm text-card-foreground">
+                <div key={index} className="bg-white dark:bg-gray-900 rounded-lg p-4">
+                  <p className="text-sm text-gray-900 dark:text-gray-100">
                     {recommendation}
                   </p>
                 </div>
