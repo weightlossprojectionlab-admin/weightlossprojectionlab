@@ -1,5 +1,5 @@
 {
-  "version": "1.7.1",
+  "version": "1.7.2",
   "updated": "2025-10-22",
   "title": "Weight Loss Project Lab",
   "executive_summary": {
@@ -94,8 +94,9 @@
     "pwa": "Implemented"
   },
   "status": {
-    "completed_features": 40,
+    "completed_features": 41,
     "newly_completed": [
+      "Recipe Import (v1.7.2)",
       "Barcode Scanner (v1.7.1)",
       "Skeleton UI (v1.7.0)",
       "PWA Icons (v1.6.9)",
@@ -114,7 +115,6 @@
     ],
     "planned_features": [
       "Native Wrapper (React Native/Capacitor)",
-      "Recipe Import",
       "Offline Mode"
     ]
   },
