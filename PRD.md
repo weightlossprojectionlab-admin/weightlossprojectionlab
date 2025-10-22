@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 ## Weight Loss Project Lab
 
-**Version:** 1.6.3
+**Version:** 1.6.4
 **Last Updated:** October 22, 2025
 **Author:** Product Team
 **Status:** Active Development
@@ -1408,24 +1408,60 @@ These represent **development team roles**, not AI agents:
 - **Status:** ✅ **IMPLEMENTED** (v1.6.1 - October 22, 2025)
 - **Complexity:** High (gamification system, progress tracking, rewards)
 
-**5. Inactive User Detection**
+**5. Inactive User Detection** ✅
 - **Purpose:** Churn prevention and re-engagement
 - **Functionality:**
-  - Identifies users who haven't logged in 7+ days
-  - Sends personalized re-engagement emails
-  - Offers incentives (free premium trial, new features)
-  - Analyzes churn reasons from behavior patterns
-- **Technology:** Cron jobs, email automation, analytics
-- **Triggers:** 7-day, 14-day, 30-day inactivity
-- **Status:** 🔵 Planned (Phase 3)
+  - Detects users inactive for 3+ days (last meal logged)
+  - Analyzes inactivity levels: mild (3-6), moderate (7-13), severe (14-29), critical (30+)
+  - Generates personalized re-engagement email campaigns
+  - Offers tiered incentives (1 month → 3 months premium free)
+  - Integrates with Readiness Analyzer for churn probability
+  - Tracks campaign performance (open rate, click rate, conversion rate)
+- **Technology:** TypeScript detection engine + Email service integration + Firebase
+- **Implementation:**
+  - `lib/inactive-detection.ts` - Core detection & campaign generation (~700 lines)
+  - `app/api/inactive/detect/route.ts` - Detection API (admin only)
+  - `app/api/inactive/analytics/route.ts` - Inactivity analytics API
+  - `app/api/inactive/campaigns/route.ts` - Campaign metrics API
+  - Firestore rules for `reengagement_campaigns` collection
+  - EMAIL_SERVICE_SETUP.md - Complete setup guide (Resend/SendGrid/Mailgun)
+- **Campaign Types:**
+  - **Gentle Reminder** (3-6 days): "Your {streak}-day streak is waiting! 🔥"
+  - **Motivational** (7-13 days): "We miss you! Your progress deserves celebration 🎉"
+  - **Incentive** (14-29 days): "Come back and get 1 month premium FREE! 🎁"
+  - **Last Chance** (30+ days): "We don't want to lose you 💔" + 3 months premium
+- **Triggers:**
+  - Daily cron job (recommended 10 AM)
+  - 3-day cooldown between campaigns to same user
+  - Automatic integration with Readiness Analyzer churn prediction
+- **Analytics:**
+  - Total/active/inactive user breakdown
+  - Inactivity level distribution
+  - Churn risk assessment (low/medium/high)
+  - Campaign performance metrics
+- **Examples:**
+  - User inactive 5 days, 15-day previous streak → Gentle reminder sent
+  - User inactive 10 days, low engagement score → Motivational + AI coach offer
+  - User inactive 20 days, 75% churn probability → Premium incentive offered
+  - User inactive 45 days, high risk → Last chance campaign with 3 months free
+- **Status:** ✅ **IMPLEMENTED** (v1.6.4 - October 22, 2025)
+- **Complexity:** High (detection logic, email templates, analytics, scheduled jobs)
+- **Setup Required:** Email service provider (Resend/SendGrid/Mailgun) + scheduled jobs (Vercel Cron/Cloud Functions/GitHub Actions)
 
 **Implementation Timeline:**
 - **Phase 3 Q1:** ✅ Weekly Missions + Nudge Delivery (BOTH COMPLETED - v1.6.1)
 - **Phase 3 Q2:** ✅ AI Coach chatbot integration (COMPLETED - v1.6.2)
 - **Phase 3 Q3:** ✅ Readiness Analyzer statistical model (COMPLETED - v1.6.3)
-- **Phase 3 Q4:** Inactive Detection with email automation (1 remaining agent)
+- **Phase 3 Q4:** ✅ Inactive Detection with email automation (COMPLETED - v1.6.4)
 
-**Note:** Inactive Detection is partially implemented via behavior-based nudges (24h+ inactivity). Full email automation and churn analysis remain planned for Q4.
+**🎉 PHASE 3 COMPLETE: ALL 5 BACKEND AGENTS IMPLEMENTED! 🎉**
+
+**Phase 3 Summary:**
+1. ✅ Weekly Missions Engine - Gamification & engagement (v1.6.1)
+2. ✅ Nudge Delivery System - Push notifications & reminders (v1.6.1)
+3. ✅ AI Coach - Gemini-powered conversational support (v1.6.2)
+4. ✅ Readiness Analyzer - Engagement scoring & churn prediction (v1.6.3)
+5. ✅ Inactive Detection - Re-engagement email campaigns (v1.6.4)
 
 #### 11.4 Client-Side Agents (Current + Planned)
 

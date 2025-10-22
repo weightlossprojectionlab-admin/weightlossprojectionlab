@@ -320,6 +320,20 @@ service cloud.firestore {
     }
 
     // ============================================
+    // INACTIVE DETECTION (Phase 3 Agent)
+    // ============================================
+
+    // Re-engagement campaigns
+    match /reengagement_campaigns/{campaignId} {
+      // Users can read their own campaigns
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Admins can read all campaigns
+      allow read: if isAdmin();
+      // Only server-side writes (through API with admin SDK)
+      allow write: if false;
+    }
+
+    // ============================================
     // MEAL TRACKING
     // ============================================
 
