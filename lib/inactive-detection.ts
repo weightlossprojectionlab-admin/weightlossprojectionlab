@@ -18,9 +18,14 @@ import {
   Timestamp,
   doc,
   setDoc,
-  getDoc
+  getDoc,
+  updateDoc
 } from 'firebase/firestore'
 import { analyzeUserReadiness, getLatestAnalysis } from './readiness-analyzer'
+import { Resend } from 'resend'
+
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 // ============================================================================
 // Types
@@ -594,50 +599,84 @@ export async function getCampaignMetrics(): Promise<{
 }
 
 // ============================================================================
-// Email Integration (Placeholder)
+// Email Integration (Resend)
 // ============================================================================
 
 /**
- * Send re-engagement email
- *
- * NOTE: This is a placeholder. Actual implementation requires:
- * - Email service integration (SendGrid, Resend, Mailgun, etc.)
- * - API keys configured
- * - Email templates
- * - Tracking pixels for open/click tracking
- *
- * For now, this function saves the campaign and logs the intent.
- * Actual sending should be done via Cloud Functions or API route.
+ * Get user's email address from Firestore
+ */
+async function getUserEmail(userId: string): Promise<string | null> {
+  try {
+    const userRef = doc(db, 'users', userId)
+    const userSnap = await getDoc(userRef)
+
+    if (!userSnap.exists()) {
+      console.error(`User ${userId} not found`)
+      return null
+    }
+
+    const userData = userSnap.data()
+    const email = userData.profile?.email || userData.email
+
+    if (!email) {
+      console.error(`No email found for user ${userId}`)
+      return null
+    }
+
+    return email
+  } catch (error) {
+    console.error('Error getting user email:', error)
+    return null
+  }
+}
+
+/**
+ * Send re-engagement email via Resend
  */
 export async function sendReEngagementEmail(campaign: ReEngagementCampaign): Promise<boolean> {
   try {
-    // Save campaign to Firestore
-    await saveCampaign(campaign)
+    // Get user's email address
+    const userEmail = await getUserEmail(campaign.userId)
 
-    // TODO: Integrate with email service provider
-    // Example with SendGrid:
-    /*
-    const sgMail = require('@sendgrid/mail')
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
-
-    const msg = {
-      to: user.email,
-      from: 'support@weightlossprojectlab.com',
-      subject: campaign.emailSubject,
-      html: campaign.emailBody,
-      trackingSettings: {
-        clickTracking: { enable: true },
-        openTracking: { enable: true }
-      }
+    if (!userEmail) {
+      console.error(`Cannot send email: No email found for user ${campaign.userId}`)
+      return false
     }
 
-    await sgMail.send(msg)
-    */
+    // Save campaign to Firestore first (with scheduledAt)
+    await saveCampaign(campaign)
 
-    // For now, just log
-    console.log(`[EMAIL] Re-engagement campaign ready for user ${campaign.userId}`)
-    console.log(`Subject: ${campaign.emailSubject}`)
-    console.log(`Type: ${campaign.campaignType}`)
+    console.log(`Sending ${campaign.campaignType} email to ${userEmail}...`)
+
+    // Send email via Resend
+    const { data, error } = await resend.emails.send({
+      from: 'Weight Loss Project Lab <noreply@weightlossprojectlab.com>',
+      to: userEmail,
+      subject: campaign.emailSubject,
+      html: campaign.emailBody,
+      tags: [
+        { name: 'campaign_type', value: campaign.campaignType },
+        { name: 'inactivity_level', value: campaign.inactivityLevel },
+        { name: 'days_inactive', value: campaign.daysInactive.toString() }
+      ]
+    })
+
+    if (error) {
+      console.error('Resend error:', error)
+      return false
+    }
+
+    console.log(`✅ Email sent successfully to ${userEmail}`)
+    console.log(`   Email ID: ${data?.id}`)
+    console.log(`   Campaign: ${campaign.campaignType}`)
+    console.log(`   Subject: ${campaign.emailSubject}`)
+
+    // Update campaign with sentAt timestamp
+    const campaignRef = doc(db, 'reengagement_campaigns', `${campaign.userId}_${campaign.scheduledAt.getTime()}`)
+    await updateDoc(campaignRef, {
+      sentAt: Timestamp.now(),
+      resendEmailId: data?.id
+    })
 
     return true
   } catch (error) {

@@ -1,13 +1,22 @@
 # Email Service Setup Guide
 ## Inactive User Detection - Re-engagement Campaigns
 
-The Inactive User Detection system is fully implemented and ready to send re-engagement emails. However, **you need to configure an email service provider** to actually send the emails.
+✅ **RESEND IS NOW CONFIGURED AND READY TO USE!**
+
+The Inactive User Detection system is fully implemented with Resend email service integration. Emails will be sent automatically when the daily detection job runs.
 
 ---
 
+## Current Setup
+
+**Email Provider:** Resend
+**Status:** ✅ Configured and Active
+**API Key:** Set in `.env.local`
+**From Address:** `Weight Loss Project Lab <noreply@weightlossprojectlab.com>`
+
 ## Overview
 
-The system is designed to work with any email service provider. Choose one of the recommended options below based on your needs:
+The system is currently configured with Resend. If you want to switch to a different email service provider, see the options below:
 
 ### Recommended Email Services
 
