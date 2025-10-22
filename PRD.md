@@ -397,6 +397,77 @@ const summary = todaysMeals.reduce((acc, meal) => ({
 - Retry options
 - Graceful degradation (save meal even if photo upload fails)
 
+#### 6.4 Photo Gallery View
+**User Story:** *As a user, I want to browse through all my meal photos in a beautiful gallery so I can visualize my food journey and see my progress over time.*
+
+**Status:** ✅ **IMPLEMENTED** (v1.6.6 - October 22, 2025)
+
+**Functionality:**
+- **Grid Layout:** Responsive masonry grid (2-4 columns based on screen size)
+- **Hover Effects:** Interactive cards with meal metadata on hover
+- **Lightbox Modal:** Full-screen photo viewer with navigation
+- **Search Filter:** Search meals by food items, notes, or title
+- **Meal Type Filter:** Filter by breakfast, lunch, dinner, or snacks
+- **Time Range Filter:** View last 7, 14, 30, 60, 90, or 180 days
+- **View Modes:** Grid view or grouped-by-date view
+- **Stats Dashboard:** Total photos, average calories, meal type breakdown
+- **Keyboard Navigation:** Arrow keys (←/→) for photo navigation, Esc to close
+
+**Technical Implementation:**
+- **Utility Layer:** `lib/photo-gallery-utils.ts`
+  - `fetchGalleryPhotos()` - Fetches meals with photos from API
+  - `fetchRecentPhotos()` - Time-range based fetching
+  - `groupPhotosByDate()` - Groups photos by YYYY-MM-DD
+  - `searchPhotos()` - Search by food items, notes, or title
+  - `getGalleryStats()` - Calculate summary statistics
+- **Components:**
+  - `components/gallery/PhotoGalleryGrid.tsx` - Responsive grid with hover effects
+  - `components/gallery/GroupedPhotoGallery.tsx` - Date-grouped layout variant
+  - `components/gallery/PhotoModal.tsx` - Full-screen lightbox with sidebar
+- **Page:** `app/gallery/page.tsx` - Main gallery page with filters and stats
+- **Dashboard Integration:** Indigo gradient card with "View Gallery" CTA
+
+**Photo Gallery Grid Features:**
+- Responsive grid (2 cols mobile, 3 cols tablet, 4 cols desktop)
+- Aspect-square cards with overlay on hover
+- Meal type badges with emoji (🌅 🌙 ☀️ 🍎)
+- Calories display
+- Food items preview (truncated at 3 items)
+- Date stamp
+- Error handling for missing images
+- Empty state with "Log Your First Meal" CTA
+
+**Lightbox Modal Features:**
+- Full-screen overlay with backdrop blur
+- Image navigation (previous/next buttons)
+- Photo counter (e.g., "3 / 24")
+- Sidebar with meal details:
+  - Meal type with emoji
+  - Date and time
+  - Total calories (highlighted)
+  - Complete food items list
+  - Notes (if present)
+  - "View Details" and "Open in New Tab" actions
+  - Keyboard shortcuts legend
+- Keyboard shortcuts: ← → for navigation, Esc to close
+- Click outside to close
+- Prevents body scroll when open
+
+**Data Flow:**
+1. User clicks "View Gallery" from dashboard
+2. Gallery page loads recent 30 days by default
+3. Filters applied → re-fetch from API or filter client-side
+4. Click photo → open lightbox modal with navigation
+5. Arrow keys navigate between photos
+6. Esc closes modal
+
+**Benefits:**
+- **Motivation:** Visual progress tracking increases engagement
+- **Accountability:** See complete meal photo history at a glance
+- **Discovery:** Search and filter to find specific meals or patterns
+- **UX Delight:** Beautiful grid layout and smooth lightbox experience
+- **Retention:** Users love seeing their journey visualized
+
 ### 7. Onboarding Experience
 
 **User Story:** *As a new user, I want a guided setup experience to personalize my health tracking journey.*
@@ -2014,14 +2085,14 @@ match /users/{userId}/mealLogs/{mealLogId} {
 26. **Aspect Ratio Optimization** - Platform-specific image formats (1:1, 9:16, 3:2)
 
 ### ✅ Recently Completed
-1. **Charts & Trends** - Interactive progress visualization (v1.6.5)
+1. **Photo Gallery View** - Grid layout for browsing meal photos with filters and lightbox (v1.6.6)
+2. **Charts & Trends** - Interactive progress visualization (v1.6.5)
 
 ### 📋 Planned Features
 1. **Health Integration** - Apple Health/Google Fit sync for step tracking
-2. **Photo Gallery View** - Grid layout for browsing meal photos
-3. **PWA Icons** - Add missing icon files for installability
-4. **Skeleton UI** - Replace loading spinners with skeleton components
-5. **Social Sharing** - Share progress and meals with friends
+2. **PWA Icons** - Add missing icon files for installability
+3. **Skeleton UI** - Replace loading spinners with skeleton components
+4. **Social Sharing** - Share progress and meals with friends
 
 ---
 
