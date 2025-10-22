@@ -1,6 +1,20 @@
 'use client'
 
-import { auth } from './firebase'
+import { auth, db } from './firebase'
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  serverTimestamp
+} from 'firebase/firestore'
 import type { AIAnalysis, UserPreferences, UserGoals, UserProfile } from '@/types'
 
 // Helper function to get auth token for API calls (with retry for race conditions)
@@ -320,6 +334,164 @@ export interface StepLogData {
   loggedAt: string
   goal?: number
   notes?: string
+}
+
+// Cooking Session Operations
+export const cookingSessionOperations = {
+  // Create a new cooking session
+  createCookingSession: async (sessionData: any) => {
+    const user = auth.currentUser
+    if (!user) throw new FirebaseOperationError('User must be authenticated')
+
+    try {
+      const sessionRef = doc(collection(db, 'cooking-sessions'))
+      const session = {
+        ...sessionData,
+        userId: user.uid,
+        id: sessionRef.id,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }
+
+      await setDoc(sessionRef, session)
+      return { ...session, id: sessionRef.id, createdAt: new Date(), updatedAt: new Date() }
+    } catch (error: any) {
+      console.error('Error creating cooking session:', error)
+      throw new FirebaseOperationError(`Failed to create cooking session: ${error.message}`)
+    }
+  },
+
+  // Get active cooking session
+  getActiveCookingSession: async () => {
+    const user = auth.currentUser
+    if (!user) throw new FirebaseOperationError('User must be authenticated')
+
+    try {
+      const q = query(
+        collection(db, 'cooking-sessions'),
+        where('userId', '==', user.uid),
+        where('status', 'in', ['in-progress', 'paused']),
+        orderBy('startedAt', 'desc'),
+        limit(1)
+      )
+
+      const snapshot = await getDocs(q)
+      if (snapshot.empty) return null
+
+      const doc = snapshot.docs[0]
+      return { ...doc.data(), id: doc.id }
+    } catch (error: any) {
+      console.error('Error getting active cooking session:', error)
+      throw new FirebaseOperationError(`Failed to get cooking session: ${error.message}`)
+    }
+  },
+
+  // Get cooking session by ID
+  getCookingSession: async (sessionId: string) => {
+    try {
+      const sessionRef = doc(db, 'cooking-sessions', sessionId)
+      const sessionDoc = await getDoc(sessionRef)
+
+      if (!sessionDoc.exists()) {
+        throw new FirebaseOperationError('Cooking session not found')
+      }
+
+      return { ...sessionDoc.data(), id: sessionDoc.id }
+    } catch (error: any) {
+      console.error('Error getting cooking session:', error)
+      throw new FirebaseOperationError(`Failed to get cooking session: ${error.message}`)
+    }
+  },
+
+  // Update cooking session
+  updateCookingSession: async (sessionId: string, updates: any) => {
+    const user = auth.currentUser
+    if (!user) throw new FirebaseOperationError('User must be authenticated')
+
+    try {
+      const sessionRef = doc(db, 'cooking-sessions', sessionId)
+      await updateDoc(sessionRef, {
+        ...updates,
+        updatedAt: serverTimestamp()
+      })
+    } catch (error: any) {
+      console.error('Error updating cooking session:', error)
+      throw new FirebaseOperationError(`Failed to update cooking session: ${error.message}`)
+    }
+  },
+
+  // Delete cooking session
+  deleteCookingSession: async (sessionId: string) => {
+    const user = auth.currentUser
+    if (!user) throw new FirebaseOperationError('User must be authenticated')
+
+    try {
+      const sessionRef = doc(db, 'cooking-sessions', sessionId)
+      await deleteDoc(sessionRef)
+    } catch (error: any) {
+      console.error('Error deleting cooking session:', error)
+      throw new FirebaseOperationError(`Failed to delete cooking session: ${error.message}`)
+    }
+  }
+}
+
+// Recipe Queue Operations
+export const recipeQueueOperations = {
+  // Add recipe to queue
+  addToQueue: async (queueData: any) => {
+    const user = auth.currentUser
+    if (!user) throw new FirebaseOperationError('User must be authenticated')
+
+    try {
+      const queueRef = doc(collection(db, 'recipe-queue'))
+      const queueItem = {
+        ...queueData,
+        userId: user.uid,
+        id: queueRef.id,
+        addedAt: serverTimestamp()
+      }
+
+      await setDoc(queueRef, queueItem)
+      return { ...queueItem, id: queueRef.id, addedAt: new Date() }
+    } catch (error: any) {
+      console.error('Error adding to recipe queue:', error)
+      throw new FirebaseOperationError(`Failed to add to queue: ${error.message}`)
+    }
+  },
+
+  // Get user's recipe queue
+  getQueue: async () => {
+    const user = auth.currentUser
+    if (!user) throw new FirebaseOperationError('User must be authenticated')
+
+    try {
+      const q = query(
+        collection(db, 'recipe-queue'),
+        where('userId', '==', user.uid),
+        orderBy('addedAt', 'desc')
+      )
+
+      const snapshot = await getDocs(q)
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))
+    } catch (error: any) {
+      console.error('Error getting recipe queue:', error)
+      throw new FirebaseOperationError(`Failed to get queue: ${error.message}`)
+    }
+  },
+
+  // Remove from queue
+  removeFromQueue: async (queueId: string) => {
+    const user = auth.currentUser
+    if (!user) throw new FirebaseOperationError('User must be authenticated')
+
+    try {
+      const queueRef = doc(db, 'recipe-queue', queueId)
+      await deleteDoc(queueRef)
+    } catch (error: any) {
+      console.error('Error removing from queue:', error)
+      throw new FirebaseOperationError(`Failed to remove from queue: ${error.message}`)
+    }
+  }
 }
 
 // Re-export real-time hooks from hooks directory for backwards compatibility

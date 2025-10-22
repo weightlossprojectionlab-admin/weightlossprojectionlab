@@ -24,7 +24,11 @@
       "Bash(node:*)",
       "Read(//c/Users/percy/Downloads/**)",
       "Bash(timeout 180 npm run build)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(find:*)",
+      "Bash(npx next build:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

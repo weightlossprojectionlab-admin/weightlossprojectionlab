@@ -1,22 +1,24 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { mealLogOperations, useMealLogsRealtime, mealTemplateOperations } from '@/lib/firebase-operations'
+import { mealLogOperations, useMealLogsRealtime, mealTemplateOperations, cookingSessionOperations, userProfileOperations } from '@/lib/firebase-operations'
 import { uploadMealPhoto } from '@/lib/storage-upload'
 import { useConfirm } from '@/hooks/useConfirm'
 import { auth } from '@/lib/firebase'
+import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
 import { compressImage, formatFileSize } from '@/lib/image-compression'
 import { exportToCSV, exportToPDF } from '@/lib/export-utils'
 import { shareMeal, shareToPlatform, getPlatformInfo } from '@/lib/share-utils'
 import { MealCardSkeleton, TemplateCardSkeleton, SummaryCardSkeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/Spinner'
-import type { AIAnalysis, MealTemplate } from '@/types'
+import type { AIAnalysis, MealTemplate, UserProfile, UserPreferences } from '@/types'
 
-// Helper function to detect meal type based on current time
+// Helper function to detect meal type based on current time (fallback when no schedule)
 const detectMealTypeFromTime = (): 'breakfast' | 'lunch' | 'dinner' | 'snack' => {
   const hour = new Date().getHours()
 
@@ -26,12 +28,66 @@ const detectMealTypeFromTime = (): 'breakfast' | 'lunch' | 'dinner' | 'snack' =>
   return 'snack'
 }
 
+// Helper function to detect meal type using personalized schedule
+const detectMealTypeWithSchedule = (mealSchedule?: {
+  breakfastTime: string
+  lunchTime: string
+  dinnerTime: string
+  hasSnacks: boolean
+}): 'breakfast' | 'lunch' | 'dinner' | 'snack' => {
+  if (!mealSchedule) {
+    return detectMealTypeFromTime()
+  }
+
+  const now = new Date()
+  const currentTime = now.getHours() + (now.getMinutes() / 60)
+
+  const parseTime = (timeStr: string) => {
+    const [hours, minutes] = timeStr.split(':').map(Number)
+    return hours + (minutes / 60)
+  }
+
+  const breakfastTime = parseTime(mealSchedule.breakfastTime)
+  const lunchTime = parseTime(mealSchedule.lunchTime)
+  const dinnerTime = parseTime(mealSchedule.dinnerTime)
+
+  // ±2 hour windows
+  const WINDOW = 2
+
+  // In breakfast window
+  if (currentTime >= (breakfastTime - WINDOW) && currentTime <= (breakfastTime + WINDOW)) {
+    return 'breakfast'
+  }
+  // In lunch window
+  if (currentTime >= (lunchTime - WINDOW) && currentTime <= (lunchTime + WINDOW)) {
+    return 'lunch'
+  }
+  // In dinner window or after
+  if (currentTime >= (dinnerTime - WINDOW)) {
+    return 'dinner'
+  }
+  // Before breakfast
+  if (currentTime < (breakfastTime - WINDOW)) {
+    return 'breakfast'
+  }
+  // Between breakfast and lunch
+  if (currentTime < (lunchTime - WINDOW)) {
+    return 'lunch'
+  }
+  // Between lunch and dinner
+  return 'dinner'
+}
+
 function LogMealContent() {
+  const searchParams = useSearchParams()
+  const [userProfile, setUserProfile] = useState<{ profile?: UserProfile; preferences?: UserPreferences } | null>(null)
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(detectMealTypeFromTime())
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [imageObjectUrl, setImageObjectUrl] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null)
+  const [fromRecipe, setFromRecipe] = useState(false)
+  const [recipeSessionId, setRecipeSessionId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string>('')
   const [expandedMealId, setExpandedMealId] = useState<string | null>(null)
@@ -117,6 +173,28 @@ function LogMealContent() {
     { id: 'snack', label: 'Snack', emoji: '🍎' },
   ] as const
 
+  // Load user profile for personalized meal schedule
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const profile = await userProfileOperations.getUserProfile()
+        if (profile) {
+          setUserProfile(profile)
+          // Update meal type with personalized schedule
+          if (profile.preferences?.mealSchedule) {
+            const detectedType = detectMealTypeWithSchedule(profile.preferences.mealSchedule)
+            setSelectedMealType(detectedType)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load user profile:', error)
+        // Silently fail - user can still log meals with time-based detection
+      }
+    }
+
+    loadUserProfile()
+  }, [])
+
   // Show error toast if real-time listener fails
   useEffect(() => {
     if (historyError) {
@@ -124,6 +202,58 @@ function LogMealContent() {
       toast.error('Failed to load meal history. Please refresh the page.')
     }
   }, [historyError])
+
+  // Detect if coming from completed cooking session
+  useEffect(() => {
+    const isFromRecipe = searchParams.get('fromRecipe') === 'true'
+    const sessionId = searchParams.get('sessionId')
+    const recipeId = searchParams.get('recipeId')
+    const mealType = searchParams.get('mealType') as 'breakfast' | 'lunch' | 'dinner' | 'snack' | null
+    const servings = searchParams.get('servings')
+
+    if (isFromRecipe && sessionId && recipeId) {
+      setFromRecipe(true)
+      setRecipeSessionId(sessionId)
+
+      if (mealType) {
+        setSelectedMealType(mealType)
+      }
+
+      // Load the cooking session to get exact nutrition data
+      cookingSessionOperations.getCookingSession(sessionId).then((session: any) => {
+        const recipe = MEAL_SUGGESTIONS.find(r => r.id === recipeId)
+
+        if (session && recipe) {
+          // Pre-fill AI analysis with exact recipe data
+          const analysis: AIAnalysis = {
+            foodItems: session.scaledIngredients.map((ing: string) => ({
+              name: ing,
+              portion: '',
+              calories: 0,
+              protein: 0,
+              carbs: 0,
+              fat: 0,
+              fiber: 0,
+              usdaVerified: true,
+              source: 'usda' as const
+            })),
+            totalCalories: session.scaledCalories,
+            totalMacros: session.scaledMacros,
+            confidence: 100,
+            suggestions: [`Cooked from recipe: ${recipe.name}`],
+            isMockData: false,
+            usdaValidation: ['Recipe-based nutrition data']
+          }
+
+          setAiAnalysis(analysis)
+          toast.success(`Ready to log your ${recipe.name}!`, { duration: 3000 })
+        }
+      }).catch(error => {
+        console.error('Error loading cooking session:', error)
+        toast.error('Failed to load recipe data')
+      })
+    }
+  }, [searchParams])
 
   // Load meal templates
   const loadMealTemplates = async () => {
@@ -307,9 +437,11 @@ function LogMealContent() {
           setSelectedMealType(result.data.suggestedMealType)
           setAiSuggestedMealType(result.data.suggestedMealType)
         } else {
-          // Fallback to time-based detection if AI doesn't suggest
-          const timeBased = detectMealTypeFromTime()
-          console.log('⏰ Using time-based meal type:', timeBased)
+          // Fallback to personalized schedule or time-based detection if AI doesn't suggest
+          const timeBased = userProfile?.preferences?.mealSchedule
+            ? detectMealTypeWithSchedule(userProfile.preferences.mealSchedule)
+            : detectMealTypeFromTime()
+          console.log('⏰ Using schedule-based meal type:', timeBased)
           setSelectedMealType(timeBased)
         }
       } else {

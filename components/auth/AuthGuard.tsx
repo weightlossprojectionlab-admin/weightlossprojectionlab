@@ -1,8 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { getAuthLoadingMessage } from '@/lib/auth-message-selector'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -19,6 +20,7 @@ interface AuthGuardProps {
 export default function AuthGuard({ children, fallback }: AuthGuardProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const [loadingMessage, setLoadingMessage] = useState('Loading your health journey...')
 
   useEffect(() => {
     if (!loading && !user) {
@@ -27,13 +29,28 @@ export default function AuthGuard({ children, fallback }: AuthGuardProps) {
     }
   }, [user, loading, router])
 
+  // Rotate loading message every 3 seconds for entertainment
+  useEffect(() => {
+    if (loading) {
+      // Set first random message immediately on client mount
+      setLoadingMessage(getAuthLoadingMessage())
+
+      // Then rotate every 3 seconds
+      const interval = setInterval(() => {
+        setLoadingMessage(getAuthLoadingMessage())
+      }, 3000)
+
+      return () => clearInterval(interval)
+    }
+  }, [loading])
+
   // Show loading spinner while Firebase Auth initializes
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-health-bg">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Authenticating...</p>
+          <p className="text-muted-foreground">{loadingMessage}</p>
         </div>
       </div>
     )

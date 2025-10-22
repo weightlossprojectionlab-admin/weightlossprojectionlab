@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { GoalsEditor } from '@/components/ui/GoalsEditor'
 import { PlateauDetectionEmpty } from '@/components/ui/EmptyState'
 import { RecipeModal } from '@/components/ui/RecipeModal'
+import { RecipeQueue } from '@/components/ui/RecipeQueue'
 import { signOut, auth } from '@/lib/auth'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
@@ -58,7 +59,8 @@ function DashboardContent() {
     nutritionSummary.goalCalories,
     {
       dietaryPreferences: userProfile?.preferences?.dietaryPreferences,
-      foodAllergies: userProfile?.profile?.foodAllergies
+      foodAllergies: userProfile?.profile?.foodAllergies,
+      mealSchedule: userProfile?.preferences?.mealSchedule
     },
     auth.currentUser?.uid
   )
@@ -669,6 +671,9 @@ function DashboardContent() {
           </button>
         </div>
 
+        {/* Recipe Queue */}
+        <RecipeQueue />
+
         {/* AI Recommendations */}
         {aiRecommendations.length > 0 && (
           <div className="bg-gradient-to-r from-accent-light to-primary-light rounded-lg p-6">
@@ -704,6 +709,8 @@ function DashboardContent() {
             setShowRecipeModal(false)
             setSelectedRecipe(null)
           }}
+          userDietaryPreferences={userProfile?.preferences?.dietaryPreferences}
+          userAllergies={userProfile?.profile?.foodAllergies}
         />
       )}
     </main>

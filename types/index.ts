@@ -47,6 +47,14 @@ export interface UserPreferences {
     dinner?: string
     snacks?: string
   }
+  // Typical meal schedule - when user actually eats (used for meal suggestions)
+  mealSchedule?: {
+    breakfastTime: string  // e.g., "07:00" in 24-hour format
+    lunchTime: string      // e.g., "12:30"
+    dinnerTime: string     // e.g., "18:00"
+    hasSnacks: boolean     // Whether user typically snacks
+    snackWindows?: string[] // Optional snack times e.g., ["10:00", "15:00", "21:00"]
+  }
   weightCheckInFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
 }
 
@@ -344,4 +352,50 @@ export interface AuthContextType {
   signUp: (email: string, password: string, name: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (data: Partial<User>) => Promise<void>
+}
+
+// Recipe Cooking & Queue
+export interface StepTimer {
+  stepIndex: number
+  stepText: string
+  duration: number | null // Duration in seconds, null if no timer needed
+  startedAt?: Date
+  completedAt?: Date
+  status: 'pending' | 'active' | 'completed' | 'skipped'
+}
+
+export interface CookingSession {
+  id: string
+  userId: string
+  recipeId: string
+  recipeName: string
+  servingSize: number
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  currentStep: number
+  totalSteps: number
+  stepTimers: StepTimer[]
+  startedAt: Date
+  pausedAt?: Date
+  completedAt?: Date
+  status: 'in-progress' | 'paused' | 'completed' | 'abandoned'
+  // Scaled recipe data for logging
+  scaledCalories: number
+  scaledMacros: {
+    protein: number
+    carbs: number
+    fat: number
+    fiber: number
+  }
+  scaledIngredients: string[]
+}
+
+export interface QueuedRecipe {
+  id: string
+  userId: string
+  recipeId: string
+  recipeName: string
+  servingSize: number
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  plannedFor?: Date
+  addedAt: Date
 }

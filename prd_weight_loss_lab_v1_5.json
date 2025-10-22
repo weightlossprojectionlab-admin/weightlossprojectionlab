@@ -1,0 +1,74 @@
+{
+  "version": "1.5",
+  "updated": "2025-10-21",
+  "title": "Weight Loss Project Lab",
+  "executive_summary": {
+    "vision": "AI-powered nutrition tracking app using Gemini AI and Firebase",
+    "audience": {
+      "primary": "Health-conscious individuals",
+      "secondary": "Fitness enthusiasts",
+      "tertiary": "People with dietary restrictions"
+    },
+    "success_metrics": {
+      "engagement": "Daily active users logging \u22652 meals/day",
+      "accuracy": "\u226585% AI confidence in meal analysis",
+      "retention": "60%+ weekly retention",
+      "performance": "<2s meal analysis response",
+      "data_quality": "\u226590% of meals have photos"
+    }
+  },
+  "features": {
+    "meal_logging": {
+      "photo_capture": true,
+      "ai_analysis": true,
+      "manual_entry": "UI implemented, save logic pending",
+      "meal_type_detection": "Time + AI-based"
+    },
+    "templates": {
+      "save_templates": true,
+      "use_templates": true,
+      "manage_templates": true
+    },
+    "dashboard": {
+      "daily_summary": true,
+      "real_time_sync": true
+    },
+    "step_tracking": {
+      "automatic": true,
+      "manual_entry": false,
+      "real_time_feed": true
+    },
+    "recipe_mode": {
+      "guided_cooking": true,
+      "scaling": true,
+      "shopping_list": true,
+      "meal_logging_integration": true
+    },
+    "marketing": {
+      "template_system": true,
+      "viral_hooks": "1000+ messages",
+      "aspect_ratios": [
+        "1:1",
+        "9:16",
+        "3:2"
+      ]
+    }
+  },
+  "technical": {
+    "frontend": "Next.js 14, Tailwind CSS, React",
+    "backend": "Firebase (Auth, Firestore, Storage)",
+    "ai": "Gemini Vision API",
+    "hosting": "Vercel / Firebase Hosting",
+    "realtime_sync": true,
+    "pwa": "Planned"
+  },
+  "status": {
+    "completed_features": 26,
+    "planned_features": [
+      "Health Sync",
+      "Offline",
+      "Charts",
+      "Social Sharing"
+    ]
+  }
+}

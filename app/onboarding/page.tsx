@@ -79,7 +79,14 @@ interface OnboardingData {
   weeklyDrinks?: number
   recreationalDrugs?: 'no' | 'occasional' | 'regular'
 
-  // Step 6: Notifications
+  // Step 6: Meal Schedule & Notifications
+  mealSchedule?: {
+    breakfastTime: string
+    lunchTime: string
+    dinnerTime: string
+    hasSnacks: boolean
+    snackWindows?: string[]
+  }
   notifications?: boolean
   mealReminderTimes?: {
     breakfast?: string
@@ -98,6 +105,14 @@ function OnboardingContent() {
     units: 'imperial',
     notifications: true,
     weightCheckInFrequency: 'weekly',
+    // Meal schedule defaults (7 AM, 12 PM, 6 PM)
+    mealSchedule: {
+      breakfastTime: '07:00',
+      lunchTime: '12:00',
+      dinnerTime: '18:00',
+      hasSnacks: false,
+      snackWindows: []
+    },
     // Lifestyle defaults
     smoking: 'never',
     alcoholFrequency: 'never',
@@ -187,6 +202,7 @@ function OnboardingContent() {
 
           // Step 6 data (from preferences)
           if (profile.preferences?.notifications !== undefined) draftData.notifications = profile.preferences.notifications
+          if (profile.preferences?.mealSchedule) draftData.mealSchedule = profile.preferences.mealSchedule
           if (profile.preferences?.mealReminderTimes) draftData.mealReminderTimes = profile.preferences.mealReminderTimes
           if (profile.preferences?.weightCheckInFrequency) draftData.weightCheckInFrequency = profile.preferences.weightCheckInFrequency
 
@@ -254,11 +270,12 @@ function OnboardingContent() {
         if (data.macroTargets) partialUpdate.goals.macroTargets = data.macroTargets
       }
 
-      if (data.units || data.dietaryPreferences || data.notifications !== undefined) {
+      if (data.units || data.dietaryPreferences || data.notifications !== undefined || data.mealSchedule) {
         partialUpdate.preferences = {}
         if (data.units) partialUpdate.preferences.units = data.units
         if (data.notifications !== undefined) partialUpdate.preferences.notifications = data.notifications
         if (data.dietaryPreferences) partialUpdate.preferences.dietaryPreferences = data.dietaryPreferences
+        if (data.mealSchedule) partialUpdate.preferences.mealSchedule = data.mealSchedule
         if (data.mealReminderTimes) partialUpdate.preferences.mealReminderTimes = data.mealReminderTimes
         if (data.weightCheckInFrequency) partialUpdate.preferences.weightCheckInFrequency = data.weightCheckInFrequency
       }
@@ -574,6 +591,7 @@ function OnboardingContent() {
         units: data.units!,
         notifications: data.notifications!,
         dietaryPreferences: data.dietaryPreferences,
+        mealSchedule: data.mealSchedule,
         mealReminderTimes: data.mealReminderTimes,
         weightCheckInFrequency: data.weightCheckInFrequency
       }
@@ -1736,7 +1754,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
   )
 }
 
-// Step 6: Notifications
+// Step 6: Meal Schedule & Notifications
 function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data: Partial<OnboardingData>) => void }) {
   // Get locale-based default meal times
   const getLocaleMealTimes = () => {
@@ -1765,11 +1783,120 @@ function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data
     }
   }
 
+  // Update meal schedule time
+  const updateMealTime = (meal: 'breakfastTime' | 'lunchTime' | 'dinnerTime', time: string) => {
+    updateData({
+      mealSchedule: {
+        ...data.mealSchedule!,
+        [meal]: time
+      }
+    })
+  }
+
+  // Toggle snacks
+  const toggleSnacks = () => {
+    updateData({
+      mealSchedule: {
+        ...data.mealSchedule!,
+        hasSnacks: !data.mealSchedule?.hasSnacks,
+        snackWindows: !data.mealSchedule?.hasSnacks ? ['15:00'] : []
+      }
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <h2>Stay on track</h2>
-        <p className="text-muted-foreground mt-2">Set up reminders to help you reach your goals</p>
+        <h2>Your meal schedule</h2>
+        <p className="text-muted-foreground mt-2">Tell us when you typically eat - this helps us suggest the right meal at the right time</p>
+      </div>
+
+      {/* Meal Schedule Times */}
+      <div className="bg-card border-2 border-border rounded-lg p-4">
+        <div className="flex items-center space-x-2 mb-4">
+          <span className="text-2xl">⏰</span>
+          <div>
+            <div className="font-medium">When do you typically eat?</div>
+            <div className="text-xs text-muted-foreground">We'll use this to give you better meal suggestions</div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {/* Breakfast Time */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">🌅</span>
+              <div>
+                <div className="text-sm font-medium">Breakfast</div>
+                <div className="text-xs text-muted-foreground">Morning meal</div>
+              </div>
+            </div>
+            <input
+              type="time"
+              value={data.mealSchedule?.breakfastTime || '07:00'}
+              onChange={(e) => updateMealTime('breakfastTime', e.target.value)}
+              className="px-3 py-2 border border-border rounded text-sm"
+            />
+          </div>
+
+          {/* Lunch Time */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">☀️</span>
+              <div>
+                <div className="text-sm font-medium">Lunch</div>
+                <div className="text-xs text-muted-foreground">Midday meal</div>
+              </div>
+            </div>
+            <input
+              type="time"
+              value={data.mealSchedule?.lunchTime || '12:00'}
+              onChange={(e) => updateMealTime('lunchTime', e.target.value)}
+              className="px-3 py-2 border border-border rounded text-sm"
+            />
+          </div>
+
+          {/* Dinner Time */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl">🌙</span>
+              <div>
+                <div className="text-sm font-medium">Dinner</div>
+                <div className="text-xs text-muted-foreground">Evening meal</div>
+              </div>
+            </div>
+            <input
+              type="time"
+              value={data.mealSchedule?.dinnerTime || '18:00'}
+              onChange={(e) => updateMealTime('dinnerTime', e.target.value)}
+              className="px-3 py-2 border border-border rounded text-sm"
+            />
+          </div>
+
+          {/* Snacks Toggle */}
+          <div className="pt-2 border-t border-border">
+            <button
+              type="button"
+              onClick={toggleSnacks}
+              className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors"
+            >
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">🍎</span>
+                <div className="text-left">
+                  <div className="text-sm font-medium">I eat snacks</div>
+                  <div className="text-xs text-muted-foreground">Between meals</div>
+                </div>
+              </div>
+              <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                data.mealSchedule?.hasSnacks ? 'bg-primary' : 'bg-muted'
+              }`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
+                  data.mealSchedule?.hasSnacks ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Enable Notifications */}

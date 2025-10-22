@@ -1,7 +1,7 @@
 /**
  * Meal Context Utilities
  *
- * Determines the next meal to log based on time of day and already-logged meals.
+ * Determines the next meal to log based on user's personalized meal schedule or time of day.
  * Provides contextual recommendations for meal logging with personalized suggestions.
  */
 
@@ -14,9 +14,18 @@ interface MealLog {
   totalCalories?: number
 }
 
+interface MealSchedule {
+  breakfastTime: string  // e.g., "07:00"
+  lunchTime: string      // e.g., "12:00"
+  dinnerTime: string     // e.g., "18:00"
+  hasSnacks: boolean
+  snackWindows?: string[]
+}
+
 interface UserPreferences {
   dietaryPreferences?: string[]
   foodAllergies?: string[]
+  mealSchedule?: MealSchedule
 }
 
 interface MealContext {
@@ -36,6 +45,22 @@ function getCurrentHour(): number {
 }
 
 /**
+ * Get current hour and minutes as decimal (e.g., 14:30 = 14.5)
+ */
+function getCurrentTimeDecimal(): number {
+  const now = new Date()
+  return now.getHours() + (now.getMinutes() / 60)
+}
+
+/**
+ * Convert time string to decimal hours (e.g., "14:30" = 14.5)
+ */
+function timeStringToDecimal(timeStr: string): number {
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  return hours + (minutes / 60)
+}
+
+/**
  * Determine which meal types have been logged today
  */
 function getLoggedMealTypes(todayMeals: MealLog[]): Set<MealType> {
@@ -43,13 +68,67 @@ function getLoggedMealTypes(todayMeals: MealLog[]): Set<MealType> {
 }
 
 /**
- * Determine the next meal to log based on time of day
+ * Determine the next meal to log based on time of day (fallback when no meal schedule)
  */
 function getMealTypeByTime(hour: number): MealType {
   if (hour < 11) return 'breakfast'
   if (hour < 15) return 'lunch'
-  if (hour < 20) return 'dinner'
+  if (hour < 21) return 'dinner'  // Extended to 9 PM
   return 'snack'
+}
+
+/**
+ * Determine next meal based on user's personalized schedule
+ */
+function getMealTypeBySchedule(currentTime: number, mealSchedule: MealSchedule, loggedMealTypes: Set<MealType>): {
+  mealType: MealType
+  reason: 'in-window' | 'missed' | 'late' | 'snack'
+} {
+  const breakfastTime = timeStringToDecimal(mealSchedule.breakfastTime)
+  const lunchTime = timeStringToDecimal(mealSchedule.lunchTime)
+  const dinnerTime = timeStringToDecimal(mealSchedule.dinnerTime)
+
+  // Define meal windows (±2 hours)
+  const WINDOW = 2
+
+  const breakfastWindow = { start: breakfastTime - WINDOW, end: breakfastTime + WINDOW }
+  const lunchWindow = { start: lunchTime - WINDOW, end: lunchTime + WINDOW }
+  const dinnerWindow = { start: dinnerTime - WINDOW, end: dinnerTime + WINDOW }
+
+  // Check if we're in a meal window
+  if (currentTime >= breakfastWindow.start && currentTime <= breakfastWindow.end && !loggedMealTypes.has('breakfast')) {
+    return { mealType: 'breakfast', reason: 'in-window' }
+  }
+  if (currentTime >= lunchWindow.start && currentTime <= lunchWindow.end && !loggedMealTypes.has('lunch')) {
+    return { mealType: 'lunch', reason: 'in-window' }
+  }
+  if (currentTime >= dinnerWindow.start && currentTime <= dinnerWindow.end && !loggedMealTypes.has('dinner')) {
+    return { mealType: 'dinner', reason: 'in-window' }
+  }
+
+  // After dinner window closes (past dinner + 2 hours)
+  if (currentTime > dinnerWindow.end) {
+    // If dinner not logged, still suggest it (late dinner)
+    if (!loggedMealTypes.has('dinner')) {
+      return { mealType: 'dinner', reason: 'late' }
+    }
+    // All main meals done, suggest snack
+    return { mealType: 'snack', reason: 'snack' }
+  }
+
+  // Between windows - suggest next upcoming meal if not logged
+  if (currentTime < lunchWindow.start && !loggedMealTypes.has('breakfast')) {
+    return { mealType: 'breakfast', reason: 'missed' }
+  }
+  if (currentTime < dinnerWindow.start && !loggedMealTypes.has('lunch')) {
+    return { mealType: 'lunch', reason: 'missed' }
+  }
+  if (!loggedMealTypes.has('dinner')) {
+    return { mealType: 'dinner', reason: 'missed' }
+  }
+
+  // Default to snack
+  return { mealType: 'snack', reason: 'snack' }
 }
 
 /**
@@ -62,6 +141,7 @@ export function getNextMealContext(
   userId?: string
 ): MealContext {
   const currentHour = getCurrentHour()
+  const currentTime = getCurrentTimeDecimal()
   const loggedMealTypes = getLoggedMealTypes(todayMeals)
   const consumedCalories = todayMeals.reduce((sum, meal) => sum + (meal.totalCalories || 0), 0)
   const remainingCalories = Math.max(0, goalCalories - consumedCalories)
@@ -71,12 +151,22 @@ export function getNextMealContext(
   let nextMealType: MealType
   let nextMealLabel: string
   let message: string
+  let mealReason: 'in-window' | 'missed' | 'late' | 'snack' | 'default' = 'default'
 
-  // If no meals logged, suggest based on time
-  if (isFirstMeal) {
+  // Use personalized meal schedule if available
+  if (userPreferences?.mealSchedule) {
+    const result = getMealTypeBySchedule(currentTime, userPreferences.mealSchedule, loggedMealTypes)
+    nextMealType = result.mealType
+    mealReason = result.reason
+  } else {
+    // Fallback to time-based detection
     nextMealType = getMealTypeByTime(currentHour)
-    nextMealLabel = nextMealType.charAt(0).toUpperCase() + nextMealType.slice(1)
+  }
 
+  nextMealLabel = nextMealType.charAt(0).toUpperCase() + nextMealType.slice(1)
+
+  // Generate contextual message based on reason and state
+  if (isFirstMeal) {
     if (nextMealType === 'breakfast') {
       message = "Start your day! Log your breakfast to begin tracking."
     } else if (nextMealType === 'lunch') {
@@ -86,53 +176,31 @@ export function getNextMealContext(
     } else {
       message = "Log your meal to start tracking today."
     }
-
-    // Generate suggestions for first meal
-    const suggestions = getMealSuggestions({
-      mealType: nextMealType,
-      calorieMax: goalCalories * 0.4, // First meal should be ~40% or less of daily budget
-      dietaryPreferences: userPreferences?.dietaryPreferences,
-      allergies: userPreferences?.foodAllergies,
-      maxResults: 3,
-      userId: userId
-    })
-
-    return { nextMealType, nextMealLabel, message, remainingCalories, isFirstMeal, suggestions }
-  }
-
-  // Check what hasn't been logged yet based on time of day
-  if (currentHour < 11 && !loggedMealTypes.has('breakfast')) {
-    nextMealType = 'breakfast'
-    nextMealLabel = 'Breakfast'
-    message = `Time for breakfast! You have ${remainingCalories.toFixed(0)} cal remaining today.`
-  } else if (currentHour >= 11 && currentHour < 15 && !loggedMealTypes.has('lunch')) {
-    nextMealType = 'lunch'
-    nextMealLabel = 'Lunch'
-    message = `Ready for lunch? You have ${remainingCalories.toFixed(0)} cal remaining.`
-  } else if (currentHour >= 15 && currentHour < 20 && !loggedMealTypes.has('dinner')) {
-    nextMealType = 'dinner'
-    nextMealLabel = 'Dinner'
-    message = `Time for dinner! You have ${remainingCalories.toFixed(0)} cal remaining.`
   } else {
-    // All main meals logged or outside meal times - suggest snack or next meal
-    const missingMeals: MealType[] = []
-    if (!loggedMealTypes.has('breakfast')) missingMeals.push('breakfast')
-    if (!loggedMealTypes.has('lunch')) missingMeals.push('lunch')
-    if (!loggedMealTypes.has('dinner')) missingMeals.push('dinner')
-
-    if (missingMeals.length > 0) {
-      // Suggest first missing meal
-      nextMealType = missingMeals[0]
-      nextMealLabel = nextMealType.charAt(0).toUpperCase() + nextMealType.slice(1)
+    // Generate smart messages based on meal reason
+    const schedule = userPreferences?.mealSchedule
+    if (mealReason === 'in-window' && schedule) {
+      const mealTime = schedule[`${nextMealType}Time` as keyof MealSchedule] as string
+      message = `Time for ${nextMealType}! (You usually eat at ${mealTime})`
+    } else if (mealReason === 'late' && schedule) {
+      const mealTime = schedule[`${nextMealType}Time` as keyof MealSchedule] as string
+      message = `Running late on ${nextMealType}? You usually eat at ${mealTime}. Ready to log?`
+    } else if (mealReason === 'missed') {
       message = `Haven't logged ${nextMealType} yet? Log it now.`
-    } else {
-      // All meals logged - suggest snack
-      nextMealType = 'snack'
-      nextMealLabel = 'Snack'
+    } else if (mealReason === 'snack') {
       if (remainingCalories > 100) {
         message = `Room for a snack! You have ${remainingCalories.toFixed(0)} cal remaining.`
       } else {
         message = "Log any additional snacks or drinks."
+      }
+    } else {
+      // Default messages
+      if (!loggedMealTypes.has(nextMealType) && nextMealType !== 'snack') {
+        message = `Ready for ${nextMealType}? You have ${remainingCalories.toFixed(0)} cal remaining.`
+      } else if (nextMealType === 'snack') {
+        message = `Room for a snack! You have ${remainingCalories.toFixed(0)} cal remaining.`
+      } else {
+        message = `Log your ${nextMealType}! You have ${remainingCalories.toFixed(0)} cal remaining.`
       }
     }
   }
@@ -140,8 +208,8 @@ export function getNextMealContext(
   // Generate personalized meal suggestions
   const suggestions = getMealSuggestions({
     mealType: nextMealType,
-    calorieMin: Math.max(0, remainingCalories * 0.2), // At least 20% of remaining budget
-    calorieMax: Math.min(remainingCalories * 1.2, remainingCalories + 200), // Allow 20% over or +200 cal buffer
+    calorieMin: isFirstMeal ? 0 : Math.max(0, remainingCalories * 0.2),
+    calorieMax: isFirstMeal ? goalCalories * 0.4 : Math.min(remainingCalories * 1.2, remainingCalories + 200),
     dietaryPreferences: userPreferences?.dietaryPreferences,
     allergies: userPreferences?.foodAllergies,
     maxResults: 3,
