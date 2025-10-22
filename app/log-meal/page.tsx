@@ -16,6 +16,8 @@ import { exportToCSV, exportToPDF } from '@/lib/export-utils'
 import { shareMeal, shareToPlatform, getPlatformInfo } from '@/lib/share-utils'
 import { MealCardSkeleton, TemplateCardSkeleton, SummaryCardSkeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/Spinner'
+import { queueMeal } from '@/lib/offline-queue'
+import { registerBackgroundSync } from '@/lib/sync-manager'
 import type { AIAnalysis, MealTemplate, UserProfile, UserPreferences } from '@/types'
 
 // Helper function to detect meal type based on current time (fallback when no schedule)
@@ -598,7 +600,37 @@ function LogMealContent() {
         isMockData: false
       }
 
-      // Save to Firebase
+      // Check if offline - queue instead of saving
+      if (!navigator.onLine) {
+        console.log('📡 Offline detected, queuing manual entry...')
+
+        await queueMeal({
+          mealType: selectedMealType,
+          aiAnalysis: manualAnalysis,
+          loggedAt: new Date().toISOString(),
+          notes: manualEntryForm.notes || undefined
+        })
+
+        await registerBackgroundSync()
+        toast.success('Meal queued! Will sync when back online.')
+        console.log('✅ Manual entry queued for offline sync')
+
+        // Reset form
+        setShowManualEntry(false)
+        setManualEntryForm({
+          foodItems: [''],
+          calories: '',
+          protein: '',
+          carbs: '',
+          fat: '',
+          fiber: '',
+          notes: ''
+        })
+
+        return
+      }
+
+      // Online - proceed with normal save
       const response = await mealLogOperations.createMealLog({
         mealType: selectedMealType,
         photoUrl: undefined,
@@ -660,6 +692,37 @@ function LogMealContent() {
     try {
       console.log('💾 Starting meal save...')
 
+      // Check if offline - queue instead of saving
+      if (!navigator.onLine) {
+        console.log('📡 Offline detected, queuing meal for later sync...')
+        setUploadProgress('Queuing for offline sync...')
+
+        // Queue meal with photo data URL (no upload needed when offline)
+        await queueMeal({
+          mealType: selectedMealType,
+          photoDataUrl: capturedImage || undefined,
+          aiAnalysis: aiAnalysis || undefined,
+          loggedAt: new Date().toISOString()
+        })
+
+        // Register background sync
+        await registerBackgroundSync()
+
+        toast.success('Meal queued! Will sync when back online.')
+        console.log('✅ Meal queued for offline sync')
+
+        // Clean up and reset form
+        if (imageObjectUrl) {
+          URL.revokeObjectURL(imageObjectUrl)
+          setImageObjectUrl(null)
+        }
+        setCapturedImage(null)
+        setAiAnalysis(null)
+
+        return
+      }
+
+      // Online - proceed with normal save
       let photoUrl: string | undefined = undefined
 
       // Upload photo to Firebase Storage if we have one

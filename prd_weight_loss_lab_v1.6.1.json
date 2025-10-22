@@ -67,17 +67,17 @@
     "ai": "Gemini Vision API",
     "hosting": "Vercel / Firebase Hosting",
     "realtime_sync": true,
-    "pwa": "Planned"
+    "pwa": "Implemented"
   },
   "status": {
-    "completed_features": 28,
+    "completed_features": 29,
     "newly_completed": [
       "Weight Projection Agent (v1.6.1)",
-      "Manual Meal Entry (v1.6.1)"
+      "Manual Meal Entry (v1.6.1)",
+      "Service Worker Agent (v1.6.1)"
     ],
     "planned_features": [
       "Health Sync",
-      "Offline (PWA)",
       "Charts",
       "Social Sharing"
     ]
@@ -99,11 +99,10 @@
     "client_agents": {
       "implemented": [
         "Step Tracker (v1.2)",
-        "Weight Projection (v1.6.1)"
+        "Weight Projection (v1.6.1)",
+        "Service Worker (v1.6.1)"
       ],
-      "planned": [
-        "Service Worker (PWA)"
-      ]
+      "planned": []
     },
     "future_agents": [
       "Meal Photo Gallery Monitor",

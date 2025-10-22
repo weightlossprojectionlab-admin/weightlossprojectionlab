@@ -10,17 +10,20 @@ import { GoalsEditor } from '@/components/ui/GoalsEditor'
 import { PlateauDetectionEmpty } from '@/components/ui/EmptyState'
 import { RecipeModal } from '@/components/ui/RecipeModal'
 import { RecipeQueue } from '@/components/ui/RecipeQueue'
+import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
 import { signOut, auth } from '@/lib/auth'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import { useStepTracking } from '@/components/StepTrackingProvider'
 import { useWeightProjection } from '@/hooks/useWeightProjection'
 import { useTrendProjection } from '@/hooks/useTrendProjection'
+import { useInstallPrompt } from '@/hooks/useInstallPrompt'
 import { formatProjectionDisplay } from '@/lib/weight-projection-agent'
 import { getNextMealContext, getMealCTA } from '@/lib/meal-context'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
 import { Spinner } from '@/components/ui/Spinner'
 import { MealSuggestion } from '@/lib/meal-suggestions'
+import toast from 'react-hot-toast'
 
 function DashboardContent() {
   const router = useRouter()
@@ -58,6 +61,9 @@ function DashboardContent() {
   // Calculate trend-based projection using historical weight logs
   const trendProjection = useTrendProjection(weightData, userProfile)
   const projectionDisplay = trendProjection ? formatProjectionDisplay(trendProjection) : null
+
+  // PWA install prompt
+  const { isInstallable, promptInstall } = useInstallPrompt()
 
   // Get contextual meal recommendations with personalized suggestions
   const mealContext = getNextMealContext(
@@ -161,6 +167,9 @@ function DashboardContent() {
 
   return (
     <main className="min-h-screen bg-health-bg">
+      {/* Offline Indicator */}
+      <OfflineIndicator />
+
       <PageHeader
         title="Dashboard"
         actions={
@@ -774,6 +783,23 @@ function DashboardContent() {
             )}
             <span className="text-sm font-medium">Settings</span>
           </button>
+
+          {/* PWA Install Button - Only visible if installable */}
+          {isInstallable && (
+            <button
+              onClick={async () => {
+                const success = await promptInstall()
+                if (success) {
+                  toast.success('App installed successfully!')
+                }
+              }}
+              className="card-interactive flex flex-col items-center space-y-2 p-6"
+              aria-label="Install app"
+            >
+              <span className="text-2xl" role="img" aria-label="install">📱</span>
+              <span className="text-sm font-medium">Install App</span>
+            </button>
+          )}
         </div>
 
         {/* Recipe Queue */}

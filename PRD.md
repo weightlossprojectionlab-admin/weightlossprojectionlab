@@ -1404,20 +1404,27 @@ These represent **development team roles**, not AI agents:
 - **Status:** ✅ **IMPLEMENTED** (v1.6.1 - October 22, 2025)
 - **Complexity:** Low (simple math, no ML needed)
 
-**3. Service Worker Agent** ⚠️
+**3. Service Worker Agent** ✅
 - **Purpose:** PWA capabilities for offline support
 - **Functionality:**
   - Caches app shell for offline access
   - Queues meal logs when offline, syncs when online
-  - Shows "Offline" indicator
-  - Pre-caches recent meal photos for viewing offline
+  - Shows "Offline" indicator with sync progress
+  - Pre-caches recent meal photos (up to 50) for viewing offline
   - Enables "Add to Home Screen" prompt
-- **Technology:** Service Worker API, IndexedDB
-- **Status:** ⚠️ **PARTIALLY IMPLEMENTED** (PWA pending)
-- **Next Steps:**
-  - Create `public/sw.js` service worker
-  - Implement offline queue with IndexedDB
-  - Add PWA manifest and icons
+  - Background sync with exponential backoff retry
+  - Automatic sync when connection restored
+- **Technology:** Service Worker API, IndexedDB, Background Sync API
+- **Implementation:**
+  - `public/sw.js` - Service worker with cache strategies and Background Sync
+  - `lib/offline-queue.ts` - IndexedDB wrapper for queuing meals offline
+  - `lib/sync-manager.ts` - Background sync processor with retry logic
+  - `hooks/useOnlineStatus.ts` - Online/offline state management
+  - `hooks/useInstallPrompt.ts` - PWA install prompt handler
+  - `components/ui/OfflineIndicator.tsx` - Real-time sync status UI
+  - Integrated into log-meal and dashboard pages
+- **Status:** ✅ **IMPLEMENTED** (v1.6.1 - October 22, 2025)
+- **Complexity:** Medium (service workers, IndexedDB, sync patterns)
 
 #### 11.5 Future Agent Roadmap (Phase 4+)
 
