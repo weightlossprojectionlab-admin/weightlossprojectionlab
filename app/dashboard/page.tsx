@@ -11,6 +11,7 @@ import { PlateauDetectionEmpty } from '@/components/ui/EmptyState'
 import { RecipeModal } from '@/components/ui/RecipeModal'
 import { RecipeQueue } from '@/components/ui/RecipeQueue'
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
+import { NotificationPrompt } from '@/components/ui/NotificationPrompt'
 import { useMissions } from '@/hooks/useMissions'
 import { MissionList } from '@/components/ui/MissionCard'
 import { XPBadge } from '@/components/ui/XPBadge'
@@ -172,7 +173,7 @@ function DashboardContent() {
   // Onboarding check is now handled by DashboardRouter
 
   return (
-    <main className="min-h-screen bg-health-bg">
+    <main className="min-h-screen bg-gray-50">
       {/* Offline Indicator */}
       <OfflineIndicator />
 
@@ -807,6 +808,9 @@ function DashboardContent() {
             </button>
           )}
         </div>
+
+        {/* Notification Permission Prompt */}
+        <NotificationPrompt userId={userProfile?.userId} />
 
         {/* Gamification: XP & Level */}
         {gamification && (

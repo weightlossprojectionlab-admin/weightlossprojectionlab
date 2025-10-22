@@ -70,12 +70,13 @@
     "pwa": "Implemented"
   },
   "status": {
-    "completed_features": 30,
+    "completed_features": 31,
     "newly_completed": [
       "Weight Projection Agent (v1.6.1)",
       "Manual Meal Entry (v1.6.1)",
       "Service Worker Agent (v1.6.1)",
-      "Weekly Missions Engine (v1.6.1)"
+      "Weekly Missions Engine (v1.6.1)",
+      "Nudge Delivery System (v1.6.1)"
     ],
     "planned_features": [
       "Health Sync",
@@ -92,13 +93,13 @@
     ],
     "backend_agents": {
       "implemented": [
-        "Weekly Missions (v1.6.1)"
+        "Weekly Missions (v1.6.1)",
+        "Nudge Delivery (v1.6.1)"
       ],
       "planned": [
         "AI Coach",
-        "Nudge Delivery",
         "Readiness Analyzer",
-        "Inactive Detection"
+        "Inactive Detection (full email automation)"
       ]
     },
     "client_agents": {

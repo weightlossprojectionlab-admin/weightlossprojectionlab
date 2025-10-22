@@ -15,9 +15,16 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isSuperAdmin() {
+      return isAuthenticated() &&
+             (request.auth.token.email == 'perriceconsulting@gmail.com' ||
+              request.auth.token.email == 'weigthlossprojectionlab@gmail.com');
+    }
+
     function isAdmin() {
       return isAuthenticated() &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+             (isSuperAdmin() ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
 
     function isModerator() {
@@ -214,6 +221,12 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
+    // Admin audit logs (append-only, admin read-only)
+    match /admin_audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only server-side writes allowed
+    }
+
     // ============================================
     // RECIPE & COOKING FEATURES
     // ============================================
@@ -231,6 +244,54 @@ service cloud.firestore {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Recipes collection (media metadata)
+    match /recipes/{recipeId} {
+      // Public read access for all users
+      allow read: if true;
+      // Admin-only write access for uploading media
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // GAMIFICATION & MISSIONS
+    // ============================================
+
+    // User missions
+    match /user_missions/{missionId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Gamification profiles
+    match /gamification/{userId} {
+      allow read: if isAuthenticated() && userId == request.auth.uid;
+      allow write: if isAuthenticated() && userId == request.auth.uid;
+    }
+
+    // XP transactions (read-only for users)
+    match /xp_transactions/{transactionId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+    }
+
+    // ============================================
+    // NOTIFICATIONS
+    // ============================================
+
+    // Notification tokens
+    match /notification_tokens/{userId} {
+      allow read: if isAuthenticated() && userId == request.auth.uid;
+      allow write: if isAuthenticated() && userId == request.auth.uid;
+    }
+
+    // Scheduled nudges (notifications)
+    match /scheduled_nudges/{nudgeId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
     }
 
     // ============================================

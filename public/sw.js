@@ -171,3 +171,74 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// ============================================================================
+// PUSH NOTIFICATIONS
+// ============================================================================
+
+// Handle push notifications
+self.addEventListener('push', (event) => {
+  console.log('[Service Worker] Push notification received');
+
+  let notificationData = {
+    title: 'Weight Loss Project Lab',
+    body: 'You have a new notification',
+    icon: '/icon-192x192.svg',
+    badge: '/icon-192x192.svg',
+    data: {}
+  };
+
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      notificationData = {
+        title: payload.notification?.title || notificationData.title,
+        body: payload.notification?.body || notificationData.body,
+        icon: payload.notification?.icon || notificationData.icon,
+        badge: payload.notification?.badge || notificationData.badge,
+        data: payload.data || {}
+      };
+    } catch (error) {
+      console.error('[Service Worker] Error parsing push payload:', error);
+    }
+  }
+
+  const { title, ...options } = notificationData;
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  console.log('[Service Worker] Notification clicked:', event.notification.data);
+
+  event.notification.close();
+
+  const urlToOpen = event.notification.data?.action === 'log_meal'
+    ? '/log-meal'
+    : '/dashboard';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Check if app is already open
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus().then((client) => {
+            // Navigate to target URL
+            if (client.url !== urlToOpen) {
+              return client.navigate(urlToOpen);
+            }
+            return client;
+          });
+        }
+      }
+
+      // If app not open, open new window
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});

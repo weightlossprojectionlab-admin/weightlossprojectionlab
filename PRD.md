@@ -1309,16 +1309,28 @@ These represent **development team roles**, not AI agents:
 - **Triggers:** User question, meal analysis completion, weekly review
 - **Status:** 🔵 Planned (Phase 3)
 
-**2. Nudge Delivery System**
+**2. Nudge Delivery System** ✅
 - **Purpose:** Behavioral prompts and reminders
 - **Functionality:**
   - Push notifications based on user behavior patterns
-  - Meal logging reminders (if user missed a meal)
-  - Encouragement messages when user hits milestones
-  - Re-engagement prompts for inactive users
-- **Technology:** Firebase Cloud Messaging, behavior analytics
-- **Triggers:** Time-based, behavior-based, milestone-based
-- **Status:** 🔵 Planned (Phase 3)
+  - Meal logging reminders (if user missed breakfast/lunch/dinner)
+  - Encouragement messages for streaks and milestones
+  - Re-engagement prompts for inactive users (24+ hours)
+  - Quiet hours support (10pm-7am, no notifications)
+  - Granular notification preferences (per-category toggles)
+- **Technology:** Firebase Cloud Messaging, Service Worker Push API
+- **Implementation:**
+  - `lib/nudge-system.ts` - Notification trigger logic and scheduling
+  - `hooks/useNotifications.ts` - Permission management & FCM token handling
+  - `components/ui/NotificationPrompt.tsx` - Permission prompt & settings UI
+  - `public/sw.js` - Push event handlers and notification clicks
+  - Firestore collections: notification_tokens, scheduled_nudges
+- **Triggers:**
+  - Time-based: Meal reminders (9am breakfast, 1pm lunch, 7pm dinner)
+  - Behavior-based: Inactive user detection (24h+ since last log)
+  - Milestone-based: Streak achievements (7, 14, 30, 100 days)
+- **Status:** ✅ **IMPLEMENTED** (v1.6.1 - October 22, 2025)
+- **Complexity:** Medium (FCM setup, trigger logic, service worker integration)
 
 **3. Readiness Analyzer**
 - **Purpose:** Detect user engagement levels and motivation
@@ -1367,10 +1379,12 @@ These represent **development team roles**, not AI agents:
 - **Status:** 🔵 Planned (Phase 3)
 
 **Implementation Timeline:**
-- **Phase 3 Q1:** ✅ Weekly Missions (COMPLETED - v1.6.1) + Nudge Delivery (pending)
+- **Phase 3 Q1:** ✅ Weekly Missions + Nudge Delivery (BOTH COMPLETED - v1.6.1)
 - **Phase 3 Q2:** AI Coach chatbot integration
 - **Phase 3 Q3:** Readiness Analyzer ML model
 - **Phase 3 Q4:** Inactive Detection with email automation
+
+**Note:** Inactive Detection is partially implemented via behavior-based nudges (24h+ inactivity). Full email automation and churn analysis remain planned for Q4.
 
 #### 11.4 Client-Side Agents (Current + Planned)
 

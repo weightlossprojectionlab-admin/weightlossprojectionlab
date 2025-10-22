@@ -2,6 +2,7 @@ import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
 import { getAuth, type Auth } from 'firebase/auth'
 import { getFirestore, type Firestore } from 'firebase/firestore'
 import { getStorage, type FirebaseStorage } from 'firebase/storage'
+import { getMessaging, type Messaging, isSupported } from 'firebase/messaging'
 
 // Firebase configuration with fallback values
 const firebaseConfig = {
@@ -27,6 +28,7 @@ try {
 let auth: Auth
 let db: Firestore
 let storage: FirebaseStorage
+let messaging: Messaging | null = null
 
 try {
   auth = getAuth(app)
@@ -39,5 +41,33 @@ try {
   throw new Error('Firebase services initialization failed')
 }
 
-export { auth, db, storage }
+// Initialize Firebase Cloud Messaging (client-side only)
+export async function initializeMessaging(): Promise<Messaging | null> {
+  if (typeof window === 'undefined') {
+    // Server-side, messaging not available
+    return null
+  }
+
+  if (messaging) {
+    // Already initialized
+    return messaging
+  }
+
+  try {
+    const supported = await isSupported()
+    if (!supported) {
+      console.warn('Firebase Messaging not supported in this browser')
+      return null
+    }
+
+    messaging = getMessaging(app)
+    console.log('Firebase Messaging initialized successfully')
+    return messaging
+  } catch (error) {
+    console.error('Failed to initialize Firebase Messaging:', error)
+    return null
+  }
+}
+
+export { auth, db, storage, messaging }
 export default app
