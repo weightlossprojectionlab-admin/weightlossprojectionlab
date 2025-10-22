@@ -306,6 +306,62 @@ service cloud.firestore {
     }
 
     // ============================================
+    // READINESS ANALYZER (Phase 3 Agent)
+    // ============================================
+
+    // Readiness analysis results
+    match /readiness_analysis/{analysisId} {
+      // Users can read their own analyses
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Admins can read all analyses
+      allow read: if isAdmin();
+      // Only server-side writes (through API with admin SDK)
+      allow write: if false;
+    }
+
+    // ============================================
+    // MEAL TRACKING
+    // ============================================
+
+    // Meals collection
+    match /meals/{mealId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Weight entries
+    match /weight_entries/{entryId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Weekly missions
+    match /weekly_missions/{missionId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Cooking sessions (if not already covered above)
+    match /cooking_sessions/{sessionId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Recipe queue (if not already covered above)
+    match /recipe_queue/{queueId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // ============================================
     // DEFAULT DENY
     // ============================================
 
