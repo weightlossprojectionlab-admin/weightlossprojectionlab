@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import type { PhotoGalleryItem } from '@/lib/photo-gallery-utils'
+import { ShareButton } from '@/components/social/ShareButton'
+import { ShareModal } from '@/components/social/ShareModal'
+import type { ShareOptions } from '@/lib/social-share-utils'
 
 export interface PhotoModalProps {
   photo: PhotoGalleryItem | null
@@ -26,6 +29,7 @@ export function PhotoModal({
   onPrevious
 }: PhotoModalProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
 
   // Keyboard navigation
   useEffect(() => {
@@ -219,27 +223,43 @@ export function PhotoModal({
             )}
 
             {/* Actions */}
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2 mb-4">
               <a
                 href={`/meals/${photo.id}`}
-                className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-center text-sm font-medium"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-center text-sm font-medium"
                 onClick={(e) => e.stopPropagation()}
               >
                 View Details
               </a>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  window.open(photo.photoUrl, '_blank')
+              <ShareButton
+                shareOptions={{
+                  type: 'meal',
+                  data: {
+                    id: photo.id,
+                    mealType: photo.mealType,
+                    calories: photo.calories,
+                    foodItems: photo.foodItems,
+                    photoUrl: photo.photoUrl
+                  }
                 }}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
-                aria-label="Open in new tab"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </button>
+                variant="default"
+                size="md"
+                onShareModalOpen={() => setShowShareModal(true)}
+              />
             </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                window.open(photo.photoUrl, '_blank')
+              }}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm flex items-center justify-center gap-2"
+              aria-label="Open in new tab"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Open Image
+            </button>
 
             {/* Keyboard Shortcuts Hint */}
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -264,6 +284,22 @@ export function PhotoModal({
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        shareOptions={{
+          type: 'meal',
+          data: {
+            id: photo.id,
+            mealType: photo.mealType,
+            calories: photo.calories,
+            foodItems: photo.foodItems,
+            photoUrl: photo.photoUrl
+          }
+        }}
+      />
     </div>
   )
 }

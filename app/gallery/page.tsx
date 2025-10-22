@@ -6,6 +6,8 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { PhotoGalleryGrid, GroupedPhotoGallery } from '@/components/gallery/PhotoGalleryGrid'
 import { PhotoModal } from '@/components/gallery/PhotoModal'
+import { ShareButton } from '@/components/social/ShareButton'
+import { ShareModal } from '@/components/social/ShareModal'
 import {
   fetchRecentPhotos,
   groupPhotosByDate,
@@ -27,6 +29,7 @@ export default function GalleryPage() {
   const [mealTypeFilter, setMealTypeFilter] = useState<'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack'>('all')
   const [viewMode, setViewMode] = useState<'grid' | 'grouped'>('grouped')
   const [timeRange, setTimeRange] = useState(30) // days
+  const [showShareModal, setShowShareModal] = useState(false)
 
   // Auth check
   useEffect(() => {
@@ -114,12 +117,26 @@ export default function GalleryPage() {
               <h1 className="text-3xl font-bold mb-2">📸 Photo Gallery</h1>
               <p className="text-purple-100">Browse your meal history</p>
             </div>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium"
-            >
-              Back to Dashboard
-            </button>
+            <div className="flex gap-2">
+              <ShareButton
+                shareOptions={{
+                  type: 'gallery',
+                  data: {
+                    photoCount: stats.totalPhotos
+                  }
+                }}
+                variant="default"
+                size="md"
+                className="bg-white/20 hover:bg-white/30"
+                onShareModalOpen={() => setShowShareModal(true)}
+              />
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium"
+              >
+                Back to Dashboard
+              </button>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -277,6 +294,18 @@ export default function GalleryPage() {
         onClose={handleCloseModal}
         onNext={handleNextPhoto}
         onPrevious={handlePreviousPhoto}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        shareOptions={{
+          type: 'gallery',
+          data: {
+            photoCount: stats.totalPhotos
+          }
+        }}
       />
     </div>
   )

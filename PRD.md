@@ -468,6 +468,81 @@ const summary = todaysMeals.reduce((acc, meal) => ({
 - **UX Delight:** Beautiful grid layout and smooth lightbox experience
 - **Retention:** Users love seeing their journey visualized
 
+#### 6.5 Social Sharing
+**User Story:** *As a user, I want to share my progress, meals, and achievements with friends and on social media to stay accountable and inspire others.*
+
+**Status:** ✅ **IMPLEMENTED** (v1.6.7 - October 22, 2025)
+
+**Functionality:**
+- **Web Share API:** Native sharing on mobile devices (iOS/Android)
+- **Platform Links:** Fallback for desktop with platform-specific share URLs
+- **Share Types:** Meals, progress, achievements, streaks, charts, gallery
+- **Copy to Clipboard:** Quick link copying for easy sharing
+- **Share Locations:** Photo gallery lightbox, progress page, gallery page
+
+**Technical Implementation:**
+- **Utility Layer:** `lib/social-share-utils.ts`
+  - `isWebShareSupported()` - Feature detection
+  - `shareViaWebAPI()` - Native mobile sharing
+  - `generateShareContent()` - Context-specific share text
+  - `getPlatformShareUrls()` - Platform-specific URLs
+  - `copyToClipboard()` - Clipboard API integration
+- **Components:**
+  - `components/social/ShareButton.tsx` - Reusable share button (3 variants: default, icon, text)
+  - `components/social/ShareModal.tsx` - Desktop fallback modal with platform grid
+- **Integrations:**
+  - Photo Gallery: Share meals from lightbox + gallery stats from header
+  - Progress Page: Share weight loss progress from header
+  - Gallery Page: Share photo count from header
+
+**Supported Platforms:**
+- Twitter (𝕏)
+- Facebook
+- WhatsApp
+- LinkedIn
+- Telegram
+- Reddit
+- Email
+
+**Share Content Examples:**
+
+*Meal Share:*
+> Just logged my dinner: Grilled Chicken, Brown Rice, Steamed Broccoli (520 cal)! 🍽️ #HealthyEating #WeightLoss
+
+*Progress Share:*
+> I've lost 12.5 lbs in 30 days! 💪 Tracking my journey with Weight Loss Project Lab. #WeightLossJourney #Fitness
+
+*Gallery Share:*
+> 45 meals logged and counting! 📸 Visualizing my healthy eating journey. #FoodDiary #HealthyLifestyle
+
+**Web Share API Flow (Mobile):**
+1. User clicks "Share" button
+2. Detect Web Share API support
+3. Generate share content (title, text, URL)
+4. Trigger native share sheet
+5. User selects platform/app
+6. Content shared successfully
+
+**Platform Links Flow (Desktop):**
+1. User clicks "Share" button
+2. Detect no Web Share API
+3. Open ShareModal with platform grid
+4. User clicks platform icon
+5. Open new window with pre-filled share
+6. Or copy link to clipboard
+
+**ShareButton Variants:**
+- **default:** Full button with icon + text (primary action)
+- **icon:** Icon-only circular button (compact spaces)
+- **text:** Text link with icon (inline usage)
+
+**Benefits:**
+- **Viral Growth:** Users sharing drives organic traffic
+- **Accountability:** Public sharing increases commitment
+- **Motivation:** Social validation reinforces positive behavior
+- **Brand Awareness:** Every share includes app name and link
+- **Zero Cost:** No API fees, native browser features
+
 ### 7. Onboarding Experience
 
 **User Story:** *As a new user, I want a guided setup experience to personalize my health tracking journey.*
@@ -2085,14 +2160,14 @@ match /users/{userId}/mealLogs/{mealLogId} {
 26. **Aspect Ratio Optimization** - Platform-specific image formats (1:1, 9:16, 3:2)
 
 ### ✅ Recently Completed
-1. **Photo Gallery View** - Grid layout for browsing meal photos with filters and lightbox (v1.6.6)
-2. **Charts & Trends** - Interactive progress visualization (v1.6.5)
+1. **Social Sharing** - Web Share API + platform links for sharing meals, progress, and achievements (v1.6.7)
+2. **Photo Gallery View** - Grid layout for browsing meal photos with filters and lightbox (v1.6.6)
+3. **Charts & Trends** - Interactive progress visualization (v1.6.5)
 
 ### 📋 Planned Features
 1. **Health Integration** - Apple Health/Google Fit sync for step tracking
 2. **PWA Icons** - Add missing icon files for installability
 3. **Skeleton UI** - Replace loading spinners with skeleton components
-4. **Social Sharing** - Share progress and meals with friends
 
 ---
 

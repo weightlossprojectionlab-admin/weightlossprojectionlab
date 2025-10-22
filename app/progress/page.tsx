@@ -9,6 +9,8 @@ import { Spinner } from '@/components/ui/Spinner'
 import { WeightTrendChart } from '@/components/charts/WeightTrendChart'
 import { CalorieIntakeChart } from '@/components/charts/CalorieIntakeChart'
 import { MacroDistributionChart } from '@/components/charts/MacroDistributionChart'
+import { ShareButton } from '@/components/social/ShareButton'
+import { ShareModal } from '@/components/social/ShareModal'
 import {
   getWeightTrendLastNDays,
   getCalorieIntakeLastNDays,
@@ -33,6 +35,7 @@ function ProgressContent() {
 
   const [timeRange, setTimeRange] = useState(30) // Days
   const [loading, setLoading] = useState(true)
+  const [showShareModal, setShowShareModal] = useState(false)
 
   // Chart data
   const [weightData, setWeightData] = useState<WeightDataPoint[]>([])
@@ -90,7 +93,21 @@ function ProgressContent() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <PageHeader
         title="Progress & Trends"
-        description="Visualize your weight loss journey with interactive charts"
+        subtitle="Visualize your weight loss journey with interactive charts"
+        actions={
+          <ShareButton
+            shareOptions={{
+              type: 'progress',
+              data: {
+                weightLoss: Math.abs(summaryStats?.weightChange || 0),
+                daysActive: timeRange
+              }
+            }}
+            variant="default"
+            size="md"
+            onShareModalOpen={() => setShowShareModal(true)}
+          />
+        }
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
@@ -239,6 +256,19 @@ function ProgressContent() {
           </div>
         )}
       </main>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        shareOptions={{
+          type: 'progress',
+          data: {
+            weightLoss: Math.abs(summaryStats?.weightChange || 0),
+            daysActive: timeRange
+          }
+        }}
+      />
     </div>
   )
 }
