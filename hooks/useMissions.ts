@@ -1,128 +1,359 @@
-// useMissions Hook
-// PRD Reference: retention_loop_system, social_retention_and_group_missions (PRD v1.3.7)
-// TODO: Link to PRD v1.3.7 § retention_loop_system
+'use client'
 
-import useSWR from 'swr';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import { timestampToDate } from '@/lib/timestamp';
-import type { UserMission, MissionHistory, SeasonalChallenge } from '@/schemas/firestore/missions';
-import type { GroupMission } from '@/schemas/firestore/groups';
+import { useState, useEffect } from 'react'
+import { collection, query, where, getDocs, doc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import {
+  Mission,
+  UserMission,
+  getWeeklyMissions,
+  getCurrentWeek,
+  getWeekIdentifier,
+  calculateMissionProgress,
+  isMissionComplete,
+  MealLog,
+  WeightLog,
+  RecipeCompletion
+} from '@/lib/missions'
+import {
+  UserGamification,
+  getOrCreateUserGamification,
+  awardXP,
+  awardBadge,
+  incrementMissionsCompleted,
+  checkLevelBadges,
+  checkAchievementBadges
+} from '@/lib/gamification'
+import toast from 'react-hot-toast'
 
-export interface MissionsData {
-  active: UserMission[];
-  completed: MissionHistory[];
-  seasonal: SeasonalChallenge | null;
-  groupMissions: GroupMission[];
-  loading: boolean;
-  error: Error | null;
+export interface MissionProgress extends Mission {
+  userMissionId?: string
+  progress: number
+  completed: boolean
+  completedAt?: string
+  xpAwarded: boolean
+}
+
+export interface MissionsState {
+  missions: MissionProgress[]
+  gamification: UserGamification | null
+  loading: boolean
+  error: string | null
 }
 
 /**
- * Fetch all missions for a user
+ * Hook to manage user missions and gamification
  */
-async function fetchMissionsData(userId: string): Promise<Omit<MissionsData, 'loading' | 'error'>> {
-  try {
-    // Fetch active missions
-    const activeMissionsSnap = await getDocs(
-      collection(db, `users/${userId}/missions_active`)
-    );
-    const active = activeMissionsSnap.docs.map((doc) => ({
-      ...doc.data(),
-      missionId: doc.id,
-    })) as UserMission[];
+export function useMissions(userId: string | undefined) {
+  const [missions, setMissions] = useState<MissionProgress[]>([])
+  const [gamification, setGamification] = useState<UserGamification | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-    // Fetch recent completed missions
-    const completedQuery = query(
-      collection(db, `users/${userId}/missions_history`),
-      orderBy('completedAt', 'desc'),
-      limit(5)
-    );
-    const completedSnap = await getDocs(completedQuery);
-    const completed = completedSnap.docs.map((doc) => doc.data()) as MissionHistory[];
+  /**
+   * Load missions for current week
+   */
+  const loadMissions = async () => {
+    if (!userId) {
+      setLoading(false)
+      return
+    }
 
-    // Fetch active seasonal challenge (if any)
-    const seasonalQuery = query(
-      collection(db, 'seasonal_challenges'),
-      where('status', '==', 'active'),
-      limit(1)
-    );
-    const seasonalSnap = await getDocs(seasonalQuery);
-    const seasonal = seasonalSnap.empty
-      ? null
-      : (seasonalSnap.docs[0].data() as SeasonalChallenge);
+    try {
+      setLoading(true)
+      setError(null)
 
-    // TODO: Fetch group missions for user's groups
-    // For now, return empty array - requires group membership query
-    const groupMissions: GroupMission[] = [];
+      // Get or create gamification profile
+      const gamificationData = await getOrCreateUserGamification(userId)
+      setGamification(gamificationData)
 
-    return {
-      active,
-      completed,
-      seasonal,
-      groupMissions,
-    };
-  } catch (error) {
-    console.error('[useMissions] Error fetching missions:', error);
-    throw error;
+      // Get missions for user's level
+      const weeklyMissions = getWeeklyMissions(gamificationData.level)
+      const weekId = getWeekIdentifier()
+
+      // Fetch user missions from Firestore
+      const userMissionsQuery = query(
+        collection(db, 'user_missions'),
+        where('userId', '==', userId),
+        where('weekStart', '==', weekId)
+      )
+
+      const userMissionsSnap = await getDocs(userMissionsQuery)
+      const userMissionsMap = new Map<string, UserMission>()
+
+      userMissionsSnap.forEach(doc => {
+        const data = doc.data() as UserMission
+        userMissionsMap.set(data.missionId, data)
+      })
+
+      // Initialize missions that don't exist yet
+      for (const mission of weeklyMissions) {
+        if (!userMissionsMap.has(mission.id)) {
+          const newUserMission: UserMission = {
+            userId,
+            missionId: mission.id,
+            weekStart: weekId,
+            progress: 0,
+            completed: false,
+            xpAwarded: false,
+            createdAt: new Date().toISOString()
+          }
+
+          const docRef = doc(collection(db, 'user_missions'))
+          await setDoc(docRef, newUserMission)
+          userMissionsMap.set(mission.id, newUserMission)
+        }
+      }
+
+      // Calculate current progress for each mission
+      await updateMissionProgress()
+    } catch (err) {
+      console.error('[useMissions] Error loading missions:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load missions')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /**
+   * Update progress for all missions based on current user activity
+   */
+  const updateMissionProgress = async () => {
+    if (!userId) return
+
+    try {
+      const weekId = getWeekIdentifier()
+      const weekStart = getCurrentWeek().start
+
+      // Fetch user activity data for the week
+      const [meals, weightLogs, recipes] = await Promise.all([
+        fetchUserMeals(userId, weekStart),
+        fetchUserWeightLogs(userId, weekStart),
+        fetchUserRecipes(userId, weekStart)
+      ])
+
+      // Get user missions
+      const userMissionsQuery = query(
+        collection(db, 'user_missions'),
+        where('userId', '==', userId),
+        where('weekStart', '==', weekId)
+      )
+
+      const userMissionsSnap = await getDocs(userMissionsQuery)
+      const updatedMissions: MissionProgress[] = []
+
+      for (const docSnap of userMissionsSnap.docs) {
+        const userMission = docSnap.data() as UserMission
+        const mission = getWeeklyMissions(gamification?.level ?? 1).find(m => m.id === userMission.missionId)
+
+        if (!mission) continue
+
+        // Calculate current progress
+        const progress = calculateMissionProgress(mission, meals, weightLogs, recipes, weekStart)
+        const completed = isMissionComplete(mission, progress)
+
+        // Update progress in Firestore if changed
+        if (progress !== userMission.progress || (completed && !userMission.completed)) {
+          const updateData: Partial<UserMission> = {
+            progress
+          }
+
+          // If just completed, award rewards
+          if (completed && !userMission.completed) {
+            updateData.completed = true
+            updateData.completedAt = new Date().toISOString()
+
+            // Award XP and badge
+            await completeMission(userId, mission, docSnap.id)
+          }
+
+          await updateDoc(docSnap.ref, updateData)
+
+          updatedMissions.push({
+            ...mission,
+            userMissionId: docSnap.id,
+            progress,
+            completed: updateData.completed ?? userMission.completed,
+            completedAt: updateData.completedAt ?? userMission.completedAt,
+            xpAwarded: userMission.xpAwarded
+          })
+        } else {
+          updatedMissions.push({
+            ...mission,
+            userMissionId: docSnap.id,
+            progress: userMission.progress,
+            completed: userMission.completed,
+            completedAt: userMission.completedAt,
+            xpAwarded: userMission.xpAwarded
+          })
+        }
+      }
+
+      setMissions(updatedMissions)
+    } catch (err) {
+      console.error('[useMissions] Error updating mission progress:', err)
+    }
+  }
+
+  /**
+   * Complete a mission and award rewards
+   */
+  const completeMission = async (userId: string, mission: Mission, userMissionId: string) => {
+    try {
+      // Award XP
+      const { newXP, newLevel, leveledUp } = await awardXP(userId, mission.xpReward, 'mission', mission.id)
+
+      // Award mission badge if exists
+      if (mission.badgeReward) {
+        const awarded = await awardBadge(userId, mission.badgeReward)
+        if (awarded) {
+          toast.success(`🎖️ Badge unlocked: ${mission.badgeReward.name}!`, { duration: 5000 })
+        }
+      }
+
+      // Increment missions completed
+      await incrementMissionsCompleted(userId)
+
+      // Check for level badges
+      if (leveledUp) {
+        const levelBadges = await checkLevelBadges(userId, newLevel)
+        levelBadges.forEach(badge => {
+          toast.success(`🎖️ Badge unlocked: ${badge.name}!`, { duration: 5000 })
+        })
+        toast.success(`🎉 Level Up! You're now level ${newLevel}!`, { duration: 5000 })
+      }
+
+      // Check for achievement badges
+      const achievementBadges = await checkAchievementBadges(userId)
+      achievementBadges.forEach(badge => {
+        toast.success(`🎖️ Badge unlocked: ${badge.name}!`, { duration: 5000 })
+      })
+
+      // Mark XP as awarded
+      await updateDoc(doc(db, 'user_missions', userMissionId), {
+        xpAwarded: true
+      })
+
+      // Update gamification state
+      const updatedGamification = await getOrCreateUserGamification(userId)
+      setGamification(updatedGamification)
+
+      toast.success(`✅ Mission Complete! +${mission.xpReward} XP`, { duration: 4000 })
+
+      console.log('[useMissions] Mission completed:', mission.title)
+    } catch (err) {
+      console.error('[useMissions] Error completing mission:', err)
+    }
+  }
+
+  /**
+   * Manually check progress (call after user actions like logging meal)
+   */
+  const checkProgress = async () => {
+    await updateMissionProgress()
+  }
+
+  // Load missions on mount
+  useEffect(() => {
+    loadMissions()
+  }, [userId])
+
+  // Subscribe to gamification changes
+  useEffect(() => {
+    if (!userId) return
+
+    const unsubscribe = onSnapshot(doc(db, 'gamification', userId), (snapshot) => {
+      if (snapshot.exists()) {
+        setGamification(snapshot.data() as UserGamification)
+      }
+    })
+
+    return () => unsubscribe()
+  }, [userId])
+
+  return {
+    missions,
+    gamification,
+    loading,
+    error,
+    refreshMissions: loadMissions,
+    checkProgress
   }
 }
 
-/**
- * React hook for missions data
- *
- * @param userId - User ID
- * @param refreshInterval - Auto-refresh interval in ms (default: 60s)
- * @returns Missions data with loading/error states
- */
-export function useMissions(
-  userId: string | null,
-  refreshInterval = 60000
-): MissionsData {
-  const { data, error, isLoading } = useSWR(
-    userId ? `missions-${userId}` : null,
-    () => fetchMissionsData(userId!),
-    {
-      refreshInterval,
-      revalidateOnFocus: true,
-      dedupingInterval: 30000,
-    }
-  );
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
-  return {
-    active: data?.active || [],
-    completed: data?.completed || [],
-    seasonal: data?.seasonal || null,
-    groupMissions: data?.groupMissions || [],
-    loading: isLoading,
-    error: error || null,
-  };
+/**
+ * Fetch user meals for the week
+ */
+async function fetchUserMeals(userId: string, weekStart: Date): Promise<MealLog[]> {
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 7)
+
+  const mealsQuery = query(
+    collection(db, 'meals'),
+    where('userId', '==', userId),
+    where('loggedAt', '>=', weekStart.toISOString()),
+    where('loggedAt', '<=', weekEnd.toISOString())
+  )
+
+  const mealsSnap = await getDocs(mealsQuery)
+  return mealsSnap.docs.map(doc => {
+    const data = doc.data()
+    return {
+      mealType: data.mealType,
+      loggedAt: data.loggedAt,
+      aiAnalysis: data.aiAnalysis
+    } as MealLog
+  })
 }
 
 /**
- * Helper: Calculate overall mission progress
+ * Fetch user weight logs for the week
  */
-export function calculateMissionProgress(missionsData: MissionsData): number {
-  const { active } = missionsData;
-  if (active.length === 0) return 0;
+async function fetchUserWeightLogs(userId: string, weekStart: Date): Promise<WeightLog[]> {
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 7)
 
-  const totalProgress = active.reduce(
-    (sum, mission) => sum + (mission.progress / mission.targetProgress),
-    0
-  );
+  const weightsQuery = query(
+    collection(db, 'weight_logs'),
+    where('userId', '==', userId),
+    where('loggedAt', '>=', weekStart.toISOString()),
+    where('loggedAt', '<=', weekEnd.toISOString())
+  )
 
-  return Math.round((totalProgress / active.length) * 100);
+  const weightsSnap = await getDocs(weightsQuery)
+  return weightsSnap.docs.map(doc => {
+    const data = doc.data()
+    return {
+      weight: data.weight,
+      loggedAt: data.loggedAt
+    } as WeightLog
+  })
 }
 
 /**
- * Helper: Get missions expiring soon (within 24 hours)
+ * Fetch user recipe completions for the week
  */
-export function getExpiringSoonMissions(missionsData: MissionsData): UserMission[] {
-  const tomorrow = new Date();
-  tomorrow.setHours(tomorrow.getHours() + 24);
+async function fetchUserRecipes(userId: string, weekStart: Date): Promise<RecipeCompletion[]> {
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 7)
 
-  return missionsData.active.filter((mission) => {
-    const expiresAt = timestampToDate(mission.expiresAt);
-    return expiresAt <= tomorrow && mission.status === 'active';
-  });
+  const recipesQuery = query(
+    collection(db, 'recipe_completions'),
+    where('userId', '==', userId),
+    where('completedAt', '>=', weekStart.toISOString()),
+    where('completedAt', '<=', weekEnd.toISOString())
+  )
+
+  const recipesSnap = await getDocs(recipesQuery)
+  return recipesSnap.docs.map(doc => {
+    const data = doc.data()
+    return {
+      recipeId: data.recipeId,
+      completedAt: data.completedAt
+    } as RecipeCompletion
+  })
 }

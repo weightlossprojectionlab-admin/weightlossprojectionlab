@@ -18,6 +18,7 @@ import { MealCardSkeleton, TemplateCardSkeleton, SummaryCardSkeleton } from '@/c
 import { Spinner } from '@/components/ui/Spinner'
 import { queueMeal } from '@/lib/offline-queue'
 import { registerBackgroundSync } from '@/lib/sync-manager'
+import { useMissions } from '@/hooks/useMissions'
 import type { AIAnalysis, MealTemplate, UserProfile, UserPreferences } from '@/types'
 
 // Helper function to detect meal type based on current time (fallback when no schedule)
@@ -142,6 +143,9 @@ function LogMealContent() {
     limitCount: 30,
     mealType: filterMealType !== 'all' ? filterMealType : undefined
   })
+
+  // Weekly missions for progress tracking
+  const { checkProgress } = useMissions(auth.currentUser?.uid)
 
   // Client-side filtering for search query (includes title, keywords, food items, and notes)
   const filteredMeals = searchQuery
@@ -615,6 +619,11 @@ function LogMealContent() {
         toast.success('Meal queued! Will sync when back online.')
         console.log('✅ Manual entry queued for offline sync')
 
+        // Check mission progress
+        if (checkProgress) {
+          await checkProgress()
+        }
+
         // Reset form
         setShowManualEntry(false)
         setManualEntryForm({
@@ -641,6 +650,11 @@ function LogMealContent() {
 
       console.log('✅ Manual entry saved:', response.data)
       toast.success('Meal logged successfully!')
+
+      // Check mission progress
+      if (checkProgress) {
+        await checkProgress()
+      }
 
       // Reset form
       setShowManualEntry(false)
@@ -711,6 +725,11 @@ function LogMealContent() {
         toast.success('Meal queued! Will sync when back online.')
         console.log('✅ Meal queued for offline sync')
 
+        // Check mission progress (offline meal still counts)
+        if (checkProgress) {
+          await checkProgress()
+        }
+
         // Clean up and reset form
         if (imageObjectUrl) {
           URL.revokeObjectURL(imageObjectUrl)
@@ -765,6 +784,11 @@ function LogMealContent() {
 
       console.log('✅ Meal logged successfully:', response.data)
       toast.success('Meal logged successfully!')
+
+      // Check mission progress after saving meal
+      if (checkProgress) {
+        await checkProgress()
+      }
 
       // No need to refresh - real-time listener will update automatically
 

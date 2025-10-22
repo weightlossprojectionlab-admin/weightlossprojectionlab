@@ -11,6 +11,9 @@ import { PlateauDetectionEmpty } from '@/components/ui/EmptyState'
 import { RecipeModal } from '@/components/ui/RecipeModal'
 import { RecipeQueue } from '@/components/ui/RecipeQueue'
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
+import { useMissions } from '@/hooks/useMissions'
+import { MissionList } from '@/components/ui/MissionCard'
+import { XPBadge } from '@/components/ui/XPBadge'
 import { signOut, auth } from '@/lib/auth'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
@@ -64,6 +67,9 @@ function DashboardContent() {
 
   // PWA install prompt
   const { isInstallable, promptInstall } = useInstallPrompt()
+
+  // Weekly missions and gamification
+  const { missions, gamification, loading: missionsLoading, checkProgress } = useMissions(userProfile?.userId)
 
   // Get contextual meal recommendations with personalized suggestions
   const mealContext = getNextMealContext(
@@ -800,6 +806,20 @@ function DashboardContent() {
               <span className="text-sm font-medium">Install App</span>
             </button>
           )}
+        </div>
+
+        {/* Gamification: XP & Level */}
+        {gamification && (
+          <XPBadge gamification={gamification} />
+        )}
+
+        {/* Weekly Missions */}
+        <div className="bg-card rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Weekly Missions</h2>
+            <span className="text-xs text-muted-foreground">Resets Monday</span>
+          </div>
+          <MissionList missions={missions} loading={missionsLoading} />
         </div>
 
         {/* Recipe Queue */}
