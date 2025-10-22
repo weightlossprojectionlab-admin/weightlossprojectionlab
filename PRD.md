@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 ## Weight Loss Project Lab
 
-**Version:** 1.6
+**Version:** 1.6.1
 **Last Updated:** October 22, 2025
 **Author:** Product Team
 **Status:** Active Development
@@ -1378,22 +1378,30 @@ These represent **development team roles**, not AI agents:
 - **Status:** ✅ **IMPLEMENTED** (v1.2)
 - **Files:** `hooks/useStepTracking.ts`, `contexts/StepTrackingProvider.tsx`
 
-**2. Weight Projection Agent** 🔵
+**2. Weight Projection Agent** ✅
 - **Purpose:** Forecast weight loss trajectory
 - **Functionality:**
   - Calculates projected weight loss dates based on:
     - Current weight
     - Target weight
     - Weekly weight loss goal (0.5-2 lbs/week)
-    - Historical weight log trend
-  - Shows "On track" or "Behind schedule" status
+    - Historical weight log trend (linear regression)
+  - Shows "On track" / "Ahead" / "Behind" status with color-coded badges
   - Displays estimated goal date
   - Updates projection as weight logs come in
+  - Personalized adjustment suggestions when behind/ahead
+  - Goal realism check (warns if >2 lbs/week target)
 - **Technology:** Client-side calculation (linear regression)
 - **Formulas:**
   - `weeks_to_goal = (current - target) / weekly_rate`
   - `projected_date = today + (weeks_to_goal * 7 days)`
-- **Status:** 🔵 **PLANNED** (High priority - Phase 2)
+  - Linear regression: `weeklyRate = (firstWeight - lastWeight) / weeksElapsed`
+- **Implementation:**
+  - `lib/weight-projection-agent.ts` - Core calculation engine
+  - `hooks/useTrendProjection.ts` - React hook wrapper
+  - Dashboard "Goal Projection" card with progress visualization
+  - Requires minimum 2 weeks of weight log data for accuracy
+- **Status:** ✅ **IMPLEMENTED** (v1.6.1 - October 22, 2025)
 - **Complexity:** Low (simple math, no ML needed)
 
 **3. Service Worker Agent** ⚠️
@@ -2030,6 +2038,25 @@ match /users/{userId}/mealLogs/{mealLogId} {
 - Firestore Indexes: `/firestore.indexes.json`
 
 ### C. Changelog
+- **v1.6.1** (Oct 22, 2025): Weight Projection Agent Implementation
+  - **Major Feature:** Trend-based weight loss projection using linear regression
+  - **Goal Projection Card:** New dashboard card showing:
+    - Estimated completion date based on actual weight loss trend
+    - Progress bar with percentage to goal (0-100%)
+    - Status badge: ✓ On Track / ⚡ Ahead / ⚠️ Behind
+    - Actual vs. target pace comparison (lbs/week)
+    - Personalized adjustment suggestions when behind/ahead schedule
+    - Goal realism check (warns if >2 lbs/week target is unhealthy)
+  - **Implementation Files:**
+    - `lib/weight-projection-agent.ts` - Core calculation engine with linear regression
+    - `hooks/useTrendProjection.ts` - React hook wrapper for agent
+    - `app/dashboard/page.tsx` - Dashboard card UI integration
+  - **Data Requirements:** Minimum 2 weeks of weight log data for accurate projections
+  - **Formulas:** Linear regression on historical weight logs to calculate weekly rate
+  - **Status Update:** Agent Architecture Section 11.4 updated (🔵 PLANNED → ✅ IMPLEMENTED)
+  - **Phase 2 Progress:** High-priority client-side agent completed
+  - **Value:** Provides motivational feedback and data-driven goal completion estimates
+
 - **v1.6** (Oct 22, 2025): Agent Architecture & Strategic Roadmap
   - **Major Addition:** Comprehensive multi-agent system architecture documentation
   - **Section 11: Agent Architecture & Future Vision** - Full strategic roadmap for autonomous agents
@@ -2042,7 +2069,7 @@ match /users/{userId}/mealLogs/{mealLogId} {
     - Inactive User Detection for churn prevention
   - **Client-Side Agents:** Current + planned features
     - ✅ Step Tracker (implemented v1.2)
-    - 🔵 Weight Projection forecasting (high priority Phase 2)
+    - ✅ Weight Projection forecasting (implemented v1.6.1)
     - ⚠️ Service Worker for PWA offline support (pending)
   - **Future Agents (Phase 4):** Meal Photo Gallery Monitor, Smart Recipe Suggestions, Shopping List Generator
   - **Agent Communication:** Event-driven architecture with Firestore data sharing
