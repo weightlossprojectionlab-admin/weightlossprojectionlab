@@ -119,6 +119,16 @@ function LogMealContent() {
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null)
   const [usingTemplateId, setUsingTemplateId] = useState<string | null>(null)
   const [updatingMealId, setUpdatingMealId] = useState<string | null>(null)
+  const [showManualEntry, setShowManualEntry] = useState(false)
+  const [manualEntryForm, setManualEntryForm] = useState({
+    foodItems: [''],
+    calories: '',
+    protein: '',
+    carbs: '',
+    fat: '',
+    fiber: '',
+    notes: ''
+  })
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileReaderRef = useRef<FileReader | null>(null)
@@ -542,6 +552,108 @@ function LogMealContent() {
     }
   }
 
+  const saveManualEntry = async () => {
+    // Validate form
+    const calories = parseFloat(manualEntryForm.calories)
+    const protein = parseFloat(manualEntryForm.protein)
+    const carbs = parseFloat(manualEntryForm.carbs)
+    const fat = parseFloat(manualEntryForm.fat)
+    const fiber = parseFloat(manualEntryForm.fiber) || 0
+
+    if (!calories || calories <= 0) {
+      toast.error('Please enter valid calories')
+      return
+    }
+
+    if (!protein || !carbs || !fat) {
+      toast.error('Please enter all macronutrients')
+      return
+    }
+
+    const foodItems = manualEntryForm.foodItems.filter(item => item.trim() !== '')
+    if (foodItems.length === 0) {
+      toast.error('Please enter at least one food item')
+      return
+    }
+
+    setSaving(true)
+
+    try {
+      console.log('💾 Saving manual entry...')
+
+      // Create AIAnalysis object from manual form data
+      const manualAnalysis: AIAnalysis = {
+        foodItems: foodItems.map(item => ({
+          name: item,
+          portion: 'As entered',
+          calories: Math.round(calories / foodItems.length),
+          protein: Math.round(protein / foodItems.length),
+          carbs: Math.round(carbs / foodItems.length),
+          fat: Math.round(fat / foodItems.length),
+          fiber: Math.round(fiber / foodItems.length)
+        })),
+        totalCalories: calories,
+        totalMacros: { protein, carbs, fat, fiber },
+        confidence: 100, // Manual entries are 100% confident
+        isMockData: false
+      }
+
+      // Save to Firebase
+      const response = await mealLogOperations.createMealLog({
+        mealType: selectedMealType,
+        photoUrl: undefined,
+        aiAnalysis: manualAnalysis,
+        loggedAt: new Date().toISOString(),
+        notes: manualEntryForm.notes || undefined
+      })
+
+      console.log('✅ Manual entry saved:', response.data)
+      toast.success('Meal logged successfully!')
+
+      // Reset form
+      setShowManualEntry(false)
+      setManualEntryForm({
+        foodItems: [''],
+        calories: '',
+        protein: '',
+        carbs: '',
+        fat: '',
+        fiber: '',
+        notes: ''
+      })
+
+    } catch (error) {
+      console.error('💥 Save error:', error)
+      toast.error(`Failed to save meal: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const addFoodItemField = () => {
+    setManualEntryForm({
+      ...manualEntryForm,
+      foodItems: [...manualEntryForm.foodItems, '']
+    })
+  }
+
+  const removeFoodItemField = (index: number) => {
+    const newFoodItems = manualEntryForm.foodItems.filter((_, i) => i !== index)
+    setManualEntryForm({
+      ...manualEntryForm,
+      foodItems: newFoodItems.length > 0 ? newFoodItems : ['']
+    })
+  }
+
+  const updateFoodItem = (index: number, value: string) => {
+    const newFoodItems = [...manualEntryForm.foodItems]
+    newFoodItems[index] = value
+    setManualEntryForm({
+      ...manualEntryForm,
+      foodItems: newFoodItems
+    })
+  }
+
   const saveMeal = async () => {
     setSaving(true)
 
@@ -912,7 +1024,7 @@ function LogMealContent() {
         <div className="card">
           <h2 className="mb-4">Take Photo</h2>
 
-            {!capturedImage && (
+            {!capturedImage && !showManualEntry && (
               <div className="space-y-4">
                 <label className="btn btn-primary w-full cursor-pointer">
                   📸 Take Photo
@@ -930,6 +1042,13 @@ function LogMealContent() {
                   aria-label="Use saved meal template"
                 >
                   ⭐ Use Saved Template
+                </button>
+                <button
+                  onClick={() => setShowManualEntry(true)}
+                  className="btn btn-secondary w-full"
+                  aria-label="Enter meal details manually"
+                >
+                  ✏️ Enter Manually
                 </button>
               </div>
             )}
@@ -964,6 +1083,180 @@ function LogMealContent() {
                     />
                   </label>
                 )}
+              </div>
+            )}
+
+            {/* Manual Entry Form */}
+            {showManualEntry && (
+              <div className="space-y-4 mt-4">
+                <div className="bg-accent-light border border-accent rounded-lg p-4">
+                  <p className="text-sm text-accent-dark">
+                    💡 Enter meal details manually (useful when you can't take a photo or prefer manual tracking)
+                  </p>
+                </div>
+
+                {/* Food Items */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Food Items
+                  </label>
+                  {manualEntryForm.foodItems.map((item, index) => (
+                    <div key={index} className="flex items-center space-x-2 mb-2">
+                      <input
+                        type="text"
+                        value={item}
+                        onChange={(e) => updateFoodItem(index, e.target.value)}
+                        placeholder="e.g., Grilled chicken breast"
+                        className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      {manualEntryForm.foodItems.length > 1 && (
+                        <button
+                          onClick={() => removeFoodItemField(index)}
+                          className="text-error hover:text-error-dark"
+                          aria-label="Remove food item"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    onClick={addFoodItemField}
+                    className="text-sm text-primary hover:text-primary-hover font-medium"
+                  >
+                    + Add another food item
+                  </button>
+                </div>
+
+                {/* Calories */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Total Calories *
+                  </label>
+                  <input
+                    type="number"
+                    value={manualEntryForm.calories}
+                    onChange={(e) => setManualEntryForm({ ...manualEntryForm, calories: e.target.value })}
+                    placeholder="e.g., 450"
+                    min="0"
+                    step="1"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
+                  />
+                </div>
+
+                {/* Macros Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Protein (g) *
+                    </label>
+                    <input
+                      type="number"
+                      value={manualEntryForm.protein}
+                      onChange={(e) => setManualEntryForm({ ...manualEntryForm, protein: e.target.value })}
+                      placeholder="30"
+                      min="0"
+                      step="0.1"
+                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Carbs (g) *
+                    </label>
+                    <input
+                      type="number"
+                      value={manualEntryForm.carbs}
+                      onChange={(e) => setManualEntryForm({ ...manualEntryForm, carbs: e.target.value })}
+                      placeholder="40"
+                      min="0"
+                      step="0.1"
+                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Fat (g) *
+                    </label>
+                    <input
+                      type="number"
+                      value={manualEntryForm.fat}
+                      onChange={(e) => setManualEntryForm({ ...manualEntryForm, fat: e.target.value })}
+                      placeholder="15"
+                      min="0"
+                      step="0.1"
+                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Fiber (g)
+                    </label>
+                    <input
+                      type="number"
+                      value={manualEntryForm.fiber}
+                      onChange={(e) => setManualEntryForm({ ...manualEntryForm, fiber: e.target.value })}
+                      placeholder="5"
+                      min="0"
+                      step="0.1"
+                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Notes (optional)
+                  </label>
+                  <textarea
+                    value={manualEntryForm.notes}
+                    onChange={(e) => setManualEntryForm({ ...manualEntryForm, notes: e.target.value })}
+                    placeholder="Add any additional notes about this meal..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-3">
+                  <button
+                    onClick={saveManualEntry}
+                    disabled={saving}
+                    className="flex-1 btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? (
+                      <span className="flex items-center justify-center space-x-2">
+                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                        <span>Saving...</span>
+                      </span>
+                    ) : (
+                      '💾 Save Meal'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowManualEntry(false)
+                      setManualEntryForm({
+                        foodItems: [''],
+                        calories: '',
+                        protein: '',
+                        carbs: '',
+                        fat: '',
+                        fiber: '',
+                        notes: ''
+                      })
+                    }}
+                    disabled={saving}
+                    className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
           </div>
