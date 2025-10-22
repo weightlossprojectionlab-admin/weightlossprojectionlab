@@ -18,6 +18,9 @@ import {
 } from '@/lib/webauthn'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
 import { Spinner } from '@/components/ui/Spinner'
+import { HealthSyncCard } from '@/components/health/HealthSyncCard'
+import { HealthConnectModal } from '@/components/health/HealthConnectModal'
+import { detectPlatform, getHealthAppForPlatform } from '@/lib/health-sync-utils'
 
 function ProfileContent() {
   const { user } = useAuth()
@@ -33,6 +36,8 @@ function ProfileContent() {
   const [profileData, setProfileData] = useState<any>(null)
   const [saving, setSaving] = useState(false)
   const [signOutLoading, setSignOutLoading] = useState(false)
+  const [showHealthModal, setShowHealthModal] = useState(false)
+  const [healthApp, setHealthApp] = useState<'apple-health' | 'google-fit' | 'none'>('none')
 
   useEffect(() => {
     setMounted(true)
@@ -55,6 +60,13 @@ function ProfileContent() {
 
     fetchProfile()
   }, [user])
+
+  // Detect platform and health app
+  useEffect(() => {
+    const platform = detectPlatform()
+    const app = getHealthAppForPlatform(platform)
+    setHealthApp(app)
+  }, [])
 
   const checkBiometricStatus = async () => {
     try {
@@ -202,12 +214,18 @@ function ProfileContent() {
     }
   }
 
+  const handleEnableHealthSync = () => {
+    // The HealthSyncCard will handle the actual sync enabling
+    // This just closes the modal
+    setShowHealthModal(false)
+  }
+
   return (
     <>
       <ConfirmDialog />
-      <main className="min-h-screen bg-background">
+      <main className="min-h-screen bg-white dark:bg-gray-900">
         {/* Header */}
-        <header className="bg-card shadow-sm">
+        <header className="bg-white dark:bg-gray-900 shadow-sm">
         <div className="mx-auto max-w-md px-4 py-4">
           <div className="flex items-center space-x-4">
             <Link
@@ -217,7 +235,7 @@ function ProfileContent() {
             >
               ← Back
             </Link>
-            <h1 className="text-xl font-semibold text-foreground">Profile & Settings</h1>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Profile & Settings</h1>
           </div>
         </div>
       </header>
@@ -227,18 +245,18 @@ function ProfileContent() {
         {profileData && (() => {
           const completeness = checkProfileCompleteness(profileData)
           return !completeness.isSafe && (
-            <div className="bg-error-light border-2 border-error rounded-lg p-4">
+            <div className="bg-error-light dark:bg-red-900/20 border-2 border-error dark:border-red-800 rounded-lg p-4">
               <div className="flex items-start space-x-3">
                 <span className="text-2xl">⚠️</span>
                 <div className="flex-1">
-                  <h3 className="font-bold text-error-dark mb-1">
+                  <h3 className="font-bold text-error-dark dark:text-red-200 mb-1">
                     Confirm Your Dietary Information
                   </h3>
-                  <p className="text-sm text-error-dark mb-3">
+                  <p className="text-sm text-error-dark dark:text-red-300 mb-3">
                     We need to know if you have any dietary restrictions, allergies, or health conditions.
                     <strong> Even if you have none, please confirm by selecting "None".</strong>
                   </p>
-                  <p className="text-xs text-error-dark">
+                  <p className="text-xs text-error-dark dark:text-red-300">
                     Profile Completeness: {completeness.score}%
                   </p>
                 </div>
@@ -249,11 +267,11 @@ function ProfileContent() {
 
         {/* Safety Information - MOST IMPORTANT */}
         {profileData && (
-          <div className="bg-card rounded-lg p-6 shadow-sm border-2 border-error">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm border-2 border-error dark:border-red-800">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-medium text-foreground">⚠️ Dietary Information</h2>
-                <p className="text-sm text-error">Please confirm (select "None" if you have no restrictions)</p>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">⚠️ Dietary Information</h2>
+                <p className="text-sm text-error dark:text-red-400">Please confirm (select "None" if you have no restrictions)</p>
               </div>
               {!editMode && (
                 <button
@@ -271,7 +289,7 @@ function ProfileContent() {
                 <div>
                   <label className="text-label block mb-2">
                     Dietary Preferences
-                    <span className="text-xs text-muted-foreground ml-2">(Select all that apply, or "None")</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">(Select all that apply, or "None")</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -282,8 +300,8 @@ function ProfileContent() {
                       }))}
                       className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                         profileData?.preferences?.dietaryPreferences?.length === 0
-                          ? 'border-success bg-success-light font-bold'
-                          : 'border-border hover:border-success/50'
+                          ? 'border-success dark:border-green-600 bg-success-light dark:bg-green-900/20 font-bold'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-success/50'
                       }`}
                     >
                       ✓ None
@@ -304,8 +322,8 @@ function ProfileContent() {
                         }}
                         className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                           profileData?.preferences?.dietaryPreferences?.includes(pref)
-                            ? 'border-primary bg-primary-light'
-                            : 'border-border hover:border-primary/50'
+                            ? 'border-primary bg-purple-100 dark:bg-purple-900/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
                         }`}
                       >
                         {pref}
@@ -318,7 +336,7 @@ function ProfileContent() {
                 <div>
                   <label className="text-label block mb-2">
                     Food Allergies
-                    <span className="text-xs text-muted-foreground ml-2">(Select all that apply, or "None")</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">(Select all that apply, or "None")</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -329,8 +347,8 @@ function ProfileContent() {
                       }))}
                       className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                         profileData?.profile?.foodAllergies?.length === 0
-                          ? 'border-success bg-success-light font-bold'
-                          : 'border-border hover:border-success/50'
+                          ? 'border-success dark:border-green-600 bg-success-light dark:bg-green-900/20 font-bold'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-success/50'
                       }`}
                     >
                       ✓ None
@@ -351,8 +369,8 @@ function ProfileContent() {
                         }}
                         className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                           profileData?.profile?.foodAllergies?.includes(allergy)
-                            ? 'border-error bg-error-light'
-                            : 'border-border hover:border-error/50'
+                            ? 'border-error dark:border-red-600 bg-error-light dark:bg-red-900/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-error/50'
                         }`}
                       >
                         {allergy}
@@ -373,8 +391,8 @@ function ProfileContent() {
                       }))}
                       className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                         profileData?.profile?.healthConditions?.length === 0
-                          ? 'border-success bg-success-light font-bold'
-                          : 'border-border hover:border-success/50'
+                          ? 'border-success dark:border-green-600 bg-success-light dark:bg-green-900/20 font-bold'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-success/50'
                       }`}
                     >
                       ✓ None
@@ -395,8 +413,8 @@ function ProfileContent() {
                         }}
                         className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                           profileData?.profile?.healthConditions?.includes(condition)
-                            ? 'border-warning bg-warning-light'
-                            : 'border-border hover:border-warning/50'
+                            ? 'border-warning dark:border-yellow-600 bg-warning-light dark:bg-yellow-900/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-warning/50'
                         }`}
                       >
                         {condition}
@@ -406,7 +424,7 @@ function ProfileContent() {
                 </div>
 
                 {/* Save/Cancel Buttons */}
-                <div className="flex space-x-3 pt-4 border-t border-border">
+                <div className="flex space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleSaveProfile}
                     disabled={saving}
@@ -427,7 +445,7 @@ function ProfileContent() {
             ) : (
               <div className="space-y-3 text-sm">
                 <div>
-                  <label className="text-muted-foreground text-xs">Dietary Preferences</label>
+                  <label className="text-gray-600 dark:text-gray-400 text-xs">Dietary Preferences</label>
                   <p className="font-medium">
                     {profileData?.preferences?.dietaryPreferences?.length > 0
                       ? profileData.preferences.dietaryPreferences.join(', ')
@@ -435,7 +453,7 @@ function ProfileContent() {
                   </p>
                 </div>
                 <div>
-                  <label className="text-muted-foreground text-xs">Food Allergies</label>
+                  <label className="text-gray-600 dark:text-gray-400 text-xs">Food Allergies</label>
                   <p className="font-medium">
                     {profileData?.profile?.foodAllergies?.length > 0
                       ? profileData.profile.foodAllergies.join(', ')
@@ -443,7 +461,7 @@ function ProfileContent() {
                   </p>
                 </div>
                 <div>
-                  <label className="text-muted-foreground text-xs">Health Conditions</label>
+                  <label className="text-gray-600 dark:text-gray-400 text-xs">Health Conditions</label>
                   <p className="font-medium">
                     {profileData?.profile?.healthConditions?.length > 0
                       ? profileData.profile.healthConditions.join(', ')
@@ -456,15 +474,15 @@ function ProfileContent() {
         )}
 
         {/* Account Information */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-foreground mb-4">Account Information</h2>
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Account Information</h2>
           <div className="space-y-3">
             <div>
-              <label className="text-sm text-muted-foreground">Email</label>
+              <label className="text-sm text-gray-600 dark:text-gray-400">Email</label>
               <p className="font-medium">{user?.email}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Account Created</label>
+              <label className="text-sm text-gray-600 dark:text-gray-400">Account Created</label>
               <p className="font-medium">
                 {user?.metadata?.creationTime ?
                   new Date(user.metadata.creationTime).toLocaleDateString() :
@@ -477,18 +495,18 @@ function ProfileContent() {
 
         {/* Biometric Authentication Settings */}
         {mounted && (
-          <div className="bg-card rounded-lg p-6 shadow-sm">
-            <h2 className="text-lg font-medium text-foreground mb-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
               Biometric Authentication
             </h2>
 
             {!biometricSupported ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                 <div className="flex items-center space-x-3">
                   <span className="text-2xl">⚠️</span>
                   <div>
-                    <p className="font-medium text-yellow-900">Not Available</p>
-                    <p className="text-sm text-yellow-700">
+                    <p className="font-medium text-yellow-900 dark:text-yellow-100">Not Available</p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-200">
                       Biometric authentication is not supported on this device or browser.
                     </p>
                   </div>
@@ -505,15 +523,15 @@ function ProfileContent() {
                       <p className="font-medium">
                         Touch ID / Face ID
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         {biometricEnabled ? 'Enabled' : 'Disabled'}
                       </p>
                     </div>
                   </div>
-                  <div className={`w-3 h-3 rounded-full ${biometricEnabled ? 'bg-success' : 'bg-muted'}`} />
+                  <div className={`w-3 h-3 rounded-full ${biometricEnabled ? 'bg-success' : 'bg-gray-100'}`} />
                 </div>
 
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {biometricEnabled ?
                     'You can sign in using your fingerprint or face recognition.' :
                     'Use your fingerprint or face recognition for quick and secure sign-in.'
@@ -538,7 +556,7 @@ function ProfileContent() {
                     >
                       {loading ? (
                         <span className="flex items-center justify-center space-x-2">
-                          <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                          <div className="animate-spin w-5 h-5 border-2 border-white dark:border-gray-700 border-t-transparent rounded-full" />
                           <span>Setting up...</span>
                         </span>
                       ) : (
@@ -552,7 +570,7 @@ function ProfileContent() {
                 </div>
 
                 {biometricSupported && (
-                  <div className="bg-accent-light rounded-lg p-3">
+                  <div className="bg-indigo-100 dark:bg-indigo-900/20 rounded-lg p-3">
                     <p className="text-xs text-accent-dark">
                       <strong>Compatible devices:</strong> iPhone with Touch/Face ID,
                       Android with fingerprint, Windows with Windows Hello
@@ -565,26 +583,26 @@ function ProfileContent() {
         )}
 
         {/* Privacy & Data Settings */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-foreground mb-4">Privacy & Data</h2>
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Privacy & Data</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Data Export</p>
-                <p className="text-sm text-muted-foreground">Download your personal data</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Download your personal data</p>
               </div>
               <button className="btn btn-secondary">
                 📥 Export
               </button>
             </div>
 
-            <div className="border-t border-border pt-4">
-              <div className="bg-error-light border-2 border-error rounded-lg p-4 mb-3">
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <div className="bg-error-light dark:bg-red-900/20 border-2 border-error dark:border-red-800 rounded-lg p-4 mb-3">
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">⚠️</span>
                   <div>
-                    <p className="font-medium text-error-dark mb-1">Reset All Data & Start Over</p>
-                    <p className="text-sm text-error-dark">
+                    <p className="font-medium text-error-dark dark:text-red-200 mb-1">Reset All Data & Start Over</p>
+                    <p className="text-sm text-error-dark dark:text-red-300">
                       If you entered false information during onboarding and want to start fresh with accurate data, use this option.
                       This will permanently delete ALL your data including meals, weight logs, and progress.
                     </p>
@@ -594,11 +612,11 @@ function ProfileContent() {
               <button
                 onClick={handleResetAllData}
                 disabled={resetLoading}
-                className="btn btn-secondary w-full text-error border-error hover:bg-error-light font-medium"
+                className="btn btn-secondary w-full text-error dark:text-red-400 border-error dark:border-red-600 hover:bg-error-light dark:hover:bg-red-900/20 font-medium"
               >
                 {resetLoading ? (
                   <span className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin w-5 h-5 border-2 border-error border-t-transparent rounded-full" />
+                    <div className="animate-spin w-5 h-5 border-2 border-error dark:border-red-600 border-t-transparent rounded-full" />
                     <span>Resetting...</span>
                   </span>
                 ) : (
@@ -610,8 +628,8 @@ function ProfileContent() {
         </div>
 
         {/* App Settings */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-foreground mb-4">App Settings</h2>
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">App Settings</h2>
           <div className="space-y-4">
             {/* Automatic Step Tracking */}
             <div className="flex items-center justify-between">
@@ -625,7 +643,7 @@ function ProfileContent() {
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {stepTrackingEnabled ? 'Counting steps in background' : 'Count steps automatically using device sensors'}
                 </p>
               </div>
@@ -636,25 +654,25 @@ function ProfileContent() {
                   checked={stepTrackingEnabled}
                   onChange={handleToggleStepTracking}
                 />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div className="w-11 h-6 bg-gray-100 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-900 after:border-gray-200 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Notifications</p>
-                <p className="text-sm text-muted-foreground">Daily reminders and achievements</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Daily reminders and achievements</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" defaultChecked />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div className="w-11 h-6 bg-gray-100 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-900 after:border-gray-200 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Weight Units</p>
-                <p className="text-sm text-muted-foreground">Pounds or kilograms</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Pounds or kilograms</p>
               </div>
               <select className="form-input text-sm">
                 <option value="lbs">Pounds (lbs)</option>
@@ -664,15 +682,20 @@ function ProfileContent() {
           </div>
         </div>
 
+        {/* Health Sync */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm">
+          <HealthSyncCard onSetupClick={() => setShowHealthModal(true)} />
+        </div>
+
         {/* Sign Out */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
           <button
             onClick={handleSignOut}
             disabled={signOutLoading}
-            className={`btn btn-secondary w-full text-error border-error hover:bg-error-light inline-flex items-center justify-center space-x-2 ${signOutLoading ? 'cursor-wait' : ''}`}
+            className={`btn btn-secondary w-full text-error dark:text-red-400 border-error dark:border-red-600 hover:bg-error-light dark:hover:bg-red-900/20 inline-flex items-center justify-center space-x-2 ${signOutLoading ? 'cursor-wait' : ''}`}
             aria-label="Sign out of account"
           >
-            {signOutLoading && <Spinner size="sm" className="text-error" />}
+            {signOutLoading && <Spinner size="sm" className="text-error dark:text-red-400" />}
             <span>{signOutLoading ? 'Signing Out...' : '🚪 Sign Out'}</span>
           </button>
         </div>
@@ -684,6 +707,14 @@ function ProfileContent() {
           <p>Privacy-focused • Secure • Accessible</p>
         </div>
       </div>
+
+      {/* Health Connect Modal */}
+      <HealthConnectModal
+        isOpen={showHealthModal}
+        onClose={() => setShowHealthModal(false)}
+        healthApp={healthApp}
+        onEnableSync={handleEnableHealthSync}
+      />
     </main>
     </>
   )

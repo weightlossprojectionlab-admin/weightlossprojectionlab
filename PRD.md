@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 ## Weight Loss Project Lab
 
-**Version:** 1.6.5
+**Version:** 1.6.8
 **Last Updated:** October 22, 2025
 **Author:** Product Team
 **Status:** Active Development
@@ -1765,6 +1765,134 @@ User logs meal
 - Readiness Analyzer cannot discriminate based on protected classes
 - Weekly Missions avoid unhealthy challenges (e.g., extreme calorie restriction)
 
+### 12. Health App Integration
+
+**User Story:** *As a user, I want to sync my step data with Apple Health or Google Fit so my fitness tracking is centralized across all my apps.*
+
+#### 12.1 Architecture & PWA Limitations
+
+**Challenge:** As a Progressive Web App (PWA), Weight Loss Project Lab cannot directly access native health APIs (Apple HealthKit or Google Fit) without native wrappers like React Native or Capacitor.
+
+**Solution:**
+- **Platform Detection:** Detect iOS/Android/Web using user agent parsing
+- **UI/UX Foundation:** Provide setup instructions and sync preferences
+- **Firestore Storage:** Store sync status and preferences in user documents
+- **Future-Proofing:** Built to easily integrate native wrappers when needed
+
+**Current Implementation:**
+- Health sync UI and settings (enable/disable toggle)
+- Platform-specific setup instructions (6-step guides)
+- Deep links to health apps (x-apple-health://, Google Play Store)
+- Clear messaging about PWA limitations
+
+#### 12.2 Components & Architecture
+
+**Core Utilities:** `lib/health-sync-utils.ts`
+- **Platform Detection:** `detectPlatform()` - Returns 'ios' | 'android' | 'web' | 'unknown'
+- **Health App Mapping:** `getHealthAppForPlatform()` - Maps platform to Apple Health or Google Fit
+- **Setup Instructions:** `getSetupInstructions()` - Returns step-by-step permission instructions
+- **Deep Links:** `getHealthAppDeepLink()` - URLs to open health apps
+- **Sync Benefits:** `getHealthSyncBenefits()` - Lists 5 key benefits of integration
+- **Time Formatting:** `formatLastSync()` - Human-readable "2h ago", "Yesterday", etc.
+
+**UI Components:**
+
+**`components/health/HealthSyncCard.tsx`**
+- Toggle switch for enable/disable sync
+- Platform detection on component mount
+- Firestore integration for sync preferences
+- Last sync timestamp display
+- "Setup Instructions" button when disabled
+- Loading and saving states with toast notifications
+
+**`components/health/HealthConnectModal.tsx`**
+- Full-screen modal with setup instructions
+- Benefits list (5 items)
+- Step-by-step numbered instructions (1-6)
+- PWA limitation warning with amber styling
+- "Open Health App" button (uses deep link)
+- "I've Enabled Permissions - Activate Sync" confirmation
+- Keyboard shortcuts (Esc to close)
+
+#### 12.3 Data Model
+
+**Firestore Document:** `users/{userId}`
+```typescript
+interface HealthSyncPreferences {
+  enabled: boolean
+  platform: 'ios' | 'android' | 'web' | 'unknown'
+  healthApp: 'apple-health' | 'google-fit' | 'none'
+  lastSyncAt?: Timestamp
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+```
+
+**Storage Location:**
+```
+users/{userId}/healthSync/...
+```
+
+#### 12.4 Setup Instructions
+
+**Apple Health (iOS):**
+1. Open the Apple Health app on your iPhone
+2. Tap your profile icon in the top right
+3. Scroll down to "Apps" section
+4. Find "Weight Loss Project Lab"
+5. Enable "Steps" data access
+6. Return to this app and enable sync
+
+**Google Fit (Android):**
+1. Open Google Fit app on your phone
+2. Tap your profile icon
+3. Go to Settings → Manage connected apps
+4. Find "Weight Loss Project Lab"
+5. Enable "Physical activity" permission
+6. Return to this app and enable sync
+
+#### 12.5 Integration Points
+
+**Profile/Settings Page:**
+- Health Sync Card appears in App Settings section
+- Toggle switch for quick enable/disable
+- Status indicator: "✓ Connected" or "Not connected"
+- Last sync timestamp when enabled
+- "Setup Instructions" button opens modal
+
+**Future Enhancements:**
+- Native wrapper integration (React Native/Capacitor)
+- Bidirectional sync (write weight data to health apps)
+- Sleep data integration
+- Heart rate and active calories sync
+- Workout/exercise tracking integration
+
+#### 12.6 Benefits Messaging
+
+**Key Benefits (displayed in modal):**
+1. Automatic step tracking from your health app
+2. No need to keep this app open
+3. More accurate data from phone's pedometer
+4. Unified health data across apps
+5. Battery-efficient background sync
+
+#### 12.7 Technical Considerations
+
+**PWA Limitations:**
+- Cannot directly access native health APIs without native wrappers
+- Deep links may not work in all browsers/contexts
+- Users must manually enable permissions in health apps
+- Sync status is preference-based, not true API integration
+
+**Future Migration Path:**
+When native wrapper is added (React Native/Capacitor):
+- Same UI components can be reused
+- Firestore data structure already established
+- Setup flow remains familiar to users
+- Backend ready for bidirectional sync
+
+**Status:** ✅ **IMPLEMENTED** (v1.6.8 - October 22, 2025)
+
 ---
 
 ## Technical Architecture
@@ -2160,14 +2288,15 @@ match /users/{userId}/mealLogs/{mealLogId} {
 26. **Aspect Ratio Optimization** - Platform-specific image formats (1:1, 9:16, 3:2)
 
 ### ✅ Recently Completed
-1. **Social Sharing** - Web Share API + platform links for sharing meals, progress, and achievements (v1.6.7)
-2. **Photo Gallery View** - Grid layout for browsing meal photos with filters and lightbox (v1.6.6)
-3. **Charts & Trends** - Interactive progress visualization (v1.6.5)
+1. **Health App Integration** - Apple Health/Google Fit sync UI with setup instructions and preferences (v1.6.8)
+2. **Social Sharing** - Web Share API + platform links for sharing meals, progress, and achievements (v1.6.7)
+3. **Photo Gallery View** - Grid layout for browsing meal photos with filters and lightbox (v1.6.6)
+4. **Charts & Trends** - Interactive progress visualization (v1.6.5)
 
 ### 📋 Planned Features
-1. **Health Integration** - Apple Health/Google Fit sync for step tracking
-2. **PWA Icons** - Add missing icon files for installability
-3. **Skeleton UI** - Replace loading spinners with skeleton components
+1. **PWA Icons** - Add missing icon files for installability
+2. **Skeleton UI** - Replace loading spinners with skeleton components
+3. **Native Wrapper** - React Native/Capacitor for true health API access
 
 ---
 
