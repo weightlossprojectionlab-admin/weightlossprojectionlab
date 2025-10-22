@@ -19,6 +19,8 @@ import { Spinner } from '@/components/ui/Spinner'
 import { queueMeal } from '@/lib/offline-queue'
 import { registerBackgroundSync } from '@/lib/sync-manager'
 import { useMissions } from '@/hooks/useMissions'
+import { BarcodeScanner } from '@/components/BarcodeScanner'
+import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import type { AIAnalysis, MealTemplate, UserProfile, UserPreferences } from '@/types'
 
 // Helper function to detect meal type based on current time (fallback when no schedule)
@@ -123,6 +125,8 @@ function LogMealContent() {
   const [usingTemplateId, setUsingTemplateId] = useState<string | null>(null)
   const [updatingMealId, setUpdatingMealId] = useState<string | null>(null)
   const [showManualEntry, setShowManualEntry] = useState(false)
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
+  const [loadingBarcode, setLoadingBarcode] = useState(false)
   const [manualEntryForm, setManualEntryForm] = useState({
     foodItems: [''],
     calories: '',
@@ -478,6 +482,43 @@ function LogMealContent() {
     } finally {
       setAnalyzing(false)
       abortControllerRef.current = null
+    }
+  }
+
+  const handleBarcodeScan = async (barcode: string) => {
+    console.log('📊 Barcode scanned:', barcode)
+    setLoadingBarcode(true)
+
+    try {
+      // Lookup product in OpenFoodFacts
+      const response = await lookupBarcode(barcode)
+      const product = simplifyProduct(response)
+
+      if (!product.found) {
+        toast.error(`Product not found for barcode: ${barcode}`)
+        return
+      }
+
+      // Enable manual entry mode
+      setShowManualEntry(true)
+
+      // Pre-fill the manual entry form with product data
+      setManualEntryForm({
+        foodItems: [product.name + (product.brand ? ` (${product.brand})` : '')],
+        calories: product.calories.toString(),
+        protein: product.protein.toString(),
+        carbs: product.carbs.toString(),
+        fat: product.fat.toString(),
+        fiber: '',
+        notes: `Scanned barcode: ${barcode}${product.servingSize ? ` | Serving: ${product.servingSize}` : ''}${product.quantity ? ` | Package: ${product.quantity}` : ''}`
+      })
+
+      toast.success(`Found: ${product.name}`)
+    } catch (error) {
+      console.error('Barcode lookup error:', error)
+      toast.error('Failed to lookup product. Please try again or enter manually.')
+    } finally {
+      setLoadingBarcode(false)
     }
   }
 
@@ -1100,7 +1141,7 @@ function LogMealContent() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-white dark:bg-gray-900">
       <PageHeader
         title="Log Meal"
         backHref="/dashboard"
@@ -1123,6 +1164,21 @@ function LogMealContent() {
                     className="hidden"
                   />
                 </label>
+                <button
+                  onClick={() => setShowBarcodeScanner(true)}
+                  className="btn btn-secondary w-full"
+                  disabled={loadingBarcode}
+                  aria-label="Scan barcode"
+                >
+                  {loadingBarcode ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Spinner size="sm" />
+                      Looking up product...
+                    </span>
+                  ) : (
+                    '🔍 Scan Barcode'
+                  )}
+                </button>
                 <button
                   onClick={() => setShowTemplates(!showTemplates)}
                   className="btn btn-secondary w-full"
@@ -1151,7 +1207,7 @@ function LogMealContent() {
                   {analyzing && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
                       <div className="text-white text-center">
-                        <div className="animate-spin w-8 h-8 border-4 border-white border-t-transparent rounded-full mx-auto mb-2"></div>
+                        <div className="animate-spin w-8 h-8 border-4 border-white dark:border-gray-700 border-t-transparent rounded-full mx-auto mb-2"></div>
                         <p>Analyzing with AI...</p>
                       </div>
                     </div>
@@ -1176,7 +1232,7 @@ function LogMealContent() {
             {/* Manual Entry Form */}
             {showManualEntry && (
               <div className="space-y-4 mt-4">
-                <div className="bg-accent-light border border-accent rounded-lg p-4">
+                <div className="bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-4">
                   <p className="text-sm text-accent-dark">
                     💡 Enter meal details manually (useful when you can't take a photo or prefer manual tracking)
                   </p>
@@ -1184,7 +1240,7 @@ function LogMealContent() {
 
                 {/* Food Items */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                     Food Items
                   </label>
                   {manualEntryForm.foodItems.map((item, index) => (
@@ -1194,7 +1250,7 @@ function LogMealContent() {
                         value={item}
                         onChange={(e) => updateFoodItem(index, e.target.value)}
                         placeholder="e.g., Grilled chicken breast"
-                        className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       {manualEntryForm.foodItems.length > 1 && (
                         <button
@@ -1217,7 +1273,7 @@ function LogMealContent() {
 
                 {/* Calories */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                     Total Calories *
                   </label>
                   <input
@@ -1227,7 +1283,7 @@ function LogMealContent() {
                     placeholder="e.g., 450"
                     min="0"
                     step="1"
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                   />
                 </div>
@@ -1235,7 +1291,7 @@ function LogMealContent() {
                 {/* Macros Grid */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
+                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                       Protein (g) *
                     </label>
                     <input
@@ -1245,12 +1301,12 @@ function LogMealContent() {
                       placeholder="30"
                       min="0"
                       step="0.1"
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
+                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                       Carbs (g) *
                     </label>
                     <input
@@ -1260,12 +1316,12 @@ function LogMealContent() {
                       placeholder="40"
                       min="0"
                       step="0.1"
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
+                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                       Fat (g) *
                     </label>
                     <input
@@ -1275,12 +1331,12 @@ function LogMealContent() {
                       placeholder="15"
                       min="0"
                       step="0.1"
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
+                    <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                       Fiber (g)
                     </label>
                     <input
@@ -1290,14 +1346,14 @@ function LogMealContent() {
                       placeholder="5"
                       min="0"
                       step="0.1"
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
                 </div>
 
                 {/* Notes */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
                     Notes (optional)
                   </label>
                   <textarea
@@ -1305,7 +1361,7 @@ function LogMealContent() {
                     onChange={(e) => setManualEntryForm({ ...manualEntryForm, notes: e.target.value })}
                     placeholder="Add any additional notes about this meal..."
                     rows={3}
-                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                   />
                 </div>
 
@@ -1318,7 +1374,7 @@ function LogMealContent() {
                   >
                     {saving ? (
                       <span className="flex items-center justify-center space-x-2">
-                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                        <div className="animate-spin w-4 h-4 border-2 border-white dark:border-gray-700 border-t-transparent rounded-full"></div>
                         <span>Saving...</span>
                       </span>
                     ) : (
@@ -1350,12 +1406,12 @@ function LogMealContent() {
 
         {/* Meal Templates Panel */}
         {showTemplates && (
-          <div className="bg-card rounded-lg p-6 shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-foreground">Meal Templates</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Meal Templates</h2>
               <button
                 onClick={() => setShowTemplates(false)}
-                className="text-muted-foreground hover:text-muted-foreground"
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-600 dark:text-gray-400"
               >
                 ✕
               </button>
@@ -1369,8 +1425,8 @@ function LogMealContent() {
               </div>
             ) : mealTemplates.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground mb-2">No templates saved yet</p>
-                <p className="text-xs text-muted-foreground">Log a meal with AI analysis and save it as a template!</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">No templates saved yet</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Log a meal with AI analysis and save it as a template!</p>
               </div>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -1379,22 +1435,22 @@ function LogMealContent() {
                   return (
                     <div
                       key={template.id}
-                      className="border border-border rounded-lg p-4 hover:border-primary transition-colors"
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary transition-colors"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
                             <span className="text-lg">{mealTypeEmoji}</span>
-                            <span className="font-medium text-foreground">{template.name}</span>
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{template.name}</span>
                           </div>
-                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                          <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400">
                             <span>{template.calories} cal</span>
                             <span>P: {template.macros.protein}g</span>
                             <span>C: {template.macros.carbs}g</span>
                             <span>F: {template.macros.fat}g</span>
                           </div>
                           {template.usageCount > 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">Used {template.usageCount} time{template.usageCount !== 1 ? 's' : ''}</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Used {template.usageCount} time{template.usageCount !== 1 ? 's' : ''}</p>
                           )}
                         </div>
                         <button
@@ -1407,7 +1463,7 @@ function LogMealContent() {
                         </button>
                       </div>
                       <div className="mb-2">
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
                           {template.foodItems.join(', ')}
                         </p>
                       </div>
@@ -1429,9 +1485,9 @@ function LogMealContent() {
 
         {/* AI Analysis Results */}
         {aiAnalysis && (
-          <div className="bg-card rounded-lg p-6 shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-foreground">AI Analysis</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">AI Analysis</h2>
             </div>
 
             <div className="space-y-4">
@@ -1443,8 +1499,8 @@ function LogMealContent() {
                       {mealTypes.find(t => t.id === selectedMealType)?.emoji || '🍽️'}
                     </span>
                     <div>
-                      <p className="text-xs text-muted-foreground">Detected Meal Type</p>
-                      <p className="text-lg font-semibold text-foreground capitalize">{selectedMealType}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Detected Meal Type</p>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 capitalize">{selectedMealType}</p>
                     </div>
                   </div>
                   <button
@@ -1479,8 +1535,8 @@ function LogMealContent() {
                           }}
                           className={`p-2 rounded-lg border-2 transition-colors ${
                             selectedMealType === type.id
-                              ? 'border-primary bg-primary-light text-primary-hover'
-                              : 'border-border hover:border-primary bg-card'
+                              ? 'border-primary bg-purple-100 dark:bg-purple-900/20 text-primary-hover'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-primary bg-white dark:bg-gray-900'
                           }`}
                         >
                           <div className="flex flex-col items-center space-y-1">
@@ -1496,14 +1552,14 @@ function LogMealContent() {
 
               {/* Individual Food Items */}
               <div>
-                <h3 className="text-sm font-medium text-foreground mb-3">Food Items</h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Food Items</h3>
                 <div className="space-y-2">
                   {aiAnalysis.foodItems.map((item, index) => (
-                    <div key={index} className="bg-muted rounded-lg p-3 border border-border">
+                    <div key={index} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 border border-gray-200">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
-                          <p className="font-medium text-foreground">{item.name}</p>
-                          <p className="text-xs text-muted-foreground">{item.portion}</p>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{item.name}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">{item.portion}</p>
                         </div>
                         <button
                           className="text-xs text-primary hover:text-primary-hover font-medium"
@@ -1523,36 +1579,36 @@ function LogMealContent() {
 
                       {/* Portion Adjustment Controls */}
                       {editingFoodItemIndex === index && (
-                        <div className="mb-3 p-3 bg-card rounded border border-indigo-200">
-                          <p className="text-xs text-foreground mb-2 font-medium">Adjust Portion Size</p>
+                        <div className="mb-3 p-3 bg-white dark:bg-gray-900 rounded border border-indigo-200">
+                          <p className="text-xs text-gray-900 dark:text-gray-100 mb-2 font-medium">Adjust Portion Size</p>
                           <div className="flex items-center space-x-2 mb-3">
                             <button
                               onClick={() => setPortionMultiplier(0.5)}
-                              className={`px-2 py-1 text-xs rounded ${portionMultiplier === 0.5 ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
+                              className={`px-2 py-1 text-xs rounded ${portionMultiplier === 0.5 ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}
                             >
                               ½
                             </button>
                             <button
                               onClick={() => setPortionMultiplier(0.75)}
-                              className={`px-2 py-1 text-xs rounded ${portionMultiplier === 0.75 ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
+                              className={`px-2 py-1 text-xs rounded ${portionMultiplier === 0.75 ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}
                             >
                               ¾
                             </button>
                             <button
                               onClick={() => setPortionMultiplier(1.0)}
-                              className={`px-2 py-1 text-xs rounded ${portionMultiplier === 1.0 ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
+                              className={`px-2 py-1 text-xs rounded ${portionMultiplier === 1.0 ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}
                             >
                               1x
                             </button>
                             <button
                               onClick={() => setPortionMultiplier(1.5)}
-                              className={`px-2 py-1 text-xs rounded ${portionMultiplier === 1.5 ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
+                              className={`px-2 py-1 text-xs rounded ${portionMultiplier === 1.5 ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}
                             >
                               1.5x
                             </button>
                             <button
                               onClick={() => setPortionMultiplier(2.0)}
-                              className={`px-2 py-1 text-xs rounded ${portionMultiplier === 2.0 ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}
+                              className={`px-2 py-1 text-xs rounded ${portionMultiplier === 2.0 ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}
                             >
                               2x
                             </button>
@@ -1567,7 +1623,7 @@ function LogMealContent() {
                               onChange={(e) => setPortionMultiplier(parseFloat(e.target.value))}
                               className="flex-1"
                             />
-                            <span className="text-sm font-medium text-foreground w-12">{portionMultiplier}x</span>
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-12">{portionMultiplier}x</span>
                           </div>
                           <button
                             onClick={() => adjustFoodItemPortion(index, portionMultiplier)}
@@ -1580,24 +1636,24 @@ function LogMealContent() {
 
                       <div className="grid grid-cols-5 gap-2 text-xs">
                         <div>
-                          <span className="text-muted-foreground">Cal</span>
+                          <span className="text-gray-600 dark:text-gray-400">Cal</span>
                           <p className="font-semibold text-primary">{item.calories}</p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">P</span>
-                          <p className="font-medium text-foreground">{item.protein}g</p>
+                          <span className="text-gray-600 dark:text-gray-400">P</span>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{item.protein}g</p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">C</span>
-                          <p className="font-medium text-foreground">{item.carbs}g</p>
+                          <span className="text-gray-600 dark:text-gray-400">C</span>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{item.carbs}g</p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">F</span>
-                          <p className="font-medium text-foreground">{item.fat}g</p>
+                          <span className="text-gray-600 dark:text-gray-400">F</span>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{item.fat}g</p>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Fi</span>
-                          <p className="font-medium text-foreground">{item.fiber}g</p>
+                          <span className="text-gray-600 dark:text-gray-400">Fi</span>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{item.fiber}g</p>
                         </div>
                       </div>
                     </div>
@@ -1608,32 +1664,32 @@ function LogMealContent() {
               {/* Totals Summary */}
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-foreground">Total Nutrition</h3>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Total Nutrition</h3>
                   <span className="text-xs bg-success-light text-success-dark px-2 py-1 rounded-full">
                     {aiAnalysis.confidence}% confidence
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-xs text-muted-foreground">Total Calories</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Total Calories</span>
                     <p className="text-2xl font-bold text-success">{aiAnalysis.totalCalories}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <span className="text-muted-foreground">Protein</span>
-                      <p className="font-semibold text-foreground">{aiAnalysis.totalMacros.protein}g</p>
+                      <span className="text-gray-600 dark:text-gray-400">Protein</span>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{aiAnalysis.totalMacros.protein}g</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Carbs</span>
-                      <p className="font-semibold text-foreground">{aiAnalysis.totalMacros.carbs}g</p>
+                      <span className="text-gray-600 dark:text-gray-400">Carbs</span>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{aiAnalysis.totalMacros.carbs}g</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Fat</span>
-                      <p className="font-semibold text-foreground">{aiAnalysis.totalMacros.fat}g</p>
+                      <span className="text-gray-600 dark:text-gray-400">Fat</span>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{aiAnalysis.totalMacros.fat}g</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Fiber</span>
-                      <p className="font-semibold text-foreground">{aiAnalysis.totalMacros.fiber}g</p>
+                      <span className="text-gray-600 dark:text-gray-400">Fiber</span>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{aiAnalysis.totalMacros.fiber}g</p>
                     </div>
                   </div>
                 </div>
@@ -1641,7 +1697,7 @@ function LogMealContent() {
 
               {aiAnalysis.suggestions && (
                 <div>
-                  <h3 className="text-sm font-medium text-foreground mb-2">AI Suggestions</h3>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">AI Suggestions</h3>
                   <ul className="text-sm text-success space-y-1">
                     {aiAnalysis.suggestions.map((suggestion: string, index: number) => (
                       <li key={index}>💡 {suggestion}</li>
@@ -1660,7 +1716,7 @@ function LogMealContent() {
                   >
                     {saving ? (
                       <span className="flex items-center justify-center space-x-2">
-                        <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                        <div className="animate-spin w-5 h-5 border-2 border-white dark:border-gray-700 border-t-transparent rounded-full" />
                         <span>{uploadProgress || 'Saving...'}</span>
                       </span>
                     ) : (
@@ -1695,7 +1751,7 @@ function LogMealContent() {
                       value={templateName}
                       onChange={(e) => setTemplateName(e.target.value)}
                       placeholder="Template name (e.g., 'My Breakfast')"
-                      className="w-full px-3 py-2 border border-border rounded text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded text-sm"
                       onKeyDown={(e) => e.key === 'Enter' && saveAsTemplate()}
                     />
                     <div className="flex space-x-2">
@@ -1712,7 +1768,7 @@ function LogMealContent() {
                           setShowSaveTemplate(false)
                           setTemplateName('')
                         }}
-                        className="flex-1 bg-muted text-foreground px-3 py-2 rounded text-sm hover:bg-gray-300"
+                        className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-700"
                       >
                         Cancel
                       </button>
@@ -1728,24 +1784,24 @@ function LogMealContent() {
         {todaysSummary.mealCount > 0 && (
           <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-6 shadow-sm border border-indigo-100">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-foreground">Today's Summary</h2>
-              <span className="text-sm text-muted-foreground">{todaysSummary.mealCount} meal{todaysSummary.mealCount !== 1 ? 's' : ''}</span>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Today's Summary</h2>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{todaysSummary.mealCount} meal{todaysSummary.mealCount !== 1 ? 's' : ''}</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-card rounded-lg p-4">
-                <div className="text-xs text-muted-foreground mb-1">Total Calories</div>
+              <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Calories</div>
                 <div className="text-2xl font-bold text-primary">{Math.round(todaysSummary.calories)}</div>
               </div>
-              <div className="bg-card rounded-lg p-4">
-                <div className="text-xs text-muted-foreground mb-1">Protein</div>
+              <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Protein</div>
                 <div className="text-2xl font-bold text-success">{Math.round(todaysSummary.protein)}g</div>
               </div>
-              <div className="bg-card rounded-lg p-4">
-                <div className="text-xs text-muted-foreground mb-1">Carbs</div>
+              <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Carbs</div>
                 <div className="text-2xl font-bold text-orange-600">{Math.round(todaysSummary.carbs)}g</div>
               </div>
-              <div className="bg-card rounded-lg p-4">
-                <div className="text-xs text-muted-foreground mb-1">Fat</div>
+              <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Fat</div>
                 <div className="text-2xl font-bold text-yellow-600">{Math.round(todaysSummary.fat)}g</div>
               </div>
             </div>
@@ -1753,9 +1809,9 @@ function LogMealContent() {
         )}
 
         {/* Meal History */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-foreground">Recent Meals</h2>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Meals</h2>
             {mealHistory.length > 0 && !multiSelectMode && (
               <div className="flex items-center space-x-2 relative">
                 <button
@@ -1771,16 +1827,16 @@ function LogMealContent() {
                       className="fixed inset-0 z-10"
                       onClick={() => setShowExportMenu(false)}
                     />
-                    <div className="absolute right-0 top-8 z-20 bg-card border border-border rounded-lg shadow-lg py-2 min-w-[120px]">
+                    <div className="absolute right-0 top-8 z-20 bg-white dark:bg-gray-900 border border-gray-200 rounded-lg shadow-lg py-2 min-w-[120px]">
                       <button
                         onClick={handleExportCSV}
-                        className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted"
+                        className="w-full text-left px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100"
                       >
                         📄 CSV
                       </button>
                       <button
                         onClick={handleExportPDF}
-                        className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted"
+                        className="w-full text-left px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100"
                       >
                         📑 PDF
                       </button>
@@ -1800,10 +1856,10 @@ function LogMealContent() {
 
           {/* Multi-select actions */}
           {multiSelectMode && (
-            <div className="mb-4 p-3 bg-primary-light rounded-lg">
+            <div className="mb-4 p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <span className="text-sm font-medium text-foreground">
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {selectedMealIds.size} selected
                   </span>
                   {selectedMealIds.size < filteredMeals.length ? (
@@ -1836,7 +1892,7 @@ function LogMealContent() {
                       setMultiSelectMode(false)
                       setSelectedMealIds(new Set())
                     }}
-                    className="text-sm bg-muted text-foreground px-3 py-1 rounded hover:bg-gray-300"
+                    className="text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-1 rounded hover:bg-gray-300 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </button>
@@ -1854,7 +1910,7 @@ function LogMealContent() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name, ingredients, or notes..."
-                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
@@ -1865,7 +1921,7 @@ function LogMealContent() {
                 className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
                   filterMealType === 'all'
                     ? 'bg-primary text-white'
-                    : 'bg-muted text-foreground hover:bg-muted'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
                 All
@@ -1877,7 +1933,7 @@ function LogMealContent() {
                   className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
                     filterMealType === type.id
                       ? 'bg-primary text-white'
-                      : 'bg-muted text-foreground hover:bg-muted'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
                   }`}
                 >
                   {type.emoji} {type.label}
@@ -1887,7 +1943,7 @@ function LogMealContent() {
 
             {/* Results Count */}
             {(searchQuery || filterMealType !== 'all') && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 {filteredMeals.length} meal{filteredMeals.length !== 1 ? 's' : ''} found
               </p>
             )}
@@ -1901,14 +1957,14 @@ function LogMealContent() {
             </div>
           ) : mealHistory.length === 0 ? (
             <div className="text-center py-12 px-4">
-              <div className="w-20 h-20 mx-auto mb-4 bg-primary-light rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 mx-auto mb-4 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
                 <span className="text-4xl">🍽️</span>
               </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">No meals logged yet</h3>
-              <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No meals logged yet</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 max-w-xs mx-auto">
                 Start tracking your nutrition journey by logging your first meal. Take a photo or enter details manually!
               </p>
-              <div className="space-y-2 text-xs text-muted-foreground max-w-sm mx-auto">
+              <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400 max-w-sm mx-auto">
                 <div className="flex items-center space-x-2">
                   <span className="flex-shrink-0">📸</span>
                   <p className="text-left">Snap a photo and let AI analyze your meal</p>
@@ -1925,11 +1981,11 @@ function LogMealContent() {
             </div>
           ) : filteredMeals.length === 0 ? (
             <div className="text-center py-12 px-4">
-              <div className="w-20 h-20 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+              <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
                 <span className="text-4xl">🔍</span>
               </div>
-              <h3 className="text-lg font-medium text-foreground mb-2">No meals found</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No meals found</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 No meals match your search criteria.
               </p>
               <button
@@ -1959,9 +2015,9 @@ function LogMealContent() {
                 return (
                   <div
                     key={meal.id}
-                    className={`border border-border rounded-lg p-4 hover:border-primary transition-colors ${
+                    className={`border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary transition-colors ${
                       isDeleting ? 'opacity-50' : ''
-                    } ${isSelected ? 'border-primary bg-primary-light' : ''}`}
+                    } ${isSelected ? 'border-primary bg-purple-100 dark:bg-purple-900/20' : ''}`}
                   >
                     <div className="flex items-start space-x-3">
                       {/* Checkbox for multi-select mode */}
@@ -1971,7 +2027,7 @@ function LogMealContent() {
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleMealSelection(meal.id)}
-                            className="w-5 h-5 text-primary rounded border-border focus:ring-primary"
+                            className="w-5 h-5 text-primary rounded border-gray-200 dark:border-gray-700 focus:ring-primary"
                           />
                         </div>
                       )}
@@ -2000,20 +2056,20 @@ function LogMealContent() {
                         )}
                         <div className="flex-1 min-w-0">
                           {meal.title && (
-                            <div className="font-semibold text-foreground mb-1">{meal.title}</div>
+                            <div className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{meal.title}</div>
                           )}
                           <div className="flex items-center space-x-2 mb-1">
                             <span className="text-xl">{mealTypeEmoji}</span>
-                            <span className="font-medium text-foreground capitalize text-sm">{meal.mealType}</span>
-                            <span className="text-xs text-muted-foreground">• {dateStr} at {timeStr}</span>
+                            <span className="font-medium text-gray-900 dark:text-gray-100 capitalize text-sm">{meal.mealType}</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-400">• {dateStr} at {timeStr}</span>
                           </div>
                           <div className="flex items-center space-x-4 text-sm">
                             <span className="font-semibold text-primary">{meal.totalCalories || 0} cal</span>
                             {meal.macros && (
                               <>
-                                <span className="text-muted-foreground">P: {meal.macros.protein || 0}g</span>
-                                <span className="text-muted-foreground">C: {meal.macros.carbs || 0}g</span>
-                                <span className="text-muted-foreground">F: {meal.macros.fat || 0}g</span>
+                                <span className="text-gray-600 dark:text-gray-400">P: {meal.macros.protein || 0}g</span>
+                                <span className="text-gray-600 dark:text-gray-400">C: {meal.macros.carbs || 0}g</span>
+                                <span className="text-gray-600 dark:text-gray-400">F: {meal.macros.fat || 0}g</span>
                               </>
                             )}
                           </div>
@@ -2069,7 +2125,7 @@ function LogMealContent() {
                           </button>
                           <button
                             onClick={() => setExpandedMealId(isExpanded ? null : meal.id)}
-                            className="text-muted-foreground hover:text-muted-foreground"
+                            className="text-gray-600 dark:text-gray-400 hover:text-gray-600 dark:text-gray-400"
                             disabled={isEditing}
                           >
                             {isExpanded ? '▲' : '▼'}
@@ -2082,17 +2138,17 @@ function LogMealContent() {
                     {isEditing && (
                       <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
                         <div>
-                          <label className="block text-xs font-medium text-foreground mb-1">Title (Optional)</label>
+                          <label className="block text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Title (Optional)</label>
                           <input
                             type="text"
                             value={editForm.title}
                             onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                             placeholder="e.g., Chicken Rice Bowl"
-                            className="w-full px-3 py-2 border border-border rounded text-sm"
+                            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded text-sm"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-foreground mb-2">Meal Type</label>
+                          <label className="block text-xs font-medium text-gray-900 dark:text-gray-100 mb-2">Meal Type</label>
                           <div className="grid grid-cols-4 gap-2">
                             {mealTypes.map((type) => (
                               <button
@@ -2100,8 +2156,8 @@ function LogMealContent() {
                                 onClick={() => setEditForm({ ...editForm, mealType: type.id })}
                                 className={`p-2 rounded border text-xs ${
                                   editForm.mealType === type.id
-                                    ? 'border-primary bg-primary-light text-primary-hover'
-                                    : 'border-border hover:border-border'
+                                    ? 'border-primary bg-purple-100 dark:bg-purple-900/20 text-primary-hover'
+                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-200 dark:border-gray-700'
                                 }`}
                               >
                                 <div className="flex flex-col items-center space-y-1">
@@ -2113,11 +2169,11 @@ function LogMealContent() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-foreground mb-1">Notes (Optional)</label>
+                          <label className="block text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Notes (Optional)</label>
                           <textarea
                             value={editForm.notes}
                             onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                            className="w-full px-3 py-2 border border-border rounded text-sm"
+                            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded text-sm"
                             rows={2}
                             placeholder="Add notes about this meal..."
                           />
@@ -2133,7 +2189,7 @@ function LogMealContent() {
                           </button>
                           <button
                             onClick={cancelEditing}
-                            className="flex-1 bg-muted text-foreground px-3 py-2 rounded text-sm hover:bg-gray-300"
+                            className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-700"
                           >
                             Cancel
                           </button>
@@ -2145,8 +2201,8 @@ function LogMealContent() {
                       <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
                         {meal.aiAnalysis.foodItems && meal.aiAnalysis.foodItems.length > 0 && (
                           <div>
-                            <h4 className="text-xs font-medium text-foreground mb-1">Detected Foods</h4>
-                            <ul className="text-xs text-muted-foreground space-y-1">
+                            <h4 className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Detected Foods</h4>
+                            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                               {meal.aiAnalysis.foodItems.map((item: any, idx: number) => (
                                 <li key={idx}>• {typeof item === 'string' ? item : item.name}</li>
                               ))}
@@ -2155,7 +2211,7 @@ function LogMealContent() {
                         )}
                         {meal.aiAnalysis.suggestions && meal.aiAnalysis.suggestions.length > 0 && (
                           <div>
-                            <h4 className="text-xs font-medium text-foreground mb-1">AI Suggestions</h4>
+                            <h4 className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">AI Suggestions</h4>
                             <ul className="text-xs text-success space-y-1">
                               {meal.aiAnalysis.suggestions.map((suggestion: string, idx: number) => (
                                 <li key={idx}>💡 {suggestion}</li>
@@ -2182,7 +2238,7 @@ function LogMealContent() {
           <div className="relative max-w-5xl w-full">
             <button
               onClick={() => setSelectedPhotoUrl(null)}
-              className="absolute -top-12 right-0 bg-card/10 hover:bg-card/20 text-white w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
+              className="absolute -top-12 right-0 bg-white dark:bg-gray-900/10 hover:bg-white dark:bg-gray-900/20 text-white w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
               aria-label="Close photo"
             >
               ✕
@@ -2204,16 +2260,16 @@ function LogMealContent() {
           onClick={() => setShareModalData(null)}
         >
           <div
-            className="bg-card rounded-2xl max-w-md w-full shadow-2xl"
+            className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-6 py-4 border-b border-border">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Share to Social Media</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Share to Social Media</h3>
                 <button
                   onClick={() => setShareModalData(null)}
-                  className="text-muted-foreground hover:text-muted-foreground transition-colors"
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
                   aria-label="Close"
                 >
                   ✕
@@ -2229,30 +2285,37 @@ function LogMealContent() {
                   <button
                     key={platform}
                     onClick={() => handlePlatformShare(platform)}
-                    className="w-full flex items-center space-x-4 p-4 rounded-lg border-2 border-border hover:border-border hover:bg-muted transition-all group"
+                    className="w-full flex items-center space-x-4 p-4 rounded-lg border-2 border-gray-200 hover:border-gray-200 hover:bg-gray-100 dark:bg-gray-800 transition-all group"
                   >
                     <span className="text-3xl">{info.icon}</span>
                     <div className="flex-1 text-left">
-                      <p className="font-medium text-foreground group-hover:text-foreground">{info.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-gray-900 dark:text-gray-100">{info.name}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         {info.supportsWebShare ? 'Open in new window' : 'Download image + copy caption'}
                       </p>
                     </div>
-                    <span className="text-muted-foreground group-hover:text-muted-foreground">→</span>
+                    <span className="text-gray-600 dark:text-gray-400 group-hover:text-gray-600 dark:text-gray-400">→</span>
                   </button>
                 )
               })}
             </div>
 
             {/* Footer Note */}
-            <div className="px-6 py-4 bg-muted rounded-b-2xl">
-              <p className="text-xs text-muted-foreground text-center">
+            <div className="px-6 py-4 bg-gray-100 dark:bg-gray-800 rounded-b-2xl">
+              <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
                 💡 For Instagram & TikTok: Image will be downloaded. Paste the caption from your clipboard!
               </p>
             </div>
           </div>
         </div>
       )}
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScanner
+        isOpen={showBarcodeScanner}
+        onScan={handleBarcodeScan}
+        onClose={() => setShowBarcodeScanner(false)}
+      />
 
       <ConfirmDialog />
     </main>
