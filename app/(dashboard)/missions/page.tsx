@@ -37,8 +37,8 @@ export default function MissionsPage() {
   const missions = missionsData.missions;
 
   // Calculate stats
-  const activeMissions = missions.filter(m => m.status === 'active');
-  const completedMissions = missions.filter(m => m.status === 'completed');
+  const activeMissions = missions.filter(m => !m.completed);
+  const completedMissions = missions.filter(m => m.completed);
   const totalXP = completedMissions.reduce((sum, m) => sum + (m.xpReward || 0), 0);
   const currentLevel = Math.floor(totalXP / 1000) + 1; // Simple level calculation
   const currentStreak = 0; // TODO: Calculate from user activity
