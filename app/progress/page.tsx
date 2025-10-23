@@ -31,7 +31,7 @@ export default function ProgressPage() {
 
 function ProgressContent() {
   const { user } = useAuth()
-  const { userProfile } = useUserProfile()
+  const { profile } = useUserProfile()
 
   const [timeRange, setTimeRange] = useState(30) // Days
   const [loading, setLoading] = useState(true)
@@ -54,7 +54,7 @@ function ProgressContent() {
     if (!user) return
 
     loadChartData()
-  }, [user, timeRange, userProfile])
+  }, [user, timeRange, profile])
 
   const loadChartData = async () => {
     if (!user) return
@@ -62,7 +62,7 @@ function ProgressContent() {
     setLoading(true)
 
     try {
-      const calorieGoal = userProfile?.goals?.dailyCalorieGoal || 2000
+      const calorieGoal = profile?.goals?.dailyCalorieGoal || 2000
 
       const endDate = new Date()
       const startDate = new Date()
@@ -87,7 +87,7 @@ function ProgressContent() {
     }
   }
 
-  const targetWeight = userProfile?.goals?.targetWeight
+  const targetWeight = profile?.goals?.targetWeight
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
