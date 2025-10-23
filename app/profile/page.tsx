@@ -341,7 +341,7 @@ function ProfileContent() {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setProfileData(prev => ({
+                      onClick={() => setProfileData((prev: any) => ({
                         ...prev,
                         profile: { ...prev.profile, foodAllergies: [] }
                       }))}
@@ -385,7 +385,7 @@ function ProfileContent() {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setProfileData(prev => ({
+                      onClick={() => setProfileData((prev: any) => ({
                         ...prev,
                         profile: { ...prev.profile, healthConditions: [] }
                       }))}
