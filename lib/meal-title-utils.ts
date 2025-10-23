@@ -133,14 +133,14 @@ export function generateSearchKeywords(
     typeof item === 'string' ? item : item.name || String(item)
   )
   normalizedItems.forEach(item => {
-    item.toLowerCase().split(/\s+/).forEach(word => {
+    item.toLowerCase().split(/\s+/).forEach((word: string) => {
       if (word.length > 2) keywords.add(word)
     })
   })
 
   // Add notes words
   if (notes) {
-    notes.toLowerCase().split(/\s+/).forEach(word => {
+    notes.toLowerCase().split(/\s+/).forEach((word: string) => {
       if (word.length > 3) keywords.add(word) // Longer words from notes
     })
   }
