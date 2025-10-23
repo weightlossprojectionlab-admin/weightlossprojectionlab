@@ -42,6 +42,13 @@ service firebase.storage {
       allow delete: if isAuthenticated(); // Creator check should be in app logic
     }
 
+    // Recipe media (admin-uploaded marketing images/videos)
+    match /recipes/media/{recipeId}/{mediaFile} {
+      allow read: if true; // Public read for recipe images
+      allow write: if isAuthenticated() && isValidImageSize();
+      allow delete: if isAuthenticated(); // Admin check should be in app logic
+    }
+
     // Default deny
     match /{allPaths=**} {
       allow read, write: if false;

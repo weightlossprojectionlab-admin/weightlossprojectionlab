@@ -32,6 +32,19 @@ export interface MealSuggestion {
   recipeSteps?: string[] // Step-by-step cooking instructions
   cookingTips?: string[] // Helpful cooking tips
   servingSize: number // Number of servings (default 1)
+
+  // Media fields (for admin-uploaded marketing content)
+  imageUrls?: string[] // Firebase Storage URLs for images (max 4, first is hero)
+  videoUrl?: string // Firebase Storage URL for 5-7 second video clip
+  videoThumbnailUrl?: string // Auto-generated thumbnail from video
+  imageStoragePaths?: string[] // Storage paths for deletion
+  videoStoragePath?: string // Storage path for deletion
+  mediaUploadedAt?: Date | string // When media was last updated
+  mediaUploadedBy?: string // Admin UID who uploaded
+
+  // Legacy field for backward compatibility (deprecated - use imageUrls)
+  imageUrl?: string // Deprecated: use imageUrls[0]
+  imageStoragePath?: string // Deprecated: use imageStoragePaths[0]
 }
 
 // Meal Suggestions Database

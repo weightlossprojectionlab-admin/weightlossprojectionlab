@@ -29,26 +29,26 @@ export function MissionCard({ mission }: MissionCardProps) {
   }
 
   return (
-    <div className={`bg-card rounded-lg p-4 border-2 transition-all ${
-      isComplete ? 'border-green-500 bg-green-50' : 'border-border'
+    <div className={`bg-white dark:bg-gray-900 rounded-lg p-4 border-2 transition-all ${
+      isComplete ? 'border-green-500 bg-green-50' : 'border-gray-200 dark:border-gray-700'
     }`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className={`font-semibold ${isComplete ? 'text-green-700' : 'text-card-foreground'}`}>
+            <h3 className={`font-semibold ${isComplete ? 'text-green-700' : 'text-gray-900 dark:text-gray-100'}`}>
               {mission.title}
             </h3>
             {isComplete && (
               <span className="text-green-600 text-lg">✓</span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">{mission.description}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{mission.description}</p>
         </div>
 
         {/* XP Reward */}
         <div className="ml-4 flex flex-col items-center">
-          <div className="bg-primary-light text-primary font-bold text-sm px-3 py-1 rounded-full">
+          <div className="bg-purple-100 dark:bg-purple-900/20 text-primary font-bold text-sm px-3 py-1 rounded-full">
             +{mission.xpReward} XP
           </div>
           <span className={`text-xs px-2 py-0.5 rounded-full mt-1 ${difficultyColors[mission.difficulty]}`}>
@@ -60,12 +60,12 @@ export function MissionCard({ mission }: MissionCardProps) {
       {/* Progress Bar */}
       <div className="mb-3">
         <div className="flex justify-between text-sm mb-1">
-          <span className="text-muted-foreground">
+          <span className="text-gray-600 dark:text-gray-400">
             Progress: {mission.progress} / {mission.criteria.target}
           </span>
           <span className="font-medium text-primary">{progressPercentage}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
           <div
             className={`h-2.5 rounded-full transition-all duration-300 ${
               isComplete ? 'bg-green-500' : 'bg-primary'
@@ -78,14 +78,14 @@ export function MissionCard({ mission }: MissionCardProps) {
       {/* Badge Reward */}
       {mission.badgeReward && (
         <div className={`flex items-center gap-2 text-sm p-2 rounded-lg ${
-          isComplete ? 'bg-white border border-green-300' : 'bg-accent-light'
+          isComplete ? 'bg-white dark:bg-gray-900 border border-green-300' : 'bg-indigo-100 dark:bg-indigo-900/20'
         }`}>
           <span className="text-2xl">{mission.badgeReward.icon}</span>
           <div className="flex-1">
             <p className={`font-medium ${rarityColors[mission.badgeReward.rarity]}`}>
               {mission.badgeReward.name}
             </p>
-            <p className="text-xs text-muted-foreground">{mission.badgeReward.description}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{mission.badgeReward.description}</p>
           </div>
           {isComplete && (
             <span className="text-green-600 font-semibold text-xs">UNLOCKED!</span>
@@ -116,10 +116,10 @@ export function MissionList({ missions, loading }: MissionListProps) {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-card rounded-lg p-4 border animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div className="h-3 bg-gray-200 rounded w-full mb-3"></div>
-            <div className="h-2 bg-gray-200 rounded w-full"></div>
+          <div key={i} className="bg-white dark:bg-gray-900 rounded-lg p-4 border animate-pulse">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full mb-3"></div>
+            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
           </div>
         ))}
       </div>
@@ -128,7 +128,7 @@ export function MissionList({ missions, loading }: MissionListProps) {
 
   if (missions.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="text-center py-8 text-gray-600 dark:text-gray-400">
         <p>No missions available this week</p>
         <p className="text-sm mt-1">Check back on Monday for new missions!</p>
       </div>

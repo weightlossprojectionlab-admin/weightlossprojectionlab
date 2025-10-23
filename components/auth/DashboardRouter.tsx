@@ -72,10 +72,10 @@ export default function DashboardRouter({ children }: DashboardRouterProps) {
   // Show loading spinner while checking access
   if (authLoading || checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-health-bg">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading your profile...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading your profile...</p>
         </div>
       </div>
     )

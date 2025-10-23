@@ -140,7 +140,7 @@ export function TabbedPageHeader({
       </div>
 
       {/* Tabs */}
-      <div className="border-t border-border">
+      <div className="border-t border-gray-200 dark:border-gray-700">
         <div className="mx-auto max-w-7xl px-4">
           <nav className="flex space-x-8 overflow-x-auto" aria-label="Tabs">
             {tabs.map((tab) => (
@@ -151,7 +151,7 @@ export function TabbedPageHeader({
                   flex items-center gap-2 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition-colors
                   ${activeTab === tab.label
                     ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:border-muted-dark hover:text-foreground'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:border-muted-dark hover:text-gray-900 dark:text-gray-100'
                   }
                 `}
                 aria-current={activeTab === tab.label ? 'page' : undefined}

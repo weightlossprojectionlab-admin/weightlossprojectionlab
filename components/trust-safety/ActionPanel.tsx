@@ -67,8 +67,8 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
   }
 
   return (
-    <div className="bg-card border border-border rounded-lg p-6">
-      <h3 className="text-lg font-bold text-foreground mb-4">Moderation Actions</h3>
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-6">
+      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Moderation Actions</h3>
 
       {!showConfirm ? (
         <div className="space-y-3">
@@ -91,7 +91,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
           <button
             onClick={() => handleActionClick('refund_partial')}
             disabled={disabled}
-            className="w-full flex items-center justify-between px-4 py-3 bg-accent-light border border-accent rounded-lg hover:bg-accent-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-between px-4 py-3 bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg hover:bg-indigo-100 dark:bg-indigo-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="flex items-center space-x-3">
               <CurrencyDollarIcon className="h-6 w-6 text-accent-dark" />
@@ -134,7 +134,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
 
           {/* Recommendation Hint */}
           {disputeCase.recommendation && (
-            <div className="mt-4 p-3 bg-accent-light border border-accent rounded-lg">
+            <div className="mt-4 p-3 bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg">
               <div className="text-xs font-semibold text-accent-dark uppercase tracking-wide mb-1">
                 AI Recommendation
               </div>
@@ -163,7 +163,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
 
           {/* Notes */}
           <div>
-            <label htmlFor="notes" className="block text-sm font-medium text-foreground mb-2">
+            <label htmlFor="notes" className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
               Admin Notes (Required)
             </label>
             <textarea
@@ -173,7 +173,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Provide reasoning for this decision..."
-              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               disabled={isLoading}
             />
           </div>
@@ -185,7 +185,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
               disabled={isLoading || !notes.trim()}
               className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                 isLoading || !notes.trim()
-                  ? 'bg-muted-dark text-muted-foreground cursor-not-allowed'
+                  ? 'bg-gray-100-dark text-gray-600 cursor-not-allowed'
                   : 'bg-primary text-white hover:bg-primary-hover'
               }`}
             >
@@ -194,7 +194,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
             <button
               onClick={handleCancel}
               disabled={isLoading}
-              className="px-4 py-2 border border-border text-foreground rounded-lg font-medium hover:bg-muted transition-colors disabled:opacity-50"
+              className="px-4 py-2 border border-gray-200 text-gray-900 dark:text-gray-100 rounded-lg font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>

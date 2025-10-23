@@ -86,9 +86,9 @@ function LogStepsContent() {
   const progressPercentage = Math.min((currentSteps / goalSteps) * 100, 100)
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-card shadow-sm">
+      <header className="bg-white dark:bg-gray-900 shadow-sm">
         <div className="mx-auto max-w-md px-4 py-4">
           <div className="flex items-center space-x-4">
             <Link
@@ -98,21 +98,21 @@ function LogStepsContent() {
             >
               ← Back
             </Link>
-            <h1 className="text-xl font-semibold text-foreground">Log Steps</h1>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Log Steps</h1>
           </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-md px-4 py-6 space-y-6">
         {/* Automatic Tracking Card - PRIMARY */}
-        <div className={`border rounded-lg p-6 shadow-sm ${isEnabled ? 'bg-success-light border-success' : 'bg-card border-border'}`}>
+        <div className={`border rounded-lg p-6 shadow-sm ${isEnabled ? 'bg-success-light dark:bg-success-dark/20 border-success dark:border-success' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'}`}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-foreground">Today's Steps</h2>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Today's Steps</h2>
             {isEnabled && isTracking && (
-              <span className="flex items-center space-x-2 text-sm text-success-dark">
+              <span className="flex items-center space-x-2 text-sm text-success-dark dark:text-success">
                 <span className="relative flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-success-light0"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-success-light dark:bg-success"></span>
                 </span>
                 <span>Tracking</span>
               </span>
@@ -121,10 +121,10 @@ function LogStepsContent() {
 
           {/* Step Count Display */}
           <div className="text-center mb-6">
-            <div className="text-6xl font-bold text-foreground mb-2">
+            <div className="text-6xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               {currentSteps.toLocaleString()}
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {isEnabled ? 'steps tracked automatically' : 'steps today'}
             </p>
           </div>
@@ -132,12 +132,12 @@ function LogStepsContent() {
           {/* Progress Bar */}
           <div className="space-y-3 mb-6">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Daily Goal</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Daily Goal</span>
               <span className="font-medium">
                 {currentSteps.toLocaleString()} / {goalSteps.toLocaleString()}
               </span>
             </div>
-            <div className="w-full bg-muted rounded-full h-3">
+            <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3">
               <div
                 className="bg-primary h-3 rounded-full transition-all duration-300"
                 style={{ width: `${progressPercentage}%` }}
@@ -148,7 +148,7 @@ function LogStepsContent() {
                 aria-label={`Step progress: ${Math.round(progressPercentage)}%`}
               />
             </div>
-            <p className="text-sm text-muted-foreground text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
               {currentSteps >= goalSteps ? (
                 <span className="text-success font-medium">🎉 Goal achieved!</span>
               ) : (
@@ -162,11 +162,11 @@ function LogStepsContent() {
           {/* Tracking Status & Controls */}
           {isEnabled ? (
             <div className="space-y-3">
-              <div className="bg-success-light border border-success rounded-lg p-3">
-                <p className="text-sm text-success-dark mb-1">
+              <div className="bg-success-light dark:bg-success-dark/20 border border-success rounded-lg p-3">
+                <p className="text-sm text-success-dark dark:text-success mb-1">
                   ✓ Automatic tracking enabled
                 </p>
-                <p className="text-xs text-success-dark">
+                <p className="text-xs text-success-dark dark:text-success">
                   Your steps are being counted automatically in the background whenever you move
                 </p>
               </div>
@@ -182,7 +182,7 @@ function LogStepsContent() {
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="bg-accent-light border border-accent rounded-lg p-3">
+              <div className="bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-3">
                 <p className="text-sm text-accent-dark mb-1">
                   💡 Enable automatic tracking
                 </p>
@@ -204,7 +204,7 @@ function LogStepsContent() {
         </div>
 
         {/* Activity Tips */}
-        <div className="bg-accent-light rounded-lg p-4">
+        <div className="bg-indigo-100 dark:bg-indigo-900/20 rounded-lg p-4">
           <h3 className="text-sm font-medium text-accent-dark mb-2">💡 Activity Tips</h3>
           <ul className="text-sm text-accent-dark space-y-1">
             <li>• Aim for at least 10,000 steps per day</li>
@@ -216,18 +216,18 @@ function LogStepsContent() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
-          <h3 className="text-lg font-medium text-foreground mb-4">Recent Activity</h3>
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Recent Activity</h3>
 
           {loadingLogs ? (
             <div className="text-center py-8">
               <div className="animate-spin w-6 h-6 border-3 border-primary border-t-transparent rounded-full mx-auto"></div>
-              <p className="text-sm text-muted-foreground mt-2">Loading activity...</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Loading activity...</p>
             </div>
           ) : recentLogs.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground mb-2">No activity logged yet</p>
-              <p className="text-sm text-muted-foreground">Enable automatic tracking to start recording your steps</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-2">No activity logged yet</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Enable automatic tracking to start recording your steps</p>
             </div>
           ) : (
             <>
@@ -239,11 +239,11 @@ function LogStepsContent() {
                   return (
                     <div
                       key={log.id}
-                      className={`flex items-center justify-between py-2 ${!isLastItem ? 'border-b border-border' : ''}`}
+                      className={`flex items-center justify-between py-2 ${!isLastItem ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
                     >
                       <div>
                         <p className="font-medium">{log.steps.toLocaleString()} steps</p>
-                        <p className="text-sm text-muted-foreground">{formatRelativeDate(log.date)}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{formatRelativeDate(log.date)}</p>
                       </div>
                       <div className="text-right">
                         {goalProgress >= 100 ? (

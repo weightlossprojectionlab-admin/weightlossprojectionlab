@@ -20,7 +20,7 @@ export function XPBadge({ gamification }: XPBadgeProps) {
       <div className="flex items-center justify-between mb-3">
         {/* Level */}
         <div className="flex items-center gap-2">
-          <div className="bg-white text-primary font-bold text-lg px-3 py-1 rounded-full">
+          <div className="bg-white dark:bg-gray-900 text-primary font-bold text-lg px-3 py-1 rounded-full">
             Lvl {gamification.level}
           </div>
           <div>
@@ -46,7 +46,7 @@ export function XPBadge({ gamification }: XPBadgeProps) {
         </div>
         <div className="w-full bg-primary-dark bg-opacity-50 rounded-full h-2">
           <div
-            className="bg-white h-2 rounded-full transition-all duration-300"
+            className="bg-white dark:bg-gray-900 h-2 rounded-full transition-all duration-300"
             style={{ width: `${xpProgress.percentage}%` }}
           />
         </div>
@@ -56,7 +56,7 @@ export function XPBadge({ gamification }: XPBadgeProps) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-2 text-center text-xs mt-3 pt-3 border-t border-white border-opacity-20">
+      <div className="grid grid-cols-2 gap-2 text-center text-xs mt-3 pt-3 border-t border-white dark:border-gray-700 border-opacity-20">
         <div>
           <p className="opacity-80">Missions</p>
           <p className="font-bold text-sm">{gamification.lifetimeMissionsCompleted}</p>
@@ -83,7 +83,7 @@ export function BadgeShowcase({ badges, limit }: BadgeShowcaseProps) {
 
   if (badges.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground bg-card rounded-lg">
+      <div className="text-center py-8 text-gray-600 dark:text-gray-400 bg-white rounded-lg">
         <p className="text-2xl mb-2">🎖️</p>
         <p>No badges yet</p>
         <p className="text-sm mt-1">Complete missions to earn badges!</p>
@@ -93,7 +93,7 @@ export function BadgeShowcase({ badges, limit }: BadgeShowcaseProps) {
 
   // Rarity colors
   const rarityColors = {
-    common: 'border-gray-300 bg-gray-50',
+    common: 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-950',
     rare: 'border-blue-400 bg-blue-50',
     epic: 'border-purple-400 bg-purple-50',
     legendary: 'border-orange-400 bg-orange-50'
@@ -122,15 +122,15 @@ export function BadgeShowcase({ badges, limit }: BadgeShowcaseProps) {
           <div className="flex items-center gap-3">
             <span className="text-4xl">{badge.icon}</span>
             <div className="flex-1">
-              <h4 className="font-semibold text-card-foreground">{badge.name}</h4>
-              <p className="text-sm text-muted-foreground">{badge.description}</p>
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100">{badge.name}</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{badge.description}</p>
               {badge.unlockedAt && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   Unlocked {new Date(badge.unlockedAt).toLocaleDateString()}
                 </p>
               )}
             </div>
-            <span className="text-xs font-medium capitalize px-2 py-1 rounded-full bg-white">
+            <span className="text-xs font-medium capitalize px-2 py-1 rounded-full bg-white dark:bg-gray-900">
               {badge.rarity}
             </span>
           </div>
@@ -138,7 +138,7 @@ export function BadgeShowcase({ badges, limit }: BadgeShowcaseProps) {
       ))}
 
       {limit && badges.length > limit && (
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-sm text-gray-600 dark:text-gray-400">
           +{badges.length - limit} more {badges.length - limit === 1 ? 'badge' : 'badges'}
         </p>
       )}

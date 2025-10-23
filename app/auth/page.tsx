@@ -314,27 +314,27 @@ export default function AuthPage() {
   // Show loading spinner while checking authentication status
   if (authLoading || checkingAuth) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-health-bg to-primary-light px-4 py-8">
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-purple-100 px-4 py-8">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-health-bg to-primary-light px-4 py-8">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-purple-100 px-4 py-8">
       <div className="w-full max-w-md space-y-8">
         {/* Header */}
         <div className="text-center">
-          <Link href="/" className="text-2xl font-bold text-foreground">
+          <Link href="/" className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             WLPL
           </Link>
           <h2 className="mt-4">
             {isSignUp ? 'Create your account' : 'Sign in to your account'}
           </h2>
-          <p className="mt-2 text-body-sm text-muted-foreground">
+          <p className="mt-2 text-body-sm text-gray-600 dark:text-gray-400">
             Track your weight loss journey with AI-powered insights
           </p>
         </div>
@@ -348,7 +348,7 @@ export default function AuthPage() {
 
         {/* Biometric Setup Modal */}
         {showBiometricSetup && signupSuccess && (
-          <div className="health-card shadow-lg">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg hover:shadow-md transition-shadow p-6">
             <div className="text-center space-y-4">
               <div className="mx-auto w-16 h-16 bg-success-light rounded-full flex items-center justify-center">
                 <span className="text-2xl">✅</span>
@@ -356,12 +356,12 @@ export default function AuthPage() {
 
               <div>
                 <h2>Account Created Successfully!</h2>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Welcome to WLPL! Your account is ready to use.
                 </p>
               </div>
 
-              <div className="bg-accent-light rounded-lg p-4">
+              <div className="bg-indigo-100 dark:bg-indigo-900/20 rounded-lg p-4">
                 <div className="flex items-center space-x-3 mb-3">
                   <span className="text-2xl">🔐</span>
                   <div className="text-left">
@@ -381,7 +381,7 @@ export default function AuthPage() {
                   >
                     {biometricLoading ? (
                       <span className="flex items-center justify-center space-x-2">
-                        <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                        <div className="animate-spin w-5 h-5 border-2 border-white dark:border-gray-700 border-t-transparent rounded-full" />
                         <span>Setting up...</span>
                       </span>
                     ) : (
@@ -522,10 +522,10 @@ export default function AuthPage() {
             {/* OAuth Options */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border" />
+                <div className="w-full border-t border-gray-200 dark:border-gray-700" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-white dark:bg-gray-900 px-2 text-gray-600 dark:text-gray-400">Or continue with</span>
               </div>
             </div>
 
@@ -575,7 +575,7 @@ export default function AuthPage() {
         )}
 
         {/* Accessibility Note */}
-        <div className="text-center text-xs text-muted-foreground">
+        <div className="text-center text-xs text-gray-600 dark:text-gray-400">
           <p>Fully accessible • Touch-optimized • Privacy-focused</p>
         </div>
       </div>

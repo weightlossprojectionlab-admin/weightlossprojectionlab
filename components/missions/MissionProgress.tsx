@@ -56,7 +56,7 @@ export default function MissionProgress({
       {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-4">
         {/* Completed Missions */}
-        <div className="bg-card bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+        <div className="bg-white dark:bg-gray-900 bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
           <div className="flex flex-col items-center text-center">
             <CheckCircleIcon className="h-8 w-8 mb-2" />
             <div className="text-2xl font-bold">{completedMissions}</div>
@@ -65,7 +65,7 @@ export default function MissionProgress({
         </div>
 
         {/* Active Missions */}
-        <div className="bg-card bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+        <div className="bg-white dark:bg-gray-900 bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
           <div className="flex flex-col items-center text-center">
             <TrophyIcon className="h-8 w-8 mb-2" />
             <div className="text-2xl font-bold">{activeMissions}</div>
@@ -74,7 +74,7 @@ export default function MissionProgress({
         </div>
 
         {/* Streak */}
-        <div className="bg-card bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
+        <div className="bg-white dark:bg-gray-900 bg-opacity-10 rounded-lg p-4 backdrop-blur-sm">
           <div className="flex flex-col items-center text-center">
             <FireIcon className="h-8 w-8 mb-2 text-orange-300" />
             <div className="text-2xl font-bold">{currentStreak}</div>

@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  darkMode: 'class', // Manual control via class on <html>
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -134,14 +135,6 @@ const config: Config = {
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
-        },
-        // Health-specific semantic colors
-        health: {
-          bg: 'hsl(var(--health-bg))',
-          nutrition: 'hsl(var(--nutrition-accent))',
-          activity: 'hsl(var(--activity-accent))',
-          weight: 'hsl(var(--weight-accent))',
-          progress: 'hsl(var(--progress-bg))',
         },
       },
       borderRadius: {

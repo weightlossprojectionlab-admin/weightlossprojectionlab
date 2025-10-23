@@ -77,8 +77,8 @@ export default function PermissionRequestModal({
   const mobile = isMobile()
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-card rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 dark:bg-opacity-70 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-gradient-to-r from-primary to-primary-dark p-6 text-white">
           <div className="flex items-center space-x-3">
@@ -98,10 +98,10 @@ export default function PermissionRequestModal({
             <>
               {/* Benefits */}
               <div>
-                <h3 className="text-sm font-semibold text-foreground mb-3">Benefits:</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Benefits:</h3>
                 <ul className="space-y-2">
                   {rationale.benefits.map((benefit, index) => (
-                    <li key={index} className="flex items-start space-x-2 text-sm text-foreground">
+                    <li key={index} className="flex items-start space-x-2 text-sm text-gray-900 dark:text-gray-100">
                       <span className="text-success mt-0.5">✓</span>
                       <span>{benefit}</span>
                     </li>
@@ -111,7 +111,7 @@ export default function PermissionRequestModal({
 
               {/* Privacy Note */}
               {type === 'biometric' && (
-                <div className="bg-accent-light rounded-lg p-4">
+                <div className="bg-indigo-100 dark:bg-indigo-900/20 rounded-lg p-4">
                   <div className="flex items-start space-x-2">
                     <span className="text-accent-dark text-lg">🔒</span>
                     <p className="text-xs text-accent-dark">
@@ -124,7 +124,7 @@ export default function PermissionRequestModal({
 
               {/* Mobile Reminder */}
               {mobile && (
-                <div className="bg-accent-light border border-accent rounded-lg p-4">
+                <div className="bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-4">
                   <p className="text-xs text-accent-dark">
                     <strong>Note:</strong> Your browser will show a permission prompt. Please tap "Allow" to enable {typeName.toLowerCase()}.
                   </p>
@@ -141,7 +141,7 @@ export default function PermissionRequestModal({
                 >
                   {isRequesting ? (
                     <span className="flex items-center justify-center space-x-2">
-                      <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                      <div className="animate-spin w-5 h-5 border-2 border-white dark:border-gray-700 border-t-transparent rounded-full" />
                       <span>Requesting...</span>
                     </span>
                   ) : (
@@ -163,7 +163,7 @@ export default function PermissionRequestModal({
                 <button
                   onClick={onClose}
                   disabled={isRequesting}
-                  className="w-full text-sm text-muted-foreground hover:text-foreground py-2"
+                  className="w-full text-sm text-gray-600 hover:text-gray-900 dark:text-gray-100 py-2"
                   aria-label="Close dialog"
                 >
                   Maybe later
@@ -174,12 +174,12 @@ export default function PermissionRequestModal({
             <>
               {/* Settings Instructions */}
               <div className="space-y-4">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="bg-yellow-50 border border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800 rounded-lg p-4">
                   <div className="flex items-start space-x-2">
                     <span className="text-yellow-600 text-xl">⚠️</span>
                     <div>
-                      <h3 className="text-sm font-semibold text-yellow-800 mb-1">Permission Denied</h3>
-                      <p className="text-xs text-yellow-700">
+                      <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-1">Permission Denied</h3>
+                      <p className="text-xs text-yellow-700 dark:text-yellow-400">
                         It looks like {typeName.toLowerCase()} access was denied or blocked. You'll need to enable it in your device settings.
                       </p>
                     </div>
@@ -187,13 +187,13 @@ export default function PermissionRequestModal({
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-2">How to Enable:</h3>
-                  <div className="bg-muted rounded-lg p-4">
-                    <p className="text-sm text-foreground whitespace-pre-line">{instructions}</p>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">How to Enable:</h3>
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
+                    <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-line">{instructions}</p>
                   </div>
                 </div>
 
-                <ol className="text-sm text-foreground space-y-2 list-decimal list-inside">
+                <ol className="text-sm text-gray-900 dark:text-gray-100 space-y-2 list-decimal list-inside">
                   <li>Follow the instructions above to access your settings</li>
                   <li>Find the {typeName.toLowerCase()} permission setting</li>
                   <li>Enable/Allow {typeName.toLowerCase()} access</li>
@@ -221,7 +221,7 @@ export default function PermissionRequestModal({
 
                   <button
                     onClick={onClose}
-                    className="w-full text-sm text-muted-foreground hover:text-foreground py-2"
+                    className="w-full text-sm text-gray-600 hover:text-gray-900 dark:text-gray-100 py-2"
                     aria-label="Close dialog"
                   >
                     Close

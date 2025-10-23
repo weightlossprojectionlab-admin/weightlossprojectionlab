@@ -65,7 +65,7 @@ export function ChatInterface({ userId, className = '' }: ChatInterfaceProps) {
     return (
       <div className={`flex items-center justify-center p-8 ${className}`}>
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
-        <span className="ml-3 text-muted-foreground">Loading chat...</span>
+        <span className="ml-3 text-gray-600 dark:text-gray-400">Loading chat...</span>
       </div>
     )
   }
@@ -84,15 +84,15 @@ export function ChatInterface({ userId, className = '' }: ChatInterfaceProps) {
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 min-h-[400px] max-h-[600px]">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-950 min-h-[400px] max-h-[600px]">
         {/* Greeting */}
         {messages.length === 0 && greeting && (
           <div className="flex justify-start">
-            <div className="bg-white rounded-lg p-4 shadow-sm max-w-[80%]">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow-sm max-w-[80%]">
               <div className="flex items-start gap-2">
                 <span className="text-2xl">🤖</span>
                 <div>
-                  <p className="text-sm text-foreground">{greeting}</p>
+                  <p className="text-sm text-gray-900 dark:text-gray-100">{greeting}</p>
                 </div>
               </div>
             </div>
@@ -107,7 +107,7 @@ export function ChatInterface({ userId, className = '' }: ChatInterfaceProps) {
                 key={i}
                 onClick={() => handleSuggestedPrompt(prompt)}
                 disabled={isSending}
-                className="bg-white border border-primary text-primary px-3 py-2 rounded-full text-sm hover:bg-primary hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-white dark:bg-gray-800 border border-primary text-primary px-3 py-2 rounded-full text-sm hover:bg-primary hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {prompt}
               </button>
@@ -123,14 +123,14 @@ export function ChatInterface({ userId, className = '' }: ChatInterfaceProps) {
         {/* Sending Indicator */}
         {isSending && (
           <div className="flex justify-start">
-            <div className="bg-white rounded-lg p-4 shadow-sm">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow-sm">
               <div className="flex items-center gap-2">
                 <div className="animate-pulse flex space-x-1">
                   <div className="w-2 h-2 bg-primary rounded-full"></div>
                   <div className="w-2 h-2 bg-primary rounded-full animation-delay-200"></div>
                   <div className="w-2 h-2 bg-primary rounded-full animation-delay-400"></div>
                 </div>
-                <span className="text-sm text-muted-foreground">Thinking...</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Thinking...</span>
               </div>
             </div>
           </div>
@@ -138,7 +138,7 @@ export function ChatInterface({ userId, className = '' }: ChatInterfaceProps) {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
             ⚠️ {error}
           </div>
         )}
@@ -148,7 +148,7 @@ export function ChatInterface({ userId, className = '' }: ChatInterfaceProps) {
       </div>
 
       {/* Input Area */}
-      <div className="bg-white p-4 rounded-b-lg border-t">
+      <div className="bg-white dark:bg-gray-900 p-4 rounded-b-lg border-t">
         <div className="flex gap-2">
           <input
             ref={inputRef}
@@ -158,7 +158,7 @@ export function ChatInterface({ userId, className = '' }: ChatInterfaceProps) {
             onKeyPress={handleKeyPress}
             placeholder="Ask about nutrition, meals, or your progress..."
             disabled={isSending}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button
             onClick={handleSend}
@@ -168,7 +168,7 @@ export function ChatInterface({ userId, className = '' }: ChatInterfaceProps) {
             {isSending ? '...' : 'Send'}
           </button>
         </div>
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
           💡 Tip: Ask about meal ideas, nutrition tips, or how you're doing
         </p>
       </div>
@@ -192,14 +192,14 @@ function MessageBubble({ message }: MessageBubbleProps) {
         className={`rounded-lg p-4 shadow-sm max-w-[80%] ${
           isUser
             ? 'bg-primary text-white'
-            : 'bg-white text-foreground'
+            : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
         }`}
       >
         <div className="flex items-start gap-2">
           {!isUser && <span className="text-2xl">🤖</span>}
           <div className="flex-1">
             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-            <p className={`text-xs mt-2 ${isUser ? 'text-white/70' : 'text-muted-foreground'}`}>
+            <p className={`text-xs mt-2 ${isUser ? 'text-white/70' : 'text-gray-600 dark:text-gray-400'}`}>
               {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
@@ -240,11 +240,11 @@ export function ChatWidget({ userId, onExpand }: ChatWidgetProps) {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-96 bg-white rounded-lg shadow-2xl z-50 overflow-hidden">
+    <div className="fixed bottom-6 right-6 w-96 bg-white dark:bg-gray-900 rounded-lg shadow-2xl z-50 overflow-hidden">
       {/* Close Button */}
       <button
         onClick={() => setIsOpen(false)}
-        className="absolute top-2 right-2 text-white hover:bg-white/20 rounded-full p-2 z-10"
+        className="absolute top-2 right-2 text-white hover:bg-white dark:hover:bg-gray-900/20 rounded-full p-2 z-10"
         aria-label="Close chat"
       >
         ✕

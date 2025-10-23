@@ -2,6 +2,7 @@
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { MacroDataPoint } from '@/lib/chart-data-aggregator'
+import { useTheme } from '@/hooks/useTheme'
 
 interface MacroDistributionChartProps {
   data: MacroDataPoint[]
@@ -9,6 +10,7 @@ interface MacroDistributionChartProps {
 }
 
 export function MacroDistributionChart({ data, loading }: MacroDistributionChartProps) {
+  const { resolvedTheme } = useTheme()
   if (loading) {
     return (
       <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse flex items-center justify-center">
@@ -19,7 +21,7 @@ export function MacroDistributionChart({ data, loading }: MacroDistributionChart
 
   if (data.length === 0) {
     return (
-      <div className="w-full h-64 bg-gray-50 dark:bg-gray-950 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
+      <div className="w-full h-64 bg-gray-50 dark:bg-gray-950 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">No macro data available</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">Log meals to track your macronutrients!</p>
@@ -51,6 +53,14 @@ export function MacroDistributionChart({ data, loading }: MacroDistributionChart
     fat: Math.round((totals.fat / grandTotal) * 100)
   } : { protein: 0, carbs: 0, fat: 0 }
 
+  // Theme-aware colors
+  const isDark = resolvedTheme === 'dark'
+  const gridColor = isDark ? '#374151' : '#e5e7eb'
+  const axisColor = isDark ? '#9ca3af' : '#6b7280'
+  const tooltipBg = isDark ? '#1f2937' : '#ffffff'
+  const tooltipBorder = isDark ? '#374151' : '#e5e7eb'
+  const tooltipText = isDark ? '#f9fafb' : '#111827'
+
   return (
     <div className="w-full">
       <ResponsiveContainer width="100%" height={300}>
@@ -70,25 +80,25 @@ export function MacroDistributionChart({ data, loading }: MacroDistributionChart
             </linearGradient>
           </defs>
 
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
           <XAxis
             dataKey="date"
-            stroke="#6b7280"
+            stroke={axisColor}
             style={{ fontSize: '12px' }}
           />
           <YAxis
-            stroke="#6b7280"
+            stroke={axisColor}
             style={{ fontSize: '12px' }}
-            label={{ value: 'Grams', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#6b7280' } }}
+            label={{ value: 'Grams', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: axisColor } }}
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: 'white',
-              border: '1px solid #e5e7eb',
+              backgroundColor: tooltipBg,
+              border: `1px solid ${tooltipBorder}`,
               borderRadius: '8px',
               padding: '8px 12px'
             }}
-            labelStyle={{ color: '#111827', fontWeight: 600 }}
+            labelStyle={{ color: tooltipText, fontWeight: 600 }}
             formatter={(value: number, name: string) => [`${value}g`, name.charAt(0).toUpperCase() + name.slice(1)]}
           />
           <Legend

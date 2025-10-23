@@ -50,20 +50,20 @@ export default function RiskScoreDisplay({ assessment, showDetails = true }: Ris
         <div className="flex items-center space-x-3">
           <RiskIcon className={`h-10 w-10 ${riskLevel.color}`} />
           <div>
-            <h3 className="text-lg font-bold text-foreground">Risk Assessment</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Risk Assessment</h3>
             <p className={`text-sm font-semibold ${riskLevel.color}`}>{riskLevel.label}</p>
           </div>
         </div>
 
         <div className="text-right">
           <div className={`text-4xl font-bold ${riskLevel.color}`}>{score}</div>
-          <div className="text-xs text-muted-foreground">/ 100</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">/ 100</div>
         </div>
       </div>
 
       {/* Score Bar */}
       <div className="mb-6">
-        <div className="w-full bg-muted-dark rounded-full h-3 overflow-hidden">
+        <div className="w-full bg-gray-100 dark:bg-gray-800-dark rounded-full h-3 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
               score >= 70 ? 'bg-red-500' :
@@ -73,7 +73,7 @@ export default function RiskScoreDisplay({ assessment, showDetails = true }: Ris
             style={{ width: `${Math.min(score, 100)}%` }}
           />
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mt-1">
           <span>Low (0-39)</span>
           <span>Medium (40-69)</span>
           <span>High (70-100)</span>
@@ -82,20 +82,20 @@ export default function RiskScoreDisplay({ assessment, showDetails = true }: Ris
 
       {/* Recommendation */}
       {recommendation && (
-        <div className="bg-card rounded-lg border border-border p-4 mb-4">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 p-4 mb-4">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-1">
+              <div className="text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-1">
                 Recommended Action
               </div>
-              <div className="text-base font-semibold text-foreground capitalize">
+              <div className="text-base font-semibold text-gray-900 dark:text-gray-100 capitalize">
                 {recommendation.replace(/_/g, ' ')}
               </div>
             </div>
             {confidence !== undefined && (
               <div className="text-right ml-4">
-                <div className="text-xs text-muted-foreground mb-1">Confidence</div>
-                <div className="text-lg font-bold text-foreground">
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Confidence</div>
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                   {Math.round(confidence * 100)}%
                 </div>
               </div>
@@ -107,14 +107,14 @@ export default function RiskScoreDisplay({ assessment, showDetails = true }: Ris
       {/* Contributing Signals */}
       {showDetails && signals && signals.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-foreground mb-3">Contributing Factors</h4>
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Contributing Factors</h4>
           <div className="space-y-2">
             {signals
               .sort((a, b) => b.weight - a.weight)
               .map((signal, index) => (
-                <div key={index} className="bg-card rounded-lg border border-border p-3">
+                <div key={index} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 p-3">
                   <div className="flex items-start justify-between mb-1">
-                    <span className="text-sm font-medium text-foreground capitalize">
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">
                       {signal.signal.replace(/_/g, ' ')}
                     </span>
                     <span className={`text-sm font-bold ${
@@ -126,7 +126,7 @@ export default function RiskScoreDisplay({ assessment, showDetails = true }: Ris
                     </span>
                   </div>
                   {signal.description && (
-                    <p className="text-xs text-muted-foreground">{signal.description}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{signal.description}</p>
                   )}
                 </div>
               ))}
@@ -134,7 +134,7 @@ export default function RiskScoreDisplay({ assessment, showDetails = true }: Ris
 
           {/* Auto-Resolve Eligibility */}
           {confidence !== undefined && (
-            <div className="mt-4 p-3 bg-accent-light border border-accent rounded-lg">
+            <div className="mt-4 p-3 bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg">
               <div className="text-xs font-semibold text-accent-dark">
                 {confidence >= 0.8 ? '✓' : '⚠'} Auto-Resolution Eligibility
               </div>

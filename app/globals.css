@@ -5,289 +5,261 @@
 :root {
   /* Base colors */
   --background: 0 0% 100%;
-  --foreground: 210 11% 15%;
+  --foreground: 222 47% 11%;
   --card: 0 0% 100%;
-  --card-foreground: 210 11% 15%;
+  --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 210 11% 15%;
+  --popover-foreground: 222 47% 11%;
 
-  /* Health & Wellness Primary - Fresh Green */
-  --primary: 142 71% 45%;
+  /* Primary - Purple (matching admin) */
+  --primary: 262 83% 58%;
   --primary-foreground: 0 0% 100%;
-  --primary-hover: 142 71% 40%;
-  --primary-light: 142 50% 85%;
-  --primary-dark: 142 71% 35%;
+  --primary-hover: 262 83% 53%;
+  --primary-light: 262 50% 95%;
+  --primary-dark: 262 83% 48%;
 
-  /* Secondary - Warm Orange/Amber */
-  --secondary: 32 95% 44%;
+  /* Secondary - Blue */
+  --secondary: 217 91% 60%;
   --secondary-foreground: 0 0% 100%;
-  --secondary-hover: 32 95% 39%;
-  --secondary-light: 32 95% 85%;
-  --secondary-dark: 32 95% 34%;
+  --secondary-hover: 217 91% 55%;
+  --secondary-light: 217 91% 95%;
+  --secondary-dark: 217 91% 50%;
 
-  /* Accent - Trust Blue */
-  --accent: 214 84% 56%;
+  /* Accent - Indigo */
+  --accent: 239 84% 67%;
   --accent-foreground: 0 0% 100%;
-  --accent-hover: 214 84% 51%;
-  --accent-light: 214 84% 85%;
-  --accent-dark: 214 84% 46%;
+  --accent-hover: 239 84% 62%;
+  --accent-light: 239 84% 95%;
+  --accent-dark: 239 84% 57%;
 
-  /* Success - Vibrant Green */
-  --success: 120 61% 50%;
+  /* Success - Green */
+  --success: 142 71% 45%;
   --success-foreground: 0 0% 100%;
-  --success-light: 120 61% 90%;
-  --success-dark: 120 61% 40%;
+  --success-light: 142 71% 95%;
+  --success-dark: 142 71% 35%;
 
   /* Warning - Amber */
-  --warning: 43 96% 56%;
-  --warning-foreground: 210 11% 15%;
-  --warning-light: 43 96% 90%;
-  --warning-dark: 43 96% 46%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+  --warning-light: 38 92% 95%;
+  --warning-dark: 38 92% 40%;
 
-  /* Error - Soft Red */
-  --error: 0 72% 51%;
+  /* Error - Red */
+  --error: 0 84% 60%;
   --error-foreground: 0 0% 100%;
-  --error-light: 0 72% 90%;
-  --error-dark: 0 72% 41%;
+  --error-light: 0 84% 95%;
+  --error-dark: 0 84% 50%;
 
   /* Neutral Grays */
-  --muted: 210 11% 96%;
-  --muted-foreground: 210 11% 46%;
-  --muted-dark: 210 11% 71%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --muted-dark: 217 19% 27%;
 
   /* Borders and inputs */
-  --border: 210 11% 91%;
-  --input: 210 11% 91%;
-  --ring: 142 71% 45%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 262 83% 58%;
 
   /* Destructive (legacy compatibility) */
-  --destructive: 0 72% 51%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
   /* Layout */
   --radius: 0.5rem;
-
-  /* Health-specific colors */
-  --health-bg: 142 25% 97%;
-  --nutrition-accent: 32 95% 44%;
-  --activity-accent: 214 84% 56%;
-  --weight-accent: 142 71% 45%;
-  --progress-bg: 210 11% 98%;
 }
 
 /* System dark mode preference (when no manual theme override) */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     /* Base colors - Dark theme */
-    --background: 210 11% 7%;
-    --foreground: 210 11% 93%;
-    --card: 210 11% 10%;
-    --card-foreground: 210 11% 93%;
-    --popover: 210 11% 10%;
-    --popover-foreground: 210 11% 93%;
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 224 71% 4%;
+    --card-foreground: 210 40% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 210 40% 98%;
 
-    /* Health & Wellness Primary - Brighter for dark */
-    --primary: 142 71% 55%;
-    --primary-foreground: 210 11% 7%;
-    --primary-hover: 142 71% 60%;
-    --primary-light: 142 40% 20%;
-    --primary-dark: 142 71% 45%;
+    /* Primary - Purple (brighter for dark) */
+    --primary: 262 83% 68%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 262 83% 73%;
+    --primary-light: 262 40% 20%;
+    --primary-dark: 262 83% 58%;
 
-    /* Secondary - Brighter orange for dark */
-    --secondary: 32 95% 54%;
-    --secondary-foreground: 210 11% 7%;
-    --secondary-hover: 32 95% 59%;
-    --secondary-light: 32 60% 20%;
-    --secondary-dark: 32 95% 44%;
+    /* Secondary - Blue (brighter for dark) */
+    --secondary: 217 91% 70%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-hover: 217 91% 75%;
+    --secondary-light: 217 50% 20%;
+    --secondary-dark: 217 91% 60%;
 
-    /* Accent - Brighter blue for dark */
-    --accent: 214 84% 66%;
-    --accent-foreground: 210 11% 7%;
-    --accent-hover: 214 84% 71%;
-    --accent-light: 214 50% 20%;
-    --accent-dark: 214 84% 56%;
+    /* Accent - Indigo (brighter for dark) */
+    --accent: 239 84% 77%;
+    --accent-foreground: 0 0% 100%;
+    --accent-hover: 239 84% 82%;
+    --accent-light: 239 50% 20%;
+    --accent-dark: 239 84% 67%;
 
-    /* Success - Brighter green for dark */
-    --success: 120 61% 60%;
-    --success-foreground: 210 11% 7%;
-    --success-light: 120 40% 20%;
-    --success-dark: 120 61% 50%;
+    /* Success - Green (brighter for dark) */
+    --success: 142 71% 55%;
+    --success-foreground: 0 0% 100%;
+    --success-light: 142 40% 20%;
+    --success-dark: 142 71% 45%;
 
-    /* Warning - Brighter amber for dark */
-    --warning: 43 96% 66%;
-    --warning-foreground: 210 11% 7%;
-    --warning-light: 43 60% 20%;
-    --warning-dark: 43 96% 56%;
+    /* Warning - Amber (brighter for dark) */
+    --warning: 38 92% 60%;
+    --warning-foreground: 0 0% 100%;
+    --warning-light: 38 50% 20%;
+    --warning-dark: 38 92% 50%;
 
-    /* Error - Brighter red for dark */
-    --error: 0 72% 61%;
-    --error-foreground: 210 11% 7%;
+    /* Error - Red (brighter for dark) */
+    --error: 0 84% 70%;
+    --error-foreground: 0 0% 100%;
     --error-light: 0 40% 20%;
-    --error-dark: 0 72% 51%;
+    --error-dark: 0 84% 60%;
 
     /* Neutral Grays - Dark theme */
-    --muted: 210 11% 15%;
-    --muted-foreground: 210 11% 65%;
-    --muted-dark: 210 11% 25%;
+    --muted: 217 19% 27%;
+    --muted-foreground: 215 20% 65%;
+    --muted-dark: 217 19% 17%;
 
     /* Borders and inputs - Dark theme */
-    --border: 210 11% 20%;
-    --input: 210 11% 20%;
-    --ring: 142 71% 55%;
+    --border: 217 19% 27%;
+    --input: 217 19% 27%;
+    --ring: 262 83% 68%;
 
     /* Destructive (legacy compatibility) */
-    --destructive: 0 72% 61%;
-    --destructive-foreground: 210 11% 7%;
-
-    /* Health-specific colors - Dark theme */
-    --health-bg: 142 15% 8%;
-    --nutrition-accent: 32 95% 54%;
-    --activity-accent: 214 84% 66%;
-    --weight-accent: 142 71% 55%;
-    --progress-bg: 210 11% 5%;
+    --destructive: 0 84% 70%;
+    --destructive-foreground: 0 0% 100%;
   }
 }
 
 /* Manual dark mode override - use: document.documentElement.setAttribute('data-theme', 'dark') */
 [data-theme="dark"] {
   /* Base colors - Dark theme */
-  --background: 210 11% 7%;
-  --foreground: 210 11% 93%;
-  --card: 210 11% 10%;
-  --card-foreground: 210 11% 93%;
-  --popover: 210 11% 10%;
-  --popover-foreground: 210 11% 93%;
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --card: 224 71% 4%;
+  --card-foreground: 210 40% 98%;
+  --popover: 224 71% 4%;
+  --popover-foreground: 210 40% 98%;
 
-  /* Health & Wellness Primary - Brighter for dark */
-  --primary: 142 71% 55%;
-  --primary-foreground: 210 11% 7%;
-  --primary-hover: 142 71% 60%;
-  --primary-light: 142 40% 20%;
-  --primary-dark: 142 71% 45%;
+  /* Primary - Purple (brighter for dark) */
+  --primary: 262 83% 68%;
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 262 83% 73%;
+  --primary-light: 262 40% 20%;
+  --primary-dark: 262 83% 58%;
 
-  /* Secondary - Brighter orange for dark */
-  --secondary: 32 95% 54%;
-  --secondary-foreground: 210 11% 7%;
-  --secondary-hover: 32 95% 59%;
-  --secondary-light: 32 60% 20%;
-  --secondary-dark: 32 95% 44%;
+  /* Secondary - Blue (brighter for dark) */
+  --secondary: 217 91% 70%;
+  --secondary-foreground: 0 0% 100%;
+  --secondary-hover: 217 91% 75%;
+  --secondary-light: 217 50% 20%;
+  --secondary-dark: 217 91% 60%;
 
-  /* Accent - Brighter blue for dark */
-  --accent: 214 84% 66%;
-  --accent-foreground: 210 11% 7%;
-  --accent-hover: 214 84% 71%;
-  --accent-light: 214 50% 20%;
-  --accent-dark: 214 84% 56%;
+  /* Accent - Indigo (brighter for dark) */
+  --accent: 239 84% 77%;
+  --accent-foreground: 0 0% 100%;
+  --accent-hover: 239 84% 82%;
+  --accent-light: 239 50% 20%;
+  --accent-dark: 239 84% 67%;
 
-  /* Success - Brighter green for dark */
-  --success: 120 61% 60%;
-  --success-foreground: 210 11% 7%;
-  --success-light: 120 40% 20%;
-  --success-dark: 120 61% 50%;
+  /* Success - Green (brighter for dark) */
+  --success: 142 71% 55%;
+  --success-foreground: 0 0% 100%;
+  --success-light: 142 40% 20%;
+  --success-dark: 142 71% 45%;
 
-  /* Warning - Brighter amber for dark */
-  --warning: 43 96% 66%;
-  --warning-foreground: 210 11% 7%;
-  --warning-light: 43 60% 20%;
-  --warning-dark: 43 96% 56%;
+  /* Warning - Amber (brighter for dark) */
+  --warning: 38 92% 60%;
+  --warning-foreground: 0 0% 100%;
+  --warning-light: 38 50% 20%;
+  --warning-dark: 38 92% 50%;
 
-  /* Error - Brighter red for dark */
-  --error: 0 72% 61%;
-  --error-foreground: 210 11% 7%;
+  /* Error - Red (brighter for dark) */
+  --error: 0 84% 70%;
+  --error-foreground: 0 0% 100%;
   --error-light: 0 40% 20%;
-  --error-dark: 0 72% 51%;
+  --error-dark: 0 84% 60%;
 
   /* Neutral Grays - Dark theme */
-  --muted: 210 11% 15%;
-  --muted-foreground: 210 11% 65%;
-  --muted-dark: 210 11% 25%;
+  --muted: 217 19% 27%;
+  --muted-foreground: 215 20% 65%;
+  --muted-dark: 217 19% 17%;
 
   /* Borders and inputs - Dark theme */
-  --border: 210 11% 20%;
-  --input: 210 11% 20%;
-  --ring: 142 71% 55%;
+  --border: 217 19% 27%;
+  --input: 217 19% 27%;
+  --ring: 262 83% 68%;
 
   /* Destructive (legacy compatibility) */
-  --destructive: 0 72% 61%;
-  --destructive-foreground: 210 11% 7%;
-
-  /* Health-specific colors - Dark theme */
-  --health-bg: 142 15% 8%;
-  --nutrition-accent: 32 95% 54%;
-  --activity-accent: 214 84% 66%;
-  --weight-accent: 142 71% 55%;
-  --progress-bg: 210 11% 5%;
+  --destructive: 0 84% 70%;
+  --destructive-foreground: 0 0% 100%;
 }
 
 /* Manual light mode override - use: document.documentElement.setAttribute('data-theme', 'light') */
 [data-theme="light"] {
   /* Base colors */
   --background: 0 0% 100%;
-  --foreground: 210 11% 15%;
+  --foreground: 222 47% 11%;
   --card: 0 0% 100%;
-  --card-foreground: 210 11% 15%;
+  --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 210 11% 15%;
+  --popover-foreground: 222 47% 11%;
 
-  /* Health & Wellness Primary - Fresh Green */
-  --primary: 142 71% 45%;
+  /* Primary - Purple (matching admin) */
+  --primary: 262 83% 58%;
   --primary-foreground: 0 0% 100%;
-  --primary-hover: 142 71% 40%;
-  --primary-light: 142 50% 85%;
-  --primary-dark: 142 71% 35%;
+  --primary-hover: 262 83% 53%;
+  --primary-light: 262 50% 95%;
+  --primary-dark: 262 83% 48%;
 
-  /* Secondary - Warm Orange/Amber */
-  --secondary: 32 95% 44%;
+  /* Secondary - Blue */
+  --secondary: 217 91% 60%;
   --secondary-foreground: 0 0% 100%;
-  --secondary-hover: 32 95% 39%;
-  --secondary-light: 32 95% 85%;
-  --secondary-dark: 32 95% 34%;
+  --secondary-hover: 217 91% 55%;
+  --secondary-light: 217 91% 95%;
+  --secondary-dark: 217 91% 50%;
 
-  /* Accent - Trust Blue */
-  --accent: 214 84% 56%;
+  /* Accent - Indigo */
+  --accent: 239 84% 67%;
   --accent-foreground: 0 0% 100%;
-  --accent-hover: 214 84% 51%;
-  --accent-light: 214 84% 85%;
-  --accent-dark: 214 84% 46%;
+  --accent-hover: 239 84% 62%;
+  --accent-light: 239 84% 95%;
+  --accent-dark: 239 84% 57%;
 
-  /* Success - Vibrant Green */
-  --success: 120 61% 50%;
+  /* Success - Green */
+  --success: 142 71% 45%;
   --success-foreground: 0 0% 100%;
-  --success-light: 120 61% 90%;
-  --success-dark: 120 61% 40%;
+  --success-light: 142 71% 95%;
+  --success-dark: 142 71% 35%;
 
   /* Warning - Amber */
-  --warning: 43 96% 56%;
-  --warning-foreground: 210 11% 15%;
-  --warning-light: 43 96% 90%;
-  --warning-dark: 43 96% 46%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+  --warning-light: 38 92% 95%;
+  --warning-dark: 38 92% 40%;
 
-  /* Error - Soft Red */
-  --error: 0 72% 51%;
+  /* Error - Red */
+  --error: 0 84% 60%;
   --error-foreground: 0 0% 100%;
-  --error-light: 0 72% 90%;
-  --error-dark: 0 72% 41%;
+  --error-light: 0 84% 95%;
+  --error-dark: 0 84% 50%;
 
   /* Neutral Grays */
-  --muted: 210 11% 96%;
-  --muted-foreground: 210 11% 46%;
-  --muted-dark: 210 11% 71%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --muted-dark: 217 19% 27%;
 
   /* Borders and inputs */
-  --border: 210 11% 91%;
-  --input: 210 11% 91%;
-  --ring: 142 71% 45%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 262 83% 58%;
 
   /* Destructive (legacy compatibility) */
-  --destructive: 0 72% 51%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-
-  /* Health-specific colors */
-  --health-bg: 142 25% 97%;
-  --nutrition-accent: 32 95% 44%;
-  --activity-accent: 214 84% 56%;
-  --weight-accent: 142 71% 45%;
-  --progress-bg: 210 11% 98%;
 }
 
 @layer base {
@@ -298,11 +270,26 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Support for light/dark color scheme */
+    color-scheme: light dark;
+    -webkit-color-scheme: light dark;
     /* Safe area insets for notched devices */
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Smooth theme transitions */
+  * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+  }
+
+  /* Prevent transitions on elements that shouldn't animate */
+  *:where(:not(:has(> *))) {
+    transition-property: background-color, border-color, color, fill, stroke;
   }
 
   /* Prevent horizontal overflow on narrow devices */
@@ -459,7 +446,7 @@
     @apply hover:border-[hsl(var(--primary-hover))] focus:border-primary;
   }
 
-  /* Health-specific component styles */
+  /* Card component styles */
   .health-card {
     @apply bg-card rounded-lg p-6 shadow-sm border border-border;
     @apply hover:shadow-md transition-shadow duration-200;
@@ -546,7 +533,7 @@
 
   /* Page layout components */
   .page-header {
-    @apply bg-white shadow-sm sticky top-0 z-40;
+    @apply bg-background shadow-sm sticky top-0 z-40;
   }
 
   .page-header-content {
@@ -554,7 +541,7 @@
   }
 
   .page-title {
-    @apply text-xl font-semibold text-gray-900 md:text-2xl;
+    @apply text-xl font-semibold text-foreground md:text-2xl;
   }
 
   .page-back-button {

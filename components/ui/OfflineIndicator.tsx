@@ -38,14 +38,14 @@ export function OfflineIndicator() {
       {isSyncing && syncProgress && (
         <div className="bg-primary text-white px-4 py-2 rounded-lg shadow-lg">
           <div className="flex items-center space-x-2 mb-2">
-            <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+            <div className="animate-spin w-4 h-4 border-2 border-white dark:border-gray-700 border-t-transparent rounded-full"></div>
             <p className="font-medium text-sm">Syncing Meals...</p>
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full bg-primary-light rounded-full h-1.5 mb-1">
+          <div className="w-full bg-purple-100 dark:bg-purple-900/20 rounded-full h-1.5 mb-1">
             <div
-              className="bg-white h-1.5 rounded-full transition-all duration-300"
+              className="bg-white dark:bg-gray-300 h-1.5 rounded-full transition-all duration-300"
               style={{
                 width: `${(syncProgress.completed / syncProgress.total) * 100}%`
               }}

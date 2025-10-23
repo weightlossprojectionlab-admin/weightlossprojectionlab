@@ -24,6 +24,13 @@ export interface AccelerometerData {
  * - maxStepInterval: Slowest possible step (800ms = slow walking)
  * - smoothingWindow: Moving average window size (3-5 samples)
  * - minMagnitudeDelta: Minimum peak prominence (0.15g)
+ *
+ * Vehicle motion detection parameters:
+ * - vehicleDetectionEnabled: Enable vehicle motion filtering (default: true)
+ * - consistencyThreshold: Max interval variance for vehicle detection (default: 0.3)
+ * - minWalkingFrequency: Minimum Hz for walking pattern (default: 1.5)
+ * - maxWalkingFrequency: Maximum Hz for walking pattern (default: 2.5)
+ * - vehicleConsistencyWindow: Samples to analyze for consistency (default: 5)
  */
 export interface StepDetectionConfig {
   sensitivity: number // g-force threshold (default: 1.2)
@@ -31,6 +38,13 @@ export interface StepDetectionConfig {
   maxStepInterval: number // milliseconds (default: 800)
   smoothingWindow: number // samples (default: 3)
   minMagnitudeDelta: number // g-force (default: 0.15)
+
+  // Vehicle motion detection
+  vehicleDetectionEnabled: boolean // Enable vehicle filtering (default: true)
+  consistencyThreshold: number // Max variance for vehicle (default: 0.3)
+  minWalkingFrequency: number // Hz (default: 1.5)
+  maxWalkingFrequency: number // Hz (default: 2.5)
+  vehicleConsistencyWindow: number // Samples (default: 5)
 }
 
 /**
@@ -44,6 +58,10 @@ export interface StepCounterState {
   calibrated: boolean // Has user calibrated device
   lastMagnitude: number // Previous magnitude value (for peak detection)
   magnitudeBuffer: number[] // Rolling buffer for smoothing
+
+  // Vehicle detection state
+  stepIntervalBuffer: number[] // Recent step intervals for consistency analysis
+  consecutiveRegularIntervals: number // Count of overly consistent intervals (vehicle indicator)
 }
 
 /**

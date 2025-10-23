@@ -19,7 +19,7 @@ export default function CoachingPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading coaching data...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading coaching data...</p>
         </div>
       </div>
     );
@@ -40,7 +40,7 @@ export default function CoachingPage() {
   if (!isEligibleForCoaching(coachingData)) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
-        <div className="bg-accent-light border border-accent rounded-lg p-6">
+        <div className="bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-6">
           <h2 className="text-2xl font-bold text-accent-dark mb-4">
             🎯 Coaching Unlocking Soon!
           </h2>
@@ -101,12 +101,12 @@ export default function CoachingPage() {
 
         {/* Pending Nudges/Actions */}
         {coachingData.actions.length > 0 && (
-          <div className="bg-card rounded-lg border border-border p-6 mt-6">
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 p-6 mt-6">
             <h2 className="text-xl font-semibold mb-4">Upcoming Reminders</h2>
             <div className="space-y-2">
               {coachingData.actions.map((nudge) => (
-                <div key={nudge.nudgeId} className="p-3 bg-accent-light border border-accent rounded-lg">
-                  <p className="text-sm text-foreground">{nudge.content}</p>
+                <div key={nudge.nudgeId} className="p-3 bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg">
+                  <p className="text-sm text-gray-900 dark:text-gray-100">{nudge.content}</p>
                 </div>
               ))}
             </div>

@@ -101,7 +101,7 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full bg-muted rounded-full h-2 mb-3">
+        <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-3">
           <div
             className={`h-2 rounded-full transition-all duration-1000 ${
               isCompleted ? 'bg-success' : 'bg-primary'
@@ -110,7 +110,7 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
           />
         </div>
 
-        <p className="text-sm text-muted-foreground">{stepText}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{stepText}</p>
       </div>
 
       {/* Timer Controls */}
@@ -142,7 +142,7 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
 
             <button
               onClick={resetTimer}
-              className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted-hover transition-colors font-medium"
+              className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
             >
               Reset
             </button>
@@ -160,12 +160,12 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
       {/* Quick Add Time Buttons */}
       {!isCompleted && (
         <div className="flex items-center justify-center space-x-2">
-          <span className="text-xs text-muted-foreground mr-2">Quick add:</span>
+          <span className="text-xs text-gray-600 dark:text-gray-400 mr-2">Quick add:</span>
           {[30, 60, 120, 300].map((seconds) => (
             <button
               key={seconds}
               onClick={() => addTime(seconds)}
-              className="text-xs px-2 py-1 bg-background border border-border rounded hover:bg-muted transition-colors"
+              className="text-xs px-2 py-1 bg-white dark:bg-gray-900 border border-gray-200 rounded hover:bg-gray-100 transition-colors"
             >
               +{seconds < 60 ? `${seconds}s` : `${seconds / 60}m`}
             </button>

@@ -110,14 +110,14 @@ export function GoalsEditor({ isOpen, onClose, userProfile, currentWeight, onSuc
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-card border-b border-border p-6 pb-4">
+        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 p-6 pb-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-foreground">Adjust Your Goals</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Adjust Your Goals</h2>
             <button
               onClick={onClose}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-gray-600 hover:text-gray-900 dark:text-gray-100"
               aria-label="Close"
             >
               ✕
@@ -129,7 +129,7 @@ export function GoalsEditor({ isOpen, onClose, userProfile, currentWeight, onSuc
         <div className="p-6 space-y-6">
           {/* Current vs Recalculated */}
           {showSuggestion && suggestions && (
-            <div className="bg-accent-light border border-accent rounded-lg p-4">
+            <div className="bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-4">
               <h3 className="font-medium text-accent-dark mb-2">📊 Recalculated Metrics</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -161,7 +161,7 @@ export function GoalsEditor({ isOpen, onClose, userProfile, currentWeight, onSuc
 
           {/* Target Weight */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
               Target Weight (lbs)
             </label>
             <input
@@ -177,7 +177,7 @@ export function GoalsEditor({ isOpen, onClose, userProfile, currentWeight, onSuc
 
           {/* Weekly Goal */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
               Weekly Weight Loss Goal (lbs/week)
             </label>
             <input
@@ -189,32 +189,32 @@ export function GoalsEditor({ isOpen, onClose, userProfile, currentWeight, onSuc
               max="2"
               step="0.1"
             />
-            <div className="flex justify-between text-sm text-muted-foreground mt-1">
+            <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mt-1">
               <span>0.5 lbs</span>
               <span className="font-medium text-primary">{weeklyGoal.toFixed(1)} lbs/week</span>
               <span>2 lbs</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               Recommended: 0.5-2 lbs/week for sustainable weight loss
             </p>
           </div>
 
           {/* Daily Calorie Goal - Auto-Calculated Only */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Daily Calorie Goal <span className="text-xs text-muted-foreground">(Auto-Calculated)</span>
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              Daily Calorie Goal <span className="text-xs text-gray-600 dark:text-gray-400">(Auto-Calculated)</span>
             </label>
             <div className="relative">
               <input
                 type="number"
                 value={calorieGoal}
                 readOnly
-                className="form-input w-full bg-muted cursor-not-allowed"
+                className="form-input w-full bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
                 min="1200"
                 max="4000"
                 step="50"
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-600 dark:text-gray-400">
                 🔒 Auto
               </div>
             </div>
@@ -226,17 +226,17 @@ export function GoalsEditor({ isOpen, onClose, userProfile, currentWeight, onSuc
 
           {/* Safety Warning */}
           {calorieGoal < 1200 && (
-            <div className="bg-error-light border border-error rounded-lg p-3">
-              <p className="text-xs text-error-dark">
+            <div className="bg-error-light dark:bg-red-900/20 dark:border-red-800 border border-error rounded-lg p-3">
+              <p className="text-xs text-error-dark dark:text-red-300">
                 ⚠️ Warning: Daily intake below 1200 calories is not recommended without medical supervision.
               </p>
             </div>
           )}
 
           {/* Preview */}
-          <div className="bg-muted rounded-lg p-4">
-            <h3 className="font-medium text-foreground mb-2">Summary</h3>
-            <div className="space-y-1 text-sm text-foreground">
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
+            <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Summary</h3>
+            <div className="space-y-1 text-sm text-gray-900 dark:text-gray-100">
               <div className="flex justify-between">
                 <span>Current Weight:</span>
                 <span className="font-medium">{currentWeight.toFixed(1)} lbs</span>
@@ -262,7 +262,7 @@ export function GoalsEditor({ isOpen, onClose, userProfile, currentWeight, onSuc
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-card border-t border-border p-6 pt-4 flex space-x-3">
+        <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 p-6 pt-4 flex space-x-3">
           <button
             onClick={onClose}
             className="btn btn-secondary flex-1"
@@ -277,7 +277,7 @@ export function GoalsEditor({ isOpen, onClose, userProfile, currentWeight, onSuc
           >
             {loading ? (
               <span className="flex items-center justify-center space-x-2">
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                <div className="animate-spin w-4 h-4 border-2 border-white dark:border-gray-700 border-t-transparent rounded-full" />
                 <span>Saving...</span>
               </span>
             ) : (

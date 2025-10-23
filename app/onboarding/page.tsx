@@ -630,15 +630,15 @@ function OnboardingContent() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-white dark:bg-gray-900">
       <div className="container-medium py-8">
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-muted-foreground">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
               Step {currentStep} of {totalSteps}
             </span>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               {Math.round((currentStep / totalSteps) * 100)}% Complete
             </span>
           </div>
@@ -741,14 +741,14 @@ function StepOne({
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2>Tell us about yourself</h2>
-        <p className="text-muted-foreground mt-2">We'll use this to calculate your personalized targets</p>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">We'll use this to calculate your personalized targets</p>
       </div>
 
       {/* Birthday */}
       <div>
         <label className="text-label block mb-2">
           Birthday <span className="text-error">*</span>
-          <span className="text-xs text-muted-foreground ml-2">
+          <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
             (Required for age-appropriate recommendations)
           </span>
         </label>
@@ -888,7 +888,7 @@ function StepOne({
         )}
 
         {/* Privacy notice */}
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
           🔒 We collect your birthday to provide age-appropriate health recommendations and ensure safe calorie targets. Your birthday is kept private and never shared.
         </p>
 
@@ -923,10 +923,10 @@ function StepOne({
               onClick={() => updateData({ gender: option.value as Gender })}
               className={`p-4 border-2 rounded-lg text-left transition-all ${
                 data.gender === option.value
-                  ? 'border-primary bg-primary-light ring-2 ring-primary'
+                  ? 'border-primary bg-purple-100 dark:bg-purple-900/20 ring-2 ring-primary'
                   : isFieldInvalid('gender')
                     ? 'border-error hover:border-error'
-                    : 'border-border hover:border-primary/50'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
               }`}
             >
               <div className="flex items-center space-x-2">
@@ -953,24 +953,24 @@ function StepOne({
             onClick={() => updateData({ units: 'imperial' })}
             className={`p-4 border-2 rounded-lg transition-all ${
               data.units === 'imperial'
-                ? 'border-primary bg-primary-light ring-2 ring-primary'
-                : 'border-border hover:border-primary/50'
+                ? 'border-primary bg-purple-100 dark:bg-purple-900/20 ring-2 ring-primary'
+                : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
             }`}
           >
             <div className="font-medium">Imperial</div>
-            <div className="text-sm text-muted-foreground">lbs, inches</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">lbs, inches</div>
           </button>
           <button
             type="button"
             onClick={() => updateData({ units: 'metric' })}
             className={`p-4 border-2 rounded-lg transition-all ${
               data.units === 'metric'
-                ? 'border-primary bg-primary-light ring-2 ring-primary'
-                : 'border-border hover:border-primary/50'
+                ? 'border-primary bg-purple-100 dark:bg-purple-900/20 ring-2 ring-primary'
+                : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
             }`}
           >
             <div className="font-medium">Metric</div>
-            <div className="text-sm text-muted-foreground">kg, cm</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">kg, cm</div>
           </button>
         </div>
       </div>
@@ -1004,7 +1004,7 @@ function StepOne({
                     className={`form-input text-center ${isFieldInvalid('height') ? 'border-error' : ''}`}
                     placeholder="e.g., 5"
                   />
-                  <span className="text-sm font-medium text-muted-foreground">ft</span>
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">ft</span>
                 </div>
               </div>
 
@@ -1027,7 +1027,7 @@ function StepOne({
                     className={`form-input text-center ${isFieldInvalid('height') ? 'border-error' : ''}`}
                     placeholder="e.g., 10"
                   />
-                  <span className="text-sm font-medium text-muted-foreground">in</span>
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">in</span>
                 </div>
               </div>
             </div>
@@ -1048,7 +1048,7 @@ function StepOne({
                 className={`form-input flex-1 ${isFieldInvalid('height') ? 'border-error' : ''}`}
                 placeholder="173"
               />
-              <span className="text-sm font-medium text-muted-foreground">cm</span>
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">cm</span>
             </div>
             <p className="text-caption mt-1">
               Example: 173 cm
@@ -1081,7 +1081,7 @@ function StepTwo({
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2>Your current state</h2>
-        <p className="text-muted-foreground mt-2">Help us understand where you're starting from</p>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Help us understand where you're starting from</p>
       </div>
 
       {/* Current Weight */}
@@ -1130,10 +1130,10 @@ function StepTwo({
               onClick={() => updateData({ activityLevel: option.value as ActivityLevel })}
               className={`w-full p-4 border-2 rounded-lg text-left transition-all ${
                 data.activityLevel === option.value
-                  ? 'border-primary bg-primary-light ring-2 ring-primary'
+                  ? 'border-primary bg-purple-100 dark:bg-purple-900/20 ring-2 ring-primary'
                   : isFieldInvalid('activityLevel')
                     ? 'border-error hover:border-error'
-                    : 'border-border hover:border-primary/50'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -1141,7 +1141,7 @@ function StepTwo({
                   <span className="text-2xl">{option.emoji}</span>
                   <div>
                     <div className="font-medium">{option.label}</div>
-                    <div className="text-sm text-muted-foreground">{option.desc}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">{option.desc}</div>
                   </div>
                 </div>
                 {data.activityLevel === option.value && (
@@ -1229,7 +1229,7 @@ function StepThree({
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2>Your personalized plan</h2>
-        <p className="text-muted-foreground mt-2">Based on your profile, we've calculated optimal targets for your success</p>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Based on your profile, we've calculated optimal targets for your success</p>
       </div>
 
       {/* Primary Goal */}
@@ -1250,10 +1250,10 @@ function StepThree({
               onClick={() => updateData({ primaryGoal: option.value as any })}
               className={`p-4 border-2 rounded-lg transition-all ${
                 data.primaryGoal === option.value
-                  ? 'border-primary bg-primary-light ring-2 ring-primary'
+                  ? 'border-primary bg-purple-100 dark:bg-purple-900/20 ring-2 ring-primary'
                   : isFieldInvalid('primaryGoal')
                     ? 'border-error hover:border-error'
-                    : 'border-border hover:border-primary/50'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
               }`}
             >
               <div className="text-2xl mb-1">{option.emoji}</div>
@@ -1269,38 +1269,38 @@ function StepThree({
 
       {/* Auto-Calculated Targets Display */}
       {optimalTargets && (
-        <div className="bg-gradient-to-r from-primary-light to-blue-50 border-2 border-primary rounded-lg p-5 space-y-4">
+        <div className="bg-gradient-to-r from-purple-100 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-2 border-primary rounded-lg p-5 space-y-4">
           <div className="flex items-start space-x-3">
             <span className="text-2xl">🎯</span>
             <div className="flex-1">
-              <h3 className="font-bold text-primary-dark mb-1">Your Optimized Targets</h3>
-              <p className="text-xs text-primary-dark/80">
+              <h3 className="font-bold text-primary-dark dark:text-primary-light mb-1">Your Optimized Targets</h3>
+              <p className="text-xs text-primary-dark/80 dark:text-primary-light/80">
                 Calculated by our system based on evidence-based guidelines for safe, sustainable results
               </p>
             </div>
           </div>
 
           {/* Target Weight */}
-          <div className="bg-card rounded-lg p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-foreground">Target Weight</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Target Weight</span>
               <span className="text-2xl font-bold text-primary">{optimalTargets.targetWeight} {data.units === 'imperial' ? 'lbs' : 'kg'}</span>
             </div>
-            <p className="text-xs text-muted-foreground">{optimalTargets.reasoning.targetWeightReason}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{optimalTargets.reasoning.targetWeightReason}</p>
           </div>
 
           {/* Weekly Weight Loss Goal */}
-          <div className="bg-card rounded-lg p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-foreground">Weekly Rate</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Weekly Rate</span>
               <span className="text-2xl font-bold text-primary">{optimalTargets.weeklyWeightLossGoal.toFixed(1)} lbs/week</span>
             </div>
-            <p className="text-xs text-muted-foreground">{optimalTargets.reasoning.weeklyGoalReason}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{optimalTargets.reasoning.weeklyGoalReason}</p>
           </div>
 
           {/* Safety Notice */}
-          <div className="bg-accent-light border border-accent rounded-lg p-3">
-            <p className="text-xs text-accent-dark">
+          <div className="bg-indigo-100 dark:bg-indigo-900/20 border border-accent dark:border-accent-light rounded-lg p-3">
+            <p className="text-xs text-accent-dark dark:text-accent-light">
               <strong>🔒 These targets are locked</strong> to ensure your safety and success. They're based on your BMI, age, health conditions, and activity level using evidence-based formulas.
             </p>
           </div>
@@ -1309,7 +1309,7 @@ function StepThree({
 
       {/* Projection */}
       {projection && (
-        <div className="bg-muted border-2 border-border rounded-lg p-4">
+        <div className="bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-4">
           <div className="font-medium mb-2">📊 Your Timeline</div>
           <div className="text-sm space-y-1">
             <p><span className="font-medium">Estimated time:</span> {projection.estimatedWeeks} weeks (~{Math.round(projection.estimatedWeeks / 4)} months)</p>
@@ -1350,25 +1350,25 @@ function StepFour({
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2>Your daily targets</h2>
-        <p className="text-muted-foreground mt-2">These are calculated based on your profile to optimize your results</p>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">These are calculated based on your profile to optimize your results</p>
       </div>
 
       {/* Daily Calories - LOCKED (Auto-Calculated) */}
-      <div className="bg-primary-light border-2 border-primary rounded-lg p-5">
+      <div className="bg-purple-100 dark:bg-purple-900/20 border-2 border-primary rounded-lg p-5">
         <label className="text-label block mb-3">
-          Daily Calorie Goal <span className="text-xs text-muted-foreground ml-2">(Auto-Calculated)</span>
+          Daily Calorie Goal <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">(Auto-Calculated)</span>
         </label>
         <div className="flex items-center space-x-4 mb-2">
           <input
             type="number"
             value={data.dailyCalorieGoal || ''}
             readOnly
-            className="form-input flex-1 text-lg font-semibold bg-muted cursor-not-allowed"
+            className="form-input flex-1 text-lg font-semibold bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
             placeholder="Auto-calculated"
           />
-          <span className="text-muted-foreground font-medium">calories/day</span>
+          <span className="text-gray-600 dark:text-gray-400 font-medium">calories/day</span>
         </div>
-        <div className="flex items-center space-x-2 text-xs text-primary-dark">
+        <div className="flex items-center space-x-2 text-xs text-primary-dark dark:text-primary-light">
           <span>🔒</span>
           <span>Locked for your safety. Based on your BMR, activity level, and weight loss goal.</span>
         </div>
@@ -1376,20 +1376,20 @@ function StepFour({
 
       {/* Daily Steps - LOCKED (Auto-Calculated) */}
       {optimalTargets && (
-        <div className="bg-card border-2 border-border rounded-lg p-5">
+        <div className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-5">
           <label className="text-label block mb-3">
-            Daily Steps Goal <span className="text-xs text-muted-foreground ml-2">(Auto-Calculated)</span>
+            Daily Steps Goal <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">(Auto-Calculated)</span>
           </label>
           <div className="flex items-center space-x-4 mb-2">
             <input
               type="number"
               value={optimalTargets.dailySteps}
               readOnly
-              className="form-input flex-1 text-lg font-semibold bg-muted cursor-not-allowed"
+              className="form-input flex-1 text-lg font-semibold bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
             />
-            <span className="text-muted-foreground font-medium">steps/day</span>
+            <span className="text-gray-600 dark:text-gray-400 font-medium">steps/day</span>
           </div>
-          <p className="text-xs text-muted-foreground">{optimalTargets.reasoning.stepsReason}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">{optimalTargets.reasoning.stepsReason}</p>
         </div>
       )}
 
@@ -1408,24 +1408,24 @@ function StepFour({
       )}
 
       {/* Macro Targets */}
-      <div className="bg-muted rounded-lg p-4">
+      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
         <div className="font-medium mb-3">Macro Distribution</div>
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           Macronutrients (macros) are the three main nutrients your body needs: protein builds muscle, carbs provide energy, and fats support hormones and cell function. These targets help you achieve balanced nutrition for your goals.
         </p>
         {data.macroTargets && (
           <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="bg-card rounded-lg p-3 border border-border">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-primary">{data.macroTargets.protein}g</div>
-              <div className="text-xs text-muted-foreground mt-1">Protein</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Protein</div>
             </div>
-            <div className="bg-card rounded-lg p-3 border border-border">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-success">{data.macroTargets.carbs}g</div>
-              <div className="text-xs text-muted-foreground mt-1">Carbs</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Carbs</div>
             </div>
-            <div className="bg-card rounded-lg p-3 border border-border">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
               <div className="text-2xl font-bold text-accent">{data.macroTargets.fat}g</div>
-              <div className="text-xs text-muted-foreground mt-1">Fat</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Fat</div>
             </div>
           </div>
         )}
@@ -1480,14 +1480,14 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
         <p className="text-error font-semibold mt-2">
           This step prevents dangerous meal suggestions. Please be thorough.
         </p>
-        <div className="bg-error-light border-2 border-error rounded-lg p-4 mt-4">
-          <h3 className="font-bold text-error-dark mb-2">Why This Matters</h3>
-          <ul className="text-sm text-error-dark space-y-1 text-left list-none">
+        <div className="bg-error-light dark:bg-error-dark/20 border-2 border-error rounded-lg p-4 mt-4">
+          <h3 className="font-bold text-error-dark dark:text-error-light mb-2">Why This Matters</h3>
+          <ul className="text-sm text-error-dark dark:text-error-light space-y-1 text-left list-none">
             <li>❌ Skip allergies → We might suggest peanuts to someone with severe allergy</li>
             <li>❌ Skip diabetes → We might suggest 80g carb meals causing blood sugar spikes</li>
             <li>❌ Skip dietary needs → We might suggest meat to vegetarians</li>
           </ul>
-          <p className="text-sm text-error-dark font-bold mt-3 text-center">
+          <p className="text-sm text-error-dark dark:text-error-light font-bold mt-3 text-center">
             If you skip this step, meal suggestions will NOT be personalized or safe.
           </p>
         </div>
@@ -1495,17 +1495,17 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
 
       {/* BMI Health Risk Assessment */}
       {bmiData && healthRisk && (
-        <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-400 rounded-lg p-5">
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border-2 border-orange-400 dark:border-orange-600 rounded-lg p-5">
           <div className="flex items-start space-x-3">
             <span className="text-3xl">⚠️</span>
             <div className="flex-1">
-              <h3 className="font-bold text-orange-900 mb-2">Your Health Profile</h3>
+              <h3 className="font-bold text-orange-900 dark:text-orange-200 mb-2">Your Health Profile</h3>
               <div className="space-y-1">
-                <p className="text-sm text-orange-800">
+                <p className="text-sm text-orange-800 dark:text-orange-300">
                   Your BMI: <strong>{bmiData.bmi.toFixed(1)}</strong> ({healthRisk.bmiCategory})
                 </p>
                 {healthRisk.warnings.map((warning, i) => (
-                  <p key={i} className="text-xs text-orange-700">• {warning}</p>
+                  <p key={i} className="text-xs text-orange-700 dark:text-orange-400">• {warning}</p>
                 ))}
               </div>
             </div>
@@ -1515,9 +1515,9 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
 
       {/* Lifestyle Reality Check */}
       <div className="space-y-4">
-        <div className="bg-primary-light border-2 border-primary rounded-lg p-4">
-          <h3 className="font-medium text-primary-dark mb-1">🔒 Lifestyle Reality Check</h3>
-          <p className="text-sm text-primary-dark">
+        <div className="bg-purple-100 dark:bg-purple-900/20 border-2 border-primary rounded-lg p-4">
+          <h3 className="font-medium text-primary-dark dark:text-primary-light mb-1">🔒 Lifestyle Reality Check</h3>
+          <p className="text-sm text-primary-dark dark:text-primary-light">
             Your lifestyle affects your metabolism and calorie needs. We need honest answers for safe, accurate recommendations.
             <strong> Remember: This is about ACCOUNTABILITY, not judgment.</strong>
           </p>
@@ -1540,8 +1540,8 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
                 onClick={() => updateData({ smoking: option.value as any })}
                 className={`w-full p-3 border-2 rounded-lg text-left transition-all text-sm ${
                   data.smoking === option.value
-                    ? 'border-primary bg-primary-light ring-2 ring-primary'
-                    : 'border-border hover:border-primary/50'
+                    ? 'border-primary bg-purple-100 dark:bg-purple-900/20 ring-2 ring-primary'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
                 }`}
               >
                 {option.label}
@@ -1549,12 +1549,12 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
             ))}
           </div>
           {(data.smoking === 'current-light' || data.smoking === 'current-heavy') && (
-            <p className="text-xs text-warning mt-2">
+            <p className="text-xs text-warning dark:text-warning-light mt-2">
               ⚠️ Smokers burn 200-300 extra cal/day. If you quit during your journey, expect 5-10 lb weight gain from metabolic slowdown.
             </p>
           )}
           {data.smoking === 'quit-recent' && (
-            <p className="text-xs text-warning mt-2">
+            <p className="text-xs text-warning dark:text-warning-light mt-2">
               ⚠️ Recent quitters have ~200 cal/day slower metabolism. Your calorie target will be adjusted accordingly.
             </p>
           )}
@@ -1565,7 +1565,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
           <label className="text-label block mb-2">Alcohol Consumption</label>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-muted-foreground">Frequency</label>
+              <label className="text-xs text-gray-600 dark:text-gray-400">Frequency</label>
               <select
                 value={data.alcoholFrequency || 'never'}
                 onChange={(e) => updateData({ alcoholFrequency: e.target.value as any })}
@@ -1578,7 +1578,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
               </select>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Drinks per week</label>
+              <label className="text-xs text-gray-600 dark:text-gray-400">Drinks per week</label>
               <input
                 type="number"
                 min="0"
@@ -1591,7 +1591,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
             </div>
           </div>
           {data.weeklyDrinks && data.weeklyDrinks > 0 && (
-            <p className="text-xs text-warning mt-2">
+            <p className="text-xs text-warning dark:text-warning-light mt-2">
               ⚠️ Alcohol Impact: ~{Math.round((data.weeklyDrinks * 150) / 7)} hidden cal/day from drinks.
               Each drink = 150 cal + 24 hours of reduced fat burning.
             </p>
@@ -1602,7 +1602,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
         <div>
           <label className="text-label block mb-2">
             Recreational Drug Use
-            <span className="text-xs text-muted-foreground ml-2">(Private & confidential)</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">(Private & confidential)</span>
           </label>
           <div className="space-y-2">
             {[
@@ -1616,15 +1616,15 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
                 onClick={() => updateData({ recreationalDrugs: option.value as any })}
                 className={`w-full p-3 border-2 rounded-lg text-left transition-all text-sm ${
                   data.recreationalDrugs === option.value
-                    ? 'border-primary bg-primary-light ring-2 ring-primary'
-                    : 'border-border hover:border-primary/50'
+                    ? 'border-primary bg-purple-100 dark:bg-purple-900/20 ring-2 ring-primary'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
                 }`}
               >
                 {option.label}
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
             🔒 Your data is encrypted and never shared. We ask because marijuana increases appetite and
             stimulants artificially suppress it, affecting tracking accuracy.
           </p>
@@ -1636,7 +1636,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
         <div>
           <label className="text-label block mb-2">
             Health Conditions
-            <span className="text-xs text-warning ml-2">
+            <span className="text-xs text-warning dark:text-warning-light ml-2">
               (Pre-selected based on your BMI - uncheck if not applicable)
             </span>
           </label>
@@ -1648,15 +1648,15 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
                 onClick={() => toggleHealthCondition(condition)}
                 className={`px-4 py-2 rounded-lg border-2 transition-all text-sm ${
                   data.healthConditions?.includes(condition)
-                    ? 'border-warning bg-warning-light text-warning-dark font-medium'
-                    : 'border-warning/30 hover:border-warning/50 text-warning-dark/60'
+                    ? 'border-warning bg-warning-light dark:bg-warning-dark/20 text-warning-dark dark:text-warning-light font-medium'
+                    : 'border-warning/30 dark:border-warning/50 hover:border-warning/50 dark:hover:border-warning/70 text-warning-dark dark:text-warning-light/60'
                 }`}
               >
                 {condition}
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
             These conditions are common at your BMI category and affect your calorie targets for safe weight loss.
           </p>
         </div>
@@ -1666,7 +1666,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
       <div>
         <label className="text-label block mb-3">
           Dietary Preferences <span className="text-error">*</span>
-          <span className="text-xs text-muted-foreground ml-2">(Select all that apply, or "None")</span>
+          <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">(Select all that apply, or "None")</span>
         </label>
         <div className="grid grid-cols-2 gap-2">
           {/* Explicit "None" option */}
@@ -1675,8 +1675,8 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
             onClick={() => updateData({ dietaryPreferences: [] })}
             className={`px-4 py-2 rounded-lg border-2 transition-all text-sm ${
               data.dietaryPreferences?.length === 0
-                ? 'border-success bg-success-light text-success-dark font-bold'
-                : 'border-border hover:border-success/50'
+                ? 'border-success bg-success-light dark:bg-success-dark/20 text-success-dark dark:text-success-light font-bold'
+                : 'border-gray-200 dark:border-gray-700 hover:border-success/50'
             }`}
           >
             ✓ None (No restrictions)
@@ -1688,8 +1688,8 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
               onClick={() => toggleDietaryPref(pref)}
               className={`px-4 py-2 rounded-lg border-2 transition-all text-sm ${
                 data.dietaryPreferences?.includes(pref)
-                  ? 'border-primary bg-primary-light text-primary'
-                  : 'border-border hover:border-primary/50'
+                  ? 'border-primary bg-purple-100 dark:bg-purple-900/20 text-primary dark:text-primary-light'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
               }`}
             >
               {pref}
@@ -1702,7 +1702,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
       <div>
         <label className="text-label block mb-3">
           Food Allergies <span className="text-error">*</span>
-          <span className="text-xs text-muted-foreground ml-2">(Select all that apply, or "None")</span>
+          <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">(Select all that apply, or "None")</span>
         </label>
         <div className="grid grid-cols-2 gap-2">
           {/* Explicit "None" option */}
@@ -1711,8 +1711,8 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
             onClick={() => updateData({ foodAllergies: [] })}
             className={`px-4 py-2 rounded-lg border-2 transition-all text-sm ${
               data.foodAllergies?.length === 0
-                ? 'border-success bg-success-light text-success-dark font-bold'
-                : 'border-border hover:border-success/50'
+                ? 'border-success bg-success-light dark:bg-success-dark/20 text-success-dark dark:text-success-light font-bold'
+                : 'border-gray-200 dark:border-gray-700 hover:border-success/50'
             }`}
           >
             ✓ None (No allergies)
@@ -1724,8 +1724,8 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
               onClick={() => toggleAllergy(allergy)}
               className={`px-4 py-2 rounded-lg border-2 transition-all text-sm ${
                 data.foodAllergies?.includes(allergy)
-                  ? 'border-error bg-error-light text-error'
-                  : 'border-border hover:border-error/50'
+                  ? 'border-error bg-error-light dark:bg-error-dark/20 text-error dark:text-error-light'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-error/50'
               }`}
             >
               {allergy}
@@ -1735,19 +1735,19 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
       </div>
 
       {/* Accountability Message */}
-      <div className="bg-error-light border-2 border-error rounded-lg p-4">
-        <h3 className="font-medium text-error-dark mb-2">⚠️ Why Honesty Matters</h3>
-        <ul className="text-sm text-error-dark space-y-1 list-disc list-inside">
+      <div className="bg-error-light dark:bg-error-dark/20 border-2 border-error rounded-lg p-4">
+        <h3 className="font-medium text-error-dark dark:text-error-light mb-2">⚠️ Why Honesty Matters</h3>
+        <ul className="text-sm text-error-dark dark:text-error-light space-y-1 list-disc list-inside">
           <li>If you have diabetes and don't tell us, we might recommend dangerously low blood sugar levels</li>
           <li>If you drink 3 beers daily but don't report it, that's 450 hidden calories</li>
           <li>If you smoke and quit mid-journey, your metabolism will drop 250 cal/day unexpectedly</li>
         </ul>
-        <p className="text-sm text-error-dark font-bold mt-3">
+        <p className="text-sm text-error-dark dark:text-error-light font-bold mt-3">
           Be honest - it's for YOUR safety and YOUR results.
         </p>
       </div>
 
-      <p className="text-xs text-muted-foreground text-center">
+      <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
         ⚕️ This is not a medical diagnosis. Consult your doctor for proper medical advice.
       </p>
     </div>
@@ -1808,16 +1808,16 @@ function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2>Your meal schedule</h2>
-        <p className="text-muted-foreground mt-2">Tell us when you typically eat - this helps us suggest the right meal at the right time</p>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Tell us when you typically eat - this helps us suggest the right meal at the right time</p>
       </div>
 
       {/* Meal Schedule Times */}
-      <div className="bg-card border-2 border-border rounded-lg p-4">
+      <div className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <div className="flex items-center space-x-2 mb-4">
           <span className="text-2xl">⏰</span>
           <div>
             <div className="font-medium">When do you typically eat?</div>
-            <div className="text-xs text-muted-foreground">We'll use this to give you better meal suggestions</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">We'll use this to give you better meal suggestions</div>
           </div>
         </div>
 
@@ -1828,14 +1828,14 @@ function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data
               <span className="text-2xl">🌅</span>
               <div>
                 <div className="text-sm font-medium">Breakfast</div>
-                <div className="text-xs text-muted-foreground">Morning meal</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Morning meal</div>
               </div>
             </div>
             <input
               type="time"
               value={data.mealSchedule?.breakfastTime || '07:00'}
               onChange={(e) => updateMealTime('breakfastTime', e.target.value)}
-              className="px-3 py-2 border border-border rounded text-sm"
+              className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             />
           </div>
 
@@ -1845,14 +1845,14 @@ function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data
               <span className="text-2xl">☀️</span>
               <div>
                 <div className="text-sm font-medium">Lunch</div>
-                <div className="text-xs text-muted-foreground">Midday meal</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Midday meal</div>
               </div>
             </div>
             <input
               type="time"
               value={data.mealSchedule?.lunchTime || '12:00'}
               onChange={(e) => updateMealTime('lunchTime', e.target.value)}
-              className="px-3 py-2 border border-border rounded text-sm"
+              className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             />
           </div>
 
@@ -1862,35 +1862,35 @@ function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data
               <span className="text-2xl">🌙</span>
               <div>
                 <div className="text-sm font-medium">Dinner</div>
-                <div className="text-xs text-muted-foreground">Evening meal</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Evening meal</div>
               </div>
             </div>
             <input
               type="time"
               value={data.mealSchedule?.dinnerTime || '18:00'}
               onChange={(e) => updateMealTime('dinnerTime', e.target.value)}
-              className="px-3 py-2 border border-border rounded text-sm"
+              className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             />
           </div>
 
           {/* Snacks Toggle */}
-          <div className="pt-2 border-t border-border">
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={toggleSnacks}
-              className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors"
+              className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <div className="flex items-center space-x-3">
                 <span className="text-2xl">🍎</span>
                 <div className="text-left">
                   <div className="text-sm font-medium">I eat snacks</div>
-                  <div className="text-xs text-muted-foreground">Between meals</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">Between meals</div>
                 </div>
               </div>
               <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                data.mealSchedule?.hasSnacks ? 'bg-primary' : 'bg-muted'
+                data.mealSchedule?.hasSnacks ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
               }`}>
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                   data.mealSchedule?.hasSnacks ? 'translate-x-6' : 'translate-x-1'
                 }`} />
               </div>
@@ -1900,24 +1900,24 @@ function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data
       </div>
 
       {/* Enable Notifications */}
-      <div className="bg-primary-light border-2 border-primary rounded-lg p-4">
+      <div className="bg-purple-100 dark:bg-purple-900/20 border-2 border-primary rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <span className="text-2xl">🔔</span>
             <div>
               <div className="font-medium">Enable Notifications</div>
-              <div className="text-sm text-muted-foreground">Get reminders and updates</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Get reminders and updates</div>
             </div>
           </div>
           <button
             type="button"
             onClick={handleNotificationToggle}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              data.notifications ? 'bg-primary' : 'bg-muted'
+              data.notifications ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'
             }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                 data.notifications ? 'translate-x-6' : 'translate-x-1'
               }`}
             />
@@ -1927,8 +1927,8 @@ function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data
 
       {/* Meal Reminder Times - Auto-set */}
       {data.notifications && (
-        <div className="bg-muted rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-4">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             📅 We've set recommended meal reminder times for you. You can customize these later in your profile settings.
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -1938,10 +1938,10 @@ function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data
               { key: 'snacks', label: 'Snacks', emoji: '🍎' },
               { key: 'dinner', label: 'Dinner', emoji: '🌙' }
             ].map((meal) => (
-              <div key={meal.key} className="flex items-center space-x-3 bg-card rounded-lg p-3 border border-border">
+              <div key={meal.key} className="flex items-center space-x-3 bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                 <span className="text-2xl">{meal.emoji}</span>
                 <div>
-                  <div className="text-xs text-muted-foreground">{meal.label}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{meal.label}</div>
                   <div className="text-sm font-semibold text-primary">
                     {data.mealReminderTimes?.[meal.key as keyof typeof data.mealReminderTimes] || 'Not set'}
                   </div>
@@ -1970,8 +1970,8 @@ function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data
               onClick={() => updateData({ weightCheckInFrequency: option.value as any })}
               className={`p-3 border-2 rounded-lg transition-all ${
                 data.weightCheckInFrequency === option.value
-                  ? 'border-primary bg-primary-light'
-                  : 'border-border hover:border-primary/50'
+                  ? 'border-primary bg-purple-100 dark:bg-purple-900/20'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
               }`}
             >
               <div className="text-xl mb-1">{option.emoji}</div>
@@ -1985,12 +1985,12 @@ function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data
       </div>
 
       {/* Summary */}
-      <div className="bg-success-light border-2 border-success rounded-lg p-4 mt-6">
+      <div className="bg-success-light dark:bg-success-dark/20 border-2 border-success rounded-lg p-4 mt-6">
         <div className="flex items-start space-x-3">
           <span className="text-2xl">✨</span>
           <div>
-            <div className="font-medium">You're all set!</div>
-            <div className="text-sm mt-1">
+            <div className="font-medium text-success-dark dark:text-success-light">You're all set!</div>
+            <div className="text-sm text-success-dark dark:text-success-light mt-1">
               Click "Complete Setup" to start your weight loss journey. We've created a personalized plan just for you!
             </div>
           </div>

@@ -45,7 +45,7 @@ export default function GroupsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-dark mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading groups...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading groups...</p>
         </div>
       </div>
     );
@@ -68,7 +68,7 @@ export default function GroupsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold">Groups</h1>
-          <p className="text-muted-foreground mt-1">Join groups to connect with others and complete missions together</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Join groups to connect with others and complete missions together</p>
         </div>
         <button
           onClick={handleCreateGroup}
@@ -81,23 +81,23 @@ export default function GroupsPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">My Groups</div>
-          <div className="text-2xl font-bold text-foreground">{userGroupIds.length}</div>
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">My Groups</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{userGroupIds.length}</div>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">Total Groups</div>
-          <div className="text-2xl font-bold text-foreground">{groups.length}</div>
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Groups</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{groups.length}</div>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">Public Groups</div>
-          <div className="text-2xl font-bold text-foreground">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Public Groups</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {groups.filter(g => g.privacy === 'public').length}
           </div>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">Total Members</div>
-          <div className="text-2xl font-bold text-foreground">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Members</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {groups.reduce((sum, g) => sum + (g.memberIds?.length || 0), 0)}
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function GroupsPage() {
       />
 
       {/* Info Box */}
-      <div className="mt-8 bg-accent-light border border-accent rounded-lg p-6">
+      <div className="mt-8 bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-6">
         <h3 className="text-lg font-semibold text-accent-dark mb-2">About Groups</h3>
         <ul className="space-y-2 text-sm text-accent-dark">
           <li>• Join groups to connect with others on similar weight loss journeys</li>

@@ -25,28 +25,28 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
 
   return (
     <div
-      className="bg-card border border-border rounded-lg p-5 hover:shadow-lg transition-all cursor-pointer"
+      className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-5 hover:shadow-lg transition-all cursor-pointer"
       onClick={() => onClick?.(groupIdToUse)}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-1">
-            <h3 className="text-lg font-bold text-foreground">{group.name}</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{group.name}</h3>
             {isPrivate ? (
-              <LockClosedIcon className="h-4 w-4 text-muted-foreground" title="Private Group" />
+              <LockClosedIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" title="Private Group" />
             ) : (
-              <GlobeAltIcon className="h-4 w-4 text-muted-foreground" title="Public Group" />
+              <GlobeAltIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" title="Public Group" />
             )}
           </div>
           {group.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{group.description}</p>
           )}
         </div>
       </div>
 
       {/* Stats */}
-      <div className="flex items-center space-x-4 mb-4 text-sm text-muted-foreground">
+      <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
         <div className="flex items-center space-x-1">
           <UsersIcon className="h-4 w-4" />
           <span>{memberCount} / {maxMembers} members</span>
@@ -60,7 +60,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
 
       {/* Mission Info */}
       {group.activeMissionId && (
-        <div className="bg-accent-light border border-accent rounded-lg p-3 mb-4">
+        <div className="bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-3 mb-4">
           <div className="text-xs font-semibold text-accent-dark uppercase tracking-wide mb-1">
             Active Mission
           </div>
@@ -72,7 +72,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
 
       {/* Member Status Bar */}
       <div className="mb-4">
-        <div className="w-full bg-muted-dark rounded-full h-2 overflow-hidden">
+        <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all ${
               isFull ? 'bg-error-dark' : 'bg-success'
@@ -101,7 +101,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
                   e.stopPropagation();
                   onLeave(groupIdToUse);
                 }}
-                className="px-4 py-2 border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors"
+                className="px-4 py-2 border border-gray-200 text-gray-900 dark:text-gray-100 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors"
               >
                 Leave
               </button>
@@ -122,7 +122,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
             ) : isFull ? (
               <button
                 disabled
-                className="flex-1 bg-muted-dark text-muted-foreground px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed"
+                className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed"
               >
                 Group Full
               </button>
@@ -132,7 +132,7 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
                   e.stopPropagation();
                   onClick?.(groupIdToUse);
                 }}
-                className="flex-1 bg-muted text-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted-dark transition-colors"
+                className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               >
                 View Details
               </button>

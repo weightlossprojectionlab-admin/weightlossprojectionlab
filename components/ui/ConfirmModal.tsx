@@ -29,17 +29,17 @@ export default function ConfirmModal({
     danger: {
       icon: '🗑️',
       confirmButton: 'bg-error hover:bg-error-dark text-white',
-      headerBg: 'bg-error-light'
+      headerBg: 'bg-error-light dark:bg-red-900/20'
     },
     warning: {
       icon: '⚠️',
       confirmButton: 'bg-yellow-600 hover:bg-yellow-700 text-white',
-      headerBg: 'bg-yellow-50'
+      headerBg: 'bg-yellow-50 dark:bg-yellow-900/20'
     },
     info: {
       icon: 'ℹ️',
       confirmButton: 'bg-primary hover:bg-primary-hover text-white',
-      headerBg: 'bg-primary-light'
+      headerBg: 'bg-purple-100 dark:bg-purple-900/20'
     }
   }
 
@@ -66,7 +66,7 @@ export default function ConfirmModal({
         </span>
 
         {/* Modal panel */}
-        <div className="inline-block transform overflow-hidden rounded-lg bg-card text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
+        <div className="inline-block transform overflow-hidden rounded-lg bg-white dark:bg-gray-900 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
           {/* Header */}
           <div className={`px-6 pt-5 pb-4 ${styles.headerBg}`}>
             <div className="flex items-start">
@@ -76,11 +76,11 @@ export default function ConfirmModal({
                 </span>
               </div>
               <div className="ml-4 mt-0 text-left">
-                <h3 className="text-lg font-medium leading-6 text-foreground" id="modal-title">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100" id="modal-title">
                   {title}
                 </h3>
                 <div className="mt-2">
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line">
                     {message}
                   </p>
                 </div>
@@ -89,7 +89,7 @@ export default function ConfirmModal({
           </div>
 
           {/* Footer */}
-          <div className="bg-muted px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
             <button
               type="button"
               onClick={handleConfirm}
@@ -100,7 +100,7 @@ export default function ConfirmModal({
             <button
               type="button"
               onClick={onClose}
-              className="mt-3 inline-flex w-full justify-center rounded-md border border-border bg-card px-4 py-2 text-base font-medium text-foreground shadow-sm hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm"
+              className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-base font-medium text-gray-900 dark:text-gray-100 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm"
             >
               {cancelText}
             </button>
