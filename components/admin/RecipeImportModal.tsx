@@ -82,7 +82,6 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
           fiber: perServingFiber
         },
         prepTime: importedRecipe.prepTime || 30,
-        cookTime: importedRecipe.cookTime || 30,
         servings: importedRecipe.servings || 4,
         mealType,
         dietaryTags: importedRecipe.dietaryTags || [],
