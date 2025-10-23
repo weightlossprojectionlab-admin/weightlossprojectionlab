@@ -21,6 +21,7 @@ export type AdminAction =
   | 'recipe_reject'
   | 'recipe_feature'
   | 'recipe_delete'
+  | 'recipe_edit'
   // T&S actions
   | 'case_create'
   | 'case_triage'
