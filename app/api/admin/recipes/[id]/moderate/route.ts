@@ -81,7 +81,7 @@ export async function POST(
           createdBy: recipeData?.createdBy,
           featured: feature === true,
         },
-        notes,
+        reason: notes,
       })
 
       // TODO: Send notification to recipe creator
