@@ -3,10 +3,7 @@
  * Matches the structure used in /api/user-profile
  */
 export const DEFAULT_PREFERENCES = {
-  units: {
-    weight: 'lbs' as const,
-    height: 'in' as const,
-  },
+  units: 'imperial' as const,
   notifications: {
     dailyReminders: true,
     weeklyReports: true,
