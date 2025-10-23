@@ -170,9 +170,9 @@ export async function POST(request: NextRequest) {
       success: true,
       message: responseText,
       context: includeContext ? {
-        userProfile: context.userProfile,
-        currentStreak: context.currentStreak,
-        level: context.level
+        userProfile: (context as any).userProfile,
+        currentStreak: (context as any).currentStreak,
+        level: (context as any).level
       } : undefined
     })
 
