@@ -23,19 +23,13 @@ export const DEFAULT_GOALS = {
 
 /**
  * Create a default user profile for signup
- * Uses nested structure to match Firestore schema
+ * Returns only the fields expected by userProfileOperations.createUserProfile
  */
 export const createDefaultProfile = (email: string, name: string) => {
   return {
     email,
     name,
-    profile: {
-      onboardingCompleted: false, // New users need to complete onboarding
-    },
     preferences: DEFAULT_PREFERENCES,
-    goals: {},
-    createdAt: new Date(),
-    lastActiveAt: new Date(),
   }
 }
 
