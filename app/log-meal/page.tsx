@@ -2040,7 +2040,7 @@ function LogMealContent() {
                           <div
                             onClick={(e) => {
                               e.stopPropagation()
-                              setSelectedPhotoUrl(meal.photoUrl)
+                              setSelectedPhotoUrl(meal.photoUrl ?? null)
                             }}
                             className="relative group/photo flex-shrink-0"
                           >
