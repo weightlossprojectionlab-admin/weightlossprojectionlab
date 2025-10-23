@@ -983,7 +983,7 @@ function LogMealContent() {
       await mealLogOperations.createMealLog({
         mealType: template.mealType,
         aiAnalysis: {
-          foodItems: template.foodItems,
+          foodItems: template.foodItems as any,
           totalCalories: template.calories,
           totalMacros: template.macros,
           confidence: 100,
