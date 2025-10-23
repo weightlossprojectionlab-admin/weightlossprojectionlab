@@ -25,7 +25,7 @@ export default function AdminLayout({
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
         <div className="text-center">
-          <Spinner size="large" />
+          <Spinner size="lg" />
           <p className="mt-4 text-gray-600 dark:text-gray-400">Checking permissions...</p>
         </div>
       </div>
