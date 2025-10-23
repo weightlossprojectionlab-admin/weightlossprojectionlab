@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const deviceInfo = getDeviceInfo(userAgent)
 
     // Create new credential object
-    const newCredential: BiometricCredential = {
+    const newCredential = {
       id: credentialId,
       deviceInfo,
       createdAt: new Date(),
