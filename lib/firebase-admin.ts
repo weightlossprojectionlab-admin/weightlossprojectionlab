@@ -244,4 +244,7 @@ export const updateUserProfile = async (uid: string, updateData: Record<string, 
 // Export getter for admin app
 export const getAdminApp = (): App => initializeFirebaseAdmin()
 
+// Alias for backward compatibility
+export const initAdmin = () => initializeFirebaseAdmin()
+
 export default getAdminApp

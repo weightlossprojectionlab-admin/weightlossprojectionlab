@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useUserProfile'
-import { AuthGuard } from '@/components/auth/AuthGuard'
+import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { ProgressPageSkeleton } from '@/components/ui/skeleton'
 import { WeightTrendChart } from '@/components/charts/WeightTrendChart'

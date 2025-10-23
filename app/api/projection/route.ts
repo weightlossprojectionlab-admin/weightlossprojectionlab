@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserFromRequest } from '@/lib/auth'
-import { firebaseOperations } from '@/lib/firebase-operations'
+import { adminAuth, adminDb } from '@/lib/firebase-admin'
 
 interface MealLog {
   totalCalories?: number
@@ -62,38 +61,112 @@ interface ProjectionResponse {
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    // Authentication
-    const user = await getUserFromRequest(request)
-    if (!user) {
+    // Authentication - get token from Authorization header
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'Unauthorized - Please log in' },
+        { error: 'Unauthorized - Missing or invalid authorization header' },
         { status: 401 }
       )
     }
 
-    const userId = user.uid
+    const token = authHeader.substring(7)
 
-    // Fetch user data
-    const [userProfile, mealLogs, stepLogs, weightLogs] = await Promise.all([
-      firebaseOperations.getUserProfile(userId),
-      firebaseOperations.getMealLogs(userId, 7), // Last 7 days
-      firebaseOperations.getStepLogs(userId, 7),
-      firebaseOperations.getWeightLogs(userId, 30) // Last 30 days for trend
-    ])
+    let decodedToken
+    try {
+      decodedToken = await adminAuth.verifyIdToken(token)
+    } catch (error) {
+      console.error('Token verification failed:', error)
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid token' },
+        { status: 401 }
+      )
+    }
 
-    if (!userProfile?.goals || !userProfile?.profile) {
+    const userId = decodedToken.uid
+
+    // Fetch user profile from Firestore
+    const userProfileDoc = await adminDb.collection('users').doc(userId).get()
+
+    if (!userProfileDoc.exists) {
       return NextResponse.json(
         { error: 'User profile not found - Please complete onboarding' },
         { status: 404 }
       )
     }
 
+    const userProfile = userProfileDoc.data() as UserProfile
+
+    if (!userProfile?.goals || !userProfile?.profile) {
+      return NextResponse.json(
+        { error: 'User profile incomplete - Please complete onboarding' },
+        { status: 404 }
+      )
+    }
+
+    // Fetch meal logs (last 7 days)
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+    const mealLogsSnapshot = await adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('meals')
+      .where('loggedAt', '>=', sevenDaysAgo.toISOString())
+      .orderBy('loggedAt', 'desc')
+      .get()
+
+    const mealLogs: MealLog[] = mealLogsSnapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        totalCalories: data.totalCalories,
+        loggedAt: data.loggedAt,
+        mealType: data.mealType
+      }
+    })
+
+    // Fetch step logs (last 7 days)
+    const stepLogsSnapshot = await adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('steps')
+      .where('date', '>=', sevenDaysAgo.toISOString().split('T')[0])
+      .get()
+
+    const stepLogs: StepLog[] = stepLogsSnapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        steps: data.steps || 0,
+        date: data.date
+      }
+    })
+
+    // Fetch weight logs (last 30 days for trend)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const weightLogsSnapshot = await adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('weightLogs')
+      .where('loggedAt', '>=', thirtyDaysAgo.toISOString())
+      .orderBy('loggedAt', 'asc')
+      .get()
+
+    const weightLogs: WeightLog[] = weightLogsSnapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        weight: data.weight,
+        loggedAt: data.loggedAt
+      }
+    })
+
     // Calculate projection
     const projection = calculateProjection(
-      mealLogs as MealLog[],
-      stepLogs as StepLog[],
-      userProfile as UserProfile,
-      weightLogs as WeightLog[]
+      mealLogs,
+      stepLogs,
+      userProfile,
+      weightLogs
     )
 
     return NextResponse.json(projection, {

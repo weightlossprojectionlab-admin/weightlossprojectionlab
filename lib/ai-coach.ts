@@ -64,7 +64,7 @@ export interface CoachResponse {
 // SYSTEM PROMPT
 // ============================================================================
 
-const COACH_SYSTEM_PROMPT = `You are an expert nutrition coach and wellness advisor for the Weight Loss Project Lab app. Your role is to provide personalized, evidence-based nutrition guidance.
+export const COACH_SYSTEM_PROMPT = `You are an expert nutrition coach and wellness advisor for the Weight Loss Project Lab app. Your role is to provide personalized, evidence-based nutrition guidance.
 
 **Your Personality:**
 - Warm, encouraging, and supportive
