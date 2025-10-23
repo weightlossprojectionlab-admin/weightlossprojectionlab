@@ -33,7 +33,8 @@ export type AdminAction =
   | 'refund_partial'
   | 'deny'
   | 'add_strike'
-  | 'remove_strike';
+  | 'remove_strike'
+  | 'recipe_edit';
 
 export type SentimentTrend = 'improving' | 'declining' | 'stable';
 
