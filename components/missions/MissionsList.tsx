@@ -136,10 +136,9 @@ export default function MissionsList({
       {sortedMissions.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {sortedMissions.map((mission) => {
-            const missionId = mission.id || mission.missionId;
             return (
               <MissionCard
-                key={missionId}
+                key={mission.id}
                 mission={mission}
                 onComplete={onCompleteMission}
               />
