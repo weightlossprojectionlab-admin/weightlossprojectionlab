@@ -9,8 +9,8 @@ import type { AIAnalysis } from '@/types'
 
 const DB_NAME = 'wlpl-offline-queue'
 const DB_VERSION = 2
-const MEAL_STORE_NAME = 'meal-queue'
-const WEIGHT_STORE_NAME = 'weight-queue'
+const MEAL_MEAL_STORE_NAME = 'meal-queue'
+const WEIGHT_MEAL_STORE_NAME = 'weight-queue'
 
 export interface QueuedMeal {
   id: string // UUID
@@ -63,15 +63,15 @@ function openDB(): Promise<IDBDatabase> {
       const db = (event.target as IDBOpenDBRequest).result
 
       // Create meal queue object store if it doesn't exist
-      if (!db.objectStoreNames.contains(MEAL_STORE_NAME)) {
-        const mealStore = db.createObjectStore(MEAL_STORE_NAME, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(MEAL_MEAL_STORE_NAME)) {
+        const mealStore = db.createObjectStore(MEAL_MEAL_STORE_NAME, { keyPath: 'id' })
         mealStore.createIndex('synced', 'synced', { unique: false })
         mealStore.createIndex('queuedAt', 'queuedAt', { unique: false })
       }
 
       // Create weight queue object store if it doesn't exist
-      if (!db.objectStoreNames.contains(WEIGHT_STORE_NAME)) {
-        const weightStore = db.createObjectStore(WEIGHT_STORE_NAME, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(WEIGHT_MEAL_STORE_NAME)) {
+        const weightStore = db.createObjectStore(WEIGHT_MEAL_STORE_NAME, { keyPath: 'id' })
         weightStore.createIndex('synced', 'synced', { unique: false })
         weightStore.createIndex('queuedAt', 'queuedAt', { unique: false })
       }
@@ -95,8 +95,8 @@ export async function queueMeal(mealData: QueuedMeal['mealData']): Promise<strin
   }
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([MEAL_STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(MEAL_STORE_NAME)
+    const transaction = db.transaction([MEAL_MEAL_STORE_NAME], 'readwrite')
+    const store = transaction.objectStore(MEAL_MEAL_STORE_NAME)
     const request = store.add(queuedMeal)
 
     request.onsuccess = () => {
@@ -127,8 +127,8 @@ export async function queueWeight(weightData: QueuedWeight['weightData']): Promi
   }
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([WEIGHT_STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(WEIGHT_STORE_NAME)
+    const transaction = db.transaction([WEIGHT_MEAL_STORE_NAME], 'readwrite')
+    const store = transaction.objectStore(WEIGHT_MEAL_STORE_NAME)
     const request = store.add(queuedWeight)
 
     request.onsuccess = () => {
@@ -150,8 +150,8 @@ export async function getUnsyncedMeals(): Promise<QueuedMeal[]> {
   const db = await openDB()
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readonly')
-    const store = transaction.objectStore(STORE_NAME)
+    const transaction = db.transaction([MEAL_STORE_NAME], 'readonly')
+    const store = transaction.objectStore(MEAL_STORE_NAME)
     const index = store.index('synced')
     const request = index.getAll(false) // Get all where synced = false
 
@@ -175,8 +175,8 @@ export async function markMealSynced(id: string): Promise<void> {
   const db = await openDB()
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
+    const transaction = db.transaction([MEAL_STORE_NAME], 'readwrite')
+    const store = transaction.objectStore(MEAL_STORE_NAME)
     const getRequest = store.get(id)
 
     getRequest.onsuccess = () => {
@@ -214,8 +214,8 @@ export async function incrementSyncAttempt(id: string): Promise<void> {
   const db = await openDB()
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
+    const transaction = db.transaction([MEAL_STORE_NAME], 'readwrite')
+    const store = transaction.objectStore(MEAL_STORE_NAME)
     const getRequest = store.get(id)
 
     getRequest.onsuccess = () => {
@@ -252,8 +252,8 @@ export async function deleteMeal(id: string): Promise<void> {
   const db = await openDB()
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
+    const transaction = db.transaction([MEAL_STORE_NAME], 'readwrite')
+    const store = transaction.objectStore(MEAL_STORE_NAME)
     const request = store.delete(id)
 
     request.onsuccess = () => {
@@ -275,8 +275,8 @@ export async function clearSyncedMeals(): Promise<number> {
   const db = await openDB()
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
+    const transaction = db.transaction([MEAL_STORE_NAME], 'readwrite')
+    const store = transaction.objectStore(MEAL_STORE_NAME)
     const index = store.index('synced')
     const request = index.getAll(true) // Get all synced meals
 
@@ -316,8 +316,8 @@ export async function getQueueStats(): Promise<{
   const db = await openDB()
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readonly')
-    const store = transaction.objectStore(STORE_NAME)
+    const transaction = db.transaction([MEAL_STORE_NAME], 'readonly')
+    const store = transaction.objectStore(MEAL_STORE_NAME)
     const countRequest = store.count()
 
     countRequest.onsuccess = () => {
