@@ -5,9 +5,12 @@ import { Timestamp } from 'firebase-admin/firestore'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Next.js 15: await params
+    const { id: recipeId } = await params
+
     // Verify authentication
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -32,8 +35,6 @@ export async function POST(
         { status: 403 }
       )
     }
-
-    const recipeId = params.id
     const body = await request.json()
     const { action, feature, reason, notes } = body
 
