@@ -809,7 +809,7 @@ function LogMealContent() {
         } catch (uploadError) {
           console.error('❌ Photo upload failed:', uploadError)
           // Continue saving even if photo upload fails
-          toast.warning('Photo upload failed, but saving meal data anyway.')
+          toast.error('Photo upload failed, but saving meal data anyway.')
         }
       }
 
