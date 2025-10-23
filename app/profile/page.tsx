@@ -74,7 +74,7 @@ function ProfileContent() {
       setBiometricSupported(supported)
 
       if (supported && user) {
-        const enabled = hasBiometricCredential(user.uid)
+        const enabled = await hasBiometricCredential(user.uid)
         setBiometricEnabled(enabled)
       }
     } catch (error) {
