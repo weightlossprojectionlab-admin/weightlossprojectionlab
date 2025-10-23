@@ -73,7 +73,7 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
         name: importedRecipe.name,
         description: importedRecipe.description,
         ingredients: importedRecipe.ingredients,
-        instructions: importedRecipe.instructions,
+        recipeSteps: importedRecipe.instructions,
         calories: perServingCalories,
         macros: {
           protein: perServingProtein,
