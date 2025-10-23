@@ -11,7 +11,7 @@ import SeasonalChallenges from '@/components/missions/SeasonalChallenges';
 
 export default function MissionsPage() {
   const { user } = useAuth();
-  const missionsData = useMissions(user?.uid || null);
+  const missionsData = useMissions(user?.uid);
 
   if (missionsData.loading) {
     return (

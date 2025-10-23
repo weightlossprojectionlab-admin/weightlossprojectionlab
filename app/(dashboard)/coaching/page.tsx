@@ -12,7 +12,7 @@ import CoachingProgress from '@/components/coaching/CoachingProgress';
 
 export default function CoachingPage() {
   const { user } = useAuth();
-  const coachingData = useCoaching(user?.uid || null);
+  const coachingData = useCoaching(user?.uid);
 
   if (coachingData.loading) {
     return (
