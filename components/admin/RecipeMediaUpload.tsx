@@ -37,7 +37,7 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
     for (let i = 0; i < 4; i++) {
       slots.push({
         file: null,
-        preview: recipe.imageUrls?.[i] || (i === 0 ? recipe.imageUrl : null)
+        preview: recipe.imageUrls?.[i] || (i === 0 ? recipe.imageUrl ?? null : null)
       })
     }
     return slots
@@ -143,7 +143,7 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
       const newSlots = [...prev]
       newSlots[slotIndex] = {
         file: null,
-        preview: recipe.imageUrls?.[slotIndex] || (slotIndex === 0 ? recipe.imageUrl : null)
+        preview: recipe.imageUrls?.[slotIndex] || (slotIndex === 0 ? recipe.imageUrl ?? null : null)
       }
       return newSlots
     })
