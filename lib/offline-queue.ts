@@ -8,11 +8,13 @@
 import type { AIAnalysis } from '@/types'
 
 const DB_NAME = 'wlpl-offline-queue'
-const DB_VERSION = 1
-const STORE_NAME = 'meal-queue'
+const DB_VERSION = 2
+const MEAL_STORE_NAME = 'meal-queue'
+const WEIGHT_STORE_NAME = 'weight-queue'
 
 export interface QueuedMeal {
   id: string // UUID
+  type: 'meal'
   mealData: {
     mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
     photoDataUrl?: string // Base64 data URL
@@ -25,6 +27,22 @@ export interface QueuedMeal {
   syncAttempts: number
   lastSyncAttempt?: number
 }
+
+export interface QueuedWeight {
+  id: string // UUID
+  type: 'weight'
+  weightData: {
+    weight: number
+    date: string // ISO string
+    notes?: string
+  }
+  queuedAt: number // timestamp
+  synced: boolean
+  syncAttempts: number
+  lastSyncAttempt?: number
+}
+
+export type QueuedItem = QueuedMeal | QueuedWeight
 
 /**
  * Initialize IndexedDB database
@@ -44,11 +62,18 @@ function openDB(): Promise<IDBDatabase> {
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result
 
-      // Create object store if it doesn't exist
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' })
-        objectStore.createIndex('synced', 'synced', { unique: false })
-        objectStore.createIndex('queuedAt', 'queuedAt', { unique: false })
+      // Create meal queue object store if it doesn't exist
+      if (!db.objectStoreNames.contains(MEAL_STORE_NAME)) {
+        const mealStore = db.createObjectStore(MEAL_STORE_NAME, { keyPath: 'id' })
+        mealStore.createIndex('synced', 'synced', { unique: false })
+        mealStore.createIndex('queuedAt', 'queuedAt', { unique: false })
+      }
+
+      // Create weight queue object store if it doesn't exist
+      if (!db.objectStoreNames.contains(WEIGHT_STORE_NAME)) {
+        const weightStore = db.createObjectStore(WEIGHT_STORE_NAME, { keyPath: 'id' })
+        weightStore.createIndex('synced', 'synced', { unique: false })
+        weightStore.createIndex('queuedAt', 'queuedAt', { unique: false })
       }
     }
   })
@@ -62,6 +87,7 @@ export async function queueMeal(mealData: QueuedMeal['mealData']): Promise<strin
 
   const queuedMeal: QueuedMeal = {
     id: crypto.randomUUID(),
+    type: 'meal',
     mealData,
     queuedAt: Date.now(),
     synced: false,
@@ -69,8 +95,8 @@ export async function queueMeal(mealData: QueuedMeal['mealData']): Promise<strin
   }
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
+    const transaction = db.transaction([MEAL_STORE_NAME], 'readwrite')
+    const store = transaction.objectStore(MEAL_STORE_NAME)
     const request = store.add(queuedMeal)
 
     request.onsuccess = () => {
@@ -81,6 +107,38 @@ export async function queueMeal(mealData: QueuedMeal['mealData']): Promise<strin
     request.onerror = () => {
       console.error('[OfflineQueue] Failed to queue meal:', request.error)
       reject(new Error('Failed to queue meal'))
+    }
+  })
+}
+
+/**
+ * Queue a weight entry for offline sync
+ */
+export async function queueWeight(weightData: QueuedWeight['weightData']): Promise<string> {
+  const db = await openDB()
+
+  const queuedWeight: QueuedWeight = {
+    id: crypto.randomUUID(),
+    type: 'weight',
+    weightData,
+    queuedAt: Date.now(),
+    synced: false,
+    syncAttempts: 0
+  }
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([WEIGHT_STORE_NAME], 'readwrite')
+    const store = transaction.objectStore(WEIGHT_STORE_NAME)
+    const request = store.add(queuedWeight)
+
+    request.onsuccess = () => {
+      console.log('[OfflineQueue] Weight queued:', queuedWeight.id)
+      resolve(queuedWeight.id)
+    }
+
+    request.onerror = () => {
+      console.error('[OfflineQueue] Failed to queue weight:', request.error)
+      reject(new Error('Failed to queue weight'))
     }
   })
 }
