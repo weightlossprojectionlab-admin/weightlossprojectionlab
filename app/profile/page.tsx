@@ -313,9 +313,9 @@ function ProfileContent() {
                         onClick={() => {
                           const current = profileData?.preferences?.dietaryPreferences || []
                           const updated = current.includes(pref)
-                            ? current.filter(p => p !== pref)
+                            ? current.filter((p: string) => p !== pref)
                             : [...current, pref]
-                          setProfileData(prev => ({
+                          setProfileData((prev: any) => ({
                             ...prev,
                             preferences: { ...prev.preferences, dietaryPreferences: updated }
                           }))
@@ -360,9 +360,9 @@ function ProfileContent() {
                         onClick={() => {
                           const current = profileData?.profile?.foodAllergies || []
                           const updated = current.includes(allergy)
-                            ? current.filter(a => a !== allergy)
+                            ? current.filter((a: string) => a !== allergy)
                             : [...current, allergy]
-                          setProfileData(prev => ({
+                          setProfileData((prev: any) => ({
                             ...prev,
                             profile: { ...prev.profile, foodAllergies: updated }
                           }))
@@ -404,9 +404,9 @@ function ProfileContent() {
                         onClick={() => {
                           const current = profileData?.profile?.healthConditions || []
                           const updated = current.includes(condition)
-                            ? current.filter(c => c !== condition)
+                            ? current.filter((c: string) => c !== condition)
                             : [...current, condition]
-                          setProfileData(prev => ({
+                          setProfileData((prev: any) => ({
                             ...prev,
                             profile: { ...prev.profile, healthConditions: updated }
                           }))
