@@ -608,7 +608,7 @@ function OnboardingContent() {
         console.log('📊 Creating initial weight log from onboarding data...')
         await weightLogOperations.createWeightLog({
           weight: data.currentWeight!,
-          unit: data.units?.weight || 'lbs',
+          unit: data.units === 'metric' ? 'kg' : 'lbs',
           notes: 'Starting weight from onboarding',
           loggedAt: new Date().toISOString()
         })
