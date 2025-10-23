@@ -501,7 +501,7 @@ function DashboardContent() {
                     </div>
                     <div className="space-y-3">
                       {mealContext.suggestions.map(suggestion => (
-                        <div key={suggestion.id} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 border border-gray-200">
+                        <div key={suggestion.id} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                           <div className="flex items-start space-x-2">
                             <span className="text-primary mt-0.5">•</span>
                             <div className="flex-1">
@@ -649,9 +649,9 @@ function DashboardContent() {
               (userProfile.lifestyle.weeklyDrinks && userProfile.lifestyle.weeklyDrinks > 0) ||
               userProfile.lifestyle.recreationalDrugs !== 'no'
             ) && (
-              <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-5">
-                <h3 className="font-medium text-amber-900 mb-3">⚠️ Lifestyle Impact on Your Goals</h3>
-                <div className="space-y-2 text-sm text-amber-800">
+              <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-lg p-5">
+                <h3 className="font-medium text-amber-900 dark:text-amber-100 mb-3">⚠️ Lifestyle Impact on Your Goals</h3>
+                <div className="space-y-2 text-sm text-amber-800 dark:text-amber-200">
                   {userProfile.lifestyle.smoking?.includes('current') && (
                     <div className="flex items-start space-x-2">
                       <span>🚬</span>
@@ -677,8 +677,8 @@ function DashboardContent() {
                     </div>
                   )}
                 </div>
-                <div className="mt-3 pt-3 border-t border-amber-200">
-                  <p className="text-xs text-amber-700">
+                <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-700">
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
                     💡 These factors are included in your calorie calculations. Track honestly for best results.
                   </p>
                 </div>
