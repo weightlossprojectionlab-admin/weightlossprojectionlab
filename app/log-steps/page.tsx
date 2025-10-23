@@ -22,7 +22,7 @@ function LogStepsContent() {
   const { todaysSteps, isTracking, isEnabled, enableTracking, disableTracking } = useStepTracking()
 
   // Get user profile for goal steps
-  const { userProfile } = useUserProfile()
+  const { profile } = useUserProfile()
 
   // State for recent activity
   const [recentLogs, setRecentLogs] = useState<StepLogData[]>([])
@@ -81,7 +81,7 @@ function LogStepsContent() {
     return `${diffDays} days ago`
   }
 
-  const goalSteps = userProfile?.goals?.dailySteps || 10000
+  const goalSteps = profile?.goals?.dailySteps || 10000
   const currentSteps = todaysSteps
   const progressPercentage = Math.min((currentSteps / goalSteps) * 100, 100)
 
