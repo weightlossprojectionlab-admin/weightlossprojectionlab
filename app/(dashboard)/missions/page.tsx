@@ -7,7 +7,6 @@ import { useMissions } from '@/hooks/useMissions';
 import { useAuth } from '@/hooks/useAuth';
 import MissionProgress from '@/components/missions/MissionProgress';
 import MissionsList from '@/components/missions/MissionsList';
-import SeasonalChallenges from '@/components/missions/SeasonalChallenges';
 
 export default function MissionsPage() {
   const { user } = useAuth();
@@ -35,24 +34,18 @@ export default function MissionsPage() {
     );
   }
 
-  const { active: missions, completed: history, seasonal: seasonalChallenges } = missionsData;
+  const missions = missionsData.missions;
 
   // Calculate stats
   const activeMissions = missions.filter(m => m.status === 'active');
   const completedMissions = missions.filter(m => m.status === 'completed');
-  const totalXP = history?.reduce((sum, h) => sum + (h.xpReward || 0), 0) || 0;
+  const totalXP = completedMissions.reduce((sum, m) => sum + (m.xpReward || 0), 0);
   const currentLevel = Math.floor(totalXP / 1000) + 1; // Simple level calculation
   const currentStreak = 0; // TODO: Calculate from user activity
 
   const handleCompleteMission = async (missionId: string) => {
     // TODO: Implement mission completion logic
     console.log('Complete mission:', missionId);
-    // This would typically call a Firebase function or API endpoint
-  };
-
-  const handleJoinChallenge = async (challengeId: string) => {
-    // TODO: Implement challenge join logic
-    console.log('Join challenge:', challengeId);
     // This would typically call a Firebase function or API endpoint
   };
 
@@ -72,14 +65,7 @@ export default function MissionsPage() {
       </div>
 
       {/* Seasonal Challenges */}
-      {seasonalChallenges && (
-        <div className="mb-6">
-          <SeasonalChallenges
-            challenges={[seasonalChallenges]}
-            onJoinChallenge={handleJoinChallenge}
-          />
-        </div>
-      )}
+      {/* TODO: Implement seasonal challenges */}
 
       {/* All Missions */}
       <div>
@@ -91,21 +77,21 @@ export default function MissionsPage() {
       </div>
 
       {/* Mission History (Optional Section) */}
-      {history && history.length > 0 && (
+      {completedMissions.length > 0 && (
         <div className="mt-8">
           <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
           <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-4">
             <div className="space-y-2">
-              {history.slice(0, 5).map((item, index) => (
+              {completedMissions.slice(0, 5).map((item, index) => (
                 <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.title}</p>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {item.completedAt ? new Date((item.completedAt as any).seconds * 1000).toLocaleDateString() : 'N/A'}
+                      {item.completedAt ? new Date(item.completedAt).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-purple-600">+{item.xpReward} XP</p>
+                    <p className="text-sm font-bold text-purple-600">+{item.xpReward || 0} XP</p>
                   </div>
                 </div>
               ))}
