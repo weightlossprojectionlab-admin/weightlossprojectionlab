@@ -7,10 +7,10 @@
 import { useState } from 'react';
 import { timestampToDate } from '@/lib/timestamp';
 import MissionCard from './MissionCard';
-import type { UserMission } from '@/schemas/firestore/missions';
+import type { MissionProgress } from '@/hooks/useMissions';
 
 interface MissionsListProps {
-  missions: UserMission[];
+  missions: MissionProgress[];
   onCompleteMission?: (missionId: string) => void;
   showFilters?: boolean;
 }
@@ -26,7 +26,9 @@ export default function MissionsList({
   // Filter missions
   const filteredMissions = missions.filter(mission => {
     if (filter === 'all') return true;
-    return mission.status === filter;
+    if (filter === 'active') return !mission.completed;
+    if (filter === 'completed') return mission.completed;
+    return true;
   });
 
   // Sort missions
@@ -40,12 +42,15 @@ export default function MissionsList({
                (difficultyOrder[a.difficulty as keyof typeof difficultyOrder] || 0);
       case 'recent':
       default:
-        return timestampToDate(b.createdAt).getTime() - timestampToDate(a.createdAt).getTime();
+        // Sort by progress for active missions, completedAt for completed
+        const aTime = a.completedAt ? new Date(a.completedAt).getTime() : Date.now();
+        const bTime = b.completedAt ? new Date(b.completedAt).getTime() : Date.now();
+        return bTime - aTime;
     }
   });
 
-  const activeMissionsCount = missions.filter(m => m.status === 'active').length;
-  const completedMissionsCount = missions.filter(m => m.status === 'completed').length;
+  const activeMissionsCount = missions.filter(m => !m.completed).length;
+  const completedMissionsCount = missions.filter(m => m.completed).length;
 
   if (missions.length === 0) {
     return (
