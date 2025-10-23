@@ -89,7 +89,7 @@ async function fetchCoachingData(userId: string): Promise<Omit<CoachingData, 'lo
  * @returns Coaching data with loading/error states
  */
 export function useCoaching(
-  userId: string | null,
+  userId: string | undefined,
   refreshInterval = 30000
 ): CoachingData {
   const { data, error, isLoading } = useSWR(
