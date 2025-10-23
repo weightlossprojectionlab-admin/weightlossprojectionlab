@@ -4,15 +4,7 @@
  */
 export const DEFAULT_PREFERENCES = {
   units: 'imperial' as const,
-  notifications: {
-    dailyReminders: true,
-    weeklyReports: true,
-    achievements: true,
-  },
-  privacy: {
-    dataSharing: false,
-    analytics: true,
-  },
+  notifications: true,
   biometricEnabled: false,
 }
 
