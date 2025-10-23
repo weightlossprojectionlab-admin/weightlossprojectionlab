@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
+import { adminDb, adminAuth, verifyIdToken } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { isSuperAdmin } from '@/lib/admin/permissions'
 import { Timestamp } from 'firebase-admin/firestore'
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { targetUserId, role, action } = body
+    const { targetUserId, targetEmail, role, action } = body
 
     // Validate role
     const validRoles = ['admin', 'moderator', 'support', null]
@@ -48,22 +48,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!targetUserId) {
+    if (!targetUserId && !targetEmail) {
       return NextResponse.json(
-        { error: 'Target user ID is required' },
+        { error: 'Target user ID or email is required' },
         { status: 400 }
       )
     }
 
-    // Get target user
-    const userRef = adminDb.collection('users').doc(targetUserId)
+    // Get target user UID (from email if needed)
+    let targetUid = targetUserId
+    if (!targetUid && targetEmail) {
+      try {
+        const userRecord = await adminAuth.getUserByEmail(targetEmail)
+        targetUid = userRecord.uid
+      } catch (err: any) {
+        if (err.code === 'auth/user-not-found') {
+          return NextResponse.json(
+            { error: 'User not found with that email' },
+            { status: 404 }
+          )
+        }
+        throw err
+      }
+    }
+
+    // Get target user from Firestore
+    const userRef = adminDb.collection('users').doc(targetUid)
     const userDoc = await userRef.get()
 
+    // If user doesn't exist in Firestore, create a basic profile
     if (!userDoc.exists) {
-      return NextResponse.json(
-        { error: 'Target user not found' },
-        { status: 404 }
-      )
+      const userRecord = await adminAuth.getUser(targetUid)
+      await userRef.set({
+        email: userRecord.email,
+        displayName: userRecord.displayName || null,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      })
     }
 
     const userData = userDoc.data()
@@ -81,7 +102,7 @@ export async function POST(request: NextRequest) {
         adminEmail: adminEmail || 'unknown',
         action: 'admin_role_grant',
         targetType: 'user',
-        targetId: targetUserId,
+        targetId: targetUid,
         metadata: {
           targetEmail: userData?.email,
           grantedRole: role,
@@ -93,7 +114,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: `Successfully granted ${role} role to user`,
         data: {
-          userId: targetUserId,
+          userId: targetUid,
           email: userData?.email,
           newRole: role,
         },
@@ -110,7 +131,7 @@ export async function POST(request: NextRequest) {
         adminEmail: adminEmail || 'unknown',
         action: 'admin_role_revoke',
         targetType: 'user',
-        targetId: targetUserId,
+        targetId: targetUid,
         metadata: {
           targetEmail: userData?.email,
           previousRole: userData?.role,
@@ -122,7 +143,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Successfully revoked admin role from user',
         data: {
-          userId: targetUserId,
+          userId: targetUid,
           email: userData?.email,
           newRole: null,
         },
