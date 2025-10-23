@@ -29,7 +29,7 @@ export default function MissionsPage() {
       <div className="p-6">
         <div className="bg-error-light border border-error rounded-lg p-4">
           <h2 className="text-error-dark font-semibold mb-2">Error Loading Missions</h2>
-          <p className="text-error-dark">{missionsData.error.message}</p>
+          <p className="text-error-dark">{missionsData.error}</p>
         </div>
       </div>
     );
