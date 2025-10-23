@@ -254,11 +254,11 @@ Guidelines:
         usdaMessages = validationResults.map(r => r.message)
 
         // Recalculate totals with USDA-validated data
-        const totalCalories = validatedFoodItems.reduce((sum: number, item) => sum + item.calories, 0)
-        const totalProtein = validatedFoodItems.reduce((sum: number, item) => sum + item.protein, 0)
-        const totalCarbs = validatedFoodItems.reduce((sum: number, item) => sum + item.carbs, 0)
-        const totalFat = validatedFoodItems.reduce((sum: number, item) => sum + item.fat, 0)
-        const totalFiber = validatedFoodItems.reduce((sum: number, item) => sum + item.fiber, 0)
+        const totalCalories = validatedFoodItems.reduce((sum: number, item: any) => sum + item.calories, 0)
+        const totalProtein = validatedFoodItems.reduce((sum: number, item: any) => sum + item.protein, 0)
+        const totalCarbs = validatedFoodItems.reduce((sum: number, item: any) => sum + item.carbs, 0)
+        const totalFat = validatedFoodItems.reduce((sum: number, item: any) => sum + item.fat, 0)
+        const totalFiber = validatedFoodItems.reduce((sum: number, item: any) => sum + item.fiber, 0)
 
         analysis.totalCalories = totalCalories
         analysis.totalMacros = {
