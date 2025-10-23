@@ -1016,7 +1016,7 @@ function LogMealContent() {
       await mealTemplateOperations.createMealTemplate({
         name: templateName.trim(),
         mealType: selectedMealType,
-        foodItems: aiAnalysis.foodItems,
+        foodItems: aiAnalysis.foodItems as any,
         calories: aiAnalysis.totalCalories,
         macros: aiAnalysis.totalMacros,
         notes: undefined
