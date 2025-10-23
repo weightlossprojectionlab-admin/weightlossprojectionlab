@@ -127,9 +127,9 @@ export async function POST(
           recipeName: recipeData?.title,
           createdBy: recipeData?.createdBy,
           rejectionReason: reason,
+          notes: notes || undefined,
         },
         reason,
-        notes,
       })
 
       // TODO: Send notification to recipe creator
