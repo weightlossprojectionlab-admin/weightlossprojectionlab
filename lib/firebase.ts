@@ -15,9 +15,9 @@ const firebaseConfig = {
 }
 
 // Initialize Firebase app (avoid duplicate initialization)
-let app
+let app: FirebaseApp
 try {
-  app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig)
+  app = getApps().length > 0 ? getApps()[0]! : initializeApp(firebaseConfig)
   console.log('Firebase app initialized successfully')
 } catch (error) {
   console.error('Failed to initialize Firebase app:', error)
