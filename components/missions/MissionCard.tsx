@@ -6,10 +6,10 @@
 
 import { CheckCircleIcon, ClockIcon, TrophyIcon } from '@heroicons/react/24/outline';
 import { formatTimestamp } from '@/lib/timestamp';
-import type { UserMission } from '@/schemas/firestore/missions';
+import type { MissionProgress } from '@/schemas/firestore/missions';
 
 interface MissionCardProps {
-  mission: UserMission;
+  mission: MissionProgress;
   onComplete?: (missionId: string) => void;
 }
 
