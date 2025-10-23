@@ -16,6 +16,7 @@ export const DEFAULT_PREFERENCES = {
     dataSharing: false,
     analytics: true,
   },
+  biometricEnabled: false,
 }
 
 /**
