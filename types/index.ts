@@ -275,18 +275,6 @@ export interface ActivitySummary {
   weeklyAverage: number
 }
 
-// WebAuthn / Biometric Types
-export interface BiometricCredential {
-  id: string
-  userId: string
-  credentialId: string
-  publicKey: string
-  counter: number
-  deviceName: string
-  createdAt: Date
-  lastUsed: Date
-}
-
 // Form Types
 export interface WeightLogForm {
   weight: number
