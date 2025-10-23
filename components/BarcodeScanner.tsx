@@ -47,7 +47,8 @@ export function BarcodeScanner({ onScan, onClose, isOpen }: BarcodeScannerProps)
             Html5QrcodeSupportedFormats.CODE_128,
             Html5QrcodeSupportedFormats.CODE_39,
             Html5QrcodeSupportedFormats.QR_CODE
-          ]
+          ],
+          verbose: false
         })
       }
 
