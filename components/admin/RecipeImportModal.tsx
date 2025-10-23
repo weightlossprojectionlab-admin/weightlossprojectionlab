@@ -71,7 +71,7 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
 
       const recipe: Partial<MealSuggestion> = {
         name: importedRecipe.name,
-        description: importedRecipe.description,
+        description: importedRecipe.description || importedRecipe.name,
         ingredients: importedRecipe.ingredients,
         recipeSteps: importedRecipe.instructions,
         calories: perServingCalories,
@@ -87,19 +87,7 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
         dietaryTags: importedRecipe.dietaryTags || [],
         imageUrls: importedRecipe.imageUrl ? [importedRecipe.imageUrl] : [],
         videoUrl: '',
-        tags: [
-          ...(importedRecipe.cuisine ? [importedRecipe.cuisine.toLowerCase()] : []),
-          ...(importedRecipe.category ? [importedRecipe.category.toLowerCase()] : []),
-          'imported'
-        ],
-        metadata: {
-          sourceUrl: importedRecipe.sourceUrl,
-          author: importedRecipe.author,
-          rating: importedRecipe.rating,
-          ratingCount: importedRecipe.ratingCount,
-          imported: true,
-          importedAt: new Date().toISOString()
-        }
+        allergens: []
       }
 
       // Save to Firestore
