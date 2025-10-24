@@ -1,5 +1,5 @@
 // Service Worker for offline support
-const CACHE_NAME = 'wlpl-v2';
+const CACHE_NAME = 'wlpl-v3';
 const PHOTO_CACHE_NAME = 'wlpl-photos-v1';
 const OFFLINE_URL = '/offline.html';
 const MAX_PHOTO_CACHE_SIZE = 50; // Max number of photos to cache

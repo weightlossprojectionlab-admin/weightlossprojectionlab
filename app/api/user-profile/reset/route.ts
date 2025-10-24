@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 
+// Set max duration to 25 seconds (just under Netlify's 26s limit)
+export const maxDuration = 25
+
 /**
  * DELETE - Reset all user data (nuclear option)
  *
@@ -59,32 +62,40 @@ export async function DELETE(request: NextRequest) {
 
     // 2. Delete all subcollections (these need to be done separately)
     const collections = ['weightLogs', 'mealLogs', 'stepLogs', 'mealTemplates']
+    const deletionResults = []
 
     for (const collectionName of collections) {
       const collectionRef = userDocRef.collection(collectionName)
-      const snapshot = await collectionRef.get()
 
-      // Delete in batches of 500 (Firestore limit)
-      const batchSize = 500
-      const deleteBatch = adminDb.batch()
-      let batchCount = 0
+      try {
+        const snapshot = await collectionRef.limit(500).get() // Limit to prevent timeout on huge datasets
 
-      for (const doc of snapshot.docs) {
-        deleteBatch.delete(doc.ref)
-        batchCount++
-
-        if (batchCount >= batchSize) {
-          await deleteBatch.commit()
-          batchCount = 0
+        if (snapshot.empty) {
+          console.log(`⏭️ Skipping empty collection: ${collectionName}`)
+          deletionResults.push({ collection: collectionName, deleted: 0 })
+          continue
         }
-      }
 
-      // Commit remaining deletions
-      if (batchCount > 0) {
+        // Delete in a single batch (max 500 operations)
+        const deleteBatch = adminDb.batch()
+        snapshot.docs.forEach(doc => {
+          deleteBatch.delete(doc.ref)
+        })
+
         await deleteBatch.commit()
-      }
 
-      console.log(`✅ Deleted ${snapshot.size} documents from ${collectionName}`)
+        const deletedCount = snapshot.size
+        console.log(`✅ Deleted ${deletedCount} documents from ${collectionName}`)
+        deletionResults.push({ collection: collectionName, deleted: deletedCount })
+
+      } catch (error) {
+        console.error(`❌ Error deleting ${collectionName}:`, error)
+        deletionResults.push({
+          collection: collectionName,
+          deleted: 0,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
     }
 
     console.log(`✅ All data reset completed for user: ${userId}`)
@@ -92,7 +103,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'All user data has been reset. You can now start onboarding again.',
-      deletedCollections: collections,
+      deletionResults,
       timestamp: new Date().toISOString()
     })
 
