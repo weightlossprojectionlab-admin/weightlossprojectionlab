@@ -117,16 +117,16 @@ In your hosting provider (Vercel, etc.), add:
 
 ```bash
 # Firebase
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyDqtUxMstOLFJDPybDruU51bAIKdLfEyGs
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=weightlossprojectionlab-8b284.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=weightlossprojectionlab-8b284
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=weightlossprojectionlab-8b284.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=354555244971
-NEXT_PUBLIC_FIREBASE_APP_ID=1:354555244971:web:9296df372cb599bac1a2ee
+NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
 
 # Firebase Admin (server-side)
-FIREBASE_ADMIN_PROJECT_ID=weightlossprojectionlab-8b284
-FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-fbsvc@weightlossprojectionlab-8b284.iam.gserviceaccount.com
+FIREBASE_ADMIN_PROJECT_ID=your-project-id
+FIREBASE_ADMIN_CLIENT_EMAIL=your-service-account@your-project.iam.gserviceaccount.com
 FIREBASE_ADMIN_PRIVATE_KEY="[from service account JSON]"
 
 # OpenAI
