@@ -54,7 +54,7 @@ const initializeFirebaseAdmin = (): App => {
     // Validate that we have the required markers
     if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') || !privateKey.includes('-----END PRIVATE KEY-----')) {
       console.error('❌ Invalid private key format: Missing BEGIN or END marker')
-      console.error('Key preview:', privateKey.substring(0, 50) + '...' + privateKey.substring(privateKey.length - 50))
+      console.error('Key length:', privateKey.length, 'characters')
       throw new Error('Invalid private key format: Missing BEGIN or END markers')
     }
 
