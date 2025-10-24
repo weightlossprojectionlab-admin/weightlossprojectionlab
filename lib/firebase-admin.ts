@@ -38,11 +38,32 @@ const initializeFirebaseAdmin = (): App => {
     // Try both literal string "\n" and escaped "\\n"
     privateKey = privateKey.split('\\n').join('\n')
 
-    // Trim any extra whitespace but ensure it ends with a single newline
-    privateKey = privateKey.trim()
+    // Handle Netlify's space-separated format (spaces instead of newlines)
+    // If there are no newlines but there are multiple consecutive spaces, it's space-separated
+    if (!privateKey.includes('\n') && /\s{2,}/.test(privateKey)) {
+      console.log('🔧 Detected space-separated private key format, converting to newline format...')
+      // Replace 2+ consecutive spaces with newlines
+      privateKey = privateKey.replace(/\s{2,}/g, '\n')
+    }
+
+    // Split by newlines, trim each line, and rejoin
+    // This handles any extra whitespace on individual lines
+    const lines = privateKey.split('\n').map(line => line.trim()).filter(line => line.length > 0)
+    privateKey = lines.join('\n')
+
+    // Validate that we have the required markers
+    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') || !privateKey.includes('-----END PRIVATE KEY-----')) {
+      console.error('❌ Invalid private key format: Missing BEGIN or END marker')
+      console.error('Key preview:', privateKey.substring(0, 50) + '...' + privateKey.substring(privateKey.length - 50))
+      throw new Error('Invalid private key format: Missing BEGIN or END markers')
+    }
+
+    // Ensure trailing newline
     if (!privateKey.endsWith('\n')) {
       privateKey += '\n'
     }
+
+    console.log('✅ Private key parsed successfully (length:', privateKey.length, 'chars)')
 
     adminApp = initializeApp({
       credential: cert({
