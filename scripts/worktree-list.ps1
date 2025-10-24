@@ -5,8 +5,8 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host ""
-Write-Host "📊 Active Git Worktrees" -ForegroundColor Cyan
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+Write-Host "Active Git Worktrees" -ForegroundColor Cyan
+Write-Host "=================================================================" -ForegroundColor DarkGray
 Write-Host ""
 
 # Get worktree list
@@ -63,24 +63,24 @@ foreach ($wt in $worktreeList) {
     }
 
     Write-Host " $wtName" -ForegroundColor White
-    Write-Host "      📂 Path: " -ForegroundColor DarkGray -NoNewline
+    Write-Host "      Path: " -ForegroundColor DarkGray -NoNewline
     Write-Host $wt.Path -ForegroundColor Gray
 
     if ($wt.Branch) {
-        Write-Host "      🌿 Branch: " -ForegroundColor DarkGray -NoNewline
+        Write-Host "      Branch: " -ForegroundColor DarkGray -NoNewline
         Write-Host $wt.Branch -ForegroundColor Cyan
     } elseif ($wt.Detached) {
-        Write-Host "      ⚠️  Detached HEAD: " -ForegroundColor DarkGray -NoNewline
+        Write-Host "      Detached HEAD: " -ForegroundColor DarkGray -NoNewline
         Write-Host $wt.HEAD.Substring(0, 8) -ForegroundColor Yellow
     }
 
     Write-Host ""
 }
 
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+Write-Host "=================================================================" -ForegroundColor DarkGray
 Write-Host "Total: $($worktreeList.Count) worktree(s)" -ForegroundColor White
 Write-Host ""
-Write-Host "📝 Quick Actions:" -ForegroundColor Cyan
+Write-Host "Quick Actions:" -ForegroundColor Cyan
 Write-Host "  Create new worktree: " -ForegroundColor DarkGray -NoNewline
 Write-Host ".\scripts\worktree-create.ps1 <feature-name>" -ForegroundColor Yellow
 Write-Host "  Remove worktree:     " -ForegroundColor DarkGray -NoNewline

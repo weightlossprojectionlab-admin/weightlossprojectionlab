@@ -19,16 +19,16 @@ $WorktreeName = "weightlossprojectlab-$FeatureName"
 $WorktreePath = "C:\Users\percy\wlpl\$WorktreeName"
 
 Write-Host ""
-Write-Host "🗑️  Removing Git Worktree" -ForegroundColor Cyan
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+Write-Host "Removing Git Worktree" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor DarkGray
 Write-Host "  Feature: $FeatureName" -ForegroundColor White
 Write-Host "  Path: $WorktreePath" -ForegroundColor Yellow
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+Write-Host "========================================" -ForegroundColor DarkGray
 Write-Host ""
 
 # Validation: Check if worktree exists
 if (-not (Test-Path $WorktreePath)) {
-    Write-Host "❌ ERROR: Worktree does not exist at: $WorktreePath" -ForegroundColor Red
+    Write-Host "[ERROR] Worktree does not exist at: $WorktreePath" -ForegroundColor Red
     Write-Host ""
     Write-Host "List all worktrees:" -ForegroundColor Yellow
     Write-Host "  .\scripts\worktree-list.ps1" -ForegroundColor White
@@ -46,9 +46,9 @@ if ($worktreeInfo) {
     }
 }
 
-Write-Host "⚠️  WARNING: This will remove the worktree directory" -ForegroundColor Yellow
+Write-Host "[WARNING] This will remove the worktree directory" -ForegroundColor Yellow
 if ($DeleteBranch -and $branchName) {
-    Write-Host "⚠️  WARNING: This will also DELETE the branch: $branchName" -ForegroundColor Yellow
+    Write-Host "[WARNING] This will also DELETE the branch: $branchName" -ForegroundColor Yellow
 }
 Write-Host ""
 Write-Host "Uncommitted changes will be LOST!" -ForegroundColor Red
@@ -61,33 +61,33 @@ if ($confirm -ne "y") {
 }
 
 Write-Host ""
-Write-Host "🧹 Removing worktree..." -ForegroundColor Cyan
+Write-Host "Removing worktree..." -ForegroundColor Cyan
 
 # Remove the worktree
 git worktree remove $WorktreePath --force
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✓ Worktree removed" -ForegroundColor Green
+    Write-Host "[OK] Worktree removed" -ForegroundColor Green
 
     # Delete the branch if requested and it exists
     if ($DeleteBranch -and $branchName) {
         Write-Host ""
-        Write-Host "🔥 Deleting branch: $branchName..." -ForegroundColor Cyan
+        Write-Host "Deleting branch: $branchName..." -ForegroundColor Cyan
 
         # Check if branch has been merged
         $mergeCheck = git branch --merged main | Select-String -Pattern $branchName
         if ($mergeCheck) {
             git branch -d $branchName
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "✓ Branch deleted (was merged)" -ForegroundColor Green
+                Write-Host "[OK] Branch deleted (was merged)" -ForegroundColor Green
             }
         } else {
-            Write-Host "⚠️  Branch has NOT been merged to main" -ForegroundColor Yellow
+            Write-Host "[WARNING] Branch has NOT been merged to main" -ForegroundColor Yellow
             $forceDelete = Read-Host "Force delete unmerged branch? (y/n)"
             if ($forceDelete -eq "y") {
                 git branch -D $branchName
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host "✓ Branch force-deleted" -ForegroundColor Green
+                    Write-Host "[OK] Branch force-deleted" -ForegroundColor Green
                 }
             } else {
                 Write-Host "Branch kept: $branchName" -ForegroundColor Gray
@@ -102,18 +102,18 @@ if ($LASTEXITCODE -eq 0) {
             if ($deleteRemote -eq "y") {
                 git push origin --delete $branchName
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Host "✓ Remote branch deleted" -ForegroundColor Green
+                    Write-Host "[OK] Remote branch deleted" -ForegroundColor Green
                 }
             }
         }
     }
 
     Write-Host ""
-    Write-Host "✅ Cleanup complete!" -ForegroundColor Green
+    Write-Host "[SUCCESS] Cleanup complete!" -ForegroundColor Green
     Write-Host ""
 } else {
     Write-Host ""
-    Write-Host "❌ ERROR: Failed to remove worktree" -ForegroundColor Red
+    Write-Host "[ERROR] Failed to remove worktree" -ForegroundColor Red
     Write-Host "Try manually: git worktree remove $WorktreePath --force" -ForegroundColor Yellow
     Write-Host ""
     exit 1
