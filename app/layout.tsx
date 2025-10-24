@@ -44,6 +44,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
+        <meta charSet="UTF-8" />
         <Script id="theme-script" strategy="beforeInteractive">
           {`(function() {
               try {
