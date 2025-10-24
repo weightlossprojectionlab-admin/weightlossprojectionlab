@@ -24,8 +24,18 @@ import {
 import { analyzeUserReadiness, getLatestAnalysis } from './readiness-analyzer'
 import { Resend } from 'resend'
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy-initialize Resend only when needed (to avoid build-time errors if API key not set)
+let resend: Resend | null = null
+function getResendClient(): Resend {
+  if (!resend) {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY environment variable is not set')
+    }
+    resend = new Resend(apiKey)
+  }
+  return resend
+}
 
 // ============================================================================
 // Types
@@ -649,7 +659,8 @@ export async function sendReEngagementEmail(campaign: ReEngagementCampaign): Pro
     console.log(`Sending ${campaign.campaignType} email to ${userEmail}...`)
 
     // Send email via Resend
-    const { data, error } = await resend.emails.send({
+    const client = getResendClient()
+    const { data, error } = await client.emails.send({
       from: 'Weight Loss Project Lab <noreply@weightlossprojectlab.com>',
       to: userEmail,
       subject: campaign.emailSubject,
