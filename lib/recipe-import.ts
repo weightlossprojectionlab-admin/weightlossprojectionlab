@@ -199,7 +199,7 @@ export async function importRecipeFromUrl(url: string): Promise<ImportedRecipe> 
 function parseSchemaOrgRecipe(html: string): SchemaOrgRecipe | null {
   try {
     // Find all JSON-LD script tags
-    const jsonLdRegex = /<script type="application\/ld\+json">(.*?)<\/script>/gs
+    const jsonLdRegex = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g
     const matches = Array.from(html.matchAll(jsonLdRegex))
 
     for (const match of matches) {
@@ -296,7 +296,7 @@ ${html.slice(0, 50000)}`
   const text = result.response.text()
 
   // Extract JSON from markdown code blocks if present
-  const jsonMatch = text.match(/```json\n?(.*?)\n?```/s) || text.match(/\{.*\}/s)
+  const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) {
     throw new Error('Failed to extract JSON from AI response')
   }
@@ -348,7 +348,7 @@ ${recipe.instructions.join('\n')}`
   const result = await model.generateContent(prompt)
   const text = result.response.text()
 
-  const jsonMatch = text.match(/```json\n?(.*?)\n?```/s) || text.match(/\{.*\}/s)
+  const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) {
     throw new Error('Failed to extract JSON from AI response')
   }

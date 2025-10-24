@@ -28,9 +28,13 @@ import toast from 'react-hot-toast'
 
 export interface MissionProgress extends Mission {
   userMissionId?: string
+  missionId?: string
   progress: number
+  targetProgress: number
   completed: boolean
+  status: 'active' | 'completed' | 'expired'
   completedAt?: string
+  expiresAt?: string
   xpAwarded: boolean
 }
 
@@ -172,18 +176,26 @@ export function useMissions(userId: string | undefined) {
           updatedMissions.push({
             ...mission,
             userMissionId: docSnap.id,
+            missionId: mission.id,
             progress,
+            targetProgress: mission.criteria.target,
             completed: updateData.completed ?? userMission.completed,
+            status: (updateData.completed ?? userMission.completed) ? 'completed' : 'active',
             completedAt: updateData.completedAt ?? userMission.completedAt,
+            expiresAt: undefined,
             xpAwarded: userMission.xpAwarded
           })
         } else {
           updatedMissions.push({
             ...mission,
             userMissionId: docSnap.id,
+            missionId: mission.id,
             progress: userMission.progress,
+            targetProgress: mission.criteria.target,
             completed: userMission.completed,
+            status: userMission.completed ? 'completed' : 'active',
             completedAt: userMission.completedAt,
+            expiresAt: undefined,
             xpAwarded: userMission.xpAwarded
           })
         }

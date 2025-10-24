@@ -506,7 +506,7 @@ async function calculateActivityData(
     let consecutiveInactiveDays = 0
     if (lastActivityDate) {
       const daysSinceActivity = Math.floor(
-        (today.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24)
+        (today.getTime() - (lastActivityDate as Date).getTime()) / (1000 * 60 * 60 * 24)
       )
       consecutiveInactiveDays = daysSinceActivity
     } else {

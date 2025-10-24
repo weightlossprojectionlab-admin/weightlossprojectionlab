@@ -19,7 +19,7 @@ export default function MissionCard({ mission, onComplete }: MissionCardProps) {
   const progressPercent = Math.min((progress / target) * 100, 100);
   const isCompleted = mission.status === 'completed';
   const isActive = mission.status === 'active';
-  const missionId = mission.id || mission.missionId;
+  const missionId = mission.id || mission.missionId || '';
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -64,12 +64,7 @@ export default function MissionCard({ mission, onComplete }: MissionCardProps) {
             {mission.xpReward} XP
           </span>
         )}
-        {mission.expiresAt && !isCompleted && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
-            <ClockIcon className="h-3 w-3 mr-1" />
-            Expires {formatTimestamp(mission.expiresAt)}
-          </span>
-        )}
+        {/* Expiration display removed - missions don't have expiry in current implementation */}
       </div>
 
       {/* Progress Bar */}
@@ -100,7 +95,7 @@ export default function MissionCard({ mission, onComplete }: MissionCardProps) {
 
       {isCompleted && mission.completedAt && (
         <div className="text-sm text-success-dark font-medium">
-          ✓ Completed {formatTimestamp(mission.completedAt)}
+          ✓ Completed {formatTimestamp(new Date(mission.completedAt))}
         </div>
       )}
     </div>

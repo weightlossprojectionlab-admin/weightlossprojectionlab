@@ -174,7 +174,6 @@ export const registerBiometric = async (userId: string, userEmail: string): Prom
 
     // Save credential to Firebase
     try {
-      const { auth } = await import('firebase/auth')
       const { getAuth } = await import('firebase/auth')
       const firebaseAuth = getAuth()
       const currentUser = firebaseAuth.currentUser
