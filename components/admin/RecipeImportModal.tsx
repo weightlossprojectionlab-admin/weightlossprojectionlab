@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { importRecipeFromUrl, calculateRecipeNutrition, ImportedRecipe } from '@/lib/recipe-import'
+import { ImportedRecipe } from '@/lib/recipe-import'
 import { MealSuggestion, MealType } from '@/lib/meal-suggestions'
 import { addDoc, collection } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { db, auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
 import { Spinner } from '@/components/ui/Spinner'
 
@@ -29,20 +29,31 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
 
     setLoading(true)
     try {
-      // Import recipe from URL
-      const recipe = await importRecipeFromUrl(url)
-
-      // Calculate nutrition if missing
-      if (!recipe.calories || !recipe.protein || !recipe.carbs || !recipe.fat) {
-        toast.loading('Calculating nutrition...', { id: 'nutrition' })
-        const nutrition = await calculateRecipeNutrition(recipe)
-        recipe.calories = nutrition.calories
-        recipe.protein = nutrition.protein
-        recipe.carbs = nutrition.carbs
-        recipe.fat = nutrition.fat
-        recipe.fiber = nutrition.fiber
-        toast.dismiss('nutrition')
+      // Get auth token
+      const user = auth.currentUser
+      if (!user) {
+        toast.error('You must be logged in to import recipes')
+        return
       }
+
+      const idToken = await user.getIdToken()
+
+      // Call API to import recipe
+      const response = await fetch('/api/recipes/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ url })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Failed to import recipe: ${response.status}`)
+      }
+
+      const recipe: ImportedRecipe = await response.json()
 
       setImportedRecipe(recipe)
       setStep('preview')
