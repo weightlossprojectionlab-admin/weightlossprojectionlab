@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: 'Weight Loss Progress Lab',
   description: 'AI-powered weight loss tracking with biometric authentication and meal analysis',
   manifest: '/manifest.json',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'),
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
@@ -43,23 +44,20 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
-      <head>
-        <meta charSet="UTF-8" />
-        <Script id="theme-script" strategy="beforeInteractive">
-          {`(function() {
-              try {
-                const theme = localStorage.getItem('wlpl-theme') || 'system';
-                const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                const resolvedTheme = theme === 'system' ? systemTheme : theme;
-                document.documentElement.classList.add(resolvedTheme);
-                const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-                if (metaThemeColor) {
-                  metaThemeColor.setAttribute('content', resolvedTheme === 'dark' ? '#111827' : '#ffffff');
-                }
-              } catch (e) {}
-            })();`}
-        </Script>
-      </head>
+      <Script id="theme-script" strategy="beforeInteractive">
+        {`(function() {
+            try {
+              const theme = localStorage.getItem('wlpl-theme') || 'system';
+              const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+              const resolvedTheme = theme === 'system' ? systemTheme : theme;
+              document.documentElement.classList.add(resolvedTheme);
+              const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+              if (metaThemeColor) {
+                metaThemeColor.setAttribute('content', resolvedTheme === 'dark' ? '#111827' : '#ffffff');
+              }
+            } catch (e) {}
+          })();`}
+      </Script>
       <body className="h-full font-sans antialiased">
         <ThemeProvider>
           <ServiceWorkerProvider>
