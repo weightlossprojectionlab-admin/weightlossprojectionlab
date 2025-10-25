@@ -11,17 +11,24 @@ import { uploadMealPhoto } from '@/lib/storage-upload'
 import { useConfirm } from '@/hooks/useConfirm'
 import { auth } from '@/lib/firebase'
 import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
-import { compressImage, formatFileSize } from '@/lib/image-compression'
-import { exportToCSV, exportToPDF } from '@/lib/export-utils'
+import { formatFileSize } from '@/lib/image-compression'
 import { shareMeal, shareToPlatform, getPlatformInfo } from '@/lib/share-utils'
 import { MealCardSkeleton, TemplateCardSkeleton, SummaryCardSkeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/Spinner'
 import { queueMeal } from '@/lib/offline-queue'
 import { registerBackgroundSync } from '@/lib/sync-manager'
 import { useMissions } from '@/hooks/useMissions'
-import { BarcodeScanner } from '@/components/BarcodeScanner'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import type { AIAnalysis, MealTemplate, UserProfile, UserPreferences } from '@/types'
+import dynamic from 'next/dynamic'
+import { Suspense } from 'react'
+
+// Dynamic imports for heavy dependencies (reduces initial bundle size)
+// BarcodeScanner uses html5-qrcode library (~50kB)
+const BarcodeScanner = dynamic(
+  () => import('@/components/BarcodeScanner').then(mod => ({ default: mod.BarcodeScanner })),
+  { ssr: false }
+)
 
 // Helper function to detect meal type based on current time (fallback when no schedule)
 const detectMealTypeFromTime = (): 'breakfast' | 'lunch' | 'dinner' | 'snack' => {
@@ -796,6 +803,9 @@ function LogMealContent() {
           const blob = await base64Response.blob()
           const file = new File([blob], 'meal-photo.jpg', { type: 'image/jpeg' })
 
+          // Dynamically import image compression (browser-image-compression library ~30kB)
+          const { compressImage } = await import('@/lib/image-compression')
+
           // Compress image for storage
           const compressed = await compressImage(file)
           console.log('✅ Compressed:', formatFileSize(compressed.originalSize), '→', formatFileSize(compressed.compressedSize))
@@ -1109,11 +1119,14 @@ function LogMealContent() {
     }
   }
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     if (filteredMeals.length === 0) {
       toast.error('No meals to export')
       return
     }
+
+    // Dynamically import export utilities (only loaded when user clicks export)
+    const { exportToCSV } = await import('@/lib/export-utils')
 
     const dateRange = searchQuery || filterMealType !== 'all' ? 'filtered-' : ''
     const filename = `meal-logs-${dateRange}${new Date().toISOString().split('T')[0]}.csv`
@@ -1128,6 +1141,9 @@ function LogMealContent() {
       toast.error('No meals to export')
       return
     }
+
+    // Dynamically import export utilities (only loaded when user clicks export)
+    const { exportToPDF } = await import('@/lib/export-utils')
 
     const user = auth.currentUser
     const userName = user?.displayName || user?.email || 'User'
