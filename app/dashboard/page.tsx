@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/auth/AuthGuard'
 import DashboardRouter from '@/components/auth/DashboardRouter'
+import { DashboardErrorBoundary } from '@/components/error/DashboardErrorBoundary'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { GoalsEditor } from '@/components/ui/GoalsEditor'
 import { PlateauDetectionEmpty } from '@/components/ui/EmptyState'
@@ -93,15 +94,17 @@ function DashboardContent() {
 
   // Get contextual meal recommendations with personalized suggestions (with images)
   const mealContext = getNextMealContext(
-    todayMeals.map(m => ({ mealType: m.mealType, totalCalories: m.totalCalories })),
-    nutritionSummary.goalCalories,
+    todayMeals
+      .filter(m => m && m.mealType && typeof m.totalCalories === 'number')
+      .map(m => ({ mealType: m.mealType, totalCalories: m.totalCalories })),
+    nutritionSummary.goalCalories || 2000,
     {
-      dietaryPreferences: userProfile?.preferences?.dietaryPreferences,
-      foodAllergies: userProfile?.profile?.foodAllergies,
+      dietaryPreferences: userProfile?.preferences?.dietaryPreferences || [],
+      foodAllergies: userProfile?.profile?.foodAllergies || [],
       mealSchedule: userProfile?.preferences?.mealSchedule
     },
     auth.currentUser?.uid,
-    recipesWithMedia // Pass recipes with images/videos from Firestore
+    recipesWithMedia || [] // Pass recipes with images/videos from Firestore
   )
 
   // Check profile completeness for safety warnings
@@ -111,8 +114,8 @@ function DashboardContent() {
   const displaySteps = isEnabled ? todaysSteps : activitySummary.todaySteps
   const displayProgress = (displaySteps / activitySummary.goalSteps) * 100
 
-  // Generate AI Coach recommendations based on live data
-  const generateAIRecommendations = (): string[] => {
+  // Generate AI Coach recommendations based on live data (memoized to prevent recalculation on every render)
+  const aiRecommendations = useMemo(() => {
     const recommendations: string[] = []
 
     // Calorie recommendations (only if user has logged meals)
@@ -186,9 +189,18 @@ function DashboardContent() {
     }
 
     return recommendations
-  }
-
-  const aiRecommendations = generateAIRecommendations()
+  }, [
+    nutritionSummary.mealsLogged,
+    nutritionSummary.todayCalories,
+    nutritionSummary.goalCalories,
+    calorieProgress,
+    mealContext.message,
+    displaySteps,
+    activitySummary.goalSteps,
+    stepProgress,
+    weightData.length,
+    weightTrend.change
+  ])
 
   // Onboarding check is now handled by DashboardRouter
 
@@ -968,7 +980,9 @@ export default function DashboardPage() {
   return (
     <AuthGuard>
       <DashboardRouter>
-        <DashboardContent />
+        <DashboardErrorBoundary>
+          <DashboardContent />
+        </DashboardErrorBoundary>
       </DashboardRouter>
     </AuthGuard>
   )

@@ -13,7 +13,15 @@
  * generateRecipeSlug("3-Ingredient Pancakes") // "3-ingredient-pancakes"
  */
 export function generateRecipeSlug(recipeName: string): string {
-  return recipeName
+  // Validate input and provide fallback
+  if (!recipeName || typeof recipeName !== 'string' || recipeName.trim().length === 0) {
+    return 'recipe'
+  }
+
+  // Normalize accented characters (café → cafe)
+  const normalized = recipeName.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+  let slug = normalized
     .toLowerCase()
     .trim()
     // Replace apostrophes with nothing
@@ -24,6 +32,19 @@ export function generateRecipeSlug(recipeName: string): string {
     .replace(/^-+|-+$/g, '')
     // Collapse multiple hyphens
     .replace(/-+/g, '-')
+
+  // Truncate to 60 characters (preserve word boundaries if possible)
+  if (slug.length > 60) {
+    slug = slug.substring(0, 60).replace(/-[^-]*$/, '')
+  }
+
+  // Prefix with "recipe-" if starts with a number
+  if (/^\d/.test(slug)) {
+    slug = `recipe-${slug}`
+  }
+
+  // Final fallback if slug is empty after processing
+  return slug || 'recipe'
 }
 
 /**
