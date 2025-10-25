@@ -1,87 +1,100 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { collection, onSnapshot } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { MEAL_SUGGESTIONS, MealSuggestion } from '@/lib/meal-suggestions'
 
-interface RecipeMediaData {
-  imageUrls?: string[]
-  videoUrl?: string
-  videoThumbnailUrl?: string
-  imageStoragePaths?: string[]
-  videoStoragePath?: string
-  mediaUploadedAt?: any
-  mediaUploadedBy?: string
+const CACHE_KEY = 'wlpl_recipes_cache'
+const CACHE_VERSION = 1
+const CACHE_EXPIRY = 1000 * 60 * 60 * 24 // 24 hours
 
-  // Legacy fields for backward compatibility
-  imageUrl?: string
-  imageStoragePath?: string
+interface RecipeCache {
+  version: number
+  timestamp: number
+  recipes: MealSuggestion[]
 }
 
 /**
- * Hook to fetch recipes with real-time Firestore media metadata.
- * Merges hardcoded recipe data from MEAL_SUGGESTIONS with uploaded media from Firestore.
+ * Hook to fetch recipes from Firestore recipe library
  *
- * @returns Array of recipes with merged media data
+ * - Fetches only published recipes from Firestore
+ * - Caches recipes in localStorage for offline support
+ * - Falls back to hardcoded MEAL_SUGGESTIONS if Firestore is empty or fails
+ * - Provides real-time updates when recipes change
+ *
+ * @returns Array of recipes with loading and error states
  */
 export function useRecipes() {
-  const [recipes, setRecipes] = useState<MealSuggestion[]>(MEAL_SUGGESTIONS)
+  const [recipes, setRecipes] = useState<MealSuggestion[]>(() => {
+    // Try to load from cache on initial render
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY)
+        if (cached) {
+          const cacheData: RecipeCache = JSON.parse(cached)
+          const age = Date.now() - cacheData.timestamp
+
+          if (cacheData.version === CACHE_VERSION && age < CACHE_EXPIRY) {
+            return cacheData.recipes
+          }
+        }
+      } catch (error) {
+        console.error('Error loading recipes from cache:', error)
+      }
+    }
+    return MEAL_SUGGESTIONS // Fallback to seed data
+  })
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
-    // Subscribe to recipes collection for real-time updates
-    const recipesRef = collection(db, 'recipes')
+    // Query only published recipes, ordered by popularity and creation date
+    const recipesQuery = query(
+      collection(db, 'recipes'),
+      where('status', '==', 'published'),
+      orderBy('popularity', 'desc'),
+      orderBy('createdAt', 'desc')
+    )
 
     const unsubscribe = onSnapshot(
-      recipesRef,
+      recipesQuery,
       (snapshot) => {
         try {
-          // Create a map of recipe media data by ID
-          const mediaMap = new Map<string, RecipeMediaData>()
-
-          snapshot.forEach((doc) => {
-            mediaMap.set(doc.id, doc.data() as RecipeMediaData)
+          // Convert Firestore documents to MealSuggestion objects
+          const firestoreRecipes: MealSuggestion[] = snapshot.docs.map((doc) => {
+            const data = doc.data()
+            return {
+              ...data,
+              firestoreId: doc.id,
+              // Convert Firestore Timestamps to Date objects
+              createdAt: data.createdAt?.toDate?.() || data.createdAt,
+              updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+              mediaUploadedAt: data.mediaUploadedAt?.toDate?.() || data.mediaUploadedAt,
+            } as MealSuggestion
           })
 
-          // Merge hardcoded recipes with Firestore media data
-          const mergedRecipes = MEAL_SUGGESTIONS.map((recipe) => {
-            const mediaData = mediaMap.get(recipe.id)
+          // If Firestore is empty, use seed data
+          const finalRecipes = firestoreRecipes.length > 0 ? firestoreRecipes : MEAL_SUGGESTIONS
 
-            if (mediaData) {
-              // Handle both new array format and legacy single image format
-              let imageUrls = mediaData.imageUrls
-              let imageStoragePaths = mediaData.imageStoragePaths
-
-              // Backward compatibility: if legacy imageUrl exists but imageUrls doesn't, convert to array
-              if (!imageUrls && mediaData.imageUrl) {
-                imageUrls = [mediaData.imageUrl]
-              }
-              if (!imageStoragePaths && mediaData.imageStoragePath) {
-                imageStoragePaths = [mediaData.imageStoragePath]
-              }
-
-              return {
-                ...recipe,
-                imageUrls,
-                imageStoragePaths,
-                videoUrl: mediaData.videoUrl,
-                videoThumbnailUrl: mediaData.videoThumbnailUrl,
-                videoStoragePath: mediaData.videoStoragePath,
-                mediaUploadedAt: mediaData.mediaUploadedAt?.toDate?.() || mediaData.mediaUploadedAt,
-                mediaUploadedBy: mediaData.mediaUploadedBy,
-                // Keep legacy fields for any components still using them
-                imageUrl: imageUrls?.[0],
-                imageStoragePath: imageStoragePaths?.[0],
-              }
-            }
-
-            return recipe
-          })
-
-          setRecipes(mergedRecipes)
+          setRecipes(finalRecipes)
           setLoading(false)
+
+          // Cache recipes in localStorage for offline support
+          if (typeof window !== 'undefined') {
+            try {
+              const cacheData: RecipeCache = {
+                version: CACHE_VERSION,
+                timestamp: Date.now(),
+                recipes: finalRecipes,
+              }
+              localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
+            } catch (error) {
+              console.error('Error caching recipes:', error)
+              // Don't fail if localStorage is full or unavailable
+            }
+          }
         } catch (err) {
           console.error('Error processing recipe data:', err)
           setError(err instanceof Error ? err : new Error('Unknown error'))
@@ -89,11 +102,14 @@ export function useRecipes() {
         }
       },
       (err) => {
-        console.error('Error fetching recipes:', err)
+        console.error('Error fetching recipes from Firestore:', err)
         setError(err instanceof Error ? err : new Error('Unknown error'))
         setLoading(false)
-        // Fall back to hardcoded recipes on error
-        setRecipes(MEAL_SUGGESTIONS)
+
+        // Fall back to cached or seed data
+        if (recipes.length === 0) {
+          setRecipes(MEAL_SUGGESTIONS)
+        }
       }
     )
 
@@ -102,4 +118,17 @@ export function useRecipes() {
   }, [])
 
   return { recipes, loading, error }
+}
+
+/**
+ * Clear the recipe cache (useful for debugging or forcing refresh)
+ */
+export function clearRecipeCache() {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(CACHE_KEY)
+    } catch (error) {
+      console.error('Error clearing recipe cache:', error)
+    }
+  }
 }
