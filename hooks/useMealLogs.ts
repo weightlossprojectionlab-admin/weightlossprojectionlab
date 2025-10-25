@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase'
 import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore'
+import { onAuthStateChanged, type User } from 'firebase/auth'
 import type { Unsubscribe } from 'firebase/firestore'
 
 export interface MealLogData {
@@ -44,16 +45,30 @@ export function useMealLogsRealtime(params?: {
   const [mealLogs, setMealLogs] = useState<MealLogData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser)
 
+  // Listen to auth state changes
   useEffect(() => {
-    const user = auth.currentUser
-    if (!user) {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user)
+      if (!user) {
+        setLoading(false)
+        setMealLogs([])
+        setError(null) // Clear error when user logs out (expected behavior)
+      }
+    })
+
+    return () => unsubscribeAuth()
+  }, [])
+
+  // Set up Firestore listener when user is authenticated
+  useEffect(() => {
+    if (!currentUser) {
       setLoading(false)
-      setError(new Error('User not authenticated'))
       return
     }
 
-    const mealLogsRef = collection(db, 'users', user.uid, 'mealLogs')
+    const mealLogsRef = collection(db, 'users', currentUser.uid, 'mealLogs')
 
     // Build query with filters (WHERE clauses must come before ORDER BY)
     let q = query(mealLogsRef)
@@ -101,7 +116,7 @@ export function useMealLogsRealtime(params?: {
 
     // Cleanup subscription on unmount
     return () => unsubscribe()
-  }, [params?.limitCount, params?.startDate, params?.endDate, params?.mealType])
+  }, [currentUser, params?.limitCount, params?.startDate, params?.endDate, params?.mealType])
 
   return { mealLogs, loading, error }
 }
