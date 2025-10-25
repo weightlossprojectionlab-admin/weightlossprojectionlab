@@ -40,6 +40,7 @@ export interface UserPreferences {
   units: 'metric' | 'imperial'
   notifications: boolean
   biometricEnabled: boolean
+  themePreference: 'light' | 'dark' | 'system' // Theme setting synced to Firestore
   dietaryPreferences?: string[]
   mealReminderTimes?: {
     breakfast?: string

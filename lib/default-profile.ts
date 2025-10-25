@@ -6,6 +6,7 @@ export const DEFAULT_PREFERENCES = {
   units: 'imperial' as const,
   notifications: true,
   biometricEnabled: false,
+  themePreference: 'system' as const, // Default to system preference
 }
 
 /**

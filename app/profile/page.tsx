@@ -21,12 +21,14 @@ import { Spinner } from '@/components/ui/Spinner'
 import { HealthSyncCard } from '@/components/health/HealthSyncCard'
 import { HealthConnectModal } from '@/components/health/HealthConnectModal'
 import { detectPlatform, getHealthAppForPlatform } from '@/lib/health-sync-utils'
+import { useTheme } from '@/hooks/useTheme'
 
 function ProfileContent() {
   const { user } = useAuth()
   const router = useRouter()
   const { confirm, ConfirmDialog } = useConfirm()
   const { isEnabled: stepTrackingEnabled, enableTracking, disableTracking, isTracking } = useStepTracking()
+  const { theme, setTheme } = useTheme()
   const [biometricSupported, setBiometricSupported] = useState(false)
   const [biometricEnabled, setBiometricEnabled] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -656,6 +658,55 @@ function ProfileContent() {
                 />
                 <div className="w-11 h-6 bg-gray-100 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-900 after:border-gray-200 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
+            </div>
+
+            {/* Theme Preference */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <div className="mb-3">
+                <p className="font-medium text-gray-900 dark:text-gray-100">Theme</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Choose your preferred color scheme</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={() => setTheme('light')}
+                  className={`
+                    flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all
+                    ${theme === 'light'
+                      ? 'border-primary bg-purple-50 dark:bg-purple-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                    }
+                  `}
+                >
+                  <span className="text-2xl mb-2">☀️</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Light</span>
+                </button>
+                <button
+                  onClick={() => setTheme('dark')}
+                  className={`
+                    flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all
+                    ${theme === 'dark'
+                      ? 'border-primary bg-purple-50 dark:bg-purple-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                    }
+                  `}
+                >
+                  <span className="text-2xl mb-2">🌙</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Dark</span>
+                </button>
+                <button
+                  onClick={() => setTheme('system')}
+                  className={`
+                    flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all
+                    ${theme === 'system'
+                      ? 'border-primary bg-purple-50 dark:bg-purple-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                    }
+                  `}
+                >
+                  <span className="text-2xl mb-2">🔄</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">System</span>
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between">

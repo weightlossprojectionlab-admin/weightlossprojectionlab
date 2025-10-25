@@ -28,7 +28,6 @@ import { formatProjectionDisplay } from '@/lib/weight-projection-agent'
 import { getNextMealContext, getMealCTA } from '@/lib/meal-context'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
 import { Spinner } from '@/components/ui/Spinner'
-import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { MealSuggestion } from '@/lib/meal-suggestions'
 import { useRecipes } from '@/hooks/useRecipes'
 import { generateRecipeAltText } from '@/lib/utils'
@@ -212,25 +211,22 @@ function DashboardContent() {
       <PageHeader
         title="Dashboard"
         actions={
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <button
-              onClick={async () => {
-                setSignOutLoading(true)
-                try {
-                  await signOut()
-                } finally {
-                  setSignOutLoading(false)
-                }
-              }}
-              disabled={signOutLoading}
-              className={`text-sm text-accent hover:text-accent-hover inline-flex items-center space-x-1 ${signOutLoading ? 'cursor-wait opacity-60' : ''}`}
-              aria-label="Sign out"
-            >
-              {signOutLoading && <Spinner size="sm" className="text-accent" />}
-              <span>{signOutLoading ? 'Signing Out...' : 'Sign Out'}</span>
-            </button>
-          </div>
+          <button
+            onClick={async () => {
+              setSignOutLoading(true)
+              try {
+                await signOut()
+              } finally {
+                setSignOutLoading(false)
+              }
+            }}
+            disabled={signOutLoading}
+            className={`text-sm text-accent hover:text-accent-hover inline-flex items-center space-x-1 ${signOutLoading ? 'cursor-wait opacity-60' : ''}`}
+            aria-label="Sign out"
+          >
+            {signOutLoading && <Spinner size="sm" className="text-accent" />}
+            <span>{signOutLoading ? 'Signing Out...' : 'Sign Out'}</span>
+          </button>
         }
       />
 
