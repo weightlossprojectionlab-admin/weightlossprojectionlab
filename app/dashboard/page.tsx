@@ -27,9 +27,22 @@ import { formatProjectionDisplay } from '@/lib/weight-projection-agent'
 import { getNextMealContext, getMealCTA } from '@/lib/meal-context'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
 import { Spinner } from '@/components/ui/Spinner'
-import { MealSuggestion } from '@/lib/meal-suggestions'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { MealSuggestion } from '@/lib/meal-suggestions'
+import { useRecipes } from '@/hooks/useRecipes'
+import Image from 'next/image'
 import toast from 'react-hot-toast'
+
+// Helper function to get meal type emoji for placeholders
+const getMealEmoji = (mealType: string): string => {
+  const emojis: Record<string, string> = {
+    breakfast: '🍳',
+    lunch: '🥗',
+    dinner: '🍽️',
+    snack: '🍎'
+  }
+  return emojis[mealType] || '🍴'
+}
 
 function DashboardContent() {
   const router = useRouter()
@@ -74,7 +87,10 @@ function DashboardContent() {
   // Weekly missions and gamification
   const { missions, gamification, loading: missionsLoading, checkProgress } = useMissions(userProfile?.userId)
 
-  // Get contextual meal recommendations with personalized suggestions
+  // Get recipes with Firestore media data (images/videos)
+  const { recipes: recipesWithMedia } = useRecipes()
+
+  // Get contextual meal recommendations with personalized suggestions (with images)
   const mealContext = getNextMealContext(
     todayMeals.map(m => ({ mealType: m.mealType, totalCalories: m.totalCalories })),
     nutritionSummary.goalCalories,
@@ -83,7 +99,8 @@ function DashboardContent() {
       foodAllergies: userProfile?.profile?.foodAllergies,
       mealSchedule: userProfile?.preferences?.mealSchedule
     },
-    auth.currentUser?.uid
+    auth.currentUser?.uid,
+    recipesWithMedia // Pass recipes with images/videos from Firestore
   )
 
   // Check profile completeness for safety warnings
@@ -486,7 +503,7 @@ function DashboardContent() {
                   </div>
                 </div>
 
-                {/* Meal Suggestions with Allergen Warnings */}
+                {/* Meal Suggestions with Images */}
                 {mealContext.suggestions.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between mb-3">
@@ -499,73 +516,97 @@ function DashboardContent() {
                         </span>
                       )}
                     </div>
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {mealContext.suggestions.map(suggestion => (
-                        <div key={suggestion.id} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-                          <div className="flex items-start space-x-2">
-                            <span className="text-primary mt-0.5">•</span>
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <p className="font-medium text-gray-900 dark:text-gray-100">{suggestion.name}</p>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                    {suggestion.calories} cal • {suggestion.macros.protein}g protein • {suggestion.prepTime} min
-                                  </p>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    setSelectedRecipe(suggestion)
-                                    setShowRecipeModal(true)
-                                  }}
-                                  className="ml-2 text-xs text-primary hover:text-primary-hover font-medium whitespace-nowrap flex items-center space-x-1"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                  </svg>
-                                  <span>Recipe</span>
-                                </button>
+                        <div
+                          key={suggestion.id}
+                          className="bg-white dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                          onClick={() => {
+                            setSelectedRecipe(suggestion)
+                            setShowRecipeModal(true)
+                          }}
+                        >
+                          {/* Recipe Image */}
+                          <div className="relative h-32 bg-gray-100 dark:bg-gray-800">
+                            {suggestion.imageUrls?.[0] ? (
+                              <Image
+                                src={suggestion.imageUrls[0]}
+                                alt={suggestion.name}
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                              />
+                            ) : (
+                              <div className="flex items-center justify-center h-full bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+                                <span className="text-4xl">{getMealEmoji(suggestion.mealType)}</span>
                               </div>
+                            )}
+                          </div>
 
-                              {/* ALWAYS show allergens (for self-filtering) */}
-                              {suggestion.allergens && suggestion.allergens.length > 0 && (
-                                <div className="mt-2 flex items-start space-x-1">
-                                  <span className="text-xs font-medium text-orange-700 mt-0.5">Contains:</span>
-                                  <div className="flex flex-wrap gap-1">
-                                    {suggestion.allergens.map(allergen => (
-                                      <span
-                                        key={allergen}
-                                        className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded"
-                                      >
-                                        {allergen}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
+                          {/* Recipe Details */}
+                          <div className="p-3">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-1 line-clamp-1">
+                              {suggestion.name}
+                            </h4>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                              {suggestion.calories} cal • {suggestion.macros.protein}g protein • {suggestion.prepTime} min
+                            </p>
 
-                              {/* Show dietary tags */}
-                              {suggestion.dietaryTags && suggestion.dietaryTags.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                  {suggestion.dietaryTags.slice(0, 3).map(tag => (
+                            {/* Allergens */}
+                            {suggestion.allergens && suggestion.allergens.length > 0 && (
+                              <div className="mb-2">
+                                <div className="flex flex-wrap gap-1">
+                                  {suggestion.allergens.slice(0, 3).map(allergen => (
                                     <span
-                                      key={tag}
-                                      className="text-xs bg-purple-100 dark:bg-purple-900/20 text-primary px-2 py-0.5 rounded"
+                                      key={allergen}
+                                      className="text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300 px-2 py-0.5 rounded"
                                     >
-                                      {tag}
+                                      {allergen}
                                     </span>
                                   ))}
+                                  {suggestion.allergens.length > 3 && (
+                                    <span className="text-xs text-orange-700 dark:text-orange-400">
+                                      +{suggestion.allergens.length - 3}
+                                    </span>
+                                  )}
                                 </div>
-                              )}
+                              </div>
+                            )}
 
-                              {/* Show safety warnings if present */}
-                              {suggestion.safetyWarnings && suggestion.safetyWarnings.length > 0 && (
-                                <div className="mt-2 text-xs text-error">
-                                  {suggestion.safetyWarnings.map((warning, idx) => (
-                                    <p key={idx}>⚠️ {warning}</p>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
+                            {/* Dietary Tags */}
+                            {suggestion.dietaryTags && suggestion.dietaryTags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mb-2">
+                                {suggestion.dietaryTags.slice(0, 2).map(tag => (
+                                  <span
+                                    key={tag}
+                                    className="text-xs bg-purple-100 dark:bg-purple-900/20 text-primary px-2 py-0.5 rounded"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* View Recipe Button */}
+                            <button
+                              className="w-full mt-2 px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedRecipe(suggestion)
+                                setShowRecipeModal(true)
+                              }}
+                            >
+                              View Recipe →
+                            </button>
+
+                            {/* Safety Warnings */}
+                            {suggestion.safetyWarnings && suggestion.safetyWarnings.length > 0 && (
+                              <div className="mt-2 text-xs text-error">
+                                {suggestion.safetyWarnings.map((warning, idx) => (
+                                  <p key={idx}>⚠️ {warning}</p>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
