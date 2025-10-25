@@ -248,27 +248,52 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
-    // Recipes collection (media metadata)
+    // Recipes collection (full recipe library with AI generation)
     match /recipes/{recipeId} {
-      // Public read access for all users
-      allow read: if true;
+      // Read: Anyone can read published recipes (for meal suggestions)
+      //       Admins can read all recipes (including drafts)
+      allow read: if resource == null ||
+                     resource.data.status == 'published' ||
+                     isAdmin();
 
-      // Create: Admin-only, with required fields
+      // Create: Admin-only, with required recipe fields
       allow create: if isAdmin() &&
-        request.resource.data.keys().hasAll(['imageUrls', 'imageStoragePaths']) &&
-        request.resource.data.imageUrls is list &&
-        request.resource.data.imageStoragePaths is list &&
-        request.resource.data.imageUrls.size() > 0 &&
-        request.resource.data.imageUrls.size() <= 4 &&
-        request.resource.data.mediaUploadedBy == request.auth.uid &&
-        request.resource.data.mediaUploadedAt is timestamp;
+        // Core recipe fields
+        request.resource.data.keys().hasAll(['id', 'name', 'mealType', 'calories', 'macros', 'ingredients', 'prepTime', 'dietaryTags', 'allergens', 'description', 'servingSize', 'status']) &&
+        request.resource.data.id is string &&
+        request.resource.data.name is string &&
+        request.resource.data.mealType in ['breakfast', 'lunch', 'dinner', 'snack'] &&
+        request.resource.data.calories is number &&
+        request.resource.data.calories > 0 &&
+        request.resource.data.macros is map &&
+        request.resource.data.ingredients is list &&
+        request.resource.data.ingredients.size() > 0 &&
+        request.resource.data.prepTime is number &&
+        request.resource.data.prepTime > 0 &&
+        request.resource.data.dietaryTags is list &&
+        request.resource.data.allergens is list &&
+        request.resource.data.description is string &&
+        request.resource.data.servingSize is number &&
+        request.resource.data.servingSize > 0 &&
+        // Status validation
+        request.resource.data.status in ['draft', 'published', 'archived'] &&
+        // Timestamps
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp &&
+        // Optional fields validation
+        (!('imageUrls' in request.resource.data) || request.resource.data.imageUrls is list) &&
+        (!('imageUrls' in request.resource.data) || request.resource.data.imageUrls.size() <= 4);
 
-      // Update: Admin-only, can only update specific media fields
+      // Update: Admin-only, with field validations
       allow update: if isAdmin() &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['imageUrls', 'imageStoragePaths', 'videoUrl', 'videoStoragePath', 'mediaUploadedAt', 'mediaUploadedBy']) &&
-        request.resource.data.mediaUploadedBy == request.auth.uid &&
-        request.resource.data.mediaUploadedAt is timestamp;
+        // Cannot change the recipe ID
+        request.resource.data.id == resource.data.id &&
+        // Status must be valid
+        request.resource.data.status in ['draft', 'published', 'archived'] &&
+        // Must update the updatedAt timestamp
+        request.resource.data.updatedAt is timestamp &&
+        // Validate image limits if present
+        (!('imageUrls' in request.resource.data) || request.resource.data.imageUrls.size() <= 4);
 
       // Delete: Admin-only
       allow delete: if isAdmin();
