@@ -14,16 +14,26 @@ interface RecipeMediaData {
   mediaUploadedAt?: any
   mediaUploadedBy?: string
 
+  // Fields that indicate this is a full recipe (post-migration)
+  status?: 'draft' | 'published' | 'archived'
+  recipeSteps?: string[]
+  name?: string
+
   // Legacy fields for backward compatibility
   imageUrl?: string
   imageStoragePath?: string
 }
 
 /**
- * Hook to fetch recipes with real-time Firestore media metadata.
- * Merges hardcoded recipe data from MEAL_SUGGESTIONS with uploaded media from Firestore.
+ * Hook to fetch recipes with Firestore integration
  *
- * @returns Array of recipes with merged media data
+ * BACKWARDS COMPATIBLE BEHAVIOR:
+ * - Before migration: Merges hardcoded MEAL_SUGGESTIONS with media from Firestore
+ * - After migration: Fetches full recipes from Firestore (with status: 'published')
+ *
+ * The hook automatically detects which mode to use based on Firestore data.
+ *
+ * @returns Array of recipes with loading and error states
  */
 export function useRecipes() {
   const [recipes, setRecipes] = useState<MealSuggestion[]>(MEAL_SUGGESTIONS)
@@ -38,49 +48,75 @@ export function useRecipes() {
       recipesRef,
       (snapshot) => {
         try {
-          // Create a map of recipe media data by ID
-          const mediaMap = new Map<string, RecipeMediaData>()
-
-          snapshot.forEach((doc) => {
-            mediaMap.set(doc.id, doc.data() as RecipeMediaData)
+          // Check if we have full recipes (post-migration) or just media (pre-migration)
+          const hasFullRecipes = snapshot.docs.some((doc) => {
+            const data = doc.data()
+            return data.status && data.recipeSteps && data.name
           })
 
-          // Merge hardcoded recipes with Firestore media data
-          const mergedRecipes = MEAL_SUGGESTIONS.map((recipe) => {
-            const mediaData = mediaMap.get(recipe.id)
+          if (hasFullRecipes) {
+            // POST-MIGRATION: Use full recipes from Firestore
+            const firestoreRecipes: MealSuggestion[] = snapshot.docs
+              .filter((doc) => doc.data().status === 'published')
+              .map((doc) => {
+                const data = doc.data()
+                return {
+                  ...data,
+                  firestoreId: doc.id,
+                  // Convert Firestore Timestamps to Date objects
+                  createdAt: data.createdAt?.toDate?.() || data.createdAt,
+                  updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+                  mediaUploadedAt: data.mediaUploadedAt?.toDate?.() || data.mediaUploadedAt,
+                } as MealSuggestion
+              })
 
-            if (mediaData) {
-              // Handle both new array format and legacy single image format
-              let imageUrls = mediaData.imageUrls
-              let imageStoragePaths = mediaData.imageStoragePaths
+            // If no published recipes, fall back to hardcoded
+            setRecipes(firestoreRecipes.length > 0 ? firestoreRecipes : MEAL_SUGGESTIONS)
+          } else {
+            // PRE-MIGRATION: Merge hardcoded recipes with media data
+            const mediaMap = new Map<string, RecipeMediaData>()
 
-              // Backward compatibility: if legacy imageUrl exists but imageUrls doesn't, convert to array
-              if (!imageUrls && mediaData.imageUrl) {
-                imageUrls = [mediaData.imageUrl]
+            snapshot.forEach((doc) => {
+              mediaMap.set(doc.id, doc.data() as RecipeMediaData)
+            })
+
+            const mergedRecipes = MEAL_SUGGESTIONS.map((recipe) => {
+              const mediaData = mediaMap.get(recipe.id)
+
+              if (mediaData) {
+                // Handle both new array format and legacy single image format
+                let imageUrls = mediaData.imageUrls
+                let imageStoragePaths = mediaData.imageStoragePaths
+
+                // Backward compatibility: if legacy imageUrl exists but imageUrls doesn't, convert to array
+                if (!imageUrls && mediaData.imageUrl) {
+                  imageUrls = [mediaData.imageUrl]
+                }
+                if (!imageStoragePaths && mediaData.imageStoragePath) {
+                  imageStoragePaths = [mediaData.imageStoragePath]
+                }
+
+                return {
+                  ...recipe,
+                  imageUrls,
+                  imageStoragePaths,
+                  videoUrl: mediaData.videoUrl,
+                  videoThumbnailUrl: mediaData.videoThumbnailUrl,
+                  videoStoragePath: mediaData.videoStoragePath,
+                  mediaUploadedAt: mediaData.mediaUploadedAt?.toDate?.() || mediaData.mediaUploadedAt,
+                  mediaUploadedBy: mediaData.mediaUploadedBy,
+                  // Keep legacy fields for any components still using them
+                  imageUrl: imageUrls?.[0],
+                  imageStoragePath: imageStoragePaths?.[0],
+                }
               }
-              if (!imageStoragePaths && mediaData.imageStoragePath) {
-                imageStoragePaths = [mediaData.imageStoragePath]
-              }
 
-              return {
-                ...recipe,
-                imageUrls,
-                imageStoragePaths,
-                videoUrl: mediaData.videoUrl,
-                videoThumbnailUrl: mediaData.videoThumbnailUrl,
-                videoStoragePath: mediaData.videoStoragePath,
-                mediaUploadedAt: mediaData.mediaUploadedAt?.toDate?.() || mediaData.mediaUploadedAt,
-                mediaUploadedBy: mediaData.mediaUploadedBy,
-                // Keep legacy fields for any components still using them
-                imageUrl: imageUrls?.[0],
-                imageStoragePath: imageStoragePaths?.[0],
-              }
-            }
+              return recipe
+            })
 
-            return recipe
-          })
+            setRecipes(mergedRecipes)
+          }
 
-          setRecipes(mergedRecipes)
           setLoading(false)
         } catch (err) {
           console.error('Error processing recipe data:', err)
@@ -102,4 +138,17 @@ export function useRecipes() {
   }, [])
 
   return { recipes, loading, error }
+}
+
+/**
+ * Clear the recipe cache (useful for debugging or forcing refresh)
+ */
+export function clearRecipeCache() {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem('wlpl_recipes_cache')
+    } catch (error) {
+      console.error('Error clearing recipe cache:', error)
+    }
+  }
 }
