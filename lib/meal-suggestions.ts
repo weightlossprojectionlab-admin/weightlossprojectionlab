@@ -544,10 +544,13 @@ export interface SuggestionFilters {
   allergies?: string[] // From user profile
   maxResults?: number
   userId?: string // For personalized shuffling
+  recipes?: MealSuggestion[] // Optional: use custom recipe array (e.g., with Firestore media)
 }
 
 export function getMealSuggestions(filters: SuggestionFilters): MealSuggestion[] {
-  let suggestions = MEAL_SUGGESTIONS.filter(meal => meal.mealType === filters.mealType)
+  // Use custom recipes array if provided (e.g., with Firestore media), otherwise use default
+  const recipesSource = filters.recipes || MEAL_SUGGESTIONS
+  let suggestions = recipesSource.filter(meal => meal.mealType === filters.mealType)
 
   // Filter by calorie budget
   if (filters.calorieMin !== undefined) {
