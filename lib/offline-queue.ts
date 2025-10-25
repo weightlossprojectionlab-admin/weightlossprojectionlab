@@ -152,13 +152,14 @@ export async function getUnsyncedMeals(): Promise<QueuedMeal[]> {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([MEAL_STORE_NAME], 'readonly')
     const store = transaction.objectStore(MEAL_STORE_NAME)
-    const index = store.index('synced')
-    const request = index.getAll(IDBKeyRange.only(false)) // Get all where synced = false
+    // Get all meals and filter client-side (IndexedDB doesn't reliably support boolean in IDBKeyRange)
+    const request = store.getAll()
 
     request.onsuccess = () => {
-      const meals = request.result as QueuedMeal[]
-      console.log('[OfflineQueue] Unsynced meals:', meals.length)
-      resolve(meals)
+      const allMeals = request.result as QueuedMeal[]
+      const unsyncedMeals = allMeals.filter(meal => meal.synced === false)
+      console.log('[OfflineQueue] Unsynced meals:', unsyncedMeals.length)
+      resolve(unsyncedMeals)
     }
 
     request.onerror = () => {
@@ -277,14 +278,15 @@ export async function clearSyncedMeals(): Promise<number> {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([MEAL_STORE_NAME], 'readwrite')
     const store = transaction.objectStore(MEAL_STORE_NAME)
-    const index = store.index('synced')
-    const request = index.getAll(IDBKeyRange.only(true)) // Get all synced meals
+    // Get all meals and filter client-side (IndexedDB doesn't reliably support boolean in IDBKeyRange)
+    const request = store.getAll()
 
     request.onsuccess = () => {
-      const meals = request.result as QueuedMeal[]
+      const allMeals = request.result as QueuedMeal[]
+      const syncedMeals = allMeals.filter(meal => meal.synced === true)
       let deletedCount = 0
 
-      meals.forEach(meal => {
+      syncedMeals.forEach(meal => {
         store.delete(meal.id)
         deletedCount++
       })
@@ -318,28 +320,20 @@ export async function getQueueStats(): Promise<{
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([MEAL_STORE_NAME], 'readonly')
     const store = transaction.objectStore(MEAL_STORE_NAME)
-    const countRequest = store.count()
+    // Get all meals and count client-side (IndexedDB doesn't reliably support boolean in IDBKeyRange)
+    const request = store.getAll()
 
-    countRequest.onsuccess = () => {
-      const total = countRequest.result
+    request.onsuccess = () => {
+      const allMeals = request.result as QueuedMeal[]
+      const total = allMeals.length
+      const unsynced = allMeals.filter(meal => meal.synced === false).length
+      const synced = allMeals.filter(meal => meal.synced === true).length
 
-      const index = store.index('synced')
-      const unsyncedRequest = index.count(IDBKeyRange.only(false))
-
-      unsyncedRequest.onsuccess = () => {
-        const unsynced = unsyncedRequest.result
-        const synced = total - unsynced
-
-        resolve({ total, unsynced, synced })
-      }
-
-      unsyncedRequest.onerror = () => {
-        reject(new Error('Failed to count unsynced meals'))
-      }
+      resolve({ total, unsynced, synced })
     }
 
-    countRequest.onerror = () => {
-      reject(new Error('Failed to count meals'))
+    request.onerror = () => {
+      reject(new Error('Failed to get queue stats'))
     }
   })
 }
