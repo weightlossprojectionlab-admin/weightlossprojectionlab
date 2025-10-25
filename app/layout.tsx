@@ -44,8 +44,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
-      <Script id="theme-script" strategy="beforeInteractive">
-        {`(function() {
+      <body className="h-full font-sans antialiased">
+        <Script id="theme-script" strategy="beforeInteractive">
+          {`(function() {
             try {
               const theme = localStorage.getItem('wlpl-theme') || 'system';
               const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -57,8 +58,7 @@ export default function RootLayout({
               }
             } catch (e) {}
           })();`}
-      </Script>
-      <body className="h-full font-sans antialiased">
+        </Script>
         <ThemeProvider>
           <ServiceWorkerProvider>
             <StepTrackingProvider>
