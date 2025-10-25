@@ -158,7 +158,10 @@ export function startSensor(
     const accel = event.accelerationIncludingGravity || event.acceleration
 
     if (!accel || accel.x === null || accel.y === null || accel.z === null) {
-      console.warn('[Sensor] No acceleration data available')
+      // Debug log only - this is expected on desktop/unsupported devices
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Sensor] No acceleration data available (expected on desktop/unsupported devices)')
+      }
       return
     }
 
