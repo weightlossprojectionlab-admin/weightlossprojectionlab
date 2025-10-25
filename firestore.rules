@@ -233,7 +233,8 @@ service cloud.firestore {
 
     // Cooking sessions
     match /cooking-sessions/{sessionId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
@@ -241,7 +242,8 @@ service cloud.firestore {
 
     // Recipe queue
     match /recipe-queue/{queueId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
@@ -276,7 +278,8 @@ service cloud.firestore {
 
     // XP transactions (read-only for users)
     match /xp_transactions/{transactionId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated();
     }
 
@@ -292,7 +295,8 @@ service cloud.firestore {
 
     // Scheduled nudges (notifications)
     match /scheduled_nudges/{nudgeId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated();
       allow update: if isAuthenticated();
     }
@@ -303,7 +307,8 @@ service cloud.firestore {
 
     // Chat messages
     match /chat_messages/{messageId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       // No updates or deletes - chat history is immutable
     }
@@ -315,7 +320,8 @@ service cloud.firestore {
     // Readiness analysis results
     match /readiness_analysis/{analysisId} {
       // Users can read their own analyses
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       // Admins can read all analyses
       allow read: if isAdmin();
       // Only server-side writes (through API with admin SDK)
@@ -329,7 +335,8 @@ service cloud.firestore {
     // Re-engagement campaigns
     match /reengagement_campaigns/{campaignId} {
       // Users can read their own campaigns
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       // Admins can read all campaigns
       allow read: if isAdmin();
       // Only server-side writes (through API with admin SDK)
@@ -342,7 +349,9 @@ service cloud.firestore {
 
     // Meals collection
     match /meals/{mealId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Allow queries and individual document reads for authenticated users querying their own data
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
@@ -350,7 +359,9 @@ service cloud.firestore {
 
     // Weight entries
     match /weight_entries/{entryId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Allow queries and individual document reads for authenticated users querying their own data
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
@@ -358,14 +369,16 @@ service cloud.firestore {
 
     // Weekly missions
     match /weekly_missions/{missionId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
     // Cooking sessions (if not already covered above)
     match /cooking_sessions/{sessionId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
@@ -373,7 +386,8 @@ service cloud.firestore {
 
     // Recipe queue (if not already covered above)
     match /recipe_queue/{queueId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
