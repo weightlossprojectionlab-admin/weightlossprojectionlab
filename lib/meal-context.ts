@@ -138,7 +138,8 @@ export function getNextMealContext(
   todayMeals: MealLog[],
   goalCalories: number,
   userPreferences?: UserPreferences,
-  userId?: string
+  userId?: string,
+  recipes?: MealSuggestion[] // Optional: use custom recipe array (e.g., with Firestore media)
 ): MealContext {
   const currentHour = getCurrentHour()
   const currentTime = getCurrentTimeDecimal()
@@ -213,7 +214,8 @@ export function getNextMealContext(
     dietaryPreferences: userPreferences?.dietaryPreferences,
     allergies: userPreferences?.foodAllergies,
     maxResults: 3,
-    userId: userId
+    userId: userId,
+    recipes: recipes // Pass through custom recipes (with media) if provided
   })
 
   return { nextMealType, nextMealLabel, message, remainingCalories, isFirstMeal, suggestions }
