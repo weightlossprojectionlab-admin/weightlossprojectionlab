@@ -1,0 +1,1321 @@
+{
+  "metadata": {
+    "version": "2.0.0",
+    "previous_version": "1.7.3",
+    "updated": "2025-10-25",
+    "title": "Weight Loss Project Lab - Comprehensive Product Requirements",
+    "status": "Production",
+    "repository": "weightlossprojectlab",
+    "deployment": {
+      "platform": "Netlify",
+      "url": "https://wlpl.netlify.app",
+      "environment": "production"
+    }
+  },
+  "executive_summary": {
+    "vision": "AI-powered nutrition tracking app using Gemini Vision AI and Firebase for real-time cross-device synchronization",
+    "mission": "Simplify meal logging to 30 seconds through computer vision, making consistent nutrition tracking accessible to everyone",
+    "value_proposition": "Snap. Analyze. Track. All in 30 seconds.",
+    "target_audience": {
+      "primary": "Health-conscious individuals (ages 25-45) actively managing weight",
+      "secondary": "Fitness enthusiasts tracking macronutrients for performance",
+      "tertiary": "People with dietary restrictions needing accurate nutrition monitoring"
+    },
+    "success_metrics": {
+      "engagement": "Daily active users logging ≥2 meals/day",
+      "ai_accuracy": "≥85% AI confidence in meal analysis",
+      "retention": "60%+ weekly retention rate",
+      "performance": "<2s meal analysis response time",
+      "data_quality": "≥90% of meals have photos",
+      "offline_capability": "100% feature parity in offline mode"
+    },
+    "competitive_advantages": [
+      "Zero manual entry - AI analyzes photos automatically",
+      "Contextual intelligence - Time-based meal type detection",
+      "Real-time sync - Firebase-powered cross-device updates",
+      "Offline-first - Complete PWA with background sync",
+      "Template system - One-tap logging for repeated meals",
+      "Dark mode - Complete UI theme support",
+      "Admin dashboard - Comprehensive platform management"
+    ]
+  },
+  "features": {
+    "core_features": {
+      "meal_logging": {
+        "status": "production",
+        "description": "AI-powered meal tracking with photo analysis",
+        "capabilities": {
+          "photo_capture": {
+            "enabled": true,
+            "features": [
+              "Native camera access",
+              "Image compression (<1MB)",
+              "Preview confirmation",
+              "Retake option"
+            ]
+          },
+          "ai_analysis": {
+            "enabled": true,
+            "provider": "Gemini Vision API",
+            "features": [
+              "Automatic food item detection",
+              "Portion size estimation",
+              "Calorie calculation",
+              "Macro breakdown (protein, carbs, fat, fiber)",
+              "Confidence scoring",
+              "Meal type suggestion (time-based)",
+              "USDA database validation"
+            ],
+            "performance": {
+              "target_response_time": "2s",
+              "confidence_threshold": 85,
+              "fallback": "Manual entry available"
+            }
+          },
+          "manual_entry": {
+            "enabled": true,
+            "version": "1.6.1",
+            "features": [
+              "Custom food item entry",
+              "Manual calorie/macro input",
+              "Portion size specification",
+              "Notes field"
+            ]
+          },
+          "barcode_scanner": {
+            "enabled": true,
+            "version": "1.7.1",
+            "provider": "html5-qrcode",
+            "integration": "OpenFoodFacts API",
+            "features": [
+              "Camera-based barcode scanning",
+              "Product lookup",
+              "Nutrition data import",
+              "Portion adjustment"
+            ]
+          },
+          "meal_types": [
+            "breakfast",
+            "lunch",
+            "dinner",
+            "snack"
+          ],
+          "data_sources": [
+            "ai-vision",
+            "template",
+            "manual",
+            "barcode"
+          ]
+        }
+      },
+      "meal_templates": {
+        "status": "production",
+        "description": "Save and reuse frequently eaten meals",
+        "capabilities": {
+          "save_templates": true,
+          "use_templates": true,
+          "manage_templates": true,
+          "template_metadata": [
+            "name",
+            "meal_type",
+            "food_items",
+            "calories",
+            "macros",
+            "usage_count",
+            "last_used"
+          ]
+        }
+      },
+      "weight_tracking": {
+        "status": "production",
+        "description": "Multi-source weight logging with trend analysis",
+        "capabilities": {
+          "data_sources": [
+            "bluetooth-scale",
+            "photo-verified",
+            "manual"
+          ],
+          "features": [
+            "Weight log history",
+            "Trend visualization",
+            "Goal progress tracking",
+            "BMI calculation",
+            "Weight projection agent"
+          ],
+          "units": [
+            "kg",
+            "lbs"
+          ]
+        }
+      },
+      "step_tracking": {
+        "status": "production",
+        "description": "Automatic step counting via device sensors",
+        "capabilities": {
+          "automatic_detection": true,
+          "manual_entry": false,
+          "real_time_feed": true,
+          "data_sources": [
+            "device-sensor",
+            "apple-health",
+            "google-fit"
+          ],
+          "features": [
+            "Real-time step counter",
+            "Daily goal tracking",
+            "Weekly averages",
+            "Historical trends",
+            "Calorie burn estimation"
+          ]
+        },
+        "technical": {
+          "sensor": "@capacitor/motion",
+          "algorithm": "Peak detection with calibration",
+          "calibration": "User-specific stride patterns"
+        }
+      },
+      "dashboard": {
+        "status": "production",
+        "description": "Real-time health metrics overview",
+        "capabilities": {
+          "daily_summary": true,
+          "real_time_sync": true,
+          "widgets": [
+            "Weight trend",
+            "Calorie progress",
+            "Macro distribution",
+            "Step count",
+            "Meal log feed",
+            "AI recommendations",
+            "Mission progress",
+            "Streak tracker"
+          ]
+        }
+      }
+    },
+    "recipe_system": {
+      "status": "production",
+      "version": "1.7.2",
+      "description": "Complete recipe management and cooking workflow",
+      "capabilities": {
+        "recipe_import": {
+          "enabled": true,
+          "version": "1.7.2",
+          "sources": [
+            "URL scraping",
+            "Manual entry"
+          ],
+          "features": [
+            "Automatic parsing",
+            "Nutrition calculation",
+            "Image upload",
+            "Multi-image support"
+          ]
+        },
+        "recipe_mode": {
+          "enabled": true,
+          "features": [
+            "Guided cooking",
+            "Step-by-step instructions",
+            "Timer extraction from steps",
+            "Hands-free mode",
+            "Serving size scaling",
+            "Shopping list generation",
+            "Direct meal logging"
+          ]
+        },
+        "recipe_queue": {
+          "enabled": true,
+          "features": [
+            "Save recipes for later",
+            "Meal planning",
+            "Scheduled cooking"
+          ]
+        },
+        "recipe_scaling": {
+          "enabled": true,
+          "features": [
+            "Dynamic serving adjustment",
+            "Ingredient recalculation",
+            "Nutrition scaling",
+            "Metric/imperial conversion"
+          ]
+        },
+        "recipe_discovery": {
+          "enabled": true,
+          "features": [
+            "Browse public recipes",
+            "Search by ingredients",
+            "Filter by dietary needs",
+            "Macro-based search"
+          ]
+        }
+      }
+    },
+    "charts_and_analytics": {
+      "status": "production",
+      "version": "1.6.5",
+      "description": "Visual data insights and trend analysis",
+      "charts": {
+        "weight_trend": {
+          "type": "Line chart",
+          "features": [
+            "Historical weight data",
+            "Trend line",
+            "Goal visualization",
+            "Date range selection"
+          ]
+        },
+        "calorie_intake": {
+          "type": "Bar chart",
+          "features": [
+            "Daily calorie tracking",
+            "Goal comparison",
+            "Weekly/monthly views"
+          ]
+        },
+        "macro_distribution": {
+          "type": "Pie chart",
+          "features": [
+            "Protein/carbs/fat breakdown",
+            "Target comparison",
+            "Daily/weekly aggregation"
+          ]
+        }
+      },
+      "library": "recharts ^3.3.0"
+    },
+    "photo_gallery": {
+      "status": "production",
+      "version": "1.6.6",
+      "description": "Advanced meal photo management",
+      "capabilities": {
+        "grid_view": true,
+        "grouped_by_date": true,
+        "lightbox_modal": true,
+        "filtering": {
+          "search": true,
+          "meal_type": true,
+          "date_range": true,
+          "calorie_range": false
+        },
+        "features": [
+          "Infinite scroll",
+          "Lazy loading",
+          "Fullscreen view",
+          "Meal details overlay",
+          "Delete functionality"
+        ]
+      }
+    },
+    "social_sharing": {
+      "status": "production",
+      "version": "1.6.7",
+      "description": "Multi-platform content sharing",
+      "capabilities": {
+        "web_share_api": true,
+        "platforms": [
+          "Twitter",
+          "Facebook",
+          "WhatsApp",
+          "LinkedIn",
+          "Telegram",
+          "Reddit",
+          "Email"
+        ],
+        "share_types": [
+          "meal",
+          "progress",
+          "achievement",
+          "streak",
+          "chart",
+          "gallery",
+          "recipe"
+        ],
+        "features": [
+          "Copy to clipboard",
+          "Native share menu",
+          "Custom share messages",
+          "OG metadata generation"
+        ]
+      }
+    },
+    "health_app_integration": {
+      "status": "foundation",
+      "version": "1.6.8",
+      "description": "iOS/Android health data sync (UI foundation)",
+      "capabilities": {
+        "platform_detection": true,
+        "supported_platforms": [
+          "iOS (Apple Health)",
+          "Android (Google Fit)"
+        ],
+        "setup_instructions": true,
+        "deep_links": true,
+        "sync_preferences": "Firestore storage",
+        "pwa_limitations": "Native wrapper required for full API access",
+        "current_status": "UI and settings foundation only",
+        "future_enhancements": [
+          "Bidirectional sync",
+          "Sleep data",
+          "Heart rate",
+          "Workouts",
+          "Nutrition export"
+        ]
+      },
+      "dependencies": {
+        "current": "capacitor-health ^7.0.0",
+        "requires": "Native wrapper (React Native/Capacitor)"
+      }
+    },
+    "offline_mode": {
+      "status": "production",
+      "version": "1.7.3",
+      "description": "Complete offline functionality with background sync",
+      "capabilities": {
+        "service_worker": true,
+        "offline_queue": true,
+        "background_sync": true,
+        "cache_strategy": "Network-first with offline fallback",
+        "features": [
+          "Log meals offline",
+          "View cached data",
+          "Auto-sync on reconnection",
+          "Offline indicator",
+          "Queue status display"
+        ]
+      },
+      "technical": {
+        "cache_storage": "CacheStorage API",
+        "sync_manager": "Background Sync API",
+        "indexed_db": "Meal logs, weight logs, step logs"
+      }
+    },
+    "dark_mode": {
+      "status": "production",
+      "version": "2.0.0",
+      "description": "Complete dark mode theme support",
+      "implementation": {
+        "coverage": "80+ components",
+        "files_updated": 71,
+        "approach": "Tailwind dark: variants",
+        "features": [
+          "System preference detection",
+          "Manual toggle",
+          "Persistent preference (localStorage)",
+          "Smooth transitions",
+          "Complete UI coverage"
+        ]
+      },
+      "components_covered": [
+        "All page components",
+        "All UI components",
+        "All chart components",
+        "Admin dashboard",
+        "Modals and overlays",
+        "Forms and inputs",
+        "Navigation elements"
+      ]
+    },
+    "pwa": {
+      "status": "production",
+      "version": "1.6.9",
+      "description": "Progressive Web App implementation",
+      "capabilities": {
+        "installable": true,
+        "offline_support": true,
+        "push_notifications": true,
+        "home_screen_icon": true,
+        "features": [
+          "App manifest",
+          "Service worker",
+          "Offline caching",
+          "Background sync",
+          "Install prompt",
+          "Splash screen",
+          "Custom icons (multiple sizes)"
+        ]
+      },
+      "technical": {
+        "manifest": "/manifest.json",
+        "service_worker": "/service-worker.js",
+        "icons": "Multiple resolutions (192x192, 512x512, etc.)"
+      }
+    },
+    "gamification": {
+      "status": "production",
+      "description": "Engagement and motivation system",
+      "capabilities": {
+        "weekly_missions": {
+          "enabled": true,
+          "version": "1.6.1",
+          "features": [
+            "Personalized weekly goals",
+            "XP rewards",
+            "Progress tracking",
+            "Mission regeneration",
+            "Difficulty scaling"
+          ]
+        },
+        "xp_system": {
+          "enabled": true,
+          "actions": {
+            "log_meal": 10,
+            "log_weight": 25,
+            "complete_mission": 100,
+            "streak_milestone": 50,
+            "recipe_completion": 75
+          }
+        },
+        "streaks": {
+          "enabled": true,
+          "types": [
+            "meal_logging_streak",
+            "weight_check_streak",
+            "step_goal_streak"
+          ]
+        },
+        "achievements": {
+          "enabled": true,
+          "categories": [
+            "First steps",
+            "Consistency",
+            "Milestones",
+            "Exploration"
+          ]
+        }
+      }
+    },
+    "ai_systems": {
+      "status": "production",
+      "description": "AI-powered features and automation",
+      "capabilities": {
+        "ai_coach": {
+          "enabled": true,
+          "version": "1.6.2",
+          "provider": "Gemini AI",
+          "features": [
+            "Personalized coaching plans",
+            "Daily check-ins",
+            "Progress analysis",
+            "Motivational messages",
+            "Habit formation guidance",
+            "Nutrition recommendations"
+          ]
+        },
+        "readiness_analyzer": {
+          "enabled": true,
+          "version": "1.6.3",
+          "features": [
+            "Daily readiness score",
+            "Recovery assessment",
+            "Workout recommendations",
+            "Stress indicators"
+          ]
+        },
+        "inactive_detection": {
+          "enabled": true,
+          "version": "1.6.4",
+          "features": [
+            "User activity monitoring",
+            "Re-engagement campaigns",
+            "Email notifications (Resend API)",
+            "Personalized win-back messages"
+          ]
+        },
+        "ai_orchestration": {
+          "enabled": true,
+          "feature_flag": "NEXT_PUBLIC_AI_ORCHESTRATION",
+          "features": [
+            "Model routing (fast/balanced/accurate)",
+            "Prompt templates",
+            "Decision logging",
+            "PII redaction",
+            "Cost optimization"
+          ],
+          "models": {
+            "fast": "gpt-3.5-turbo",
+            "balanced": "gpt-4o-mini",
+            "accurate": "gpt-4-turbo"
+          }
+        },
+        "weight_projection_agent": {
+          "enabled": true,
+          "version": "1.6.1",
+          "features": [
+            "Future weight predictions",
+            "Trend analysis",
+            "Goal achievement forecasting",
+            "Confidence intervals"
+          ]
+        }
+      }
+    },
+    "admin_dashboard": {
+      "status": "production",
+      "version": "2.0.0",
+      "description": "Comprehensive platform administration",
+      "access_control": {
+        "super_admins": [
+          "perriceconsulting@gmail.com",
+          "weigthlossprojectionlab@gmail.com"
+        ],
+        "roles": [
+          "admin",
+          "moderator",
+          "support"
+        ],
+        "rbac": true
+      },
+      "sections": {
+        "users": {
+          "path": "/admin/users",
+          "capabilities": [
+            "Search users",
+            "View profiles",
+            "Suspend accounts",
+            "Export user data (GDPR)",
+            "Delete accounts",
+            "View activity logs"
+          ]
+        },
+        "recipes": {
+          "path": "/admin/recipes",
+          "capabilities": [
+            "Review submissions",
+            "Approve/reject recipes",
+            "Feature recipes",
+            "Upload media",
+            "Moderate content",
+            "View submission history"
+          ]
+        },
+        "trust_safety": {
+          "path": "/admin/trust-safety",
+          "capabilities": [
+            "Review dispute cases",
+            "Risk score assessment",
+            "Evidence collection",
+            "Case resolution",
+            "Strike management",
+            "Fraud detection"
+          ]
+        },
+        "ai_decisions": {
+          "path": "/admin/ai-decisions",
+          "capabilities": [
+            "Review low-confidence decisions",
+            "Decision history",
+            "Reverse AI decisions",
+            "Statistics and analytics",
+            "Model performance tracking"
+          ]
+        },
+        "analytics": {
+          "path": "/admin/analytics",
+          "capabilities": [
+            "User metrics (DAU, MAU, retention)",
+            "Technical metrics (performance, uptime)",
+            "Business metrics (conversions)",
+            "Recipe analytics",
+            "Platform health"
+          ]
+        },
+        "settings": {
+          "path": "/admin/settings",
+          "capabilities": [
+            "Manage admin users",
+            "Feature flags",
+            "System configuration",
+            "Audit log viewer"
+          ]
+        }
+      },
+      "security": {
+        "audit_logging": true,
+        "firestore_rules": "Super admin bypass with role checks",
+        "access_protection": "Authentication + role verification on every API call"
+      }
+    },
+    "authentication": {
+      "status": "production",
+      "description": "Multi-method user authentication",
+      "methods": {
+        "email_password": {
+          "enabled": true,
+          "provider": "Firebase Auth"
+        },
+        "google_oauth": {
+          "enabled": true,
+          "provider": "Firebase Auth - Google Provider"
+        },
+        "biometric": {
+          "enabled": true,
+          "standard": "WebAuthn",
+          "features": [
+            "Fingerprint",
+            "Face ID",
+            "Touch ID",
+            "Device credential storage"
+          ]
+        }
+      },
+      "features": {
+        "loading_messages": {
+          "enabled": true,
+          "count": "1000+ personalized variants",
+          "categories": [
+            "Motivational",
+            "Educational",
+            "Humorous",
+            "Progress-focused"
+          ]
+        },
+        "auth_guards": true,
+        "onboarding_router": true,
+        "dashboard_router": true
+      }
+    },
+    "onboarding": {
+      "status": "production",
+      "description": "Multi-step user setup flow",
+      "steps": [
+        {
+          "step": 1,
+          "title": "Welcome",
+          "fields": [
+            "name"
+          ]
+        },
+        {
+          "step": 2,
+          "title": "Profile",
+          "fields": [
+            "birthDate",
+            "gender",
+            "height"
+          ]
+        },
+        {
+          "step": 3,
+          "title": "Current Stats",
+          "fields": [
+            "currentWeight",
+            "activityLevel"
+          ]
+        },
+        {
+          "step": 4,
+          "title": "Goals",
+          "fields": [
+            "primaryGoal",
+            "targetWeight",
+            "weeklyWeightLossGoal"
+          ]
+        },
+        {
+          "step": 5,
+          "title": "Lifestyle",
+          "fields": [
+            "smoking",
+            "alcoholFrequency",
+            "recreationalDrugs"
+          ]
+        },
+        {
+          "step": 6,
+          "title": "Preferences",
+          "fields": [
+            "units",
+            "notifications",
+            "dietaryPreferences"
+          ]
+        }
+      ],
+      "features": {
+        "progress_tracking": true,
+        "step_validation": true,
+        "resume_capability": true,
+        "bmr_tdee_calculation": true
+      }
+    }
+  },
+  "technical_stack": {
+    "frontend": {
+      "framework": "Next.js 15.4.6",
+      "ui_library": "React 19.1.0",
+      "styling": "Tailwind CSS 3.4.14",
+      "language": "TypeScript 5.9.3",
+      "state_management": "SWR 2.3.6",
+      "form_handling": "React Hook Form 7.56.0 + Zod 3.24.1",
+      "charts": "Recharts 3.3.0",
+      "icons": "@heroicons/react 2.2.0",
+      "notifications": "React Hot Toast 2.4.1",
+      "date_handling": "date-fns 4.1.0"
+    },
+    "backend": {
+      "platform": "Firebase",
+      "services": {
+        "authentication": "Firebase Auth 11.0.2",
+        "database": "Firestore 11.0.2",
+        "storage": "Firebase Storage 11.0.2",
+        "messaging": "Firebase Cloud Messaging 11.0.2",
+        "admin_sdk": "Firebase Admin 12.6.0"
+      }
+    },
+    "ai": {
+      "primary": "Google Gemini Vision API",
+      "package": "@google/generative-ai 0.24.1",
+      "fallback": "OpenAI GPT models (orchestration layer)"
+    },
+    "deployment": {
+      "hosting": "Netlify",
+      "environment": "Production",
+      "ci_cd": "Git push triggers automatic deployment",
+      "build_command": "npm run build",
+      "build_validation": "Pre-deploy scripts (PowerShell/Bash)"
+    },
+    "pwa": {
+      "service_worker": "Custom implementation",
+      "manifest": "Web App Manifest",
+      "offline_storage": "IndexedDB + Cache Storage"
+    },
+    "sensors": {
+      "motion": "@capacitor/motion 7.0.1",
+      "health": "capacitor-health 7.0.0"
+    },
+    "utilities": {
+      "image_compression": "browser-image-compression 2.0.2",
+      "barcode_scanner": "html5-qrcode 2.3.8",
+      "email": "Resend 6.2.2"
+    },
+    "testing": {
+      "unit": "Jest 29.7.0",
+      "integration": "React Testing Library 16.1.0",
+      "e2e": "Playwright 1.49.1"
+    },
+    "dev_tools": {
+      "linter": "ESLint 9.18.0",
+      "package_manager": "npm",
+      "node_version": "Latest LTS"
+    }
+  },
+  "agent_architecture": {
+    "description": "Autonomous backend and client-side agents for automation",
+    "development_agents": [
+      "Frontend Development Agent",
+      "Backend Development Agent",
+      "AI Integration Agent",
+      "QA Testing Agent"
+    ],
+    "backend_agents": {
+      "implemented": [
+        {
+          "name": "Weekly Missions Engine",
+          "version": "1.6.1",
+          "status": "production",
+          "triggers": [
+            "Weekly reset",
+            "User milestone"
+          ],
+          "responsibilities": [
+            "Generate personalized missions",
+            "Track progress",
+            "Award XP"
+          ]
+        },
+        {
+          "name": "Nudge Delivery System",
+          "version": "1.6.1",
+          "status": "production",
+          "triggers": [
+            "Time-based",
+            "Event-based"
+          ],
+          "responsibilities": [
+            "Send push notifications",
+            "Track engagement",
+            "Optimize send times"
+          ]
+        },
+        {
+          "name": "AI Coach",
+          "version": "1.6.2",
+          "status": "production",
+          "triggers": [
+            "Daily check-in",
+            "User request"
+          ],
+          "responsibilities": [
+            "Generate coaching plans",
+            "Provide feedback",
+            "Adjust recommendations"
+          ]
+        },
+        {
+          "name": "Readiness Analyzer",
+          "version": "1.6.3",
+          "status": "production",
+          "triggers": [
+            "Morning analysis"
+          ],
+          "responsibilities": [
+            "Calculate readiness score",
+            "Assess recovery",
+            "Recommend workout intensity"
+          ]
+        },
+        {
+          "name": "Inactive Detection",
+          "version": "1.6.4",
+          "status": "production",
+          "triggers": [
+            "Daily scan"
+          ],
+          "responsibilities": [
+            "Monitor user activity",
+            "Trigger re-engagement campaigns",
+            "Send recovery emails"
+          ]
+        }
+      ],
+      "phase_3_status": "COMPLETE - All 5 backend agents implemented"
+    },
+    "client_agents": {
+      "implemented": [
+        {
+          "name": "Step Tracker Agent",
+          "version": "1.2",
+          "status": "production",
+          "responsibilities": [
+            "Real-time step counting",
+            "Sensor data processing",
+            "Calibration management"
+          ]
+        },
+        {
+          "name": "Weight Projection Agent",
+          "version": "1.6.1",
+          "status": "production",
+          "responsibilities": [
+            "Trend analysis",
+            "Future weight prediction",
+            "Confidence calculation"
+          ]
+        },
+        {
+          "name": "Service Worker Agent",
+          "version": "1.6.1",
+          "status": "production",
+          "responsibilities": [
+            "Offline queue management",
+            "Background sync",
+            "Cache strategy"
+          ]
+        }
+      ]
+    },
+    "future_agents": [
+      "Meal Photo Gallery Monitor",
+      "Smart Recipe Suggestions Agent",
+      "Shopping List Generator Agent",
+      "Social Engagement Agent"
+    ]
+  },
+  "data_architecture": {
+    "firestore_collections": {
+      "users": {
+        "structure": "users/{uid}",
+        "fields": [
+          "email",
+          "name",
+          "profile",
+          "goals",
+          "preferences",
+          "role",
+          "createdAt",
+          "lastActiveAt"
+        ]
+      },
+      "meal_logs": {
+        "structure": "meal-logs/{id}",
+        "fields": [
+          "userId",
+          "title",
+          "mealType",
+          "photoUrl",
+          "aiAnalysis",
+          "loggedAt",
+          "dataSource"
+        ],
+        "indexes": [
+          "userId + loggedAt",
+          "userId + mealType"
+        ]
+      },
+      "weight_logs": {
+        "structure": "weight-logs/{id}",
+        "fields": [
+          "userId",
+          "weight",
+          "unit",
+          "loggedAt",
+          "dataSource",
+          "photoUrl"
+        ],
+        "indexes": [
+          "userId + loggedAt"
+        ]
+      },
+      "step_logs": {
+        "structure": "step-logs/{id}",
+        "fields": [
+          "userId",
+          "steps",
+          "loggedAt",
+          "dataSource"
+        ],
+        "indexes": [
+          "userId + loggedAt"
+        ]
+      },
+      "meal_templates": {
+        "structure": "meal-templates/{id}",
+        "fields": [
+          "userId",
+          "name",
+          "mealType",
+          "foodItems",
+          "calories",
+          "macros",
+          "usageCount",
+          "lastUsed"
+        ]
+      },
+      "recipes": {
+        "structure": "recipes/{id}",
+        "fields": [
+          "userId",
+          "name",
+          "ingredients",
+          "instructions",
+          "servings",
+          "nutrition",
+          "imageUrls",
+          "isPublic",
+          "status"
+        ]
+      },
+      "cooking_sessions": {
+        "structure": "cooking-sessions/{id}",
+        "fields": [
+          "userId",
+          "recipeId",
+          "currentStep",
+          "status",
+          "startedAt",
+          "completedAt"
+        ]
+      },
+      "missions": {
+        "structure": "missions/{userId}/weekly/{week}",
+        "fields": [
+          "missions",
+          "completedCount",
+          "totalXP",
+          "weekStart",
+          "weekEnd"
+        ]
+      },
+      "admin_audit_logs": {
+        "structure": "admin_audit_logs/{id}",
+        "fields": [
+          "adminId",
+          "action",
+          "targetId",
+          "changes",
+          "reason",
+          "timestamp"
+        ]
+      }
+    },
+    "firebase_storage": {
+      "paths": {
+        "meal_photos": "meal-photos/{userId}/{mealId}.jpg",
+        "weight_photos": "weight-photos/{userId}/{logId}.jpg",
+        "recipe_images": "recipe-images/{recipeId}/{index}.jpg",
+        "profile_photos": "profile-photos/{userId}.jpg"
+      }
+    }
+  },
+  "security_and_compliance": {
+    "authentication": {
+      "methods": [
+        "Email/Password",
+        "Google OAuth",
+        "WebAuthn (Biometric)"
+      ],
+      "session_management": "Firebase Auth tokens",
+      "token_refresh": "Automatic"
+    },
+    "data_protection": {
+      "encryption_at_rest": "Firebase default encryption",
+      "encryption_in_transit": "HTTPS/TLS",
+      "pii_handling": "PII redaction in AI logs",
+      "gdpr_compliance": {
+        "data_export": true,
+        "right_to_deletion": true,
+        "consent_management": true
+      }
+    },
+    "firestore_security_rules": {
+      "user_data": "Owner-only access",
+      "meal_logs": "Owner-only access",
+      "public_recipes": "Read-all, write-owner",
+      "admin_collections": "Admin role required",
+      "audit_logs": "Append-only, admin read"
+    },
+    "environment_variables": {
+      "management": "Netlify Environment Variables",
+      "sensitive_data": [
+        "Firebase credentials",
+        "API keys",
+        "Admin emails"
+      ],
+      "validation": "Build-time checks"
+    },
+    "rate_limiting": {
+      "ai_requests": "Per-user limits",
+      "api_endpoints": "Firebase quotas",
+      "file_uploads": "Size and frequency limits"
+    }
+  },
+  "performance_and_monitoring": {
+    "performance_targets": {
+      "time_to_interactive": "<3s",
+      "first_contentful_paint": "<1.5s",
+      "ai_analysis_response": "<2s",
+      "page_transitions": "<500ms"
+    },
+    "monitoring": {
+      "error_tracking": "Console logging + Firebase",
+      "performance_monitoring": "Lighthouse CI",
+      "uptime_monitoring": "Netlify status",
+      "analytics": "Feature flag controlled"
+    },
+    "optimization": {
+      "image_compression": "Automatic on upload",
+      "code_splitting": "Next.js automatic",
+      "lazy_loading": "Images and components",
+      "caching": "Service worker + CDN"
+    }
+  },
+  "feature_flags": {
+    "enabled_by_default": [
+      "GROUP_MISSIONS_ENABLED",
+      "GROUP_TRUST_SCORES_ENABLED",
+      "AI_COACH_ENABLED",
+      "HUMAN_COACH_ENABLED"
+    ],
+    "environment_controlled": [
+      {
+        "flag": "SPONSOR_PERKS_ENABLED",
+        "env_var": "NEXT_PUBLIC_PERKS_ENABLED",
+        "default": false
+      },
+      {
+        "flag": "AI_ORCHESTRATION_ENABLED",
+        "env_var": "NEXT_PUBLIC_AI_ORCHESTRATION",
+        "default": true
+      },
+      {
+        "flag": "TRUST_SAFETY_DASHBOARD",
+        "env_var": "NEXT_PUBLIC_TS_DASHBOARD",
+        "default": true
+      },
+      {
+        "flag": "ANALYTICS_ENABLED",
+        "env_var": "NEXT_PUBLIC_ANALYTICS",
+        "default": false
+      }
+    ]
+  },
+  "status": {
+    "total_features_completed": 52,
+    "production_ready": true,
+    "active_users": "TBD",
+    "recent_updates": [
+      {
+        "version": "2.0.0",
+        "date": "2025-10-25",
+        "features": [
+          "Complete dark mode implementation (80+ components)",
+          "Admin dashboard (6 sections)",
+          "Firebase security improvements",
+          "Build validation infrastructure"
+        ]
+      },
+      {
+        "version": "1.7.3",
+        "date": "2025-10-22",
+        "features": [
+          "Offline mode with background sync",
+          "Service worker improvements"
+        ]
+      },
+      {
+        "version": "1.7.2",
+        "date": "2025-10-21",
+        "features": [
+          "Recipe import from URLs",
+          "Server-side recipe parsing"
+        ]
+      },
+      {
+        "version": "1.7.1",
+        "date": "2025-10-20",
+        "features": [
+          "Barcode scanner integration",
+          "OpenFoodFacts API"
+        ]
+      },
+      {
+        "version": "1.7.0",
+        "date": "2025-10-19",
+        "features": [
+          "Skeleton loading UI",
+          "Improved loading states"
+        ]
+      }
+    ],
+    "newly_completed_since_v1_6_1": [
+      "Dark Mode (v2.0.0)",
+      "Admin Dashboard (v2.0.0)",
+      "Offline Mode (v1.7.3)",
+      "Recipe Import (v1.7.2)",
+      "Barcode Scanner (v1.7.1)",
+      "Skeleton UI (v1.7.0)",
+      "PWA Icons (v1.6.9)",
+      "Health App Integration Foundation (v1.6.8)",
+      "Social Sharing (v1.6.7)",
+      "Photo Gallery View (v1.6.6)",
+      "Charts & Trends (v1.6.5)",
+      "Inactive Detection (v1.6.4)",
+      "Readiness Analyzer (v1.6.3)",
+      "AI Coach (v1.6.2)",
+      "Weight Projection Agent (v1.6.1)",
+      "Manual Meal Entry (v1.6.1)",
+      "Service Worker Agent (v1.6.1)",
+      "Weekly Missions Engine (v1.6.1)",
+      "Nudge Delivery System (v1.6.1)"
+    ]
+  },
+  "roadmap": {
+    "immediate_priorities": [
+      "Native wrapper (React Native/Capacitor) for full health API access",
+      "Enhanced analytics dashboard",
+      "Social features (groups, challenges)",
+      "Recipe marketplace",
+      "Premium subscription tier"
+    ],
+    "future_enhancements": [
+      "Meal planning AI assistant",
+      "Grocery delivery integration",
+      "Wearable device integration",
+      "Nutrition coach matching platform",
+      "Community forums"
+    ],
+    "technical_debt": [
+      "Migrate to React 19 concurrent features",
+      "Optimize bundle size",
+      "Add comprehensive E2E tests",
+      "Improve error boundaries",
+      "Add performance monitoring"
+    ]
+  },
+  "infrastructure": {
+    "deployment": {
+      "platform": "Netlify",
+      "url": "https://wlpl.netlify.app",
+      "build_command": "npm run build",
+      "build_time": "~4-5 minutes",
+      "auto_deploy": "On push to main branch"
+    },
+    "environment_management": {
+      "tool": "Netlify Environment Variables",
+      "contexts": [
+        "Production",
+        "Deploy Previews",
+        "Branch deploys"
+      ]
+    },
+    "version_control": {
+      "platform": "Git",
+      "workflow": "Feature branches + Pull Requests",
+      "pre_deploy_validation": "PowerShell/Bash scripts"
+    },
+    "build_validation": {
+      "scripts": [
+        "scripts/pre-deploy-check.ps1 (Windows)",
+        "scripts/pre-deploy-check.sh (Linux/Mac)"
+      ],
+      "checks": [
+        "Git status validation",
+        "TypeScript compilation",
+        "Dynamic route syntax",
+        "Build artifact cleanup",
+        "Production build test"
+      ]
+    }
+  },
+  "documentation": {
+    "technical_docs": [
+      "ADMIN_SETUP.md - Admin panel setup guide",
+      "BUILD_VALIDATION_SUMMARY.md - Build process documentation",
+      "DARK_MODE_IMPLEMENTATION_SUMMARY.md - Dark mode implementation guide",
+      "DARK_MODE_TRANSFORMATION_GUIDE.md - Dark mode patterns",
+      "TESTING.md - Testing guidelines",
+      "WORKFLOW.md - Git workflow"
+    ],
+    "api_documentation": "In-code JSDoc comments",
+    "component_documentation": "TypeScript interfaces and prop types"
+  },
+  "known_issues": {
+    "limitations": [
+      "Health app integration requires native wrapper",
+      "PWA install prompt browser-dependent",
+      "Barcode scanner requires HTTPS",
+      "Background sync limited by browser support"
+    ],
+    "browser_support": {
+      "modern_browsers": "Full support",
+      "safari": "Limited background sync",
+      "firefox": "Full support",
+      "chrome": "Full support",
+      "edge": "Full support"
+    }
+  },
+  "analytics_and_metrics": {
+    "user_metrics": [
+      "Daily Active Users (DAU)",
+      "Monthly Active Users (MAU)",
+      "Retention rate",
+      "Session duration",
+      "Feature adoption"
+    ],
+    "engagement_metrics": [
+      "Meals logged per day",
+      "Weight check-in frequency",
+      "Recipe usage",
+      "Mission completion rate",
+      "Streak maintenance"
+    ],
+    "technical_metrics": [
+      "API response times",
+      "AI analysis accuracy",
+      "Error rates",
+      "Build success rate",
+      "Lighthouse scores"
+    ]
+  }
+}
