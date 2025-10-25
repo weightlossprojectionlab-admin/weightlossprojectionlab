@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { recipeQueueOperations, cookingSessionOperations } from '@/lib/firebase-operations'
 import { QueuedRecipe } from '@/types'
-import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
+import { MEAL_SUGGESTIONS, getRecipeActionLabel } from '@/lib/meal-suggestions'
 import { createStepTimers } from '@/lib/recipe-timer-parser'
 import { scaleRecipe } from '@/lib/recipe-scaler'
 import { Spinner } from '@/components/ui/Spinner'
@@ -116,6 +116,7 @@ export function RecipeQueue() {
         {queue.map((queueItem) => {
           const recipe = MEAL_SUGGESTIONS.find(r => r.id === queueItem.recipeId)
           const isStarting = startingRecipe === queueItem.id
+          const actionLabel = recipe ? getRecipeActionLabel(recipe) : 'Cook'
 
           if (!recipe) return null
 
@@ -160,7 +161,7 @@ export function RecipeQueue() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <span>Start Cooking</span>
+                          <span>Start {actionLabel}ing</span>
                         </>
                       )}
                     </button>

@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { CookingTimer } from '@/components/ui/CookingTimer'
 import { cookingSessionOperations } from '@/lib/firebase-operations'
 import { CookingSession } from '@/types'
-import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
+import { MEAL_SUGGESTIONS, getRecipeActionLabel } from '@/lib/meal-suggestions'
 import { Spinner } from '@/components/ui/Spinner'
 import toast from 'react-hot-toast'
 
@@ -162,11 +162,12 @@ function CookingSessionContent() {
 
   const currentStepData = session.stepTimers[session.currentStep]
   const progress = ((session.currentStep + 1) / session.totalSteps) * 100
+  const actionLabel = getRecipeActionLabel(recipe)
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-100">
       <PageHeader
-        title={`Cooking: ${session.recipeName}`}
+        title={`${actionLabel}ing: ${session.recipeName}`}
         subtitle={`Step ${session.currentStep + 1} of ${session.totalSteps}`}
       />
 

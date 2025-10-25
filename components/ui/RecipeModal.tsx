@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { MealSuggestion } from '@/lib/meal-suggestions'
+import { MealSuggestion, getRecipeActionLabel } from '@/lib/meal-suggestions'
 import {
   shareRecipe,
   copyToClipboard,
@@ -77,6 +77,11 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   const adjustedPrepTime = useMemo(() => {
     return calculateAdjustedPrepTime(suggestion.prepTime, suggestion.servingSize, servingSize)
   }, [suggestion.prepTime, suggestion.servingSize, servingSize])
+
+  // Get action label (Cook vs Prepare)
+  const actionLabel = useMemo(() => {
+    return getRecipeActionLabel(suggestion)
+  }, [suggestion])
 
   if (!isOpen) return null
 
@@ -861,7 +866,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
         {showCookingOptions && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4 z-10">
             <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg shadow-xl max-w-md w-full p-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Start Cooking</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Start {actionLabel}ing</h3>
 
               {/* Meal Type Selector */}
               <div className="mb-6">
@@ -916,7 +921,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>{startingSession ? 'Starting...' : 'Cook Now'}</span>
+                  <span>{startingSession ? 'Starting...' : `${actionLabel} Now`}</span>
                 </button>
 
                 <button
@@ -927,7 +932,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  <span>Add to Queue</span>
+                  <span>Prepare Later</span>
                 </button>
 
                 <button

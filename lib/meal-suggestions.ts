@@ -32,6 +32,7 @@ export interface MealSuggestion {
   recipeSteps?: string[] // Step-by-step cooking instructions
   cookingTips?: string[] // Helpful cooking tips
   servingSize: number // Number of servings (default 1)
+  requiresCooking?: boolean // Whether recipe requires heat/cooking (vs just assembly/prep)
 
   // Media fields (for admin-uploaded marketing content)
   imageUrls?: string[] // Firebase Storage URLs for images (max 4, first is hero)
@@ -621,4 +622,40 @@ export function getMealSuggestions(filters: SuggestionFilters): MealSuggestion[]
   // Limit results
   const maxResults = filters.maxResults || 3
   return suggestions.slice(0, maxResults)
+}
+
+/**
+ * Determines if a recipe requires actual cooking (heat/stove/oven) vs just preparation/assembly
+ * @param recipe The meal suggestion to check
+ * @returns true if cooking is required, false if it's just preparation
+ */
+export function requiresCooking(recipe: MealSuggestion): boolean {
+  // Check if field is explicitly set
+  if (recipe.requiresCooking !== undefined) {
+    return recipe.requiresCooking
+  }
+
+  // If no recipe steps, assume it's just preparation
+  if (!recipe.recipeSteps || recipe.recipeSteps.length === 0) {
+    return false
+  }
+
+  // Infer from recipe steps (look for cooking keywords)
+  const cookingKeywords = [
+    'cook', 'bake', 'fry', 'boil', 'grill', 'simmer', 'roast', 'sauté',
+    'toast', 'poach', 'heat', 'broil', 'sear', 'pan-fry', 'stir-fry',
+    'steam', 'braise', 'stew', 'microwave', 'warm', 'reduce'
+  ]
+
+  const recipeText = recipe.recipeSteps.join(' ').toLowerCase()
+  return cookingKeywords.some(keyword => recipeText.includes(keyword))
+}
+
+/**
+ * Gets appropriate action label for a recipe (e.g., "Cook" vs "Prepare")
+ * @param recipe The meal suggestion
+ * @returns "Cook" or "Prepare" based on whether cooking is required
+ */
+export function getRecipeActionLabel(recipe: MealSuggestion): 'Cook' | 'Prepare' {
+  return requiresCooking(recipe) ? 'Cook' : 'Prepare'
 }
