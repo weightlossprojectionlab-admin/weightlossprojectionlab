@@ -12,6 +12,8 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 export type DietaryTag = 'vegan' | 'vegetarian' | 'keto' | 'paleo' | 'gluten-free' | 'dairy-free' | 'high-protein' | 'low-carb' | 'pescatarian'
 export type AllergyTag = 'dairy' | 'gluten' | 'nuts' | 'shellfish' | 'soy' | 'eggs' | 'fish'
 
+export type RecipeStatus = 'draft' | 'published' | 'archived'
+
 export interface MealSuggestion {
   id: string
   name: string
@@ -42,6 +44,15 @@ export interface MealSuggestion {
   videoStoragePath?: string // Storage path for deletion
   mediaUploadedAt?: Date | string // When media was last updated
   mediaUploadedBy?: string // Admin UID who uploaded
+
+  // Firestore management fields (for dynamic recipe library)
+  firestoreId?: string // Firestore document ID (may differ from recipe.id)
+  status?: RecipeStatus // Publication workflow status
+  generatedByAI?: boolean // Whether recipe was AI-generated
+  curatedBy?: string // Admin UID who reviewed/approved
+  createdAt?: Date | string // When recipe was created
+  updatedAt?: Date | string // When recipe was last modified
+  popularity?: number // Usage count for ranking
 
   // Legacy field for backward compatibility (deprecated - use imageUrls)
   imageUrl?: string // Deprecated: use imageUrls[0]
