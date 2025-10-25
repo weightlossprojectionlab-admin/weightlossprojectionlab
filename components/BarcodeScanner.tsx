@@ -73,8 +73,27 @@ export function BarcodeScanner({ onScan, onClose, isOpen }: BarcodeScannerProps)
       setIsScanning(true)
     } catch (err: any) {
       console.error('Failed to start scanner:', err)
-      setError(err.message || 'Failed to access camera')
-      toast.error('Failed to access camera. Please check permissions.')
+
+      // Provide user-friendly error messages based on error type
+      let errorMessage = 'Failed to access camera'
+      let toastMessage = 'Camera access failed'
+
+      if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
+        errorMessage = 'Camera permission denied. Please enable camera access in your browser settings to scan barcodes.'
+        toastMessage = 'Camera permission denied. Click the camera icon in your browser\'s address bar to enable access.'
+      } else if (err.name === 'NotFoundError' || err.message?.includes('not found')) {
+        errorMessage = 'No camera found. Please connect a camera or use a device with a built-in camera.'
+        toastMessage = 'No camera detected on this device'
+      } else if (err.name === 'NotReadableError' || err.message?.includes('use')) {
+        errorMessage = 'Camera is already in use by another application. Please close other apps using the camera.'
+        toastMessage = 'Camera is already in use'
+      } else {
+        errorMessage = err.message || 'Failed to access camera. Please try again.'
+        toastMessage = 'Failed to access camera. Please try again.'
+      }
+
+      setError(errorMessage)
+      toast.error(toastMessage, { duration: 5000 })
     }
   }
 
