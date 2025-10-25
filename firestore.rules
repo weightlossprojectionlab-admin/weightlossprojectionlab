@@ -252,8 +252,26 @@ service cloud.firestore {
     match /recipes/{recipeId} {
       // Public read access for all users
       allow read: if true;
-      // Admin-only write access for uploading media
-      allow write: if isAdmin();
+
+      // Create: Admin-only, with required fields
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasAll(['imageUrls', 'imageStoragePaths']) &&
+        request.resource.data.imageUrls is list &&
+        request.resource.data.imageStoragePaths is list &&
+        request.resource.data.imageUrls.size() > 0 &&
+        request.resource.data.imageUrls.size() <= 4 &&
+        request.resource.data.mediaUploadedBy == request.auth.uid &&
+        request.resource.data.mediaUploadedAt is timestamp;
+
+      // Update: Admin-only, can only update specific media fields
+      allow update: if isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['imageUrls', 'imageStoragePaths', 'videoUrl', 'videoStoragePath', 'mediaUploadedAt', 'mediaUploadedBy']) &&
+        request.resource.data.mediaUploadedBy == request.auth.uid &&
+        request.resource.data.mediaUploadedAt is timestamp;
+
+      // Delete: Admin-only
+      allow delete: if isAdmin();
     }
 
     // ============================================

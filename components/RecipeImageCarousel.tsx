@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { MealType } from '@/lib/meal-suggestions'
 import { generateRecipeAltText } from '@/lib/utils'
@@ -26,6 +26,21 @@ export function RecipeImageCarousel({
   className = ''
 }: RecipeImageCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const isMountedRef = useRef(true)
+
+  // Cleanup on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
+  // Safe state updater that checks if component is mounted
+  const safeSetActiveIndex = (index: number) => {
+    if (isMountedRef.current) {
+      setActiveIndex(index)
+    }
+  }
 
   // Use uploaded images or show placeholder
   const hasImages = images && images.length > 0
@@ -41,7 +56,11 @@ export function RecipeImageCarousel({
         {hasImages ? (
           <Image
             src={displayImages[activeIndex]}
-            alt={generateRecipeAltText(recipeName, mealType, activeIndex === 0 ? 'hero' : 'angle')}
+            alt={generateRecipeAltText(
+              recipeName || 'Recipe',
+              mealType || 'snack',
+              activeIndex === 0 ? 'hero' : 'angle'
+            )}
             fill
             className="object-cover transition-opacity duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -61,7 +80,7 @@ export function RecipeImageCarousel({
           {displayImages.map((image, index) => (
             <button
               key={index}
-              onClick={() => setActiveIndex(index)}
+              onClick={() => safeSetActiveIndex(index)}
               className={`
                 flex-shrink-0 relative w-16 h-16 rounded-md overflow-hidden
                 border-2 transition-all
@@ -74,7 +93,11 @@ export function RecipeImageCarousel({
             >
               <Image
                 src={image}
-                alt={generateRecipeAltText(recipeName, mealType, 'thumbnail')}
+                alt={generateRecipeAltText(
+                  recipeName || 'Recipe',
+                  mealType || 'snack',
+                  'thumbnail'
+                )}
                 fill
                 className="object-cover"
                 sizes="64px"

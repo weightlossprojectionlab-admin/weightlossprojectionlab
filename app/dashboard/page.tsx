@@ -532,7 +532,11 @@ function DashboardContent() {
                             {suggestion.imageUrls?.[0] ? (
                               <Image
                                 src={suggestion.imageUrls[0]}
-                                alt={generateRecipeAltText(suggestion.name, suggestion.mealType, 'hero')}
+                                alt={generateRecipeAltText(
+                                  suggestion.name || 'Recipe',
+                                  suggestion.mealType || 'snack',
+                                  'hero'
+                                )}
                                 fill
                                 className="object-cover"
                                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

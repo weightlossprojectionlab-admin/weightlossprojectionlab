@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MealSuggestion, getRecipeActionLabel } from '@/lib/meal-suggestions'
 import {
@@ -67,6 +67,16 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   const [showCookingOptions, setShowCookingOptions] = useState(false)
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(suggestion.mealType)
   const [startingSession, setStartingSession] = useState(false)
+
+  // Prevent duplicate session creation
+  const sessionCreationRef = useRef(false)
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      sessionCreationRef.current = false
+    }
+  }, [])
 
   // Scale recipe based on current serving size
   const scaledRecipe = useMemo<ScaledRecipe>(() => {
@@ -206,12 +216,19 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   }
 
   const handleCookNow = async () => {
+    // Prevent duplicate clicks
+    if (startingSession || sessionCreationRef.current) {
+      return
+    }
+
     if (!suggestion.recipeSteps || suggestion.recipeSteps.length === 0) {
       toast.error('This recipe doesn\'t have cooking instructions yet')
       return
     }
 
+    sessionCreationRef.current = true
     setStartingSession(true)
+
     try {
       // Create cooking session
       const stepTimers = createStepTimers(suggestion.recipeSteps)
@@ -232,12 +249,13 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
       })
 
       toast.success('Starting cooking session!')
-      router.push(`/cooking/${session.id}`)
+      await router.push(`/cooking/${session.id}`)
       onClose()
     } catch (error) {
       console.error('Error starting cooking session:', error)
       toast.error('Failed to start cooking session')
-    } finally {
+      // Reset on error so user can retry
+      sessionCreationRef.current = false
       setStartingSession(false)
     }
   }
