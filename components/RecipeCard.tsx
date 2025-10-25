@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { PublicRecipe } from '@/lib/types/public-recipes'
 import { shareRecipe, canUseWebShare } from '@/lib/recipe-share-utils'
+import { generateRecipeAltText } from '@/lib/utils'
 
 interface RecipeCardProps {
   recipe: PublicRecipe
@@ -85,7 +86,7 @@ export function RecipeCard({ recipe, onSave, onView, isSaved = false, priority =
       <div className="relative w-full aspect-[3/4] overflow-hidden">
         <Image
           src={recipe.imageUrl}
-          alt={recipe.name}
+          alt={generateRecipeAltText(recipe.name, recipe.mealType, 'hero')}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover group-hover:scale-105 transition-transform duration-200"

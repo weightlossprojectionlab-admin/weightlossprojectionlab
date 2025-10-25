@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { MealType } from '@/lib/meal-suggestions'
+import { generateRecipeAltText } from '@/lib/utils'
 
 interface RecipeImageCarouselProps {
   images?: string[]
@@ -40,7 +41,7 @@ export function RecipeImageCarousel({
         {hasImages ? (
           <Image
             src={displayImages[activeIndex]}
-            alt={`${recipeName} - Image ${activeIndex + 1}`}
+            alt={generateRecipeAltText(recipeName, mealType, activeIndex === 0 ? 'hero' : 'angle')}
             fill
             className="object-cover transition-opacity duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -73,7 +74,7 @@ export function RecipeImageCarousel({
             >
               <Image
                 src={image}
-                alt={`${recipeName} - Thumbnail ${index + 1}`}
+                alt={generateRecipeAltText(recipeName, mealType, 'thumbnail')}
                 fill
                 className="object-cover"
                 sizes="64px"

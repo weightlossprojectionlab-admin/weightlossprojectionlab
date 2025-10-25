@@ -30,6 +30,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { MealSuggestion } from '@/lib/meal-suggestions'
 import { useRecipes } from '@/hooks/useRecipes'
+import { generateRecipeAltText } from '@/lib/utils'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 
@@ -531,7 +532,7 @@ function DashboardContent() {
                             {suggestion.imageUrls?.[0] ? (
                               <Image
                                 src={suggestion.imageUrls[0]}
-                                alt={suggestion.name}
+                                alt={generateRecipeAltText(suggestion.name, suggestion.mealType, 'hero')}
                                 fill
                                 className="object-cover"
                                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

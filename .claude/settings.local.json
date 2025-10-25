@@ -28,7 +28,12 @@
       "Bash(find:*)",
       "Bash(npx next build:*)",
       "Bash(npm uninstall:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(git worktree:*)",
+      "Bash(git branch:*)"
     ],
     "deny": [],
     "ask": []

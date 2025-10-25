@@ -206,9 +206,10 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
         .filter(slot => slot.file !== null)
         .map(slot => slot.file!)
 
-      // Upload to Firebase Storage (client-side)
+      // Upload to Firebase Storage (client-side) with SEO-friendly filenames
       const uploadResult = await uploadRecipeMedia(
         recipe.id,
+        recipe.name, // Pass recipe name for SEO-friendly filenames
         imageFiles,
         videoFile,
         (progress) => {

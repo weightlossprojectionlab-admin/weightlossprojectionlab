@@ -3,6 +3,7 @@
 import { storage } from './firebase'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { auth } from './firebase'
+import { generateRecipeImageFilename, generateRecipeVideoFilename } from './utils'
 
 /**
  * Upload recipe media files (images/videos) to Firebase Storage
@@ -19,12 +20,14 @@ export interface RecipeMediaUploadResult {
 /**
  * Upload multiple recipe images to Firebase Storage
  * @param recipeId - The recipe ID
+ * @param recipeName - The recipe name (for SEO-friendly filenames)
  * @param imageFiles - Array of image File objects (max 4)
  * @param onProgress - Optional progress callback (0-100)
  * @returns Object with image URLs and storage paths
  */
 export async function uploadRecipeImages(
   recipeId: string,
+  recipeName: string,
   imageFiles: File[],
   onProgress?: (progress: number) => void
 ): Promise<{ imageUrls: string[]; imageStoragePaths: string[] }> {
@@ -59,8 +62,12 @@ export async function uploadRecipeImages(
         throw new Error(`Image ${i + 1} exceeds 5MB limit`)
       }
 
-      // Create storage path: recipes/media/{recipeId}/image-{index}.jpg
-      const imagePath = `recipes/media/${recipeId}/image-${i + 1}.jpg`
+      // Generate SEO-friendly filename
+      const imageType = i === 0 ? 'hero' : 'angle'
+      const seoFilename = generateRecipeImageFilename(recipeName, i + 1, imageType)
+
+      // Create storage path: recipes/media/{recipeId}/{seo-filename}
+      const imagePath = `recipes/media/${recipeId}/${seoFilename}`
       const storageRef = ref(storage, imagePath)
 
       // Upload file
@@ -95,11 +102,13 @@ export async function uploadRecipeImages(
 /**
  * Upload recipe video to Firebase Storage
  * @param recipeId - The recipe ID
+ * @param recipeName - The recipe name (for SEO-friendly filenames)
  * @param videoFile - Video File object
  * @returns Object with video URL and storage path
  */
 export async function uploadRecipeVideo(
   recipeId: string,
+  recipeName: string,
   videoFile: File
 ): Promise<{ videoUrl: string; videoStoragePath: string }> {
   const user = auth.currentUser
@@ -118,8 +127,11 @@ export async function uploadRecipeVideo(
       throw new Error('Video exceeds 20MB limit')
     }
 
-    // Create storage path: recipes/media/{recipeId}/video.mp4
-    const videoPath = `recipes/media/${recipeId}/video.mp4`
+    // Generate SEO-friendly filename
+    const seoFilename = generateRecipeVideoFilename(recipeName)
+
+    // Create storage path: recipes/media/{recipeId}/{seo-filename}
+    const videoPath = `recipes/media/${recipeId}/${seoFilename}`
     const storageRef = ref(storage, videoPath)
 
     // Upload file
@@ -144,6 +156,7 @@ export async function uploadRecipeVideo(
 /**
  * Upload all recipe media (images and optional video)
  * @param recipeId - The recipe ID
+ * @param recipeName - The recipe name (for SEO-friendly filenames)
  * @param imageFiles - Array of image File objects (max 4)
  * @param videoFile - Optional video File object
  * @param onProgress - Optional progress callback (0-100)
@@ -151,6 +164,7 @@ export async function uploadRecipeVideo(
  */
 export async function uploadRecipeMedia(
   recipeId: string,
+  recipeName: string,
   imageFiles: File[],
   videoFile?: File | null,
   onProgress?: (progress: number) => void
@@ -162,7 +176,7 @@ export async function uploadRecipeMedia(
 
   // Upload images
   if (imageFiles.length > 0) {
-    const imageResult = await uploadRecipeImages(recipeId, imageFiles, (progress) => {
+    const imageResult = await uploadRecipeImages(recipeId, recipeName, imageFiles, (progress) => {
       // Images are 80% of total progress, video is 20%
       const totalProgress = videoFile ? progress * 0.8 : progress
       onProgress?.(Math.round(totalProgress))
@@ -173,7 +187,7 @@ export async function uploadRecipeMedia(
 
   // Upload video if provided
   if (videoFile) {
-    const videoResult = await uploadRecipeVideo(recipeId, videoFile)
+    const videoResult = await uploadRecipeVideo(recipeId, recipeName, videoFile)
     result.videoUrl = videoResult.videoUrl
     result.videoStoragePath = videoResult.videoStoragePath
     onProgress?.(100)
