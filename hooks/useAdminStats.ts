@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react'
 import { db } from '@/lib/firebase'
+import { logger } from '@/lib/logger'
 import {
   collection,
   query,
@@ -75,7 +76,7 @@ export function useAdminStats() {
           getDocs(
             query(
               collection(db, 'publicRecipes'),
-              where('status', '==', 'pending')
+              where('moderationStatus', '==', 'pending')
             )
           ).catch(() => ({ size: 0 })),
 
@@ -114,7 +115,7 @@ export function useAdminStats() {
 
         setLoading(false)
       } catch (err) {
-        console.error('Error fetching admin stats:', err)
+        logger.error('Error fetching admin stats:', err as Error)
         setError(err instanceof Error ? err.message : 'Failed to fetch stats')
         setLoading(false)
       }
@@ -130,7 +131,7 @@ export function useAdminStats() {
         fetchStats()
       },
       (err) => {
-        console.error('Error listening to users:', err)
+        logger.error('Error listening to users:', err)
       }
     )
 
@@ -142,7 +143,7 @@ export function useAdminStats() {
         fetchStats()
       },
       (err) => {
-        console.error('Error listening to dispute_cases:', err)
+        logger.error('Error listening to dispute_cases:', err)
       }
     )
 

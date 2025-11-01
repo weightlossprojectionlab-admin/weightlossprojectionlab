@@ -2,7 +2,7 @@
 import { MealSuggestion, MealType, DietaryTag, AllergyTag } from '../meal-suggestions'
 import { Timestamp } from 'firebase/firestore'
 
-export type RecipeStatus = 'pending' | 'approved' | 'rejected'
+export type ModerationStatus = 'pending' | 'approved' | 'rejected'
 export type RecipeDifficulty = 'easy' | 'medium' | 'hard'
 export type AspectRatio = '1:1' | '3:4' | '4:3' | '16:9' | '9:16'
 export type RecipeSourceType = 'meal_log' | 'custom' | 'template'
@@ -10,7 +10,7 @@ export type RecipeSourceType = 'meal_log' | 'custom' | 'template'
 /**
  * Public Recipe - Extended from MealSuggestion with Pinterest-style metadata
  */
-export interface PublicRecipe extends Omit<MealSuggestion, 'id'> {
+export interface PublicRecipe extends Omit<MealSuggestion, 'id' | 'createdAt' | 'updatedAt'> {
   id: string
 
   // Creator information
@@ -24,8 +24,8 @@ export interface PublicRecipe extends Omit<MealSuggestion, 'id'> {
   updatedAt: Timestamp | Date
   submittedAt: Timestamp | Date
 
-  // Moderation
-  status: RecipeStatus
+  // Moderation (uses status field from MealSuggestion parent for 'draft' | 'published' | 'archived')
+  moderationStatus: ModerationStatus
   moderationNotes?: string
   moderatedBy?: string
   moderatedAt?: Timestamp | Date

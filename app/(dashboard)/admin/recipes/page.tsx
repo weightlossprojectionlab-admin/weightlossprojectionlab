@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
 import Image from 'next/image'
+import { logger } from '@/lib/logger'
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -72,7 +73,7 @@ export default function RecipeModerationPage() {
       // Placeholder: No recipes yet
       setRecipes([])
     } catch (error) {
-      console.error('Error fetching recipes:', error)
+      logger.error('Error fetching recipes:', error as Error)
       toast.error('Failed to fetch recipes')
     } finally {
       setLoading(false)
@@ -106,7 +107,7 @@ export default function RecipeModerationPage() {
       setNotes('')
       fetchRecipes()
     } catch (error) {
-      console.error('Error approving recipe:', error)
+      logger.error('Error approving recipe:', error as Error)
       toast.error('Failed to approve recipe')
     } finally {
       setProcessing(false)
@@ -146,7 +147,7 @@ export default function RecipeModerationPage() {
       setRejectionReason('')
       fetchRecipes()
     } catch (error) {
-      console.error('Error rejecting recipe:', error)
+      logger.error('Error rejecting recipe:', error as Error)
       toast.error('Failed to reject recipe')
     } finally {
       setProcessing(false)
@@ -254,15 +255,15 @@ export default function RecipeModerationPage() {
                     className={`
                       px-2 py-1 rounded-full text-xs font-semibold
                       ${
-                        recipe.status === 'approved'
+                        recipe.moderationStatus === 'approved'
                           ? 'bg-green-500 text-white'
-                          : recipe.status === 'rejected'
+                          : recipe.moderationStatus === 'rejected'
                           ? 'bg-red-500 text-white'
                           : 'bg-yellow-500 text-white'
                       }
                     `}
                   >
-                    {recipe.status}
+                    {recipe.moderationStatus}
                   </span>
                 </div>
               </div>
@@ -408,7 +409,7 @@ export default function RecipeModerationPage() {
               )}
 
               {/* Moderation Actions (only for pending) */}
-              {selectedRecipe.status === 'pending' && (
+              {selectedRecipe.moderationStatus === 'pending' && (
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
                   <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Moderation Actions</h3>
 
