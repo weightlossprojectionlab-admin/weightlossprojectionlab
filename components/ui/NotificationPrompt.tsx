@@ -1,6 +1,8 @@
 'use client'
 
+import { memo } from 'react'
 import { useNotifications } from '@/hooks/useNotifications'
+import { logger } from '@/lib/logger'
 
 export interface NotificationPromptProps {
   userId: string | undefined
@@ -9,7 +11,7 @@ export interface NotificationPromptProps {
 /**
  * Prompt card to request notification permission
  */
-export function NotificationPrompt({ userId }: NotificationPromptProps) {
+export const NotificationPrompt = memo(function NotificationPrompt({ userId }: NotificationPromptProps) {
   const {
     permission,
     isSupported,
@@ -60,7 +62,7 @@ export function NotificationPrompt({ userId }: NotificationPromptProps) {
           className="text-white opacity-60 hover:opacity-100 text-xl"
           onClick={() => {
             // TODO: Implement "don't show again" preference
-            console.log('Notification prompt dismissed')
+            logger.debug('Notification prompt dismissed')
           }}
         >
           ✕
@@ -68,7 +70,7 @@ export function NotificationPrompt({ userId }: NotificationPromptProps) {
       </div>
     </div>
   )
-}
+})
 
 /**
  * Notification settings panel
@@ -77,7 +79,7 @@ export interface NotificationSettingsProps {
   userId: string | undefined
 }
 
-export function NotificationSettings({ userId }: NotificationSettingsProps) {
+export const NotificationSettings = memo(function NotificationSettings({ userId }: NotificationSettingsProps) {
   const {
     isSupported,
     isSubscribed,
@@ -200,4 +202,5 @@ export function NotificationSettings({ userId }: NotificationSettingsProps) {
       </div>
     </div>
   )
-}
+})
+

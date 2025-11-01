@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import type { MissionProgress } from '@/hooks/useMissions'
 
 export interface MissionCardProps {
@@ -111,7 +112,7 @@ export interface MissionListProps {
   loading?: boolean
 }
 
-export function MissionList({ missions, loading }: MissionListProps) {
+export const MissionList = memo(function MissionList({ missions, loading }: MissionListProps) {
   if (loading) {
     return (
       <div className="space-y-4">
@@ -151,4 +152,6 @@ export function MissionList({ missions, loading }: MissionListProps) {
       ))}
     </div>
   )
-}
+})
+
+

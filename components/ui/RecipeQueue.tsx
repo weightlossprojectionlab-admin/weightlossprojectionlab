@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import { recipeQueueOperations, cookingSessionOperations } from '@/lib/firebase-operations'
 import { QueuedRecipe } from '@/types'
@@ -9,8 +9,9 @@ import { createStepTimers } from '@/lib/recipe-timer-parser'
 import { scaleRecipe } from '@/lib/recipe-scaler'
 import { Spinner } from '@/components/ui/Spinner'
 import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger'
 
-export function RecipeQueue() {
+export const RecipeQueue = memo(function RecipeQueue() {
   const router = useRouter()
   const [queue, setQueue] = useState<QueuedRecipe[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,7 +26,7 @@ export function RecipeQueue() {
       const queueData = await recipeQueueOperations.getQueue()
       setQueue(queueData as QueuedRecipe[])
     } catch (error) {
-      console.error('Error loading recipe queue:', error)
+      logger.error('Error loading recipe queue:', error as Error)
     } finally {
       setLoading(false)
     }
@@ -68,7 +69,7 @@ export function RecipeQueue() {
       toast.success('Starting cooking session!')
       router.push(`/cooking/${session.id}`)
     } catch (error) {
-      console.error('Error starting cooking session:', error)
+      logger.error('Error starting cooking session:', error as Error)
       toast.error('Failed to start cooking session')
     } finally {
       setStartingRecipe(null)
@@ -81,7 +82,7 @@ export function RecipeQueue() {
       setQueue(prev => prev.filter(item => item.id !== queueId))
       toast.success('Removed from queue')
     } catch (error) {
-      console.error('Error removing from queue:', error)
+      logger.error('Error removing from queue:', error as Error)
       toast.error('Failed to remove from queue')
     }
   }
@@ -185,4 +186,5 @@ export function RecipeQueue() {
       </div>
     </div>
   )
-}
+})
+

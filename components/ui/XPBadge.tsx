@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import type { UserGamification } from '@/lib/gamification'
 import { getXPProgress, getXPForNextLevel } from '@/lib/gamification'
 import type { Badge } from '@/lib/missions'
@@ -11,7 +12,7 @@ export interface XPBadgeProps {
 /**
  * Display user's level, XP, and progress to next level
  */
-export function XPBadge({ gamification }: XPBadgeProps) {
+export const XPBadge = memo(function XPBadge({ gamification }: XPBadgeProps) {
   const xpProgress = getXPProgress(gamification.totalXP)
   const nextLevelXP = getXPForNextLevel(gamification.level)
 
@@ -68,7 +69,8 @@ export function XPBadge({ gamification }: XPBadgeProps) {
       </div>
     </div>
   )
-}
+})
+
 
 /**
  * Badge showcase grid
