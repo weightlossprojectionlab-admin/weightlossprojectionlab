@@ -21,7 +21,7 @@ interface PublicRecipe {
   createdBy: string
   createdByName: string
   createdByPhoto?: string
-  status: 'pending' | 'approved' | 'rejected'
+  moderationStatus: 'pending' | 'approved' | 'rejected'
   submittedAt: Date
   description: string
   prepTime: number
