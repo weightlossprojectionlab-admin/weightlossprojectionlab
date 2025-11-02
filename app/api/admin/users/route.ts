@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
+import { logger } from '@/lib/logger'
 
 /**
  * GET /api/admin/users?q=<query>
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
             stepLogsCount: stepLogs.data().count,
           }
         } catch (err) {
-          console.error(`Error enriching user ${user.uid}:`, err)
+          logger.error('Error enriching user data', err as Error, { uid: user.uid })
           return {
             uid: user.uid,
             email: user.email,
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ users: enrichedUsers })
   } catch (error) {
-    console.error('Error searching users:', error)
+    logger.error('Error searching users', error as Error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to search users' },
       { status: 500 }
@@ -174,7 +175,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
   } catch (error) {
-    console.error('Error updating user:', error)
+    logger.error('Error updating user', error as Error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to update user' },
       { status: 500 }
@@ -240,7 +241,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'User deleted' })
   } catch (error) {
-    console.error('Error deleting user:', error)
+    logger.error('Error deleting user', error as Error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to delete user' },
       { status: 500 }

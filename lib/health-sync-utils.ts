@@ -8,6 +8,8 @@
  * (React Native, Capacitor, etc.). This provides the UI/UX foundation.
  */
 
+import { logger } from '@/lib/logger'
+
 export type Platform = 'ios' | 'android' | 'web' | 'unknown'
 export type HealthApp = 'apple-health' | 'google-fit' | 'none'
 
@@ -125,7 +127,7 @@ export function openHealthApp(healthApp: HealthApp): boolean {
     window.location.href = deepLink
     return true
   } catch (error) {
-    console.error('Failed to open health app:', error)
+    logger.error('Failed to open health app', error as Error)
     return false
   }
 }

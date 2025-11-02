@@ -35,7 +35,16 @@
       "Bash(git worktree:*)",
       "Bash(git branch:*)",
       "Bash(git checkout:*)",
-      "Bash(git merge-base:*)"
+      "Bash(git merge-base:*)",
+      "Bash(tasklist)",
+      "Bash(findstr:*)",
+      "Bash(awk:*)",
+      "Bash(firebase firestore:indexes:*)",
+      "Bash(npm audit:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git rm:*)",
+      "Bash(set CI=true)",
+      "Bash(npx cross-env:*)"
     ],
     "deny": [],
     "ask": []

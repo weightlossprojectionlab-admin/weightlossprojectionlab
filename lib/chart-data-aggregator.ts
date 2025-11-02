@@ -20,6 +20,7 @@ import {
   limit,
   Timestamp
 } from 'firebase/firestore'
+import { logger } from '@/lib/logger'
 
 // ============================================================================
 // Types
@@ -100,7 +101,7 @@ export async function getWeightTrendData(
 
     return dataPoints
   } catch (error) {
-    console.error('Error fetching weight trend data:', error)
+    logger.error('Error fetching weight trend data', error as Error)
     return []
   }
 }
@@ -169,7 +170,7 @@ export async function getCalorieIntakeData(
 
     return dataPoints
   } catch (error) {
-    console.error('Error fetching calorie intake data:', error)
+    logger.error('Error fetching calorie intake data', error as Error)
     return []
   }
 }
@@ -248,7 +249,7 @@ export async function getMacroDistributionData(
 
     return dataPoints
   } catch (error) {
-    console.error('Error fetching macro distribution data:', error)
+    logger.error('Error fetching macro distribution data', error as Error)
     return []
   }
 }
@@ -382,7 +383,7 @@ export async function getWeeklyAverages(
 
     return averages
   } catch (error) {
-    console.error('Error calculating weekly averages:', error)
+    logger.error('Error calculating weekly averages', error as Error)
     return []
   }
 }
@@ -437,7 +438,7 @@ export async function getSummaryStatistics(
       macroPercentages
     }
   } catch (error) {
-    console.error('Error calculating summary statistics:', error)
+    logger.error('Error calculating summary statistics', error as Error)
     return {
       weightChange: 0,
       avgCalories: 0,

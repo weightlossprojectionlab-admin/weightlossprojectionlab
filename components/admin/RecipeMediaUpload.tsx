@@ -7,6 +7,7 @@ import { uploadRecipeMedia } from '@/lib/recipe-upload'
 import { db } from '@/lib/firebase'
 import { doc, setDoc, Timestamp } from 'firebase/firestore'
 import Image from 'next/image'
+import { logger } from '@/lib/logger'
 import {
   XMarkIcon,
   PhotoIcon,
@@ -234,7 +235,7 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
       onSuccess()
       onClose()
     } catch (error) {
-      console.error('Upload error:', error)
+      logger.error('Upload error:', error as Error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload media'
       toast.error(errorMessage, { duration: 5000 })
     } finally {

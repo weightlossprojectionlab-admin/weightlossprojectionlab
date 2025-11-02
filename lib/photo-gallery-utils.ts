@@ -2,6 +2,7 @@
 
 import { mealLogOperations } from './firebase-operations'
 import type { MealLog } from '@/types'
+import { logger } from '@/lib/logger'
 
 /**
  * Photo Gallery Utilities
@@ -70,7 +71,7 @@ export async function fetchGalleryPhotos(filters?: GalleryFilters): Promise<Phot
 
     return galleryItems
   } catch (error) {
-    console.error('Error fetching gallery photos:', error)
+    logger.error('Error fetching gallery photos', error as Error)
     return []
   }
 }

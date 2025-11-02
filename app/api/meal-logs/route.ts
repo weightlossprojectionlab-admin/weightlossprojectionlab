@@ -2,46 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
 import { generateSearchKeywords } from '@/lib/meal-title-utils'
-
-interface AIAnalysis {
-  foods: Array<{
-    name: string
-    portion: string
-    calories: number
-    confidence: number
-  }>
-  totalCalories: number
-  macros: {
-    carbs: number
-    protein: number
-    fat: number
-    fiber: number
-  }
-  nutritionalHighlights: string[]
-  suggestions: string[]
-  confidence: number
-}
-
-interface MealLog {
-  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
-  photoUrl?: string
-  aiAnalysis?: AIAnalysis
-  manualEntries?: Array<{
-    food: string
-    calories: number
-    quantity: string
-  }>
-  totalCalories: number
-  macros: {
-    carbs: number
-    protein: number
-    fat: number
-    fiber: number
-  }
-  loggedAt: Timestamp
-  source: 'photo' | 'manual' | 'hybrid'
-  notes?: string
-}
+import { logger } from '@/lib/logger'
+import { ErrorHandler } from '@/lib/utils/error-handler'
+import {
+  CreateMealLogRequestSchema,
+  GetMealLogsQuerySchema,
+} from '@/lib/validations/meal-logs'
+import { z } from 'zod'
 
 // GET - Retrieve meal logs for authenticated user
 export async function GET(request: NextRequest) {
@@ -61,30 +28,35 @@ export async function GET(request: NextRequest) {
     const decodedToken = await verifyIdToken(idToken)
     const userId = decodedToken.uid
 
-    // Get query parameters
+    // Get and validate query parameters
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
-    const mealType = searchParams.get('mealType')
+    const queryParams = {
+      limit: searchParams.get('limit'),
+      startDate: searchParams.get('startDate'),
+      endDate: searchParams.get('endDate'),
+      mealType: searchParams.get('mealType'),
+    }
+
+    // Validate with Zod
+    const validatedQuery = GetMealLogsQuerySchema.parse(queryParams)
 
     // Build Firestore query
     const mealLogsRef = adminDb.collection('users').doc(userId).collection('mealLogs')
     let queryRef = mealLogsRef.orderBy('loggedAt', 'desc')
 
     // Add filters if provided
-    if (startDate) {
-      queryRef = queryRef.where('loggedAt', '>=', new Date(startDate))
+    if (validatedQuery.startDate) {
+      queryRef = queryRef.where('loggedAt', '>=', new Date(validatedQuery.startDate))
     }
-    if (endDate) {
-      queryRef = queryRef.where('loggedAt', '<=', new Date(endDate))
+    if (validatedQuery.endDate) {
+      queryRef = queryRef.where('loggedAt', '<=', new Date(validatedQuery.endDate))
     }
-    if (mealType && ['breakfast', 'lunch', 'dinner', 'snack'].includes(mealType)) {
-      queryRef = queryRef.where('mealType', '==', mealType)
+    if (validatedQuery.mealType) {
+      queryRef = queryRef.where('mealType', '==', validatedQuery.mealType)
     }
 
     // Limit results
-    queryRef = queryRef.limit(limit)
+    queryRef = queryRef.limit(validatedQuery.limit)
 
     // Execute query
     const snapshot = await queryRef.get()
@@ -101,9 +73,15 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching meal logs:', error)
+    ErrorHandler.handle(error, {
+      operation: 'fetch_meal_logs',
+      component: 'api/meal-logs',
+      userId: 'unknown'
+    })
+
+    const userMessage = ErrorHandler.getUserMessage(error)
     return NextResponse.json(
-      { error: 'Failed to fetch meal logs' },
+      { error: userMessage },
       { status: 500 }
     )
   }
@@ -127,8 +105,12 @@ export async function POST(request: NextRequest) {
     const decodedToken = await verifyIdToken(idToken)
     const userId = decodedToken.uid
 
-    // Parse request body
+    // Parse and validate request body
     const body = await request.json()
+
+    // Validate with Zod
+    const validatedData = CreateMealLogRequestSchema.parse(body)
+
     const {
       mealType,
       photoUrl,
@@ -136,31 +118,7 @@ export async function POST(request: NextRequest) {
       manualEntries,
       notes,
       loggedAt
-    } = body
-
-    // Validate required fields
-    if (!mealType) {
-      return NextResponse.json(
-        { error: 'Meal type is required' },
-        { status: 400 }
-      )
-    }
-
-    // Validate meal type
-    if (!['breakfast', 'lunch', 'dinner', 'snack'].includes(mealType)) {
-      return NextResponse.json(
-        { error: 'Invalid meal type' },
-        { status: 400 }
-      )
-    }
-
-    // Validate that we have either AI analysis or manual entries
-    if (!aiAnalysis && (!manualEntries || manualEntries.length === 0)) {
-      return NextResponse.json(
-        { error: 'Either AI analysis or manual entries are required' },
-        { status: 400 }
-      )
-    }
+    } = validatedData
 
     // Calculate totals
     let totalCalories = 0
@@ -241,15 +199,17 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Error creating meal log:', error)
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-    console.error('Error message:', error instanceof Error ? error.message : String(error))
+    ErrorHandler.handle(error, {
+      operation: 'create_meal_log',
+      component: 'api/meal-logs',
+      userId: 'unknown'
+    })
 
+    const userMessage = ErrorHandler.getUserMessage(error)
     return NextResponse.json(
       {
-        error: 'Failed to create meal log',
-        details: error instanceof Error ? error.message : String(error),
-        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
+        error: userMessage,
+        details: process.env.NODE_ENV === 'development' ? error : undefined
       },
       { status: 500 }
     )

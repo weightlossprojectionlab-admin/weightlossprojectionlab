@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminStorage, verifyIdToken } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { Timestamp } from 'firebase-admin/firestore'
+import { logger } from '@/lib/logger'
 
 export async function POST(
   request: NextRequest,
@@ -10,11 +11,11 @@ export async function POST(
   try {
     // Await params as required by Next.js 15
     const { id: recipeId } = await params
-    console.log('[Media Upload] Starting upload for recipe:', recipeId)
+    logger.debug('Media Upload: Starting upload for recipe', { recipeId })
 
     // Verify authentication
     const authHeader = request.headers.get('authorization')
-    console.log('[Media Upload] Auth header present:', !!authHeader)
+    logger.debug('Media Upload: Auth header present', { hasAuth: !!authHeader })
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -24,16 +25,16 @@ export async function POST(
     }
 
     const idToken = authHeader.split('Bearer ')[1]
-    console.log('[Media Upload] Verifying ID token...')
+    logger.debug('Media Upload: Verifying ID token')
     const decodedToken = await verifyIdToken(idToken)
     const adminUid = decodedToken.uid
-    console.log('[Media Upload] User authenticated:', adminUid)
+    logger.debug('Media Upload: User authenticated', { adminUid })
 
     // Check if user is admin
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
     const role = adminData?.role
-    console.log('[Media Upload] User role:', role)
+    logger.debug('Media Upload: User role', { role })
 
     if (role !== 'admin') {
       return NextResponse.json(
@@ -42,12 +43,12 @@ export async function POST(
       )
     }
 
-    console.log('[Media Upload] Recipe ID:', recipeId)
+    logger.debug('Media Upload: Recipe ID', { recipeId })
 
     // Parse multipart form data
-    console.log('[Media Upload] Parsing form data...')
+    logger.debug('Media Upload: Parsing form data')
     const formData = await request.formData()
-    console.log('[Media Upload] Form data entries:', Array.from(formData.keys()))
+    logger.debug('Media Upload: Form data entries', { entries: Array.from(formData.keys()) })
 
     // Get up to 4 image files
     const imageFiles: (File | null)[] = [
@@ -60,7 +61,7 @@ export async function POST(
     const videoFile = formData.get('video') as File | null
 
     const hasAnyImage = imageFiles.some(file => file !== null)
-    console.log('[Media Upload] Has images:', hasAnyImage, 'Has video:', !!videoFile)
+    logger.debug('Media Upload: Media check', { hasImages: hasAnyImage, hasVideo: !!videoFile })
 
     if (!hasAnyImage && !videoFile) {
       return NextResponse.json(
@@ -69,9 +70,9 @@ export async function POST(
       )
     }
 
-    console.log('[Media Upload] Getting storage bucket...')
+    logger.debug('Media Upload: Getting storage bucket')
     const bucket = adminStorage.bucket()
-    console.log('[Media Upload] Bucket name:', bucket.name)
+    logger.debug('Media Upload: Bucket name', { bucketName: bucket.name })
     const uploadedMedia: {
       imageUrls?: string[]
       videoUrl?: string
@@ -81,7 +82,7 @@ export async function POST(
 
     // Upload images (up to 4)
     if (hasAnyImage) {
-      console.log('[Media Upload] Starting image uploads...')
+      logger.debug('Media Upload: Starting image uploads')
       const imageUrls: string[] = []
       const imageStoragePaths: string[] = []
 
@@ -89,7 +90,7 @@ export async function POST(
         const imageFile = imageFiles[i]
         if (!imageFile) continue
 
-        console.log(`[Media Upload] Uploading image ${i + 1}...`)
+        logger.debug('Media Upload: Uploading image', { imageIndex: i + 1 })
         const imageBuffer = Buffer.from(await imageFile.arrayBuffer())
         const imagePath = `recipes/media/${recipeId}/image-${i + 1}.jpg`
         const imageFileRef = bucket.file(imagePath)
@@ -110,12 +111,12 @@ export async function POST(
 
         imageUrls.push(`https://storage.googleapis.com/${bucket.name}/${imagePath}`)
         imageStoragePaths.push(imagePath)
-        console.log(`[Media Upload] Image ${i + 1} uploaded successfully`)
+        logger.debug('Media Upload: Image uploaded successfully', { imageIndex: i + 1 })
       }
 
       uploadedMedia.imageUrls = imageUrls
       uploadedMedia.imageStoragePaths = imageStoragePaths
-      console.log('[Media Upload] All images uploaded:', imageUrls.length)
+      logger.debug('Media Upload: All images uploaded', { imageCount: imageUrls.length })
     }
 
     // Upload video
@@ -146,7 +147,7 @@ export async function POST(
     }
 
     // Update recipe in Firestore (or create if doesn't exist)
-    console.log('[Media Upload] Updating Firestore...')
+    logger.debug('Media Upload: Updating Firestore')
     const recipeRef = adminDb.collection('recipes').doc(recipeId)
     await recipeRef.set(
       {
@@ -156,10 +157,10 @@ export async function POST(
       },
       { merge: true }
     )
-    console.log('[Media Upload] Firestore updated')
+    logger.debug('Media Upload: Firestore updated')
 
     // Log admin action
-    console.log('[Media Upload] Logging admin action...')
+    logger.debug('Media Upload: Logging admin action')
     await logAdminAction({
       adminUid,
       adminEmail: decodedToken.email || 'unknown',
@@ -172,9 +173,8 @@ export async function POST(
       },
       reason: `Uploaded ${uploadedMedia.imageUrls?.length || 0} image(s)${videoFile ? ' and 1 video' : ''}`,
     })
-    console.log('[Media Upload] Admin action logged')
+    logger.info('Media Upload: Upload complete', { recipeId, imageCount: uploadedMedia.imageUrls?.length || 0, hasVideo: !!videoFile })
 
-    console.log('[Media Upload] Upload complete!')
     return NextResponse.json({
       success: true,
       message: 'Media uploaded successfully',
@@ -184,16 +184,13 @@ export async function POST(
       },
     })
   } catch (error) {
-    console.error('[Media Upload] ERROR:', error)
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    const errorStack = error instanceof Error ? error.stack : undefined
-    console.error('[Media Upload] Error stack:', errorStack)
+    logger.error('Media Upload: Failed', error instanceof Error ? error : new Error(String(error)))
 
     return NextResponse.json(
       {
         error: 'Failed to upload media',
-        details: errorMessage,
-        stack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
+        details: error instanceof Error ? error.message : String(error),
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined,
       },
       { status: 500 }
     )
@@ -251,7 +248,7 @@ export async function DELETE(
       await bucket.file(filePath).delete()
     } catch (error) {
       // File might not exist, that's okay
-      console.log('File not found in storage:', filePath)
+      logger.debug('File not found in storage', { filePath })
     }
 
     // Update Firestore
@@ -279,7 +276,7 @@ export async function DELETE(
       message: `${mediaType} deleted successfully`,
     })
   } catch (error) {
-    console.error('Error deleting recipe media:', error)
+    logger.error('Error deleting recipe media', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       {
         error: 'Failed to delete media',

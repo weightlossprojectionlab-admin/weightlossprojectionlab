@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getRoleDisplayName, getRoleBadgeColor } from '@/lib/admin/permissions'
+import { logger } from '@/lib/logger'
 import {
   UserGroupIcon,
   ShieldCheckIcon,
@@ -55,7 +56,7 @@ export default function AdminSettingsPage() {
       const data = await response.json()
       setAdminUsers(data.admins || [])
     } catch (err) {
-      console.error('Error loading admin users:', err)
+      logger.error('Error loading admin users:', err as Error)
     }
   }
 
@@ -67,7 +68,7 @@ export default function AdminSettingsPage() {
       setAuditLogs(data.logs || [])
       setLoading(false)
     } catch (err) {
-      console.error('Error loading audit logs:', err)
+      logger.error('Error loading audit logs:', err as Error)
       setLoading(false)
     }
   }

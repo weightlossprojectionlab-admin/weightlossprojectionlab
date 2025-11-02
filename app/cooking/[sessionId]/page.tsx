@@ -11,6 +11,7 @@ import { CookingSession } from '@/types'
 import { MEAL_SUGGESTIONS, getRecipeActionLabel } from '@/lib/meal-suggestions'
 import { Spinner } from '@/components/ui/Spinner'
 import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger'
 
 function CookingSessionContent() {
   const router = useRouter()
@@ -29,7 +30,7 @@ function CookingSessionContent() {
         const sessionData = await cookingSessionOperations.getCookingSession(sessionId)
         setSession(sessionData as CookingSession)
       } catch (error) {
-        console.error('Error loading cooking session:', error)
+        logger.error('Error loading cooking session', error as Error)
         toast.error('Failed to load cooking session')
         router.push('/dashboard')
       } finally {
@@ -61,7 +62,7 @@ function CookingSessionContent() {
         })
         setSession({ ...session, currentStep: nextStep })
       } catch (error) {
-        console.error('Error updating step:', error)
+        logger.error('Error updating step', error as Error)
         toast.error('Failed to update step')
       }
     }
@@ -78,7 +79,7 @@ function CookingSessionContent() {
       })
       setSession({ ...session, currentStep: prevStep })
     } catch (error) {
-      console.error('Error updating step:', error)
+      logger.error('Error updating step', error as Error)
       toast.error('Failed to update step')
     }
   }
@@ -94,7 +95,7 @@ function CookingSessionContent() {
       toast.success('Session paused')
       router.push('/dashboard')
     } catch (error) {
-      console.error('Error pausing session:', error)
+      logger.error('Error pausing session', error as Error)
       toast.error('Failed to pause session')
     }
   }
@@ -119,7 +120,7 @@ function CookingSessionContent() {
 
       router.push(`/log-meal?${queryParams.toString()}`)
     } catch (error) {
-      console.error('Error completing session:', error)
+      logger.error('Error completing session', error as Error)
       toast.error('Failed to complete session')
     }
   }

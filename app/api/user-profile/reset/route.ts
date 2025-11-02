@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
+import { logger } from '@/lib/logger'
 
 // Set max duration to 25 seconds (just under Netlify's 26s limit)
 export const maxDuration = 25
@@ -34,7 +35,7 @@ export async function DELETE(request: NextRequest) {
     const decodedToken = await verifyIdToken(idToken)
     const userId = decodedToken.uid
 
-    console.log(`⚠️ RESET ALL DATA requested for user: ${userId}`)
+    logger.warn('RESET ALL DATA requested', { userId })
 
     // Get user document reference
     const userDocRef = adminDb.collection('users').doc(userId)
@@ -71,7 +72,7 @@ export async function DELETE(request: NextRequest) {
         const snapshot = await collectionRef.limit(500).get() // Limit to prevent timeout on huge datasets
 
         if (snapshot.empty) {
-          console.log(`⏭️ Skipping empty collection: ${collectionName}`)
+          logger.debug('Skipping empty collection', { collectionName })
           deletionResults.push({ collection: collectionName, deleted: 0 })
           continue
         }
@@ -85,11 +86,11 @@ export async function DELETE(request: NextRequest) {
         await deleteBatch.commit()
 
         const deletedCount = snapshot.size
-        console.log(`✅ Deleted ${deletedCount} documents from ${collectionName}`)
+        logger.info('Deleted documents from collection', { collectionName, deletedCount })
         deletionResults.push({ collection: collectionName, deleted: deletedCount })
 
       } catch (error) {
-        console.error(`❌ Error deleting ${collectionName}:`, error)
+        logger.error('Error deleting collection', error instanceof Error ? error : new Error(String(error)), { collectionName })
         deletionResults.push({
           collection: collectionName,
           deleted: 0,
@@ -98,7 +99,7 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    console.log(`✅ All data reset completed for user: ${userId}`)
+    logger.info('All data reset completed', { userId })
 
     return NextResponse.json({
       success: true,
@@ -108,7 +109,7 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error resetting user data:', error)
+    logger.error('Error resetting user data', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       {
         error: 'Failed to reset user data',

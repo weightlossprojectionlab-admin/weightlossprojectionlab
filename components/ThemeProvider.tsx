@@ -4,6 +4,7 @@ import { createContext, useEffect, useState, ReactNode } from 'react'
 import { auth } from '@/lib/firebase'
 import { userProfileOperations } from '@/lib/firebase-operations'
 import type { Theme, ThemeContextType } from '@/hooks/useTheme'
+import { logger } from '@/lib/logger'
 
 export const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
@@ -93,7 +94,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
           }
         }
       } catch (error) {
-        console.error('Failed to load theme:', error)
+        logger.error('Failed to load theme:', error as Error)
         // Fallback to localStorage
         try {
           const savedTheme = localStorage.getItem(STORAGE_KEY) as Theme | null
@@ -101,7 +102,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
             setThemeState(savedTheme)
           }
         } catch (err) {
-          console.error('Failed to load from localStorage:', err)
+          logger.error('Failed to load from localStorage:', err as Error)
         }
       } finally {
         setMounted(true)
@@ -148,7 +149,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       // Always save to localStorage as backup
       localStorage.setItem(STORAGE_KEY, newTheme)
     } catch (error) {
-      console.error('Failed to save theme:', error)
+      logger.error('Failed to save theme:', error as Error)
       // Even if Firestore fails, we saved to localStorage
     }
   }

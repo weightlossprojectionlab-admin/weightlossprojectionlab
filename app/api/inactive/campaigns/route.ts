@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuth } from 'firebase-admin/auth'
 import { getCampaignMetrics } from '@/lib/inactive-detection'
 import { initAdmin } from '@/lib/firebase-admin'
+import { logger } from '@/lib/logger'
 
 /**
  * GET /api/inactive/campaigns
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
     try {
       decodedToken = await getAuth().verifyIdToken(token)
     } catch (error) {
-      console.error('Token verification failed:', error)
+      logger.error('Token verification failed', error instanceof Error ? error : new Error(String(error)))
       return NextResponse.json(
         { error: 'Unauthorized - Invalid token' },
         { status: 401 }
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get campaign metrics
-    console.log('Getting campaign performance metrics...')
+    logger.info('Getting campaign performance metrics')
 
     const metrics = await getCampaignMetrics()
 
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Error getting campaign metrics:', error)
+    logger.error('Error getting campaign metrics', error instanceof Error ? error : new Error(String(error)))
 
     return NextResponse.json(
       {

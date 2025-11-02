@@ -6,6 +6,7 @@ import { MealType, DietaryTag, MealSuggestion } from '@/lib/meal-suggestions'
 import { generateRecipeSteps } from '@/lib/ai-recipe-generator'
 import { saveRecipeToFirestore } from '@/lib/firestore-recipes'
 import { requiresCooking, getRecipeActionLabel } from '@/lib/meal-suggestions'
+import { logger } from '@/lib/logger'
 import {
   XMarkIcon,
   SparklesIcon,
@@ -91,7 +92,7 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
 
           recipes.push(baseRecipe)
         } catch (error) {
-          console.error(`Failed to generate recipe ${i + 1}:`, error)
+          logger.error(`Failed to generate recipe ${i + 1}:`, error as Error)
           toast.error(`Failed to generate recipe ${i + 1}`)
         }
 
@@ -102,7 +103,7 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
       setGeneratedRecipes(recipes)
       toast.success(`Generated ${recipes.length} recipes!`)
     } catch (error) {
-      console.error('Error generating recipes:', error)
+      logger.error('Error generating recipes:', error as Error)
       toast.error('Failed to generate recipes')
     } finally {
       setGenerating(false)
@@ -119,14 +120,14 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
           await saveRecipeToFirestore(recipe, user.uid)
           saved++
         } catch (error) {
-          console.error('Failed to save recipe:', error)
+          logger.error('Failed to save recipe:', error as Error)
         }
       }
 
       toast.success(`Saved ${saved} recipes as drafts`)
       onSuccess()
     } catch (error) {
-      console.error('Error saving recipes:', error)
+      logger.error('Error saving recipes:', error as Error)
       toast.error('Failed to save recipes')
     }
   }

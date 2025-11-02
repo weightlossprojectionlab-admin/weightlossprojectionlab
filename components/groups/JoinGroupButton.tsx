@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { UserPlusIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { Spinner } from '@/components/ui/Spinner';
+import { logger } from '@/lib/logger'
 
 interface JoinGroupButtonProps {
   groupId: string;
@@ -38,7 +39,7 @@ export default function JoinGroupButton({
       await onJoin(groupId);
       setIsJoined(true);
     } catch (error) {
-      console.error('Failed to join group:', error);
+      logger.error('Failed to join group:', error as Error);
       // Optionally show error toast
     } finally {
       setIsLoading(false);

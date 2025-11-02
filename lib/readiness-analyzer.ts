@@ -20,6 +20,7 @@ import {
   setDoc,
   getDoc
 } from 'firebase/firestore'
+import { logger } from '@/lib/logger'
 
 // ============================================================================
 // Types
@@ -232,7 +233,7 @@ async function calculateMealLoggingFrequency(
 
     return Math.min(100, Math.round(percentage))
   } catch (error) {
-    console.error('Error calculating meal logging frequency:', error)
+    logger.error('Error calculating meal logging frequency', error as Error)
     return 0
   }
 }
@@ -265,7 +266,7 @@ async function calculateWeightTrackingFrequency(
 
     return Math.min(100, Math.round(percentage))
   } catch (error) {
-    console.error('Error calculating weight tracking frequency:', error)
+    logger.error('Error calculating weight tracking frequency', error as Error)
     return 0
   }
 }
@@ -288,7 +289,7 @@ async function getCurrentStreak(userId: string): Promise<{ current: number; long
       longest: data.profile?.longestStreak || 0
     }
   } catch (error) {
-    console.error('Error getting current streak:', error)
+    logger.error('Error getting current streak', error as Error)
     return { current: 0, longest: 0 }
   }
 }
@@ -333,7 +334,7 @@ async function calculateMissionCompletionRate(
     const percentage = (completedMissions / totalMissions) * 100
     return Math.round(percentage)
   } catch (error) {
-    console.error('Error calculating mission completion rate:', error)
+    logger.error('Error calculating mission completion rate', error as Error)
     return 0
   }
 }
@@ -366,7 +367,7 @@ async function calculateGoalProgressRate(userId: string): Promise<number> {
     const percentage = (lostSoFar / totalToLose) * 100
     return Math.min(100, Math.round(percentage))
   } catch (error) {
-    console.error('Error calculating goal progress rate:', error)
+    logger.error('Error calculating goal progress rate', error as Error)
     return 0
   }
 }
@@ -417,7 +418,7 @@ async function calculateRecipeEngagement(
 
     return Math.round(percentage)
   } catch (error) {
-    console.error('Error calculating recipe engagement:', error)
+    logger.error('Error calculating recipe engagement', error as Error)
     return 0
   }
 }
@@ -456,7 +457,7 @@ async function calculateProfileCompleteness(userId: string): Promise<number> {
     const percentage = (filledFields / requiredFields.length) * 100
     return Math.round(percentage)
   } catch (error) {
-    console.error('Error calculating profile completeness:', error)
+    logger.error('Error calculating profile completeness', error as Error)
     return 0
   }
 }
@@ -519,7 +520,7 @@ async function calculateActivityData(
       lastActivityDate
     }
   } catch (error) {
-    console.error('Error calculating activity data:', error)
+    logger.error('Error calculating activity data', error as Error)
     return {
       daysActive: 0,
       consecutiveInactiveDays: ANALYSIS_PERIOD_DAYS,
@@ -760,7 +761,7 @@ async function saveAnalysis(userId: string, analysis: ReadinessAnalysis): Promis
       }
     }, { merge: true })
   } catch (error) {
-    console.error('Error saving readiness analysis:', error)
+    logger.error('Error saving readiness analysis', error as Error)
     throw error
   }
 }
@@ -802,7 +803,7 @@ export async function getLatestAnalysis(userId: string): Promise<ReadinessAnalys
       analyzedAt: latest.analyzedAt.toDate()
     }
   } catch (error) {
-    console.error('Error getting latest analysis:', error)
+    logger.error('Error getting latest analysis', error as Error)
     return null
   }
 }

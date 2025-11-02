@@ -5,6 +5,7 @@
  * Uses IndexedDB for persistent storage across page reloads.
  */
 
+import { logger } from '@/lib/logger'
 import type { AIAnalysis } from '@/types'
 
 const DB_NAME = 'wlpl-offline-queue'
@@ -100,12 +101,12 @@ export async function queueMeal(mealData: QueuedMeal['mealData']): Promise<strin
     const request = store.add(queuedMeal)
 
     request.onsuccess = () => {
-      console.log('[OfflineQueue] Meal queued:', queuedMeal.id)
+      logger.debug('[OfflineQueue] Meal queued', { mealId: queuedMeal.id })
       resolve(queuedMeal.id)
     }
 
     request.onerror = () => {
-      console.error('[OfflineQueue] Failed to queue meal:', request.error)
+      logger.error('[OfflineQueue] Failed to queue meal', request.error as Error)
       reject(new Error('Failed to queue meal'))
     }
   })
@@ -132,12 +133,12 @@ export async function queueWeight(weightData: QueuedWeight['weightData']): Promi
     const request = store.add(queuedWeight)
 
     request.onsuccess = () => {
-      console.log('[OfflineQueue] Weight queued:', queuedWeight.id)
+      logger.debug('[OfflineQueue] Weight queued', { weightId: queuedWeight.id })
       resolve(queuedWeight.id)
     }
 
     request.onerror = () => {
-      console.error('[OfflineQueue] Failed to queue weight:', request.error)
+      logger.error('[OfflineQueue] Failed to queue weight', request.error as Error)
       reject(new Error('Failed to queue weight'))
     }
   })
@@ -158,12 +159,12 @@ export async function getUnsyncedMeals(): Promise<QueuedMeal[]> {
     request.onsuccess = () => {
       const allMeals = request.result as QueuedMeal[]
       const unsyncedMeals = allMeals.filter(meal => meal.synced === false)
-      console.log('[OfflineQueue] Unsynced meals:', unsyncedMeals.length)
+      logger.debug('[OfflineQueue] Unsynced meals', { count: unsyncedMeals.length })
       resolve(unsyncedMeals)
     }
 
     request.onerror = () => {
-      console.error('[OfflineQueue] Failed to get unsynced meals:', request.error)
+      logger.error('[OfflineQueue] Failed to get unsynced meals', request.error as Error)
       reject(new Error('Failed to get unsynced meals'))
     }
   })
@@ -188,12 +189,12 @@ export async function markMealSynced(id: string): Promise<void> {
         const updateRequest = store.put(meal)
 
         updateRequest.onsuccess = () => {
-          console.log('[OfflineQueue] Meal marked as synced:', id)
+          logger.debug('[OfflineQueue] Meal marked as synced', { mealId: id })
           resolve()
         }
 
         updateRequest.onerror = () => {
-          console.error('[OfflineQueue] Failed to update meal:', updateRequest.error)
+          logger.error('[OfflineQueue] Failed to update meal', updateRequest.error as Error)
           reject(new Error('Failed to mark meal as synced'))
         }
       } else {
@@ -202,7 +203,7 @@ export async function markMealSynced(id: string): Promise<void> {
     }
 
     getRequest.onerror = () => {
-      console.error('[OfflineQueue] Failed to get meal:', getRequest.error)
+      logger.error('[OfflineQueue] Failed to get meal', getRequest.error as Error)
       reject(new Error('Failed to get meal'))
     }
   })
@@ -228,7 +229,7 @@ export async function incrementSyncAttempt(id: string): Promise<void> {
         const updateRequest = store.put(meal)
 
         updateRequest.onsuccess = () => {
-          console.log('[OfflineQueue] Sync attempt incremented:', id, 'attempts:', meal.syncAttempts)
+          logger.debug('[OfflineQueue] Sync attempt incremented', { mealId: id, attempts: meal.syncAttempts })
           resolve()
         }
 
@@ -258,12 +259,12 @@ export async function deleteMeal(id: string): Promise<void> {
     const request = store.delete(id)
 
     request.onsuccess = () => {
-      console.log('[OfflineQueue] Meal deleted:', id)
+      logger.debug('[OfflineQueue] Meal deleted', { mealId: id })
       resolve()
     }
 
     request.onerror = () => {
-      console.error('[OfflineQueue] Failed to delete meal:', request.error)
+      logger.error('[OfflineQueue] Failed to delete meal', request.error as Error)
       reject(new Error('Failed to delete meal'))
     }
   })
@@ -292,7 +293,7 @@ export async function clearSyncedMeals(): Promise<number> {
       })
 
       transaction.oncomplete = () => {
-        console.log('[OfflineQueue] Cleared synced meals:', deletedCount)
+        logger.debug('[OfflineQueue] Cleared synced meals', { count: deletedCount })
         resolve(deletedCount)
       }
 

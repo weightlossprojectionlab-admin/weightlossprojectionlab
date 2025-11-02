@@ -3,6 +3,7 @@
 // TODO: Link to PRD v1.3.7 § ai_and_data_governance
 
 import { AIModel, AIContext, ModelTier, DataSensitivity } from '@/types/ai';
+import { logger } from '@/lib/logger';
 
 /**
  * Available AI models with their characteristics
@@ -116,7 +117,7 @@ export function selectModel(context: AIContext): AIModel {
 
   if (!model) {
     // Fallback to safe default
-    console.warn(`Model not found for ${dataSensitivity}/${tier}, falling back to gpt-4o-mini`);
+    logger.warn(`Model not found for ${dataSensitivity}/${tier}, falling back to gpt-4o-mini`);
     return AI_MODELS['gpt-4o-mini'];
   }
 

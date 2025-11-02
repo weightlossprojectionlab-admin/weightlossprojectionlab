@@ -23,6 +23,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { MealSuggestion, RecipeStatus, MealType } from './meal-suggestions'
+import { logger } from '@/lib/logger'
 
 const RECIPES_COLLECTION = 'recipes'
 
@@ -81,7 +82,7 @@ export async function saveRecipeToFirestore(
 
     return docId
   } catch (error) {
-    console.error('Error saving recipe to Firestore:', error)
+    logger.error('Error saving recipe to Firestore', error as Error)
     throw error
   }
 }
@@ -100,7 +101,7 @@ export async function getRecipeById(recipeId: string): Promise<MealSuggestion | 
 
     return firestoreToRecipe(recipeDoc.id, recipeDoc.data())
   } catch (error) {
-    console.error('Error fetching recipe:', error)
+    logger.error('Error fetching recipe', error as Error)
     throw error
   }
 }
@@ -132,7 +133,7 @@ export async function getPublishedRecipes(options?: {
 
     return snapshot.docs.map((doc) => firestoreToRecipe(doc.id, doc.data()))
   } catch (error) {
-    console.error('Error fetching published recipes:', error)
+    logger.error('Error fetching published recipes', error as Error)
     throw error
   }
 }
@@ -151,7 +152,7 @@ export async function getDraftRecipes(): Promise<MealSuggestion[]> {
 
     return snapshot.docs.map((doc) => firestoreToRecipe(doc.id, doc.data()))
   } catch (error) {
-    console.error('Error fetching draft recipes:', error)
+    logger.error('Error fetching draft recipes', error as Error)
     throw error
   }
 }
@@ -179,7 +180,7 @@ export async function updateRecipeStatus(
 
     await updateDoc(recipeRef, updateData)
   } catch (error) {
-    console.error('Error updating recipe status:', error)
+    logger.error('Error updating recipe status', error as Error)
     throw error
   }
 }
@@ -194,7 +195,7 @@ export async function incrementRecipePopularity(recipeId: string): Promise<void>
       popularity: increment(1),
     })
   } catch (error) {
-    console.error('Error incrementing recipe popularity:', error)
+    logger.error('Error incrementing recipe popularity', error as Error)
     // Don't throw - popularity tracking is non-critical
   }
 }
@@ -252,7 +253,7 @@ export async function searchRecipes(searchTerm: string): Promise<MealSuggestion[
         recipe.ingredients.some((ing) => ing.toLowerCase().includes(searchLower))
     )
   } catch (error) {
-    console.error('Error searching recipes:', error)
+    logger.error('Error searching recipes', error as Error)
     throw error
   }
 }

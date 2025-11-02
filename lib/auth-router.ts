@@ -13,6 +13,7 @@
  * 4. AUTHENTICATED + COMPLETED → /dashboard or any page
  */
 
+import { logger } from '@/lib/logger'
 import { User } from 'firebase/auth'
 import { userProfileOperations } from './firebase-operations'
 
@@ -34,7 +35,7 @@ export async function determineUserDestination(
   user: User | null,
   currentPath: string
 ): Promise<UserDestination> {
-  console.log('🔀 Determining user destination:', {
+  logger.debug('[AuthRouter] Determining user destination', {
     userId: user?.uid,
     currentPath,
     email: user?.email
@@ -42,19 +43,19 @@ export async function determineUserDestination(
 
   // Step 1: Not authenticated → Must go to /auth
   if (!user) {
-    console.log('❌ No user - redirect to /auth')
+    logger.debug('[AuthRouter] No user - redirect to /auth')
     return { type: 'auth', reason: 'Not authenticated' }
   }
 
   // Step 2: User authenticated → Check profile status
   try {
-    console.log('📡 Fetching user profile for:', user.uid)
+    logger.debug('[AuthRouter] Fetching user profile', { userId: user.uid })
     const profileResponse = await userProfileOperations.getUserProfile()
     const profile = profileResponse?.data
 
     // Step 3: Profile doesn't exist → Create it and start onboarding
     if (!profile) {
-      console.log('📝 No profile found - creating profile and starting onboarding')
+      logger.info('[AuthRouter] No profile found - creating profile and starting onboarding', { userId: user.uid })
       await createProfileForUser(user)
       return {
         type: 'onboarding',
@@ -63,7 +64,7 @@ export async function determineUserDestination(
       }
     }
 
-    console.log('✅ Profile found:', {
+    logger.debug('[AuthRouter] Profile found', {
       onboardingCompleted: profile.profile?.onboardingCompleted,
       currentStep: profile.profile?.currentOnboardingStep
     })
@@ -73,7 +74,7 @@ export async function determineUserDestination(
 
     if (isOnboardingCompleted) {
       // Fully onboarded → Allow access to protected pages
-      console.log('✅ Onboarding completed - user can access all pages')
+      logger.debug('[AuthRouter] Onboarding completed - user can access all pages')
 
       // If user is on /onboarding but already completed, redirect to dashboard
       if (currentPath === '/onboarding') {
@@ -91,7 +92,7 @@ export async function determineUserDestination(
 
     // Step 5: Onboarding incomplete → Must complete onboarding
     const resumeStep = profile.profile?.currentOnboardingStep || 1
-    console.log(`⏸️ Onboarding incomplete - resume from step ${resumeStep}`)
+    logger.debug('[AuthRouter] Onboarding incomplete - resume from step', { resumeStep })
 
     // If already on /onboarding, let them stay
     if (currentPath === '/onboarding') {
@@ -106,13 +107,13 @@ export async function determineUserDestination(
     }
 
   } catch (error: any) {
-    console.error('❌ Error determining user destination:', error)
+    logger.error('[AuthRouter] Error determining user destination', error as Error)
 
     // Profile fetch failed (404 or other error) → Create profile and start onboarding
     if (error.message?.includes('404') ||
         error.message?.includes('not found') ||
         error.message?.includes('User profile not found')) {
-      console.log('📝 Profile not found (404) - creating and starting onboarding')
+      logger.info('[AuthRouter] Profile not found (404) - creating and starting onboarding')
       try {
         await createProfileForUser(user)
         return {
@@ -121,7 +122,7 @@ export async function determineUserDestination(
           reason: 'Profile created after 404 error'
         }
       } catch (createError) {
-        console.error('❌ Failed to create profile:', createError)
+        logger.error('[AuthRouter] Failed to create profile', createError as Error)
         // Even if profile creation fails, send to onboarding
         // (onboarding page will try to create it again)
         return {
@@ -133,7 +134,7 @@ export async function determineUserDestination(
     }
 
     // Other error (network, etc.) → Assume needs onboarding to be safe
-    console.log('⚠️ Unknown error - defaulting to onboarding')
+    logger.warn('[AuthRouter] Unknown error - defaulting to onboarding', { error: error.message })
     return {
       type: 'onboarding',
       resumeStep: 1,
@@ -148,7 +149,7 @@ export async function determineUserDestination(
  * @param user - Firebase Auth user object
  */
 async function createProfileForUser(user: User): Promise<void> {
-  console.log('📝 Creating profile for user:', user.uid)
+  logger.debug('[AuthRouter] Creating profile for user', { userId: user.uid })
 
   const profileData = {
     email: user.email || '',
@@ -157,18 +158,18 @@ async function createProfileForUser(user: User): Promise<void> {
 
   try {
     await userProfileOperations.createUserProfile(profileData)
-    console.log('✅ Profile created successfully')
+    logger.info('[AuthRouter] Profile created successfully', { userId: user.uid })
   } catch (error: any) {
     // Profile might already exist (409 conflict) - that's OK
     if (error.message?.includes('409') ||
         error.message?.includes('already exists') ||
         error.message?.includes('User profile already exists')) {
-      console.log('ℹ️ Profile already exists (409) - continuing')
+      logger.debug('[AuthRouter] Profile already exists (409) - continuing', { userId: user.uid })
       return
     }
 
     // Other error - re-throw
-    console.error('❌ Failed to create profile:', error)
+    logger.error('[AuthRouter] Failed to create profile', error as Error, { userId: user.uid })
     throw error
   }
 }

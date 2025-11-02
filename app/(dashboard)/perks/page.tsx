@@ -11,6 +11,7 @@ import PerkCard from '@/components/perks/PerkCard';
 import RedemptionForm from '@/components/perks/RedemptionForm';
 import EligibilityBadge from '@/components/perks/EligibilityBadge';
 import type { Perk } from '@/types/perks';
+import { logger } from '@/lib/logger'
 
 const PERKS_ENABLED = process.env.NEXT_PUBLIC_PERKS_ENABLED === 'true';
 const XP_THRESHOLD = 10000; // 10K XP required for perks
@@ -38,7 +39,7 @@ export default function PerksPage() {
   };
 
   const handleRedeemSubmit = async (perkId: string, email: string) => {
-    console.log('Redeem perk:', perkId, 'Email:', email);
+    logger.debug('Redeem perk:', { perkId, email });
     // TODO: Implement Firebase function to process redemption
     // This would create a redemption record and trigger webhook to sponsor
 

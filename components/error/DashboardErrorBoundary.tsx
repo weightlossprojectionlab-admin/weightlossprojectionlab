@@ -1,6 +1,7 @@
 'use client'
 
 import { Component, ReactNode } from 'react'
+import { logger } from '@/lib/logger'
 
 interface Props {
   children: ReactNode
@@ -29,7 +30,7 @@ export class DashboardErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: any) {
     // Log error to console in development
-    console.error('Dashboard error:', error, errorInfo)
+    logger.error('Dashboard error:', error, errorInfo)
 
     // In production, you would send this to an error tracking service
     // Example: Sentry.captureException(error, { extra: errorInfo })

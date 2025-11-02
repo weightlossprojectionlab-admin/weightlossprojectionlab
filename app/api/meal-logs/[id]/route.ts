@@ -3,6 +3,7 @@ import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { adminStorage } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
 import { generateSearchKeywords } from '@/lib/meal-title-utils'
+import { logger } from '@/lib/logger'
 
 // PUT - Update a specific meal log
 export async function PUT(
@@ -128,7 +129,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Error updating meal log:', error)
+    logger.error('Error updating meal log', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       {
         error: 'Failed to update meal log',
@@ -198,10 +199,10 @@ export async function DELETE(
           const storagePath = decodeURIComponent(urlMatch[1])
           const bucket = adminStorage.bucket()
           await bucket.file(storagePath).delete()
-          console.log('✅ Deleted photo from Storage:', storagePath)
+          logger.info('Deleted photo from Storage', { storagePath })
         }
       } catch (storageError) {
-        console.error('⚠️ Failed to delete photo from Storage:', storageError)
+        logger.warn('Failed to delete photo from Storage', { error: storageError })
         // Continue with document deletion even if photo deletion fails
       }
     }
@@ -215,7 +216,7 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error('Error deleting meal log:', error)
+    logger.error('Error deleting meal log', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       {
         error: 'Failed to delete meal log',

@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import { auth, db } from './firebase'
 import {
   collection,
@@ -15,7 +16,8 @@ import {
   limit,
   serverTimestamp
 } from 'firebase/firestore'
-import type { AIAnalysis, UserPreferences, UserGoals, UserProfile } from '@/types'
+import type { AIAnalysis, UserPreferences, UserGoals, UserProfile, CookingSession, QueuedRecipe } from '@/types'
+import { JsonObject, getErrorMessage } from '@/types/common'
 
 // Helper function to get auth token for API calls (with retry for race conditions)
 const getAuthToken = async () => {
@@ -23,17 +25,17 @@ const getAuthToken = async () => {
 
   if (!user) {
     // Wait briefly for Firebase Auth to initialize, then retry
-    console.log('⏳ Auth not ready, waiting 200ms and retrying...')
+    logger.debug('[FirebaseOps] Auth not ready, waiting 200ms and retrying...')
     await new Promise(resolve => setTimeout(resolve, 200))
     user = auth.currentUser
 
     if (!user) {
-      console.error('❌ User still not authenticated after retry')
+      logger.error('[FirebaseOps] User still not authenticated after retry')
       throw new Error('User not authenticated - please log in again')
     }
   }
 
-  console.log('✅ Getting auth token for user:', user.uid)
+  logger.debug('[FirebaseOps] Getting auth token for user', { userId: user.uid })
   return await user.getIdToken()
 }
 
@@ -52,7 +54,7 @@ const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) 
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-    console.error('API Error:', errorData)
+    logger.error('[FirebaseOps] API Error', new Error(errorData.error || 'Unknown error'), { errorData, status: response.status })
 
     // Include detailed error message if available
     const errorMessage = errorData.details || errorData.error || `HTTP ${response.status}`
@@ -136,7 +138,7 @@ export const mealLogOperations = {
     title?: string
     mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack'
     notes?: string
-    aiAnalysis?: any
+    aiAnalysis?: AIAnalysis
     manualEntries?: Array<{
       food: string
       calories: number
@@ -339,7 +341,7 @@ export interface StepLogData {
 // Cooking Session Operations
 export const cookingSessionOperations = {
   // Create a new cooking session
-  createCookingSession: async (sessionData: any) => {
+  createCookingSession: async (sessionData: Omit<CookingSession, 'id' | 'userId'>) => {
     const user = auth.currentUser
     if (!user) throw new FirebaseOperationError('User must be authenticated')
 
@@ -355,9 +357,9 @@ export const cookingSessionOperations = {
 
       await setDoc(sessionRef, session)
       return { ...session, id: sessionRef.id, createdAt: new Date(), updatedAt: new Date() }
-    } catch (error: any) {
-      console.error('Error creating cooking session:', error)
-      throw new FirebaseOperationError(`Failed to create cooking session: ${error.message}`)
+    } catch (error: unknown) {
+      logger.error('[FirebaseOps] Error creating cooking session', error as Error)
+      throw new FirebaseOperationError(`Failed to create cooking session: ${getErrorMessage(error)}`)
     }
   },
 
@@ -380,9 +382,9 @@ export const cookingSessionOperations = {
 
       const doc = snapshot.docs[0]
       return { ...doc.data(), id: doc.id }
-    } catch (error: any) {
-      console.error('Error getting active cooking session:', error)
-      throw new FirebaseOperationError(`Failed to get cooking session: ${error.message}`)
+    } catch (error: unknown) {
+      logger.error('[FirebaseOps] Error getting active cooking session', error as Error)
+      throw new FirebaseOperationError(`Failed to get cooking session: ${getErrorMessage(error)}`)
     }
   },
 
@@ -397,14 +399,14 @@ export const cookingSessionOperations = {
       }
 
       return { ...sessionDoc.data(), id: sessionDoc.id }
-    } catch (error: any) {
-      console.error('Error getting cooking session:', error)
-      throw new FirebaseOperationError(`Failed to get cooking session: ${error.message}`)
+    } catch (error: unknown) {
+      logger.error('[FirebaseOps] Error getting cooking session', error as Error)
+      throw new FirebaseOperationError(`Failed to get cooking session: ${getErrorMessage(error)}`)
     }
   },
 
   // Update cooking session
-  updateCookingSession: async (sessionId: string, updates: any) => {
+  updateCookingSession: async (sessionId: string, updates: Partial<CookingSession>) => {
     const user = auth.currentUser
     if (!user) throw new FirebaseOperationError('User must be authenticated')
 
@@ -414,9 +416,9 @@ export const cookingSessionOperations = {
         ...updates,
         updatedAt: serverTimestamp()
       })
-    } catch (error: any) {
-      console.error('Error updating cooking session:', error)
-      throw new FirebaseOperationError(`Failed to update cooking session: ${error.message}`)
+    } catch (error: unknown) {
+      logger.error('[FirebaseOps] Error updating cooking session', error as Error)
+      throw new FirebaseOperationError(`Failed to update cooking session: ${getErrorMessage(error)}`)
     }
   },
 
@@ -428,9 +430,9 @@ export const cookingSessionOperations = {
     try {
       const sessionRef = doc(db, 'cooking-sessions', sessionId)
       await deleteDoc(sessionRef)
-    } catch (error: any) {
-      console.error('Error deleting cooking session:', error)
-      throw new FirebaseOperationError(`Failed to delete cooking session: ${error.message}`)
+    } catch (error: unknown) {
+      logger.error('[FirebaseOps] Error deleting cooking session', error as Error)
+      throw new FirebaseOperationError(`Failed to delete cooking session: ${getErrorMessage(error)}`)
     }
   }
 }
@@ -438,7 +440,7 @@ export const cookingSessionOperations = {
 // Recipe Queue Operations
 export const recipeQueueOperations = {
   // Add recipe to queue
-  addToQueue: async (queueData: any) => {
+  addToQueue: async (queueData: Omit<QueuedRecipe, 'id' | 'userId' | 'addedAt'>) => {
     const user = auth.currentUser
     if (!user) throw new FirebaseOperationError('User must be authenticated')
 
@@ -453,9 +455,9 @@ export const recipeQueueOperations = {
 
       await setDoc(queueRef, queueItem)
       return { ...queueItem, id: queueRef.id, addedAt: new Date() }
-    } catch (error: any) {
-      console.error('Error adding to recipe queue:', error)
-      throw new FirebaseOperationError(`Failed to add to queue: ${error.message}`)
+    } catch (error: unknown) {
+      logger.error('[FirebaseOps] Error adding to recipe queue', error as Error)
+      throw new FirebaseOperationError(`Failed to add to queue: ${getErrorMessage(error)}`)
     }
   },
 
@@ -473,9 +475,9 @@ export const recipeQueueOperations = {
 
       const snapshot = await getDocs(q)
       return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))
-    } catch (error: any) {
-      console.error('Error getting recipe queue:', error)
-      throw new FirebaseOperationError(`Failed to get queue: ${error.message}`)
+    } catch (error: unknown) {
+      logger.error('[FirebaseOps] Error getting recipe queue', error as Error)
+      throw new FirebaseOperationError(`Failed to get queue: ${getErrorMessage(error)}`)
     }
   },
 
@@ -487,9 +489,9 @@ export const recipeQueueOperations = {
     try {
       const queueRef = doc(db, 'recipe-queue', queueId)
       await deleteDoc(queueRef)
-    } catch (error: any) {
-      console.error('Error removing from queue:', error)
-      throw new FirebaseOperationError(`Failed to remove from queue: ${error.message}`)
+    } catch (error: unknown) {
+      logger.error('[FirebaseOps] Error removing from queue', error as Error)
+      throw new FirebaseOperationError(`Failed to remove from queue: ${getErrorMessage(error)}`)
     }
   }
 }

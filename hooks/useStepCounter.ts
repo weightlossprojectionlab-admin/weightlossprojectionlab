@@ -11,6 +11,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { stepLogOperations } from '@/lib/firebase-operations'
+import { logger } from '@/lib/logger'
 import {
   AccelerometerData,
   StepDetectionConfig,
@@ -116,11 +117,11 @@ export function useStepCounter(
               totalSteps: data.totalSteps || 0,
               sessionSteps: data.sessionSteps || 0
             }))
-            console.log('[Step Counter] Restored from localStorage:', data.totalSteps)
+            logger.debug('[Step Counter] Restored from localStorage:', data.totalSteps)
           }
         }
       } catch (err) {
-        console.error('[Step Counter] Failed to load saved state:', err)
+        logger.error('[Step Counter] Failed to load saved state:', err as Error)
       }
     }
 
@@ -136,7 +137,7 @@ export function useStepCounter(
       if (calibrated) {
         configRef.current = calibrated
         setState(prev => ({ ...prev, calibrated: true }))
-        console.log('[Step Counter] Loaded calibration')
+        logger.debug('[Step Counter] Loaded calibration')
       }
     }
 
@@ -167,7 +168,7 @@ export function useStepCounter(
       }
       localStorage.setItem(STEP_COUNT_STORAGE_KEY, JSON.stringify(data))
     } catch (err) {
-      console.error('[Step Counter] Failed to save to localStorage:', err)
+      logger.error('[Step Counter] Failed to save to localStorage:', err as Error)
     }
   }, [])
 
@@ -211,11 +212,11 @@ export function useStepCounter(
       }
 
       setState(prev => ({ ...prev, isActive: true }))
-      console.log('[Step Counter] Started counting')
+      logger.debug('[Step Counter] Started counting')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       setError(message)
-      console.error('[Step Counter] Failed to start:', err)
+      logger.error('[Step Counter] Failed to start:', err as Error)
     }
   }, [handleSample])
 
@@ -226,7 +227,7 @@ export function useStepCounter(
     stopSensor()
     setState(prev => ({ ...prev, isActive: false }))
     saveToLocalStorage()
-    console.log('[Step Counter] Stopped counting')
+    logger.debug('[Step Counter] Stopped counting')
   }, [saveToLocalStorage])
 
   /**
@@ -236,7 +237,7 @@ export function useStepCounter(
     stopSensor()
     setState(prev => ({ ...prev, isActive: false }))
     saveToLocalStorage()
-    console.log('[Step Counter] Paused')
+    logger.debug('[Step Counter] Paused')
   }, [saveToLocalStorage])
 
   /**
@@ -257,10 +258,10 @@ export function useStepCounter(
     try {
       localStorage.removeItem(STEP_COUNT_STORAGE_KEY)
     } catch (err) {
-      console.error('[Step Counter] Failed to clear localStorage:', err)
+      logger.error('[Step Counter] Failed to clear localStorage:', err as Error)
     }
 
-    console.log('[Step Counter] Reset')
+    logger.debug('[Step Counter] Reset')
   }, [])
 
   /**
@@ -283,11 +284,11 @@ export function useStepCounter(
         loggedAt: new Date().toISOString()
       })
 
-      console.log('[Step Counter] Saved to Firebase:', stateRef.current.totalSteps)
+      logger.debug('[Step Counter] Saved to Firebase:', { totalSteps: stateRef.current.totalSteps })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save'
       setError(message)
-      console.error('[Step Counter] Firebase save failed:', err)
+      logger.error('[Step Counter] Firebase save failed:', err as Error)
     }
   }, [user])
 

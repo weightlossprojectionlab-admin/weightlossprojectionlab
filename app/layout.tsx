@@ -4,6 +4,8 @@ import Script from 'next/script'
 import { ServiceWorkerProvider } from '@/components/ServiceWorkerProvider'
 import { StepTrackingProvider } from '@/components/StepTrackingProvider'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { MenuProvider } from '@/contexts/MenuContext'
+import { AppMenu } from '@/components/ui/AppMenu'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -62,33 +64,36 @@ export default function RootLayout({
         <ThemeProvider>
           <ServiceWorkerProvider>
             <StepTrackingProvider>
-              <div className="flex min-h-full flex-col">
-                {children}
-              </div>
-              <Toaster
-              position="top-center"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
-                },
-                success: {
-                  duration: 3000,
-                  iconTheme: {
-                    primary: '#10b981',
-                    secondary: '#fff',
-                  },
-                },
-                error: {
-                  duration: 4000,
-                  iconTheme: {
-                    primary: '#ef4444',
-                    secondary: '#fff',
-                  },
-                },
-              }}
-            />
+              <MenuProvider>
+                <div className="flex min-h-full flex-col">
+                  {children}
+                </div>
+                <AppMenu />
+                <Toaster
+                  position="top-center"
+                  toastOptions={{
+                    duration: 4000,
+                    style: {
+                      background: '#363636',
+                      color: '#fff',
+                    },
+                    success: {
+                      duration: 3000,
+                      iconTheme: {
+                        primary: '#10b981',
+                        secondary: '#fff',
+                      },
+                    },
+                    error: {
+                      duration: 4000,
+                      iconTheme: {
+                        primary: '#ef4444',
+                        secondary: '#fff',
+                      },
+                    },
+                  }}
+                />
+              </MenuProvider>
             </StepTrackingProvider>
           </ServiceWorkerProvider>
         </ThemeProvider>

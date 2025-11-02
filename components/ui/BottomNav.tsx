@@ -7,14 +7,18 @@ import {
   CameraIcon,
   ChartBarIcon,
   BookOpenIcon,
-  UserCircleIcon
+  UserCircleIcon,
+  ShoppingBagIcon,
+  ArchiveBoxIcon
 } from '@heroicons/react/24/outline'
 import {
   HomeIcon as HomeIconSolid,
   CameraIcon as CameraIconSolid,
   ChartBarIcon as ChartBarIconSolid,
   BookOpenIcon as BookOpenIconSolid,
-  UserCircleIcon as UserCircleIconSolid
+  UserCircleIcon as UserCircleIconSolid,
+  ShoppingBagIcon as ShoppingBagIconSolid,
+  ArchiveBoxIcon as ArchiveBoxIconSolid
 } from '@heroicons/react/24/solid'
 
 interface NavItem {
@@ -41,11 +45,18 @@ const navItems: NavItem[] = [
     label: 'Log',
   },
   {
-    name: 'Progress',
-    href: '/progress',
-    icon: ChartBarIcon,
-    activeIcon: ChartBarIconSolid,
-    label: 'Progress',
+    name: 'Shopping',
+    href: '/shopping',
+    icon: ShoppingBagIcon,
+    activeIcon: ShoppingBagIconSolid,
+    label: 'Shop',
+  },
+  {
+    name: 'Inventory',
+    href: '/inventory',
+    icon: ArchiveBoxIcon,
+    activeIcon: ArchiveBoxIconSolid,
+    label: 'Kitchen',
   },
   {
     name: 'Recipes',
@@ -69,7 +80,7 @@ const navItems: NavItem[] = [
  *
  * Features:
  * - Fixed at bottom of screen
- * - 5 main navigation items
+ * - 6 main navigation items
  * - Active state indication
  * - Accessible labels
  * - Safe area insets for notched devices

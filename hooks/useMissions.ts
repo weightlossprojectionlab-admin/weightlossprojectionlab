@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { collection, query, where, getDocs, doc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore'
+import useSWR from 'swr'
+import { collection, query, where, getDocs, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { logger } from '@/lib/logger'
 import {
   Mission,
   UserMission,
@@ -112,7 +114,7 @@ export function useMissions(userId: string | undefined) {
       // Calculate current progress for each mission
       await updateMissionProgress()
     } catch (err) {
-      console.error('[useMissions] Error loading missions:', err)
+      logger.error('[useMissions] Error loading missions:', err as Error)
       setError(err instanceof Error ? err.message : 'Failed to load missions')
     } finally {
       setLoading(false)
@@ -203,7 +205,7 @@ export function useMissions(userId: string | undefined) {
 
       setMissions(updatedMissions)
     } catch (err) {
-      console.error('[useMissions] Error updating mission progress:', err)
+      logger.error('[useMissions] Error updating mission progress:', err as Error)
     }
   }
 
@@ -252,9 +254,9 @@ export function useMissions(userId: string | undefined) {
 
       toast.success(`✅ Mission Complete! +${mission.xpReward} XP`, { duration: 4000 })
 
-      console.log('[useMissions] Mission completed:', mission.title)
+      logger.debug('[useMissions] Mission completed:', { title: mission.title })
     } catch (err) {
-      console.error('[useMissions] Error completing mission:', err)
+      logger.error('[useMissions] Error completing mission:', err as Error)
     }
   }
 
@@ -270,18 +272,30 @@ export function useMissions(userId: string | undefined) {
     loadMissions()
   }, [userId])
 
-  // Subscribe to gamification changes
-  useEffect(() => {
-    if (!userId) return
-
-    const unsubscribe = onSnapshot(doc(db, 'gamification', userId), (snapshot) => {
+  // Fetch gamification data with SWR (15min cache - changes rarely)
+  const { data: gamificationData, mutate: refreshGamification } = useSWR(
+    userId ? ['gamification', userId] : null,
+    async () => {
+      const snapshot = await getDoc(doc(db, 'gamification', userId!))
       if (snapshot.exists()) {
-        setGamification(snapshot.data() as UserGamification)
+        return snapshot.data() as UserGamification
       }
-    })
+      return null
+    },
+    {
+      revalidateOnFocus: false, // Gamification changes rarely, don't auto-refresh
+      revalidateOnReconnect: false,
+      dedupingInterval: 15 * 60 * 1000, // 15 minutes
+      refreshInterval: 0
+    }
+  )
 
-    return () => unsubscribe()
-  }, [userId])
+  // Update state when SWR data changes
+  useEffect(() => {
+    if (gamificationData) {
+      setGamification(gamificationData)
+    }
+  }, [gamificationData])
 
   return {
     missions,
@@ -289,6 +303,7 @@ export function useMissions(userId: string | undefined) {
     loading,
     error,
     refreshMissions: loadMissions,
+    refreshGamification, // Expose refresh for manual updates (e.g., after level up)
     checkProgress
   }
 }

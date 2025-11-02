@@ -5,6 +5,7 @@
  * Handles retries with exponential backoff for failed syncs.
  */
 
+import { logger } from '@/lib/logger'
 import { mealLogOperations } from './firebase-operations'
 import {
   getUnsyncedMeals,
@@ -56,7 +57,7 @@ function notifySyncProgress(progress: SyncProgress) {
     try {
       callback(progress)
     } catch (error) {
-      console.error('[SyncManager] Error in progress callback:', error)
+      logger.error('[SyncManager] Error in progress callback', error as Error)
     }
   })
 }
@@ -67,7 +68,7 @@ function notifySyncProgress(progress: SyncProgress) {
 export async function syncQueue(): Promise<SyncResult> {
   // Prevent concurrent syncs
   if (isSyncing) {
-    console.log('[SyncManager] Sync already in progress, skipping')
+    logger.debug('[SyncManager] Sync already in progress, skipping')
     return {
       success: false,
       syncedCount: 0,
@@ -78,7 +79,7 @@ export async function syncQueue(): Promise<SyncResult> {
 
   // Check online status
   if (!navigator.onLine) {
-    console.log('[SyncManager] Offline, cannot sync')
+    logger.debug('[SyncManager] Offline, cannot sync')
     return {
       success: false,
       syncedCount: 0,
@@ -88,13 +89,13 @@ export async function syncQueue(): Promise<SyncResult> {
   }
 
   isSyncing = true
-  console.log('[SyncManager] Starting sync...')
+  logger.info('[SyncManager] Starting sync...')
 
   try {
     const unsyncedMeals = await getUnsyncedMeals()
 
     if (unsyncedMeals.length === 0) {
-      console.log('[SyncManager] No meals to sync')
+      logger.debug('[SyncManager] No meals to sync')
       isSyncing = false
       return {
         success: true,
@@ -104,7 +105,7 @@ export async function syncQueue(): Promise<SyncResult> {
       }
     }
 
-    console.log('[SyncManager] Found', unsyncedMeals.length, 'meals to sync')
+    logger.info('[SyncManager] Found meals to sync', { count: unsyncedMeals.length })
 
     let syncedCount = 0
     let failedCount = 0
@@ -124,16 +125,16 @@ export async function syncQueue(): Promise<SyncResult> {
         await syncMeal(meal)
         await markMealSynced(meal.id)
         syncedCount++
-        console.log('[SyncManager] Synced meal:', meal.id)
+        logger.debug('[SyncManager] Synced meal', { mealId: meal.id })
       } catch (error) {
-        console.error('[SyncManager] Failed to sync meal:', meal.id, error)
+        logger.error('[SyncManager] Failed to sync meal', error as Error, { mealId: meal.id })
         await incrementSyncAttempt(meal.id)
         failedCount++
         errors.push(`Failed to sync meal ${meal.id}: ${error instanceof Error ? error.message : 'Unknown error'}`)
 
         // Delete meal if max attempts reached
         if (meal.syncAttempts >= MAX_SYNC_ATTEMPTS - 1) {
-          console.warn('[SyncManager] Max sync attempts reached, deleting meal:', meal.id)
+          logger.warn('[SyncManager] Max sync attempts reached, deleting meal', { mealId: meal.id })
           await deleteMeal(meal.id)
           errors.push(`Deleted meal ${meal.id} after ${MAX_SYNC_ATTEMPTS} failed attempts`)
         }
@@ -149,9 +150,9 @@ export async function syncQueue(): Promise<SyncResult> {
 
     // Clean up synced meals periodically
     const clearedCount = await clearSyncedMeals()
-    console.log('[SyncManager] Cleared', clearedCount, 'synced meals')
+    logger.debug('[SyncManager] Cleared synced meals', { count: clearedCount })
 
-    console.log('[SyncManager] Sync complete:', syncedCount, 'synced,', failedCount, 'failed')
+    logger.info('[SyncManager] Sync complete', { syncedCount, failedCount })
 
     return {
       success: failedCount === 0,
@@ -160,7 +161,7 @@ export async function syncQueue(): Promise<SyncResult> {
       errors
     }
   } catch (error) {
-    console.error('[SyncManager] Sync failed:', error)
+    logger.error('[SyncManager] Sync failed', error as Error)
     return {
       success: false,
       syncedCount: 0,
@@ -186,7 +187,7 @@ async function syncMeal(queuedMeal: QueuedMeal): Promise<void> {
 
   // Wait before retry if this is not the first attempt
   if (queuedMeal.syncAttempts > 0) {
-    console.log('[SyncManager] Waiting', retryDelay, 'ms before retry')
+    logger.debug('[SyncManager] Waiting before retry', { retryDelayMs: retryDelay })
     await new Promise(resolve => setTimeout(resolve, retryDelay))
   }
 
@@ -205,9 +206,9 @@ async function syncMeal(queuedMeal: QueuedMeal): Promise<void> {
       throw new Error(response.error || 'Failed to create meal log')
     }
 
-    console.log('[SyncManager] Meal synced successfully:', response.data?.id)
+    logger.debug('[SyncManager] Meal synced successfully', { mealLogId: response.data?.id })
   } catch (error) {
-    console.error('[SyncManager] Error syncing meal:', error)
+    logger.error('[SyncManager] Error syncing meal', error as Error)
     throw error
   }
 }
@@ -224,17 +225,17 @@ export function isSyncInProgress(): boolean {
  */
 export async function registerBackgroundSync(): Promise<boolean> {
   if (!('serviceWorker' in navigator) || !('sync' in ServiceWorkerRegistration.prototype)) {
-    console.warn('[SyncManager] Background Sync API not supported')
+    logger.warn('[SyncManager] Background Sync API not supported')
     return false
   }
 
   try {
     const registration = await navigator.serviceWorker.ready
     await registration.sync.register('sync-meal-queue')
-    console.log('[SyncManager] Background sync registered')
+    logger.info('[SyncManager] Background sync registered')
     return true
   } catch (error) {
-    console.error('[SyncManager] Failed to register background sync:', error)
+    logger.error('[SyncManager] Failed to register background sync', error as Error)
     return false
   }
 }

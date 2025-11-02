@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { getToken, onMessage } from 'firebase/messaging'
 import { initializeMessaging } from '@/lib/firebase'
+import { logger } from '@/lib/logger'
 import {
   saveNotificationToken,
   deleteNotificationToken,
@@ -64,7 +65,7 @@ export function useNotifications(userId: string | undefined) {
             settings
           }))
         } catch (error) {
-          console.error('[useNotifications] Error loading settings:', error)
+          logger.error('[useNotifications] Error loading settings:', error as Error)
         }
       }
     }
@@ -115,7 +116,7 @@ export function useNotifications(userId: string | undefined) {
       const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
 
       if (!vapidKey) {
-        console.warn('[useNotifications] VAPID key not configured')
+        logger.warn('[useNotifications] VAPID key not configured')
         setState(prev => ({
           ...prev,
           loading: false,
@@ -146,7 +147,10 @@ export function useNotifications(userId: string | undefined) {
 
       // Listen for foreground messages
       onMessage(messaging, (payload) => {
-        console.log('[useNotifications] Foreground message:', payload)
+        logger.debug('[useNotifications] Foreground message:', {
+          title: payload.notification?.title,
+          body: payload.notification?.body
+        })
 
         // Show toast notification
         if (payload.notification) {
@@ -160,7 +164,7 @@ export function useNotifications(userId: string | undefined) {
       toast.success('Notifications enabled! You\'ll receive helpful reminders')
       return true
     } catch (error) {
-      console.error('[useNotifications] Error requesting permission:', error)
+      logger.error('[useNotifications] Error requesting permission:', error as Error)
       setState(prev => ({
         ...prev,
         loading: false,
@@ -187,7 +191,7 @@ export function useNotifications(userId: string | undefined) {
 
       toast.success('Notifications disabled')
     } catch (error) {
-      console.error('[useNotifications] Error revoking permission:', error)
+      logger.error('[useNotifications] Error revoking permission:', error as Error)
       toast.error('Failed to disable notifications')
     }
   }
@@ -208,7 +212,7 @@ export function useNotifications(userId: string | undefined) {
 
       toast.success('Notification settings updated')
     } catch (error) {
-      console.error('[useNotifications] Error updating settings:', error)
+      logger.error('[useNotifications] Error updating settings:', error as Error)
       toast.error('Failed to update settings')
     }
   }

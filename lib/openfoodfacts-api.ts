@@ -7,6 +7,8 @@
  * API: https://world.openfoodfacts.org/api/v2/product/{barcode}.json
  */
 
+import { logger } from '@/lib/logger'
+
 export interface OpenFoodFactsProduct {
   code: string
   product_name?: string
@@ -76,15 +78,45 @@ export async function lookupBarcode(barcode: string): Promise<OpenFoodFactsRespo
       }
     )
 
+    // Handle 404 - product not found (return empty response instead of throwing)
+    if (response.status === 404) {
+      logger.debug(`Product not found in OpenFoodFacts: ${barcode}`)
+      return {
+        code: barcode,
+        status: 0,
+        status_verbose: 'product not found'
+      }
+    }
+
     if (!response.ok) {
-      throw new Error(`OpenFoodFacts API error: ${response.status}`)
+      logger.warn(`OpenFoodFacts API returned ${response.status} for barcode ${barcode}`)
+      // Return empty response for other HTTP errors too
+      return {
+        code: barcode,
+        status: 0,
+        status_verbose: `API error: ${response.status}`
+      }
     }
 
     const data: OpenFoodFactsResponse = await response.json()
     return data
-  } catch (error) {
-    console.error('Error fetching from OpenFoodFacts:', error)
-    throw error
+  } catch (error: any) {
+    console.error('[OpenFoodFacts] Detailed error:', {
+      name: error?.name,
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+      barcode,
+      fullError: error
+    })
+    logger.error('Error fetching from OpenFoodFacts', error as Error, { barcode })
+
+    // Return empty response instead of throwing (network errors, JSON parse errors, etc.)
+    return {
+      code: barcode,
+      status: 0,
+      status_verbose: `Error: ${error?.message || 'Unknown error'}`
+    }
   }
 }
 
@@ -154,8 +186,16 @@ export async function searchProducts(query: string, page: number = 1): Promise<a
 
     const data = await response.json()
     return data
-  } catch (error) {
-    console.error('Error searching OpenFoodFacts:', error)
+  } catch (error: any) {
+    console.error('[OpenFoodFacts Search] Detailed error:', {
+      name: error?.name,
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+      query,
+      fullError: error
+    })
+    logger.error('Error searching OpenFoodFacts', error as Error, { query })
     throw error
   }
 }

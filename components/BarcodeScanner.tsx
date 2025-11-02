@@ -3,34 +3,110 @@
 import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger'
 
 export interface BarcodeScannerProps {
   onScan: (barcode: string) => void
   onClose: () => void
   isOpen: boolean
+  context?: 'meal' | 'purchase' | 'consume' | 'inventory' // Scan purpose
+  title?: string // Override default title
+}
+
+/**
+ * Check if camera API is supported
+ */
+function isCameraSupported(): boolean {
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+}
+
+/**
+ * Detect user's platform for better error messages
+ */
+function detectPlatform(): 'ios' | 'android' | 'desktop' {
+  const userAgent = navigator.userAgent.toLowerCase()
+  if (/iphone|ipad|ipod/.test(userAgent)) return 'ios'
+  if (/android/.test(userAgent)) return 'android'
+  return 'desktop'
 }
 
 /**
  * Barcode Scanner Component
  * Uses html5-qrcode library for scanning 1D/2D barcodes
  */
-export function BarcodeScanner({ onScan, onClose, isOpen }: BarcodeScannerProps) {
+export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', title }: BarcodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showManualEntry, setShowManualEntry] = useState(false)
+  const [manualBarcode, setManualBarcode] = useState('')
+  const [permissionState, setPermissionState] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown')
+  const [cameraSupported, setCameraSupported] = useState(true)
 
   useEffect(() => {
     if (!isOpen) {
       stopScanning()
+      setShowManualEntry(false)
+      setManualBarcode('')
       return
     }
 
-    startScanning()
+    // Set camera support flag (for UI purposes only, don't block)
+    setCameraSupported(isCameraSupported())
+
+    // Check camera permission and start scanner
+    checkCameraPermission()
 
     return () => {
       stopScanning()
     }
   }, [isOpen])
+
+  /**
+   * Check camera permission status
+   */
+  const checkCameraPermission = async () => {
+    try {
+      // Try to query permission status
+      if (navigator.permissions && navigator.permissions.query) {
+        const result = await navigator.permissions.query({ name: 'camera' as PermissionName })
+        setPermissionState(result.state as any)
+
+        if (result.state === 'granted') {
+          startScanning()
+        } else if (result.state === 'denied') {
+          showPermissionError()
+        }
+        // If 'prompt', wait for user to click request button
+      } else {
+        // Permissions API not supported, try to start scanning directly
+        startScanning()
+      }
+    } catch (err) {
+      // If permission check fails, try to start scanning anyway
+      logger.warn('Could not check camera permission:', { error: err instanceof Error ? err.message : String(err) })
+      startScanning()
+    }
+  }
+
+  /**
+   * Show platform-specific permission error
+   */
+  const showPermissionError = () => {
+    const platform = detectPlatform()
+    let errorMessage = ''
+
+    if (platform === 'ios') {
+      errorMessage = 'Camera access denied. Go to Settings > Safari > Camera and select "Allow". Then refresh this page.'
+    } else if (platform === 'android') {
+      errorMessage = 'Camera access denied. Tap the lock icon in the address bar, then tap "Permissions" and enable Camera.'
+    } else {
+      errorMessage = 'Camera access denied. Click the camera icon in your browser\'s address bar to enable access.'
+    }
+
+    setError(errorMessage)
+    toast.error('Camera permission denied', { duration: 5000 })
+  }
 
   const startScanning = async () => {
     try {
@@ -72,24 +148,36 @@ export function BarcodeScanner({ onScan, onClose, isOpen }: BarcodeScannerProps)
 
       setIsScanning(true)
     } catch (err: any) {
-      console.error('Failed to start scanner:', err)
+      // Log detailed error info for debugging
+      console.error('Scanner error details:', {
+        name: err?.name,
+        message: err?.message,
+        code: err?.code,
+        stack: err?.stack,
+        fullError: err
+      })
+      logger.error('Failed to start scanner', err as Error)
 
       // Provide user-friendly error messages based on error type
       let errorMessage = 'Failed to access camera'
       let toastMessage = 'Camera access failed'
 
-      if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
-        errorMessage = 'Camera permission denied. Please enable camera access in your browser settings to scan barcodes.'
-        toastMessage = 'Camera permission denied. Click the camera icon in your browser\'s address bar to enable access.'
+      if (err.name === 'NotAllowedError' || err.message?.includes('Permission') || err.message?.includes('permission')) {
+        setPermissionState('denied')
+        showPermissionError()
+        return
       } else if (err.name === 'NotFoundError' || err.message?.includes('not found')) {
-        errorMessage = 'No camera found. Please connect a camera or use a device with a built-in camera.'
+        errorMessage = 'No camera found. Please use manual entry below or try a different device.'
         toastMessage = 'No camera detected on this device'
       } else if (err.name === 'NotReadableError' || err.message?.includes('use')) {
         errorMessage = 'Camera is already in use by another application. Please close other apps using the camera.'
         toastMessage = 'Camera is already in use'
+      } else if (err.name === 'NotSupportedError' || err.message?.includes('not support')) {
+        errorMessage = 'Camera not supported on this device/browser. Please use manual entry.'
+        toastMessage = 'Camera not supported'
       } else {
-        errorMessage = err.message || 'Failed to access camera. Please try again.'
-        toastMessage = 'Failed to access camera. Please try again.'
+        errorMessage = err.message || err.toString() || 'Failed to access camera. Please try manual entry below.'
+        toastMessage = err.message || 'Failed to access camera. Try manual entry.'
       }
 
       setError(errorMessage)
@@ -98,12 +186,16 @@ export function BarcodeScanner({ onScan, onClose, isOpen }: BarcodeScannerProps)
   }
 
   const stopScanning = async () => {
-    if (scannerRef.current && isScanning) {
+    if (scannerRef.current) {
       try {
-        await scannerRef.current.stop()
-        scannerRef.current.clear()
+        // Check if scanner is actually running before stopping
+        const state = scannerRef.current.getState()
+        if (state === 2 || state === 3) { // 2 = SCANNING, 3 = PAUSED
+          await scannerRef.current.stop()
+          scannerRef.current.clear()
+        }
       } catch (err) {
-        console.error('Failed to stop scanner:', err)
+        // Ignore errors when stopping - scanner might already be stopped
       }
       setIsScanning(false)
     }
@@ -134,6 +226,67 @@ export function BarcodeScanner({ onScan, onClose, isOpen }: BarcodeScannerProps)
     onClose()
   }
 
+  /**
+   * Handle manual barcode entry
+   */
+  const handleManualSubmit = () => {
+    if (!manualBarcode.trim()) {
+      toast.error('Please enter a barcode')
+      return
+    }
+
+    // Validate barcode (should be numeric and reasonable length)
+    if (!/^\d{8,14}$/.test(manualBarcode.trim())) {
+      toast.error('Invalid barcode format. Should be 8-14 digits.')
+      return
+    }
+
+    toast.success(`Entered: ${manualBarcode}`)
+    onScan(manualBarcode.trim())
+    setManualBarcode('')
+    setShowManualEntry(false)
+    onClose()
+  }
+
+  /**
+   * Request camera permission
+   */
+  const handleRequestPermission = () => {
+    startScanning()
+  }
+
+  // Get context-specific messaging
+  const getContextTitle = () => {
+    if (title) return title
+    switch (context) {
+      case 'meal':
+        return 'Scan Food Barcode'
+      case 'purchase':
+        return 'Scan Item'
+      case 'consume':
+        return 'Scan Used Item'
+      case 'inventory':
+        return 'Scan Inventory Item'
+      default:
+        return 'Scan Barcode'
+    }
+  }
+
+  const getContextInstructions = () => {
+    switch (context) {
+      case 'meal':
+        return 'Scan a product barcode to log it as a meal'
+      case 'purchase':
+        return 'Position the barcode within the frame to start scanning'
+      case 'consume':
+        return 'Scan items you finished or threw away'
+      case 'inventory':
+        return 'Scan items to add to your kitchen inventory'
+      default:
+        return 'Position the barcode within the frame'
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -142,9 +295,10 @@ export function BarcodeScanner({ onScan, onClose, isOpen }: BarcodeScannerProps)
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            Scan Barcode
+            {getContextTitle()}
           </h2>
           <button
+            type="button"
             onClick={handleClose}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
             aria-label="Close"
@@ -157,18 +311,80 @@ export function BarcodeScanner({ onScan, onClose, isOpen }: BarcodeScannerProps)
 
         {/* Instructions */}
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Position the barcode within the frame. The scanner will automatically detect and read it.
+          {getContextInstructions()}. The scanner will automatically detect and read it.
         </p>
 
-        {/* Scanner Container */}
+        {/* Scanner Container or Permission Request */}
         <div className="relative mb-4">
-          <div id="barcode-reader" className="rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-700"></div>
+          {/* Request Permission Button */}
+          {!isScanning && permissionState === 'prompt' && cameraSupported && !error && !showManualEntry && (
+            <div className="text-center py-12 bg-gray-100 dark:bg-gray-800 rounded-lg">
+              <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Camera Permission Required</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">We need access to your camera to scan barcodes</p>
+              <button
+                type="button"
+                onClick={handleRequestPermission}
+                className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+              >
+                Allow Camera Access
+              </button>
+            </div>
+          )}
+
+          {/* Scanner View - Always render the div so html5-qrcode can find it */}
+          <div
+            id="barcode-reader"
+            className={`rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-700 ${
+              showManualEntry || (!isScanning && permissionState === 'prompt') ? 'hidden' : ''
+            }`}
+          ></div>
 
           {/* Overlay instructions */}
-          {isScanning && (
+          {isScanning && !showManualEntry && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center text-white bg-black/50 px-4 py-2 rounded-lg">
                 <p className="text-sm font-medium">Scanning...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Manual Entry Form */}
+          {showManualEntry && (
+            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Enter Barcode Manually</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Type the barcode number (usually found below the barcode)
+              </p>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={manualBarcode}
+                onChange={(e) => setManualBarcode(e.target.value.replace(/\D/g, ''))}
+                onKeyPress={(e) => e.key === 'Enter' && handleManualSubmit()}
+                placeholder="e.g. 012345678912"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg mb-4 text-center text-lg tracking-wider"
+                autoFocus
+              />
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={handleManualSubmit}
+                  className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+                >
+                  Submit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowManualEntry(false)}
+                  className="px-4 py-3 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           )}
@@ -188,13 +404,28 @@ export function BarcodeScanner({ onScan, onClose, isOpen }: BarcodeScannerProps)
           </p>
         </div>
 
-        {/* Cancel Button */}
-        <button
-          onClick={handleClose}
-          className="w-full mt-4 px-4 py-3 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
-        >
-          Cancel
-        </button>
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          {/* Manual Entry Toggle */}
+          {!showManualEntry && cameraSupported && (
+            <button
+              type="button"
+              onClick={() => setShowManualEntry(true)}
+              className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+            >
+              Can't scan? Enter barcode manually
+            </button>
+          )}
+
+          {/* Cancel Button */}
+          <button
+            type="button"
+            onClick={handleClose}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   )

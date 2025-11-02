@@ -9,6 +9,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { MealSuggestion, MealType, DietaryTag } from './meal-suggestions'
+import { logger } from '@/lib/logger'
 
 export interface SchemaOrgRecipe {
   '@type': 'Recipe'
@@ -177,16 +178,16 @@ export async function importRecipeFromUrl(url: string): Promise<ImportedRecipe> 
     const schemaRecipe = parseSchemaOrgRecipe(html)
 
     if (schemaRecipe) {
-      console.log('✅ Found Schema.org Recipe data')
+      logger.info('Found Schema.org Recipe data')
       return convertSchemaToImportedRecipe(schemaRecipe, url)
     }
 
-    console.log('⚠️ No Schema.org Recipe found, using AI extraction')
+    logger.info('No Schema.org Recipe found, using AI extraction')
 
     // Fallback to AI extraction
     return await extractRecipeWithAI(html, url)
   } catch (error) {
-    console.error('Error importing recipe:', error)
+    logger.error('Error importing recipe', error as Error)
     throw error
   }
 }
@@ -227,7 +228,7 @@ function parseSchemaOrgRecipe(html: string): SchemaOrgRecipe | null {
 
     return null
   } catch (error) {
-    console.error('Error parsing Schema.org Recipe:', error)
+    logger.error('Error parsing Schema.org Recipe', error as Error)
     return null
   }
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from './useAuth'
 import { db } from '@/lib/firebase'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { logger } from '@/lib/logger'
 
 export type AdminRole = 'admin' | 'moderator' | 'support' | null
 
@@ -62,7 +63,7 @@ export const useAdminAuth = (): AdminAuthState => {
                 lastActiveAt: new Date(),
               }, { merge: true })
             } catch (err) {
-              console.error('Error creating super admin profile:', err)
+              logger.error('Error creating super admin profile:', err as Error)
             }
           } else {
             setRole(null)
@@ -85,7 +86,7 @@ export const useAdminAuth = (): AdminAuthState => {
                 lastActiveAt: new Date(),
               }, { merge: true })
             } catch (err) {
-              console.error('Error updating super admin role:', err)
+              logger.error('Error updating super admin role:', err as Error)
             }
           }
         }
@@ -97,7 +98,7 @@ export const useAdminAuth = (): AdminAuthState => {
           setRole(null)
         }
       } catch (error) {
-        console.error('Error checking admin role:', error)
+        logger.error('Error checking admin role:', error as Error)
         // Super admins still get access even on error
         if (isSuperAdminEmail(user.email)) {
           setRole('admin')

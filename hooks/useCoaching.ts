@@ -8,6 +8,7 @@ import { collection, doc, getDocs, getDoc, query, where, orderBy, limit } from '
 import { timestampToDate } from '@/lib/timestamp';
 import type { CoachingStatus, AICoachPlan } from '@/schemas/firestore/users';
 import type { NudgeQueue } from '@/schemas/firestore/users';
+import { logger } from '@/lib/logger'
 
 export interface CoachingData {
   status: CoachingStatus | null;
@@ -76,7 +77,7 @@ async function fetchCoachingData(userId: string): Promise<Omit<CoachingData, 'lo
       actions,
     };
   } catch (error) {
-    console.error('[useCoaching] Error fetching coaching data:', error);
+    logger.error('[useCoaching] Error fetching coaching data:', error as Error);
     throw error;
   }
 }

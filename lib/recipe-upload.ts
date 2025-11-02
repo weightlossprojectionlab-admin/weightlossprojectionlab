@@ -4,6 +4,7 @@ import { storage } from './firebase'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { auth } from './firebase'
 import { generateRecipeImageFilename, generateRecipeVideoFilename } from './utils'
+import { logger } from '@/lib/logger'
 
 /**
  * Upload recipe media files (images/videos) to Firebase Storage
@@ -94,7 +95,7 @@ export async function uploadRecipeImages(
 
     return { imageUrls, imageStoragePaths }
   } catch (error) {
-    console.error('Error uploading recipe images:', error)
+    logger.error('Error uploading recipe images', error as Error)
     throw error
   }
 }
@@ -148,7 +149,7 @@ export async function uploadRecipeVideo(
 
     return { videoUrl, videoStoragePath: videoPath }
   } catch (error) {
-    console.error('Error uploading recipe video:', error)
+    logger.error('Error uploading recipe video', error as Error)
     throw error
   }
 }

@@ -11,6 +11,8 @@ import CaseList from '@/components/trust-safety/CaseList';
 import RiskScoreDisplay from '@/components/trust-safety/RiskScoreDisplay';
 import ActionPanel from '@/components/trust-safety/ActionPanel';
 import type { DisputeCase, AdminAction } from '@/types/trust-safety';
+import { toDate } from '@/types/common';
+import { logger } from '@/lib/logger';
 
 export default function TrustSafetyAdminPage() {
   const { user } = useAuth();
@@ -30,7 +32,7 @@ export default function TrustSafetyAdminPage() {
   };
 
   const handleAction = async (action: AdminAction, notes: string) => {
-    console.log('Admin action:', action, 'Notes:', notes, 'Case:', selectedCaseId);
+    logger.info('Admin action', { action, notes, caseId: selectedCaseId });
     // TODO: Implement Firebase function to process admin action
     // This would update the dispute case status and create an audit log entry
 
@@ -125,7 +127,7 @@ export default function TrustSafetyAdminPage() {
                   <div>
                     <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Filed On</div>
                     <div className="text-base text-gray-900 dark:text-gray-100">
-                      {new Date(selectedCase.createdAt).toLocaleString()}
+                      {toDate(selectedCase.createdAt).toLocaleString()}
                     </div>
                   </div>
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { logger } from '@/lib/logger'
 import {
   detectPlatform,
   getHealthAppForPlatform,
@@ -60,7 +61,7 @@ export function HealthSyncCard({ onSetupClick }: HealthSyncCardProps) {
         }
       }
     } catch (error) {
-      console.error('Error loading sync preferences:', error)
+      logger.error('Error loading sync preferences:', error as Error)
     } finally {
       setLoading(false)
     }
@@ -101,7 +102,7 @@ export function HealthSyncCard({ onSetupClick }: HealthSyncCardProps) {
         toast.success(`${getHealthAppName(healthApp)} sync disabled`)
       }
     } catch (error) {
-      console.error('Error toggling sync:', error)
+      logger.error('Error toggling sync:', error as Error)
       toast.error('Failed to update sync settings')
     } finally {
       setSaving(false)

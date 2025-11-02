@@ -22,6 +22,7 @@ import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import type { AIAnalysis, MealTemplate, UserProfile, UserPreferences } from '@/types'
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
+import { logger } from '@/lib/logger'
 
 // Dynamic imports for heavy dependencies (reduces initial bundle size)
 // BarcodeScanner uses html5-qrcode library (~50kB)
@@ -214,7 +215,7 @@ function LogMealContent() {
           }
         }
       } catch (error) {
-        console.error('Failed to load user profile:', error)
+        logger.error('Failed to load user profile:', error as Error)
         // Silently fail - user can still log meals with time-based detection
       }
     }
@@ -225,7 +226,7 @@ function LogMealContent() {
   // Show error toast if real-time listener fails
   useEffect(() => {
     if (historyError) {
-      console.error('Real-time listener error:', historyError)
+      logger.error('Real-time listener error:', historyError)
       toast.error('Failed to load meal history. Please refresh the page.')
     }
   }, [historyError])
@@ -276,7 +277,7 @@ function LogMealContent() {
           toast.success(`Ready to log your ${recipe.name}!`, { duration: 3000 })
         }
       }).catch(error => {
-        console.error('Error loading cooking session:', error)
+        logger.error('Error loading cooking session:', error as Error)
         toast.error('Failed to load recipe data')
       })
     }
@@ -291,7 +292,7 @@ function LogMealContent() {
         setMealTemplates(response.data || [])
       }
     } catch (error) {
-      console.error('Failed to load templates:', error)
+      logger.error('Failed to load templates:', error as Error)
       toast.error('Failed to load templates')
     } finally {
       setLoadingTemplates(false)
@@ -348,11 +349,11 @@ function LogMealContent() {
   const handleCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) {
-      console.log('No file selected')
+      logger.debug('No file selected')
       return
     }
 
-    console.log('📸 File selected:', {
+    logger.debug('📸 File selected:', {
       name: file.name,
       size: formatFileSize(file.size),
       type: file.type,
@@ -377,7 +378,7 @@ function LogMealContent() {
     }
 
     try {
-      console.log('🔄 Converting image to base64 for AI analysis...')
+      logger.debug('🔄 Converting image to base64 for AI analysis...')
 
       // Create object URL for preview
       const objectUrl = URL.createObjectURL(file)
@@ -387,20 +388,20 @@ function LogMealContent() {
       const reader = new FileReader()
       reader.onload = (event) => {
         const base64Data = event.target?.result as string
-        console.log('✅ Image converted to base64, length:', base64Data.length)
+        logger.debug('✅ Image converted to base64, length:', { length: base64Data.length })
         setCapturedImage(base64Data)
 
         // Start AI analysis with high-quality image
         analyzeImage(base64Data)
       }
       reader.onerror = (error) => {
-        console.error('❌ FileReader error:', error)
+        logger.error('❌ FileReader error:', new Error('FileReader error'))
         toast.error('Failed to read image file')
       }
       reader.readAsDataURL(file)
 
     } catch (error) {
-      console.error('❌ Image capture error:', error)
+      logger.error('❌ Image capture error:', error as Error)
       toast.error('Failed to process image. Please try again.')
     }
   }
@@ -413,10 +414,10 @@ function LogMealContent() {
     abortControllerRef.current = abortController
 
     try {
-      console.log('🔍 Starting AI analysis...')
-      console.log('Image data length:', imageData.length)
-      console.log('Image data prefix:', imageData.substring(0, 30))
-      console.log('Meal type:', selectedMealType)
+      logger.debug('🔍 Starting AI analysis...')
+      logger.debug('Image data length:', { length: imageData.length })
+      logger.debug('Image data prefix:', { prefix: imageData.substring(0, 30) })
+      logger.debug('Meal type:', { mealType: selectedMealType })
 
       // Get authentication token
       const user = auth.currentUser
@@ -438,29 +439,29 @@ function LogMealContent() {
         signal: abortController.signal
       })
 
-      console.log('Response status:', response.status)
-      console.log('Response ok:', response.ok)
+      logger.debug('Response status:', { status: response.status })
+      logger.debug('Response ok:', { ok: response.ok })
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('API error response:', errorText)
+        logger.error('API error response:', new Error(errorText))
         throw new Error(`Analysis request failed: ${response.status} ${errorText}`)
       }
 
       const result = await response.json()
-      console.log('Analysis result:', result)
-      console.log('Result keys:', Object.keys(result))
-      console.log('Result.success:', result.success)
-      console.log('Result.data:', result.data)
+      logger.debug('Analysis result:', result)
+      logger.debug('Result keys:', { keys: Object.keys(result) })
+      logger.debug('Result.success:', { success: result.success })
+      logger.debug('Result.data:', result.data)
 
       if (result.success && result.data) {
-        console.log('✅ Analysis successful:', result.data)
+        logger.debug('✅ Analysis successful:', result.data)
         setAiAnalysis(result.data)
-        console.log('✅ State updated with aiAnalysis:', result.data)
+        logger.debug('✅ State updated with aiAnalysis:', result.data)
 
         // Automatically set meal type from AI suggestion
         if (result.data.suggestedMealType) {
-          console.log('🤖 AI suggested meal type:', result.data.suggestedMealType)
+          logger.debug('🤖 AI suggested meal type:', result.data.suggestedMealType)
           setSelectedMealType(result.data.suggestedMealType)
           setAiSuggestedMealType(result.data.suggestedMealType)
         } else {
@@ -468,23 +469,23 @@ function LogMealContent() {
           const timeBased = userProfile?.preferences?.mealSchedule
             ? detectMealTypeWithSchedule(userProfile.preferences.mealSchedule)
             : detectMealTypeFromTime()
-          console.log('⏰ Using schedule-based meal type:', timeBased)
+          logger.debug('⏰ Using schedule-based meal type:', { mealType: timeBased })
           setSelectedMealType(timeBased)
         }
       } else {
-        console.error('❌ Analysis failed:', result.error)
+        logger.error('❌ Analysis failed:', result.error)
         throw new Error(result.error || 'Analysis failed')
       }
 
     } catch (error) {
       // Don't show error if request was aborted
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Analysis request aborted')
+        logger.debug('Analysis request aborted')
         return
       }
 
-      console.error('💥 Analysis error:', error)
-      console.error('Error details:', error instanceof Error ? error.message : String(error))
+      logger.error('💥 Analysis error:', error as Error)
+      logger.error('Error details:', new Error(error instanceof Error ? error.message : String(error)))
       toast.error(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or enter manually.`)
     } finally {
       setAnalyzing(false)
@@ -493,7 +494,7 @@ function LogMealContent() {
   }
 
   const handleBarcodeScan = async (barcode: string) => {
-    console.log('📊 Barcode scanned:', barcode)
+    logger.debug('📊 Barcode scanned:', { barcode })
     setLoadingBarcode(true)
 
     try {
@@ -522,7 +523,7 @@ function LogMealContent() {
 
       toast.success(`Found: ${product.name}`)
     } catch (error) {
-      console.error('Barcode lookup error:', error)
+      logger.error('Barcode lookup error:', error as Error)
       toast.error('Failed to lookup product. Please try again or enter manually.')
     } finally {
       setLoadingBarcode(false)
@@ -595,13 +596,13 @@ function LogMealContent() {
         correction: correctionData
       }
 
-      console.log('📊 Tracking AI correction:', correction)
+      logger.debug('📊 Tracking AI correction:', correction)
 
       // TODO: Save to Firestore aiCorrections collection
       // For now, just log it
       // await addDoc(collection(db, 'aiCorrections'), correction)
     } catch (error) {
-      console.error('Failed to track correction:', error)
+      logger.error('Failed to track correction:', error as Error)
       // Don't show error to user - this is background tracking
     }
   }
@@ -633,7 +634,7 @@ function LogMealContent() {
     setSaving(true)
 
     try {
-      console.log('💾 Saving manual entry...')
+      logger.debug('💾 Saving manual entry...')
 
       // Create AIAnalysis object from manual form data
       const manualAnalysis: AIAnalysis = {
@@ -654,7 +655,7 @@ function LogMealContent() {
 
       // Check if offline - queue instead of saving
       if (!navigator.onLine) {
-        console.log('📡 Offline detected, queuing manual entry...')
+        logger.debug('📡 Offline detected, queuing manual entry...')
 
         await queueMeal({
           mealType: selectedMealType,
@@ -665,7 +666,7 @@ function LogMealContent() {
 
         await registerBackgroundSync()
         toast.success('Meal queued! Will sync when back online.')
-        console.log('✅ Manual entry queued for offline sync')
+        logger.debug('✅ Manual entry queued for offline sync')
 
         // Check mission progress
         if (checkProgress) {
@@ -696,7 +697,7 @@ function LogMealContent() {
         notes: manualEntryForm.notes || undefined
       })
 
-      console.log('✅ Manual entry saved:', response.data)
+      logger.debug('✅ Manual entry saved:', response.data)
       toast.success('Meal logged successfully!')
 
       // Check mission progress
@@ -717,7 +718,7 @@ function LogMealContent() {
       })
 
     } catch (error) {
-      console.error('💥 Save error:', error)
+      logger.error('💥 Save error:', error as Error)
       toast.error(`Failed to save meal: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setSaving(false)
@@ -752,11 +753,11 @@ function LogMealContent() {
     setSaving(true)
 
     try {
-      console.log('💾 Starting meal save...')
+      logger.debug('💾 Starting meal save...')
 
       // Check if offline - queue instead of saving
       if (!navigator.onLine) {
-        console.log('📡 Offline detected, queuing meal for later sync...')
+        logger.debug('📡 Offline detected, queuing meal for later sync...')
         setUploadProgress('Queuing for offline sync...')
 
         // Queue meal with photo data URL (no upload needed when offline)
@@ -771,7 +772,7 @@ function LogMealContent() {
         await registerBackgroundSync()
 
         toast.success('Meal queued! Will sync when back online.')
-        console.log('✅ Meal queued for offline sync')
+        logger.debug('✅ Meal queued for offline sync')
 
         // Check mission progress (offline meal still counts)
         if (checkProgress) {
@@ -795,7 +796,7 @@ function LogMealContent() {
       // Upload photo to Firebase Storage if we have one
       if (capturedImage) {
         setUploadProgress('Compressing image...')
-        console.log('🗜️ Compressing image before upload...')
+        logger.debug('🗜️ Compressing image before upload...')
 
         try {
           // Convert base64 to blob for compression
@@ -808,16 +809,19 @@ function LogMealContent() {
 
           // Compress image for storage
           const compressed = await compressImage(file)
-          console.log('✅ Compressed:', formatFileSize(compressed.originalSize), '→', formatFileSize(compressed.compressedSize))
+          logger.debug('✅ Compressed:', {
+            original: formatFileSize(compressed.originalSize),
+            compressed: formatFileSize(compressed.compressedSize)
+          })
 
           setUploadProgress('Uploading photo...')
-          console.log('📤 Uploading compressed photo to Storage...')
+          logger.debug('📤 Uploading compressed photo to Storage...')
 
           // Upload compressed image
           photoUrl = await uploadMealPhoto(compressed.base64DataUrl)
-          console.log('✅ Photo uploaded:', photoUrl)
+          logger.debug('✅ Photo uploaded:', { photoUrl })
         } catch (uploadError) {
-          console.error('❌ Photo upload failed:', uploadError)
+          logger.error('❌ Photo upload failed:', uploadError as Error)
           // Continue saving even if photo upload fails
           toast.error('Photo upload failed, but saving meal data anyway.')
         }
@@ -825,7 +829,7 @@ function LogMealContent() {
 
       // Save to Firebase using real API
       setUploadProgress('Saving meal data...')
-      console.log('💾 Saving meal log to Firestore...')
+      logger.debug('💾 Saving meal log to Firestore...')
       const response = await mealLogOperations.createMealLog({
         mealType: selectedMealType,
         photoUrl: photoUrl || undefined,
@@ -833,7 +837,7 @@ function LogMealContent() {
         loggedAt: new Date().toISOString()
       })
 
-      console.log('✅ Meal logged successfully:', response.data)
+      logger.debug('✅ Meal logged successfully:', response.data)
       toast.success('Meal logged successfully!')
 
       // Check mission progress after saving meal
@@ -852,8 +856,8 @@ function LogMealContent() {
       setAiAnalysis(null)
 
     } catch (error) {
-      console.error('💥 Save error:', error)
-      console.error('Error details:', error instanceof Error ? error.message : String(error))
+      logger.error('💥 Save error:', error as Error)
+      logger.error('Error details:', new Error(error instanceof Error ? error.message : String(error)))
       toast.error(`Failed to save meal: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`)
     } finally {
       setSaving(false)
@@ -888,7 +892,7 @@ function LogMealContent() {
       setEditForm({ title: '', mealType: 'breakfast', notes: '' })
       // No need to refresh - real-time listener will update automatically
     } catch (error) {
-      console.error('Failed to update meal:', error)
+      logger.error('Failed to update meal:', error as Error)
       toast.error(`Failed to update meal: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setUpdatingMealId(null)
@@ -914,7 +918,7 @@ function LogMealContent() {
 
       // No need to refresh - real-time listener will update automatically
     } catch (error) {
-      console.error('Failed to delete meal:', error)
+      logger.error('Failed to delete meal:', error as Error)
       toast.error(`Failed to delete meal: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setDeletingMealId(null)
@@ -947,7 +951,7 @@ function LogMealContent() {
         })
       }
     } catch (error) {
-      console.error('Failed to share meal:', error)
+      logger.error('Failed to share meal:', error as Error)
       toast.error('Failed to generate share card')
     } finally {
       setSharingMealId(null)
@@ -978,7 +982,7 @@ function LogMealContent() {
       // Close modal after a short delay
       setTimeout(() => setShareModalData(null), 500)
     } catch (error) {
-      console.error('Failed to share to platform:', error)
+      logger.error('Failed to share to platform:', error as Error)
       toast.error('Failed to share')
     }
   }
@@ -1008,7 +1012,7 @@ function LogMealContent() {
       // Refresh templates to update usage count
       loadMealTemplates()
     } catch (error) {
-      console.error('Failed to use template:', error)
+      logger.error('Failed to use template:', error as Error)
       toast.error(`Failed to log meal: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setUsingTemplateId(null)
@@ -1037,7 +1041,7 @@ function LogMealContent() {
       setTemplateName('')
       loadMealTemplates()
     } catch (error) {
-      console.error('Failed to save template:', error)
+      logger.error('Failed to save template:', error as Error)
       toast.error(`Failed to save template: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setSavingTemplate(false)
@@ -1061,7 +1065,7 @@ function LogMealContent() {
       toast.success('Template deleted successfully!')
       loadMealTemplates()
     } catch (error) {
-      console.error('Failed to delete template:', error)
+      logger.error('Failed to delete template:', error as Error)
       toast.error(`Failed to delete template: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setDeletingTemplateId(null)
@@ -1114,7 +1118,7 @@ function LogMealContent() {
       setSelectedMealIds(new Set())
       setMultiSelectMode(false)
     } catch (error) {
-      console.error('Failed to delete meals:', error)
+      logger.error('Failed to delete meals:', error as Error)
       toast.error(`Failed to delete meals: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId })
     }
   }

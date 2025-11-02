@@ -6,6 +6,7 @@
 
 import { ExclamationTriangleIcon, ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import type { DisputeCase } from '@/types/trust-safety';
+import { toDate } from '@/types/common';
 
 interface CaseCardProps {
   case: DisputeCase;
@@ -35,7 +36,7 @@ export default function CaseCard({ case: disputeCase, onClick }: CaseCardProps) 
   };
 
   const isHighPriority = disputeCase.riskScore >= 70;
-  const slaDeadline = disputeCase.slaDeadline ? new Date(disputeCase.slaDeadline) : null;
+  const slaDeadline = disputeCase.slaDeadline ? toDate(disputeCase.slaDeadline) : null;
   const isOverdue = slaDeadline && slaDeadline < new Date();
 
   return (
@@ -111,7 +112,7 @@ export default function CaseCard({ case: disputeCase, onClick }: CaseCardProps) 
       {/* Metadata */}
       <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 pt-3 border-t border-gray-200">
         <div>
-          Filed: {new Date(disputeCase.createdAt).toLocaleDateString()}
+          Filed: {toDate(disputeCase.createdAt).toLocaleDateString()}
         </div>
         {disputeCase.assignedTo && (
           <div>Assigned: {disputeCase.assignedTo}</div>
@@ -119,7 +120,7 @@ export default function CaseCard({ case: disputeCase, onClick }: CaseCardProps) 
         {disputeCase.resolvedAt && (
           <div className="flex items-center space-x-1 text-success-dark">
             <CheckCircleIcon className="h-4 w-4" />
-            <span>Resolved {new Date(disputeCase.resolvedAt).toLocaleDateString()}</span>
+            <span>Resolved {toDate(disputeCase.resolvedAt).toLocaleDateString()}</span>
           </div>
         )}
       </div>

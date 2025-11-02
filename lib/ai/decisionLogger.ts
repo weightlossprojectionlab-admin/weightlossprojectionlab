@@ -5,6 +5,7 @@
 import { adminDb } from '../firebase-admin';
 import { AIDecisionLog, ModelTier, DataSensitivity } from '@/types/ai';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { logger } from '@/lib/logger';
 
 /**
  * Log an AI decision to Firestore for audit trail
@@ -28,11 +29,11 @@ export async function logAIDecision(
 
     await decisionRef.set(logEntry);
 
-    console.log(`[AI Decision Logged] ID: ${decisionId}, Confidence: ${decision.confidence}`);
+    logger.info(`[AI Decision Logged] ID: ${decisionId}, Confidence: ${decision.confidence}`);
 
     return decisionId;
   } catch (error) {
-    console.error('[AI Decision Logger] Error logging decision:', error);
+    logger.error('[AI Decision Logger] Error logging decision', error as Error);
     throw new Error('Failed to log AI decision');
   }
 }
@@ -55,7 +56,7 @@ export async function getAIDecision(
 
     return doc.data() as AIDecisionLog;
   } catch (error) {
-    console.error('[AI Decision Logger] Error retrieving decision:', error);
+    logger.error('[AI Decision Logger] Error retrieving decision', error as Error);
     return null;
   }
 }
@@ -82,9 +83,9 @@ export async function markForReview(
       },
     });
 
-    console.log(`[AI Decision] Marked for review: ${decisionId} by ${reviewedBy}`);
+    logger.info(`[AI Decision] Marked for review: ${decisionId} by ${reviewedBy}`);
   } catch (error) {
-    console.error('[AI Decision Logger] Error marking for review:', error);
+    logger.error('[AI Decision Logger] Error marking for review', error as Error);
     throw error;
   }
 }
@@ -109,9 +110,9 @@ export async function reverseDecision(
       reviewedAt: Timestamp.now(),
     });
 
-    console.log(`[AI Decision] Reversed: ${decisionId} - Reason: ${reversalReason}`);
+    logger.info(`[AI Decision] Reversed: ${decisionId} - Reason: ${reversalReason}`);
   } catch (error) {
-    console.error('[AI Decision Logger] Error reversing decision:', error);
+    logger.error('[AI Decision Logger] Error reversing decision', error as Error);
     throw error;
   }
 }
@@ -162,7 +163,7 @@ export async function queryAIDecisions(filters: {
     const snapshot = await query.get();
     return snapshot.docs.map((doc) => doc.data() as AIDecisionLog);
   } catch (error) {
-    console.error('[AI Decision Logger] Error querying decisions:', error);
+    logger.error('[AI Decision Logger] Error querying decisions', error as Error);
     return [];
   }
 }
@@ -209,11 +210,11 @@ export async function cleanupOldDecisions(retentionDays = 365): Promise<number> 
 
     await batch.commit();
 
-    console.log(`[AI Decision Logger] Cleaned up ${snapshot.size} old decisions`);
+    logger.info(`[AI Decision Logger] Cleaned up ${snapshot.size} old decisions`);
 
     return snapshot.size;
   } catch (error) {
-    console.error('[AI Decision Logger] Error cleaning up old decisions:', error);
+    logger.error('[AI Decision Logger] Error cleaning up old decisions', error as Error);
     return 0;
   }
 }
@@ -275,7 +276,7 @@ export async function getDecisionStats(days = 30): Promise<{
 
     return stats;
   } catch (error) {
-    console.error('[AI Decision Logger] Error getting stats:', error);
+    logger.error('[AI Decision Logger] Error getting stats', error as Error);
     return {
       total: 0,
       avgConfidence: 0,

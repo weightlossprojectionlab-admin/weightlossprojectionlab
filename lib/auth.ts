@@ -11,13 +11,14 @@ import {
   fetchSignInMethodsForEmail,
   User
 } from 'firebase/auth'
+import { logger } from '@/lib/logger'
 
 export const signIn = async (email: string, password: string) => {
   try {
     const result = await signInWithEmailAndPassword(auth, email, password)
     return result.user
   } catch (error) {
-    console.error('Sign in error:', error)
+    logger.error('Sign in error', error as Error)
     throw error
   }
 }
@@ -27,7 +28,7 @@ export const signUp = async (email: string, password: string) => {
     const result = await createUserWithEmailAndPassword(auth, email, password)
     return result.user
   } catch (error) {
-    console.error('Sign up error:', error)
+    logger.error('Sign up error', error as Error)
     throw error
   }
 }
@@ -41,7 +42,7 @@ export const signInWithGoogle = async () => {
     const result = await signInWithPopup(auth, provider)
     return result.user
   } catch (error) {
-    console.error('Google sign in error:', error)
+    logger.error('Google sign in error', error as Error)
     throw error
   }
 }
@@ -50,7 +51,7 @@ export const signOut = async () => {
   try {
     await firebaseSignOut(auth)
   } catch (error) {
-    console.error('Sign out error:', error)
+    logger.error('Sign out error', error as Error)
     throw error
   }
 }
@@ -64,7 +65,7 @@ export const checkSignInMethods = async (email: string) => {
     const methods = await fetchSignInMethodsForEmail(auth, email)
     return methods
   } catch (error) {
-    console.error('Error checking sign-in methods:', error)
+    logger.error('Error checking sign-in methods', error as Error)
     throw error
   }
 }

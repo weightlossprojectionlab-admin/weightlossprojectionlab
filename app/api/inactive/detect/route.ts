@@ -18,6 +18,7 @@ import {
   runDailyDetection
 } from '@/lib/inactive-detection'
 import { initAdmin } from '@/lib/firebase-admin'
+import { logger } from '@/lib/logger'
 
 /**
  * POST /api/inactive/detect
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     try {
       decodedToken = await getAuth().verifyIdToken(token)
     } catch (error) {
-      console.error('Token verification failed:', error)
+      logger.error('Token verification failed', error instanceof Error ? error : new Error(String(error)))
       return NextResponse.json(
         { error: 'Unauthorized - Invalid token' },
         { status: 401 }
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Run detection
-    console.log('Running inactive user detection...')
+    logger.info('Running inactive user detection')
 
     const result = await runDailyDetection()
 
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('Error running inactive detection:', error)
+    logger.error('Error running inactive detection', error instanceof Error ? error : new Error(String(error)))
 
     return NextResponse.json(
       {
@@ -118,7 +119,7 @@ export async function GET(request: NextRequest) {
     try {
       decodedToken = await getAuth().verifyIdToken(token)
     } catch (error) {
-      console.error('Token verification failed:', error)
+      logger.error('Token verification failed', error instanceof Error ? error : new Error(String(error)))
       return NextResponse.json(
         { error: 'Unauthorized - Invalid token' },
         { status: 401 }
@@ -139,7 +140,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get analytics
-    console.log('Generating inactivity analytics...')
+    logger.info('Generating inactivity analytics')
 
     const analytics = await analyzeInactivity()
 
@@ -160,7 +161,7 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Error getting inactivity analytics:', error)
+    logger.error('Error getting inactivity analytics', error instanceof Error ? error : new Error(String(error)))
 
     return NextResponse.json(
       {

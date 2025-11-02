@@ -7,6 +7,7 @@
 
 import { adminDb } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
+import { logger } from '@/lib/logger'
 
 export type AdminAction =
   // User actions
@@ -94,13 +95,13 @@ export async function logAdminAction(params: {
     // Add to admin_audit_logs collection
     await adminDb.collection('admin_audit_logs').add(logData)
 
-    console.log('✅ Admin action logged:', {
+    logger.info('Admin action logged:', {
       admin: params.adminEmail,
       action: params.action,
       target: `${params.targetType}:${params.targetId}`,
     })
   } catch (error) {
-    console.error('❌ Failed to log admin action:', error)
+    logger.error('Failed to log admin action', error as Error)
     // Don't throw - logging failures shouldn't break admin operations
   }
 }
@@ -153,7 +154,7 @@ export async function getAuditLogs(params: {
       ...doc.data(),
     })) as AdminAuditLog[]
   } catch (error) {
-    console.error('Error fetching audit logs:', error)
+    logger.error('Error fetching audit logs', error as Error)
     return []
   }
 }
@@ -203,7 +204,7 @@ export async function getAuditStats(days: number = 30): Promise<{
       recentActions,
     }
   } catch (error) {
-    console.error('Error fetching audit stats:', error)
+    logger.error('Error fetching audit stats', error as Error)
     return {
       totalActions: 0,
       actionsByType: {} as Record<AdminAction, number>,

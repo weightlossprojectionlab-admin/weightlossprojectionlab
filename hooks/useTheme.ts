@@ -1,5 +1,6 @@
 import { useContext } from 'react'
 import { ThemeContext } from '@/components/ThemeProvider'
+import { logger } from '@/lib/logger'
 
 export type Theme = 'light' | 'dark' | 'system'
 
@@ -21,10 +22,10 @@ export interface ThemeContextType {
  * const { theme, setTheme, resolvedTheme } = useTheme()
  *
  * // Get current theme setting
- * console.log(theme) // 'light' | 'dark' | 'system'
+ * logger.debug(theme) // 'light' | 'dark' | 'system'
  *
  * // Get actual rendered theme
- * console.log(resolvedTheme) // 'light' | 'dark'
+ * logger.debug(resolvedTheme) // 'light' | 'dark'
  *
  * // Change theme
  * setTheme('dark')

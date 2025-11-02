@@ -3,6 +3,7 @@ import { getAuth, type Auth } from 'firebase/auth'
 import { getFirestore, type Firestore } from 'firebase/firestore'
 import { getStorage, type FirebaseStorage } from 'firebase/storage'
 import { getMessaging, type Messaging, isSupported } from 'firebase/messaging'
+import { logger } from '@/lib/logger'
 
 // Firebase configuration (requires environment variables)
 const firebaseConfig = {
@@ -18,9 +19,9 @@ const firebaseConfig = {
 let app: FirebaseApp
 try {
   app = getApps().length > 0 ? getApps()[0]! : initializeApp(firebaseConfig)
-  console.log('Firebase app initialized successfully')
+  logger.info('Firebase app initialized successfully')
 } catch (error) {
-  console.error('Failed to initialize Firebase app:', error)
+  logger.error('Failed to initialize Firebase app', error as Error)
   throw new Error('Firebase initialization failed')
 }
 
@@ -35,9 +36,9 @@ try {
   db = getFirestore(app)
   storage = getStorage(app)
 
-  console.log('Firebase services initialized successfully')
+  logger.info('Firebase services initialized successfully')
 } catch (error) {
-  console.error('Failed to initialize Firebase services:', error)
+  logger.error('Failed to initialize Firebase services', error as Error)
   throw new Error('Firebase services initialization failed')
 }
 
@@ -56,15 +57,15 @@ export async function initializeMessaging(): Promise<Messaging | null> {
   try {
     const supported = await isSupported()
     if (!supported) {
-      console.warn('Firebase Messaging not supported in this browser')
+      logger.warn('Firebase Messaging not supported in this browser')
       return null
     }
 
     messaging = getMessaging(app)
-    console.log('Firebase Messaging initialized successfully')
+    logger.info('Firebase Messaging initialized successfully')
     return messaging
   } catch (error) {
-    console.error('Failed to initialize Firebase Messaging:', error)
+    logger.error('Failed to initialize Firebase Messaging', error as Error)
     return null
   }
 }

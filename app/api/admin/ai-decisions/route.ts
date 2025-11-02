@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { Timestamp } from 'firebase-admin/firestore'
+import { logger } from '@/lib/logger'
 
 /**
  * GET /api/admin/ai-decisions?reviewed=<reviewed>&maxConfidence=<maxConfidence>
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ decisions })
   } catch (error) {
-    console.error('Error fetching AI decisions:', error)
+    logger.error('Error fetching AI decisions', error as Error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch AI decisions' },
       { status: 500 }
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: `Decision ${action}d` })
   } catch (error) {
-    console.error('Error reviewing AI decision:', error)
+    logger.error('Error reviewing AI decision', error as Error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to review decision' },
       { status: 500 }

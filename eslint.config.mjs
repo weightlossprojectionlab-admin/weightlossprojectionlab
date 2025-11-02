@@ -19,7 +19,8 @@ const eslintConfig = [
       }
     },
     rules: {
-      'local/no-hardcoded-colors': 'warn' // Start with warning, can escalate to 'error' later
+      'local/no-hardcoded-colors': 'warn', // Start with warning, can escalate to 'error' later
+      '@typescript-eslint/no-explicit-any': 'warn' // Warn on any type usage
     }
   }
 ];

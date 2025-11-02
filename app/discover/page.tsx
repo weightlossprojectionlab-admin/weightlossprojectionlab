@@ -6,6 +6,7 @@ import { RecipeGrid } from '@/components/RecipeGrid'
 import { PublicRecipe, RecipeSortOption, MembershipTier } from '@/lib/types/public-recipes'
 import { useAuth } from '@/hooks/useAuth'
 import { MealType } from '@/lib/meal-suggestions'
+import { logger } from '@/lib/logger'
 
 export default function DiscoverPage() {
   const router = useRouter()
@@ -38,7 +39,7 @@ export default function DiscoverPage() {
       setRecipes([])
       setHasMore(false)
     } catch (error) {
-      console.error('Error loading recipes:', error)
+      logger.error('Error loading recipes:', error as Error)
     } finally {
       setLoading(false)
     }
@@ -47,9 +48,9 @@ export default function DiscoverPage() {
   const handleLoadMore = async () => {
     try {
       // TODO: Load next page of recipes
-      console.log('Load more recipes')
+      logger.debug('Load more recipes')
     } catch (error) {
-      console.error('Error loading more recipes:', error)
+      logger.error('Error loading more recipes:', error as Error)
     }
   }
 
@@ -71,7 +72,7 @@ export default function DiscoverPage() {
         return newSet
       })
     } catch (error) {
-      console.error('Error saving recipe:', error)
+      logger.error('Error saving recipe:', error as Error)
     }
   }
 
@@ -79,7 +80,7 @@ export default function DiscoverPage() {
     // Track view for freemium limits
     if (userTier === 'free' && viewsRemaining <= 0) {
       // Show upgrade modal
-      console.log('Show upgrade modal')
+      logger.debug('Show upgrade modal')
     }
   }
 

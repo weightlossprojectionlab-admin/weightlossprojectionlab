@@ -7,6 +7,7 @@ import { saveRecipeToFirestore } from '@/lib/firestore-recipes'
 import { requiresCooking, getRecipeActionLabel } from '@/lib/meal-suggestions'
 import { XMarkIcon, CheckCircleIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger'
 
 interface RecipeEditorProps {
   recipe: MealSuggestion
@@ -28,7 +29,7 @@ export function RecipeEditor({ recipe: initialRecipe, onClose, onSuccess }: Reci
       toast.success('Recipe saved successfully')
       onSuccess()
     } catch (error) {
-      console.error('Error saving recipe:', error)
+      logger.error('Error saving recipe:', error as Error)
       toast.error('Failed to save recipe')
     } finally {
       setSaving(false)

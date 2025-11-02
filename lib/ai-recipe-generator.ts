@@ -7,6 +7,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { MealSuggestion } from './meal-suggestions'
+import { logger } from '@/lib/logger'
 
 const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '')
 
@@ -124,7 +125,7 @@ Now generate the recipe instructions:`
       requiresCooking: generated.requiresCooking
     }
   } catch (error) {
-    console.error('Error generating recipe steps:', error)
+    logger.error('Error generating recipe steps', error as Error)
 
     // Fallback: Return basic steps
     return {

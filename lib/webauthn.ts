@@ -2,11 +2,20 @@
 
 // WebAuthn utility functions for biometric authentication
 
+import { getErrorMessage } from '@/types/common'
+import { logger } from '@/lib/logger'
+
 export interface BiometricCredential {
   id: string
   rawId: ArrayBuffer
   response: AuthenticatorAttestationResponse | AuthenticatorAssertionResponse
   type: 'public-key'
+}
+
+interface StoredCredential {
+  id: string
+  createdAt?: string
+  lastUsed?: string
 }
 
 // Check if WebAuthn is supported
@@ -26,7 +35,7 @@ export const isBiometricSupported = async (): Promise<boolean> => {
     const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
     return available
   } catch (error) {
-    console.error('Error checking biometric support:', error)
+    logger.error('Error checking biometric support', error as Error)
     return false
   }
 }
@@ -76,7 +85,7 @@ export const checkBiometricPermissionStatus = async (): Promise<{
       message: 'Biometric authentication is ready to use.'
     }
   } catch (error) {
-    console.error('Error checking biometric permission:', error)
+    logger.error('Error checking biometric permission', error as Error)
     return {
       supported: false,
       available: false,
@@ -170,7 +179,7 @@ export const registerBiometric = async (userId: string, userEmail: string): Prom
     // Return the credential ID for storage
     const credentialId = arrayBufferToBase64url(credential.rawId)
 
-    console.log('Biometric credential registered:', credentialId)
+    logger.info('Biometric credential registered:', { credentialId })
 
     // Save credential to Firebase
     try {
@@ -195,30 +204,31 @@ export const registerBiometric = async (userId: string, userEmail: string): Prom
 
       if (!response.ok) {
         const error = await response.json()
-        console.error('Failed to save credential to Firebase:', error)
+        logger.error('Failed to save credential to Firebase', new Error(JSON.stringify(error)))
         // Continue anyway, store in localStorage as fallback
         localStorage.setItem(`biometric_${userId}`, credentialId)
       } else {
-        console.log('Credential successfully saved to Firebase')
+        logger.info('Credential successfully saved to Firebase')
         // Also store in localStorage for backward compatibility
         localStorage.setItem(`biometric_${userId}`, credentialId)
       }
     } catch (firebaseError) {
-      console.error('Error saving to Firebase:', firebaseError)
+      logger.error('Error saving to Firebase', firebaseError as Error)
       // Fallback to localStorage only
       localStorage.setItem(`biometric_${userId}`, credentialId)
     }
 
     return credentialId
 
-  } catch (error: any) {
-    console.error('Biometric registration failed:', error)
+  } catch (error: unknown) {
+    logger.error('Biometric registration failed', error as Error)
 
-    if (error.name === 'NotAllowedError') {
+    const errorName = error instanceof Error ? error.name : ''
+    if (errorName === 'NotAllowedError') {
       throw new Error('Biometric registration was cancelled or denied')
-    } else if (error.name === 'InvalidStateError') {
+    } else if (errorName === 'InvalidStateError') {
       throw new Error('This device is already registered for biometric authentication')
-    } else if (error.name === 'NotSupportedError') {
+    } else if (errorName === 'NotSupportedError') {
       throw new Error('Biometric authentication is not supported on this device')
     } else {
       throw new Error('Failed to register biometric authentication')
@@ -269,7 +279,7 @@ export const authenticateBiometric = async (userId: string): Promise<boolean> =>
       throw new Error('Authentication failed')
     }
 
-    console.log('Biometric authentication successful')
+    logger.info('Biometric authentication successful')
 
     // Update last used timestamp in Firebase
     try {
@@ -290,18 +300,19 @@ export const authenticateBiometric = async (userId: string): Promise<boolean> =>
         })
       }
     } catch (updateError) {
-      console.error('Failed to update lastUsed timestamp:', updateError)
+      logger.error('Failed to update lastUsed timestamp', updateError as Error)
       // Don't fail the authentication if timestamp update fails
     }
 
     return true
 
-  } catch (error: any) {
-    console.error('Biometric authentication failed:', error)
+  } catch (error: unknown) {
+    logger.error('Biometric authentication failed', error as Error)
 
-    if (error.name === 'NotAllowedError') {
+    const errorName = error instanceof Error ? error.name : ''
+    if (errorName === 'NotAllowedError') {
       throw new Error('Biometric authentication was cancelled or denied')
-    } else if (error.name === 'InvalidStateError') {
+    } else if (errorName === 'InvalidStateError') {
       throw new Error('Invalid biometric authentication state')
     } else {
       throw new Error('Biometric authentication failed')
@@ -340,7 +351,7 @@ export const hasBiometricCredential = async (userId: string): Promise<boolean> =
     const data = await response.json()
     return data.count > 0
   } catch (error) {
-    console.error('Error checking biometric credential:', error)
+    logger.error('Error checking biometric credential', error as Error)
     // Fallback to localStorage
     const credentialId = localStorage.getItem(`biometric_${userId}`)
     return !!credentialId
@@ -372,12 +383,12 @@ export const removeBiometricCredential = async (userId: string): Promise<void> =
         })
 
         if (!response.ok) {
-          console.error('Failed to remove credential from Firebase')
+          logger.error('Failed to remove credential from Firebase', new Error('Failed to remove credential'))
         }
       }
     }
   } catch (error) {
-    console.error('Error removing biometric credential from Firebase:', error)
+    logger.error('Error removing biometric credential from Firebase', error as Error)
   }
 
   // Always remove from localStorage
@@ -425,7 +436,7 @@ export const migrateLocalStorageCredentials = async (userId: string): Promise<bo
     const currentUser = firebaseAuth.currentUser
 
     if (!currentUser) {
-      console.log('Cannot migrate: No authenticated user')
+      logger.debug('Cannot migrate: No authenticated user')
       return false
     }
 
@@ -440,13 +451,13 @@ export const migrateLocalStorageCredentials = async (userId: string): Promise<bo
     })
 
     if (checkResponse.ok) {
-      const data = await checkResponse.json()
+      const data = await checkResponse.json() as { credentials?: StoredCredential[] }
 
       // Check if this exact credential already exists
-      const credentialExists = data.credentials?.some((cred: any) => cred.id === credentialId)
+      const credentialExists = data.credentials?.some((cred: StoredCredential) => cred.id === credentialId)
 
       if (credentialExists) {
-        console.log('Credential already exists in Firebase, skipping migration')
+        logger.info('Credential already exists in Firebase, skipping migration')
         return true
       }
     }
@@ -462,24 +473,27 @@ export const migrateLocalStorageCredentials = async (userId: string): Promise<bo
     })
 
     if (response.ok) {
-      console.log('Successfully migrated localStorage credential to Firebase')
+      logger.info('Successfully migrated localStorage credential to Firebase')
       return true
     } else {
       const error = await response.json()
-      console.error('Failed to migrate credential:', error)
+      logger.error('Failed to migrate credential', new Error(JSON.stringify(error)))
       return false
     }
   } catch (error) {
-    console.error('Error migrating localStorage credentials:', error)
+    logger.error('Error migrating localStorage credentials', error as Error)
     return false
   }
 }
 
 // Get user-friendly error messages
-export const getBiometricErrorMessage = (error: any): string => {
+export const getBiometricErrorMessage = (error: unknown): string => {
   if (!error) return 'Unknown error occurred'
 
-  switch (error.name) {
+  const errorName = error instanceof Error ? error.name : ''
+  const errorMessage = error instanceof Error ? error.message : ''
+
+  switch (errorName) {
     case 'NotAllowedError':
       return 'Permission denied. Please allow biometric authentication and try again.'
     case 'InvalidStateError':
@@ -497,7 +511,7 @@ export const getBiometricErrorMessage = (error: any): string => {
     case 'UnknownError':
       return 'An unknown error occurred. Please try again.'
     default:
-      return error.message || 'Biometric authentication failed. Please try again.'
+      return errorMessage || 'Biometric authentication failed. Please try again.'
   }
 }
 
@@ -525,7 +539,7 @@ export const testBiometricCapabilities = async (): Promise<{
     result.userVerifyingPlatformAuthenticatorAvailable =
       await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
   } catch (error) {
-    console.warn('Could not check platform authenticator availability:', error)
+    logger.warn('Could not check platform authenticator availability', { error: error instanceof Error ? error.message : String(error) })
   }
 
   try {
@@ -533,7 +547,7 @@ export const testBiometricCapabilities = async (): Promise<{
     result.conditionalMediationSupported =
       await PublicKeyCredential.isConditionalMediationAvailable?.() || false
   } catch (error) {
-    console.warn('Conditional mediation not supported:', error)
+    logger.warn('Conditional mediation not supported', { error: error instanceof Error ? error.message : String(error) })
   }
 
   return result

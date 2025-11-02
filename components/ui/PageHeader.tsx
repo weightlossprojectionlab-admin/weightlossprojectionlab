@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ReactNode } from 'react'
+import { MenuButton } from './MenuButton'
 
 interface PageHeaderProps {
   title: string
@@ -8,6 +9,7 @@ interface PageHeaderProps {
   actions?: ReactNode
   subtitle?: string
   className?: string
+  showMenu?: boolean
 }
 
 /**
@@ -28,7 +30,8 @@ export function PageHeader({
   backLabel = '← Back',
   actions,
   subtitle,
-  className = ''
+  className = '',
+  showMenu = true
 }: PageHeaderProps) {
   return (
     <header className={`page-header ${className}`}>
@@ -50,11 +53,10 @@ export function PageHeader({
             )}
           </div>
         </div>
-        {actions && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {actions}
-          </div>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {actions}
+          {showMenu && <MenuButton />}
+        </div>
       </div>
     </header>
   )
@@ -68,14 +70,19 @@ export function PageHeader({
  * <SimplePageHeader title="Dashboard" />
  * ```
  */
-export function SimplePageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+export function SimplePageHeader({ title, subtitle, showMenu = true }: { title: string; subtitle?: string; showMenu?: boolean }) {
   return (
     <header className="page-header">
       <div className="page-header-content">
-        <div>
+        <div className="flex-1">
           <h1 className="page-title">{title}</h1>
           {subtitle && <p className="text-caption mt-1">{subtitle}</p>}
         </div>
+        {showMenu && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <MenuButton />
+          </div>
+        )}
       </div>
     </header>
   )
@@ -108,6 +115,7 @@ interface TabbedPageHeaderProps {
   activeTab: string
   backHref?: string
   actions?: ReactNode
+  showMenu?: boolean
 }
 
 export function TabbedPageHeader({
@@ -115,7 +123,8 @@ export function TabbedPageHeader({
   tabs,
   activeTab,
   backHref,
-  actions
+  actions,
+  showMenu = true
 }: TabbedPageHeaderProps) {
   return (
     <header className="page-header">
@@ -132,11 +141,10 @@ export function TabbedPageHeader({
           )}
           <h1 className="page-title">{title}</h1>
         </div>
-        {actions && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {actions}
-          </div>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {actions}
+          {showMenu && <MenuButton />}
+        </div>
       </div>
 
       {/* Tabs */}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
+import { logger } from '@/lib/logger'
 
 interface UserProfile {
   email: string
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error fetching user profile:', error)
+    logger.error('Error fetching user profile', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       {
         error: 'Failed to fetch user profile',
@@ -202,7 +203,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error: any) {
-    console.error('Error creating user profile:', error)
+    logger.error('Error creating user profile', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       {
         error: 'Failed to create user profile',
@@ -269,7 +270,7 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error updating user profile:', error)
+    logger.error('Error updating user profile', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       {
         error: 'Failed to update user profile',
