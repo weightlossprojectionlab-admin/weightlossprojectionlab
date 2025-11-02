@@ -1,25 +1,36 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
+
+// Force static generation for maximum performance
+export const dynamic = 'force-static'
+export const revalidate = false
+
+// Override metadata for home page with optimized title
+export const metadata: Metadata = {
+  title: 'Weight Loss Progress Lab - AI-Powered Meal Tracking',
+  description: 'Stop guessing, start losing. Track meals in 30 seconds with AI-powered photo analysis. No tedious logging required.',
+}
 
 export default function HomePage() {
   // No auth check on home page - keeps it fast and lightweight
   // The /auth page will handle redirects for already-authenticated users
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-purple-100 px-4">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="mx-auto max-w-md space-y-8 text-center">
         {/* Hero Section */}
         <div className="space-y-4">
           <h1 className="text-5xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
             Stop Guessing. Start Losing.
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
+          <p className="text-lg text-gray-600 dark:text-gray-400 font-sans">
             Lose weight without the tedious tracking. Just snap a photo of your meal—our AI does the rest in 30 seconds.
           </p>
         </div>
 
         {/* Benefit-Driven Features */}
         <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-md transition-shadow p-6 text-left">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-left">
             <div className="flex items-start space-x-3">
               <span className="text-3xl">⚡</span>
               <div className="flex-1">
@@ -31,7 +42,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-md transition-shadow p-6 text-left">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-left">
             <div className="flex items-start space-x-3">
               <span className="text-3xl">🎯</span>
               <div className="flex-1">
@@ -43,7 +54,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-md transition-shadow p-6 text-left">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-left">
             <div className="flex items-start space-x-3">
               <span className="text-3xl">📈</span>
               <div className="flex-1">
