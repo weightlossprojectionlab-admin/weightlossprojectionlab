@@ -80,7 +80,8 @@ export type ManualAdjustments = z.infer<typeof ManualAdjustmentsSchema>
 // MEAL LOG REQUEST SCHEMA
 // ============================================
 
-export const CreateMealLogRequestSchema = z.object({
+// Base schema without refinement (supports .partial() for updates)
+const CreateMealLogRequestBaseSchema = z.object({
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
   photoUrl: z.string().url().optional(),
   aiAnalysis: AIAnalysisSchema.optional(),
@@ -88,10 +89,16 @@ export const CreateMealLogRequestSchema = z.object({
   notes: z.string().optional(),
   loggedAt: z.string().datetime().optional(), // ISO 8601 datetime string
 })
+
+// For CREATE operations - requires either aiAnalysis or manualEntries
+export const CreateMealLogRequestSchema = CreateMealLogRequestBaseSchema
   .refine(
     (data) => data.aiAnalysis || (data.manualEntries && data.manualEntries.length > 0),
     { message: 'Either AI analysis or manual entries are required' }
   )
+
+// For UPDATE operations - allows partial data without refinement
+export const UpdateMealLogRequestSchema = CreateMealLogRequestBaseSchema
 
 export type CreateMealLogRequest = z.infer<typeof CreateMealLogRequestSchema>
 

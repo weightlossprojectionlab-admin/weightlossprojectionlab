@@ -8,6 +8,7 @@ import { apiClient, buildQueryString } from '../api-client'
 import {
   MealLogSchema,
   CreateMealLogRequestSchema,
+  UpdateMealLogRequestSchema,
   GetMealLogsQuerySchema,
   type MealLog,
   type CreateMealLogRequest,
@@ -86,7 +87,7 @@ export async function getMealLog(id: string): Promise<MealLog> {
  */
 export async function updateMealLog(id: string, data: Partial<CreateMealLogRequest>): Promise<MealLog> {
   // Validate partial update data
-  const validatedData = CreateMealLogRequestSchema.partial().parse(data)
+  const validatedData = UpdateMealLogRequestSchema.partial().parse(data)
 
   return apiClient.patch(
     `/meal-logs/${id}`,
