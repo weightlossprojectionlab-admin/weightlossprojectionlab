@@ -4,7 +4,7 @@ import { Fragment } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useMenu } from '@/contexts/MenuContext'
-import { useAuth } from '@/hooks/useAuth'
+import { useLazyAuth } from '@/hooks/useLazyAuth'
 import { signOut } from '@/lib/auth'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import {
@@ -42,7 +42,7 @@ interface MenuSection {
  */
 export function AppMenu() {
   const { isOpen, closeMenu } = useMenu()
-  const { user } = useAuth()
+  const { user } = useLazyAuth()
   const pathname = usePathname()
   const router = useRouter()
 

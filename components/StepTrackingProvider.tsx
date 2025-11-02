@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { useAuth } from '@/hooks/useAuth'
+import { useLazyAuth } from '@/hooks/useLazyAuth'
 import { useStepCounter } from '@/hooks/useStepCounter'
 import { logger } from '@/lib/logger'
 
@@ -36,7 +36,7 @@ interface StepTrackingProviderProps {
 }
 
 export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
-  const { user } = useAuth()
+  const { user } = useLazyAuth()
   const [isEnabled, setIsEnabled] = useState(false)
   const [lastSaveDate, setLastSaveDate] = useState<string | null>(null)
 

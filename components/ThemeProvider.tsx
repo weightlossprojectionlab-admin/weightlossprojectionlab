@@ -1,7 +1,6 @@
 'use client'
 
 import { createContext, useEffect, useState, ReactNode } from 'react'
-import { auth } from '@/lib/firebase'
 import { userProfileOperations } from '@/lib/firebase-operations'
 import type { Theme, ThemeContextType } from '@/hooks/useTheme'
 import { logger } from '@/lib/logger'
@@ -46,12 +45,24 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   // Calculate the actual theme to render
   const resolvedTheme = theme === 'system' ? systemTheme : theme
 
-  // Listen for auth state changes
+  // Listen for auth state changes (lazy-loaded)
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUserId(user?.uid || null)
+    let unsubscribe: (() => void) | undefined
+
+    // Dynamically import auth to avoid loading Firebase on every page
+    import('@/lib/auth').then((authModule) => {
+      unsubscribe = authModule.onAuthStateChange((user) => {
+        setUserId(user?.uid || null)
+      })
+    }).catch((error) => {
+      logger.error('Failed to load auth module:', error)
     })
-    return unsubscribe
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe()
+      }
+    }
   }, [])
 
   // Detect system preference
