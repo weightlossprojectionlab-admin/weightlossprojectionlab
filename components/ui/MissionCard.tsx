@@ -1,6 +1,6 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import type { MissionProgress } from '@/hooks/useMissions'
 
 export interface MissionCardProps {
@@ -10,7 +10,7 @@ export interface MissionCardProps {
 /**
  * Display individual mission with progress, XP reward, and badge
  */
-export function MissionCard({ mission }: MissionCardProps) {
+export const MissionCard = memo(function MissionCard({ mission }: MissionCardProps) {
   const progressPercentage = Math.round((mission.progress / mission.criteria.target) * 100)
   const isComplete = mission.completed
 
@@ -102,7 +102,7 @@ export function MissionCard({ mission }: MissionCardProps) {
       )}
     </div>
   )
-}
+})
 
 /**
  * Mission list with all active missions
@@ -137,13 +137,16 @@ export const MissionList = memo(function MissionList({ missions, loading }: Miss
   }
 
   // Sort: incomplete missions first, then by difficulty
-  const sortedMissions = [...missions].sort((a, b) => {
-    if (a.completed !== b.completed) {
-      return a.completed ? 1 : -1
-    }
-    const difficultyOrder = { easy: 1, medium: 2, hard: 3 }
-    return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty]
-  })
+  // MEMOIZED: Prevents creating new sorted array on every render
+  const sortedMissions = useMemo(() => {
+    return [...missions].sort((a, b) => {
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1
+      }
+      const difficultyOrder = { easy: 1, medium: 2, hard: 3 }
+      return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty]
+    })
+  }, [missions])
 
   return (
     <div className="space-y-4">

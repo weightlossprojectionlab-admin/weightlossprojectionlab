@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { PublicRecipe } from '@/lib/types/public-recipes'
-import { shareRecipe, canUseWebShare } from '@/lib/recipe-share-utils'
+import { shareRecipe, canUseWebShare, ShareableRecipe } from '@/lib/recipe-share-utils'
 import { generateRecipeAltText } from '@/lib/utils'
 import { logger } from '@/lib/logger'
 
@@ -41,9 +41,8 @@ export function RecipeCard({ recipe, onSave, onView, isSaved = false, priority =
 
     setSharing(true)
     try {
-      // Type assertion needed because PublicRecipe.createdAt (Timestamp | Date)
-      // is incompatible with MealSuggestion.createdAt (string | Date | undefined)
-      const { imageBlob, caption, shareUrl } = await shareRecipe(recipe as any)
+      // PublicRecipe is compatible with ShareableRecipe type
+      const { imageBlob, caption, shareUrl } = await shareRecipe(recipe as ShareableRecipe)
 
       if (canUseWebShare()) {
         const file = new File([imageBlob], `${recipe.slug}.png`, { type: 'image/png' })
