@@ -1227,7 +1227,7 @@ function LogMealContent() {
                   {analyzing && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
                       <div className="text-white text-center">
-                        <div className="animate-spin w-8 h-8 border-4 border-white dark:border-gray-700 border-t-transparent rounded-full mx-auto mb-2"></div>
+                        <Spinner size="lg" className="text-white mx-auto mb-2" />
                         <p>Analyzing with AI...</p>
                       </div>
                     </div>
@@ -1736,7 +1736,7 @@ function LogMealContent() {
                   >
                     {saving ? (
                       <span className="flex items-center justify-center space-x-2">
-                        <div className="animate-spin w-5 h-5 border-2 border-white dark:border-gray-700 border-t-transparent rounded-full" />
+                        <Spinner size="sm" className="text-white" />
                         <span>{uploadProgress || 'Saving...'}</span>
                       </span>
                     ) : (
