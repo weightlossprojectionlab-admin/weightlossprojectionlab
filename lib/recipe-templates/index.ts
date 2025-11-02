@@ -1,6 +1,8 @@
 // Recipe Template System - Marketing-Grade Share Images
 import { MealSuggestion } from '../meal-suggestions'
+import { PublicRecipe } from '../types/public-recipes'
 import { AspectRatio } from '../recipe-share-utils'
+import { logger } from '@/lib/logger'
 
 export type TemplateStyle = 'minimalist' | 'bold-vibrant' | 'elegant-dark' | 'photo-overlay' | 'infographic'
 
@@ -16,7 +18,7 @@ export interface TemplateConfig {
 export interface TemplateRenderContext {
   ctx: CanvasRenderingContext2D
   canvas: HTMLCanvasElement
-  recipe: MealSuggestion
+  recipe: MealSuggestion | PublicRecipe
   width: number
   height: number
   aspectRatio: AspectRatio
@@ -97,9 +99,9 @@ export const renderTemplate = (
     }
   } catch (error) {
     // Fallback to minimalist template on any error
-    console.error('Template rendering error:', error)
+    logger.error('Template rendering error', error as Error)
     if (style !== 'minimalist') {
-      console.warn(`Falling back to minimalist template`)
+      logger.warn('Falling back to minimalist template')
       renderMinimalistTemplate(context)
     } else {
       // Re-throw if minimalist itself failed

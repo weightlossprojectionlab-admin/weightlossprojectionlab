@@ -1,8 +1,9 @@
 'use client'
 
+import { memo } from 'react'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 
-export function OfflineIndicator() {
+export const OfflineIndicator = memo(function OfflineIndicator() {
   const { isOnline, isSyncing, queuedCount, syncProgress } = useOnlineStatus()
 
   // Don't show anything if online and not syncing
@@ -78,4 +79,5 @@ export function OfflineIndicator() {
       )}
     </div>
   )
-}
+})
+

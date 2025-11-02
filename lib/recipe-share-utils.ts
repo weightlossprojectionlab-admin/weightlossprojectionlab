@@ -1,16 +1,24 @@
 // Recipe sharing utilities extending share-utils.ts functionality
 import { MealSuggestion } from './meal-suggestions'
+import { PublicRecipe } from './types/public-recipes'
 import viralHooks from './viral-hooks.json'
 import { TemplateStyle, renderTemplate, TemplateRenderContext } from './recipe-templates'
+import { logger } from '@/lib/logger'
 
 export type AspectRatio = '1:1' | '9:16' | '3:2'
+
+/**
+ * Shareable recipe type - common fields needed for sharing
+ * This allows both MealSuggestion and PublicRecipe to be shared
+ */
+export type ShareableRecipe = MealSuggestion | PublicRecipe
 
 /**
  * Generate a shareable image card for a recipe
  * Creates a canvas with recipe information and returns as blob
  */
 export const generateRecipeShareCard = async (
-  recipe: MealSuggestion,
+  recipe: MealSuggestion | PublicRecipe,
   aspectRatio: AspectRatio = '1:1',
   templateStyle: TemplateStyle = 'minimalist'
 ): Promise<Blob> => {
@@ -71,7 +79,7 @@ export const generateRecipeShareCard = async (
 /**
  * Generate caption text for social media recipe sharing
  */
-export const generateRecipeShareCaption = (recipe: MealSuggestion): string => {
+export const generateRecipeShareCaption = (recipe: MealSuggestion | PublicRecipe): string => {
   // Get a random viral hook for social sharing
   const socialHooks = viralHooks.social
   const randomHook = socialHooks[Math.floor(Math.random() * socialHooks.length)]
@@ -130,7 +138,7 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
       await navigator.clipboard.writeText(text)
       return true
     } catch (error) {
-      console.error('Failed to copy to clipboard:', error)
+      logger.error('Failed to copy to clipboard', error as Error)
       return false
     }
   }
@@ -139,9 +147,10 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
 
 /**
  * Share recipe - generates image and caption
+ * Accepts both MealSuggestion and PublicRecipe types for maximum flexibility
  */
 export const shareRecipe = async (
-  recipe: MealSuggestion,
+  recipe: ShareableRecipe,
   aspectRatio: AspectRatio = '1:1',
   templateStyle: TemplateStyle = 'minimalist'
 ): Promise<{
@@ -200,7 +209,7 @@ export const shareViaWebShareAPI = async (
     return true
   } catch (error) {
     // User cancelled or error occurred
-    console.error('Web Share API failed:', error)
+    logger.error('Web Share API failed', error as Error)
     return false
   }
 }

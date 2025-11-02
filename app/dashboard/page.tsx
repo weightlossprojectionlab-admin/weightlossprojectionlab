@@ -3,21 +3,19 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import AuthGuard from '@/components/auth/AuthGuard'
 import DashboardRouter from '@/components/auth/DashboardRouter'
 import { DashboardErrorBoundary } from '@/components/error/DashboardErrorBoundary'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { GoalsEditor } from '@/components/ui/GoalsEditor'
 import { PlateauDetectionEmpty } from '@/components/ui/EmptyState'
-import { RecipeModal } from '@/components/ui/RecipeModal'
 import { RecipeQueue } from '@/components/ui/RecipeQueue'
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
 import { NotificationPrompt } from '@/components/ui/NotificationPrompt'
-import { ChatWidget } from '@/components/ui/ChatInterface'
 import { useMissions } from '@/hooks/useMissions'
 import { MissionList } from '@/components/ui/MissionCard'
 import { XPBadge } from '@/components/ui/XPBadge'
-import { signOut, auth } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import { useStepTracking } from '@/components/StepTrackingProvider'
@@ -34,6 +32,22 @@ import { generateRecipeAltText } from '@/lib/utils'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 
+// Dynamic imports for heavy components (lazy loaded on demand)
+const GoalsEditor = dynamic(() => import('@/components/ui/GoalsEditor').then(mod => ({ default: mod.GoalsEditor })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><Spinner /></div>,
+  ssr: false
+})
+
+const RecipeModal = dynamic(() => import('@/components/ui/RecipeModal').then(mod => ({ default: mod.RecipeModal })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><Spinner /></div>,
+  ssr: false
+})
+
+const ChatWidget = dynamic(() => import('@/components/ui/ChatInterface').then(mod => ({ default: mod.ChatWidget })), {
+  loading: () => null, // Chat widget loads silently in background
+  ssr: false
+})
+
 // Helper function to get meal type emoji for placeholders
 const getMealEmoji = (mealType: string): string => {
   const emojis: Record<string, string> = {
@@ -48,7 +62,6 @@ const getMealEmoji = (mealType: string): string => {
 function DashboardContent() {
   const router = useRouter()
   const [showGoalsEditor, setShowGoalsEditor] = useState(false)
-  const [signOutLoading, setSignOutLoading] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState<MealSuggestion | null>(null)
   const [showRecipeModal, setShowRecipeModal] = useState(false)
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
@@ -92,22 +105,36 @@ function DashboardContent() {
   const { recipes: recipesWithMedia } = useRecipes()
 
   // Get contextual meal recommendations with personalized suggestions (with images)
-  const mealContext = getNextMealContext(
-    todayMeals
-      .filter(m => m && m.mealType && typeof m.totalCalories === 'number')
-      .map(m => ({ mealType: m.mealType, totalCalories: m.totalCalories })),
-    nutritionSummary.goalCalories || 2000,
-    {
-      dietaryPreferences: userProfile?.preferences?.dietaryPreferences || [],
-      foodAllergies: userProfile?.profile?.foodAllergies || [],
-      mealSchedule: userProfile?.preferences?.mealSchedule
-    },
+  // MEMOIZED: Prevents expensive recalculation on every render (237 lines of logic + 692-line meal array)
+  const mealContext = useMemo(() => {
+    return getNextMealContext(
+      todayMeals
+        .filter(m => m && m.mealType && typeof m.totalCalories === 'number')
+        .map(m => ({ mealType: m.mealType, totalCalories: m.totalCalories })),
+      nutritionSummary.goalCalories || 2000,
+      {
+        dietaryPreferences: userProfile?.preferences?.dietaryPreferences || [],
+        foodAllergies: userProfile?.profile?.foodAllergies || [],
+        mealSchedule: userProfile?.preferences?.mealSchedule
+      },
+      auth.currentUser?.uid,
+      recipesWithMedia || [] // Pass recipes with images/videos from Firestore
+    )
+  }, [
+    todayMeals,
+    nutritionSummary.goalCalories,
+    userProfile?.preferences?.dietaryPreferences,
+    userProfile?.profile?.foodAllergies,
+    userProfile?.preferences?.mealSchedule,
     auth.currentUser?.uid,
-    recipesWithMedia || [] // Pass recipes with images/videos from Firestore
-  )
+    recipesWithMedia
+  ])
 
   // Check profile completeness for safety warnings
-  const profileCompleteness = checkProfileCompleteness(userProfile)
+  // MEMOIZED: Prevents expensive recalculation on every render (147 lines of logic)
+  const profileCompleteness = useMemo(() => {
+    return checkProfileCompleteness(userProfile)
+  }, [userProfile])
 
   // Use sensor steps if tracking is enabled, otherwise use logged steps
   const displaySteps = isEnabled ? todaysSteps : activitySummary.todaySteps
@@ -210,24 +237,6 @@ function DashboardContent() {
 
       <PageHeader
         title="Dashboard"
-        actions={
-          <button
-            onClick={async () => {
-              setSignOutLoading(true)
-              try {
-                await signOut()
-              } finally {
-                setSignOutLoading(false)
-              }
-            }}
-            disabled={signOutLoading}
-            className={`text-sm text-accent hover:text-accent-hover inline-flex items-center space-x-1 ${signOutLoading ? 'cursor-wait opacity-60' : ''}`}
-            aria-label="Sign out"
-          >
-            {signOutLoading && <Spinner size="sm" className="text-accent" />}
-            <span>{signOutLoading ? 'Signing Out...' : 'Sign Out'}</span>
-          </button>
-        }
       />
 
       <div className="container-narrow py-6 space-y-6">
@@ -548,6 +557,8 @@ function DashboardContent() {
                                 fill
                                 className="object-cover"
                                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                placeholder="blur"
+                                blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYigyNDAsMjQwLDI0MCkiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYigyMjAsMjIwLDIyMCkiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0idXJsKCNhKSIvPjwvc3ZnPg=="
                               />
                             ) : (
                               <div className="flex items-center justify-center h-full bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
@@ -869,6 +880,40 @@ function DashboardContent() {
               <span className="text-2xl" role="img" aria-label="gallery">🖼️</span>
             )}
             <span className="text-sm font-medium">Gallery</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setNavigatingTo('shopping')
+              router.push('/shopping')
+            }}
+            disabled={!!navigatingTo}
+            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-label="Shopping list"
+          >
+            {navigatingTo === 'shopping' ? (
+              <Spinner size="md" className="text-primary" />
+            ) : (
+              <span className="text-2xl" role="img" aria-label="shopping">🛒</span>
+            )}
+            <span className="text-sm font-medium">Shopping</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setNavigatingTo('inventory')
+              router.push('/inventory')
+            }}
+            disabled={!!navigatingTo}
+            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-label="Kitchen inventory"
+          >
+            {navigatingTo === 'inventory' ? (
+              <Spinner size="md" className="text-primary" />
+            ) : (
+              <span className="text-2xl" role="img" aria-label="inventory">📦</span>
+            )}
+            <span className="text-sm font-medium">Inventory</span>
           </button>
 
           <button

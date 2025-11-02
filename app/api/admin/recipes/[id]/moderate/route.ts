@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { Timestamp } from 'firebase-admin/firestore'
+import { logger } from '@/lib/logger'
 
 export async function POST(
   request: NextRequest,
@@ -59,10 +60,10 @@ export async function POST(
 
     const recipeData = recipeDoc.data()
 
-    // Update recipe status
+    // Update recipe moderation status
     if (action === 'approve') {
       await recipeRef.update({
-        status: 'approved',
+        moderationStatus: 'approved',
         moderatedBy: adminUid,
         moderatedAt: Timestamp.now(),
         moderationNotes: notes || null,
@@ -96,7 +97,7 @@ export async function POST(
         message: feature ? 'Recipe approved and featured' : 'Recipe approved',
         data: {
           recipeId,
-          status: 'approved',
+          moderationStatus: 'approved',
           featured: feature === true,
         },
       })
@@ -109,7 +110,7 @@ export async function POST(
       }
 
       await recipeRef.update({
-        status: 'rejected',
+        moderationStatus: 'rejected',
         moderatedBy: adminUid,
         moderatedAt: Timestamp.now(),
         rejectionReason: reason,
@@ -146,13 +147,13 @@ export async function POST(
         message: 'Recipe rejected',
         data: {
           recipeId,
-          status: 'rejected',
+          moderationStatus: 'rejected',
           reason,
         },
       })
     }
   } catch (error) {
-    console.error('Error moderating recipe:', error)
+    logger.error('Error moderating recipe', error as Error)
     return NextResponse.json(
       {
         error: 'Failed to moderate recipe',
