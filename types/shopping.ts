@@ -33,6 +33,12 @@ export type ScanContext =
   | 'consume'     // Used up / threw away
   | 'inventory'   // Checking what's in stock
 
+export type ItemSource =
+  | 'manual'        // Manually added by user
+  | 'recipe'        // Added from recipe
+  | 'mealplan'      // Added from meal plan
+  | 'autosuggest'   // Auto-suggested based on patterns
+
 export type QuantityUnit =
   // Weight
   | 'lbs'          // Pounds
@@ -99,10 +105,20 @@ export interface ShoppingItem {
   priority: 'low' | 'medium' | 'high' // Based on expiration or usage frequency
   lastPurchased?: Date
   preferredStore?: string
+  storeId?: string // Reference to Store document
+  source?: ItemSource // How this item was added
+  missingFromInventory?: boolean // True if checked against inventory and not found
 
   // History & Learning
   purchaseHistory: PurchaseHistoryEntry[]
-  averageDaysBetweenPurchases?: number // Learned pattern
+  averageDaysBetweenPurchases?: number // Learned pattern (in days)
+  expectedPriceCents?: number // Expected price based on purchase history
+
+  // Inventory-Specific Fields (when inStock=true)
+  freezeDate?: Date // Date item was frozen
+  purchasePriceCents?: number // Actual purchase price
+  lowStockThreshold?: number // Trigger low-stock alert when quantity drops below this
+  photoUrl?: string // Photo of product or expiration date
 
   // Metadata
   createdAt: Date
@@ -189,4 +205,35 @@ export interface GeofenceConfig {
   radiusMeters: number
   notificationsEnabled: boolean
   autoShowList: boolean
+}
+
+/**
+ * Store - User's saved stores with preferences
+ */
+export interface Store {
+  id: string
+  userId: string
+  name: string
+  placeId?: string // Google Places ID for maps integration
+  latitude?: number
+  longitude?: number
+  lastVisitedAt?: Date
+  aisleOrder?: ProductCategory[] // Preferred aisle ordering for this store
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * PriceHistory - Track purchase prices over time
+ */
+export interface PriceHistory {
+  id: string // Format: productKey_YYYYMMDD
+  userId: string
+  productKey: string // Barcode or normalized product name
+  storeId?: string // Which store this price is from
+  priceCents: number // Price in cents (avoid floating point issues)
+  quantity: number
+  unit?: QuantityUnit
+  purchasedAt: Date
+  createdAt: Date
 }
