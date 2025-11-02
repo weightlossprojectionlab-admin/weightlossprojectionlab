@@ -316,50 +316,50 @@ react-dom: 19.1.0 → 19.2.0
 
 ## Worktree Strategy
 
-### Active Worktrees (13)
+### Active Worktrees (9) - Last Updated: November 2, 2025
+
+All worktrees synced to main@c211752 ✅
 
 ```bash
 # Main baseline
-main (ad21cd5) ⭐
+main (c211752) ⭐
 
-# Features
-feature/ai-recipe-generation (2c9d1b5)
-feature/cooking-vs-preparing (cb8c749)
-feature/native-wrapper (a228772)
-feature/premium-subscription (a228772)
-feature/recipe-library-migration (82b35ad)
-feature/recipe-marketplace (a228772)
-feature/scanner-shopping-inventory
-feature/social-expansion (a228772)
-feature/theme-preferences (9a00e4f)
+# Features (6)
+feature/native-wrapper (c211752)
+feature/premium-subscription (c211752)
+feature/recipe-library-migration (c211752)
+feature/recipe-marketplace (c211752)
+feature/social-expansion (c211752)
 
-# Performance
-perf/bundle-optimization (a228772)
-perf/phase-3a-dashboard-optimization
+# Performance (1)
+perf/bundle-optimization (c211752)
 
-# Refactor/Test
-refactor/react-19-features (a228772)
-test/e2e-suite (a228772)
+# Test (1)
+test/e2e-suite (c211752)
 
-# Docs
-docs/repository-cleanup (a228772)
+# Docs (1)
+docs/repository-cleanup (c211752)
 ```
 
-### Recommendations
+### Recently Archived (6)
 
-1. **Sync old worktrees**: Many are based on old commit (a228772)
-2. **Archive completed**: theme-preferences (9a00e4f) looks complete
-3. **New worktrees**: Branch from ad21cd5 (current baseline)
+These worktrees were removed as their work is already merged to main:
+- feature/theme-preferences (merged)
+- feature/ai-recipe-generation (merged)
+- feature/cooking-vs-preparing (merged)
+- refactor/react-19-features (React 19 already in main)
+- perf/phase-3a-dashboard-optimization (merged)
+- feature/scanner-shopping-inventory (merged)
 
 ### Creating New Worktree
 
 ```bash
-# From main branch (ad21cd5)
+# From main branch (c211752)
 git worktree add ../wlpl-[feature-name] -b feature/[feature-name]
 cd ../wlpl-[feature-name]
 
 # Verify baseline
-git log --oneline -1  # Should show ad21cd5 as parent
+git log --oneline -1  # Should show c211752 as parent
 ```
 
 ---
@@ -392,6 +392,20 @@ git log --oneline -1  # Should show ad21cd5 as parent
 
 ## Changelog (Since 790130d)
 
+### c211752 - Spinner Visibility Fix
+- Fix AI analysis and saving spinners not visible in dark mode
+- Replace custom inline spinners with Spinner component
+- Ensure consistent text-white styling
+
+### 607dee4 - Gemini API Key Addition
+- Add GEMINI_API_KEY to Netlify environment variables
+- Fix AI meal analysis falling back to mock data in production
+
+### Worktree Maintenance (November 2, 2025)
+- Archived 6 merged worktrees (theme-preferences, ai-recipe-generation, cooking-vs-preparing, react-19-features, phase-3a-dashboard-optimization, scanner-shopping-inventory)
+- Synced 9 remaining worktrees from a228772 to c211752 (42 commits forward)
+- All worktrees now on current main baseline
+
 ### ad21cd5 - ThemeProvider Optimization
 - Load theme from localStorage first (instant)
 - Sync with Firestore in background (non-blocking)
@@ -410,8 +424,8 @@ git log --oneline -1  # Should show ad21cd5 as parent
 
 ### Immediate (This Sprint)
 1. ✅ Document baseline (this file)
-2. 🧪 Re-test Lighthouse after ThemeProvider deployment
-3. 🔀 Create feature worktree from ad21cd5
+2. ✅ Sync/archive old worktrees
+3. 🧪 Re-test Lighthouse after ThemeProvider deployment
 4. 📝 Track TODOs in GitHub Issues
 
 ### Short-term (Next Sprint)
@@ -424,7 +438,6 @@ git log --oneline -1  # Should show ad21cd5 as parent
 1. 🚀 Optimize build performance
 2. 🔍 Fix ESLint warnings, remove ignoreDuringBuilds
 3. 📊 Add Real User Monitoring (RUM)
-4. 🔄 Sync/archive old worktrees
 
 ---
 
