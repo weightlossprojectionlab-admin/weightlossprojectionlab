@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/useAuth'
+import { useLazyAuth } from '@/hooks/useLazyAuth'
 
 export default function HomePage() {
-  const { user, loading } = useAuth()
+  const { user, loading } = useLazyAuth()
   const router = useRouter()
 
   // Don't block the homepage with loading state - show it immediately

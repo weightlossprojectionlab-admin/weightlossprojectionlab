@@ -1,0 +1,12 @@
+# Modern browsers only - avoids legacy polyfills
+# This targets browsers released in the last 2 years with >0.2% market share
+# Excludes IE11 and other legacy browsers
+
+>0.2%
+not dead
+not op_mini all
+not ie 11
+last 2 Chrome versions
+last 2 Firefox versions
+last 2 Safari versions
+last 2 Edge versions

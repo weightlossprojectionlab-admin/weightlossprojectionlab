@@ -9,6 +9,17 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     NEXT_PUBLIC_FIREBASE_APP_ID: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   },
+  // Modern JavaScript output for better performance
+  compiler: {
+    // Remove console.log in production for smaller bundles
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
+  // Optimize CSS for better LCP
+  experimental: {
+    optimizeCss: true,
+  },
   eslint: {
     // Allow builds to complete even with ESLint errors (warnings will still show)
     ignoreDuringBuilds: true,

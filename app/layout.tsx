@@ -46,6 +46,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
+      <head>
+        {/* Resource hints for third-party origins */}
+        <link rel="preconnect" href="https://apis.google.com" />
+        <link rel="preconnect" href="https://weightlossprojectionlab-8b284.firebaseapp.com" />
+        <link rel="dns-prefetch" href="https://apis.google.com" />
+        <link rel="dns-prefetch" href="https://weightlossprojectionlab-8b284.firebaseapp.com" />
+      </head>
       <body className="h-full font-sans antialiased">
         <Script id="theme-script" strategy="beforeInteractive">
           {`(function() {
