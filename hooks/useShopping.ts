@@ -18,9 +18,12 @@ import {
   markItemAsConsumed,
   markItemAsPurchased,
   deleteShoppingItem,
-  getStoreVisits
+  getStoreVisits,
+  addManualShoppingItem
 } from '@/lib/shopping-operations'
 import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
+import { mergeIngredients } from '@/lib/shopping-diff'
+import type { RecipeIngredient } from '@/lib/shopping-diff'
 
 export function useShopping() {
   const [items, setItems] = useState<ShoppingItem[]>([])
@@ -132,6 +135,40 @@ export function useShopping() {
   }, [fetchItems])
 
   /**
+   * Add ingredients from recipe to shopping list
+   * Merges quantities for duplicate items
+   */
+  const addFromRecipe = useCallback(async (
+    recipeId: string,
+    ingredients: RecipeIngredient[]
+  ) => {
+    if (!userId) throw new Error('User not authenticated')
+
+    try {
+      // Merge duplicate ingredients
+      const mergedIngredients = mergeIngredients(ingredients)
+
+      // Add each ingredient to shopping list
+      const addPromises = mergedIngredients.map(ingredient =>
+        addManualShoppingItem(userId, ingredient.name, {
+          recipeId,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit,
+          priority: 'medium'
+        })
+      )
+
+      await Promise.all(addPromises)
+      await fetchItems()
+
+      return { success: true, itemsAdded: mergedIngredients.length }
+    } catch (error) {
+      logger.error('Error adding recipe to shopping list:', error as Error)
+      throw error
+    }
+  }, [userId, fetchItems])
+
+  /**
    * Get shopping list summary
    */
   const getSummary = useCallback((): ShoppingListSummary => {
@@ -168,6 +205,7 @@ export function useShopping() {
     loading,
     error,
     addItem,
+    addFromRecipe,
     consumeItem,
     purchaseItem,
     updateItem,
