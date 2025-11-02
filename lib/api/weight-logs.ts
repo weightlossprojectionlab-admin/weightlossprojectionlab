@@ -35,8 +35,8 @@ const CreateWeightLogResponseSchema = z.object({
 /**
  * Fetch weight logs for the authenticated user
  */
-export async function getWeightLogs(query: GetWeightLogsQuery = {}): Promise<WeightLog[]> {
-  // Validate query parameters
+export async function getWeightLogs(query: Partial<GetWeightLogsQuery> = {}): Promise<WeightLog[]> {
+  // Validate query parameters with defaults
   const validatedQuery = GetWeightLogsQuerySchema.parse(query)
 
   // Build query string
@@ -79,10 +79,11 @@ export async function getLatestWeightLog(): Promise<WeightLog | null> {
 /**
  * Get weight logs for a specific date range
  */
-export async function getWeightLogsByDateRange(startDate: Date, endDate: Date): Promise<WeightLog[]> {
+export async function getWeightLogsByDateRange(startDate: Date, endDate: Date, limit?: number): Promise<WeightLog[]> {
   return getWeightLogs({
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
+    ...(limit && { limit }),
   })
 }
 
