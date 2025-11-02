@@ -1,16 +1,30 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { ProgressPageSkeleton } from '@/components/ui/skeleton'
-import { WeightTrendChart } from '@/components/charts/WeightTrendChart'
-import { CalorieIntakeChart } from '@/components/charts/CalorieIntakeChart'
-import { MacroDistributionChart } from '@/components/charts/MacroDistributionChart'
 import { ShareButton } from '@/components/social/ShareButton'
 import { ShareModal } from '@/components/social/ShareModal'
+
+// Dynamic imports for charts to reduce initial bundle size
+const WeightTrendChart = dynamic(() => import('@/components/charts/WeightTrendChart').then(mod => ({ default: mod.WeightTrendChart })), {
+  loading: () => <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
+
+const CalorieIntakeChart = dynamic(() => import('@/components/charts/CalorieIntakeChart').then(mod => ({ default: mod.CalorieIntakeChart })), {
+  loading: () => <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
+
+const MacroDistributionChart = dynamic(() => import('@/components/charts/MacroDistributionChart').then(mod => ({ default: mod.MacroDistributionChart })), {
+  loading: () => <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
 import {
   getWeightTrendLastNDays,
   getCalorieIntakeLastNDays,

@@ -16,9 +16,10 @@ const nextConfig: NextConfig = {
       exclude: ['error', 'warn'],
     } : false,
   },
-  // Optimize CSS for better LCP
+  // Optimize CSS and packages for better LCP
   experimental: {
     optimizeCss: true,
+    optimizePackageImports: ['recharts', 'react-hot-toast', '@heroicons/react'],
   },
   eslint: {
     // Allow builds to complete even with ESLint errors (warnings will still show)
