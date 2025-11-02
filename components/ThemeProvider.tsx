@@ -85,34 +85,37 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
   }, [])
 
-  // Load theme from Firestore for authenticated users, or localStorage for unauthenticated
+  // Load theme from localStorage first (instant), then sync with Firestore in background
+  // This prevents blocking on Firestore/auth initialization and avoids Listen channel errors
   useEffect(() => {
     const loadTheme = async () => {
+      // ALWAYS try localStorage first for instant theme application
       try {
-        if (userId) {
-          // Load from Firestore
-          const profile = await userProfileOperations.getUserProfile()
-          const savedTheme = profile.data?.preferences?.themePreference
-          if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
-            setThemeState(savedTheme)
-          }
-        } else {
-          // Load from localStorage
-          const savedTheme = localStorage.getItem(STORAGE_KEY) as Theme | null
-          if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
-            setThemeState(savedTheme)
-          }
+        const savedTheme = localStorage.getItem(STORAGE_KEY) as Theme | null
+        if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+          setThemeState(savedTheme)
         }
-      } catch (error) {
-        logger.error('Failed to load theme:', error as Error)
-        // Fallback to localStorage
+      } catch (err) {
+        logger.error('Failed to load from localStorage:', err as Error)
+      }
+
+      // If authenticated, sync with Firestore in background (non-blocking)
+      if (userId) {
         try {
-          const savedTheme = localStorage.getItem(STORAGE_KEY) as Theme | null
-          if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
-            setThemeState(savedTheme)
+          const profile = await userProfileOperations.getUserProfile()
+          const firestoreTheme = profile.data?.preferences?.themePreference
+
+          if (firestoreTheme && ['light', 'dark', 'system'].includes(firestoreTheme)) {
+            // Only update if different from localStorage (avoid unnecessary re-renders)
+            const currentLocalTheme = localStorage.getItem(STORAGE_KEY)
+            if (firestoreTheme !== currentLocalTheme) {
+              setThemeState(firestoreTheme)
+              localStorage.setItem(STORAGE_KEY, firestoreTheme)
+            }
           }
-        } catch (err) {
-          logger.error('Failed to load from localStorage:', err as Error)
+        } catch (error) {
+          // Firestore errors are non-critical - we already have theme from localStorage
+          logger.error('Failed to sync theme from Firestore (non-critical):', error as Error)
         }
       }
     }

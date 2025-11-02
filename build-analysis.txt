@@ -1,0 +1,100 @@
+
+> weightlossprojectlab@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.6
+   - Environments: .env.local, .env
+   - Experiments (use with caution):
+     ✓ optimizeCss
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 24.8s
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+ ⚠ Using edge runtime on a page currently disables static generation for that page
+   Generating static pages (0/83) ...
+   Generating static pages (20/83) 
+   Generating static pages (41/83) 
+   Generating static pages (62/83) 
+ ✓ Generating static pages (83/83)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                      387 B         106 kB
+├ ○ /_not-found                             1 kB         103 kB
+├ ○ /admin                               5.01 kB         240 kB
+├ ○ /admin/ai-decisions                  5.75 kB         237 kB
+├ ○ /admin/analytics                      5.4 kB         237 kB
+├ ○ /admin/coaching                      4.26 kB         236 kB
+├ ○ /admin/perks                         6.06 kB         237 kB
+├ ○ /admin/recipes                       5.82 kB         248 kB
+├ ○ /admin/settings                      5.16 kB         237 kB
+├ ○ /admin/trust-safety                     8 kB         239 kB
+├ ○ /admin/users                         5.75 kB         237 kB
+├ ƒ /api/admin/ai-decisions                231 B         103 kB
+├ ƒ /api/admin/ai-decisions/stats          231 B         103 kB
+├ ƒ /api/admin/analytics                   231 B         103 kB
+├ ƒ /api/admin/grant-role                  231 B         103 kB
+├ ƒ /api/admin/perks                       231 B         103 kB
+├ ƒ /api/admin/recipes/[id]/media          231 B         103 kB
+├ ƒ /api/admin/recipes/[id]/moderate       231 B         103 kB
+├ ƒ /api/admin/settings/admin-users        231 B         103 kB
+├ ƒ /api/admin/settings/audit-logs         231 B         103 kB
+├ ƒ /api/admin/users                       231 B         103 kB
+├ ƒ /api/admin/users/export                231 B         103 kB
+├ ƒ /api/ai/analyze-meal                   231 B         103 kB
+├ ƒ /api/ai/analyze-weight                 231 B         103 kB
+├ ƒ /api/ai/chat                           231 B         103 kB
+├ ƒ /api/ai/orchestrate                    231 B         103 kB
+├ ƒ /api/fetch-url                         231 B         103 kB
+├ ƒ /api/inactive/campaigns                231 B         103 kB
+├ ƒ /api/inactive/detect                   231 B         103 kB
+├ ƒ /api/meal-logs                         231 B         103 kB
+├ ƒ /api/meal-logs/[id]                    231 B         103 kB
+├ ƒ /api/meal-templates                    231 B         103 kB
+├ ƒ /api/meal-templates/[id]               231 B         103 kB
+├ ƒ /api/projection                        231 B         103 kB
+├ ƒ /api/readiness/analyze                 231 B         103 kB
+├ ƒ /api/recipes/generate-steps            231 B         103 kB
+├ ƒ /api/recipes/import                    231 B         103 kB
+├ ƒ /api/step-logs                         231 B         103 kB
+├ ƒ /api/user-profile                      231 B         103 kB
+├ ƒ /api/user-profile/biometric            231 B         103 kB
+├ ƒ /api/user-profile/reset                231 B         103 kB
+├ ƒ /api/weight-logs                       231 B         103 kB
+├ ○ /auth                                6.77 kB         249 kB
+├ ○ /coaching                            5.83 kB         242 kB
+├ ƒ /cooking/[sessionId]                 4.92 kB         267 kB
+├ ○ /dashboard                           23.4 kB         308 kB
+├ ○ /discover                            8.08 kB         248 kB
+├ ○ /gallery                             5.72 kB         260 kB
+├ ○ /groups                              4.91 kB         236 kB
+├ ○ /inventory                           4.76 kB         263 kB
+├ ○ /log-meal                            37.4 kB         312 kB
+├ ○ /log-steps                           3.41 kB         264 kB
+├ ○ /meal-gallery                           4 kB         256 kB
+├ ○ /missions                            4.99 kB         257 kB
+├ ○ /onboarding                          15.7 kB         269 kB
+├ ○ /perks                               2.73 kB         234 kB
+├ ○ /profile                             12.1 kB         273 kB
+├ ○ /progress                            5.51 kB         267 kB
+├ ○ /recipes                             12.6 kB         263 kB
+├ ● /recipes/[id]                          387 B         106 kB
+├   ├ /recipes/bf001
+├   ├ /recipes/bf002
+├   ├ /recipes/bf003
+├   └ [+24 more paths]
+└ ○ /shopping                             5.1 kB         263 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/1255-f4edd6fa084107ef.js      45.9 kB
+  ├ chunks/4bd1b696-100b9d70ed4e49c1.js  54.2 kB
+  └ other shared chunks (total)           2.3 kB
+
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
