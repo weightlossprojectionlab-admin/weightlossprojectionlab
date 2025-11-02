@@ -1,0 +1,15 @@
+
+> weightlossprojectlab@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.6
+   - Environments: .env.local, .env
+   - Experiments (use with caution):
+     ✓ optimizeCss
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 4.9min
+   Skipping linting
+   Checking validity of types ...
+Next.js build worker exited with code: 3221225794 and signal: null

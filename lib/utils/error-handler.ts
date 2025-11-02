@@ -44,12 +44,16 @@ export class ErrorHandler {
     })
 
     // 2. Structured logger
-    logger.error(context.operation, undefined, {
+    const logContext = {
       ...serialized,
       ...context.metadata,
       userId: context.userId,
       component: context.component
-    })
+    }
+
+    // Pass actual Error object if available, otherwise just use context
+    const actualError = error instanceof Error ? error : undefined
+    logger.error(context.operation, actualError, logContext)
   }
 
   /**

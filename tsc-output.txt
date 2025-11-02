@@ -1,0 +1,1 @@
+lib/utils/error-handler.ts(50,7): error TS2353: Object literal may only specify known properties, and 'userId' does not exist in type 'Error'.

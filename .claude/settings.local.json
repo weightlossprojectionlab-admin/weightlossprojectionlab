@@ -44,7 +44,9 @@
       "Bash(gh pr create:*)",
       "Bash(git rm:*)",
       "Bash(set CI=true)",
-      "Bash(npx cross-env:*)"
+      "Bash(npx cross-env:*)",
+      "Bash(tee:*)",
+      "WebFetch(domain:690701e2bd649600081b10d5--wlpl.netlify.app)"
     ],
     "deny": [],
     "ask": []
