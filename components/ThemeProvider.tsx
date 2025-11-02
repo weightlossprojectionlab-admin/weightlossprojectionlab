@@ -39,7 +39,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   // Start with 'system' as default, will be updated on mount
   const [theme, setThemeState] = useState<Theme>('system')
   const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>('light')
-  const [mounted, setMounted] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
 
   // Calculate the actual theme to render
@@ -115,8 +114,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         } catch (err) {
           logger.error('Failed to load from localStorage:', err as Error)
         }
-      } finally {
-        setMounted(true)
       }
     }
 
@@ -125,8 +122,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   // Apply theme to document
   useEffect(() => {
-    if (!mounted) return
-
     const root = document.documentElement
 
     // Remove both classes first
@@ -143,7 +138,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         resolvedTheme === 'dark' ? '#111827' : '#ffffff'
       )
     }
-  }, [resolvedTheme, mounted])
+  }, [resolvedTheme])
 
   // Update theme and save to Firestore (if authenticated) or localStorage
   const setTheme = async (newTheme: Theme) => {
@@ -172,10 +167,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     resolvedTheme,
   }
 
-  // Prevent flash of unstyled content by not rendering until theme is loaded
-  if (!mounted) {
-    return null
-  }
-
+  // No need to block rendering - the inline script in layout.tsx already prevents FOUC
+  // by setting the theme class before React hydrates
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
