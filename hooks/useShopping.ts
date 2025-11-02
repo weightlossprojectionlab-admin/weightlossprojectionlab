@@ -21,20 +21,29 @@ import {
   getStoreVisits,
   addManualShoppingItem
 } from '@/lib/shopping-operations'
+import {
+  getAllStores,
+  saveStore,
+  updateStoreVisit,
+  recordPrice,
+  getAveragePrice
+} from '@/lib/store-operations'
 import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
 import { mergeIngredients } from '@/lib/shopping-diff'
 import type { RecipeIngredient } from '@/lib/shopping-diff'
+import type { Store, ProductCategory } from '@/types/shopping'
 
 export function useShopping() {
   const [items, setItems] = useState<ShoppingItem[]>([])
   const [neededItems, setNeededItems] = useState<ShoppingItem[]>([])
+  const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const userId = auth.currentUser?.uid
 
   /**
-   * Fetch all shopping items
+   * Fetch all shopping items and stores
    */
   const fetchItems = useCallback(async () => {
     if (!userId) {
@@ -46,13 +55,15 @@ export function useShopping() {
       setLoading(true)
       setError(null)
 
-      const [allItems, needed] = await Promise.all([
+      const [allItems, needed, userStores] = await Promise.all([
         getAllShoppingItems(userId),
-        getNeededItems(userId)
+        getNeededItems(userId),
+        getAllStores(userId, 5) // Get 5 most recent stores
       ])
 
       setItems(allItems)
       setNeededItems(needed)
+      setStores(userStores)
     } catch (err: any) {
       logger.error('Error fetching shopping items:', err)
       setError(err.message || 'Failed to load shopping items')
@@ -194,6 +205,74 @@ export function useShopping() {
     }
   }, [items, neededItems])
 
+  /**
+   * Smart sort shopping items by store aisle order
+   */
+  const smartSort = useCallback((
+    itemsToSort: ShoppingItem[],
+    storeId?: string
+  ): ShoppingItem[] => {
+    const store = stores.find(s => s.id === storeId)
+
+    if (!store || !store.aisleOrder) {
+      // Default sort: priority desc, then category
+      return [...itemsToSort].sort((a, b) => {
+        const priorityOrder = { high: 3, medium: 2, low: 1 }
+        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority]
+        if (priorityDiff !== 0) return priorityDiff
+        return a.category.localeCompare(b.category)
+      })
+    }
+
+    // Sort by store's aisle order
+    return [...itemsToSort].sort((a, b) => {
+      const aIndex = store.aisleOrder!.indexOf(a.category)
+      const bIndex = store.aisleOrder!.indexOf(b.category)
+
+      // Handle categories not in aisle order (put at end)
+      if (aIndex === -1 && bIndex === -1) return 0
+      if (aIndex === -1) return 1
+      if (bIndex === -1) return -1
+
+      return aIndex - bIndex
+    })
+  }, [stores])
+
+  /**
+   * Add or update a store
+   */
+  const addStore = useCallback(async (
+    storeName: string,
+    options?: {
+      latitude?: number
+      longitude?: number
+      placeId?: string
+    }
+  ) => {
+    if (!userId) throw new Error('User not authenticated')
+
+    const newStore = await saveStore(userId, {
+      name: storeName,
+      latitude: options?.latitude,
+      longitude: options?.longitude,
+      placeId: options?.placeId,
+      lastVisitedAt: new Date()
+    })
+
+    await fetchItems() // Refresh to get updated stores list
+    return newStore
+  }, [userId, fetchItems])
+
+  /**
+   * Update store visit timestamp
+   */
+  const visitStore = useCallback(async (storeId: string) => {
+    if (!userId) throw new Error('User not authenticated')
+
+    await updateStoreVisit(userId, storeId)
+    await fetchItems()
+  }, [userId, fetchItems])
+
   // Load items on mount
   useEffect(() => {
     fetchItems()
@@ -202,6 +281,7 @@ export function useShopping() {
   return {
     items,
     neededItems,
+    stores,
     loading,
     error,
     addItem,
@@ -212,6 +292,9 @@ export function useShopping() {
     removeItem,
     toggleNeeded,
     getSummary,
+    smartSort,
+    addStore,
+    visitStore,
     refresh: fetchItems
   }
 }
