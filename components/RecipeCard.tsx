@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { PublicRecipe } from '@/lib/types/public-recipes'
 import { shareRecipe, canUseWebShare } from '@/lib/recipe-share-utils'
 import { generateRecipeAltText } from '@/lib/utils'
+import { logger } from '@/lib/logger'
 
 interface RecipeCardProps {
   recipe: PublicRecipe
@@ -40,7 +41,9 @@ export function RecipeCard({ recipe, onSave, onView, isSaved = false, priority =
 
     setSharing(true)
     try {
-      const { imageBlob, caption, shareUrl } = await shareRecipe(recipe)
+      // Type assertion needed because PublicRecipe.createdAt (Timestamp | Date)
+      // is incompatible with MealSuggestion.createdAt (string | Date | undefined)
+      const { imageBlob, caption, shareUrl } = await shareRecipe(recipe as any)
 
       if (canUseWebShare()) {
         const file = new File([imageBlob], `${recipe.slug}.png`, { type: 'image/png' })
@@ -56,7 +59,7 @@ export function RecipeCard({ recipe, onSave, onView, isSaved = false, priority =
         alert('Link copied to clipboard!')
       }
     } catch (error) {
-      console.error('Share failed:', error)
+      logger.error('Share failed:', error as Error)
     } finally {
       setSharing(false)
     }
