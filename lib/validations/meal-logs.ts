@@ -125,7 +125,7 @@ export type MealLog = z.infer<typeof MealLogSchema>
 // ============================================
 
 export const GetMealLogsQuerySchema = z.object({
-  limit: z.coerce.number().min(1).max(100).default(50),
+  limit: z.coerce.number().min(1).max(100).optional().default(50),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional(),
