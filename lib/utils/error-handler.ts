@@ -44,7 +44,7 @@ export class ErrorHandler {
     })
 
     // 2. Structured logger
-    logger.error(context.operation, {
+    logger.error(context.operation, undefined, {
       ...serialized,
       ...context.metadata,
       userId: context.userId,
