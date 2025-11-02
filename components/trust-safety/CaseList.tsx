@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { FunnelIcon } from '@heroicons/react/24/outline';
 import CaseCard from './CaseCard';
 import type { DisputeCase } from '@/types/trust-safety';
+import { toDate } from '@/types/common';
 
 interface CaseListProps {
   cases: DisputeCase[];
@@ -30,10 +31,10 @@ export default function CaseList({ cases, onViewCase }: CaseListProps) {
       case 'risk':
         return b.riskScore - a.riskScore;
       case 'date':
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime();
       case 'sla':
         if (!a.slaDeadline || !b.slaDeadline) return 0;
-        return new Date(a.slaDeadline).getTime() - new Date(b.slaDeadline).getTime();
+        return toDate(a.slaDeadline).getTime() - toDate(b.slaDeadline).getTime();
       default:
         return 0;
     }
@@ -48,7 +49,7 @@ export default function CaseList({ cases, onViewCase }: CaseListProps) {
   // Calculate overdue cases
   const overdueCount = cases.filter(c => {
     if (!c.slaDeadline || c.status === 'resolved') return false;
-    return new Date(c.slaDeadline) < new Date();
+    return toDate(c.slaDeadline) < new Date();
   }).length;
 
   if (cases.length === 0) {

@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MealSuggestion, getRecipeActionLabel } from '@/lib/meal-suggestions'
+import { logger } from '@/lib/logger'
 import {
   shareRecipe,
   copyToClipboard,
@@ -17,6 +18,15 @@ import { scaleRecipe, calculateAdjustedPrepTime, type ScaledRecipe } from '@/lib
 import { getSubstitutionSuggestions, type Substitution } from '@/lib/ingredient-substitutions'
 import { recipeQueueOperations, cookingSessionOperations } from '@/lib/firebase-operations'
 import { createStepTimers } from '@/lib/recipe-timer-parser'
+import { useInventory } from '@/hooks/useInventory'
+import {
+  checkIngredientsAgainstInventory,
+  checkIngredientsWithQuantities,
+  calculateRecipeReadiness,
+  type IngredientMatchResult
+} from '@/lib/ingredient-matcher'
+import { addManualShoppingItem } from '@/lib/shopping-operations'
+import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
 
 /**
@@ -64,12 +74,50 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   const [expandedIngredient, setExpandedIngredient] = useState<number | null>(null)
   const [swappedIngredients, setSwappedIngredients] = useState<Map<number, Substitution>>(new Map())
   const [haveIngredients, setHaveIngredients] = useState<Set<number>>(new Set())
+  const [inventoryMatches, setInventoryMatches] = useState<Map<number, any>>(new Map())
+  const [ingredientResults, setIngredientResults] = useState<IngredientMatchResult[]>([])
   const [showCookingOptions, setShowCookingOptions] = useState(false)
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(suggestion.mealType)
   const [startingSession, setStartingSession] = useState(false)
+  const [addingToShoppingList, setAddingToShoppingList] = useState(false)
 
   // Prevent duplicate session creation
   const sessionCreationRef = useRef(false)
+
+  // Get inventory items
+  const { fridgeItems, freezerItems, pantryItems, counterItems } = useInventory()
+  const allInventoryItems = useMemo(() =>
+    [...fridgeItems, ...freezerItems, ...pantryItems, ...counterItems],
+    [fridgeItems, freezerItems, pantryItems, counterItems]
+  )
+
+  // Check ingredients against inventory when modal opens
+  useEffect(() => {
+    if (isOpen && suggestion.ingredients && allInventoryItems.length > 0) {
+      // Legacy simple matching (for backward compatibility)
+      const matches = checkIngredientsAgainstInventory(
+        suggestion.ingredients,
+        allInventoryItems
+      )
+      setInventoryMatches(matches)
+
+      // New quantity-aware matching
+      const quantityResults = checkIngredientsWithQuantities(
+        suggestion.ingredients,
+        allInventoryItems
+      )
+      setIngredientResults(quantityResults)
+
+      // Auto-check ingredients we have enough of
+      const enoughIndices = new Set<number>()
+      quantityResults.forEach((result, idx) => {
+        if (result.hasEnough === true) {
+          enoughIndices.add(idx)
+        }
+      })
+      setHaveIngredients(enoughIndices)
+    }
+  }, [isOpen, suggestion.ingredients, allInventoryItems])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -194,7 +242,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
       // Show platform menu
       setShowShareMenu(true)
     } catch (error) {
-      console.error('Share failed:', error)
+      logger.error('Share failed:', error as Error)
       setShareStatus('Share failed')
       setTimeout(() => setShareStatus(''), 2000)
     }
@@ -211,7 +259,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
       setShowShareMenu(false)
     } catch (error) {
-      console.error('Platform share failed:', error)
+      logger.error('Platform share failed:', error as Error)
     }
   }
 
@@ -252,7 +300,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
       await router.push(`/cooking/${session.id}`)
       onClose()
     } catch (error) {
-      console.error('Error starting cooking session:', error)
+      logger.error('Error starting cooking session:', error as Error)
       toast.error('Failed to start cooking session')
       // Reset on error so user can retry
       sessionCreationRef.current = false
@@ -273,8 +321,52 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
       setShowCookingOptions(false)
       onClose()
     } catch (error) {
-      console.error('Error adding to queue:', error)
+      logger.error('Error adding to queue:', error as Error)
       toast.error('Failed to add recipe to queue')
+    }
+  }
+
+  const handleAddMissingToShoppingList = async () => {
+    if (!auth.currentUser?.uid) {
+      toast.error('You must be logged in to add items')
+      return
+    }
+
+    setAddingToShoppingList(true)
+
+    try {
+      // Get ingredients that are missing or insufficient (based on quantity-aware matching)
+      const itemsToAdd = scaledRecipe.scaledIngredients
+        .map((ingredient, idx) => ({ ingredient, idx, result: ingredientResults[idx] }))
+        .filter(({ result }) => {
+          // Add if not matched at all, or matched but don't have enough
+          return !result?.matched || result.hasEnough === false
+        })
+
+      if (itemsToAdd.length === 0) {
+        toast('You already have all ingredients!', { icon: '✅' })
+        setAddingToShoppingList(false)
+        return
+      }
+
+      // Add each missing/insufficient ingredient to shopping list
+      const addPromises = itemsToAdd.map(({ ingredient }) =>
+        addManualShoppingItem(auth.currentUser!.uid, ingredient, {
+          recipeId: suggestion.id,
+          quantity: 1,
+          priority: 'medium'
+        })
+      )
+
+      await Promise.all(addPromises)
+
+      toast.success(`Added ${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} to shopping list!`)
+      setActiveTab('recipe') // Switch back to recipe tab
+    } catch (error) {
+      logger.error('Error adding to shopping list:', error as Error)
+      toast.error('Failed to add items to shopping list')
+    } finally {
+      setAddingToShoppingList(false)
     }
   }
 
@@ -460,6 +552,39 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     </button>
                   </div>
                 </div>
+                {/* Recipe Readiness Indicator */}
+                {ingredientResults.length > 0 && (() => {
+                  const readiness = calculateRecipeReadiness(suggestion.ingredients || [], allInventoryItems)
+                  return (
+                    <div className={`mb-3 p-3 rounded-lg border-2 ${
+                      readiness.canMake
+                        ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-700'
+                        : 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 dark:border-orange-700'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className={`text-sm font-semibold ${
+                            readiness.canMake
+                              ? 'text-green-900 dark:text-green-200'
+                              : 'text-orange-900 dark:text-orange-200'
+                          }`}>
+                            {readiness.canMake ? '✓ Ready to cook!' : '⚠️ Missing ingredients'}
+                          </p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                            {readiness.haveEnough} of {readiness.totalIngredients} ingredients
+                            {readiness.insufficient > 0 && ` • ${readiness.insufficient} insufficient`}
+                            {readiness.missing > 0 && ` • ${readiness.missing} missing`}
+                          </p>
+                        </div>
+                        {!readiness.canMake && (
+                          <span className="text-xs px-2 py-1 bg-orange-200 dark:bg-orange-800 text-orange-900 dark:text-orange-200 rounded font-medium">
+                            Shop needed
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
                 {swappedIngredients.size > 0 && (
                   <div className="mb-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2">
                     <p className="text-xs text-blue-900 dark:text-blue-300">
@@ -521,6 +646,35 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                                 )}
                                 {isSwapped && swappedSub.notes && (
                                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{swappedSub.notes}</p>
+                                )}
+                                {/* Show quantity-aware inventory status */}
+                                {ingredientResults[idx] && (
+                                  <div className="mt-1">
+                                    {ingredientResults[idx].hasEnough === true && (
+                                      <p className="text-xs text-green-700 dark:text-green-400 flex items-center gap-1">
+                                        <span>✓</span>
+                                        <span>{ingredientResults[idx].comparison}</span>
+                                      </p>
+                                    )}
+                                    {ingredientResults[idx].hasEnough === false && ingredientResults[idx].matched && (
+                                      <p className="text-xs text-orange-700 dark:text-orange-400 flex items-center gap-1">
+                                        <span>⚠️</span>
+                                        <span>{ingredientResults[idx].comparison}</span>
+                                      </p>
+                                    )}
+                                    {!ingredientResults[idx].matched && (
+                                      <p className="text-xs text-red-700 dark:text-red-400 flex items-center gap-1">
+                                        <span>❌</span>
+                                        <span>{ingredientResults[idx].comparison}</span>
+                                      </p>
+                                    )}
+                                    {ingredientResults[idx].hasEnough === null && ingredientResults[idx].matched && (
+                                      <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                        <span>ℹ️</span>
+                                        <span>{ingredientResults[idx].comparison}</span>
+                                      </p>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -646,10 +800,10 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
           ) : (
             <div className="space-y-4">
               {(() => {
-                // Filter ingredients to only show what they need (not checked)
+                // Filter ingredients to only show what they need (missing or insufficient)
                 const neededIngredients = scaledRecipe.scaledIngredients
-                  .map((ingredient, idx) => ({ ingredient, idx }))
-                  .filter(({ idx }) => !haveIngredients.has(idx))
+                  .map((ingredient, idx) => ({ ingredient, idx, result: ingredientResults[idx] }))
+                  .filter(({ result }) => !result?.matched || result.hasEnough === false)
 
                 const totalCount = scaledRecipe.scaledIngredients.length
                 const neededCount = neededIngredients.length
@@ -666,6 +820,25 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                       <p className="text-sm text-gray-600 dark:text-gray-400">For {servingSize} serving{servingSize > 1 ? 's' : ''}</p>
                     </div>
 
+                    {/* Add to Shopping List Button */}
+                    {neededCount > 0 && (
+                      <button
+                        onClick={handleAddMissingToShoppingList}
+                        disabled={addingToShoppingList}
+                        className="w-full mb-4 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span>
+                          {addingToShoppingList
+                            ? 'Adding...'
+                            : `Add ${neededCount} Missing Item${neededCount > 1 ? 's' : ''} to Shopping List`
+                          }
+                        </span>
+                      </button>
+                    )}
+
                     {/* Shopping List - Only items they need */}
                     {neededCount === 0 ? (
                       <div className="bg-success-light border border-success rounded-lg p-6 text-center">
@@ -675,7 +848,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {neededIngredients.map(({ ingredient, idx }) => {
+                        {neededIngredients.map(({ ingredient, idx, result }) => {
                           const swappedSub = swappedIngredients.get(idx)
                           const isSwapped = !!swappedSub
 
@@ -689,23 +862,38 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                           }
 
                           return (
-                            <label key={idx} className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer ${isSwapped ? 'bg-purple-100 dark:bg-purple-900/20' : 'bg-gray-100 dark:bg-gray-800'}`}>
-                              <input
-                                type="checkbox"
-                                className="w-4 h-4 text-primary border-gray-200 dark:border-gray-700 rounded focus:ring-primary"
-                              />
-                              <span className="text-sm text-gray-900 dark:text-gray-100 flex-1">
-                                {displayIngredient}
-                                {isSwapped && swappedSub.ratio && (
-                                  <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">({swappedSub.ratio})</span>
+                            <div key={idx} className={`p-3 rounded-lg ${isSwapped ? 'bg-purple-100 dark:bg-purple-900/20' : 'bg-gray-100 dark:bg-gray-800'}`}>
+                              <div className="flex items-start space-x-3">
+                                <input
+                                  type="checkbox"
+                                  className="w-4 h-4 mt-0.5 text-primary border-gray-200 dark:border-gray-700 rounded focus:ring-primary"
+                                />
+                                <div className="flex-1">
+                                  <span className="text-sm text-gray-900 dark:text-gray-100 block">
+                                    {displayIngredient}
+                                    {isSwapped && swappedSub.ratio && (
+                                      <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">({swappedSub.ratio})</span>
+                                    )}
+                                  </span>
+                                  {/* Show quantity status */}
+                                  {result && result.hasEnough === false && result.deficit && (
+                                    <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
+                                      ⚠️ Need {result.deficit.quantity} {result.deficit.unit} more
+                                    </p>
+                                  )}
+                                  {result && !result.matched && (
+                                    <p className="text-xs text-red-700 dark:text-red-400 mt-1">
+                                      ❌ Not in stock
+                                    </p>
+                                  )}
+                                </div>
+                                {isSwapped && (
+                                  <span className="text-[10px] bg-success text-white px-1.5 py-0.5 rounded">
+                                    Swapped
+                                  </span>
                                 )}
-                              </span>
-                              {isSwapped && (
-                                <span className="text-[10px] bg-success text-white px-1.5 py-0.5 rounded">
-                                  Swapped
-                                </span>
-                              )}
-                            </label>
+                              </div>
+                            </div>
                           )
                         })}
                       </div>

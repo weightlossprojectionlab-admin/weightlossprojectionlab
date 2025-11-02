@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
+import { logger } from '@/lib/logger'
 import {
   MagnifyingGlassIcon,
   UserCircleIcon,
@@ -58,7 +59,7 @@ export default function AdminUsersPage() {
         setError('No users found')
       }
     } catch (err) {
-      console.error('Search error:', err)
+      logger.error('Search error:', err as Error)
       setError(err instanceof Error ? err.message : 'Failed to search users')
     } finally {
       setLoading(false)

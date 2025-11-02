@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { determineUserDestination } from '@/lib/auth-router'
+import { logger } from '@/lib/logger'
 
 interface OnboardingRouterProps {
   children: React.ReactNode
@@ -26,40 +27,40 @@ export default function OnboardingRouter({ children }: OnboardingRouterProps) {
   useEffect(() => {
     const checkAccess = async () => {
       if (authLoading) {
-        console.log('⏳ OnboardingRouter: Waiting for auth to load...')
+        logger.debug('⏳ OnboardingRouter: Waiting for auth to load...')
         return
       }
 
-      console.log('🔀 OnboardingRouter: Checking if user should be on /onboarding')
+      logger.debug('🔀 OnboardingRouter: Checking if user should be on /onboarding')
 
       try {
         const destination = await determineUserDestination(user, pathname)
 
-        console.log('📍 OnboardingRouter destination:', destination)
+        logger.debug('📍 OnboardingRouter destination:', destination)
 
         switch (destination.type) {
           case 'auth':
-            console.log('➡️ Redirecting to /auth:', destination.reason)
+            logger.debug('➡️ Redirecting to /auth:', { reason: destination.reason })
             router.push('/auth')
             break
 
           case 'dashboard':
-            console.log('➡️ Redirecting to /dashboard:', destination.reason)
+            logger.debug('➡️ Redirecting to /dashboard:', { reason: destination.reason })
             router.push('/dashboard')
             break
 
           case 'stay':
-            console.log('✅ User can stay on /onboarding:', destination.reason)
+            logger.debug('✅ User can stay on /onboarding:', { reason: destination.reason })
             setChecking(false)
             break
 
           default:
-            console.log('✅ Allowing access to /onboarding')
+            logger.debug('✅ Allowing access to /onboarding')
             setChecking(false)
             break
         }
       } catch (error) {
-        console.error('❌ OnboardingRouter error:', error)
+        logger.error('❌ OnboardingRouter error:', error as Error)
         // On error, allow access (fail open for onboarding)
         setChecking(false)
       }

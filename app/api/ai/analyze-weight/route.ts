@@ -6,12 +6,70 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { logger } from '@/lib/logger'
+import { adminAuth } from '@/lib/firebase-admin'
+import { aiRateLimit, dailyRateLimit, getRateLimitHeaders } from '@/lib/utils/rate-limit'
+import { ErrorHandler } from '@/lib/utils/error-handler'
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify authentication
+    const authHeader = request.headers.get('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Missing authentication token' },
+        { status: 401 }
+      )
+    }
+
+    const token = authHeader.split('Bearer ')[1]
+
+    // Verify the Firebase ID token
+    let userId: string
+    try {
+      const decodedToken = await adminAuth.verifyIdToken(token)
+      userId = decodedToken.uid
+      logger.debug('Authenticated user for weight verification', { uid: userId })
+    } catch (authError) {
+      ErrorHandler.handle(authError, {
+        operation: 'ai_analyze_weight_auth',
+        component: 'api/ai/analyze-weight'
+      })
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Invalid authentication token' },
+        { status: 401 }
+      )
+    }
+
+    // Check rate limits (both per-minute and daily)
+    const [minuteLimit, dayLimit] = await Promise.all([
+      aiRateLimit?.limit(userId),
+      dailyRateLimit?.limit(userId)
+    ])
+
+    if (minuteLimit && !minuteLimit.success) {
+      return NextResponse.json(
+        { success: false, error: 'Rate limit: 10 requests per minute. Please try again in a moment.' },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(minuteLimit)
+        }
+      )
+    }
+
+    if (dayLimit && !dayLimit.success) {
+      return NextResponse.json(
+        { success: false, error: 'Daily limit reached (500 requests). Please try again tomorrow.' },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(dayLimit)
+        }
+      )
+    }
+
     const body = await request.json()
     const { imageBase64, expectedUnit } = body
 
@@ -24,8 +82,9 @@ export async function POST(request: NextRequest) {
 
     // Verify API key is configured
     if (!process.env.GEMINI_API_KEY) {
+      logger.warn('GEMINI_API_KEY not configured for weight verification')
       return NextResponse.json(
-        { success: false, error: 'Gemini API key not configured' },
+        { success: false, error: 'AI service not configured' },
         { status: 500 }
       )
     }
@@ -86,9 +145,15 @@ Analyze the image now:`
       const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text
       analysis = JSON.parse(jsonStr.trim())
     } catch (parseError) {
-      console.error('Failed to parse AI response:', text)
+      ErrorHandler.handle(parseError, {
+        operation: 'ai_weight_parse_response',
+        userId,
+        component: 'api/ai/analyze-weight',
+        severity: 'warning',
+        metadata: { rawText: text }
+      })
       return NextResponse.json(
-        { success: false, error: 'Failed to parse scale reading', rawResponse: text },
+        { success: false, error: 'Failed to parse scale reading' },
         { status: 500 }
       )
     }
@@ -152,11 +217,17 @@ Analyze the image now:`
     })
 
   } catch (error) {
-    console.error('Weight verification error:', error)
+    ErrorHandler.handle(error, {
+      operation: 'ai_analyze_weight',
+      component: 'api/ai/analyze-weight',
+      userId: 'unknown'
+    })
+
+    const userMessage = ErrorHandler.getUserMessage(error)
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to verify weight'
+        error: userMessage
       },
       { status: 500 }
     )

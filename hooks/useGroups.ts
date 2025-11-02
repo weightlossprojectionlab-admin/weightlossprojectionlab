@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import type { Group, GroupMission } from '@/schemas/firestore/groups';
+import { logger } from '@/lib/logger'
 
 export interface GroupsData {
   userGroups: Group[];
@@ -74,7 +75,7 @@ async function fetchGroupsData(userId: string): Promise<Omit<GroupsData, 'loadin
       groupMissions,
     };
   } catch (error) {
-    console.error('Error fetching groups data:', error);
+    logger.error('Error fetching groups data:', error as Error);
     throw error;
   }
 }
@@ -117,7 +118,7 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
       ...groupDoc.data(),
     } as Group;
   } catch (error) {
-    console.error('Error fetching group:', error);
+    logger.error('Error fetching group:', error as Error);
     return null;
   }
 }

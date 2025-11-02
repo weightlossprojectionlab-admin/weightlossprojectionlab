@@ -13,13 +13,11 @@ const nextConfig: NextConfig = {
     // Allow builds to complete even with ESLint errors (warnings will still show)
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js'
-        }
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js'
       }
     }
   },

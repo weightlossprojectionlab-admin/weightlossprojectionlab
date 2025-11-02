@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
-
-interface WeightLog {
-  weight: number
-  unit: 'kg' | 'lbs'
-  loggedAt: Timestamp
-  notes?: string
-  source: 'manual' | 'scale' | 'import'
-}
+import { logger } from '@/lib/logger'
+import { ErrorHandler } from '@/lib/utils/error-handler'
+import {
+  CreateWeightLogRequestSchema,
+  GetWeightLogsQuerySchema,
+} from '@/lib/validations/weight-logs'
+import { z } from 'zod'
 
 // GET - Retrieve weight logs for authenticated user
 export async function GET(request: NextRequest) {
@@ -28,26 +27,31 @@ export async function GET(request: NextRequest) {
     const decodedToken = await verifyIdToken(idToken)
     const userId = decodedToken.uid
 
-    // Get query parameters
+    // Get and validate query parameters
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
+    const queryParams = {
+      limit: searchParams.get('limit'),
+      startDate: searchParams.get('startDate'),
+      endDate: searchParams.get('endDate'),
+    }
+
+    // Validate with Zod
+    const validatedQuery = GetWeightLogsQuerySchema.parse(queryParams)
 
     // Build Firestore query
     const weightLogsRef = adminDb.collection('users').doc(userId).collection('weightLogs')
     let queryRef = weightLogsRef.orderBy('loggedAt', 'desc')
 
     // Add date filters if provided
-    if (startDate) {
-      queryRef = queryRef.where('loggedAt', '>=', new Date(startDate))
+    if (validatedQuery.startDate) {
+      queryRef = queryRef.where('loggedAt', '>=', new Date(validatedQuery.startDate))
     }
-    if (endDate) {
-      queryRef = queryRef.where('loggedAt', '<=', new Date(endDate))
+    if (validatedQuery.endDate) {
+      queryRef = queryRef.where('loggedAt', '<=', new Date(validatedQuery.endDate))
     }
 
     // Limit results
-    queryRef = queryRef.limit(limit)
+    queryRef = queryRef.limit(validatedQuery.limit)
 
     // Execute query
     const snapshot = await queryRef.get()
@@ -64,9 +68,15 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching weight logs:', error)
+    ErrorHandler.handle(error, {
+      operation: 'fetch_weight_logs',
+      component: 'api/weight-logs',
+      userId: 'unknown'
+    })
+
+    const userMessage = ErrorHandler.getUserMessage(error)
     return NextResponse.json(
-      { error: 'Failed to fetch weight logs' },
+      { error: userMessage },
       { status: 500 }
     )
   }
@@ -90,42 +100,26 @@ export async function POST(request: NextRequest) {
     const decodedToken = await verifyIdToken(idToken)
     const userId = decodedToken.uid
 
-    // Parse request body
+    // Parse and validate request body
     const body = await request.json()
-    const { weight, unit, notes, loggedAt } = body
 
-    // Validate required fields
-    if (!weight || !unit) {
-      return NextResponse.json(
-        { error: 'Weight and unit are required' },
-        { status: 400 }
-      )
-    }
+    // Validate with Zod
+    const validatedData = CreateWeightLogRequestSchema.parse(body)
 
-    // Validate unit
-    if (!['kg', 'lbs'].includes(unit)) {
-      return NextResponse.json(
-        { error: 'Unit must be either kg or lbs' },
-        { status: 400 }
-      )
-    }
-
-    // Validate weight is a positive number
-    if (typeof weight !== 'number' || weight <= 0) {
-      return NextResponse.json(
-        { error: 'Weight must be a positive number' },
-        { status: 400 }
-      )
-    }
+    const { weight, unit, notes, loggedAt, dataSource, photoUrl, scaleDeviceId } = validatedData
 
     // Create weight log data
-    const weightLogData: WeightLog = {
+    const weightLogData: any = {
       weight,
       unit,
       loggedAt: loggedAt ? Timestamp.fromDate(new Date(loggedAt)) : Timestamp.now(),
-      notes: notes || undefined,
-      source: 'manual'
+      dataSource,
     }
+
+    // Add optional fields
+    if (notes) weightLogData.notes = notes
+    if (photoUrl) weightLogData.photoUrl = photoUrl
+    if (scaleDeviceId) weightLogData.scaleDeviceId = scaleDeviceId
 
     // Add to Firestore
     const weightLogsRef = adminDb.collection('users').doc(userId).collection('weightLogs')
@@ -145,9 +139,15 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Error creating weight log:', error)
+    ErrorHandler.handle(error, {
+      operation: 'create_weight_log',
+      component: 'api/weight-logs',
+      userId: 'unknown'
+    })
+
+    const userMessage = ErrorHandler.getUserMessage(error)
     return NextResponse.json(
-      { error: 'Failed to create weight log' },
+      { error: userMessage },
       { status: 500 }
     )
   }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { share, isWebShareSupported, type ShareOptions } from '@/lib/social-share-utils'
 import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger'
 
 export interface ShareButtonProps {
   shareOptions: ShareOptions
@@ -40,7 +41,7 @@ export function ShareButton({
         onShareModalOpen?.()
       }
     } catch (error) {
-      console.error('Share error:', error)
+      logger.error('Share error:', error as Error)
       toast.error('Failed to share')
     } finally {
       setSharing(false)

@@ -1,6 +1,7 @@
 'use client'
 
 import imageCompression from 'browser-image-compression'
+import { logger } from '@/lib/logger'
 
 /**
  * Compress an image file to reduce size before upload
@@ -26,14 +27,14 @@ export async function compressImage(file: File): Promise<{
   }
 
   try {
-    console.log('📸 Original image size:', (originalSize / 1024 / 1024).toFixed(2), 'MB')
+    logger.debug(`Original image size: ${(originalSize / 1024 / 1024).toFixed(2)} MB`)
 
     // Compress the image
     const compressedFile = await imageCompression(file, options)
     const compressedSize = compressedFile.size
 
-    console.log('✅ Compressed image size:', (compressedSize / 1024 / 1024).toFixed(2), 'MB')
-    console.log('📊 Compression ratio:', ((1 - compressedSize / originalSize) * 100).toFixed(1), '% reduction')
+    logger.debug(`Compressed image size: ${(compressedSize / 1024 / 1024).toFixed(2)} MB`)
+    logger.debug(`Compression ratio: ${((1 - compressedSize / originalSize) * 100).toFixed(1)}% reduction`)
 
     // Convert compressed file to base64 data URL
     const base64DataUrl = await imageCompression.getDataUrlFromFile(compressedFile)
@@ -46,7 +47,7 @@ export async function compressImage(file: File): Promise<{
       compressionRatio: (1 - compressedSize / originalSize) * 100
     }
   } catch (error) {
-    console.error('Error compressing image:', error)
+    logger.error('Error compressing image', error as Error)
     throw new Error('Failed to compress image. Please try again.')
   }
 }

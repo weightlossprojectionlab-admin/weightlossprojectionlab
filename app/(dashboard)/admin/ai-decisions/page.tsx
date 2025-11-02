@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
+import { logger } from '@/lib/logger'
 import {
   CpuChipIcon,
   CheckCircleIcon,
@@ -67,7 +68,7 @@ export default function AIDecisionsPage() {
       const data = await response.json()
       setDecisions(data.decisions || [])
     } catch (err) {
-      console.error('Error loading AI decisions:', err)
+      logger.error('Error loading AI decisions:', err as Error)
     } finally {
       setLoading(false)
     }
@@ -80,7 +81,7 @@ export default function AIDecisionsPage() {
       const data = await response.json()
       setStats(data.stats)
     } catch (err) {
-      console.error('Error loading stats:', err)
+      logger.error('Error loading stats:', err as Error)
     }
   }
 

@@ -6,6 +6,8 @@
  * Provides Web Share API integration for mobile and fallback platform links for desktop
  */
 
+import { logger } from '@/lib/logger'
+
 export interface ShareContent {
   title: string
   text: string
@@ -30,7 +32,7 @@ export function isWebShareSupported(): boolean {
  */
 export async function shareViaWebAPI(content: ShareContent): Promise<boolean> {
   if (!isWebShareSupported()) {
-    console.warn('Web Share API not supported')
+    logger.warn('Web Share API not supported')
     return false
   }
 
@@ -44,7 +46,7 @@ export async function shareViaWebAPI(content: ShareContent): Promise<boolean> {
   } catch (error: any) {
     // User cancelled or error occurred
     if (error.name !== 'AbortError') {
-      console.error('Error sharing:', error)
+      logger.error('Error sharing', error as Error)
     }
     return false
   }
@@ -149,7 +151,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
       textArea.remove()
       return true
     } catch (error) {
-      console.error('Failed to copy:', error)
+      logger.error('Failed to copy', error as Error)
       textArea.remove()
       return false
     }
@@ -159,7 +161,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     await navigator.clipboard.writeText(text)
     return true
   } catch (error) {
-    console.error('Failed to copy:', error)
+    logger.error('Failed to copy', error as Error)
     return false
   }
 }

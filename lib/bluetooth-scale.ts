@@ -13,6 +13,8 @@
  * - Body Composition Measurement: 0x2A9C (optional)
  */
 
+import { logger } from '@/lib/logger'
+
 // Bluetooth GATT UUIDs for Weight Scale Service
 export const WEIGHT_SCALE_SERVICE = '0000181d-0000-1000-8000-00805f9b34fb'
 export const WEIGHT_MEASUREMENT_CHAR = '00002a9d-0000-1000-8000-00805f9b34fb'
@@ -69,15 +71,15 @@ export async function connectToScale(): Promise<BluetoothScaleDevice> {
     }
 
     // Connect to GATT server
-    console.log('Connecting to GATT server...')
+    logger.debug('Connecting to GATT server...')
     const server = await device.gatt.connect()
 
     // Get Weight Scale service
-    console.log('Getting Weight Scale service...')
+    logger.debug('Getting Weight Scale service...')
     const service = await server.getPrimaryService(WEIGHT_SCALE_SERVICE)
 
     // Get Weight Measurement characteristic
-    console.log('Getting Weight Measurement characteristic...')
+    logger.debug('Getting Weight Measurement characteristic...')
     const characteristic = await service.getCharacteristic(WEIGHT_MEASUREMENT_CHAR)
 
     return {
@@ -241,7 +243,7 @@ export async function getPairedScales(): Promise<BluetoothDevice[]> {
        device.name.toLowerCase().includes('weight'))
     )
   } catch (error) {
-    console.error('Failed to get paired devices:', error)
+    logger.error('Failed to get paired devices', error as Error)
     return []
   }
 }

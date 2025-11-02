@@ -20,6 +20,7 @@ import {
   CalorieDataPoint,
   MacroDataPoint
 } from '@/lib/chart-data-aggregator'
+import { logger } from '@/lib/logger'
 
 export default function ProgressPage() {
   return (
@@ -81,7 +82,7 @@ function ProgressContent() {
       setMacroData(macros)
       setSummaryStats(stats)
     } catch (error) {
-      console.error('Error loading chart data:', error)
+      logger.error('Error loading chart data', error as Error)
     } finally {
       setLoading(false)
     }

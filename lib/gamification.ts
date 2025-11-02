@@ -5,6 +5,7 @@
  * Handles progression, rewards, and user achievement tracking.
  */
 
+import { logger } from '@/lib/logger'
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore'
 import { db } from './firebase'
 import type { Badge } from './missions'
@@ -28,7 +29,7 @@ export interface UserGamification {
 export interface XPTransaction {
   userId: string
   amount: number
-  source: 'mission' | 'streak_bonus' | 'daily_login' | 'achievement'
+  source: 'mission' | 'streak_bonus' | 'daily_login' | 'achievement' | 'inventory_scan' | 'item_purchase' | 'prevent_waste'
   sourceId: string
   timestamp: string
 }
@@ -126,7 +127,7 @@ export async function getUserGamification(userId: string): Promise<UserGamificat
     }
     return null
   } catch (error) {
-    console.error('[Gamification] Error fetching user gamification:', error)
+    logger.error('[Gamification] Error fetching user gamification', error as Error)
     return null
   }
 }
@@ -149,10 +150,10 @@ export async function initializeUserGamification(userId: string): Promise<UserGa
 
   try {
     await setDoc(doc(db, 'gamification', userId), newProfile)
-    console.log('[Gamification] Initialized profile for user:', userId)
+    logger.info('[Gamification] Initialized profile for user', { userId })
     return newProfile
   } catch (error) {
-    console.error('[Gamification] Error initializing gamification:', error)
+    logger.error('[Gamification] Error initializing gamification', error as Error, { userId })
     throw error
   }
 }
@@ -202,11 +203,11 @@ export async function awardXP(
 
     await setDoc(doc(collection(db, 'xp_transactions')), transaction)
 
-    console.log(`[Gamification] Awarded ${amount} XP to user ${userId} (${oldLevel} → ${newLevel})`)
+    logger.info('[Gamification] Awarded XP to user', { amount, userId, oldLevel, newLevel, leveledUp })
 
     return { newXP, newLevel, leveledUp }
   } catch (error) {
-    console.error('[Gamification] Error awarding XP:', error)
+    logger.error('[Gamification] Error awarding XP', error as Error, { userId, amount })
     throw error
   }
 }
@@ -220,7 +221,7 @@ export async function awardBadge(userId: string, badge: Badge): Promise<boolean>
 
     // Check if user already has this badge
     if (profile.badges.some(b => b.id === badge.id)) {
-      console.log('[Gamification] User already has badge:', badge.id)
+      logger.debug('[Gamification] User already has badge', { badgeId: badge.id })
       return false
     }
 
@@ -235,10 +236,10 @@ export async function awardBadge(userId: string, badge: Badge): Promise<boolean>
       updatedAt: new Date().toISOString()
     })
 
-    console.log('[Gamification] Awarded badge to user:', badge.name)
+    logger.info('[Gamification] Awarded badge to user', { badgeName: badge.name, userId })
     return true
   } catch (error) {
-    console.error('[Gamification] Error awarding badge:', error)
+    logger.error('[Gamification] Error awarding badge', error as Error, { userId, badgeId: badge.id })
     throw error
   }
 }
@@ -257,9 +258,9 @@ export async function updateStreak(userId: string, newStreak: number): Promise<v
       updatedAt: new Date().toISOString()
     })
 
-    console.log('[Gamification] Updated streak for user:', userId, '→', newStreak)
+    logger.info('[Gamification] Updated streak for user', { userId, newStreak, longestStreak })
   } catch (error) {
-    console.error('[Gamification] Error updating streak:', error)
+    logger.error('[Gamification] Error updating streak', error as Error, { userId })
     throw error
   }
 }
@@ -276,10 +277,73 @@ export async function incrementMissionsCompleted(userId: string): Promise<void> 
       updatedAt: new Date().toISOString()
     })
 
-    console.log('[Gamification] Incremented missions completed for user:', userId)
+    logger.debug('[Gamification] Incremented missions completed for user', { userId })
   } catch (error) {
-    console.error('[Gamification] Error incrementing missions:', error)
+    logger.error('[Gamification] Error incrementing missions', error as Error, { userId })
     throw error
+  }
+}
+
+// ============================================================================
+// SHOPPING & INVENTORY XP REWARDS
+// ============================================================================
+
+/**
+ * Award XP for scanning items into inventory
+ */
+export async function awardInventoryScanXP(userId: string, itemId: string): Promise<number> {
+  const XP_AMOUNT = 5
+  try {
+    await awardXP(userId, XP_AMOUNT, 'inventory_scan', itemId)
+    logger.debug('[Gamification] Awarded XP for inventory scan', { amount: XP_AMOUNT })
+    return XP_AMOUNT
+  } catch (error) {
+    logger.error('[Gamification] Error awarding inventory scan XP', error as Error)
+    return 0
+  }
+}
+
+/**
+ * Award XP for marking items as purchased
+ */
+export async function awardItemPurchaseXP(userId: string, itemId: string): Promise<number> {
+  const XP_AMOUNT = 10
+  try {
+    await awardXP(userId, XP_AMOUNT, 'item_purchase', itemId)
+    logger.debug('[Gamification] Awarded XP for item purchase', { amount: XP_AMOUNT })
+    return XP_AMOUNT
+  } catch (error) {
+    logger.error('[Gamification] Error awarding purchase XP', error as Error)
+    return 0
+  }
+}
+
+/**
+ * Award XP for using items before expiration (waste prevention)
+ */
+export async function awardWastePreventionXP(userId: string, itemId: string): Promise<number> {
+  const XP_AMOUNT = 25
+  try {
+    await awardXP(userId, XP_AMOUNT, 'prevent_waste', itemId)
+    logger.debug('[Gamification] Awarded XP for preventing waste', { amount: XP_AMOUNT })
+    return XP_AMOUNT
+  } catch (error) {
+    logger.error('[Gamification] Error awarding waste prevention XP', error as Error)
+    return 0
+  }
+}
+
+/**
+ * Check if user qualifies for waste warrior badge (no expired items for 7 days)
+ */
+export async function checkWasteWarriorBadge(userId: string, daysWithoutExpiredItems: number): Promise<void> {
+  if (daysWithoutExpiredItems >= 7) {
+    const badge = ALL_BADGES.find(b => b.id === 'waste_warrior')
+    if (badge) await awardBadge(userId, badge)
+  }
+  if (daysWithoutExpiredItems >= 30) {
+    const badge = ALL_BADGES.find(b => b.id === 'zero_waste_champion')
+    if (badge) await awardBadge(userId, badge)
   }
 }
 
@@ -369,6 +433,36 @@ export const ALL_BADGES: Badge[] = [
     description: '30-day logging streak',
     icon: '🚀',
     rarity: 'legendary'
+  },
+
+  // Shopping & Inventory badges
+  {
+    id: 'waste_warrior',
+    name: 'Waste Warrior',
+    description: 'No expired items for 7 days',
+    icon: '♻️',
+    rarity: 'rare'
+  },
+  {
+    id: 'zero_waste_champion',
+    name: 'Zero Waste Champion',
+    description: 'No expired items for 30 days',
+    icon: '🌱',
+    rarity: 'legendary'
+  },
+  {
+    id: 'organized_kitchen',
+    name: 'Organized Kitchen',
+    description: 'Tracked 50+ items in inventory',
+    icon: '📦',
+    rarity: 'rare'
+  },
+  {
+    id: 'smart_shopper',
+    name: 'Smart Shopper',
+    description: 'Completed 10 shopping trips',
+    icon: '🛒',
+    rarity: 'common'
   }
 ]
 

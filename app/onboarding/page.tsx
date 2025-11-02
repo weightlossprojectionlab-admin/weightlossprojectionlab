@@ -33,6 +33,7 @@ import {
 } from '@/lib/age-utils'
 import { Spinner } from '@/components/ui/Spinner'
 import type { UserProfile, UserGoals, UserPreferences } from '@/types'
+import { logger } from '@/lib/logger'
 
 interface OnboardingData {
   // Step 1: About You
@@ -143,24 +144,24 @@ function OnboardingContent() {
   // Load draft data from Firebase when user is authenticated
   useEffect(() => {
     if (!user) {
-      console.log('⏳ User not authenticated yet, waiting...')
+      logger.debug('User not authenticated yet, waiting')
       return
     }
 
     if (draftLoaded) {
-      console.log('✅ Draft already loaded, skipping')
+      logger.debug('Draft already loaded, skipping')
       return
     }
 
     const loadDraft = async () => {
       try {
-        console.log('✅ User authenticated:', user.uid, '- Loading onboarding draft from Firebase...')
+        logger.info('User authenticated, loading onboarding draft from Firebase', { uid: user.uid })
         const profile = await userProfileOperations.getUserProfile()
-        console.log('📦 Profile data from Firebase:', profile)
+        logger.debug('Profile data from Firebase', { profile })
 
         if (profile && !profile.profile?.onboardingCompleted) {
           // User has draft data - load it
-          console.log('📋 Loading onboarding draft...', profile.profile)
+          logger.info('Loading onboarding draft', { profile: profile.profile })
 
           const draftData: Partial<OnboardingData> = {}
 
@@ -212,19 +213,18 @@ function OnboardingContent() {
           setData(prev => ({ ...prev, ...draftData }))
           setCurrentStep(resumeStep)
 
-          console.log(`📋 Resumed onboarding to Step ${resumeStep}`)
+          logger.info('Resumed onboarding', { step: resumeStep })
           toast.success(`📋 Resumed from Step ${resumeStep}`, { duration: 3000 })
         } else if (profile && profile.profile?.onboardingCompleted) {
-          console.log('✅ Onboarding already completed - redirecting to dashboard')
+          logger.info('Onboarding already completed, redirecting to dashboard')
           toast.success('Welcome back! Redirecting to dashboard...', { duration: 2000 })
           router.push('/dashboard')
           return
         } else {
-          console.log('📝 No profile found - starting fresh onboarding')
+          logger.info('No profile found, starting fresh onboarding')
         }
       } catch (error: any) {
-        console.error('❌ Error loading draft:', error)
-        console.error('Error details:', error?.message, error?.code)
+        logger.error('Error loading draft', error as Error)
         // Don't show error to user - just start fresh
       } finally {
         setDraftLoaded(true)
@@ -282,12 +282,12 @@ function OnboardingContent() {
 
       // Only save if there's data to save
       if (Object.keys(partialUpdate).length > 0) {
-        console.log('💾 Saving step data:', stepNumber, partialUpdate)
+        logger.debug('Saving step data', { step: stepNumber, data: partialUpdate })
         await userProfileOperations.updateUserProfile(partialUpdate)
-        console.log('✅ Auto-saved onboarding progress to Firebase')
+        logger.info('Auto-saved onboarding progress to Firebase')
       }
     } catch (error) {
-      console.error('❌ Error auto-saving onboarding:', error)
+      logger.error('Error auto-saving onboarding', error as Error)
       toast.error('Failed to save progress. Please check your connection.')
       // Don't block user progression on save failure
     }
@@ -605,24 +605,24 @@ function OnboardingContent() {
 
       // Create initial weight log entry so dashboard shows weight immediately
       try {
-        console.log('📊 Creating initial weight log from onboarding data...')
+        logger.info('Creating initial weight log from onboarding data')
         await weightLogOperations.createWeightLog({
           weight: data.currentWeight!,
           unit: data.units === 'metric' ? 'kg' : 'lbs',
           notes: 'Starting weight from onboarding',
           loggedAt: new Date().toISOString()
         })
-        console.log('✅ Initial weight log created successfully')
+        logger.info('Initial weight log created successfully')
       } catch (weightLogError) {
         // Don't block onboarding completion if weight log fails
-        console.error('⚠️ Failed to create initial weight log:', weightLogError)
+        logger.warn('Failed to create initial weight log', { error: weightLogError instanceof Error ? weightLogError.message : String(weightLogError) })
         // User can still manually log weight later
       }
 
       toast.success('Welcome! Your profile is all set up! 🎉')
       router.push('/dashboard')
     } catch (error) {
-      console.error('Error completing onboarding:', error)
+      logger.error('Error completing onboarding', error as Error)
       toast.error('Failed to save your profile. Please try again.')
     } finally {
       setLoading(false)

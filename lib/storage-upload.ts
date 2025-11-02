@@ -3,6 +3,7 @@
 import { storage } from './firebase'
 import { ref, uploadString, getDownloadURL } from 'firebase/storage'
 import { auth } from './firebase'
+import { logger } from '@/lib/logger'
 
 /**
  * Upload a base64 image to Firebase Storage
@@ -31,7 +32,7 @@ export async function uploadBase64Image(
 
     return downloadURL
   } catch (error) {
-    console.error('Error uploading image:', error)
+    logger.error('Error uploading image', error as Error)
     throw new Error('Failed to upload image')
   }
 }

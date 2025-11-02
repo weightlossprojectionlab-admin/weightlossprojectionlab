@@ -9,38 +9,9 @@ import {
   COACH_SYSTEM_PROMPT,
   type ChatMessage
 } from '@/lib/ai-coach'
-
-// Rate limiting for Gemini free tier: 10 req/min, 500 req/day
-const rateLimiter = {
-  minuteRequests: [] as number[],
-  dailyRequests: [] as number[],
-
-  canMakeRequest(): { allowed: boolean; reason?: string } {
-    const now = Date.now()
-    const oneMinuteAgo = now - 60 * 1000
-    const oneDayAgo = now - 24 * 60 * 60 * 1000
-
-    // Clean old requests
-    this.minuteRequests = this.minuteRequests.filter(t => t > oneMinuteAgo)
-    this.dailyRequests = this.dailyRequests.filter(t => t > oneDayAgo)
-
-    // Check limits
-    if (this.minuteRequests.length >= 10) {
-      return { allowed: false, reason: 'Rate limit: 10 requests per minute. Please try again in a moment.' }
-    }
-    if (this.dailyRequests.length >= 500) {
-      return { allowed: false, reason: 'Daily limit reached. Please try again tomorrow.' }
-    }
-
-    return { allowed: true }
-  },
-
-  recordRequest() {
-    const now = Date.now()
-    this.minuteRequests.push(now)
-    this.dailyRequests.push(now)
-  }
-}
+import { logger } from '@/lib/logger'
+import { aiRateLimit, dailyRateLimit, getRateLimitHeaders } from '@/lib/utils/rate-limit'
+import { ErrorHandler } from '@/lib/utils/error-handler'
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -75,16 +46,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check rate limit
-    const rateLimitCheck = rateLimiter.canMakeRequest()
-    if (!rateLimitCheck.allowed) {
+    // Check rate limits (both per-minute and daily)
+    const [minuteLimit, dayLimit] = await Promise.all([
+      aiRateLimit?.limit(userId),
+      dailyRateLimit?.limit(userId)
+    ])
+
+    if (minuteLimit && !minuteLimit.success) {
       return NextResponse.json(
-        { error: rateLimitCheck.reason },
-        { status: 429 }
+        { error: 'Rate limit: 10 requests per minute. Please try again in a moment.' },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(minuteLimit)
+        }
       )
     }
 
-    console.log('[AI Chat] Processing message for user:', userId)
+    if (dayLimit && !dayLimit.success) {
+      return NextResponse.json(
+        { error: 'Daily limit reached (500 requests). Please try again tomorrow.' },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(dayLimit)
+        }
+      )
+    }
+
+    logger.debug('Processing AI chat message', { userId })
 
     // Fetch user context and chat history
     const [context, history] = await Promise.all([
@@ -149,12 +137,13 @@ export async function POST(request: NextRequest) {
     })
 
     // Send message and get response
-    rateLimiter.recordRequest()
     const result = await chat.sendMessage(fullPrompt)
     const response = result.response
     const responseText = response.text()
 
-    console.log('[AI Chat] Generated response:', responseText.substring(0, 100) + '...')
+    logger.debug('Generated AI chat response', {
+      preview: responseText.substring(0, 100)
+    })
 
     // Save assistant response
     const assistantMessage: Omit<ChatMessage, 'id'> = {
@@ -177,7 +166,11 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[AI Chat] Error:', error)
+    ErrorHandler.handle(error, {
+      operation: 'ai_chat_post',
+      userId: 'unknown',
+      component: 'api/ai/chat'
+    })
 
     // Return helpful error message
     if (error instanceof Error && error.message.includes('rate limit')) {
@@ -194,8 +187,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const userMessage = ErrorHandler.getUserMessage(error)
     return NextResponse.json(
-      { error: 'Failed to process message. Please try again.' },
+      { error: userMessage },
       { status: 500 }
     )
   }
@@ -229,9 +223,14 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[AI Chat] Error fetching history:', error)
+    ErrorHandler.handle(error, {
+      operation: 'ai_chat_get_history',
+      component: 'api/ai/chat'
+    })
+
+    const userMessage = ErrorHandler.getUserMessage(error)
     return NextResponse.json(
-      { error: 'Failed to fetch chat history' },
+      { error: userMessage },
       { status: 500 }
     )
   }

@@ -7,6 +7,7 @@ import { useMissions } from '@/hooks/useMissions';
 import { useAuth } from '@/hooks/useAuth';
 import MissionProgress from '@/components/missions/MissionProgress';
 import MissionsList from '@/components/missions/MissionsList';
+import { logger } from '@/lib/logger'
 
 export default function MissionsPage() {
   const { user } = useAuth();
@@ -45,7 +46,7 @@ export default function MissionsPage() {
 
   const handleCompleteMission = async (missionId: string) => {
     // TODO: Implement mission completion logic
-    console.log('Complete mission:', missionId);
+    logger.debug('Complete mission:', { missionId });
     // This would typically call a Firebase function or API endpoint
   };
 

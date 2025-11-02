@@ -24,6 +24,8 @@
  * - goals.startWeight is a fixed reference point for goal progress
  */
 
+import { JsonObject } from './common'
+
 // User Types
 export interface User {
   id: string
@@ -330,7 +332,7 @@ export interface GoalProgress {
 export interface AppError {
   code: string
   message: string
-  details?: any
+  details?: JsonObject
 }
 
 // Auth Context Types

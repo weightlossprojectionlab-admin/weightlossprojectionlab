@@ -23,6 +23,7 @@ import {
 } from 'firebase/firestore'
 import { analyzeUserReadiness, getLatestAnalysis } from './readiness-analyzer'
 import { Resend } from 'resend'
+import { logger } from '@/lib/logger'
 
 // Lazy-initialize Resend only when needed (to avoid build-time errors if API key not set)
 let resend: Resend | null = null
@@ -171,7 +172,7 @@ export async function detectInactiveUsers(): Promise<InactiveUser[]> {
 
     return inactiveUsers
   } catch (error) {
-    console.error('Error detecting inactive users:', error)
+    logger.error('Error detecting inactive users', error as Error)
     throw error
   }
 }
@@ -197,7 +198,7 @@ async function getLastActivityDate(userId: string): Promise<Date | null> {
 
     return snapshot.docs[0].data().timestamp.toDate()
   } catch (error) {
-    console.error('Error getting last activity date:', error)
+    logger.error('Error getting last activity date', error as Error)
     return null
   }
 }
@@ -213,7 +214,7 @@ async function getTotalMealsLogged(userId: string): Promise<number> {
 
     return snapshot.size
   } catch (error) {
-    console.error('Error getting total meals logged:', error)
+    logger.error('Error getting total meals logged', error as Error)
     return 0
   }
 }
@@ -248,7 +249,7 @@ export async function generateCampaigns(inactiveUsers: InactiveUser[]): Promise<
       )
 
       if (daysSinceCampaign < CAMPAIGN_COOLDOWN_DAYS) {
-        console.log(`Skipping user ${user.userId} - campaign sent ${daysSinceCampaign} days ago`)
+        logger.debug('Skipping user - campaign sent recently', { userId: user.userId, daysSinceCampaign })
         continue
       }
     }
@@ -463,7 +464,7 @@ async function getRecentCampaign(userId: string): Promise<ReEngagementCampaign |
       resulted_in_return: data.resulted_in_return || false
     }
   } catch (error) {
-    console.error('Error getting recent campaign:', error)
+    logger.error('Error getting recent campaign', error as Error)
     return null
   }
 }
@@ -490,9 +491,9 @@ export async function saveCampaign(campaign: ReEngagementCampaign): Promise<void
       resulted_in_return: campaign.resulted_in_return
     })
 
-    console.log(`Campaign saved for user ${campaign.userId}: ${campaign.campaignType}`)
+    logger.info('Campaign saved for user', { userId: campaign.userId, campaignType: campaign.campaignType })
   } catch (error) {
-    console.error('Error saving campaign:', error)
+    logger.error('Error saving campaign', error as Error)
     throw error
   }
 }
@@ -557,7 +558,7 @@ export async function analyzeInactivity(): Promise<InactivityAnalysis> {
       analyzedAt: new Date()
     }
   } catch (error) {
-    console.error('Error analyzing inactivity:', error)
+    logger.error('Error analyzing inactivity', error as Error)
     throw error
   }
 }
@@ -603,7 +604,7 @@ export async function getCampaignMetrics(): Promise<{
       conversionRate: sent > 0 ? (conversions / sent) * 100 : 0
     }
   } catch (error) {
-    console.error('Error getting campaign metrics:', error)
+    logger.error('Error getting campaign metrics', error as Error)
     throw error
   }
 }
@@ -621,7 +622,7 @@ async function getUserEmail(userId: string): Promise<string | null> {
     const userSnap = await getDoc(userRef)
 
     if (!userSnap.exists()) {
-      console.error(`User ${userId} not found`)
+      logger.error('User not found', new Error('User not found'), { userId })
       return null
     }
 
@@ -629,13 +630,13 @@ async function getUserEmail(userId: string): Promise<string | null> {
     const email = userData.profile?.email || userData.email
 
     if (!email) {
-      console.error(`No email found for user ${userId}`)
+      logger.error('No email found for user', new Error('No email found for user'), { userId })
       return null
     }
 
     return email
   } catch (error) {
-    console.error('Error getting user email:', error)
+    logger.error('Error getting user email', error as Error)
     return null
   }
 }
@@ -649,14 +650,14 @@ export async function sendReEngagementEmail(campaign: ReEngagementCampaign): Pro
     const userEmail = await getUserEmail(campaign.userId)
 
     if (!userEmail) {
-      console.error(`Cannot send email: No email found for user ${campaign.userId}`)
+      logger.error('Cannot send email: No email found for user', new Error('No email found for user'), { userId: campaign.userId })
       return false
     }
 
     // Save campaign to Firestore first (with scheduledAt)
     await saveCampaign(campaign)
 
-    console.log(`Sending ${campaign.campaignType} email to ${userEmail}...`)
+    logger.info('Sending re-engagement email', { campaignType: campaign.campaignType, userEmail })
 
     // Send email via Resend
     const client = getResendClient()
@@ -673,14 +674,16 @@ export async function sendReEngagementEmail(campaign: ReEngagementCampaign): Pro
     })
 
     if (error) {
-      console.error('Resend error:', error)
+      logger.error('Resend error', error as Error)
       return false
     }
 
-    console.log(`✅ Email sent successfully to ${userEmail}`)
-    console.log(`   Email ID: ${data?.id}`)
-    console.log(`   Campaign: ${campaign.campaignType}`)
-    console.log(`   Subject: ${campaign.emailSubject}`)
+    logger.info('Email sent successfully', {
+      userEmail,
+      emailId: data?.id,
+      campaignType: campaign.campaignType,
+      subject: campaign.emailSubject
+    })
 
     // Update campaign with sentAt timestamp
     const campaignRef = doc(db, 'reengagement_campaigns', `${campaign.userId}_${campaign.scheduledAt.getTime()}`)
@@ -691,7 +694,7 @@ export async function sendReEngagementEmail(campaign: ReEngagementCampaign): Pro
 
     return true
   } catch (error) {
-    console.error('Error sending re-engagement email:', error)
+    logger.error('Error sending re-engagement email', error as Error)
     return false
   }
 }
@@ -709,15 +712,15 @@ export async function runDailyDetection(): Promise<{
   const errors: string[] = []
 
   try {
-    console.log('Starting daily inactive user detection...')
+    logger.info('Starting daily inactive user detection')
 
     // Detect inactive users
     const inactiveUsers = await detectInactiveUsers()
-    console.log(`Found ${inactiveUsers.length} inactive users`)
+    logger.info('Found inactive users', { count: inactiveUsers.length })
 
     // Generate campaigns
     const campaigns = await generateCampaigns(inactiveUsers)
-    console.log(`Generated ${campaigns.length} re-engagement campaigns`)
+    logger.info('Generated re-engagement campaigns', { count: campaigns.length })
 
     // Send emails (or queue them)
     for (const campaign of campaigns) {
@@ -728,7 +731,7 @@ export async function runDailyDetection(): Promise<{
       }
     }
 
-    console.log(`Daily detection complete. Sent ${campaigns.length} campaigns.`)
+    logger.info('Daily detection complete', { campaignsSent: campaigns.length })
 
     return {
       detected: inactiveUsers.length,
@@ -736,7 +739,7 @@ export async function runDailyDetection(): Promise<{
       errors
     }
   } catch (error) {
-    console.error('Error in daily detection:', error)
+    logger.error('Error in daily detection', error as Error)
     errors.push(`Critical error: ${error}`)
 
     return {

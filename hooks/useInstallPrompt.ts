@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { logger } from '@/lib/logger'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -40,14 +41,14 @@ export function useInstallPrompt(): InstallPromptState {
     }
 
     if (checkInstalled()) {
-      console.log('[InstallPrompt] App is already installed')
+      logger.debug('[InstallPrompt] App is already installed')
       return
     }
 
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       const event = e as BeforeInstallPromptEvent
-      console.log('[InstallPrompt] beforeinstallprompt fired')
+      logger.debug('[InstallPrompt] beforeinstallprompt fired')
 
       // Prevent the default browser install prompt
       e.preventDefault()
@@ -59,7 +60,7 @@ export function useInstallPrompt(): InstallPromptState {
 
     // Listen for successful install
     const handleAppInstalled = () => {
-      console.log('[InstallPrompt] App installed successfully')
+      logger.debug('[InstallPrompt] App installed successfully')
       setIsInstalled(true)
       setIsInstallable(false)
       setDeferredPrompt(null)
@@ -79,7 +80,7 @@ export function useInstallPrompt(): InstallPromptState {
    */
   const promptInstall = async (): Promise<boolean> => {
     if (!deferredPrompt) {
-      console.warn('[InstallPrompt] No install prompt available')
+      logger.warn('[InstallPrompt] No install prompt available')
       return false
     }
 
@@ -90,7 +91,7 @@ export function useInstallPrompt(): InstallPromptState {
       // Wait for user response
       const choiceResult = await deferredPrompt.userChoice
 
-      console.log('[InstallPrompt] User choice:', choiceResult.outcome)
+      logger.debug('[InstallPrompt] User choice:', { outcome: choiceResult.outcome })
 
       if (choiceResult.outcome === 'accepted') {
         setIsInstallable(false)
@@ -100,7 +101,7 @@ export function useInstallPrompt(): InstallPromptState {
         return false
       }
     } catch (error) {
-      console.error('[InstallPrompt] Error showing prompt:', error)
+      logger.error('[InstallPrompt] Error showing prompt:', error as Error)
       return false
     }
   }

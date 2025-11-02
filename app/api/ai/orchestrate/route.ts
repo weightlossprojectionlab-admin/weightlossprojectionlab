@@ -5,6 +5,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { orchestrateAI } from '@/lib/ai/orchestrator';
 import { AIOrchestrationRequest } from '@/types/ai';
+import { logger } from '@/lib/logger';
+import { adminAuth } from '@/lib/firebase-admin';
+import { aiRateLimit, dailyRateLimit, getRateLimitHeaders } from '@/lib/utils/rate-limit';
+import { ErrorHandler } from '@/lib/utils/error-handler';
 
 /**
  * POST /api/ai/orchestrate
@@ -34,12 +38,66 @@ import { AIOrchestrationRequest } from '@/types/ai';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Verify authentication
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Missing authentication token' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.split('Bearer ')[1];
+
+    // Verify the Firebase ID token
+    let userId: string;
+    try {
+      const decodedToken = await adminAuth.verifyIdToken(token);
+      userId = decodedToken.uid;
+      logger.debug('Authenticated user', { uid: userId });
+    } catch (authError) {
+      ErrorHandler.handle(authError, {
+        operation: 'ai_orchestrate_auth',
+        component: 'api/ai/orchestrate'
+      });
+      return NextResponse.json(
+        { error: 'Unauthorized: Invalid authentication token' },
+        { status: 401 }
+      );
+    }
+
+    // Check rate limits (both per-minute and daily)
+    const [minuteLimit, dayLimit] = await Promise.all([
+      aiRateLimit?.limit(userId),
+      dailyRateLimit?.limit(userId)
+    ]);
+
+    if (minuteLimit && !minuteLimit.success) {
+      return NextResponse.json(
+        { error: 'Rate limit: 10 requests per minute. Please try again in a moment.' },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(minuteLimit)
+        }
+      );
+    }
+
+    if (dayLimit && !dayLimit.success) {
+      return NextResponse.json(
+        { error: 'Daily limit reached (500 requests). Please try again tomorrow.' },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(dayLimit)
+        }
+      );
+    }
+
     const body = (await request.json()) as AIOrchestrationRequest;
 
     // Validate required fields
-    if (!body.templateId || !body.userId || !body.dataSensitivity) {
+    if (!body.templateId || !body.dataSensitivity) {
       return NextResponse.json(
-        { error: 'Missing required fields: templateId, userId, dataSensitivity' },
+        { error: 'Missing required fields: templateId, dataSensitivity' },
         { status: 400 }
       );
     }
@@ -51,21 +109,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Add authentication check
-    // const session = await getServerSession(authOptions);
-    // if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Use authenticated userId instead of body.userId for security
+    const orchestrationRequest: AIOrchestrationRequest = {
+      ...body,
+      userId // Override with authenticated userId
+    };
+
+    logger.debug('Processing AI orchestration', {
+      userId,
+      templateId: body.templateId,
+      dataSensitivity: body.dataSensitivity
+    });
 
     // Call orchestrator
-    const result = await orchestrateAI(body);
+    const result = await orchestrateAI(orchestrationRequest);
 
     return NextResponse.json(result, { status: 200 });
-  } catch (error: any) {
-    console.error('[API /ai/orchestrate] Error:', error);
+  } catch (error) {
+    ErrorHandler.handle(error, {
+      operation: 'ai_orchestrate',
+      component: 'api/ai/orchestrate',
+      userId: 'unknown'
+    });
 
+    const userMessage = ErrorHandler.getUserMessage(error);
     return NextResponse.json(
       {
-        error: error.message || 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        error: userMessage,
+        details: process.env.NODE_ENV === 'development' ? error : undefined
       },
       { status: 500 }
     );

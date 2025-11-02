@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { determineUserDestination } from '@/lib/auth-router'
+import { logger } from '@/lib/logger'
 
 interface DashboardRouterProps {
   children: React.ReactNode
@@ -26,42 +27,42 @@ export default function DashboardRouter({ children }: DashboardRouterProps) {
   useEffect(() => {
     const checkAccess = async () => {
       if (authLoading) {
-        console.log('⏳ DashboardRouter: Waiting for auth to load...')
+        logger.debug('⏳ DashboardRouter: Waiting for auth to load...')
         return
       }
 
-      console.log('🔀 DashboardRouter: Checking if user should access protected page')
+      logger.debug('🔀 DashboardRouter: Checking if user should access protected page')
 
       try {
         const destination = await determineUserDestination(user, pathname)
 
-        console.log('📍 DashboardRouter destination:', destination)
+        logger.debug('📍 DashboardRouter destination:', destination)
 
         switch (destination.type) {
           case 'auth':
-            console.log('➡️ Redirecting to /auth:', destination.reason)
+            logger.debug('➡️ Redirecting to /auth:', { reason: destination.reason })
             router.push('/auth')
             break
 
           case 'onboarding':
-            console.log('➡️ Redirecting to /onboarding:', destination.reason)
+            logger.debug('➡️ Redirecting to /onboarding:', { reason: destination.reason })
             router.push('/onboarding')
             break
 
           case 'stay':
-            console.log('✅ User can access protected page:', destination.reason)
+            logger.debug('✅ User can access protected page:', { reason: destination.reason })
             setChecking(false)
             break
 
           default:
-            console.log('✅ Allowing access to protected page')
+            logger.debug('✅ Allowing access to protected page')
             setChecking(false)
             break
         }
       } catch (error) {
-        console.error('❌ DashboardRouter error:', error)
+        logger.error('❌ DashboardRouter error:', error as Error)
         // On error, redirect to onboarding (fail safe)
-        console.log('⚠️ Error occurred - redirecting to /onboarding for safety')
+        logger.debug('⚠️ Error occurred - redirecting to /onboarding for safety')
         router.push('/onboarding')
       }
     }

@@ -11,6 +11,7 @@
  */
 
 import { AccelerometerData, SensorStatus } from './types'
+import { logger } from '@/lib/logger'
 
 /**
  * Target sample rate for accelerometer data (Hz)
@@ -72,7 +73,7 @@ export async function requestMotionPermission(): Promise<boolean> {
     const permission = await (DeviceMotionEvent as any).requestPermission()
     return permission === 'granted'
   } catch (error) {
-    console.error('[Sensor] Permission request failed:', error)
+    logger.error('[Sensor] Permission request failed', error as Error)
     return false
   }
 }
@@ -132,7 +133,7 @@ export function startSensor(
   callback: (data: AccelerometerData) => void
 ): boolean {
   if (!isSensorAvailable()) {
-    console.error('[Sensor] DeviceMotionEvent not available')
+    logger.error('[Sensor] DeviceMotionEvent not available', new Error('DeviceMotionEvent not available'))
     return false
   }
 
@@ -160,7 +161,7 @@ export function startSensor(
     if (!accel || accel.x === null || accel.y === null || accel.z === null) {
       // Debug log only - this is expected on desktop/unsupported devices
       if (process.env.NODE_ENV === 'development') {
-        console.log('[Sensor] No acceleration data available (expected on desktop/unsupported devices)')
+        logger.debug('[Sensor] No acceleration data available (expected on desktop/unsupported devices)')
       }
       return
     }
@@ -179,10 +180,10 @@ export function startSensor(
   // Add event listener
   try {
     window.addEventListener('devicemotion', motionListener)
-    console.log('[Sensor] Started listening to device motion')
+    logger.info('[Sensor] Started listening to device motion')
     return true
   } catch (error) {
-    console.error('[Sensor] Failed to start listening:', error)
+    logger.error('[Sensor] Failed to start listening', error as Error)
     return false
   }
 }
@@ -194,7 +195,7 @@ export function stopSensor(): void {
   if (motionListener) {
     window.removeEventListener('devicemotion', motionListener)
     motionListener = null
-    console.log('[Sensor] Stopped listening to device motion')
+    logger.info('[Sensor] Stopped listening to device motion')
   }
 }
 

@@ -12,6 +12,7 @@ import { getTemplate, renderTemplate, validateVariables } from './promptTemplate
 import { selectModel, getRecommendedModel } from './modelRouter';
 import { redactPII, redactFields } from './piiRedaction';
 import { logAIDecision } from './decisionLogger';
+import { logger } from '@/lib/logger';
 
 /**
  * Main AI orchestration function
@@ -105,7 +106,7 @@ export async function orchestrateAI(
       policyReference: `PRD v1.3.7 § ${template.category}`,
     };
   } catch (error) {
-    console.error('[AI Orchestrator] Error:', error);
+    logger.error('[AI Orchestrator] Error', error as Error);
     throw error;
   }
 }
@@ -167,7 +168,7 @@ async function callOpenAI(params: {
       outputTokens: data.usage?.completion_tokens || 0,
     };
   } catch (error) {
-    console.error('[AI Orchestrator] OpenAI API call failed:', error);
+    logger.error('[AI Orchestrator] OpenAI API call failed', error as Error);
     throw error;
   }
 }
@@ -212,7 +213,7 @@ function parseAIResponse(
     return { decision, confidence, rationale };
   } catch (error) {
     // Fallback for non-JSON responses
-    console.warn('[AI Orchestrator] Failed to parse JSON response:', error);
+    logger.warn('[AI Orchestrator] Failed to parse JSON response', { error: error instanceof Error ? error.message : String(error) });
     return {
       decision: content,
       confidence: 0.5,  // Low confidence for unparseable responses

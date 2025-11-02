@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { auth } from '@/lib/firebase'
+import { logger } from '@/lib/logger'
 import {
   type ChatMessage,
   type ChatContext,
@@ -86,7 +87,7 @@ export function useAIChat(userId: string | undefined) {
         setMessages(data.messages || [])
 
       } catch (err) {
-        console.error('[useAIChat] Error loading chat:', err)
+        logger.error('[useAIChat] Error loading chat:', err as Error)
         setError(err instanceof Error ? err.message : 'Failed to load chat')
       } finally {
         setIsLoading(false)
@@ -170,7 +171,7 @@ export function useAIChat(userId: string | undefined) {
       return true
 
     } catch (err) {
-      console.error('[useAIChat] Error sending message:', err)
+      logger.error('[useAIChat] Error sending message:', err as Error)
       const errorMessage = err instanceof Error ? err.message : 'Failed to send message'
       setError(errorMessage)
       toast.error(errorMessage)

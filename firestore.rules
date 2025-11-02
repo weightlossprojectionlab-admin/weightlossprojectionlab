@@ -15,22 +15,35 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // SECURITY: Super admin check using hardcoded emails (for bootstrapping)
+    // Once custom claims are set, prefer using isAdmin() which checks token claims
     function isSuperAdmin() {
       return isAuthenticated() &&
              (request.auth.token.email == 'perriceconsulting@gmail.com' ||
-              request.auth.token.email == 'weigthlossprojectionlab@gmail.com');
+              request.auth.token.email == 'weightlossprojectlab@gmail.com');
     }
 
+    // SECURITY: Check admin status from Firebase Custom Claims (fast, no Firestore read)
+    // Falls back to super admin check for bootstrapping
     function isAdmin() {
       return isAuthenticated() &&
              (isSuperAdmin() ||
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+              request.auth.token.admin == true);
     }
 
+    // SECURITY: Check moderator status from Firebase Custom Claims
+    // Admins also have moderator permissions
     function isModerator() {
       return isAuthenticated() &&
-             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'moderator' ||
+             (request.auth.token.moderator == true ||
               isAdmin());
+    }
+
+    // SECURITY: Check support role from Firebase Custom Claims
+    function isSupport() {
+      return isAuthenticated() &&
+             (request.auth.token.support == true ||
+              isModerator());
     }
 
     // ============================================
@@ -231,7 +244,7 @@ service cloud.firestore {
     // RECIPE & COOKING FEATURES
     // ============================================
 
-    // Cooking sessions
+    // Cooking sessions (kebab-case for backwards compatibility)
     match /cooking-sessions/{sessionId} {
       allow read: if isAuthenticated() &&
                      (resource == null || resource.data.userId == request.auth.uid);
@@ -240,7 +253,7 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
-    // Recipe queue
+    // Recipe queue (kebab-case for backwards compatibility)
     match /recipe-queue/{queueId} {
       allow read: if isAuthenticated() &&
                      (resource == null || resource.data.userId == request.auth.uid);
@@ -248,13 +261,22 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
+    // Recipe completions (for mission tracking)
+    match /recipe_completions/{completionId} {
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
     // Recipes collection (full recipe library with AI generation)
     match /recipes/{recipeId} {
-      // Read: Anyone can read published recipes (for meal suggestions)
+      // Read: Public access to published recipes (for landing page)
       //       Admins can read all recipes (including drafts)
-      allow read: if resource == null ||
-                     resource.data.status == 'published' ||
-                     isAdmin();
+      // SECURITY NOTE: allow list: if true; is INTENTIONAL for public recipe browsing on landing page
+      //                Consider adding rate limiting via Firebase App Check for production
+      allow list: if true; // Allow anyone to query recipes collection
+      allow get: if resource.data.status == 'published' || isAdmin();
 
       // Create: Admin-only, with required recipe fields
       allow create: if isAdmin() &&
@@ -306,11 +328,11 @@ service cloud.firestore {
     // User missions
     match /user_missions/{missionId} {
       allow read: if isAuthenticated() &&
-                     (!('userId' in resource.data) || resource.data.userId == request.auth.uid);
+                     (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() &&
-                       (!('userId' in resource.data) || resource.data.userId == request.auth.uid) &&
-                       (!('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid);
+                       resource.data.userId == request.auth.uid &&
+                       request.resource.data.userId == request.auth.uid;
     }
 
     // Gamification profiles
@@ -323,7 +345,8 @@ service cloud.firestore {
     match /xp_transactions/{transactionId} {
       allow read: if isAuthenticated() &&
                      (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid;
     }
 
     // ============================================
@@ -340,8 +363,10 @@ service cloud.firestore {
     match /scheduled_nudges/{nudgeId} {
       allow read: if isAuthenticated() &&
                      (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
     }
 
     // ============================================
@@ -410,6 +435,15 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
+    // Weight logs (underscore variant for backwards compatibility)
+    match /weight_logs/{logId} {
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
     // Weekly missions
     match /weekly_missions/{missionId} {
       allow read: if isAuthenticated() &&
@@ -433,6 +467,26 @@ service cloud.firestore {
                      (resource == null || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // ============================================
+    // SHOPPING & INVENTORY
+    // ============================================
+
+    // Shopping items and kitchen inventory
+    match /shopping_items/{itemId} {
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Store visits for location tracking
+    match /store_visits/{visitId} {
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
     }
 
     // ============================================

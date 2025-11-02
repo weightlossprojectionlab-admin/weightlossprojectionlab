@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { getSettingsInstructions, isMobile, isIOS, isAndroid } from '@/lib/permissions'
+import { logger } from '@/lib/logger'
 
 interface PermissionRequestModalProps {
   type: 'camera' | 'biometric'
@@ -34,7 +35,7 @@ export default function PermissionRequestModal({
       await onRequest()
       onClose()
     } catch (error) {
-      console.error('Permission request failed:', error)
+      logger.error('Permission request failed:', error as Error)
       setShowInstructions(true)
     } finally {
       setIsRequesting(false)

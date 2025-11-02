@@ -5,6 +5,7 @@
 'use client';
 
 import { useState } from 'react';
+import { logger } from '@/lib/logger'
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -12,6 +13,7 @@ import {
   ArrowUpCircleIcon
 } from '@heroicons/react/24/outline';
 import type { DisputeCase, AdminAction } from '@/types/trust-safety';
+import { toDate } from '@/types/common';
 
 interface ActionPanelProps {
   case: DisputeCase;
@@ -40,7 +42,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
       setSelectedAction(null);
       setNotes('');
     } catch (error) {
-      console.error('Action failed:', error);
+      logger.error('Action failed:', error as Error);
       // Optionally show error toast
     } finally {
       setIsLoading(false);
@@ -60,7 +62,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
         <CheckCircleIcon className="h-12 w-12 text-success-dark mx-auto mb-3" />
         <h3 className="text-lg font-semibold text-success-dark mb-1">Case Resolved</h3>
         <p className="text-sm text-success-dark">
-          This case was resolved on {new Date(disputeCase.resolvedAt!).toLocaleDateString()}
+          This case was resolved on {toDate(disputeCase.resolvedAt!).toLocaleDateString()}
         </p>
       </div>
     );

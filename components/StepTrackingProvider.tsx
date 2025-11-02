@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useStepCounter } from '@/hooks/useStepCounter'
+import { logger } from '@/lib/logger'
 
 /**
  * Step Tracking Context
@@ -61,10 +62,10 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
         const enabled = localStorage.getItem('step-tracking-enabled')
         if (enabled === 'true') {
           setIsEnabled(true)
-          console.log('📍 Step tracking enabled from preferences')
+          logger.debug('📍 Step tracking enabled from preferences')
         }
       } catch (err) {
-        console.error('Failed to load step tracking preference:', err)
+        logger.error('Failed to load step tracking preference:', err as Error)
       }
     }
 
@@ -77,12 +78,12 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
   useEffect(() => {
     const autoStart = async () => {
       if (isEnabled && user && !isTracking && sensorStatus?.isAvailable) {
-        console.log('🚶 Auto-starting step counter...')
+        logger.debug('🚶 Auto-starting step counter...')
         try {
           await startCounting()
-          console.log('✅ Step counter started automatically')
+          logger.debug('✅ Step counter started automatically')
         } catch (err) {
-          console.error('❌ Failed to auto-start step counter:', err)
+          logger.error('❌ Failed to auto-start step counter:', err as Error)
         }
       }
     }
@@ -101,14 +102,14 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
 
       // If date changed and we haven't saved today's steps yet
       if (lastSaveDate && lastSaveDate !== today && stepCount > 0) {
-        console.log('🌙 Midnight - auto-saving yesterday\'s steps:', stepCount)
+        logger.debug('🌙 Midnight - auto-saving yesterday\'s steps:', { stepCount })
 
         saveToFirebase(lastSaveDate).then(() => {
-          console.log('✅ Steps saved to Firebase')
+          logger.debug('✅ Steps saved to Firebase')
           resetCount()
           setLastSaveDate(today)
         }).catch(err => {
-          console.error('❌ Failed to auto-save steps:', err)
+          logger.error('❌ Failed to auto-save steps:', err)
         })
       } else if (!lastSaveDate) {
         setLastSaveDate(today)
@@ -130,13 +131,13 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
     const handleBeforeUnload = async () => {
       if (stepCount > 0) {
         const today = new Date().toISOString().split('T')[0]
-        console.log('👋 App closing - saving steps:', stepCount)
+        logger.debug('👋 App closing - saving steps:', { stepCount })
 
         // Use sendBeacon API for reliable save on page unload
         try {
           await saveToFirebase(today)
         } catch (err) {
-          console.error('Failed to save on unload:', err)
+          logger.error('Failed to save on unload:', err as Error)
         }
       }
     }
@@ -154,7 +155,7 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
   const enableTracking = async () => {
     setIsEnabled(true)
     localStorage.setItem('step-tracking-enabled', 'true')
-    console.log('✅ Step tracking enabled')
+    logger.debug('✅ Step tracking enabled')
 
     // Start counting immediately
     if (user && sensorStatus?.isAvailable) {
@@ -169,7 +170,7 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
     setIsEnabled(false)
     localStorage.setItem('step-tracking-enabled', 'false')
     stopCounting()
-    console.log('⏸️ Step tracking disabled')
+    logger.debug('⏸️ Step tracking disabled')
   }
 
   const contextValue: StepTrackingContextValue = {

@@ -2,7 +2,8 @@
 // PRD Reference: trust_safety_moderation.automation.risk_score (PRD v1.3.7)
 // TODO: Link to PRD v1.3.7 § trust_safety_moderation.automation.risk_score
 
-import { RiskSignal, RiskScoreResult, ModerationCase } from '@/types/trust-safety';
+import { RiskSignal, RiskScoreResult, ModerationCase, Evidence } from '@/types/trust-safety';
+import { JsonObject } from '@/types/common';
 
 /**
  * Risk signal weights (0-100 contribution)
@@ -40,13 +41,13 @@ const RECOMMENDATION_THRESHOLDS = {
  */
 export function calculateRiskScore(caseData: {
   reason: string;
-  evidence: any[];
+  evidence: Evidence[];
   targetHistory?: {
     priorDisputes?: number;
     completedSessions?: number;
     avgSessionDuration?: number;
   };
-  metadata?: Record<string, any>;
+  metadata?: JsonObject;
 }): RiskScoreResult {
   const signals: RiskSignal[] = [];
   let totalScore = 0;
@@ -94,13 +95,13 @@ export function calculateRiskScore(caseData: {
  */
 function detectRiskSignals(caseData: {
   reason: string;
-  evidence: any[];
+  evidence: Evidence[];
   targetHistory?: {
     priorDisputes?: number;
     completedSessions?: number;
     avgSessionDuration?: number;
   };
-  metadata?: Record<string, any>;
+  metadata?: JsonObject;
 }): RiskSignal[] {
   const signals: RiskSignal[] = [];
 
@@ -125,8 +126,8 @@ function detectRiskSignals(caseData: {
   }
 
   // Duplicate payment detection
-  const hasZoomEvidence = caseData.evidence.some((e: any) => e.type === 'zoom');
-  const hasStripeEvidence = caseData.evidence.some((e: any) => e.type === 'stripe');
+  const hasZoomEvidence = caseData.evidence.some((e) => e.type === 'zoom');
+  const hasStripeEvidence = caseData.evidence.some((e) => e.type === 'stripe');
   if (hasStripeEvidence && caseData.metadata?.duplicatePayment) {
     signals.push({
       signal: 'dup_payment',
@@ -138,13 +139,14 @@ function detectRiskSignals(caseData: {
 
   // Short duration detection (session < 10 minutes)
   if (hasZoomEvidence) {
-    const zoomData = caseData.evidence.find((e: any) => e.type === 'zoom')?.data;
-    if (zoomData?.duration && zoomData.duration < 600) {  // 10 minutes in seconds
+    const zoomData = caseData.evidence.find((e) => e.type === 'zoom')?.data;
+    const duration = zoomData?.duration;
+    if (typeof duration === 'number' && duration < 600) {  // 10 minutes in seconds
       signals.push({
         signal: 'short_duration',
         weight: 0.8,
         detected: true,
-        metadata: { duration: zoomData.duration },
+        metadata: { duration },
       });
     }
   }
@@ -162,7 +164,7 @@ function detectRiskSignals(caseData: {
 
   // Blocked keywords detection (PRD: scam prevention)
   const blockedKeywords = ['cashapp', 'venmo', 'paypal', 'btc', 'crypto', 'wire', 'western union'];
-  const chatEvidence = caseData.evidence.find((e: any) => e.type === 'chat');
+  const chatEvidence = caseData.evidence.find((e) => e.type === 'chat');
   if (chatEvidence?.data?.messages) {
     const messages = chatEvidence.data.messages as string[];
     const foundKeywords = blockedKeywords.filter((kw) =>

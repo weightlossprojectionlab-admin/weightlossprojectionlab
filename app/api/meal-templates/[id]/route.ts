@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
+import { logger } from '@/lib/logger'
 
 // DELETE - Delete a meal template
 export async function DELETE(
@@ -53,7 +54,7 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error('Error deleting meal template:', error)
+    logger.error('Error deleting meal template', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       {
         error: 'Failed to delete meal template',
@@ -128,7 +129,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Error updating meal template:', error)
+    logger.error('Error updating meal template', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       {
         error: 'Failed to update meal template',

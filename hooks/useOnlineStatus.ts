@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { syncQueue, onSyncProgress, isSyncInProgress, registerBackgroundSync, type SyncProgress } from '@/lib/sync-manager'
 import { getQueueStats } from '@/lib/offline-queue'
 import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger'
 
 export interface OnlineStatus {
   isOnline: boolean
@@ -26,18 +27,18 @@ export function useOnlineStatus(): OnlineStatus {
     setIsOnline(navigator.onLine)
 
     // Register background sync on mount
-    registerBackgroundSync().catch(console.error)
+    registerBackgroundSync().catch(err => logger.error('Failed to register background sync', err))
 
     // Update queued count
     getQueueStats()
       .then(stats => setQueuedCount(stats.unsynced))
-      .catch(console.error)
+      .catch(err => logger.error('Failed to get queue stats', err))
   }, [])
 
   // Listen to online/offline events
   useEffect(() => {
     const handleOnline = async () => {
-      console.log('[OnlineStatus] Connection restored')
+      logger.debug('[OnlineStatus] Connection restored')
       setIsOnline(true)
 
       // Check if there are queued meals
@@ -62,7 +63,7 @@ export function useOnlineStatus(): OnlineStatus {
           setSyncProgress(null)
         }
       } catch (error) {
-        console.error('[OnlineStatus] Sync error:', error)
+        logger.error('[OnlineStatus] Sync error:', error as Error)
         toast.error('Sync failed. Will retry automatically.')
         setIsSyncing(false)
         setSyncProgress(null)
@@ -70,7 +71,7 @@ export function useOnlineStatus(): OnlineStatus {
     }
 
     const handleOffline = () => {
-      console.log('[OnlineStatus] Connection lost')
+      logger.debug('[OnlineStatus] Connection lost')
       setIsOnline(false)
       toast.error('You are offline. Meals will be queued for later sync.')
     }
@@ -99,7 +100,7 @@ export function useOnlineStatus(): OnlineStatus {
     if ('serviceWorker' in navigator) {
       const handleMessage = async (event: MessageEvent) => {
         if (event.data && event.data.type === 'SYNC_QUEUE') {
-          console.log('[OnlineStatus] Received sync message from service worker')
+          logger.debug('[OnlineStatus] Received sync message from service worker')
 
           // Start sync if not already syncing
           if (!isSyncInProgress()) {
@@ -113,7 +114,7 @@ export function useOnlineStatus(): OnlineStatus {
                 setQueuedCount(result.failedCount)
               }
             } catch (error) {
-              console.error('[OnlineStatus] Sync error:', error)
+              logger.error('[OnlineStatus] Sync error:', error as Error)
             } finally {
               setIsSyncing(false)
               setSyncProgress(null)

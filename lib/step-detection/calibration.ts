@@ -11,6 +11,7 @@
  * 4. Saves to localStorage for persistence
  */
 
+import { logger } from '@/lib/logger'
 import {
   CalibrationData,
   StepDetectionConfig,
@@ -52,7 +53,7 @@ let currentCalibration: CalibrationData = { ...INITIAL_CALIBRATION }
  */
 export function startCalibration(): void {
   currentCalibration = { ...INITIAL_CALIBRATION }
-  console.log('[Calibration] Started - walk normally for 20 steps')
+  logger.info('[Calibration] Started - walk normally for 20 steps')
 }
 
 /**
@@ -91,13 +92,14 @@ export function processCalibrationSample(data: AccelerometerData): void {
 export function recordCalibrationStep(): boolean {
   currentCalibration.stepCount++
 
-  console.log(
-    `[Calibration] Step ${currentCalibration.stepCount}/${CALIBRATION_STEPS_REQUIRED}`
-  )
+  logger.debug('[Calibration] Step recorded', {
+    stepCount: currentCalibration.stepCount,
+    stepsRequired: CALIBRATION_STEPS_REQUIRED
+  })
 
   if (currentCalibration.stepCount >= CALIBRATION_STEPS_REQUIRED) {
     currentCalibration.isComplete = true
-    console.log('[Calibration] Complete!')
+    logger.info('[Calibration] Complete!')
     return true
   }
 
@@ -116,14 +118,14 @@ export function recordCalibrationStep(): boolean {
  */
 export function finishCalibration(): StepDetectionConfig {
   if (!currentCalibration.isComplete) {
-    console.warn('[Calibration] Not complete yet')
+    logger.warn('[Calibration] Not complete yet')
     return DEFAULT_CONFIG
   }
 
   const { samples, minMagnitude, maxMagnitude } = currentCalibration
 
   if (samples.length === 0) {
-    console.error('[Calibration] No samples collected')
+    logger.error('[Calibration] No samples collected')
     return DEFAULT_CONFIG
   }
 
@@ -153,7 +155,7 @@ export function finishCalibration(): StepDetectionConfig {
     minMagnitudeDelta
   }
 
-  console.log('[Calibration] Results:', {
+  logger.info('[Calibration] Results', {
     avgMagnitude: avgMagnitude.toFixed(3),
     minMagnitude: minMagnitude.toFixed(3),
     maxMagnitude: maxMagnitude.toFixed(3),
@@ -205,9 +207,9 @@ export function saveCalibration(
     }
 
     localStorage.setItem(key, JSON.stringify(data))
-    console.log('[Calibration] Saved to localStorage')
+    logger.debug('[Calibration] Saved to localStorage')
   } catch (error) {
-    console.error('[Calibration] Failed to save:', error)
+    logger.error('[Calibration] Failed to save', error as Error)
   }
 }
 
@@ -238,14 +240,14 @@ export function loadCalibration(
     const maxAge = 30 * 24 * 60 * 60 * 1000 // 30 days
 
     if (age > maxAge) {
-      console.log('[Calibration] Stored calibration expired')
+      logger.debug('[Calibration] Stored calibration expired')
       return null
     }
 
-    console.log('[Calibration] Loaded from localStorage')
+    logger.debug('[Calibration] Loaded from localStorage')
     return data.config
   } catch (error) {
-    console.error('[Calibration] Failed to load:', error)
+    logger.error('[Calibration] Failed to load', error as Error)
     return null
   }
 }
@@ -262,9 +264,9 @@ export function clearCalibration(userId: string | null): void {
       : CALIBRATION_STORAGE_KEY
 
     localStorage.removeItem(key)
-    console.log('[Calibration] Cleared from localStorage')
+    logger.debug('[Calibration] Cleared from localStorage')
   } catch (error) {
-    console.error('[Calibration] Failed to clear:', error)
+    logger.error('[Calibration] Failed to clear', error as Error)
   }
 }
 
@@ -273,5 +275,5 @@ export function clearCalibration(userId: string | null): void {
  */
 export function resetCalibration(): void {
   currentCalibration = { ...INITIAL_CALIBRATION }
-  console.log('[Calibration] Reset')
+  logger.debug('[Calibration] Reset')
 }

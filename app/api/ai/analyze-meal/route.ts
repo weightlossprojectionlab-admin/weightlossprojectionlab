@@ -3,38 +3,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { adminAuth } from '@/lib/firebase-admin'
 import { generateMealTitle } from '@/lib/meal-title-utils'
 import { batchValidateWithUSDA } from '@/lib/usda-nutrition'
-
-// Rate limiting for Gemini free tier: 10 req/min, 500 req/day
-const rateLimiter = {
-  minuteRequests: [] as number[],
-  dailyRequests: [] as number[],
-
-  canMakeRequest(): { allowed: boolean; reason?: string } {
-    const now = Date.now()
-    const oneMinuteAgo = now - 60 * 1000
-    const oneDayAgo = now - 24 * 60 * 60 * 1000
-
-    // Clean old requests
-    this.minuteRequests = this.minuteRequests.filter(t => t > oneMinuteAgo)
-    this.dailyRequests = this.dailyRequests.filter(t => t > oneDayAgo)
-
-    // Check limits
-    if (this.minuteRequests.length >= 10) {
-      return { allowed: false, reason: 'Rate limit: 10 requests per minute. Please try again in a moment.' }
-    }
-    if (this.dailyRequests.length >= 500) {
-      return { allowed: false, reason: 'Daily limit reached: 500 requests per day. Using fallback analysis.' }
-    }
-
-    return { allowed: true }
-  },
-
-  recordRequest() {
-    const now = Date.now()
-    this.minuteRequests.push(now)
-    this.dailyRequests.push(now)
-  }
-}
+import { logger } from '@/lib/logger'
+import { aiRateLimit, dailyRateLimit, getRateLimitHeaders } from '@/lib/utils/rate-limit'
+import { ErrorHandler } from '@/lib/utils/error-handler'
 
 // Fallback mock data if Gemini fails
 const getMockAnalysis = () => {
@@ -89,12 +60,17 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.split('Bearer ')[1]
 
+    // Verify the Firebase ID token
+    let userId: string
     try {
-      // Verify the Firebase ID token
       const decodedToken = await adminAuth.verifyIdToken(token)
-      console.log('✅ Authenticated user:', decodedToken.uid)
+      userId = decodedToken.uid
+      logger.debug('Authenticated user', { uid: userId })
     } catch (authError) {
-      console.error('❌ Authentication failed:', authError)
+      ErrorHandler.handle(authError, {
+        operation: 'ai_analyze_meal_auth',
+        component: 'api/ai/analyze-meal'
+      })
       return NextResponse.json(
         { error: 'Unauthorized: Invalid authentication token' },
         { status: 401 }
@@ -104,7 +80,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { imageData, mealType } = body
 
-    console.log('Received request:', {
+    logger.debug('Received request', {
       hasImageData: !!imageData,
       imageDataType: typeof imageData,
       imageDataLength: imageData?.length,
@@ -138,18 +114,25 @@ export async function POST(request: NextRequest) {
     let analysis
 
     try {
-      // Check rate limits first
-      const rateLimitCheck = rateLimiter.canMakeRequest()
+      // Check rate limits first (per-minute and daily)
+      const [minuteLimit, dayLimit] = await Promise.all([
+        aiRateLimit?.limit(userId),
+        dailyRateLimit?.limit(userId)
+      ])
+
+      const rateLimitExceeded = (minuteLimit && !minuteLimit.success) || (dayLimit && !dayLimit.success)
 
       if (!process.env.GEMINI_API_KEY) {
-        console.warn('⚠️ GEMINI_API_KEY not set, using mock data')
+        logger.warn('GEMINI_API_KEY not set, using mock data')
         analysis = getMockAnalysis()
-      } else if (!rateLimitCheck.allowed) {
-        console.warn(`⚠️ ${rateLimitCheck.reason}`)
+      } else if (rateLimitExceeded) {
+        const reason = minuteLimit && !minuteLimit.success
+          ? 'Rate limit: 10 requests per minute'
+          : 'Daily limit reached (500 requests)'
+        logger.warn(reason)
         analysis = getMockAnalysis()
       } else {
-        console.log('🤖 Calling Google Gemini Vision API...')
-        rateLimiter.recordRequest()
+        logger.info('Calling Google Gemini Vision API')
 
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
@@ -209,7 +192,7 @@ Guidelines:
         const response = result.response
         const text = response.text()
 
-        console.log('✅ Gemini response received')
+        logger.debug('Gemini response received')
 
         // Remove markdown code blocks if present
         const jsonContent = text
@@ -219,15 +202,20 @@ Guidelines:
           .trim()
 
         analysis = JSON.parse(jsonContent)
-        console.log('✅ Analysis parsed successfully:', analysis)
+        logger.debug('Analysis parsed successfully', { analysis })
       }
     } catch (error) {
-      console.error('❌ Gemini analysis failed, using mock data:', error)
+      ErrorHandler.handle(error, {
+        operation: 'gemini_meal_analysis',
+        userId,
+        component: 'api/ai/analyze-meal',
+        severity: 'warning'
+      })
       analysis = getMockAnalysis()
     }
 
     // Validate AI-generated nutrition data with USDA database
-    console.log('🔍 Validating nutrition data with USDA...')
+    logger.info('Validating nutrition data with USDA')
     let validatedFoodItems = analysis.foodItems || []
     let usdaMessages: string[] = []
 
@@ -273,10 +261,18 @@ Guidelines:
         const verificationRate = usdaVerifiedCount / validationResults.length
         analysis.confidence = Math.round(analysis.confidence * 0.4 + verificationRate * 60) // Weighted average
 
-        console.log(`✅ USDA validation complete: ${usdaVerifiedCount}/${validationResults.length} items verified`)
+        logger.info('USDA validation complete', {
+          usdaVerifiedCount,
+          totalItems: validationResults.length
+        })
       }
     } catch (error) {
-      console.error('⚠️ USDA validation failed, using AI data:', error)
+      ErrorHandler.handle(error, {
+        operation: 'usda_meal_validation',
+        userId,
+        component: 'api/ai/analyze-meal',
+        severity: 'warning'
+      })
       // Continue with AI data if USDA validation fails
     }
 
@@ -296,11 +292,16 @@ Guidelines:
     })
 
   } catch (error) {
-    console.error('Meal analysis error:', error)
+    ErrorHandler.handle(error, {
+      operation: 'ai_analyze_meal',
+      component: 'api/ai/analyze-meal',
+      userId: 'unknown'
+    })
 
+    const userMessage = ErrorHandler.getUserMessage(error)
     return NextResponse.json(
       {
-        error: 'Failed to analyze meal. Please try again or enter manually.',
+        error: userMessage,
         details: process.env.NODE_ENV === 'development' ? error : undefined
       },
       { status: 500 }

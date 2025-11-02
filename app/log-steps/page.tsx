@@ -8,6 +8,7 @@ import { useStepTracking } from '@/components/StepTrackingProvider'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { stepLogOperations } from '@/lib/firebase-operations'
 import { Spinner } from '@/components/ui/Spinner'
+import { logger } from '@/lib/logger'
 
 interface StepLogData {
   id: string
@@ -36,7 +37,7 @@ function LogStepsContent() {
         const response = await stepLogOperations.getStepLogs({ limit: 7 })
         setRecentLogs(response.data || [])
       } catch (error) {
-        console.error('Error fetching recent logs:', error)
+        logger.error('Error fetching recent logs:', error as Error)
       } finally {
         setLoadingLogs(false)
       }

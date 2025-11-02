@@ -22,6 +22,7 @@ import { HealthSyncCard } from '@/components/health/HealthSyncCard'
 import { HealthConnectModal } from '@/components/health/HealthConnectModal'
 import { detectPlatform, getHealthAppForPlatform } from '@/lib/health-sync-utils'
 import { useTheme } from '@/hooks/useTheme'
+import { logger } from '@/lib/logger'
 
 function ProfileContent() {
   const { user } = useAuth()
@@ -55,7 +56,7 @@ function ProfileContent() {
         const profile = await userProfileOperations.getUserProfile()
         setProfileData(profile.data)
       } catch (error) {
-        console.error('Error fetching profile:', error)
+        logger.error('Error fetching profile', error as Error)
         toast.error('Failed to load profile data')
       }
     }
@@ -80,7 +81,7 @@ function ProfileContent() {
         setBiometricEnabled(enabled)
       }
     } catch (error) {
-      console.error('Error checking biometric status:', error)
+      logger.error('Error checking biometric status', error as Error)
     }
   }
 
@@ -93,7 +94,7 @@ function ProfileContent() {
       setBiometricEnabled(true)
       toast.success('Biometric authentication enabled successfully!')
     } catch (error: any) {
-      console.error('Failed to enable biometrics:', error)
+      logger.error('Failed to enable biometrics', error as Error)
       toast.error('Failed to set up biometric authentication: ' + error.message)
     } finally {
       setLoading(false)
@@ -128,7 +129,7 @@ function ProfileContent() {
         toast.success('Automatic step tracking enabled! Your steps will be counted in the background.')
       }
     } catch (error) {
-      console.error('Toggle step tracking error:', error)
+      logger.error('Toggle step tracking error', error as Error)
       toast.error('Failed to toggle step tracking. Please check device permissions.')
     }
   }
@@ -138,7 +139,7 @@ function ProfileContent() {
     try {
       await signOut()
     } catch (error) {
-      console.error('Sign out error:', error)
+      logger.error('Sign out error', error as Error)
       toast.error('Failed to sign out. Please try again.')
     } finally {
       setSignOutLoading(false)
@@ -177,7 +178,7 @@ function ProfileContent() {
         router.push('/onboarding')
       }, 2000)
     } catch (error) {
-      console.error('Reset all data error:', error)
+      logger.error('Reset all data error', error as Error)
       toast.error('Failed to reset data. Please try again or contact support.')
       setResetLoading(false)
     }
@@ -198,7 +199,7 @@ function ProfileContent() {
       const updated = await userProfileOperations.getUserProfile()
       setProfileData(updated.data)
     } catch (error) {
-      console.error('Save profile error:', error)
+      logger.error('Save profile error', error as Error)
       toast.error('Failed to save profile. Please try again.')
     } finally {
       setSaving(false)
@@ -212,7 +213,7 @@ function ProfileContent() {
       const profile = await userProfileOperations.getUserProfile()
       setProfileData(profile.data)
     } catch (error) {
-      console.error('Error refreshing profile:', error)
+      logger.error('Error refreshing profile', error as Error)
     }
   }
 

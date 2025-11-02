@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { auth } from '@/lib/auth'
 import { userProfileOperations } from '@/lib/firebase-operations'
 import { DEFAULT_GOALS, createDefaultProfile } from '@/lib/default-profile'
+import { logger } from '@/lib/logger'
 
 export interface UserProfileData {
   goals?: any
@@ -28,7 +29,7 @@ export function useUserProfile() {
     } catch (profileError: any) {
       // If profile doesn't exist (404), auto-create it
       if (profileError.message?.includes('404') || profileError.message?.includes('not found')) {
-        console.warn('User profile not found, auto-creating:', profileError)
+        logger.warn('User profile not found, auto-creating:', profileError)
 
         const currentUser = auth.currentUser
         if (currentUser) {
@@ -42,9 +43,9 @@ export function useUserProfile() {
             // Save to Firestore
             const createdProfile = await userProfileOperations.createUserProfile(profileData)
             setProfile(createdProfile.data)
-            console.log('✅ Auto-created user profile successfully')
+            logger.debug('✅ Auto-created user profile successfully')
           } catch (createError: any) {
-            console.error('Error auto-creating profile:', createError)
+            logger.error('Error auto-creating profile:', createError)
 
             // Use defaults as fallback
             setProfile({

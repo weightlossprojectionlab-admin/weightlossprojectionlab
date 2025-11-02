@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { userProfileOperations } from '@/lib/firebase-operations'
 import { calculateBMR, calculateTDEE, calculateCalorieTarget } from '@/lib/health-calculations'
 import type { UserProfileData } from '@/hooks/useUserProfile'
+import { logger } from '@/lib/logger'
 
 interface GoalsEditorProps {
   isOpen: boolean
@@ -97,7 +98,7 @@ export function GoalsEditor({ isOpen, onClose, userProfile, currentWeight, onSuc
       onSuccess?.()
       onClose()
     } catch (error) {
-      console.error('Failed to update goals:', error)
+      logger.error('Failed to update goals:', error as Error)
       toast.error('Failed to update goals. Please try again.')
     } finally {
       setLoading(false)

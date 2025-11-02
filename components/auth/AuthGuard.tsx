@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { getAuthLoadingMessage } from '@/lib/auth-message-selector'
+import { logger } from '@/lib/logger'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -24,7 +25,7 @@ export default function AuthGuard({ children, fallback }: AuthGuardProps) {
 
   useEffect(() => {
     if (!loading && !user) {
-      console.log('🔒 AuthGuard: No user found, redirecting to /auth')
+      logger.debug('🔒 AuthGuard: No user found, redirecting to /auth')
       router.push('/auth')
     }
   }, [user, loading, router])

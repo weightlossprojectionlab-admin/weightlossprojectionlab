@@ -1,5 +1,7 @@
 // Utility functions for social media sharing
 
+import { logger } from '@/lib/logger'
+
 /**
  * Detect if user is on a mobile device
  */
@@ -74,7 +76,7 @@ export const generateMealShareCard = async (meal: MealShareData): Promise<Blob> 
       ctx.drawImage(img, x, y, scaledWidth, scaledHeight)
       ctx.restore()
     } catch (error) {
-      console.error('Failed to load meal photo:', error)
+      logger.error('Failed to load meal photo', error as Error)
     }
   }
 
@@ -234,7 +236,7 @@ export const shareMeal = async (meal: MealShareData): Promise<{ imageBlob: Blob;
       try {
         await navigator.clipboard.writeText(caption)
       } catch (error) {
-        console.warn('Failed to copy caption to clipboard:', error)
+        logger.warn('Failed to copy caption to clipboard')
       }
     }
   }

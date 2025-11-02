@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { logger } from '@/lib/logger'
 import {
   UsersIcon,
   CameraIcon,
@@ -68,7 +69,7 @@ export default function AnalyticsPage() {
       const result = await response.json()
       setData(result.data)
     } catch (err) {
-      console.error('Error loading analytics:', err)
+      logger.error('Error loading analytics:', err as Error)
       setError(err instanceof Error ? err.message : 'Failed to load analytics')
     } finally {
       setLoading(false)

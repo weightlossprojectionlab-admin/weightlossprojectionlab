@@ -7,6 +7,7 @@ import { addDoc, collection } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
 import { Spinner } from '@/components/ui/Spinner'
+import { logger } from '@/lib/logger'
 
 interface RecipeImportModalProps {
   isOpen: boolean
@@ -59,7 +60,7 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
       setStep('preview')
       toast.success('Recipe imported successfully!')
     } catch (error: any) {
-      console.error('Import error:', error)
+      logger.error('Import error:', error as Error)
       toast.error(error.message || 'Failed to import recipe')
     } finally {
       setLoading(false)
@@ -108,7 +109,7 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
       onSuccess?.()
       handleClose()
     } catch (error: any) {
-      console.error('Save error:', error)
+      logger.error('Save error:', error as Error)
       toast.error(error.message || 'Failed to save recipe')
     } finally {
       setLoading(false)

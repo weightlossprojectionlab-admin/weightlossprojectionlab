@@ -7,6 +7,7 @@
 
 import { collection, query, where, getDocs, orderBy, limit, doc, setDoc, Timestamp } from 'firebase/firestore'
 import { db } from './firebase'
+import { logger } from '@/lib/logger'
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -232,7 +233,7 @@ export async function fetchUserContext(userId: string): Promise<ChatContext> {
 
     return context
   } catch (error) {
-    console.error('[AI Coach] Error fetching user context:', error)
+    logger.error('[AI Coach] Error fetching user context', error as Error)
     return context
   }
 }
@@ -259,7 +260,7 @@ export async function getChatHistory(userId: string, limitCount: number = 20): P
     // Reverse to get chronological order
     return messages.reverse()
   } catch (error) {
-    console.error('[AI Coach] Error fetching chat history:', error)
+    logger.error('[AI Coach] Error fetching chat history', error as Error)
     return []
   }
 }
@@ -275,7 +276,7 @@ export async function saveChatMessage(message: Omit<ChatMessage, 'id'>): Promise
       id: messageId
     })
   } catch (error) {
-    console.error('[AI Coach] Error saving chat message:', error)
+    logger.error('[AI Coach] Error saving chat message', error as Error)
   }
 }
 

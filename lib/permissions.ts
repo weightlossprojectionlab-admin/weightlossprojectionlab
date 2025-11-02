@@ -2,6 +2,8 @@
 
 // Permission management utilities for camera and biometric access
 
+import { logger } from '@/lib/logger'
+
 export type PermissionStatus = 'granted' | 'denied' | 'prompt' | 'unsupported'
 
 export interface PermissionCheckResult {
@@ -90,7 +92,7 @@ export const checkCameraPermission = async (): Promise<PermissionCheckResult> =>
       }
     } catch (error) {
       // Permissions API failed, fall through to getUserMedia approach
-      console.log('Permissions API not available, will use getUserMedia')
+      logger.debug('Permissions API not available, will use getUserMedia')
     }
   }
 
@@ -125,7 +127,7 @@ export const requestCameraPermission = async (): Promise<{
       stream
     }
   } catch (error: any) {
-    console.error('Camera permission error:', error)
+    logger.error('Camera permission error', error as Error)
 
     let errorMessage = 'Unable to access camera. '
 
@@ -197,7 +199,7 @@ export const checkBiometricPermission = async (): Promise<PermissionCheckResult>
       message: 'Biometric authentication is available on this device.'
     }
   } catch (error) {
-    console.error('Biometric check error:', error)
+    logger.error('Biometric check error', error as Error)
     return {
       status: 'unsupported',
       canRequest: false,

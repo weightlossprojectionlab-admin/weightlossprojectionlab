@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { Timestamp } from 'firebase-admin/firestore'
+import { logger } from '@/lib/logger'
 
 /**
  * GET /api/admin/perks
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ perks })
   } catch (error) {
-    console.error('Error fetching perks:', error)
+    logger.error('Error fetching perks', error as Error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch perks' },
       { status: 500 }
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, perkId: perkRef.id })
   } catch (error) {
-    console.error('Error creating perk:', error)
+    logger.error('Error creating perk', error as Error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create perk' },
       { status: 500 }
@@ -235,7 +236,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error updating perk:', error)
+    logger.error('Error updating perk', error as Error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to update perk' },
       { status: 500 }
@@ -297,7 +298,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting perk:', error)
+    logger.error('Error deleting perk', error as Error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to delete perk' },
       { status: 500 }

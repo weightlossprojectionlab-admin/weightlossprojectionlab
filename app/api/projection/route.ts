@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { logger } from '@/lib/logger'
 
 interface MealLog {
   totalCalories?: number
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
       decodedToken = await adminAuth.verifyIdToken(token)
     } catch (error) {
-      console.error('Token verification failed:', error)
+      logger.error('Token verification failed', error instanceof Error ? error : new Error(String(error)))
       return NextResponse.json(
         { error: 'Unauthorized - Invalid token' },
         { status: 401 }
@@ -175,7 +176,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     })
   } catch (error) {
-    console.error('Error calculating projection:', error)
+    logger.error('Error calculating projection', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       { error: 'Failed to calculate projection' },
       { status: 500 }

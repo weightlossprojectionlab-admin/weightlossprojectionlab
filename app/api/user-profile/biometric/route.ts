@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import type { BiometricCredential } from '@/types'
+import { logger } from '@/lib/logger'
 
 // Helper to get device info from user agent
 function getDeviceInfo(userAgent: string): string {
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error registering biometric credential:', error)
+    logger.error('Error registering biometric credential', error instanceof Error ? error : new Error(String(error)))
 
     if (error.code === 'auth/id-token-expired') {
       return NextResponse.json(
@@ -146,7 +147,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error fetching biometric credentials:', error)
+    logger.error('Error fetching biometric credentials', error instanceof Error ? error : new Error(String(error)))
 
     if (error.code === 'auth/id-token-expired') {
       return NextResponse.json(
@@ -235,7 +236,7 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error removing biometric credential:', error)
+    logger.error('Error removing biometric credential', error instanceof Error ? error : new Error(String(error)))
 
     if (error.code === 'auth/id-token-expired') {
       return NextResponse.json(
@@ -324,7 +325,7 @@ export async function PATCH(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error updating biometric credential:', error)
+    logger.error('Error updating biometric credential', error instanceof Error ? error : new Error(String(error)))
 
     if (error.code === 'auth/id-token-expired') {
       return NextResponse.json(

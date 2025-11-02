@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuth } from 'firebase-admin/auth'
 import { analyzeUserReadiness, getLatestAnalysis } from '@/lib/readiness-analyzer'
 import { initAdmin } from '@/lib/firebase-admin'
+import { logger } from '@/lib/logger'
 
 // Rate limiting: Store last analysis time per user
 const analysisCache = new Map<string, number>()
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
       const decodedToken = await getAuth().verifyIdToken(token)
       userId = decodedToken.uid
     } catch (error) {
-      console.error('Token verification failed:', error)
+      logger.error('Token verification failed', error instanceof Error ? error : new Error(String(error)))
       return NextResponse.json(
         { error: 'Unauthorized - Invalid token' },
         { status: 401 }
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Perform analysis
-    console.log(`Starting readiness analysis for user: ${userId}`)
+    logger.info('Starting readiness analysis', { userId })
 
     const analysis = await analyzeUserReadiness(userId)
 
@@ -77,7 +78,8 @@ export async function POST(request: NextRequest) {
 
     // Log intervention recommendation
     if (analysis.intervention.priority === 'high' || analysis.intervention.priority === 'urgent') {
-      console.log(`⚠️ High priority intervention for user ${userId}:`, {
+      logger.warn('High priority intervention detected', {
+        userId,
         level: analysis.engagementScore.level,
         score: analysis.engagementScore.overallScore,
         churnProbability: analysis.churnProbability,
@@ -118,7 +120,7 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Error analyzing readiness:', error)
+    logger.error('Error analyzing readiness', error instanceof Error ? error : new Error(String(error)))
 
     return NextResponse.json(
       {
@@ -157,7 +159,7 @@ export async function GET(request: NextRequest) {
       const decodedToken = await getAuth().verifyIdToken(token)
       userId = decodedToken.uid
     } catch (error) {
-      console.error('Token verification failed:', error)
+      logger.error('Token verification failed', error instanceof Error ? error : new Error(String(error)))
       return NextResponse.json(
         { error: 'Unauthorized - Invalid token' },
         { status: 401 }
@@ -189,7 +191,7 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Error getting latest analysis:', error)
+    logger.error('Error getting latest analysis', error instanceof Error ? error : new Error(String(error)))
 
     return NextResponse.json(
       {

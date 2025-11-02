@@ -11,11 +11,9 @@
  * Data is public domain (CC0 1.0 Universal)
  */
 
-const USDA_API_BASE = 'https://api.nal.usda.gov/fdc/v1'
+import { logger } from './logger'
 
-// In-memory cache to reduce API calls
-const cache = new Map<string, { data: any; timestamp: number }>()
-const CACHE_TTL = 1000 * 60 * 60 * 24 // 24 hours
+const USDA_API_BASE = 'https://api.nal.usda.gov/fdc/v1'
 
 interface USDANutrient {
   nutrientId: number
@@ -39,6 +37,10 @@ interface USDASearchResult {
   currentPage: number
   totalPages: number
 }
+
+// In-memory cache to reduce API calls
+const cache = new Map<string, { data: NutritionData | NutritionData[]; timestamp: number }>()
+const CACHE_TTL = 1000 * 60 * 60 * 24 // 24 hours
 
 export interface NutritionData {
   fdcId: number
@@ -65,7 +67,7 @@ export async function searchUSDAFood(
   const apiKey = process.env.USDA_API_KEY
 
   if (!apiKey) {
-    console.warn('⚠️ USDA_API_KEY not set, skipping USDA lookup')
+    logger.warn('USDA_API_KEY not set, skipping USDA lookup')
     return []
   }
 
@@ -73,7 +75,7 @@ export async function searchUSDAFood(
   const cacheKey = `search:${query.toLowerCase()}`
   const cached = cache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data
+    return cached.data as NutritionData[]
   }
 
   try {
@@ -100,7 +102,7 @@ export async function searchUSDAFood(
 
     return results
   } catch (error) {
-    console.error('USDA API error:', error)
+    logger.error('USDA API error', error as Error)
     return []
   }
 }
@@ -112,7 +114,7 @@ export async function getUSDAFoodDetails(fdcId: number): Promise<NutritionData |
   const apiKey = process.env.USDA_API_KEY
 
   if (!apiKey) {
-    console.warn('⚠️ USDA_API_KEY not set, skipping USDA lookup')
+    logger.warn('USDA_API_KEY not set, skipping USDA lookup')
     return null
   }
 
@@ -120,7 +122,7 @@ export async function getUSDAFoodDetails(fdcId: number): Promise<NutritionData |
   const cacheKey = `food:${fdcId}`
   const cached = cache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data
+    return cached.data as NutritionData
   }
 
   try {
@@ -139,7 +141,7 @@ export async function getUSDAFoodDetails(fdcId: number): Promise<NutritionData |
 
     return result
   } catch (error) {
-    console.error('USDA API error:', error)
+    logger.error('USDA API error', error as Error)
     return null
   }
 }
@@ -284,25 +286,29 @@ export async function validateWithUSDA(
   }
 }
 
+interface FoodItemInput {
+  name: string
+  portion: string
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  fiber: number
+}
+
+interface ValidationResult {
+  original: FoodItemInput
+  validated: NutritionData
+  isUSDAVerified: boolean
+  message: string
+}
+
 /**
  * Batch validate multiple food items
  */
 export async function batchValidateWithUSDA(
-  foodItems: Array<{
-    name: string
-    portion: string
-    calories: number
-    protein: number
-    carbs: number
-    fat: number
-    fiber: number
-  }>
-): Promise<Array<{
-  original: any
-  validated: NutritionData
-  isUSDAVerified: boolean
-  message: string
-}>> {
+  foodItems: FoodItemInput[]
+): Promise<ValidationResult[]> {
   const results = await Promise.all(
     foodItems.map(async (item) => {
       const { nutrition, validated, message } = await validateWithUSDA(

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { formatDuration } from '@/lib/recipe-timer-parser'
+import { logger } from '@/lib/logger'
 
 interface CookingTimerProps {
   duration: number // Duration in seconds
@@ -27,7 +28,7 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
 
           // Play notification sound
           if (audioRef.current) {
-            audioRef.current.play().catch(err => console.log('Audio play failed:', err))
+            audioRef.current.play().catch(err => logger.debug('Audio play failed:', err))
           }
 
           // Trigger completion callback

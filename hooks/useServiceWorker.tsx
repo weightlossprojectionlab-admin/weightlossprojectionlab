@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger'
 
 export function useServiceWorker() {
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null)
@@ -18,7 +19,7 @@ export function useServiceWorker() {
       navigator.serviceWorker
         .register('/sw.js')
         .then((reg) => {
-          console.log('[SW] Registered:', reg)
+          logger.debug('[SW] Registered:', { scope: reg.scope, active: !!reg.active })
           setRegistration(reg)
 
           // Check for updates
@@ -38,7 +39,7 @@ export function useServiceWorker() {
           })
         })
         .catch((error) => {
-          console.error('[SW] Registration failed:', error)
+          logger.error('[SW] Registration failed:', error as Error)
         })
 
       // Listen for controller changes (new SW activated)

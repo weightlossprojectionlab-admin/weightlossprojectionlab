@@ -2,6 +2,7 @@
 // PRD Reference: trust_safety_moderation, refunds_cancellations_disputes
 
 import { Timestamp } from 'firebase/firestore';
+import { FirebaseTimestamp, JsonObject } from './common';
 
 export type CaseStatus =
   | 'new'
@@ -43,7 +44,7 @@ export type TSRole = 'ts_agent' | 'ts_lead' | 'auditor' | 'system';
 export interface Evidence {
   type: 'stripe' | 'zoom' | 'app' | 'chat' | 'screenshot' | 'other';
   source: string;
-  data: Record<string, any>;
+  data: JsonObject;
   collectedAt: Timestamp;
   verifiedBy?: string;
 }
@@ -145,16 +146,16 @@ export interface CoachStrike {
 }
 
 // Dispute case extends ModerationCase with risk assessment data
-export interface DisputeCase extends Omit<ModerationCase, 'caseId'> {
+export interface DisputeCase extends Omit<ModerationCase, 'caseId' | 'createdAt' | 'updatedAt' | 'resolvedAt' | 'slaDeadline' | 'firstResponseAt'> {
   id: string;              // Alias for caseId for consistency
   caseId?: string;         // Optional to maintain compatibility
   signals: RiskSignal[];   // Risk signals from assessment
   recommendation: 'refund_full' | 'refund_partial' | 'deny' | 'review_manual';
   confidence: number;      // 0.0-1.0
   rationale?: string;      // Explanation for the recommendation
-  createdAt: any;          // Allow both Timestamp and Date
-  updatedAt: any;
-  resolvedAt?: any;
-  slaDeadline: any;
-  firstResponseAt?: any;
+  createdAt: FirebaseTimestamp;
+  updatedAt: FirebaseTimestamp;
+  resolvedAt?: FirebaseTimestamp;
+  slaDeadline: FirebaseTimestamp;
+  firstResponseAt?: FirebaseTimestamp;
 }

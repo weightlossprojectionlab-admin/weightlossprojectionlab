@@ -8,6 +8,7 @@ import { PhotoGalleryGrid, GroupedPhotoGallery } from '@/components/gallery/Phot
 import { PhotoModal } from '@/components/gallery/PhotoModal'
 import { ShareButton } from '@/components/social/ShareButton'
 import { ShareModal } from '@/components/social/ShareModal'
+import { logger } from '@/lib/logger'
 import {
   fetchRecentPhotos,
   groupPhotosByDate,
@@ -53,7 +54,7 @@ export default function GalleryPage() {
       setPhotos(fetchedPhotos)
       setFilteredPhotos(fetchedPhotos)
     } catch (error) {
-      console.error('Error loading photos:', error)
+      logger.error('Error loading photos:', error as Error)
       toast.error('Failed to load photos')
     } finally {
       setLoading(false)

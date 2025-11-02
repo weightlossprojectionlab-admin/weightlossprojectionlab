@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import GroupsList from '@/components/groups/GroupsList';
 import { PlusIcon } from '@heroicons/react/24/outline';
+import { logger } from '@/lib/logger'
 
 // TODO: Create useGroups hook similar to useMissions
 // For now, using mock data structure
@@ -21,22 +22,22 @@ export default function GroupsPage() {
   const error = null;
 
   const handleJoinGroup = async (groupId: string) => {
-    console.log('Join group:', groupId);
+    logger.debug('Join group:', { groupId });
     // TODO: Implement Firebase function to join group
   };
 
   const handleLeaveGroup = async (groupId: string) => {
-    console.log('Leave group:', groupId);
+    logger.debug('Leave group:', { groupId });
     // TODO: Implement Firebase function to leave group
   };
 
   const handleViewGroup = (groupId: string) => {
-    console.log('View group:', groupId);
+    logger.debug('View group:', { groupId });
     // TODO: Navigate to group detail page
   };
 
   const handleCreateGroup = () => {
-    console.log('Create new group');
+    logger.debug('Create new group');
     // TODO: Open create group modal or navigate to create page
   };
 

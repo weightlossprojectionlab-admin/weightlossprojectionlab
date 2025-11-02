@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { User } from 'firebase/auth'
 import { signIn, signUp, signInWithGoogle, checkSignInMethods } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 import {
   isBiometricSupported,
   registerBiometric,
@@ -41,27 +42,27 @@ export default function AuthPage() {
   useEffect(() => {
     const checkAuthStatus = async () => {
       if (authLoading) {
-        console.log('⏳ Auth page: Waiting for auth to load...')
+        logger.debug('⏳ Auth page: Waiting for auth to load...')
         return
       }
 
       if (authUser) {
-        console.log('✅ User already authenticated on /auth page, checking destination...')
+        logger.debug('✅ User already authenticated on /auth page, checking destination...')
 
         try {
           const destination = await determineUserDestination(authUser, '/auth')
 
           if (destination.type === 'dashboard') {
-            console.log('➡️ Redirecting to dashboard:', destination.reason)
+            logger.debug('➡️ Redirecting to dashboard:', { reason: destination.reason })
             router.push('/dashboard')
           } else if (destination.type === 'onboarding') {
-            console.log('➡️ Redirecting to onboarding:', destination.reason)
+            logger.debug('➡️ Redirecting to onboarding:', { reason: destination.reason })
             router.push('/onboarding')
           } else if (destination.type === 'stay') {
-            console.log('⚠️ User authenticated but destination is "stay" - allowing /auth access')
+            logger.debug('⚠️ User authenticated but destination is "stay" - allowing /auth access')
           }
         } catch (error) {
-          console.error('❌ Error checking auth destination:', error)
+          logger.error('❌ Error checking auth destination:', error as Error)
         }
       }
 
@@ -88,10 +89,10 @@ export default function AuthPage() {
       setBiometricSupported(isSupported)
 
       if (!isSupported && detailedStatus.message) {
-        console.log('Biometric status:', detailedStatus.message)
+        logger.debug('Biometric status:', { message: detailedStatus.message })
       }
     } catch (error) {
-      console.error('Error checking biometric support:', error)
+      logger.error('Error checking biometric support:', error as Error)
       setBiometricSupported(false)
     }
   }
@@ -113,7 +114,7 @@ export default function AuthPage() {
             await userProfileOperations.createUserProfile(profileData)
           } catch (profileError: any) {
             // Log error but don't block signup flow
-            console.error('Error creating user profile:', profileError)
+            logger.error('Error creating user profile:', profileError)
             // If profile already exists (409), that's fine - just continue
             if (profileError.message && !profileError.message.includes('409') && !profileError.message.includes('already exists')) {
               setError('Account created but profile setup failed. Please contact support.')
@@ -140,7 +141,7 @@ export default function AuthPage() {
       }
 
     } catch (error: any) {
-      console.error('Auth error:', error)
+      logger.error('Auth error:', error as Error)
 
       // Check if it's an invalid credential error
       if (error.code === 'auth/invalid-credential') {
@@ -219,7 +220,7 @@ export default function AuthPage() {
         if (success) {
           // For demo purposes, simulate a successful login
           // In a real app, you'd verify the biometric authentication on the server
-          console.log('Biometric authentication successful')
+          logger.debug('Biometric authentication successful')
 
           // Try to sign in with a placeholder (this is just for demo)
           // In production, you'd have a separate biometric auth endpoint
@@ -227,7 +228,7 @@ export default function AuthPage() {
         }
 
       } catch (biometricError: any) {
-        console.error('Biometric auth error:', biometricError)
+        logger.error('Biometric auth error:', biometricError)
         setError(getBiometricErrorMessage(biometricError))
       }
     } finally {
@@ -261,7 +262,7 @@ export default function AuthPage() {
       await registerBiometric(currentUser.uid, currentUser.email || email)
       router.push('/onboarding')
     } catch (error: any) {
-      console.error('Biometric setup error:', error)
+      logger.error('Biometric setup error:', error as Error)
 
       // Check if it's a permission error
       if (error.message?.includes('not available') || error.message?.includes('not supported')) {
@@ -298,7 +299,7 @@ export default function AuthPage() {
       }
 
     } catch (error: any) {
-      console.error('Google sign in error:', error)
+      logger.error('Google sign in error:', error as Error)
       if (error.code === 'auth/popup-closed-by-user') {
         setError('Sign-in was cancelled. Please try again.')
       } else if (error.code === 'auth/popup-blocked') {

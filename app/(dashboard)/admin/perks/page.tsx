@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
+import { logger } from '@/lib/logger'
 import {
   GiftIcon,
   PlusCircleIcon,
@@ -73,7 +74,7 @@ export default function PerksAdminPage() {
       const data = await response.json()
       setPerks(data.perks || [])
     } catch (err) {
-      console.error('Error loading perks:', err)
+      logger.error('Error loading perks:', err as Error)
     } finally {
       setLoading(false)
     }

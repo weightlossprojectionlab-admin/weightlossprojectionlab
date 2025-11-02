@@ -5,6 +5,7 @@
  * Part of Phase 3 Backend Agents implementation.
  */
 
+import { logger } from '@/lib/logger'
 import { collection, query, where, getDocs, doc, setDoc, updateDoc, orderBy, limit } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -78,9 +79,9 @@ export async function saveNotificationToken(userId: string, token: string): Prom
       lastUsed: new Date().toISOString()
     })
 
-    console.log('[Nudge] Saved notification token for user:', userId)
+    logger.info('[Nudge] Saved notification token for user', { userId })
   } catch (error) {
-    console.error('[Nudge] Error saving notification token:', error)
+    logger.error('[Nudge] Error saving notification token', error as Error, { userId })
     throw error
   }
 }
@@ -104,7 +105,7 @@ export async function getNotificationToken(userId: string): Promise<string | nul
     const tokenData = tokenSnap.docs[0].data() as NotificationToken
     return tokenData.token
   } catch (error) {
-    console.error('[Nudge] Error getting notification token:', error)
+    logger.error('[Nudge] Error getting notification token', error as Error)
     return null
   }
 }
@@ -120,9 +121,9 @@ export async function deleteNotificationToken(userId: string): Promise<void> {
       deletedAt: new Date().toISOString()
     })
 
-    console.log('[Nudge] Deleted notification token for user:', userId)
+    logger.info('[Nudge] Deleted notification token for user', { userId })
   } catch (error) {
-    console.error('[Nudge] Error deleting notification token:', error)
+    logger.error('[Nudge] Error deleting notification token', error as Error, { userId })
   }
 }
 
@@ -148,7 +149,7 @@ export async function getNotificationSettings(userId: string): Promise<Notificat
     const userData = userDoc.docs[0].data()
     return userData.notificationSettings || DEFAULT_NOTIFICATION_SETTINGS
   } catch (error) {
-    console.error('[Nudge] Error getting notification settings:', error)
+    logger.error('[Nudge] Error getting notification settings', error as Error)
     return DEFAULT_NOTIFICATION_SETTINGS
   }
 }
@@ -169,7 +170,7 @@ export async function updateNotificationSettings(
 
     const userSnap = await getDocs(userQuery)
     if (userSnap.empty) {
-      console.warn('[Nudge] User not found:', userId)
+      logger.warn('[Nudge] User not found', { userId })
       return
     }
 
@@ -178,9 +179,9 @@ export async function updateNotificationSettings(
       notificationSettings: settings
     })
 
-    console.log('[Nudge] Updated notification settings for user:', userId)
+    logger.info('[Nudge] Updated notification settings for user', { userId })
   } catch (error) {
-    console.error('[Nudge] Error updating notification settings:', error)
+    logger.error('[Nudge] Error updating notification settings', error as Error, { userId })
     throw error
   }
 }
@@ -289,7 +290,7 @@ export async function checkMissedMealLogging(userId: string): Promise<Nudge | nu
       createdAt: now.toISOString()
     }
   } catch (error) {
-    console.error('[Nudge] Error checking missed meal logging:', error)
+    logger.error('[Nudge] Error checking missed meal logging', error as Error)
     return null
   }
 }
@@ -352,7 +353,7 @@ export async function checkInactiveUser(userId: string): Promise<Nudge | null> {
 
     return null
   } catch (error) {
-    console.error('[Nudge] Error checking inactive user:', error)
+    logger.error('[Nudge] Error checking inactive user', error as Error)
     return null
   }
 }
@@ -417,7 +418,7 @@ export async function checkMilestoneAchievements(userId: string): Promise<Nudge[
 
     return nudges
   } catch (error) {
-    console.error('[Nudge] Error checking milestone achievements:', error)
+    logger.error('[Nudge] Error checking milestone achievements', error as Error)
     return nudges
   }
 }
@@ -432,9 +433,9 @@ export async function checkMilestoneAchievements(userId: string): Promise<Nudge[
 export async function scheduleNudge(nudge: Nudge): Promise<void> {
   try {
     await setDoc(doc(db, 'scheduled_nudges', nudge.id), nudge)
-    console.log('[Nudge] Scheduled nudge:', nudge.id)
+    logger.debug('[Nudge] Scheduled nudge', { nudgeId: nudge.id })
   } catch (error) {
-    console.error('[Nudge] Error scheduling nudge:', error)
+    logger.error('[Nudge] Error scheduling nudge', error as Error)
     throw error
   }
 }
@@ -449,9 +450,9 @@ export async function markNudgeSent(nudgeId: string): Promise<void> {
       sentAt: new Date().toISOString()
     })
 
-    console.log('[Nudge] Marked nudge as sent:', nudgeId)
+    logger.debug('[Nudge] Marked nudge as sent', { nudgeId })
   } catch (error) {
-    console.error('[Nudge] Error marking nudge as sent:', error)
+    logger.error('[Nudge] Error marking nudge as sent', error as Error, { nudgeId })
   }
 }
 
@@ -470,7 +471,7 @@ export async function getPendingNudges(userId: string): Promise<Nudge[]> {
     const nudgesSnap = await getDocs(nudgesQuery)
     return nudgesSnap.docs.map(doc => doc.data() as Nudge)
   } catch (error) {
-    console.error('[Nudge] Error getting pending nudges:', error)
+    logger.error('[Nudge] Error getting pending nudges', error as Error)
     return []
   }
 }
