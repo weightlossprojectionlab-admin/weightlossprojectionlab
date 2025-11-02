@@ -258,3 +258,4 @@ See `/agents/` directory for detailed specifications.
 ---
 
 **Built with simplicity and accessibility in mind. Ready for mobile users worldwide.**
+<!-- Trigger rebuild after adding GEMINI_API_KEY to Netlify (2025-11-02) -->
