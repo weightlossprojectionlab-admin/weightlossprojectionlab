@@ -35,9 +35,12 @@ const CreateMealLogResponseSchema = z.object({
 /**
  * Fetch meal logs for the authenticated user
  */
-export async function getMealLogs(query: GetMealLogsQuery = {}): Promise<MealLog[]> {
-  // Validate query parameters
-  const validatedQuery = GetMealLogsQuerySchema.parse(query)
+export async function getMealLogs(query: Partial<GetMealLogsQuery> = {}): Promise<MealLog[]> {
+  // Validate query parameters with explicit defaults
+  const validatedQuery = GetMealLogsQuerySchema.parse({
+    limit: 50,
+    ...query,
+  })
 
   // Build query string
   const queryString = buildQueryString(validatedQuery)
