@@ -1,16 +1,8 @@
-'use client'
-
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useLazyAuth } from '@/hooks/useLazyAuth'
 
 export default function HomePage() {
-  const { user, loading } = useLazyAuth()
-  const router = useRouter()
-
-  // Don't block the homepage with loading state - show it immediately
-  // Default to unauthenticated state (most visitors are new)
-  // Only show authenticated options once auth is confirmed
+  // No auth check on home page - keeps it fast and lightweight
+  // The /auth page will handle redirects for already-authenticated users
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-purple-100 px-4">
@@ -64,41 +56,18 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Conditional CTA */}
+        {/* CTA */}
         <div className="space-y-3">
-          {!loading && user ? (
-            // Authenticated: Go to dashboard
-            <>
-              <Link
-                href="/dashboard"
-                className="btn btn-primary w-full text-lg py-4"
-                aria-label="Go to your dashboard"
-              >
-                Go to Dashboard
-              </Link>
-              <button
-                onClick={() => router.push('/profile')}
-                className="text-sm text-accent hover:text-accent-hover"
-                aria-label="View profile settings"
-              >
-                Profile Settings
-              </button>
-            </>
-          ) : (
-            // Unauthenticated or loading: Single clear CTA (default state)
-            <>
-              <Link
-                href="/auth"
-                className="btn btn-primary w-full text-lg py-4"
-                aria-label="Start your weight loss journey"
-              >
-                Start Your Journey
-              </Link>
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Join thousands who've simplified their weight loss journey
-              </p>
-            </>
-          )}
+          <Link
+            href="/auth"
+            className="btn btn-primary w-full text-lg py-4"
+            aria-label="Start your weight loss journey"
+          >
+            Start Your Journey
+          </Link>
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            Join thousands who've simplified their weight loss journey
+          </p>
         </div>
 
         {/* Footer */}
