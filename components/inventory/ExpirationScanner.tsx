@@ -58,7 +58,7 @@ export function ExpirationScanner({
     const patterns = [
       // MM/DD/YYYY, MM-DD-YYYY, MM.DD.YYYY
       {
-        regex: /\b(0?[1-9]|1[0-2])[\/-\.](0?[1-9]|[12][0-9]|3[01])[\/-\.](\d{4}|\d{2})\b/g,
+        regex: /\b(0?[1-9]|1[0-2])[\/\-.](0?[1-9]|[12][0-9]|3[01])[\/\-.](\d{4}|\d{2})\b/g,
         formatter: (match: string[]) => {
           const month = parseInt(match[1])
           const day = parseInt(match[2])
@@ -70,7 +70,7 @@ export function ExpirationScanner({
       },
       // DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY (European format)
       {
-        regex: /\b(0?[1-9]|[12][0-9]|3[01])[\/-\.](0?[1-9]|1[0-2])[\/-\.](\d{4}|\d{2})\b/g,
+        regex: /\b(0?[1-9]|[12][0-9]|3[01])[\/\-.](0?[1-9]|1[0-2])[\/\-.](\d{4}|\d{2})\b/g,
         formatter: (match: string[]) => {
           const day = parseInt(match[1])
           const month = parseInt(match[2])
@@ -104,10 +104,10 @@ export function ExpirationScanner({
       },
       // Text patterns: "EXP 01/15/2025", "USE BY 01-15-2025", "BEST BEFORE 01.15.2025"
       {
-        regex: /(?:exp|expir|use by|best before|sell by)[\s:]*(\d{1,2}[\/-\.]\d{1,2}[\/-\.]\d{2,4})/gi,
+        regex: /(?:exp|expir|use by|best before|sell by)[\s:]*(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})/gi,
         formatter: (match: string[]) => {
           const datePart = match[1]
-          const parts = datePart.split(/[\/-\.]/)
+          const parts = datePart.split(/[\/\-.]/)
           const month = parseInt(parts[0])
           const day = parseInt(parts[1])
           let year = parseInt(parts[2])
