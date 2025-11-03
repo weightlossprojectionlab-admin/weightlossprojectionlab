@@ -26,11 +26,7 @@ import { ShareListButton } from '@/components/shopping/ShareListButton'
 import { SearchFilter } from '@/components/shopping/SearchFilter'
 import { StorePicker } from '@/components/shopping/StorePicker'
 import { SmartSuggestions } from '@/components/shopping/SmartSuggestions'
-import { ItemActionMenu } from '@/components/shopping/ItemActionMenu'
-import { QuantityAdjustModal } from '@/components/shopping/QuantityAdjustModal'
-import { NutritionReviewModal } from '@/components/shopping/NutritionReviewModal'
-import { ReplacementCompareModal } from '@/components/shopping/ReplacementCompareModal'
-import { CategoryConfirmModal } from '@/components/shopping/CategoryConfirmModal'
+import { SequentialShoppingFlow } from '@/components/shopping/SequentialShoppingFlow'
 import { RecipeLinks } from '@/components/shopping/RecipeLinks'
 import type { ProductCategory, ShoppingItem } from '@/types/shopping'
 import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
@@ -72,14 +68,9 @@ function ShoppingListContent() {
     category: ProductCategory
   } | null>(null)
 
-  // Per-item shopping hub state
+  // Sequential shopping flow state
   const [selectedItem, setSelectedItem] = useState<ShoppingItem | null>(null)
-  const [showItemActionMenu, setShowItemActionMenu] = useState(false)
-  const [showQuantityAdjust, setShowQuantityAdjust] = useState(false)
-  const [showNutritionReview, setShowNutritionReview] = useState(false)
-  const [showReplacementCompare, setShowReplacementCompare] = useState(false)
-  const [showCategoryConfirm, setShowCategoryConfirm] = useState(false)
-  const [replacementProduct, setReplacementProduct] = useState<OpenFoodFactsProduct | null>(null)
+  const [showSequentialFlow, setShowSequentialFlow] = useState(false)
 
   const summary = getSummary()
 
@@ -311,63 +302,55 @@ function ShoppingListContent() {
   }
 
   /**
-   * Handle item click - open per-item action menu
+   * Handle item click - open sequential shopping flow
+   * This opens the scanner immediately and guides user through purchase
    */
   const handleItemClick = (item: ShoppingItem) => {
     setSelectedItem(item)
-    setShowItemActionMenu(true)
+    setShowSequentialFlow(true)
   }
 
   /**
-   * Handle per-item scan - scan the exact item from shopping list
+   * Handle sequential flow completion
+   * Called when user finishes the entire purchase flow
    */
-  const handleItemScan = () => {
-    setShowItemActionMenu(false)
-    setShowScanner(true)
-  }
-
-  /**
-   * Handle quantity adjustment for selected item
-   */
-  const handleAdjustQuantity = () => {
-    setShowItemActionMenu(false)
-    setShowQuantityAdjust(true)
-  }
-
-  /**
-   * Confirm quantity adjustment
-   */
-  const handleQuantityConfirm = async (quantity: number) => {
+  const handleSequentialFlowComplete = async (result: {
+    quantity: number
+    unit?: import('@/types/shopping').QuantityUnit
+    expirationDate?: Date
+    category: ProductCategory
+    scannedProduct: OpenFoodFactsProduct
+    isReplacement: boolean
+  }) => {
     if (!selectedItem) return
 
     try {
-      await updateItem(selectedItem.id, {
-        quantity,
-        updatedAt: new Date()
+      // Update item category if it changed
+      if (result.category !== selectedItem.category) {
+        await updateItem(selectedItem.id, {
+          category: result.category,
+          updatedAt: new Date()
+        })
+      }
+
+      // Mark as purchased with all collected data
+      await purchaseItem(selectedItem.id, {
+        quantity: result.quantity,
+        unit: result.unit,
+        expiresAt: result.expirationDate
       })
-      toast.success(`Updated quantity to ${quantity}`)
-      setShowQuantityAdjust(false)
-      setSelectedItem(null)
+
+      const productName = result.scannedProduct.product_name || selectedItem.productName
+      if (result.isReplacement) {
+        toast.success(`✓ Purchased substitution: ${productName}`)
+      } else {
+        toast.success(`✓ Purchased: ${productName}`)
+      }
     } catch (error) {
-      logger.error('Error updating quantity', error as Error)
-      toast.error('Failed to update quantity')
+      logger.error('Error completing purchase', error as Error)
+      toast.error('Failed to complete purchase')
+      throw error // Re-throw so SequentialShoppingFlow doesn't auto-close
     }
-  }
-
-  /**
-   * Handle scan replacement - scan a different brand/size
-   */
-  const handleScanReplacement = () => {
-    setShowItemActionMenu(false)
-    setShowScanner(true)
-    toast('Scan the replacement product', { icon: '🔄' })
-  }
-
-  /**
-   * Handle family chat - coming soon
-   */
-  const handleFamilyChat = () => {
-    toast('Family shopping collaboration coming soon!', { icon: '👨‍👩‍👧‍👦' })
   }
 
   return (
@@ -613,106 +596,17 @@ function ShoppingListContent() {
           </div>
         )}
 
-        {/* Per-Item Shopping Hub Modals */}
+        {/* Sequential Shopping Flow - All-in-One Guided Purchase */}
         {selectedItem && (
-          <>
-            {/* Item Action Menu */}
-            <ItemActionMenu
-              isOpen={showItemActionMenu}
-              onClose={() => {
-                setShowItemActionMenu(false)
-                setSelectedItem(null)
-              }}
-              item={selectedItem}
-              onScan={handleItemScan}
-              onAdjustQuantity={handleAdjustQuantity}
-              onReplacement={handleScanReplacement}
-              onChat={handleFamilyChat}
-            />
-
-            {/* Quantity Adjust Modal */}
-            <QuantityAdjustModal
-              isOpen={showQuantityAdjust}
-              onClose={() => {
-                setShowQuantityAdjust(false)
-                setSelectedItem(null)
-              }}
-              item={selectedItem}
-              onConfirm={handleQuantityConfirm}
-            />
-
-            {/* Nutrition Review Modal */}
-            {scannedProduct && (
-              <NutritionReviewModal
-                isOpen={showNutritionReview}
-                onClose={() => {
-                  setShowNutritionReview(false)
-                  setScannedProduct(null)
-                }}
-                product={scannedProduct.product}
-                onConfirm={() => {
-                  setShowNutritionReview(false)
-                  setShowCategoryConfirm(true)
-                }}
-              />
-            )}
-
-            {/* Category Confirm Modal */}
-            {scannedProduct && (
-              <CategoryConfirmModal
-                isOpen={showCategoryConfirm}
-                onClose={() => {
-                  setShowCategoryConfirm(false)
-                  setScannedProduct(null)
-                  setSelectedItem(null)
-                }}
-                currentCategory={selectedItem.category}
-                productName={scannedProduct.product.product_name || 'Product'}
-                onConfirm={async (category: ProductCategory) => {
-                  // Update item category if changed
-                  if (category !== selectedItem.category) {
-                    await updateItem(selectedItem.id, { category, updatedAt: new Date() })
-                  }
-
-                  // Mark as purchased
-                  const categoryMeta = getCategoryMetadata(category)
-                  if (categoryMeta.isPerishable) {
-                    setShowCategoryConfirm(false)
-                    setShowExpirationPicker(true)
-                  } else {
-                    await purchaseItem(selectedItem.id, { quantity: selectedItem.quantity })
-                    toast.success(`✓ Checked off: ${selectedItem.productName}`)
-                    setShowCategoryConfirm(false)
-                    setScannedProduct(null)
-                    setSelectedItem(null)
-                  }
-                }}
-              />
-            )}
-
-            {/* Replacement Compare Modal */}
-            {replacementProduct && (
-              <ReplacementCompareModal
-                isOpen={showReplacementCompare}
-                onClose={() => {
-                  setShowReplacementCompare(false)
-                  setReplacementProduct(null)
-                }}
-                originalItem={selectedItem}
-                replacementProduct={replacementProduct}
-                onConfirm={() => {
-                  // User confirmed replacement - show nutrition review
-                  setShowReplacementCompare(false)
-                  setShowNutritionReview(true)
-                }}
-                onCancel={() => {
-                  setShowReplacementCompare(false)
-                  setReplacementProduct(null)
-                  setSelectedItem(null)
-                }}
-              />
-            )}
-          </>
+          <SequentialShoppingFlow
+            isOpen={showSequentialFlow}
+            item={selectedItem}
+            onComplete={handleSequentialFlowComplete}
+            onCancel={() => {
+              setShowSequentialFlow(false)
+              setSelectedItem(null)
+            }}
+          />
         )}
       </div>
     </AuthGuard>
