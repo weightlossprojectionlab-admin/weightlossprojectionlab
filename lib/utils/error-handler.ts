@@ -51,9 +51,12 @@ export class ErrorHandler {
       component: context.component
     }
 
-    // Pass actual Error object if available, otherwise just use context
-    const actualError = error instanceof Error ? error : undefined
-    logger.error(context.operation, actualError, logContext)
+    // Pass actual Error object if available, otherwise pass undefined explicitly
+    if (error instanceof Error) {
+      logger.error(context.operation, error, logContext)
+    } else {
+      logger.error(context.operation, undefined, logContext)
+    }
   }
 
   /**

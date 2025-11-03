@@ -165,16 +165,13 @@ export function ExpirationScanner({
     let worker: Worker | null = null
 
     try {
-      worker = await createWorker({
+      worker = await createWorker('eng', 1, {
         logger: (m: LoggerMessage) => {
           if (m.status === 'recognizing text' && typeof m.progress === 'number') {
             setProgress(Math.round(m.progress * 100))
           }
         }
       })
-
-      await worker.loadLanguage('eng')
-      await worker.initialize('eng')
 
       const { data: { text } } = await worker.recognize(imageSrc)
       setOcrText(text)

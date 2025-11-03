@@ -29,6 +29,7 @@ import type {
   Store,
   PriceHistory,
   ProductCategory,
+  QuantityUnit,
 } from '@/types/shopping'
 import { FirebaseTimestamp, toDate } from '@/types/common'
 
@@ -191,7 +192,7 @@ export async function recordPrice(
   options: {
     storeId?: string
     quantity?: number
-    unit?: string
+    unit?: QuantityUnit
   } = {}
 ): Promise<PriceHistory> {
   try {
