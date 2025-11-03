@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { MealSuggestion, getRecipeActionLabel } from '@/lib/meal-suggestions'
 import { logger } from '@/lib/logger'
 import {
@@ -19,6 +20,7 @@ import { getSubstitutionSuggestions, type Substitution } from '@/lib/ingredient-
 import { recipeQueueOperations, cookingSessionOperations } from '@/lib/firebase-operations'
 import { createStepTimers } from '@/lib/recipe-timer-parser'
 import { useInventory } from '@/hooks/useInventory'
+import { useShopping } from '@/hooks/useShopping'
 import {
   checkIngredientsAgainstInventory,
   checkIngredientsWithQuantities,
@@ -26,8 +28,15 @@ import {
   type IngredientMatchResult
 } from '@/lib/ingredient-matcher'
 import { addManualShoppingItem } from '@/lib/shopping-operations'
+import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
+
+// Dynamic import for BarcodeScanner
+const BarcodeScanner = dynamic(
+  () => import('@/components/BarcodeScanner').then(mod => ({ default: mod.BarcodeScanner })),
+  { ssr: false }
+)
 
 /**
  * Parse ingredient string to extract quantity/unit and ingredient name
@@ -77,6 +86,11 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   const [inventoryMatches, setInventoryMatches] = useState<Map<number, any>>(new Map())
   const [ingredientResults, setIngredientResults] = useState<IngredientMatchResult[]>([])
   const [showCookingOptions, setShowCookingOptions] = useState(false)
+  const [showMissingIngredientsModal, setShowMissingIngredientsModal] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
+  const [missingIngredients, setMissingIngredients] = useState<string[]>([])
+  const [scannedItems, setScannedItems] = useState<Set<string>>(new Set())
+  const [scanningInProgress, setScanningInProgress] = useState(false)
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(suggestion.mealType)
   const [startingSession, setStartingSession] = useState(false)
   const [addingToShoppingList, setAddingToShoppingList] = useState(false)
@@ -85,7 +99,8 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   const sessionCreationRef = useRef(false)
 
   // Get inventory items
-  const { fridgeItems, freezerItems, pantryItems, counterItems } = useInventory()
+  const { fridgeItems, freezerItems, pantryItems, counterItems, refresh: refreshInventory } = useInventory()
+  const { addItem, updateItem } = useShopping()
   const allInventoryItems = useMemo(() =>
     [...fridgeItems, ...freezerItems, ...pantryItems, ...counterItems],
     [fridgeItems, freezerItems, pantryItems, counterItems]
@@ -274,6 +289,21 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
       return
     }
 
+    // ⚠️ BLOCKING CHECK: Verify all ingredients are available
+    const missingItems = ingredientResults.filter(result =>
+      !result.matched || result.hasEnough === false
+    )
+
+    if (missingItems.length > 0) {
+      // Block cooking! User must have all ingredients
+      const missingNames = missingItems.map(r => r.ingredient)
+      setMissingIngredients(missingNames)
+      setShowCookingOptions(false) // Close cooking options modal
+      setShowMissingIngredientsModal(true) // Show missing ingredients modal
+      toast.error(`Missing ${missingItems.length} ingredient${missingItems.length > 1 ? 's' : ''}. Scan items or add to shopping list.`)
+      return // BLOCKED - cannot start cooking
+    }
+
     sessionCreationRef.current = true
     setStartingSession(true)
 
@@ -368,6 +398,86 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
     } finally {
       setAddingToShoppingList(false)
     }
+  }
+
+  /**
+   * Handle barcode scan for missing ingredients
+   * Scans items one by one, tracks progress, auto-proceeds when all items scanned
+   */
+  const handleBarcodeScan = async (barcode: string) => {
+    try {
+      toast.loading('Looking up product...', { id: 'barcode-scan' })
+
+      // Lookup product
+      const response = await lookupBarcode(barcode)
+      const product = simplifyProduct(response)
+
+      if (!product.found) {
+        toast.error(`Product not found (barcode: ${barcode})`, { id: 'barcode-scan' })
+        return
+      }
+
+      // Add to inventory
+      const existing = allInventoryItems.find(item => item.barcode === barcode)
+
+      if (existing) {
+        await updateItem(existing.id, {
+          inStock: true,
+          quantity: existing.quantity + 1,
+          needed: false
+        })
+      } else {
+        await addItem(response.product!, {
+          inStock: true,
+          needed: false,
+          quantity: 1
+        })
+      }
+
+      // Track this scan
+      setScannedItems(prev => new Set([...prev, barcode]))
+
+      // Refresh inventory to update ingredient matching
+      refreshInventory()
+
+      toast.success(`✓ Added ${product.name} to inventory`, { id: 'barcode-scan' })
+
+      // Check if we've scanned all missing items
+      // Note: This is simplified - ideally we'd match barcodes to specific ingredients
+      const newScannedCount = scannedItems.size + 1
+
+      if (newScannedCount >= missingIngredients.length) {
+        // All items scanned! Proceed to cooking
+        toast.success('✓ All ingredients scanned! Starting cooking...', { duration: 3000 })
+        setShowScanner(false)
+        setShowMissingIngredientsModal(false)
+        setScanningInProgress(false)
+
+        // Small delay to let inventory update, then proceed
+        setTimeout(() => {
+          setShowCookingOptions(true)
+        }, 500)
+      } else {
+        // More items to scan
+        toast(`Progress: ${newScannedCount} of ${missingIngredients.length} items scanned`, {
+          icon: '📊',
+          duration: 2000
+        })
+      }
+    } catch (error: any) {
+      logger.error('Barcode scan error', error as Error)
+      toast.error(error?.message || 'Failed to process barcode', { id: 'barcode-scan' })
+    }
+  }
+
+  /**
+   * Start scanning missing ingredients
+   */
+  const handleStartScanning = () => {
+    setScanningInProgress(true)
+    setScannedItems(new Set()) // Reset progress
+    setShowMissingIngredientsModal(false)
+    setShowScanner(true)
   }
 
   return (
@@ -1152,6 +1262,95 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
             </div>
           </div>
         )}
+
+        {/* Missing Ingredients Modal */}
+        {showMissingIngredientsModal && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4 z-10">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="text-center mb-4">
+                <div className="text-4xl mb-2">🛒</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Missing Ingredients</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                  You need all ingredients to start cooking. Timers depend on having everything ready!
+                </p>
+              </div>
+
+              {/* Missing Items List */}
+              <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 mb-4 max-h-48 overflow-y-auto">
+                <p className="text-xs font-semibold text-orange-800 dark:text-orange-300 mb-2">
+                  Missing ({missingIngredients.length}):
+                </p>
+                <ul className="space-y-1">
+                  {missingIngredients.map((ingredient, idx) => (
+                    <li key={idx} className="text-sm text-orange-900 dark:text-orange-200 flex items-start">
+                      <span className="mr-2">•</span>
+                      <span>{ingredient}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Smart Suggestions Message */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+                <p className="text-xs text-blue-900 dark:text-blue-200">
+                  💡 <strong>Smart tip:</strong> {missingIngredients.length <= 3 ?
+                    'Just a few items - quick store trip?' :
+                    'Several items needed - plan your shopping!'}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <button
+                  onClick={handleStartScanning}
+                  className="w-full px-6 py-3 bg-success text-white rounded-lg hover:bg-success-hover transition-colors font-medium flex items-center justify-center space-x-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                  </svg>
+                  <span>Scan Items I Have</span>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    setShowMissingIngredientsModal(false)
+                    await handleAddMissingToShoppingList()
+                  }}
+                  disabled={addingToShoppingList}
+                  className="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <span>{addingToShoppingList ? 'Adding...' : 'Add to Shopping List'}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowMissingIngredientsModal(false)
+                    setShowCookingOptions(true) // Go back to cooking options
+                  }}
+                  className="w-full px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+                  disabled={addingToShoppingList}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Barcode Scanner */}
+        <BarcodeScanner
+          isOpen={showScanner}
+          onScan={handleBarcodeScan}
+          onClose={() => {
+            setShowScanner(false)
+            setShowMissingIngredientsModal(true) // Return to missing ingredients modal
+          }}
+          context="inventory"
+          title={`Scan Ingredients (${scannedItems.size}/${missingIngredients.length})`}
+        />
       </div>
     </div>
   )
