@@ -263,7 +263,9 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
                   labelLine={false}
                   label={(props: PieLabelRenderProps) => {
                     const name = props.name || ''
-                    const percent = props.percent || 0
+                    const percent = typeof props.percent === 'number'
+                      ? props.percent
+                      : Number(props.percent ?? 0)
                     return `${name} ${(percent * 100).toFixed(0)}%`
                   }}
                   outerRadius={80}
