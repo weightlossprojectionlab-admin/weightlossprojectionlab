@@ -550,8 +550,8 @@ function DashboardContent() {
                             setShowRecipeModal(true)
                           }}
                         >
-                          {/* Recipe Image */}
-                          <div className="relative h-32 bg-gray-100 dark:bg-gray-800">
+                          {/* Recipe Image - Increased height for prominent badges */}
+                          <div className="relative h-48 bg-gray-100 dark:bg-gray-800">
                             {suggestion.imageUrls?.[0] ? (
                               <Image
                                 src={suggestion.imageUrls[0]}
@@ -572,22 +572,49 @@ function DashboardContent() {
                               </div>
                             )}
 
-                            {/* Inventory Status Badge */}
-                            {suggestion.inventoryStatus && (
+                            {/* Prominent Overlay Badge - Impulse Shopping Style */}
+                            {suggestion.inventoryStatus && suggestion.inventoryStatus.matchPercentage >= 60 && (
                               <>
+                                {/* 100% Match - Green "COOK NOW!" Banner */}
                                 {suggestion.inventoryStatus.matchPercentage === 100 && (
-                                  <div className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
-                                    <span>🎉</span>
-                                    <span>Ready to Cook!</span>
+                                  <div className="absolute top-0 left-0 right-0 bg-green-500/95 backdrop-blur-sm text-white px-3 py-2.5 shadow-lg">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span className="text-base">🎉</span>
+                                      <span className="font-bold text-sm tracking-wide">READY TO COOK NOW!</span>
+                                    </div>
                                   </div>
                                 )}
-                                {suggestion.inventoryStatus.matchPercentage >= 60 && suggestion.inventoryStatus.matchPercentage < 100 && (
-                                  <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow">
-                                    <span>⚠️ {suggestion.inventoryStatus.availableCount} of {suggestion.inventoryStatus.totalCount}</span>
+
+                                {/* 80-99% Match - Yellow "ALMOST READY" Banner */}
+                                {suggestion.inventoryStatus.matchPercentage >= 80 && suggestion.inventoryStatus.matchPercentage < 100 && (
+                                  <div className="absolute top-0 left-0 right-0 bg-yellow-500/95 backdrop-blur-sm text-white px-3 py-2.5 shadow-lg">
+                                    <div className="flex flex-col items-center justify-center">
+                                      <span className="font-bold text-sm tracking-wide">ALMOST READY!</span>
+                                      <span className="text-xs font-medium mt-0.5">
+                                        {suggestion.inventoryStatus.totalCount - suggestion.inventoryStatus.availableCount} item needed
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* 60-79% Match - Orange "X OF Y" Banner */}
+                                {suggestion.inventoryStatus.matchPercentage >= 60 && suggestion.inventoryStatus.matchPercentage < 80 && (
+                                  <div className="absolute top-0 left-0 right-0 bg-orange-500/95 backdrop-blur-sm text-white px-3 py-2.5 shadow-lg">
+                                    <div className="flex flex-col items-center justify-center">
+                                      <span className="font-bold text-sm tracking-wide">
+                                        YOU HAVE {suggestion.inventoryStatus.availableCount} OF {suggestion.inventoryStatus.totalCount}
+                                      </span>
+                                      <span className="text-xs font-medium mt-0.5">
+                                        {suggestion.inventoryStatus.totalCount - suggestion.inventoryStatus.availableCount} items to scan or buy
+                                      </span>
+                                    </div>
                                   </div>
                                 )}
                               </>
                             )}
+
+                            {/* Dark gradient overlay at bottom for recipe name readability */}
+                            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/60 to-transparent"></div>
                           </div>
 
                           {/* Recipe Details */}

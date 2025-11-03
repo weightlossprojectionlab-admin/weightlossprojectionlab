@@ -33,7 +33,7 @@ export function extractIngredientName(ingredient: string): string {
 
 /**
  * Check if ingredient matches inventory item
- * Uses simple substring matching for MVP
+ * Uses keyword-based matching (brand-agnostic) for flexibility
  */
 export function matchIngredientToItem(
   ingredientText: string,
@@ -41,35 +41,72 @@ export function matchIngredientToItem(
 ): boolean {
   const ingredientName = extractIngredientName(ingredientText)
   const itemName = inventoryItem.productName.toLowerCase()
-  const brandName = inventoryItem.brand?.toLowerCase() || ''
+  const category = inventoryItem.category
 
-  // Direct match
+  // Direct keyword match (ignore brand)
   if (itemName.includes(ingredientName) || ingredientName.includes(itemName)) {
     return true
   }
 
-  // Check brand + product
-  if (brandName && (brandName + ' ' + itemName).includes(ingredientName)) {
-    return true
+  // Category-aware matching (users can switch brands)
+  const categoryMatches: Record<string, string[]> = {
+    dairy: ['milk', 'cheese', 'butter', 'cream', 'yogurt', 'sour cream'],
+    meat: ['chicken', 'beef', 'pork', 'turkey', 'lamb', 'sausage', 'bacon', 'ground meat'],
+    produce: ['lettuce', 'tomato', 'onion', 'pepper', 'carrot', 'celery', 'potato', 'spinach', 'garlic'],
+    pantry: ['rice', 'pasta', 'flour', 'sugar', 'salt', 'pepper', 'oil', 'bread', 'cereal'],
+    frozen: ['ice cream', 'frozen vegetables', 'frozen fruit', 'frozen meal'],
+    beverages: ['juice', 'soda', 'water', 'coffee', 'tea'],
+    condiments: ['ketchup', 'mustard', 'mayo', 'mayonnaise', 'sauce', 'dressing', 'salsa']
   }
 
-  // Special cases for common variations
+  // Check if ingredient keyword matches category
+  const categoryKeywords = categoryMatches[category] || []
+  for (const keyword of categoryKeywords) {
+    if (ingredientName.includes(keyword)) {
+      // Verify item name also contains the keyword
+      if (itemName.includes(keyword)) {
+        return true
+      }
+    }
+  }
+
+  // Expanded keyword synonyms for common ingredients
   const specialMatches: Record<string, string[]> = {
-    milk: ['whole milk', '2% milk', 'skim milk', 'low-fat milk', 'milk'],
-    cheese: ['cheddar', 'mozzarella', 'parmesan', 'swiss'],
-    butter: ['unsalted butter', 'salted butter'],
-    chicken: ['chicken breast', 'chicken thigh', 'whole chicken'],
-    beef: ['ground beef', 'steak', 'beef roast'],
-    egg: ['eggs', 'large eggs', 'medium eggs'],
-    tomato: ['tomatoes', 'roma tomato', 'cherry tomato'],
-    onion: ['yellow onion', 'white onion', 'red onion'],
-    pepper: ['bell pepper', 'red pepper', 'green pepper']
+    milk: ['whole milk', '2% milk', 'skim milk', 'low-fat milk', 'milk', 'dairy milk', 'cow milk'],
+    cheese: ['cheddar', 'mozzarella', 'parmesan', 'swiss', 'american cheese', 'cheese blend'],
+    butter: ['unsalted butter', 'salted butter', 'margarine'],
+    chicken: ['chicken breast', 'chicken thigh', 'whole chicken', 'chicken drumstick', 'rotisserie chicken'],
+    beef: ['ground beef', 'steak', 'beef roast', 'chuck roast', 'sirloin', 'ribeye'],
+    egg: ['eggs', 'large eggs', 'medium eggs', 'dozen eggs'],
+    tomato: ['tomatoes', 'roma tomato', 'cherry tomato', 'grape tomato', 'heirloom tomato'],
+    onion: ['yellow onion', 'white onion', 'red onion', 'sweet onion', 'vidalia onion'],
+    pepper: ['bell pepper', 'red pepper', 'green pepper', 'yellow pepper', 'orange pepper'],
+    pasta: ['spaghetti', 'penne', 'macaroni', 'noodles', 'linguine', 'fettuccine', 'rotini'],
+    rice: ['white rice', 'brown rice', 'basmati', 'jasmine', 'long grain', 'instant rice'],
+    bread: ['loaf', 'rolls', 'baguette', 'sandwich bread', 'wheat bread', 'white bread'],
+    oil: ['vegetable oil', 'olive oil', 'canola oil', 'cooking oil', 'sunflower oil'],
+    salt: ['table salt', 'sea salt', 'kosher salt', 'himalayan salt'],
+    sugar: ['white sugar', 'cane sugar', 'granulated sugar', 'brown sugar']
   }
 
   for (const [key, variations] of Object.entries(specialMatches)) {
     if (ingredientName.includes(key)) {
       for (const variation of variations) {
         if (itemName.includes(variation)) {
+          return true
+        }
+      }
+    }
+  }
+
+  // Word-level matching for compound ingredients (e.g., "ground beef" matches "beef")
+  const ingredientWords = ingredientName.split(/\s+/)
+  const itemWords = itemName.split(/\s+/)
+
+  for (const ingredientWord of ingredientWords) {
+    if (ingredientWord.length > 3) { // Avoid short words like "of", "to"
+      for (const itemWord of itemWords) {
+        if (itemWord.includes(ingredientWord) || ingredientWord.includes(itemWord)) {
           return true
         }
       }
