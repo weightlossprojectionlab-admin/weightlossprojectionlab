@@ -101,6 +101,30 @@ This repository uses Git worktrees for parallel development across multiple feat
 - API documentation
 - Component documentation
 
+### 🧪 Shopping System Worktrees
+
+#### 9. Shopping E2E Tests (Priority 2)
+**Location:** `C:/Users/percy/wlpl/wlpl-shopping-tests`
+**Branch:** `test/shopping-e2e`
+**Purpose:** End-to-end tests for sequential shopping flow
+**Key Deliverables:**
+- Sequential flow happy path test
+- Item not found → replacement flow test
+- Multi-recipe linking tests
+- Error handling tests
+- Performance benchmarks
+
+#### 10. Family Chat Feature (Priority 2)
+**Location:** `C:/Users/percy/wlpl/wlpl-family-chat`
+**Branch:** `feature/family-chat`
+**Purpose:** Real-time family shopping collaboration
+**Key Deliverables:**
+- Firestore real-time messaging
+- Push notifications integration
+- Message history UI
+- Family member management
+- Shopping list sharing
+
 ## Workflow
 
 ### Working in a Worktree
@@ -198,18 +222,20 @@ Remove worktrees and branches after PRs are merged.
 ## Development Priority
 
 ### Immediate (Start Now)
-1. `feature/native-wrapper` - Critical for mobile health API access
-2. `feature/social-expansion` - High user engagement impact
-3. `feature/recipe-marketplace` - Key differentiator
+1. `test/shopping-e2e` - **CRITICAL** - No E2E tests for v2.1.0 shopping features
+2. `feature/family-chat` - Complete sequential shopping flow placeholder
+3. `feature/native-wrapper` - Critical for mobile health API access
+4. `feature/social-expansion` - High user engagement impact
 
 ### Short-term (Next Sprint)
-4. `feature/premium-subscription` - Revenue generation
-5. `test/e2e-suite` - Quality assurance
-6. `perf/bundle-optimization` - User experience
+5. `feature/recipe-marketplace` - Key differentiator
+6. `feature/premium-subscription` - Revenue generation
+7. `test/e2e-suite` - Expand general E2E coverage
+8. `perf/bundle-optimization` - User experience
 
 ### Medium-term (Future Sprints)
-7. `refactor/react-19-features` - Technical debt
-8. `docs/repository-cleanup` - Maintainability
+9. `refactor/react-19-features` - Technical debt
+10. `docs/repository-cleanup` - Maintainability
 
 ## Troubleshooting
 
@@ -272,6 +298,13 @@ code C:/Users/percy/wlpl/wlpl-social-expansion
 
 ---
 
-**Last Updated:** 2025-10-25
-**Total Worktrees:** 9 (1 main + 8 feature/improvement)
-**Active Development Branches:** 8
+**Last Updated:** 2025-11-03
+**Total Worktrees:** 11 (1 main + 10 feature/improvement/test)
+**Active Development Branches:** 10
+**Recent Additions:** Shopping E2E Tests, Family Chat Feature
+
+### Shopping System v2.1.0 Complete! 🎉
+- ✅ Multi-recipe ingredient linking
+- ✅ Sequential shopping flow
+- ✅ 75% state complexity reduction
+- ⚠️ **Priority:** Add E2E tests before next feature
