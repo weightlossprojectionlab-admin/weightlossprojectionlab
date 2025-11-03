@@ -15,7 +15,8 @@
 
 import { useMemo } from 'react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import type { PieLabelRenderProps, ValueType, NameType } from 'recharts'
+import type { PieLabelRenderProps } from 'recharts'
+import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent'
 import { TrashIcon, CurrencyDollarIcon, ClockIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 import type { ShoppingItem, ProductCategory } from '@/types/shopping'
 import { getCategoryMetadata } from '@/lib/product-categories'
