@@ -69,7 +69,7 @@ export function ShareListButton({
     const text = generateShoppingListText()
 
     // Try native Web Share API first (mobile)
-    if (navigator.share) {
+    if ('share' in navigator && typeof navigator.share === 'function') {
       try {
         await navigator.share({
           title: storeName ? `Shopping List - ${storeName}` : 'Shopping List',
@@ -118,7 +118,7 @@ export function ShareListButton({
         </>
       ) : (
         <>
-          {navigator.share ? (
+          {'share' in navigator && typeof navigator.share === 'function' ? (
             <ShareIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           ) : (
             <ClipboardDocumentIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
