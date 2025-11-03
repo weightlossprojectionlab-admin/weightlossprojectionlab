@@ -257,6 +257,7 @@ export async function addManualShoppingItem(
       priority: options.priority ?? 'medium',
       lastPurchased: undefined,
       preferredStore: undefined,
+      source: options.recipeId ? 'recipe' : 'manual', // Track source
       purchaseHistory: [],
       createdAt: new Date(),
       updatedAt: new Date()
@@ -275,6 +276,7 @@ export async function addManualShoppingItem(
       preferredStore: newItem.preferredStore ?? null,
       recipeId: newItem.recipeId ?? null,
       manualIngredientName: newItem.manualIngredientName ?? null,
+      source: newItem.source ?? null,
       createdAt: Timestamp.fromDate(newItem.createdAt),
       updatedAt: Timestamp.fromDate(newItem.updatedAt),
       purchaseHistory: []

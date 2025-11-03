@@ -11,7 +11,7 @@
  * - Expiring items alerts
  */
 
-import { useState, Suspense, useMemo } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
@@ -21,17 +21,10 @@ import { useShopping } from '@/hooks/useShopping'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { getCategoryMetadata, detectCategory, formatQuantityDisplay } from '@/lib/product-categories'
 import { ExpirationPicker } from '@/components/shopping/ExpirationPicker'
-import { SwipeableShoppingItem } from '@/components/shopping/SwipeableShoppingItem'
-import { ShareListButton } from '@/components/shopping/ShareListButton'
-import { SearchFilter } from '@/components/shopping/SearchFilter'
-import { StorePicker } from '@/components/shopping/StorePicker'
-import { SmartSuggestions } from '@/components/shopping/SmartSuggestions'
-import type { ProductCategory, ShoppingItem } from '@/types/shopping'
+import type { ProductCategory } from '@/types/shopping'
 import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
 import { Spinner } from '@/components/ui/Spinner'
 import { logger } from '@/lib/logger'
-import { auth } from '@/lib/firebase'
-import { addManualShoppingItem } from '@/lib/shopping-operations'
 
 // Dynamic imports
 const BarcodeScanner = dynamic(
@@ -41,20 +34,7 @@ const BarcodeScanner = dynamic(
 
 function ShoppingListContent() {
   const router = useRouter()
-  const {
-    neededItems,
-    items: allItems,
-    stores,
-    loading,
-    purchaseItem,
-    toggleNeeded,
-    removeItem,
-    addItem,
-    updateItem,
-    getSummary,
-    smartSort,
-    addStore
-  } = useShopping()
+  const { neededItems, items: allItems, loading, purchaseItem, toggleNeeded, removeItem, addItem, updateItem, getSummary } = useShopping()
 
   const [showScanner, setShowScanner] = useState(false)
   const [showExpirationPicker, setShowExpirationPicker] = useState(false)
