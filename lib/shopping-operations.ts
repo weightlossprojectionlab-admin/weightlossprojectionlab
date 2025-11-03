@@ -122,15 +122,17 @@ export async function addOrUpdateShoppingItem(
 
     if (existingItem) {
       // Update existing item
-      return await updateShoppingItem(existingItem.id, {
+      const updates: Partial<ShoppingItem> = {
         inStock: options.inStock ?? existingItem.inStock,
-        quantity: options.quantity ?? existingItem.quantity + 1,
+        quantity: options.quantity ?? (existingItem.quantity + 1),
         expiresAt: options.expiresAt ?? existingItem.expiresAt,
         location: options.location ?? existingItem.location,
         needed: options.needed ?? false,
         lastPurchased: options.inStock ? new Date() : existingItem.lastPurchased,
         updatedAt: new Date()
-      })
+      }
+
+      return await updateShoppingItem(existingItem.id, updates)
     }
 
     // Create new item
@@ -479,7 +481,7 @@ export async function markItemAsPurchased(
       lastPurchased: new Date(),
       expiresAt: options.expiresAt,
       preferredStore: options.store ?? item.preferredStore,
-      purchaseHistory: [...item.purchaseHistory, newPurchase],
+      purchaseHistory: [...(item.purchaseHistory || []), newPurchase],
       updatedAt: new Date()
     })
   } catch (error: any) {

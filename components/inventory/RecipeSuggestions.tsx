@@ -172,7 +172,10 @@ export function RecipeSuggestions({
         {/* Urgency Filter */}
         <select
           value={urgencyFilter}
-          onChange={(e) => setUrgencyFilter(e.target.value as any)}
+          onChange={(e) => {
+            const value = e.target.value as 'all' | 'critical' | 'high' | 'medium'
+            setUrgencyFilter(value)
+          }}
           className="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-primary focus:border-transparent"
         >
           <option value="all">All ({recipeMatches.length})</option>
