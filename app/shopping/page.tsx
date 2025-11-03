@@ -41,7 +41,20 @@ const BarcodeScanner = dynamic(
 
 function ShoppingListContent() {
   const router = useRouter()
-  const { neededItems, items: allItems, loading, purchaseItem, toggleNeeded, removeItem, addItem, updateItem, getSummary } = useShopping()
+  const {
+    neededItems,
+    items: allItems,
+    stores,
+    loading,
+    purchaseItem,
+    toggleNeeded,
+    removeItem,
+    addItem,
+    updateItem,
+    getSummary,
+    smartSort,
+    addStore
+  } = useShopping()
 
   const [showScanner, setShowScanner] = useState(false)
   const [showExpirationPicker, setShowExpirationPicker] = useState(false)
