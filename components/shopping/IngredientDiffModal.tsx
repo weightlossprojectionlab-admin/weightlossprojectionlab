@@ -30,14 +30,13 @@ export function IngredientDiffModal({
   ingredients,
   onClose,
 }: IngredientDiffModalProps) {
-  const { getAllItems: getInventoryItems, loading: inventoryLoading } = useInventory()
+  const { allItems: inventoryItems, loading: inventoryLoading } = useInventory()
   const { addFromRecipe, loading: addingItems } = useShopping()
   const [diffs, setDiffs] = useState<IngredientDiff[]>([])
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set())
 
   // Compare recipe with inventory on mount
   useEffect(() => {
-    const inventoryItems = getInventoryItems()
     const comparison = compareWithInventory(ingredients, inventoryItems)
     setDiffs(comparison)
 
@@ -46,7 +45,7 @@ export function IngredientDiffModal({
       .map((diff, index) => (diff.status !== 'have' ? index : -1))
       .filter(index => index !== -1)
     setSelectedItems(new Set(needIndices))
-  }, [ingredients, getInventoryItems])
+  }, [ingredients, inventoryItems])
 
   const toggleItem = (index: number) => {
     const newSelected = new Set(selectedItems)
