@@ -26,6 +26,11 @@ import { ShareListButton } from '@/components/shopping/ShareListButton'
 import { SearchFilter } from '@/components/shopping/SearchFilter'
 import { StorePicker } from '@/components/shopping/StorePicker'
 import { SmartSuggestions } from '@/components/shopping/SmartSuggestions'
+import { ItemActionMenu } from '@/components/shopping/ItemActionMenu'
+import { QuantityAdjustModal } from '@/components/shopping/QuantityAdjustModal'
+import { NutritionReviewModal } from '@/components/shopping/NutritionReviewModal'
+import { ReplacementCompareModal } from '@/components/shopping/ReplacementCompareModal'
+import { CategoryConfirmModal } from '@/components/shopping/CategoryConfirmModal'
 import type { ProductCategory, ShoppingItem } from '@/types/shopping'
 import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
 import { Spinner } from '@/components/ui/Spinner'
@@ -65,6 +70,15 @@ function ShoppingListContent() {
     itemId?: string
     category: ProductCategory
   } | null>(null)
+
+  // Per-item shopping hub state
+  const [selectedItem, setSelectedItem] = useState<ShoppingItem | null>(null)
+  const [showItemActionMenu, setShowItemActionMenu] = useState(false)
+  const [showQuantityAdjust, setShowQuantityAdjust] = useState(false)
+  const [showNutritionReview, setShowNutritionReview] = useState(false)
+  const [showReplacementCompare, setShowReplacementCompare] = useState(false)
+  const [showCategoryConfirm, setShowCategoryConfirm] = useState(false)
+  const [replacementProduct, setReplacementProduct] = useState<OpenFoodFactsProduct | null>(null)
 
   const summary = getSummary()
 
@@ -295,6 +309,66 @@ function ShoppingListContent() {
     }
   }
 
+  /**
+   * Handle item click - open per-item action menu
+   */
+  const handleItemClick = (item: ShoppingItem) => {
+    setSelectedItem(item)
+    setShowItemActionMenu(true)
+  }
+
+  /**
+   * Handle per-item scan - scan the exact item from shopping list
+   */
+  const handleItemScan = () => {
+    setShowItemActionMenu(false)
+    setShowScanner(true)
+  }
+
+  /**
+   * Handle quantity adjustment for selected item
+   */
+  const handleAdjustQuantity = () => {
+    setShowItemActionMenu(false)
+    setShowQuantityAdjust(true)
+  }
+
+  /**
+   * Confirm quantity adjustment
+   */
+  const handleQuantityConfirm = async (quantity: number) => {
+    if (!selectedItem) return
+
+    try {
+      await updateItem(selectedItem.id, {
+        quantity,
+        updatedAt: new Date()
+      })
+      toast.success(`Updated quantity to ${quantity}`)
+      setShowQuantityAdjust(false)
+      setSelectedItem(null)
+    } catch (error) {
+      logger.error('Error updating quantity', error as Error)
+      toast.error('Failed to update quantity')
+    }
+  }
+
+  /**
+   * Handle scan replacement - scan a different brand/size
+   */
+  const handleScanReplacement = () => {
+    setShowItemActionMenu(false)
+    setShowScanner(true)
+    toast('Scan the replacement product', { icon: '🔄' })
+  }
+
+  /**
+   * Handle family chat - coming soon
+   */
+  const handleFamilyChat = () => {
+    toast('Family shopping collaboration coming soon!', { icon: '👨‍👩‍👧‍👦' })
+  }
+
   return (
     <AuthGuard>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -417,6 +491,7 @@ function ShoppingListContent() {
                         item={item}
                         onToggle={handleToggleNeeded}
                         onDelete={handleDeleteItem}
+                        onClick={handleItemClick}
                         showDebugInfo={true}
                         onFixOrphaned={handleFixOrphanedItem}
                       />
@@ -441,6 +516,7 @@ function ShoppingListContent() {
                           item={item}
                           onToggle={handleToggleNeeded}
                           onDelete={handleDeleteItem}
+                          onClick={handleItemClick}
                           showDebugInfo={showDebugMode}
                         />
                       ))}
@@ -465,6 +541,7 @@ function ShoppingListContent() {
                           item={item}
                           onToggle={handleToggleNeeded}
                           onDelete={handleDeleteItem}
+                          onClick={handleItemClick}
                           showDebugInfo={showDebugMode}
                         />
                       ))}
@@ -534,6 +611,108 @@ function ShoppingListContent() {
             </div>
           </div>
         )}
+
+        {/* Per-Item Shopping Hub Modals */}
+        {selectedItem && (
+          <>
+            {/* Item Action Menu */}
+            <ItemActionMenu
+              isOpen={showItemActionMenu}
+              onClose={() => {
+                setShowItemActionMenu(false)
+                setSelectedItem(null)
+              }}
+              item={selectedItem}
+              onScan={handleItemScan}
+              onAdjustQuantity={handleAdjustQuantity}
+              onReplacement={handleScanReplacement}
+              onChat={handleFamilyChat}
+            />
+
+            {/* Quantity Adjust Modal */}
+            <QuantityAdjustModal
+              isOpen={showQuantityAdjust}
+              onClose={() => {
+                setShowQuantityAdjust(false)
+                setSelectedItem(null)
+              }}
+              item={selectedItem}
+              onConfirm={handleQuantityConfirm}
+            />
+
+            {/* Nutrition Review Modal */}
+            {scannedProduct && (
+              <NutritionReviewModal
+                isOpen={showNutritionReview}
+                onClose={() => {
+                  setShowNutritionReview(false)
+                  setScannedProduct(null)
+                }}
+                product={scannedProduct.product}
+                onConfirm={() => {
+                  setShowNutritionReview(false)
+                  setShowCategoryConfirm(true)
+                }}
+              />
+            )}
+
+            {/* Category Confirm Modal */}
+            {scannedProduct && (
+              <CategoryConfirmModal
+                isOpen={showCategoryConfirm}
+                onClose={() => {
+                  setShowCategoryConfirm(false)
+                  setScannedProduct(null)
+                  setSelectedItem(null)
+                }}
+                currentCategory={selectedItem.category}
+                productName={scannedProduct.product.product_name || 'Product'}
+                onConfirm={async (category: ProductCategory) => {
+                  // Update item category if changed
+                  if (category !== selectedItem.category) {
+                    await updateItem(selectedItem.id, { category, updatedAt: new Date() })
+                  }
+
+                  // Mark as purchased
+                  const categoryMeta = getCategoryMetadata(category)
+                  if (categoryMeta.isPerishable) {
+                    setShowCategoryConfirm(false)
+                    setShowExpirationPicker(true)
+                  } else {
+                    await purchaseItem(selectedItem.id, { quantity: selectedItem.quantity })
+                    toast.success(`✓ Checked off: ${selectedItem.productName}`)
+                    setShowCategoryConfirm(false)
+                    setScannedProduct(null)
+                    setSelectedItem(null)
+                  }
+                }}
+              />
+            )}
+
+            {/* Replacement Compare Modal */}
+            {replacementProduct && (
+              <ReplacementCompareModal
+                isOpen={showReplacementCompare}
+                onClose={() => {
+                  setShowReplacementCompare(false)
+                  setReplacementProduct(null)
+                }}
+                originalItem={selectedItem}
+                replacementProduct={replacementProduct}
+                onConfirm={() => {
+                  // User confirmed replacement - show nutrition review
+                  setShowReplacementCompare(false)
+                  setShowNutritionReview(true)
+                }}
+                onCancel={() => {
+                  setShowReplacementCompare(false)
+                  setReplacementProduct(null)
+                  setSelectedItem(null)
+                }}
+              />
+            )}
+          </>
+        )}
       </div>
     </AuthGuard>
   )
@@ -546,12 +725,14 @@ function ShoppingItemCard({
   item,
   onToggle,
   onDelete,
+  onClick,
   showDebugInfo,
   onFixOrphaned
 }: {
   item: ShoppingItem
   onToggle: (id: string, current: boolean) => void
   onDelete: (id: string) => void
+  onClick?: (item: ShoppingItem) => void
   showDebugInfo?: boolean
   onFixOrphaned?: (itemId: string, itemName: string) => void
 }) {
@@ -559,7 +740,10 @@ function ShoppingItemCard({
   const isOrphaned = !item.inStock && !item.needed && item.quantity === 0
 
   return (
-    <div className={`bg-white dark:bg-gray-900 rounded-lg shadow p-4 flex items-center gap-4 ${isOrphaned ? 'border-2 border-red-200 dark:border-red-800' : ''}`}>
+    <div
+      className={`bg-white dark:bg-gray-900 rounded-lg shadow p-4 flex items-center gap-4 ${isOrphaned ? 'border-2 border-red-200 dark:border-red-800' : ''} ${onClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors' : ''}`}
+      onClick={() => onClick?.(item)}
+    >
       {/* Product Image */}
       {item.imageUrl ? (
         <img
@@ -625,7 +809,10 @@ function ShoppingItemCard({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => onToggle(item.id, item.needed)}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggle(item.id, item.needed)
+          }}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
           title="Remove from list"
         >
@@ -635,7 +822,10 @@ function ShoppingItemCard({
         </button>
         <button
           type="button"
-          onClick={() => onDelete(item.id)}
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(item.id)
+          }}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
           title="Delete item"
         >
@@ -647,7 +837,10 @@ function ShoppingItemCard({
         {isOrphaned && onFixOrphaned && (
           <button
             type="button"
-            onClick={() => onFixOrphaned(item.id, item.productName)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onFixOrphaned(item.id, item.productName)
+            }}
             className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
             title="Add to shopping list"
           >
