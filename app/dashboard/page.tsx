@@ -22,6 +22,7 @@ import { useStepTracking } from '@/components/StepTrackingProvider'
 import { useWeightProjection } from '@/hooks/useWeightProjection'
 import { useTrendProjection } from '@/hooks/useTrendProjection'
 import { useInstallPrompt } from '@/hooks/useInstallPrompt'
+import { useInventory } from '@/hooks/useInventory'
 import { formatProjectionDisplay } from '@/lib/weight-projection-agent'
 import { getNextMealContext, getMealCTA } from '@/lib/meal-context'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
@@ -104,6 +105,9 @@ function DashboardContent() {
   // Get recipes with Firestore media data (images/videos)
   const { recipes: recipesWithMedia } = useRecipes()
 
+  // Get inventory items for ingredient-aware suggestions
+  const { allItems: inventoryItems } = useInventory()
+
   // Get contextual meal recommendations with personalized suggestions (with images)
   // MEMOIZED: Prevents expensive recalculation on every render (237 lines of logic + 692-line meal array)
   const mealContext = useMemo(() => {
@@ -118,7 +122,8 @@ function DashboardContent() {
         mealSchedule: userProfile?.preferences?.mealSchedule
       },
       auth.currentUser?.uid,
-      recipesWithMedia || [] // Pass recipes with images/videos from Firestore
+      recipesWithMedia || [], // Pass recipes with images/videos from Firestore
+      inventoryItems // Pass inventory for ingredient checking
     )
   }, [
     todayMeals,
@@ -127,7 +132,8 @@ function DashboardContent() {
     userProfile?.profile?.foodAllergies,
     userProfile?.preferences?.mealSchedule,
     auth.currentUser?.uid,
-    recipesWithMedia
+    recipesWithMedia,
+    inventoryItems // Add to dependencies
   ])
 
   // Check profile completeness for safety warnings
@@ -564,6 +570,23 @@ function DashboardContent() {
                               <div className="flex items-center justify-center h-full bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
                                 <span className="text-4xl">{getMealEmoji(suggestion.mealType)}</span>
                               </div>
+                            )}
+
+                            {/* Inventory Status Badge */}
+                            {suggestion.inventoryStatus && (
+                              <>
+                                {suggestion.inventoryStatus.matchPercentage === 100 && (
+                                  <div className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+                                    <span>🎉</span>
+                                    <span>Ready to Cook!</span>
+                                  </div>
+                                )}
+                                {suggestion.inventoryStatus.matchPercentage >= 60 && suggestion.inventoryStatus.matchPercentage < 100 && (
+                                  <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow">
+                                    <span>⚠️ {suggestion.inventoryStatus.availableCount} of {suggestion.inventoryStatus.totalCount}</span>
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
 

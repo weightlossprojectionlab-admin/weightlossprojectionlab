@@ -34,6 +34,14 @@ export type AllergyTag = 'dairy' | 'gluten' | 'nuts' | 'shellfish' | 'soy' | 'eg
 
 export type RecipeStatus = 'draft' | 'published' | 'archived'
 
+export interface InventoryStatus {
+  hasAllIngredients: boolean
+  availableCount: number
+  totalCount: number
+  matchPercentage: number
+  missingIngredients: string[]
+}
+
 export interface MealSuggestion {
   id: string
   name: string
@@ -55,6 +63,9 @@ export interface MealSuggestion {
   cookingTips?: string[] // Helpful cooking tips
   servingSize: number // Number of servings (default 1)
   requiresCooking?: boolean // Whether recipe requires heat/cooking (vs just assembly/prep)
+
+  // Inventory availability (added dynamically when inventory provided)
+  inventoryStatus?: InventoryStatus
 
   // Media fields (for admin-uploaded marketing content)
   imageUrls?: string[] // Firebase Storage URLs for images (max 4, first is hero)

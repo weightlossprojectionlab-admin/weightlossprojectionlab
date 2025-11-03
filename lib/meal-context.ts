@@ -3,9 +3,12 @@
  *
  * Determines the next meal to log based on user's personalized meal schedule or time of day.
  * Provides contextual recommendations for meal logging with personalized suggestions.
+ * Now with inventory-aware recipe suggestions!
  */
 
 import { getMealSuggestions, type MealSuggestion } from './meal-suggestions'
+import { checkIngredientsWithQuantities } from './ingredient-matcher'
+import type { ShoppingItem } from '@/types/shopping'
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 
@@ -35,6 +38,14 @@ interface MealContext {
   remainingCalories: number
   isFirstMeal: boolean
   suggestions: MealSuggestion[]
+}
+
+interface InventoryStatus {
+  hasAllIngredients: boolean
+  availableCount: number
+  totalCount: number
+  matchPercentage: number
+  missingIngredients: string[]
 }
 
 /**
@@ -132,6 +143,48 @@ function getMealTypeBySchedule(currentTime: number, mealSchedule: MealSchedule, 
 }
 
 /**
+ * Check ingredient availability for a recipe against inventory
+ */
+function checkRecipeInventoryStatus(
+  recipe: MealSuggestion,
+  inventoryItems: ShoppingItem[]
+): InventoryStatus {
+  if (!recipe.ingredients || recipe.ingredients.length === 0) {
+    return {
+      hasAllIngredients: false,
+      availableCount: 0,
+      totalCount: 0,
+      matchPercentage: 0,
+      missingIngredients: []
+    }
+  }
+
+  const results = checkIngredientsWithQuantities(
+    recipe.ingredients,
+    inventoryItems
+  )
+
+  const availableCount = results.filter(r =>
+    r.matched && r.hasEnough === true
+  ).length
+
+  const totalCount = recipe.ingredients.length
+  const matchPercentage = (availableCount / totalCount) * 100
+
+  const missingIngredients = results
+    .filter(r => !r.matched || r.hasEnough === false)
+    .map(r => r.ingredient)
+
+  return {
+    hasAllIngredients: matchPercentage === 100,
+    availableCount,
+    totalCount,
+    matchPercentage,
+    missingIngredients
+  }
+}
+
+/**
  * Get contextual information about the next meal to log with personalized suggestions
  */
 export function getNextMealContext(
@@ -139,7 +192,8 @@ export function getNextMealContext(
   goalCalories: number,
   userPreferences?: UserPreferences,
   userId?: string,
-  recipes?: MealSuggestion[] // Optional: use custom recipe array (e.g., with Firestore media)
+  recipes?: MealSuggestion[], // Optional: use custom recipe array (e.g., with Firestore media)
+  inventoryItems?: ShoppingItem[] // Optional: check ingredient availability
 ): MealContext {
   const currentHour = getCurrentHour()
   const currentTime = getCurrentTimeDecimal()
@@ -207,7 +261,7 @@ export function getNextMealContext(
   }
 
   // Generate personalized meal suggestions
-  const suggestions = getMealSuggestions({
+  let suggestions = getMealSuggestions({
     mealType: nextMealType,
     calorieMin: isFirstMeal ? 0 : Math.max(0, remainingCalories * 0.2),
     calorieMax: isFirstMeal ? goalCalories * 0.4 : Math.min(remainingCalories * 1.2, remainingCalories + 200),
@@ -217,6 +271,21 @@ export function getNextMealContext(
     userId: userId,
     recipes: recipes // Pass through custom recipes (with media) if provided
   })
+
+  // If inventory provided, check ingredient availability for each suggestion
+  if (inventoryItems && inventoryItems.length > 0) {
+    suggestions = suggestions.map(suggestion => ({
+      ...suggestion,
+      inventoryStatus: checkRecipeInventoryStatus(suggestion, inventoryItems)
+    }))
+
+    // Sort by match percentage (recipes user can make NOW appear first!)
+    suggestions.sort((a, b) => {
+      const aMatch = a.inventoryStatus?.matchPercentage || 0
+      const bMatch = b.inventoryStatus?.matchPercentage || 0
+      return bMatch - aMatch // Descending order
+    })
+  }
 
   return { nextMealType, nextMealLabel, message, remainingCalories, isFirstMeal, suggestions }
 }
