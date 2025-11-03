@@ -33,12 +33,15 @@ export function CategoryConfirmModal({
   const categories: ProductCategory[] = [
     'produce',
     'meat',
+    'seafood',
     'dairy',
-    'pantry',
+    'eggs',
+    'bakery',
+    'deli',
+    'herbs',
     'frozen',
     'beverages',
-    'snacks',
-    'condiments',
+    'pantry',
     'other'
   ]
 
