@@ -15,6 +15,7 @@
 
 import { useMemo } from 'react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import type { PieLabelRenderProps } from 'recharts'
 import { TrashIcon, CurrencyDollarIcon, ClockIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 import type { ShoppingItem, ProductCategory } from '@/types/shopping'
 import { getCategoryMetadata } from '@/lib/product-categories'
@@ -259,7 +260,11 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                  label={(props: PieLabelRenderProps) => {
+                    const name = props.name || ''
+                    const percent = props.percent || 0
+                    return `${name} ${(percent * 100).toFixed(0)}%`
+                  }}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"

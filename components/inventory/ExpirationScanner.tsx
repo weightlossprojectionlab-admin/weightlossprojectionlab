@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useCallback } from 'react'
-import { createWorker, Worker } from 'tesseract.js'
+import { createWorker, Worker, LoggerMessage } from 'tesseract.js'
 import { CameraIcon, XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -159,13 +159,16 @@ export function ExpirationScanner({
     let worker: Worker | null = null
 
     try {
-      worker = await createWorker('eng', 1, {
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
+      worker = await createWorker({
+        logger: (m: LoggerMessage) => {
+          if (m.status === 'recognizing text' && typeof m.progress === 'number') {
             setProgress(Math.round(m.progress * 100))
           }
         }
       })
+
+      await worker.loadLanguage('eng')
+      await worker.initialize('eng')
 
       const { data: { text } } = await worker.recognize(imageSrc)
       setOcrText(text)

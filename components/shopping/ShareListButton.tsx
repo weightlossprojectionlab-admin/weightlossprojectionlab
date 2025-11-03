@@ -11,6 +11,14 @@ import { ShareIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24
 import toast from 'react-hot-toast'
 import type { ShoppingItem } from '@/types/shopping'
 
+interface NavigatorWithShare extends Navigator {
+  share(data?: ShareData): Promise<void>
+}
+
+function hasShareAPI(nav: Navigator): nav is NavigatorWithShare {
+  return 'share' in nav && typeof (nav as any).share === 'function'
+}
+
 interface ShareListButtonProps {
   items: ShoppingItem[]
   storeName?: string
@@ -69,7 +77,7 @@ export function ShareListButton({
     const text = generateShoppingListText()
 
     // Try native Web Share API first (mobile)
-    if ('share' in navigator && typeof navigator.share === 'function') {
+    if (hasShareAPI(navigator)) {
       try {
         await navigator.share({
           title: storeName ? `Shopping List - ${storeName}` : 'Shopping List',
@@ -118,7 +126,7 @@ export function ShareListButton({
         </>
       ) : (
         <>
-          {'share' in navigator && typeof navigator.share === 'function' ? (
+          {hasShareAPI(navigator) ? (
             <ShareIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           ) : (
             <ClipboardDocumentIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
