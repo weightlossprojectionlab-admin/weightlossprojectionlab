@@ -15,7 +15,7 @@
 
 import { useMemo } from 'react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import type { PieLabelRenderProps } from 'recharts'
+import type { PieLabelRenderProps, ValueType, NameType } from 'recharts'
 import { TrashIcon, CurrencyDollarIcon, ClockIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 import type { ShoppingItem, ProductCategory } from '@/types/shopping'
 import { getCategoryMetadata } from '@/lib/product-categories'
@@ -395,8 +395,13 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
                     borderRadius: '8px',
                     color: '#fff'
                   }}
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cost']}
-                  labelFormatter={(label) => getCategoryMetadata(label).displayName}
+                  formatter={(value: ValueType) => {
+                    const numValue = typeof value === 'number' ? value : 0
+                    return [`$${numValue.toFixed(2)}`, 'Cost']
+                  }}
+                  labelFormatter={(label: NameType) => {
+                    return getCategoryMetadata(label as ProductCategory).displayName
+                  }}
                 />
                 <Bar dataKey="cost" fill="#3b82f6" radius={[8, 8, 0, 0]} />
               </BarChart>

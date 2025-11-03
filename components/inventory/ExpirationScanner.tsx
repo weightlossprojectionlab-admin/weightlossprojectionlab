@@ -29,6 +29,12 @@ interface DetectedDate {
   rawText: string
 }
 
+interface DatePattern {
+  regex: RegExp
+  formatter: (match: RegExpMatchArray) => Date
+  confidence: 'high' | 'medium' | 'low'
+}
+
 export function ExpirationScanner({
   isOpen,
   onClose,
@@ -55,74 +61,74 @@ export function ExpirationScanner({
     const now = new Date()
 
     // Common date patterns
-    const patterns = [
+    const patterns: DatePattern[] = [
       // MM/DD/YYYY, MM-DD-YYYY, MM.DD.YYYY
       {
         regex: /\b(0?[1-9]|1[0-2])[\/\-.](0?[1-9]|[12][0-9]|3[01])[\/\-.](\d{4}|\d{2})\b/g,
-        formatter: (match: string[]) => {
-          const month = parseInt(match[1])
-          const day = parseInt(match[2])
-          let year = parseInt(match[3])
+        formatter: (match: RegExpMatchArray) => {
+          const month = parseInt(match[1], 10)
+          const day = parseInt(match[2], 10)
+          let year = parseInt(match[3], 10)
           if (year < 100) year += 2000
           return new Date(year, month - 1, day)
         },
-        confidence: 'high' as const
+        confidence: 'high'
       },
       // DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY (European format)
       {
         regex: /\b(0?[1-9]|[12][0-9]|3[01])[\/\-.](0?[1-9]|1[0-2])[\/\-.](\d{4}|\d{2})\b/g,
-        formatter: (match: string[]) => {
-          const day = parseInt(match[1])
-          const month = parseInt(match[2])
-          let year = parseInt(match[3])
+        formatter: (match: RegExpMatchArray) => {
+          const day = parseInt(match[1], 10)
+          const month = parseInt(match[2], 10)
+          let year = parseInt(match[3], 10)
           if (year < 100) year += 2000
           return new Date(year, month - 1, day)
         },
-        confidence: 'medium' as const
+        confidence: 'medium'
       },
       // YYYY-MM-DD, YYYY/MM/DD (ISO format)
       {
         regex: /\b(\d{4})[\/-](0?[1-9]|1[0-2])[\/-](0?[1-9]|[12][0-9]|3[01])\b/g,
-        formatter: (match: string[]) => {
-          const year = parseInt(match[1])
-          const month = parseInt(match[2])
-          const day = parseInt(match[3])
+        formatter: (match: RegExpMatchArray) => {
+          const year = parseInt(match[1], 10)
+          const month = parseInt(match[2], 10)
+          const day = parseInt(match[3], 10)
           return new Date(year, month - 1, day)
         },
-        confidence: 'high' as const
+        confidence: 'high'
       },
       // MM/YYYY, MM-YYYY (month/year only - assume last day of month)
       {
         regex: /\b(0?[1-9]|1[0-2])[\/-](\d{4})\b/g,
-        formatter: (match: string[]) => {
-          const month = parseInt(match[1])
-          const year = parseInt(match[2])
+        formatter: (match: RegExpMatchArray) => {
+          const month = parseInt(match[1], 10)
+          const year = parseInt(match[2], 10)
           // Last day of the month
           return new Date(year, month, 0)
         },
-        confidence: 'low' as const
+        confidence: 'low'
       },
       // Text patterns: "EXP 01/15/2025", "USE BY 01-15-2025", "BEST BEFORE 01.15.2025"
       {
         regex: /(?:exp|expir|use by|best before|sell by)[\s:]*(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})/gi,
-        formatter: (match: string[]) => {
+        formatter: (match: RegExpMatchArray) => {
           const datePart = match[1]
           const parts = datePart.split(/[\/\-.]/)
-          const month = parseInt(parts[0])
-          const day = parseInt(parts[1])
-          let year = parseInt(parts[2])
+          const month = parseInt(parts[0], 10)
+          const day = parseInt(parts[1], 10)
+          let year = parseInt(parts[2], 10)
           if (year < 100) year += 2000
           return new Date(year, month - 1, day)
         },
-        confidence: 'high' as const
+        confidence: 'high'
       }
     ]
 
     patterns.forEach(pattern => {
-      const matches = [...text.matchAll(pattern.regex)]
+      const matches = Array.from(text.matchAll(pattern.regex))
       matches.forEach(match => {
         try {
-          const date = pattern.formatter(match as any)
+          const date = pattern.formatter(match)
           // Only include dates in the future and within 5 years
           if (date > now && date < new Date(now.getFullYear() + 5, now.getMonth(), now.getDate())) {
             dates.push({
