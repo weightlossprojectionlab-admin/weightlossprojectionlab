@@ -16,7 +16,7 @@
 import { useMemo } from 'react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { TrashIcon, CurrencyDollarIcon, ClockIcon, ChartBarIcon } from '@heroicons/react/24/outline'
-import type { ShoppingItem } from '@/types/shopping'
+import type { ShoppingItem, ProductCategory } from '@/types/shopping'
 import { getCategoryMetadata } from '@/lib/product-categories'
 
 interface AnalyticsDashboardProps {
@@ -27,8 +27,8 @@ interface AnalyticsDashboardProps {
 interface WasteMetrics {
   totalWasted: number
   totalCost: number
-  wasteByCategory: { category: string; count: number; cost: number }[]
-  topWastedItems: { name: string; count: number; category: string }[]
+  wasteByCategory: { category: ProductCategory; count: number; cost: number }[]
+  topWastedItems: { name: string; count: number; category: ProductCategory }[]
   expirationRate: number
   averageDaysToExpiry: number
 }
