@@ -917,35 +917,104 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                 </div>
               </div>
 
-              {/* Recipe Steps */}
-              {suggestion.recipeSteps && suggestion.recipeSteps.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Instructions</h3>
-                  <ol className="space-y-3">
-                    {suggestion.recipeSteps.map((step, idx) => (
-                      <li key={idx} className="text-sm text-gray-900 dark:text-gray-100 flex items-start">
-                        <span className="font-bold text-primary mr-3 min-w-[24px]">{idx + 1}.</span>
-                        <span>{step}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
+              {/* Recipe Steps - Gated behind ingredient availability */}
+              {suggestion.recipeSteps && suggestion.recipeSteps.length > 0 && (() => {
+                // Check if user has ALL ingredients
+                const hasAllIngredients = ingredientResults.length > 0 &&
+                  ingredientResults.filter(r => !r.matched || r.hasEnough === false).length === 0
 
-              {/* Cooking Tips */}
-              {suggestion.cookingTips && suggestion.cookingTips.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Cooking Tips</h3>
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-2">
-                    {suggestion.cookingTips.map((tip, idx) => (
-                      <p key={idx} className="text-sm text-blue-900 dark:text-blue-300 flex items-start">
-                        <span className="text-blue-600 dark:text-blue-400 mr-2">💡</span>
-                        <span>{tip}</span>
-                      </p>
-                    ))}
+                const availableCount = ingredientResults.filter(r => r.matched && r.hasEnough === true).length
+                const totalIngredientsCount = ingredientResults.length
+                const missingCount = totalIngredientsCount - availableCount
+
+                return (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Instructions</h3>
+
+                    {hasAllIngredients ? (
+                      /* Show instructions when user has everything */
+                      <ol className="space-y-3">
+                        {suggestion.recipeSteps.map((step, idx) => (
+                          <li key={idx} className="text-sm text-gray-900 dark:text-gray-100 flex items-start">
+                            <span className="font-bold text-primary mr-3 min-w-[24px]">{idx + 1}.</span>
+                            <span>{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      /* Show locked state when missing ingredients */
+                      <div className="bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-700 rounded-lg p-6">
+                        <div className="text-center mb-4">
+                          <div className="text-4xl mb-2">🔒</div>
+                          <h4 className="font-semibold text-orange-900 dark:text-orange-100 text-lg mb-1">
+                            Instructions Locked
+                          </h4>
+                          <p className="text-sm text-orange-800 dark:text-orange-200">
+                            You need all ingredients before starting to cook. Timers and steps depend on having everything ready!
+                          </p>
+                        </div>
+
+                        {/* Show what's needed */}
+                        <div className="bg-white dark:bg-gray-900 rounded-lg p-4 mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              Ingredient Progress
+                            </span>
+                            <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                              {availableCount} / {totalIngredientsCount}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className="bg-orange-500 h-2 rounded-full transition-all"
+                              style={{
+                                width: `${(availableCount / totalIngredientsCount) * 100}%`
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Call to action */}
+                        <div className="space-y-2">
+                          <button
+                            onClick={() => setActiveTab('shopping')}
+                            className="w-full px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+                          >
+                            📋 View Missing Ingredients ({missingCount})
+                          </button>
+                          <p className="text-xs text-center text-orange-700 dark:text-orange-300">
+                            Switch to Shopping List tab to scan items or add to your list
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                )
+              })()}
+
+              {/* Cooking Tips - Also gated behind ingredient availability */}
+              {suggestion.cookingTips && suggestion.cookingTips.length > 0 && (() => {
+                // Check if user has ALL ingredients (same check as instructions)
+                const hasAllIngredients = ingredientResults.length > 0 &&
+                  ingredientResults.filter(r => !r.matched || r.hasEnough === false).length === 0
+
+                // Only show cooking tips if user has all ingredients
+                if (!hasAllIngredients) return null
+
+                return (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Cooking Tips</h3>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-2">
+                      {suggestion.cookingTips.map((tip, idx) => (
+                        <p key={idx} className="text-sm text-blue-900 dark:text-blue-300 flex items-start">
+                          <span className="text-blue-600 dark:text-blue-400 mr-2">💡</span>
+                          <span>{tip}</span>
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* No Recipe Available */}
               {(!suggestion.recipeSteps || suggestion.recipeSteps.length === 0) && (
