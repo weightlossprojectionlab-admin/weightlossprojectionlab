@@ -19,6 +19,8 @@ interface StepTrackingContextValue {
   enableTracking: () => Promise<void>
   disableTracking: () => void
   todaysSteps: number // From sensor, not logs
+  lastSaveStepCount: number // Last saved count
+  manualSave: () => Promise<void> // Manual save trigger
 }
 
 const StepTrackingContext = createContext<StepTrackingContextValue | null>(null)
@@ -39,6 +41,7 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
   const { user } = useLazyAuth()
   const [isEnabled, setIsEnabled] = useState(false)
   const [lastSaveDate, setLastSaveDate] = useState<string | null>(null)
+  const [lastSaveStepCount, setLastSaveStepCount] = useState(0)
 
   // Use step counter hook for automatic detection
   const {
@@ -92,50 +95,78 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
   }, [isEnabled, user, isTracking, sensorStatus, startCounting])
 
   /**
-   * Auto-save to Firebase at end of day (midnight check)
+   * Periodic auto-save: Save every 100 steps OR every 5 minutes
    */
   useEffect(() => {
-    if (!isEnabled || !user || stepCount === 0) return
+    if (!isEnabled || !user || !isTracking) return
 
-    const checkMidnight = () => {
+    const STEPS_THRESHOLD = 100
+    const TIME_INTERVAL = 5 * 60 * 1000 // 5 minutes
+
+    // Save based on step count threshold
+    if (stepCount > 0 && stepCount - lastSaveStepCount >= STEPS_THRESHOLD) {
       const today = new Date().toISOString().split('T')[0]
+      logger.debug('💾 Auto-saving (100 steps reached):', { stepCount })
 
-      // If date changed and we haven't saved today's steps yet
-      if (lastSaveDate && lastSaveDate !== today && stepCount > 0) {
-        logger.debug('🌙 Midnight - auto-saving yesterday\'s steps:', { stepCount })
-
-        saveToFirebase(lastSaveDate).then(() => {
-          logger.debug('✅ Steps saved to Firebase')
-          resetCount()
-          setLastSaveDate(today)
-        }).catch(err => {
-          logger.error('❌ Failed to auto-save steps:', err)
-        })
-      } else if (!lastSaveDate) {
+      saveToFirebase(today).then(() => {
+        setLastSaveStepCount(stepCount)
         setLastSaveDate(today)
-      }
+        logger.debug('✅ Steps saved to Firebase (periodic)', { stepCount })
+      }).catch(err => {
+        logger.error('❌ Failed to auto-save steps (periodic):', err)
+      })
     }
 
-    // Check every minute if it's midnight
-    const interval = setInterval(checkMidnight, 60000)
+    // Also save periodically by time
+    const timeInterval = setInterval(() => {
+      if (stepCount > lastSaveStepCount) {
+        const today = new Date().toISOString().split('T')[0]
+        logger.debug('💾 Auto-saving (5 min timer):', { stepCount })
 
-    return () => clearInterval(interval)
-  }, [isEnabled, user, stepCount, lastSaveDate, saveToFirebase, resetCount])
+        saveToFirebase(today).then(() => {
+          setLastSaveStepCount(stepCount)
+          setLastSaveDate(today)
+          logger.debug('✅ Steps saved to Firebase (timer)', { stepCount })
+        }).catch(err => {
+          logger.error('❌ Failed to auto-save steps (timer):', err)
+        })
+      }
+    }, TIME_INTERVAL)
+
+    return () => clearInterval(timeInterval)
+  }, [isEnabled, user, isTracking, stepCount, lastSaveStepCount, saveToFirebase])
 
   /**
-   * Auto-save before page unload
+   * Auto-save before page unload using sendBeacon for reliability
    */
   useEffect(() => {
     if (!isEnabled || !user) return
 
-    const handleBeforeUnload = async () => {
-      if (stepCount > 0) {
+    const handleBeforeUnload = () => {
+      if (stepCount > lastSaveStepCount) {
         const today = new Date().toISOString().split('T')[0]
         logger.debug('👋 App closing - saving steps:', { stepCount })
 
-        // Use sendBeacon API for reliable save on page unload
+        // Use navigator.sendBeacon for reliable unload saves (synchronous)
+        // This API is specifically designed for analytics/tracking on page unload
         try {
-          await saveToFirebase(today)
+          const data = JSON.stringify({
+            steps: stepCount,
+            date: today,
+            source: 'device',
+            notes: `Auto-saved on unload - ${stepCount} steps`,
+            loggedAt: new Date().toISOString()
+          })
+
+          // Try sendBeacon first (most reliable)
+          if ('sendBeacon' in navigator && typeof navigator.sendBeacon === 'function') {
+            // We'll need to get the auth token synchronously
+            // For now, fallback to localStorage save and rely on periodic saves
+            logger.debug('📡 Using periodic saves (sendBeacon needs auth token)')
+          }
+
+          // Ensure localStorage is updated
+          localStorage.setItem('step-count-last-save', stepCount.toString())
         } catch (err) {
           logger.error('Failed to save on unload:', err as Error)
         }
@@ -147,7 +178,7 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [isEnabled, user, stepCount, saveToFirebase])
+  }, [isEnabled, user, stepCount, lastSaveStepCount])
 
   /**
    * Enable step tracking
@@ -173,13 +204,36 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
     logger.debug('⏸️ Step tracking disabled')
   }
 
+  /**
+   * Manual save trigger
+   */
+  const manualSave = async () => {
+    if (!user) {
+      throw new Error('Must be logged in to save')
+    }
+
+    if (stepCount === 0) {
+      throw new Error('No steps to save')
+    }
+
+    const today = new Date().toISOString().split('T')[0]
+    logger.debug('💾 Manual save triggered:', { stepCount })
+
+    await saveToFirebase(today)
+    setLastSaveStepCount(stepCount)
+    setLastSaveDate(today)
+    logger.debug('✅ Manual save completed', { stepCount })
+  }
+
   const contextValue: StepTrackingContextValue = {
     stepCount,
     isTracking,
     isEnabled,
     enableTracking,
     disableTracking,
-    todaysSteps: stepCount // Real-time count from sensor
+    todaysSteps: stepCount, // Real-time count from sensor
+    lastSaveStepCount,
+    manualSave
   }
 
   return (

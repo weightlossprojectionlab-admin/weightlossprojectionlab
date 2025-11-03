@@ -20,7 +20,7 @@ interface StepLogData {
 
 function LogStepsContent() {
   // Get automatic tracking status from provider
-  const { todaysSteps, isTracking, isEnabled, enableTracking, disableTracking } = useStepTracking()
+  const { todaysSteps, isTracking, isEnabled, enableTracking, disableTracking, lastSaveStepCount, manualSave } = useStepTracking()
 
   // Get user profile for goal steps
   const { profile } = useUserProfile()
@@ -29,6 +29,7 @@ function LogStepsContent() {
   const [recentLogs, setRecentLogs] = useState<StepLogData[]>([])
   const [loadingLogs, setLoadingLogs] = useState(true)
   const [togglingTracking, setTogglingTracking] = useState(false)
+  const [savingProgress, setSavingProgress] = useState(false)
 
   // Fetch recent step logs on mount
   useEffect(() => {
@@ -60,6 +61,22 @@ function LogStepsContent() {
       toast.error('Failed to toggle tracking. Please check device permissions.')
     } finally {
       setTogglingTracking(false)
+    }
+  }
+
+  const handleManualSave = async () => {
+    setSavingProgress(true)
+    try {
+      await manualSave()
+      toast.success('Progress saved successfully!')
+      // Refresh recent logs
+      const response = await stepLogOperations.getStepLogs({ limit: 7 })
+      setRecentLogs(response.data || [])
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save progress'
+      toast.error(message)
+    } finally {
+      setSavingProgress(false)
     }
   }
 
@@ -171,6 +188,32 @@ function LogStepsContent() {
                   Your steps are being counted automatically in the background whenever you move
                 </p>
               </div>
+
+              {/* Save Progress Info */}
+              {currentSteps > lastSaveStepCount && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-xs text-blue-900 dark:text-blue-100 mb-2">
+                    💾 {currentSteps - lastSaveStepCount} unsaved steps
+                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    Auto-saves every 100 steps or 5 minutes
+                  </p>
+                </div>
+              )}
+
+              {/* Manual Save Button */}
+              {currentSteps > lastSaveStepCount && (
+                <button
+                  onClick={handleManualSave}
+                  disabled={savingProgress}
+                  className={`btn btn-primary w-full inline-flex items-center justify-center space-x-2 ${savingProgress ? 'cursor-wait' : ''}`}
+                  aria-label="Save progress now"
+                >
+                  {savingProgress && <Spinner size="sm" />}
+                  <span>{savingProgress ? 'Saving...' : 'Save Progress Now'}</span>
+                </button>
+              )}
+
               <button
                 onClick={handleToggleTracking}
                 disabled={togglingTracking}
