@@ -549,7 +549,7 @@ function ShoppingItemCard({
   showDebugInfo,
   onFixOrphaned
 }: {
-  item: any
+  item: ShoppingItem
   onToggle: (id: string, current: boolean) => void
   onDelete: (id: string) => void
   showDebugInfo?: boolean

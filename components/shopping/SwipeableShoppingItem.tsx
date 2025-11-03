@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react'
-import { useSwipeable } from 'react-swipeable'
+import { useSwipeable, SwipeEventData } from 'react-swipeable'
 import { CheckCircleIcon, TrashIcon } from '@heroicons/react/24/outline'
 import type { ShoppingItem } from '@/types/shopping'
 
@@ -34,13 +34,13 @@ export function SwipeableShoppingItem({
   const swipeThreshold = 100 // pixels
 
   const handlers = useSwipeable({
-    onSwiping: (eventData) => {
+    onSwiping: (eventData: SwipeEventData) => {
       setIsSwiping(true)
       // Limit swipe offset
       const offset = Math.max(-200, Math.min(200, eventData.deltaX))
       setSwipeOffset(offset)
     },
-    onSwipedLeft: (eventData) => {
+    onSwipedLeft: (eventData: SwipeEventData) => {
       if (Math.abs(eventData.deltaX) > swipeThreshold) {
         // Swipe left = delete
         onDelete(item.id)
@@ -48,7 +48,7 @@ export function SwipeableShoppingItem({
       setSwipeOffset(0)
       setIsSwiping(false)
     },
-    onSwipedRight: (eventData) => {
+    onSwipedRight: (eventData: SwipeEventData) => {
       if (eventData.deltaX > swipeThreshold) {
         // Swipe right = mark as purchased
         onPurchase(item.id)

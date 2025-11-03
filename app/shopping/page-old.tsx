@@ -21,7 +21,7 @@ import { useShopping } from '@/hooks/useShopping'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { getCategoryMetadata, detectCategory, formatQuantityDisplay } from '@/lib/product-categories'
 import { ExpirationPicker } from '@/components/shopping/ExpirationPicker'
-import type { ProductCategory } from '@/types/shopping'
+import type { ProductCategory, ShoppingItem } from '@/types/shopping'
 import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
 import { Spinner } from '@/components/ui/Spinner'
 import { logger } from '@/lib/logger'
@@ -529,7 +529,7 @@ function ShoppingItemCard({
   showDebugInfo,
   onFixOrphaned
 }: {
-  item: any
+  item: ShoppingItem
   onToggle: (id: string, current: boolean) => void
   onDelete: (id: string) => void
   showDebugInfo?: boolean
