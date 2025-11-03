@@ -8,6 +8,8 @@ import { MEAL_SUGGESTIONS, getRecipeActionLabel } from '@/lib/meal-suggestions'
 import { createStepTimers } from '@/lib/recipe-timer-parser'
 import { scaleRecipe } from '@/lib/recipe-scaler'
 import { Spinner } from '@/components/ui/Spinner'
+import { addManualShoppingItem } from '@/lib/shopping-operations'
+import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 
@@ -16,6 +18,7 @@ export const RecipeQueue = memo(function RecipeQueue() {
   const [queue, setQueue] = useState<QueuedRecipe[]>([])
   const [loading, setLoading] = useState(true)
   const [startingRecipe, setStartingRecipe] = useState<string | null>(null)
+  const [addingToShoppingList, setAddingToShoppingList] = useState(false)
 
   useEffect(() => {
     loadQueue()
@@ -87,6 +90,58 @@ export const RecipeQueue = memo(function RecipeQueue() {
     }
   }
 
+  const handleAddAllToShoppingList = async () => {
+    if (!auth.currentUser?.uid) {
+      toast.error('You must be logged in')
+      return
+    }
+
+    setAddingToShoppingList(true)
+
+    try {
+      // Collect all unique ingredients from all queued recipes
+      const allIngredients = new Set<string>()
+      const ingredientRecipeMap = new Map<string, string>() // Track which recipe each ingredient is from
+
+      queue.forEach((queueItem) => {
+        const recipe = MEAL_SUGGESTIONS.find(r => r.id === queueItem.recipeId)
+        if (recipe && recipe.ingredients) {
+          // Scale ingredients
+          const scaledRecipe = scaleRecipe(recipe, queueItem.servingSize)
+          scaledRecipe.scaledIngredients.forEach((ingredient) => {
+            allIngredients.add(ingredient)
+            if (!ingredientRecipeMap.has(ingredient)) {
+              ingredientRecipeMap.set(ingredient, queueItem.recipeId)
+            }
+          })
+        }
+      })
+
+      if (allIngredients.size === 0) {
+        toast('No ingredients to add', { icon: 'ℹ️' })
+        return
+      }
+
+      // Add all ingredients to shopping list
+      const addPromises = Array.from(allIngredients).map((ingredient) =>
+        addManualShoppingItem(auth.currentUser!.uid, ingredient, {
+          recipeId: ingredientRecipeMap.get(ingredient),
+          quantity: 1,
+          priority: 'medium'
+        })
+      )
+
+      await Promise.all(addPromises)
+
+      toast.success(`✓ Added ${allIngredients.size} ingredient${allIngredients.size > 1 ? 's' : ''} to shopping list!`)
+    } catch (error) {
+      logger.error('Error adding queue ingredients to shopping list:', error as Error)
+      toast.error('Failed to add ingredients')
+    } finally {
+      setAddingToShoppingList(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="bg-background rounded-lg shadow-lg p-6 flex justify-center">
@@ -108,9 +163,31 @@ export const RecipeQueue = memo(function RecipeQueue() {
           </svg>
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Recipe Queue</h2>
         </div>
-        <span className="text-sm bg-purple-100 dark:bg-purple-900/20 text-primary px-3 py-1 rounded-full font-medium">
-          {queue.length} {queue.length === 1 ? 'recipe' : 'recipes'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm bg-purple-100 dark:bg-purple-900/20 text-primary px-3 py-1 rounded-full font-medium">
+            {queue.length} {queue.length === 1 ? 'recipe' : 'recipes'}
+          </span>
+          <button
+            onClick={handleAddAllToShoppingList}
+            disabled={addingToShoppingList || queue.length === 0}
+            className="px-3 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Add all recipe ingredients to shopping list"
+          >
+            {addingToShoppingList ? (
+              <>
+                <Spinner size="sm" className="w-3 h-3" />
+                <span>Adding...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span>Shop All</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">

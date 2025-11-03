@@ -8,10 +8,12 @@
  * - Swipe left: Delete
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useSwipeable, SwipeEventData } from 'react-swipeable'
 import { CheckCircleIcon, TrashIcon } from '@heroicons/react/24/outline'
+import Link from 'next/link'
 import type { ShoppingItem } from '@/types/shopping'
+import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
 
 interface SwipeableShoppingItemProps {
   item: ShoppingItem
@@ -32,6 +34,13 @@ export function SwipeableShoppingItem({
   const [isSwiping, setIsSwiping] = useState(false)
 
   const swipeThreshold = 100 // pixels
+
+  // Look up recipe name if recipeId exists
+  const recipeName = useMemo(() => {
+    if (!item.recipeId) return null
+    const recipe = MEAL_SUGGESTIONS.find(r => r.id === item.recipeId)
+    return recipe?.name || null
+  }, [item.recipeId])
 
   const handlers = useSwipeable({
     onSwiping: (eventData: SwipeEventData) => {
@@ -150,13 +159,19 @@ export function SwipeableShoppingItem({
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
               {item.displayQuantity || `${item.quantity} ${item.unit || 'units'}`}
-              {item.source === 'recipe' && (
-                <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
-                  📖 From recipe
-                </span>
-              )}
             </div>
-            {item.brand && (
+            {/* Recipe badge */}
+            {recipeName && (
+              <Link
+                href={`/recipes/${item.recipeId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+              >
+                <span>📖</span>
+                <span>From: {recipeName}</span>
+              </Link>
+            )}
+            {item.brand && !recipeName && (
               <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                 {item.brand}
               </div>

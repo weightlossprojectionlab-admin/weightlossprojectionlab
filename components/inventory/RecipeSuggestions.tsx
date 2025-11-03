@@ -15,26 +15,17 @@
 import { useMemo, useState } from 'react'
 import { ClockIcon, FireIcon } from '@heroicons/react/24/outline'
 import type { ShoppingItem } from '@/types/shopping'
+import { MEAL_SUGGESTIONS, MealSuggestion } from '@/lib/meal-suggestions'
 import Link from 'next/link'
 
 interface RecipeSuggestionsProps {
   items: ShoppingItem[]
-  recipes?: Recipe[]
+  recipes?: MealSuggestion[]
   className?: string
 }
 
-interface Recipe {
-  id: string
-  name: string
-  imageUrl?: string
-  cookTime?: number
-  servings?: number
-  ingredients: string[]
-  category?: string
-}
-
 interface RecipeMatch {
-  recipe: Recipe
+  recipe: MealSuggestion
   matchingItems: ShoppingItem[]
   urgency: 'critical' | 'high' | 'medium'
   daysUntilExpiry: number
@@ -42,7 +33,7 @@ interface RecipeMatch {
 
 export function RecipeSuggestions({
   items,
-  recipes = DEMO_RECIPES,
+  recipes = MEAL_SUGGESTIONS,
   className = ''
 }: RecipeSuggestionsProps) {
   const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'critical' | 'high' | 'medium'>('all')
@@ -229,16 +220,16 @@ export function RecipeSuggestions({
 
               {/* Recipe Meta */}
               <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                {match.recipe.cookTime && (
+                {match.recipe.prepTime && (
                   <div className="flex items-center gap-1">
                     <ClockIcon className="h-4 w-4" />
-                    <span>{match.recipe.cookTime}min</span>
+                    <span>{match.recipe.prepTime}min</span>
                   </div>
                 )}
-                {match.recipe.servings && (
+                {match.recipe.calories && (
                   <div className="flex items-center gap-1">
                     <FireIcon className="h-4 w-4" />
-                    <span>{match.recipe.servings} servings</span>
+                    <span>{match.recipe.calories} cal</span>
                   </div>
                 )}
               </div>
@@ -272,54 +263,5 @@ export function RecipeSuggestions({
   )
 }
 
-/**
- * Demo recipes for testing
- * In production, these would come from the recipes database
- */
-const DEMO_RECIPES: Recipe[] = [
-  {
-    id: 'demo-1',
-    name: 'Fresh Garden Salad',
-    imageUrl: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400',
-    cookTime: 15,
-    servings: 4,
-    ingredients: ['lettuce', 'tomato', 'cucumber', 'carrots', 'bell pepper'],
-    category: 'salad'
-  },
-  {
-    id: 'demo-2',
-    name: 'Chicken Stir Fry',
-    imageUrl: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400',
-    cookTime: 25,
-    servings: 4,
-    ingredients: ['chicken', 'broccoli', 'carrots', 'bell pepper', 'soy sauce'],
-    category: 'main'
-  },
-  {
-    id: 'demo-3',
-    name: 'Berry Smoothie Bowl',
-    imageUrl: 'https://images.unsplash.com/photo-1590301157890-4810ed352733?w=400',
-    cookTime: 10,
-    servings: 2,
-    ingredients: ['strawberries', 'blueberries', 'banana', 'yogurt', 'milk'],
-    category: 'breakfast'
-  },
-  {
-    id: 'demo-4',
-    name: 'Vegetable Soup',
-    imageUrl: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400',
-    cookTime: 40,
-    servings: 6,
-    ingredients: ['carrots', 'celery', 'onion', 'tomato', 'potatoes'],
-    category: 'soup'
-  },
-  {
-    id: 'demo-5',
-    name: 'Cheese Omelette',
-    imageUrl: 'https://images.unsplash.com/photo-1528207776546-365bb710ee93?w=400',
-    cookTime: 10,
-    servings: 1,
-    ingredients: ['eggs', 'cheese', 'milk', 'butter'],
-    category: 'breakfast'
-  }
-]
+// Using MEAL_SUGGESTIONS imported from lib/meal-suggestions
+// This provides access to 200+ real recipes from the database

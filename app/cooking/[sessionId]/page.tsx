@@ -12,6 +12,9 @@ import { MEAL_SUGGESTIONS, getRecipeActionLabel } from '@/lib/meal-suggestions'
 import { Spinner } from '@/components/ui/Spinner'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
+import { useInventory } from '@/hooks/useInventory'
+import { useShopping } from '@/hooks/useShopping'
+import { checkIngredientsWithQuantities } from '@/lib/ingredient-matcher'
 
 function CookingSessionContent() {
   const router = useRouter()
@@ -22,6 +25,12 @@ function CookingSessionContent() {
   const [loading, setLoading] = useState(true)
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set())
   const [showCompletionModal, setShowCompletionModal] = useState(false)
+
+  // Inventory hook for checking what we have
+  const { allItems: inventoryItems } = useInventory()
+
+  // Shopping hook for consuming items
+  const { consumeItem } = useShopping()
 
   // Load session
   useEffect(() => {
@@ -104,10 +113,38 @@ function CookingSessionContent() {
     if (!session) return
 
     try {
+      // Mark session as completed
       await cookingSessionOperations.updateCookingSession(sessionId, {
         status: 'completed',
         completedAt: new Date()
       })
+
+      // Consume ingredients from inventory
+      if (session.scaledIngredients && session.scaledIngredients.length > 0) {
+        const ingredientResults = checkIngredientsWithQuantities(
+          session.scaledIngredients,
+          inventoryItems
+        )
+
+        // Consume items we have enough of
+        let consumedCount = 0
+        const consumePromises = ingredientResults
+          .filter(result => result.matched && result.hasEnough === true && result.item)
+          .map(async (result) => {
+            try {
+              await consumeItem(result.item!.id)
+              consumedCount++
+            } catch (err) {
+              logger.error(`Failed to consume item ${result.item!.id}`, err as Error)
+            }
+          })
+
+        await Promise.all(consumePromises)
+
+        if (consumedCount > 0) {
+          toast.success(`✓ ${consumedCount} ingredient${consumedCount > 1 ? 's' : ''} consumed from inventory`)
+        }
+      }
 
       // Redirect to meal logging with recipe data
       const queryParams = new URLSearchParams({

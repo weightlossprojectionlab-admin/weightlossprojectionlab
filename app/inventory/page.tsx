@@ -23,8 +23,10 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ScanContextModal } from '@/components/shopping/ScanContextModal'
 import { ExpirationPicker } from '@/components/shopping/ExpirationPicker'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
+import { addManualShoppingItem } from '@/lib/shopping-operations'
 import type { ScanContext } from '@/types/shopping'
 import { logger } from '@/lib/logger'
+import { auth } from '@/lib/firebase'
 
 // Dynamic imports
 const BarcodeScanner = dynamic(
@@ -342,6 +344,32 @@ function KitchenInventoryContent() {
                           title="Mark as used up"
                         >
                           Used Up
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!auth.currentUser?.uid) {
+                              toast.error('You must be logged in')
+                              return
+                            }
+
+                            try {
+                              // Add to shopping list without removing from inventory
+                              await addManualShoppingItem(auth.currentUser.uid, item.productName, {
+                                quantity: 1,
+                                unit: item.unit,
+                                priority: 'medium'
+                              })
+                              toast.success(`✓ Added ${item.productName} to shopping list`)
+                            } catch (error: any) {
+                              console.error('[Inventory] Error adding to shopping list:', error)
+                              toast.error(`Failed to add: ${error?.message || 'Unknown error'}`)
+                            }
+                          }}
+                          className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
+                          title="Add to shopping list for restocking"
+                        >
+                          Buy Again
                         </button>
                       </div>
                     </div>
