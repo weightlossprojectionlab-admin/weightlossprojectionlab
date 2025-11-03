@@ -91,6 +91,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   const [missingIngredients, setMissingIngredients] = useState<string[]>([])
   const [scannedItems, setScannedItems] = useState<Set<string>>(new Set())
   const [scanningInProgress, setScanningInProgress] = useState(false)
+  const [recentlyAddedIngredients, setRecentlyAddedIngredients] = useState<Set<string>>(new Set())
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(suggestion.mealType)
   const [startingSession, setStartingSession] = useState(false)
   const [addingToShoppingList, setAddingToShoppingList] = useState(false)
@@ -100,7 +101,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
   // Get inventory items
   const { fridgeItems, freezerItems, pantryItems, counterItems, refresh: refreshInventory } = useInventory()
-  const { addItem, updateItem } = useShopping()
+  const { addItem, updateItem, neededItems: shoppingListItems, refresh: refreshShoppingList } = useShopping()
   const allInventoryItems = useMemo(() =>
     [...fridgeItems, ...freezerItems, ...pantryItems, ...counterItems],
     [fridgeItems, freezerItems, pantryItems, counterItems]
@@ -211,6 +212,42 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
   const handleClearAllIngredients = () => {
     setHaveIngredients(new Set())
+  }
+
+  /**
+   * Check if ingredient is on shopping list
+   */
+  const isIngredientOnShoppingList = (ingredientText: string): boolean => {
+    if (!shoppingListItems || shoppingListItems.length === 0) return false
+
+    const ingredientLower = ingredientText.toLowerCase()
+
+    return shoppingListItems.some(item => {
+      // Check if item is needed (on shopping list)
+      if (!item.needed) return false
+
+      // Match by manual ingredient name (exact recipe text)
+      if (item.manualIngredientName?.toLowerCase() === ingredientLower) {
+        return true
+      }
+
+      // Match by product name (for similar items)
+      if (item.productName?.toLowerCase().includes(ingredientLower.split(' ').slice(-1)[0])) {
+        return true
+      }
+
+      // Match if this recipe added the item
+      if (item.recipeId === suggestion.id) {
+        const itemNameWords = item.productName?.toLowerCase().split(' ') || []
+        const ingredientWords = ingredientLower.split(' ')
+        // Check if any significant word matches
+        return ingredientWords.some(word =>
+          word.length > 3 && itemNameWords.includes(word)
+        )
+      }
+
+      return false
+    })
   }
 
   const handlePrint = () => {
@@ -390,7 +427,19 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
       await Promise.all(addPromises)
 
-      toast.success(`Added ${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} to shopping list!`)
+      // Track recently added items for visual feedback
+      const addedSet = new Set(itemsToAdd.map(({ ingredient }) => ingredient))
+      setRecentlyAddedIngredients(addedSet)
+
+      // Auto-clear "Just Added" indicator after 3 seconds
+      setTimeout(() => {
+        setRecentlyAddedIngredients(new Set())
+      }, 3000)
+
+      // Refresh shopping list to show updated status
+      await refreshShoppingList()
+
+      toast.success(`✓ Added ${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} to shopping list!`)
       setActiveTab('recipe') // Switch back to recipe tab
     } catch (error) {
       logger.error('Error adding to shopping list:', error as Error)
@@ -930,24 +979,51 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                       <p className="text-sm text-gray-600 dark:text-gray-400">For {servingSize} serving{servingSize > 1 ? 's' : ''}</p>
                     </div>
 
-                    {/* Add to Shopping List Button */}
-                    {neededCount > 0 && (
-                      <button
-                        onClick={handleAddMissingToShoppingList}
-                        disabled={addingToShoppingList}
-                        className="w-full mb-4 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        <span>
-                          {addingToShoppingList
-                            ? 'Adding...'
-                            : `Add ${neededCount} Missing Item${neededCount > 1 ? 's' : ''} to Shopping List`
-                          }
-                        </span>
-                      </button>
-                    )}
+                    {/* Add to Shopping List Button / Status */}
+                    {neededCount > 0 && (() => {
+                      // Check how many needed items are already on shopping list
+                      const itemsOnList = neededIngredients.filter(({ ingredient }) =>
+                        isIngredientOnShoppingList(ingredient)
+                      ).length
+                      const allOnList = itemsOnList === neededCount
+
+                      if (allOnList) {
+                        // All missing items are on shopping list
+                        return (
+                          <div className="w-full mb-4 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500 dark:border-blue-700 rounded-lg text-center">
+                            <div className="flex items-center justify-center gap-2 text-blue-700 dark:text-blue-300">
+                              <span className="text-lg">📋</span>
+                              <span className="font-semibold">All {neededCount} missing item{neededCount > 1 ? 's are' : ' is'} on your shopping list!</span>
+                            </div>
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                              Shop for these items, then scan them to cook this recipe
+                            </p>
+                          </div>
+                        )
+                      }
+
+                      // Some or no items on list - show add button
+                      const remainingCount = neededCount - itemsOnList
+                      return (
+                        <button
+                          onClick={handleAddMissingToShoppingList}
+                          disabled={addingToShoppingList}
+                          className="w-full mb-4 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          <span>
+                            {addingToShoppingList
+                              ? 'Adding...'
+                              : itemsOnList > 0
+                                ? `Add ${remainingCount} More Item${remainingCount > 1 ? 's' : ''} to Shopping List`
+                                : `Add ${neededCount} Missing Item${neededCount > 1 ? 's' : ''} to Shopping List`
+                            }
+                          </span>
+                        </button>
+                      )
+                    })()}
 
                     {/* Shopping List - Only items they need */}
                     {neededCount === 0 ? (
@@ -992,9 +1068,22 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                                     </p>
                                   )}
                                   {result && !result.matched && (
-                                    <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                                      ❌ Not in stock
-                                    </p>
+                                    <>
+                                      {/* Check if on shopping list */}
+                                      {isIngredientOnShoppingList(ingredient) ? (
+                                        <p className="text-xs text-blue-700 dark:text-blue-400 mt-1 flex items-center gap-1.5">
+                                          <span>📋</span>
+                                          <span>On Shopping List</span>
+                                          {recentlyAddedIngredients.has(ingredient) && (
+                                            <span className="text-green-600 dark:text-green-400 font-medium">✓ Just Added</span>
+                                          )}
+                                        </p>
+                                      ) : (
+                                        <p className="text-xs text-red-700 dark:text-red-400 mt-1">
+                                          ❌ Not in stock
+                                        </p>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                                 {isSwapped && (
