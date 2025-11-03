@@ -1071,13 +1071,22 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                                     <>
                                       {/* Check if on shopping list */}
                                       {isIngredientOnShoppingList(ingredient) ? (
-                                        <p className="text-xs text-blue-700 dark:text-blue-400 mt-1 flex items-center gap-1.5">
-                                          <span>📋</span>
-                                          <span>On Shopping List</span>
+                                        <div className="text-xs mt-1 flex items-center gap-1.5">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation() // Prevent modal from closing
+                                              router.push('/shopping')
+                                            }}
+                                            className="text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 hover:underline cursor-pointer flex items-center gap-1.5 transition-colors"
+                                            aria-label="View shopping list"
+                                          >
+                                            <span>📋</span>
+                                            <span>On Shopping List</span>
+                                          </button>
                                           {recentlyAddedIngredients.has(ingredient) && (
                                             <span className="text-green-600 dark:text-green-400 font-medium">✓ Just Added</span>
                                           )}
-                                        </p>
+                                        </div>
                                       ) : (
                                         <p className="text-xs text-red-700 dark:text-red-400 mt-1">
                                           ❌ Not in stock
