@@ -114,6 +114,7 @@ export async function getStore(userId: string, storeId: string): Promise<Store |
  */
 export async function getAllStores(userId: string, limitCount = 10): Promise<Store[]> {
   try {
+    // Try query with ordering first
     const q = query(
       collection(db, 'users', userId, STORES_COLLECTION),
       orderBy('lastVisitedAt', 'desc'),
@@ -125,8 +126,35 @@ export async function getAllStores(userId: string, limitCount = 10): Promise<Sto
       convertTimestamps({ id: doc.id, ...doc.data() }) as Store
     )
   } catch (error) {
-    logger.error('[StoreOps] Error getting all stores', error as Error)
-    return []
+    const errorCode = (error as any)?.code
+    const errorMessage = (error as any)?.message
+
+    logger.error('[StoreOps] Error querying stores with orderBy', error as Error, {
+      userId,
+      errorCode,
+      errorMessage
+    })
+
+    // If ordering fails (likely no index or no stores yet), try without ordering
+    try {
+      const fallbackQuery = query(
+        collection(db, 'users', userId, STORES_COLLECTION),
+        firestoreLimit(limitCount)
+      )
+      const snapshot = await getDocs(fallbackQuery)
+      return snapshot.docs.map(doc =>
+        convertTimestamps({ id: doc.id, ...doc.data() }) as Store
+      )
+    } catch (fallbackError) {
+      logger.error('[StoreOps] Fallback query without orderBy also failed', fallbackError as Error, {
+        userId,
+        errorCode: (fallbackError as any)?.code,
+        errorMessage: (fallbackError as any)?.message
+      })
+
+      // Return empty array - stores are optional feature
+      return []
+    }
   }
 }
 
