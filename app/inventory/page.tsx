@@ -22,6 +22,7 @@ import type { StorageLocation } from '@/types/shopping'
 import { Spinner } from '@/components/ui/Spinner'
 import { ScanContextModal } from '@/components/shopping/ScanContextModal'
 import { ExpirationPicker } from '@/components/shopping/ExpirationPicker'
+import { RecipeLinks } from '@/components/shopping/RecipeLinks'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { addManualShoppingItem } from '@/lib/shopping-operations'
 import type { ScanContext } from '@/types/shopping'
@@ -324,6 +325,20 @@ function KitchenInventoryContent() {
                             </span>
                           )}
                         </div>
+
+                        {/* Recipe Links - Show which recipes can be made with this ingredient */}
+                        {item.recipeIds && item.recipeIds.length > 0 && (
+                          <div className="mt-2">
+                            <RecipeLinks
+                              recipeIds={item.recipeIds}
+                              primaryRecipeId={item.primaryRecipeId}
+                              onRecipeClick={(recipeId, recipeName) => {
+                                toast(`You can make: ${recipeName}`, { icon: '🍳' })
+                                // TODO: Open recipe modal with this recipe
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
 
                       {/* Actions */}

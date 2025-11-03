@@ -151,7 +151,8 @@ export async function addOrUpdateShoppingItem(
       category,
       isManual: false, // Scanned items are not manual
       manualIngredientName: undefined,
-      recipeId: undefined,
+      recipeIds: [], // Scanned items start with empty recipe array
+      primaryRecipeId: undefined, // No primary recipe for scanned items initially
       inStock: options.inStock ?? true,
       quantity,
       unit,
@@ -182,6 +183,8 @@ export async function addOrUpdateShoppingItem(
       ...newItem,
       expiresAt: newItem.expiresAt ? Timestamp.fromDate(newItem.expiresAt) : null,
       lastPurchased: newItem.lastPurchased ? Timestamp.fromDate(newItem.lastPurchased) : null,
+      recipeIds: newItem.recipeIds ?? [], // Array of recipe IDs
+      primaryRecipeId: newItem.primaryRecipeId ?? null, // Primary recipe
       createdAt: Timestamp.fromDate(newItem.createdAt),
       updatedAt: Timestamp.fromDate(newItem.updatedAt),
       purchaseHistory: newItem.purchaseHistory.map(entry => {
@@ -246,7 +249,8 @@ export async function addManualShoppingItem(
       category,
       isManual: true,
       manualIngredientName: ingredientName,
-      recipeId: options.recipeId,
+      recipeIds: options.recipeId ? [options.recipeId] : [], // Multi-recipe support
+      primaryRecipeId: options.recipeId, // First recipe that added this
       inStock: false,
       quantity,
       unit,
@@ -276,7 +280,8 @@ export async function addManualShoppingItem(
       lastPurchased: newItem.lastPurchased ? Timestamp.fromDate(newItem.lastPurchased) : null,
       typicalShelfLife: newItem.typicalShelfLife ?? null,
       preferredStore: newItem.preferredStore ?? null,
-      recipeId: newItem.recipeId ?? null,
+      recipeIds: newItem.recipeIds ?? [], // Array of recipe IDs
+      primaryRecipeId: newItem.primaryRecipeId ?? null, // First recipe
       manualIngredientName: newItem.manualIngredientName ?? null,
       source: newItem.source ?? null,
       createdAt: Timestamp.fromDate(newItem.createdAt),
@@ -692,5 +697,96 @@ export async function getStoreVisits(
   } catch (error) {
     logger.error('[ShoppingOps] Error getting store visits', error as Error)
     return []
+  }
+}
+
+/**
+ * Find existing ingredient by name (for multi-recipe linking)
+ * Matches by normalized ingredient name or manual ingredient name
+ */
+export async function findExistingIngredientByName(
+  userId: string,
+  ingredientName: string
+): Promise<ShoppingItem | null> {
+  try {
+    const normalizedName = ingredientName.toLowerCase().trim()
+
+    // Query by manualIngredientName first (exact match for recipe ingredients)
+    const manualNameQuery = query(
+      collection(db, SHOPPING_ITEMS_COLLECTION),
+      where('userId', '==', userId),
+      where('manualIngredientName', '==', ingredientName),
+      where('needed', '==', true), // Only check shopping list items
+      firestoreLimit(1)
+    )
+
+    const manualSnapshot = await getDocs(manualNameQuery)
+    if (!manualSnapshot.empty) {
+      const doc = manualSnapshot.docs[0]
+      return convertTimestamps({ id: doc.id, ...doc.data() }) as ShoppingItem
+    }
+
+    // Fallback: query all user's shopping list items and match by normalized name
+    const allItemsQuery = query(
+      collection(db, SHOPPING_ITEMS_COLLECTION),
+      where('userId', '==', userId),
+      where('needed', '==', true)
+    )
+
+    const allSnapshot = await getDocs(allItemsQuery)
+    for (const doc of allSnapshot.docs) {
+      const itemData = doc.data()
+      const itemName = (itemData.productName || '').toLowerCase().trim()
+      const manualName = (itemData.manualIngredientName || '').toLowerCase().trim()
+
+      if (itemName === normalizedName || manualName === normalizedName) {
+        return convertTimestamps({ id: doc.id, ...itemData }) as ShoppingItem
+      }
+    }
+
+    return null
+  } catch (error) {
+    logger.error('[ShoppingOps] Error finding ingredient by name', error as Error)
+    return null
+  }
+}
+
+/**
+ * Append recipe ID to existing shopping item's recipeIds array
+ * Deduplicates to prevent duplicate recipe links
+ */
+export async function appendRecipeToIngredient(
+  itemId: string,
+  recipeId: string
+): Promise<ShoppingItem> {
+  try {
+    const item = await getShoppingItem(itemId)
+    if (!item) throw new Error('Item not found')
+
+    // Get current recipeIds array (or empty array if not set)
+    const currentRecipeIds = item.recipeIds || []
+
+    // Deduplicate - only add if not already present
+    if (!currentRecipeIds.includes(recipeId)) {
+      const updatedRecipeIds = [...currentRecipeIds, recipeId]
+
+      // If no primary recipe set, set this as primary
+      const updates: Partial<ShoppingItem> = {
+        recipeIds: updatedRecipeIds,
+        updatedAt: new Date()
+      }
+
+      if (!item.primaryRecipeId) {
+        updates.primaryRecipeId = recipeId
+      }
+
+      return await updateShoppingItem(itemId, updates)
+    }
+
+    // Recipe already linked, return unchanged item
+    return item
+  } catch (error) {
+    logger.error('[ShoppingOps] Error appending recipe to ingredient', error as Error, { itemId, recipeId })
+    throw error
   }
 }

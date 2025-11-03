@@ -35,12 +35,12 @@ export function SwipeableShoppingItem({
 
   const swipeThreshold = 100 // pixels
 
-  // Look up recipe name if recipeId exists
+  // Look up recipe name if primaryRecipeId exists
   const recipeName = useMemo(() => {
-    if (!item.recipeId) return null
-    const recipe = MEAL_SUGGESTIONS.find(r => r.id === item.recipeId)
+    if (!item.primaryRecipeId) return null
+    const recipe = MEAL_SUGGESTIONS.find(r => r.id === item.primaryRecipeId)
     return recipe?.name || null
-  }, [item.recipeId])
+  }, [item.primaryRecipeId])
 
   const handlers = useSwipeable({
     onSwiping: (eventData: SwipeEventData) => {
@@ -163,7 +163,7 @@ export function SwipeableShoppingItem({
             {/* Recipe badge */}
             {recipeName && (
               <Link
-                href={`/recipes/${item.recipeId}`}
+                href={`/recipes/${item.primaryRecipeId}`}
                 onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
               >

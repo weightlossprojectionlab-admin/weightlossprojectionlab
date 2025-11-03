@@ -31,6 +31,7 @@ import { QuantityAdjustModal } from '@/components/shopping/QuantityAdjustModal'
 import { NutritionReviewModal } from '@/components/shopping/NutritionReviewModal'
 import { ReplacementCompareModal } from '@/components/shopping/ReplacementCompareModal'
 import { CategoryConfirmModal } from '@/components/shopping/CategoryConfirmModal'
+import { RecipeLinks } from '@/components/shopping/RecipeLinks'
 import type { ProductCategory, ShoppingItem } from '@/types/shopping'
 import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
 import { Spinner } from '@/components/ui/Spinner'
@@ -782,6 +783,20 @@ function ShoppingItemCard({
             </span>
           )}
         </div>
+
+        {/* Recipe Links - Show which recipes use this ingredient */}
+        {item.recipeIds && item.recipeIds.length > 0 && (
+          <div className="mt-2">
+            <RecipeLinks
+              recipeIds={item.recipeIds}
+              primaryRecipeId={item.primaryRecipeId}
+              onRecipeClick={(recipeId, recipeName) => {
+                toast(`Recipe: ${recipeName}`, { icon: '🍳' })
+                // TODO: Open recipe modal with this recipe
+              }}
+            />
+          </div>
+        )}
 
         {/* Debug Info */}
         {showDebugInfo && (

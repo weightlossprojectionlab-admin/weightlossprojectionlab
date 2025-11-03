@@ -86,7 +86,8 @@ export interface ShoppingItem {
   // Manual Entry Support (for recipe ingredients)
   isManual: boolean // True if added from recipe without barcode
   manualIngredientName?: string // Original ingredient text from recipe (e.g., "2 cups milk")
-  recipeId?: string // Link back to recipe if added from recipe
+  recipeIds?: string[] // Links to ALL recipes using this ingredient
+  primaryRecipeId?: string // First recipe that added this ingredient (for UI display)
 
   // Inventory Tracking
   inStock: boolean

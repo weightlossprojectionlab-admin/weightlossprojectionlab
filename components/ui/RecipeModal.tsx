@@ -27,7 +27,7 @@ import {
   calculateRecipeReadiness,
   type IngredientMatchResult
 } from '@/lib/ingredient-matcher'
-import { addManualShoppingItem } from '@/lib/shopping-operations'
+import { addManualShoppingItem, findExistingIngredientByName, appendRecipeToIngredient } from '@/lib/shopping-operations'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
@@ -236,8 +236,8 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
         return true
       }
 
-      // Match if this recipe added the item
-      if (item.recipeId === suggestion.id) {
+      // Match if this recipe added the item (check recipeIds array)
+      if (item.recipeIds && item.recipeIds.includes(suggestion.id)) {
         const itemNameWords = item.productName?.toLowerCase().split(' ') || []
         const ingredientWords = ingredientLower.split(' ')
         // Check if any significant word matches
@@ -416,16 +416,28 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
         return
       }
 
-      // Add each missing/insufficient ingredient to shopping list
-      const addPromises = itemsToAdd.map(({ ingredient }) =>
-        addManualShoppingItem(auth.currentUser!.uid, ingredient, {
-          recipeId: suggestion.id,
-          quantity: 1,
-          priority: 'medium'
-        })
-      )
+      // Multi-recipe linking: Check if each ingredient already exists on shopping list
+      let newItemsCount = 0
+      let linkedItemsCount = 0
 
-      await Promise.all(addPromises)
+      for (const { ingredient } of itemsToAdd) {
+        // Check if ingredient already exists on shopping list
+        const existingItem = await findExistingIngredientByName(auth.currentUser!.uid, ingredient)
+
+        if (existingItem) {
+          // Item exists - append current recipe ID to its recipeIds array
+          await appendRecipeToIngredient(existingItem.id, suggestion.id)
+          linkedItemsCount++
+        } else {
+          // Item doesn't exist - create new item with recipeIds array
+          await addManualShoppingItem(auth.currentUser!.uid, ingredient, {
+            recipeId: suggestion.id, // This will be converted to recipeIds: [id]
+            quantity: 1,
+            priority: 'medium'
+          })
+          newItemsCount++
+        }
+      }
 
       // Track recently added items for visual feedback
       const addedSet = new Set(itemsToAdd.map(({ ingredient }) => ingredient))
@@ -439,7 +451,15 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
       // Refresh shopping list to show updated status
       await refreshShoppingList()
 
-      toast.success(`✓ Added ${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} to shopping list!`)
+      // Show smart toast message based on what happened
+      if (linkedItemsCount > 0 && newItemsCount > 0) {
+        toast.success(`✓ Added ${newItemsCount} new item${newItemsCount > 1 ? 's' : ''}, linked ${linkedItemsCount} existing item${linkedItemsCount > 1 ? 's' : ''} to this recipe!`)
+      } else if (linkedItemsCount > 0) {
+        toast.success(`✓ Linked ${linkedItemsCount} item${linkedItemsCount > 1 ? 's' : ''} already on your list to this recipe!`)
+      } else {
+        toast.success(`✓ Added ${newItemsCount} item${newItemsCount > 1 ? 's' : ''} to shopping list!`)
+      }
+
       setActiveTab('recipe') // Switch back to recipe tab
     } catch (error) {
       logger.error('Error adding to shopping list:', error as Error)
