@@ -1048,11 +1048,30 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                           }
 
                           return (
-                            <div key={idx} className={`p-3 rounded-lg ${isSwapped ? 'bg-purple-100 dark:bg-purple-900/20' : 'bg-gray-100 dark:bg-gray-800'}`}>
+                            <div key={idx} className={`p-3 rounded-lg ${
+                              isSwapped
+                                ? 'bg-purple-100 dark:bg-purple-900/20'
+                                : result && result.matched && result.hasEnough === true
+                                  ? 'bg-green-50 dark:bg-green-900/10' // Green background for in-stock
+                                  : isIngredientOnShoppingList(ingredient)
+                                    ? 'bg-amber-50 dark:bg-amber-900/10' // Amber background for on list
+                                    : 'bg-gray-100 dark:bg-gray-800' // Default
+                            }`}>
                               <div className="flex items-start space-x-3">
                                 <input
                                   type="checkbox"
-                                  className="w-4 h-4 mt-0.5 text-primary border-gray-200 dark:border-gray-700 rounded focus:ring-primary"
+                                  checked={
+                                    (result && result.matched && result.hasEnough === true) // Green: In inventory
+                                    || isIngredientOnShoppingList(ingredient) // Amber: On shopping list
+                                  }
+                                  readOnly
+                                  className={`w-4 h-4 mt-0.5 rounded focus:ring-0 pointer-events-none ${
+                                    result && result.matched && result.hasEnough === true
+                                      ? 'text-green-500 border-green-500 dark:border-green-500 bg-green-500' // Green checkbox
+                                      : isIngredientOnShoppingList(ingredient)
+                                        ? 'text-amber-500 border-amber-500 dark:border-amber-500 bg-amber-500' // Amber checkbox
+                                        : 'border-gray-300 dark:border-gray-600' // Default unchecked
+                                  }`}
                                 />
                                 <div className="flex-1">
                                   <span className="text-sm text-gray-900 dark:text-gray-100 block">
