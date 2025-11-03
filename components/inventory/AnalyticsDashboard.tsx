@@ -60,7 +60,7 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
     })
 
     // Count by category
-    const categoryMap = new Map<string, { count: number; cost: number }>()
+    const categoryMap = new Map<ProductCategory, { count: number; cost: number }>()
     let totalCost = 0
 
     expiredItems.forEach(item => {
@@ -76,7 +76,7 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
     })
 
     // Top wasted items (by product name)
-    const productMap = new Map<string, { count: number; category: string }>()
+    const productMap = new Map<string, { count: number; category: ProductCategory }>()
     expiredItems.forEach(item => {
       const key = item.productName
       const existing = productMap.get(key) || { count: 0, category: item.category }
