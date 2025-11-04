@@ -26,6 +26,7 @@ interface SelectedProduct {
     carbs: number
     fat: number
     fiber: number
+    sodium: number
     servingSize: string
   }
 }
@@ -67,6 +68,7 @@ export default function CreateRecipePage() {
     let totalCarbs = 0
     let totalFat = 0
     let totalFiber = 0
+    let totalSodium = 0
 
     ingredients.forEach(ingredient => {
       if (ingredient.nutrition) {
@@ -75,6 +77,7 @@ export default function CreateRecipePage() {
         totalCarbs += ingredient.nutrition.carbs * ingredient.quantity
         totalFat += ingredient.nutrition.fat * ingredient.quantity
         totalFiber += ingredient.nutrition.fiber * ingredient.quantity
+        totalSodium += (ingredient.nutrition.sodium || 0) * ingredient.quantity
       }
     })
 
@@ -83,7 +86,8 @@ export default function CreateRecipePage() {
       protein: Math.round((totalProtein / servingSize) * 10) / 10,
       carbs: Math.round((totalCarbs / servingSize) * 10) / 10,
       fat: Math.round((totalFat / servingSize) * 10) / 10,
-      fiber: Math.round((totalFiber / servingSize) * 10) / 10
+      fiber: Math.round((totalFiber / servingSize) * 10) / 10,
+      sodium: Math.round(totalSodium / servingSize)
     }
   }
 
