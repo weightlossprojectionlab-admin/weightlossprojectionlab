@@ -790,3 +790,159 @@ export async function appendRecipeToIngredient(
     throw error
   }
 }
+
+/**
+ * Update Global Product Database
+ *
+ * Aggregates product scans across all users to build a shared product database.
+ * This reduces API calls to OpenFoodFacts and enables ML/recipe features.
+ *
+ * Called automatically when a user scans a barcode.
+ */
+export async function updateGlobalProductDatabase(
+  barcode: string,
+  productData: OpenFoodFactsProduct,
+  userId: string,
+  metadata: {
+    category: ProductCategory
+    store?: string
+    priceCents?: number
+    region?: string
+    purchased: boolean
+    context: 'shopping' | 'meal-log' | 'inventory'
+  }
+): Promise<void> {
+  try {
+    const productRef = doc(db, 'product_database', barcode)
+    const productSnap = await getDoc(productRef)
+
+    const now = new Date()
+
+    // Extract nutrition data from OpenFoodFacts
+    const nutrition = {
+      calories: productData.nutriments?.['energy-kcal_serving'] ||
+                productData.nutriments?.['energy-kcal_100g'] ||
+                productData.nutriments?.['energy-kcal'] || 0,
+      protein: productData.nutriments?.proteins_serving ||
+               productData.nutriments?.proteins_100g ||
+               productData.nutriments?.proteins || 0,
+      carbs: productData.nutriments?.carbohydrates_serving ||
+             productData.nutriments?.carbohydrates_100g ||
+             productData.nutriments?.carbohydrates || 0,
+      fat: productData.nutriments?.fat_serving ||
+           productData.nutriments?.fat_100g ||
+           productData.nutriments?.fat || 0,
+      fiber: productData.nutriments?.fiber_serving ||
+             productData.nutriments?.fiber_100g ||
+             productData.nutriments?.fiber || 0,
+      servingSize: productData.serving_size || productData.quantity || 'unknown'
+    }
+
+    if (productSnap.exists()) {
+      // Product exists - update aggregated stats
+      const existing = productSnap.data() as any
+
+      // Update stats
+      const updates: any = {
+        'stats.totalScans': (existing.stats?.totalScans || 0) + 1,
+        'stats.lastSeenAt': now,
+        updatedAt: now
+      }
+
+      // Increment purchase count if purchased
+      if (metadata.purchased) {
+        updates['stats.totalPurchases'] = (existing.stats?.totalPurchases || 0) + 1
+      }
+
+      // Add store to list if not already there
+      if (metadata.store && !(existing.regional?.stores || []).includes(metadata.store)) {
+        updates['regional.stores'] = [...(existing.regional?.stores || []), metadata.store]
+      }
+
+      // Add region to list if not already there
+      if (metadata.region && !(existing.regional?.regions || []).includes(metadata.region)) {
+        updates['regional.regions'] = [...(existing.regional?.regions || []), metadata.region]
+      }
+
+      // Update price data if provided
+      if (metadata.priceCents) {
+        const currentMin = existing.regional?.priceMin || metadata.priceCents
+        const currentMax = existing.regional?.priceMax || metadata.priceCents
+        const currentTotal = existing.regional?.avgPriceCents ?
+          (existing.regional.avgPriceCents * (existing.stats?.totalPurchases || 1)) : 0
+        const newPurchaseCount = (existing.stats?.totalPurchases || 0) + (metadata.purchased ? 1 : 0)
+
+        updates['regional.priceMin'] = Math.min(currentMin, metadata.priceCents)
+        updates['regional.priceMax'] = Math.max(currentMax, metadata.priceCents)
+        updates['regional.avgPriceCents'] = newPurchaseCount > 0 ?
+          Math.round((currentTotal + metadata.priceCents) / newPurchaseCount) : metadata.priceCents
+        updates['regional.lastPriceUpdate'] = now
+      }
+
+      await updateDoc(productRef, updates)
+
+      logger.debug('[GlobalProduct] Updated existing product', { barcode, totalScans: updates['stats.totalScans'] })
+    } else {
+      // New product - create entry
+      const newProduct = {
+        barcode,
+        productName: productData.product_name || 'Unknown Product',
+        brand: productData.brands || 'Unknown Brand',
+        imageUrl: productData.image_url || productData.image_front_url,
+        nutrition,
+        category: metadata.category,
+        categories: productData.categories ? productData.categories.split(',').map(c => c.trim()) : [metadata.category],
+        stats: {
+          totalScans: 1,
+          uniqueUsers: 1, // Will use array union in future for exact count
+          totalPurchases: metadata.purchased ? 1 : 0,
+          firstSeenAt: now,
+          lastSeenAt: now
+        },
+        regional: {
+          stores: metadata.store ? [metadata.store] : [],
+          regions: metadata.region ? [metadata.region] : [],
+          avgPriceCents: metadata.priceCents || 0,
+          priceMin: metadata.priceCents || 0,
+          priceMax: metadata.priceCents || 0,
+          lastPriceUpdate: metadata.priceCents ? now : null
+        },
+        usage: {
+          linkedRecipes: 0,
+          popularityScore: 1 // Initial score
+        },
+        quality: {
+          verified: false,
+          verificationCount: 0,
+          dataSource: 'openfoodfacts' as const,
+          confidence: 70 // Default confidence for OpenFoodFacts
+        },
+        createdAt: now,
+        updatedAt: now
+      }
+
+      await setDoc(productRef, removeUndefinedFields(newProduct))
+
+      logger.info('[GlobalProduct] Created new product', { barcode, productName: newProduct.productName })
+    }
+
+    // Optionally: Record individual scan event for detailed analytics
+    // (Commented out to avoid excessive writes - enable if needed)
+    /*
+    const scanRef = doc(collection(db, `product_database/${barcode}/scans`))
+    await setDoc(scanRef, {
+      id: scanRef.id,
+      userId,
+      scannedAt: now,
+      store: metadata.store,
+      region: metadata.region,
+      priceCents: metadata.priceCents,
+      purchased: metadata.purchased,
+      context: metadata.context
+    })
+    */
+  } catch (error) {
+    logger.error('[GlobalProduct] Error updating global product database', error as Error, { barcode, userId })
+    // Don't throw - this is a best-effort aggregation, don't block user flow
+  }
+}

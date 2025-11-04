@@ -4,50 +4,73 @@ import { logAdminAction } from '@/lib/admin/audit'
 import { logger } from '@/lib/logger'
 
 /**
- * GET /api/admin/users?q=<query>
- * Search users by email or UID
+ * GET /api/admin/users?q=<query>&limit=<limit>&pageToken=<pageToken>
+ * Search users by email/UID OR list all users with pagination
  */
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication
     const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      // For client-side requests, check cookie
-      const idToken = request.cookies.get('idToken')?.value
-      if (!idToken) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
+    const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
+
+    if (!idToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Verify token with Firebase Admin SDK
+    const decodedToken = await adminAuth.verifyIdToken(idToken)
+    const adminUid = decodedToken.uid
+    const adminEmail = decodedToken.email || 'unknown'
+
+    // Check if user is admin (super admin or has admin/moderator/support role)
+    const adminDoc = await adminDb.collection('users').doc(adminUid).get()
+    const adminData = adminDoc.data()
+    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weigthlossprojectionlab@gmail.com'].includes(adminEmail.toLowerCase())
+
+    if (!isSuperAdmin && adminData?.role !== 'admin' && adminData?.role !== 'moderator' && adminData?.role !== 'support') {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
     const searchParams = request.nextUrl.searchParams
     const query = searchParams.get('q')
+    const limit = parseInt(searchParams.get('limit') || '50', 10)
+    const pageToken = searchParams.get('pageToken') || undefined
 
-    if (!query) {
-      return NextResponse.json({ error: 'Query parameter required' }, { status: 400 })
-    }
-
-    // Search by email or UID
     let users: any[] = []
+    let nextPageToken: string | undefined
 
-    // Try email search first
-    if (query.includes('@')) {
-      try {
-        const userRecord = await adminAuth.getUserByEmail(query)
-        users = [userRecord]
-      } catch (err: any) {
-        if (err.code !== 'auth/user-not-found') {
-          throw err
+    // If query provided, search for specific user
+    if (query) {
+      // Try email search first
+      if (query.includes('@')) {
+        try {
+          const userRecord = await adminAuth.getUserByEmail(query)
+          users = [userRecord]
+        } catch (err: any) {
+          if (err.code !== 'auth/user-not-found') {
+            throw err
+          }
+        }
+      } else {
+        // Try UID search
+        try {
+          const userRecord = await adminAuth.getUser(query)
+          users = [userRecord]
+        } catch (err: any) {
+          if (err.code !== 'auth/user-not-found') {
+            throw err
+          }
         }
       }
     } else {
-      // Try UID search
+      // List all users with pagination
       try {
-        const userRecord = await adminAuth.getUser(query)
-        users = [userRecord]
-      } catch (err: any) {
-        if (err.code !== 'auth/user-not-found') {
-          throw err
-        }
+        const listUsersResult = await adminAuth.listUsers(limit, pageToken)
+        users = listUsersResult.users
+        nextPageToken = listUsersResult.pageToken
+      } catch (err) {
+        logger.error('Error listing users', err as Error)
+        throw err
       }
     }
 
@@ -95,7 +118,10 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    return NextResponse.json({ users: enrichedUsers })
+    return NextResponse.json({
+      users: enrichedUsers,
+      ...(nextPageToken && { nextPageToken })
+    })
   } catch (error) {
     logger.error('Error searching users', error as Error)
     return NextResponse.json(

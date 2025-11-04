@@ -53,11 +53,38 @@ const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) 
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-    logger.error('[FirebaseOps] API Error', new Error(errorData.error || 'Unknown error'), { errorData, status: response.status })
+    // Try to parse error response
+    let errorData: any = { error: 'Unknown error' }
+    let parseError: string | undefined
+
+    try {
+      errorData = await response.json()
+    } catch (e) {
+      parseError = getErrorMessage(e)
+      // Try to get response text as fallback
+      try {
+        const text = await response.text()
+        if (text) errorData = { error: text }
+      } catch {
+        // Keep default error
+      }
+    }
+
+    // Build comprehensive error context
+    const errorContext = {
+      url,
+      method: options.method || 'GET',
+      status: response.status,
+      statusText: response.statusText,
+      errorData,
+      ...(parseError && { parseError }),
+    }
+
+    const errorMessage = errorData.details || errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`
+
+    logger.error('[FirebaseOps] API Error', new Error(errorMessage), errorContext)
 
     // Include detailed error message if available
-    const errorMessage = errorData.details || errorData.error || `HTTP ${response.status}`
     throw new Error(errorMessage)
   }
 

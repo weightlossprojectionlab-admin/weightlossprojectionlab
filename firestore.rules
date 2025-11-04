@@ -490,6 +490,31 @@ service cloud.firestore {
     }
 
     // ============================================
+    // GLOBAL PRODUCT DATABASE
+    // ============================================
+
+    // Global product database (aggregated from all user scans)
+    match /product_database/{barcode} {
+      // Read: Any authenticated user can read products
+      allow read: if isAuthenticated();
+
+      // Create/Update: Server-side only (via API with Admin SDK)
+      allow write: if false;
+
+      // Scan events subcollection (for analytics)
+      match /scans/{scanId} {
+        allow read: if isAdmin();
+        allow write: if false;
+      }
+
+      // Edit history subcollection (for audit trail)
+      match /edit_history/{editId} {
+        allow read: if isAdmin();
+        allow write: if false;
+      }
+    }
+
+    // ============================================
     // DEFAULT DENY
     // ============================================
 

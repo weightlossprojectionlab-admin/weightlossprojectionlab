@@ -18,7 +18,8 @@ import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useShopping } from '@/hooks/useShopping'
-import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
+import { simplifyProduct } from '@/lib/openfoodfacts-api'
+import { lookupBarcodeWithCache } from '@/lib/cached-product-lookup'
 import { getCategoryMetadata, detectCategory, formatQuantityDisplay } from '@/lib/product-categories'
 import { ExpirationPicker } from '@/components/shopping/ExpirationPicker'
 import { SwipeableShoppingItem } from '@/components/shopping/SwipeableShoppingItem'
@@ -107,7 +108,7 @@ function ShoppingListContent() {
       setShowScanner(false)
       toast.loading('Looking up product...', { id: 'barcode-lookup' })
 
-      const response = await lookupBarcode(barcode)
+      const response = await lookupBarcodeWithCache(barcode)
       const product = simplifyProduct(response)
 
       if (!product.found) {

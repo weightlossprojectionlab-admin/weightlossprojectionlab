@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
 import { logger } from '@/lib/logger'
+import { auth } from '@/lib/firebase'
 import {
   MagnifyingGlassIcon,
   UserCircleIcon,
@@ -11,6 +13,7 @@ import {
   CheckCircleIcon,
   DocumentArrowDownIcon,
   TrashIcon,
+  ChartBarIcon,
 } from '@heroicons/react/24/outline'
 
 interface UserRecord {
@@ -27,18 +30,92 @@ interface UserRecord {
 }
 
 export default function AdminUsersPage() {
+  const router = useRouter()
   const { isAdmin, role } = useAdminAuth()
   const permissions = getPermissions(role)
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<UserRecord[]>([])
+  const [users, setUsers] = useState<UserRecord[]>([])
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null)
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined)
+  const [hasMore, setHasMore] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+
+  // Ref for intersection observer
+  const observerTarget = useRef<HTMLDivElement>(null)
+
+  // Helper to get auth token
+  const getAuthToken = async () => {
+    const user = auth.currentUser
+    if (!user) {
+      throw new Error('User not authenticated')
+    }
+    return await user.getIdToken()
+  }
+
+  // Handler for viewing user analytics
+  const handleViewUserAnalytics = (user: UserRecord) => {
+    // Navigate to analytics page with user filter
+    router.push(`/admin/analytics?uid=${user.uid}&email=${encodeURIComponent(user.email)}`)
+  }
+
+  // Load users on mount
+  useEffect(() => {
+    loadUsers()
+  }, [])
+
+  const loadUsers = useCallback(async (pageToken?: string, append: boolean = false) => {
+    if (append) {
+      setIsLoadingMore(true)
+    } else {
+      setLoading(true)
+    }
+    setError(null)
+
+    try {
+      const token = await getAuthToken()
+      const params = new URLSearchParams()
+      params.set('limit', '50')
+      if (pageToken) params.set('pageToken', pageToken)
+
+      const response = await fetch(`/api/admin/users?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to load users' }))
+        throw new Error(errorData.error || 'Failed to load users')
+      }
+
+      const data = await response.json()
+
+      if (append) {
+        // Append new users to existing list
+        setUsers(prev => [...prev, ...(data.users || [])])
+      } else {
+        // Replace users list
+        setUsers(data.users || [])
+      }
+
+      setNextPageToken(data.nextPageToken)
+      setHasMore(!!data.nextPageToken)
+    } catch (err) {
+      logger.error('Load users error:', err as Error)
+      setError(err instanceof Error ? err.message : 'Failed to load users')
+    } finally {
+      setLoading(false)
+      setIsLoadingMore(false)
+    }
+  }, [])
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      setError('Please enter an email or UID')
+      // If search is empty, reload all users
+      loadUsers()
       return
     }
 
@@ -46,14 +123,22 @@ export default function AdminUsersPage() {
     setError(null)
 
     try {
-      const response = await fetch(`/api/admin/users?q=${encodeURIComponent(searchQuery)}`)
+      const token = await getAuthToken()
+      const response = await fetch(`/api/admin/users?q=${encodeURIComponent(searchQuery)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to search users')
+        const errorData = await response.json().catch(() => ({ error: 'Failed to search users' }))
+        throw new Error(errorData.error || 'Failed to search users')
       }
 
       const data = await response.json()
-      setSearchResults(data.users || [])
+      setUsers(data.users || [])
+      setHasMore(false) // No pagination for search results
+      setNextPageToken(undefined)
 
       if (data.users.length === 0) {
         setError('No users found')
@@ -66,22 +151,70 @@ export default function AdminUsersPage() {
     }
   }
 
+  const handleClearSearch = () => {
+    setSearchQuery('')
+    loadUsers()
+  }
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Only load more if:
+        // 1. Element is visible
+        // 2. There are more users to load
+        // 3. Not currently loading
+        // 4. Not in search mode (searchQuery empty)
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore && !loading && !searchQuery) {
+          loadUsers(nextPageToken, true)
+        }
+      },
+      {
+        root: null, // viewport
+        rootMargin: '100px', // Start loading 100px before reaching bottom
+        threshold: 0.1
+      }
+    )
+
+    const currentTarget = observerTarget.current
+    if (currentTarget) {
+      observer.observe(currentTarget)
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget)
+      }
+    }
+  }, [hasMore, isLoadingMore, loading, nextPageToken, searchQuery, loadUsers])
+
   const handleSuspend = async (uid: string) => {
     if (!permissions.canSuspendUsers) return
     if (!confirm('Are you sure you want to suspend this user?')) return
 
     setActionLoading(true)
     try {
+      const token = await getAuthToken()
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ uid, action: 'suspend' }),
       })
 
-      if (!response.ok) throw new Error('Failed to suspend user')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to suspend user' }))
+        throw new Error(errorData.error || 'Failed to suspend user')
+      }
 
-      // Refresh search results
-      await handleSearch()
+      // Refresh list
+      if (searchQuery) {
+        await handleSearch()
+      } else {
+        await loadUsers()
+      }
       alert('User suspended successfully')
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to suspend user')
@@ -95,15 +228,27 @@ export default function AdminUsersPage() {
 
     setActionLoading(true)
     try {
+      const token = await getAuthToken()
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ uid, action: 'unsuspend' }),
       })
 
-      if (!response.ok) throw new Error('Failed to unsuspend user')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to unsuspend user' }))
+        throw new Error(errorData.error || 'Failed to unsuspend user')
+      }
 
-      await handleSearch()
+      // Refresh list
+      if (searchQuery) {
+        await handleSearch()
+      } else {
+        await loadUsers()
+      }
       alert('User unsuspended successfully')
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to unsuspend user')
@@ -117,9 +262,17 @@ export default function AdminUsersPage() {
 
     setActionLoading(true)
     try {
-      const response = await fetch(`/api/admin/users/export?uid=${uid}`)
+      const token = await getAuthToken()
+      const response = await fetch(`/api/admin/users/export?uid=${uid}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
 
-      if (!response.ok) throw new Error('Failed to export user data')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to export user data' }))
+        throw new Error(errorData.error || 'Failed to export user data')
+      }
 
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
@@ -149,15 +302,22 @@ export default function AdminUsersPage() {
 
     setActionLoading(true)
     try {
+      const token = await getAuthToken()
       const response = await fetch('/api/admin/users', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ uid }),
       })
 
-      if (!response.ok) throw new Error('Failed to delete user')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to delete user' }))
+        throw new Error(errorData.error || 'Failed to delete user')
+      }
 
-      setSearchResults(prev => prev.filter(u => u.uid !== uid))
+      setUsers(prev => prev.filter(u => u.uid !== uid))
       alert('User deleted successfully')
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete user')
@@ -207,7 +367,7 @@ export default function AdminUsersPage() {
               />
             </div>
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
             <button
               onClick={handleSearch}
               disabled={loading}
@@ -215,6 +375,15 @@ export default function AdminUsersPage() {
             >
               {loading ? 'Searching...' : 'Search'}
             </button>
+            {searchQuery && (
+              <button
+                onClick={handleClearSearch}
+                disabled={loading}
+                className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 font-medium"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
 
@@ -225,8 +394,16 @@ export default function AdminUsersPage() {
         )}
       </div>
 
+      {/* Loading State */}
+      {loading && users.length === 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-12 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading users...</p>
+        </div>
+      )}
+
       {/* Results */}
-      {searchResults.length > 0 && (
+      {!loading && users.length > 0 && (
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -253,7 +430,7 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {searchResults.map((user) => (
+                {users.map((user) => (
                   <tr key={user.uid} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -301,9 +478,19 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
+                        <button
+                          onClick={() => handleViewUserAnalytics(user)}
+                          className="p-2 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-colors"
+                          title="View analytics"
+                        >
+                          <ChartBarIcon className="h-5 w-5" />
+                        </button>
                         {permissions.canSuspendUsers && (
                           <button
-                            onClick={() => user.suspended ? handleUnsuspend(user.uid) : handleSuspend(user.uid)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              user.suspended ? handleUnsuspend(user.uid) : handleSuspend(user.uid)
+                            }}
                             disabled={actionLoading}
                             className={`p-2 rounded-lg transition-colors ${
                               user.suspended
@@ -317,7 +504,10 @@ export default function AdminUsersPage() {
                         )}
                         {permissions.canExportUserData && (
                           <button
-                            onClick={() => handleExportData(user.uid, user.email)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleExportData(user.uid, user.email)
+                            }}
                             disabled={actionLoading}
                             className="p-2 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
                             title="Export GDPR data"
@@ -327,7 +517,10 @@ export default function AdminUsersPage() {
                         )}
                         {permissions.canDeleteUsers && (
                           <button
-                            onClick={() => handleDelete(user.uid, user.email)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(user.uid, user.email)
+                            }}
                             disabled={actionLoading}
                             className="p-2 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors"
                             title="Delete user"
@@ -342,6 +535,44 @@ export default function AdminUsersPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Lazy Loading Indicator */}
+          {!searchQuery && (
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              {isLoadingMore && (
+                <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                  <span className="text-sm">Loading more users...</span>
+                </div>
+              )}
+              {!isLoadingMore && hasMore && (
+                <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                  Scroll down to load more users
+                </div>
+              )}
+              {!hasMore && users.length > 0 && (
+                <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                  All users loaded ({users.length} total)
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Intersection Observer Target */}
+          {!searchQuery && hasMore && (
+            <div ref={observerTarget} className="h-4"></div>
+          )}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && users.length === 0 && !error && (
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-12 text-center">
+          <UserCircleIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Users Found</h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            {searchQuery ? 'Try a different search query' : 'No users registered yet'}
+          </p>
         </div>
       )}
 

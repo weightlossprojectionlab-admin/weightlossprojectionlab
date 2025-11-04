@@ -6,12 +6,14 @@ import {
   HomeIcon,
   UsersIcon,
   DocumentCheckIcon,
+  QrCodeIcon,
   ShieldCheckIcon,
   CpuChipIcon,
   AcademicCapIcon,
   GiftIcon,
   ChartBarIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
 
 interface NavItem {
@@ -51,6 +53,11 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
       badge: pendingCounts?.recipes,
     },
     {
+      name: 'Barcodes',
+      href: '/admin/barcodes',
+      icon: QrCodeIcon,
+    },
+    {
       name: 'Trust & Safety',
       href: '/admin/trust-safety',
       icon: ShieldCheckIcon,
@@ -77,6 +84,11 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
       name: 'Analytics',
       href: '/admin/analytics',
       icon: ChartBarIcon,
+    },
+    {
+      name: 'ML Analytics',
+      href: '/admin/ml-analytics',
+      icon: SparklesIcon,
     },
     {
       name: 'Settings',

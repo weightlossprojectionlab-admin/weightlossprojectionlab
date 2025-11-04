@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
 import Image from 'next/image'
@@ -10,6 +11,7 @@ import {
   XCircleIcon,
   ClockIcon,
   StarIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import toast from 'react-hot-toast'
@@ -48,6 +50,7 @@ type RejectionReason =
   | 'misleading_nutrition'
 
 export default function RecipeModerationPage() {
+  const router = useRouter()
   const { role } = useAdminAuth()
   const permissions = getPermissions(role)
   const [recipes, setRecipes] = useState<PublicRecipe[]>([])
@@ -178,9 +181,18 @@ export default function RecipeModerationPage() {
   return (
     <div className="p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Recipe Moderation</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Review and approve user-submitted recipes</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Recipe Management</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Create, review, and moderate recipes</p>
+        </div>
+        <button
+          onClick={() => router.push('/admin/recipes/create')}
+          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors"
+        >
+          <PlusIcon className="h-5 w-5" />
+          Create Recipe
+        </button>
       </div>
 
       {/* Filter Tabs */}

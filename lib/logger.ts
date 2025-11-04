@@ -61,13 +61,24 @@ class Logger {
    * Logs in all environments
    */
   error(message: string, error?: Error, context?: LogContext): void {
-    const errorContext = {
+    const errorContext: LogContext = {
       ...context,
-      ...(error && {
-        errorMessage: error.message,
-        errorStack: error.stack,
-        errorName: error.name,
-      }),
+    }
+
+    // Always add error details if error exists
+    if (error) {
+      errorContext.errorMessage = error.message || 'No error message'
+      errorContext.errorName = error.name || 'Error'
+
+      // Add stack trace in development
+      if (this.isDevelopment && error.stack) {
+        errorContext.errorStack = error.stack
+      }
+
+      // Add cause if present
+      if (error.cause) {
+        errorContext.errorCause = String(error.cause)
+      }
     }
 
     this.log('error', message, errorContext)
@@ -84,11 +95,42 @@ class Logger {
                   level === 'warn' ? console.warn :
                   console.log
 
-    if (context && Object.keys(context).length > 0) {
-      logFn(prefix, message, context)
+    // Serialize context by removing undefined/null values and handling Error objects
+    const serializedContext = this.serializeContext(context)
+
+    if (serializedContext && Object.keys(serializedContext).length > 0) {
+      logFn(prefix, message, serializedContext)
     } else {
       logFn(prefix, message)
     }
+  }
+
+  /**
+   * Serialize context for logging, removing undefined/null and handling Error objects
+   */
+  private serializeContext(context?: LogContext): LogContext | undefined {
+    if (!context) return undefined
+
+    const serialized: LogContext = {}
+
+    for (const [key, value] of Object.entries(context)) {
+      // Skip undefined and null values
+      if (value === undefined || value === null) continue
+
+      // Handle Error objects specially
+      if (value instanceof Error) {
+        serialized[key] = {
+          message: value.message,
+          name: value.name,
+          ...(this.isDevelopment && value.stack && { stack: value.stack }),
+          ...(value.cause && { cause: String(value.cause) }),
+        }
+      } else {
+        serialized[key] = value
+      }
+    }
+
+    return Object.keys(serialized).length > 0 ? serialized : undefined
   }
 }
 

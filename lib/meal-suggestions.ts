@@ -34,6 +34,35 @@ export type AllergyTag = 'dairy' | 'gluten' | 'nuts' | 'shellfish' | 'soy' | 'eg
 
 export type RecipeStatus = 'draft' | 'published' | 'archived'
 
+/**
+ * Enhanced Recipe Ingredient - supports both product-based and text-based ingredients
+ */
+export interface RecipeIngredient {
+  // Product-based ingredient (linked to product_database)
+  productBarcode?: string // Links to product_database/{barcode}
+  productName?: string // Cached product name
+  productBrand?: string // Cached brand name
+  productImageUrl?: string // Cached product image
+
+  // Ingredient details
+  ingredientText: string // Display text: "2 cups milk" OR "Horizon Organic Whole Milk (2 cups)"
+  quantity: number // Amount needed
+  unit: string // Unit of measurement: "cups", "lbs", "count", "tbsp", etc.
+
+  // Optional: Per-serving nutrition (auto-calculated from product OR manual entry)
+  nutrition?: {
+    calories: number
+    protein: number // grams
+    carbs: number // grams
+    fat: number // grams
+    fiber: number // grams
+  }
+
+  // Optional: Notes for this ingredient
+  notes?: string // e.g., "or substitute with almond milk", "optional"
+  optional?: boolean // Whether ingredient is optional
+}
+
 export interface InventoryStatus {
   hasAllIngredients: boolean
   availableCount: number
@@ -53,7 +82,16 @@ export interface MealSuggestion {
     fat: number
     fiber: number
   }
-  ingredients: string[]
+
+  // Enhanced ingredients format (new)
+  ingredientsV2?: RecipeIngredient[] // Structured ingredients with product links
+
+  // Legacy ingredients format (for backward compatibility)
+  ingredients: string[] // Simple text array: ["2 cups milk", "1 lb beef"]
+
+  // Nutrition calculation
+  autoCalculatedNutrition?: boolean // True if nutrition was calculated from ingredientsV2
+
   prepTime: number // minutes
   dietaryTags: DietaryTag[]
   allergens: AllergyTag[]

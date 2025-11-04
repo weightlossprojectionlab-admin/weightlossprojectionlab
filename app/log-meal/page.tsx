@@ -18,7 +18,8 @@ import { Spinner } from '@/components/ui/Spinner'
 import { queueMeal } from '@/lib/offline-queue'
 import { registerBackgroundSync } from '@/lib/sync-manager'
 import { useMissions } from '@/hooks/useMissions'
-import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
+import { simplifyProduct } from '@/lib/openfoodfacts-api'
+import { lookupBarcodeWithCache } from '@/lib/cached-product-lookup'
 import type { AIAnalysis, MealTemplate, UserProfile, UserPreferences } from '@/types'
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
@@ -498,8 +499,8 @@ function LogMealContent() {
     setLoadingBarcode(true)
 
     try {
-      // Lookup product in OpenFoodFacts
-      const response = await lookupBarcode(barcode)
+      // Lookup product with cache-first strategy
+      const response = await lookupBarcodeWithCache(barcode)
       const product = simplifyProduct(response)
 
       if (!product.found) {

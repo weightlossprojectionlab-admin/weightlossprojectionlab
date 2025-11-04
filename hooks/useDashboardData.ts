@@ -81,12 +81,19 @@ export function useDashboardData() {
         setDataLoading(true)
         setDataError(null)
 
+        const startDate = dateRange.sevenDaysAgo.toISOString().split('T')[0]
+        const endDate = dateRange.tomorrow.toISOString().split('T')[0]
+
         // Parallel API calls for better performance
         const [weightResponse, stepsResponse] = await Promise.all([
-          weightLogOperations.getWeightLogs({ limit: 10 }),
+          weightLogOperations.getWeightLogs({
+            limit: 10,
+            startDate,
+            endDate
+          }),
           stepLogOperations.getStepLogs({
-            startDate: dateRange.sevenDaysAgo.toISOString().split('T')[0],
-            endDate: dateRange.tomorrow.toISOString().split('T')[0]
+            startDate,
+            endDate
           })
         ])
 
@@ -94,8 +101,21 @@ export function useDashboardData() {
         setStepsData(stepsResponse.data || [])
         setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
       } catch (error) {
-        logger.error('Error fetching dashboard data:', error as Error)
+        const errorContext = {
+          phase: 'dashboard-phase2',
+          apis: ['weight-logs', 'step-logs'],
+          startDate: dateRange.sevenDaysAgo.toISOString().split('T')[0],
+          endDate: dateRange.tomorrow.toISOString().split('T')[0],
+        }
+
+        logger.error('Error fetching dashboard data', error as Error, errorContext)
         setDataError(error as Error)
+
+        // Set empty arrays as fallback so dashboard doesn't break
+        setWeightData([])
+        setStepsData([])
+        // Still mark phase2 ready so app can continue
+        setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
       } finally {
         setDataLoading(false)
       }

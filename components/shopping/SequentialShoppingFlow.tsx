@@ -18,14 +18,17 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
 import { ShoppingItem, ProductCategory, QuantityUnit } from '@/types/shopping'
-import { OpenFoodFactsProduct, lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
+import { OpenFoodFactsProduct, simplifyProduct } from '@/lib/openfoodfacts-api'
+import { lookupBarcodeWithCache } from '@/lib/cached-product-lookup'
 import { getCategoryMetadata, detectCategory } from '@/lib/product-categories'
+import { updateGlobalProductDatabase } from '@/lib/shopping-operations'
 import { NutritionReviewModal } from './NutritionReviewModal'
 import { CategoryConfirmModal } from './CategoryConfirmModal'
 import { QuantityAdjustModal } from './QuantityAdjustModal'
 import { ReplacementCompareModal } from './ReplacementCompareModal'
 import { ExpirationPicker } from './ExpirationPicker'
 import { logger } from '@/lib/logger'
+import { auth } from '@/lib/firebase'
 
 // Dynamic import for BarcodeScanner
 const BarcodeScanner = dynamic(
@@ -96,7 +99,7 @@ export function SequentialShoppingFlow({
     try {
       toast.loading('Looking up product...', { id: 'scan' })
 
-      const response = await lookupBarcode(barcode)
+      const response = await lookupBarcodeWithCache(barcode)
       const product = simplifyProduct(response)
 
       if (!product.found || !response.product) {
@@ -110,6 +113,27 @@ export function SequentialShoppingFlow({
       // Detect category from scanned product
       const detectedCategory = detectCategory(response.product)
       setSelectedCategory(detectedCategory)
+
+      // Update global product database (non-blocking)
+      const user = auth.currentUser
+      if (user && response.product) {
+        updateGlobalProductDatabase(
+          barcode,
+          response.product,
+          user.uid,
+          {
+            category: detectedCategory,
+            store: item.preferredStore,
+            priceCents: item.purchasePriceCents,
+            region: undefined, // Could be derived from user profile
+            purchased: false, // Will be set to true on completion
+            context: 'shopping'
+          }
+        ).catch(err => {
+          // Silently log errors - don't block user flow
+          logger.debug('[GlobalProduct] Failed to update database (non-critical)', err)
+        })
+      }
 
       // Store scanned product based on current step
       if (currentStep === 'SCANNING') {
