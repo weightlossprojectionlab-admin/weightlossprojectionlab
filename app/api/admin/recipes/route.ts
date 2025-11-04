@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Recipe created successfully',
-      recipe: { id: recipeId, ...recipeData }
+      recipe: recipeData
     })
   } catch (error) {
     logger.error('Error creating recipe', error as Error)

@@ -75,8 +75,8 @@ class Logger {
         errorContext.errorStack = error.stack
       }
 
-      // Add cause if present
-      if (error.cause) {
+      // Add cause if present (ES2022 feature)
+      if ('cause' in error && error.cause) {
         errorContext.errorCause = String(error.cause)
       }
     }
@@ -119,12 +119,17 @@ class Logger {
 
       // Handle Error objects specially
       if (value instanceof Error) {
-        serialized[key] = {
+        const errorObj: Record<string, any> = {
           message: value.message,
           name: value.name,
-          ...(this.isDevelopment && value.stack && { stack: value.stack }),
-          ...(value.cause && { cause: String(value.cause) }),
         }
+        if (this.isDevelopment && value.stack) {
+          errorObj.stack = value.stack
+        }
+        if ('cause' in value && value.cause) {
+          errorObj.cause = String(value.cause)
+        }
+        serialized[key] = errorObj
       } else {
         serialized[key] = value
       }

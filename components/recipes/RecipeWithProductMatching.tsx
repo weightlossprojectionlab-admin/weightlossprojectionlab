@@ -44,12 +44,9 @@ export function RecipeWithProductMatching({ recipe, onClose }: RecipeWithProduct
 
     setAddingToCart(true)
     try {
-      await addManualShoppingItem(user.uid, {
-        ingredientText: ingredientName,
+      await addManualShoppingItem(user.uid, ingredientName, {
         recipeId: recipe.id,
-        recipeName: recipe.name,
-        quantity: 1,
-        barcode
+        quantity: 1
       })
 
       toast.success(`Added ${ingredientName} to shopping list`)
@@ -74,13 +71,9 @@ export function RecipeWithProductMatching({ recipe, onClose }: RecipeWithProduct
       const promises = result.matches
         .filter(match => match.matches.length > 0)
         .map(match => {
-          const topMatch = match.matches[0]
-          return addManualShoppingItem(user.uid, {
-            ingredientText: match.ingredient,
+          return addManualShoppingItem(user.uid, match.ingredient, {
             recipeId: recipe.id,
-            recipeName: recipe.name,
-            quantity: match.quantity || 1,
-            barcode: topMatch.barcode
+            quantity: match.quantity || 1
           })
         })
 

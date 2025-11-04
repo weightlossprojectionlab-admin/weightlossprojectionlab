@@ -49,10 +49,8 @@ export function RecipeCardWithAvailability({
     try {
       // Add all ingredients to shopping list
       const promises = recipe.ingredients.map(ingredient =>
-        addManualShoppingItem(user.uid, {
-          ingredientText: ingredient,
+        addManualShoppingItem(user.uid, ingredient, {
           recipeId: recipe.id,
-          recipeName: recipe.name,
           quantity: 1
         })
       )

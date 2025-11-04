@@ -32,7 +32,7 @@ async function logAPIUsage(log: APIUsageLog) {
     })
   } catch (error) {
     // Don't throw - logging is non-critical
-    logger.debug('Failed to log API usage', error as Error)
+    logger.error('Failed to log API usage', error as Error)
   }
 }
 

@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
             const productWords = productName.split(/\s+/)
 
             ingredientWords.forEach(word => {
-              if (word.length > 2 && productWords.some(pw => pw.includes(word))) {
+              if (word.length > 2 && productWords.some((pw: string) => pw.includes(word))) {
                 score += 20
               }
             })

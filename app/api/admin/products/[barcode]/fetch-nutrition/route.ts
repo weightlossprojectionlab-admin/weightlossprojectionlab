@@ -11,9 +11,10 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ barcode: string }> }
 ) {
+  let params: { barcode: string } | undefined
   try {
     // Resolve params first (Next.js 15 requirement)
-    const params = await context.params
+    params = await context.params
     const barcode = params.barcode
 
     // Verify admin authentication
@@ -68,7 +69,7 @@ export async function POST(
     const fiber = nutriments.fiber_serving || nutriments.fiber_100g || nutriments.fiber || 0
 
     // Prepare update data
-    const updateData = {
+    const updateData: Record<string, any> = {
       nutrition: {
         calories: Math.round(calories),
         protein: Math.round(protein * 10) / 10,
@@ -95,11 +96,9 @@ export async function POST(
     }
 
     // Update image if better quality available
-    if (product.image_front_url || product.image_url) {
-      const newImageUrl = product.image_front_url || product.image_url
-      if (!currentData?.imageUrl || currentData.imageUrl.length < newImageUrl.length) {
-        updateData['imageUrl'] = newImageUrl
-      }
+    const newImageUrl = product.image_front_url || product.image_url
+    if (newImageUrl && (!currentData?.imageUrl || currentData.imageUrl.length < newImageUrl.length)) {
+      updateData['imageUrl'] = newImageUrl
     }
 
     // Update the product

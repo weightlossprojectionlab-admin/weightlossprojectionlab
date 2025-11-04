@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 
+interface ScanEvent {
+  id: string
+  scannedAt: string
+  region?: string
+  store?: string
+  priceCents?: number
+  purchased?: boolean
+  context?: string
+}
+
 /**
  * GET /api/admin/products/[barcode]
  * Get detailed product information and analytics
@@ -10,9 +20,10 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ barcode: string }> }
 ) {
+  let params: { barcode: string } | undefined
   try {
     // Resolve params first (Next.js 15 requirement)
-    const params = await context.params
+    params = await context.params
     const barcode = params.barcode
 
     // Verify admin authentication
@@ -55,11 +66,18 @@ export async function GET(
       .limit(100)
       .get()
 
-    const scanEvents = scansSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      scannedAt: doc.data().scannedAt?.toDate?.()?.toISOString() || doc.data().scannedAt
-    }))
+    const scanEvents: ScanEvent[] = scansSnapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        scannedAt: data.scannedAt?.toDate?.()?.toISOString() || data.scannedAt,
+        region: data.region,
+        store: data.store,
+        priceCents: data.priceCents,
+        purchased: data.purchased,
+        context: data.context
+      }
+    })
 
     // Calculate scan timeline (scans per day for last 30 days)
     const scanTimeline: Record<string, number> = {}
@@ -170,9 +188,10 @@ export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ barcode: string }> }
 ) {
+  let params: { barcode: string } | undefined
   try {
     // Resolve params first (Next.js 15 requirement)
-    const params = await context.params
+    params = await context.params
     const barcode = params.barcode
 
     // Verify admin authentication

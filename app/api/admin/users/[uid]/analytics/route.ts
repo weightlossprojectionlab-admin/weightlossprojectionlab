@@ -10,9 +10,10 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ uid: string }> }
 ) {
+  let params: { uid: string } | undefined
   try {
     // Resolve params first (Next.js 15 requirement)
-    const params = await context.params
+    params = await context.params
 
     // Verify admin authentication
     const authHeader = request.headers.get('authorization')
@@ -234,7 +235,7 @@ export async function GET(
       range
     })
   } catch (error) {
-    logger.error('Error fetching user analytics', error as Error, { uid: params.uid })
+    logger.error('Error fetching user analytics', error as Error, { uid: params?.uid })
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch user analytics' },
       { status: 500 }
