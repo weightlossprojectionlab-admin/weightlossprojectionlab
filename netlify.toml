@@ -4,6 +4,12 @@
   command = "npm run build"
   publish = ".next"
 
+[build.environment]
+  NODE_VERSION = "18"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 # Cache static assets for 1 year
 [[headers]]
   for = "/_next/static/*"

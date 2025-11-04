@@ -23,6 +23,15 @@ const customJestConfig = {
     '!**/node_modules/**',
     '!**/.next/**',
   ],
+  // Coverage threshold enforcement (PRD requirement)
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
   // Performance optimizations
   maxWorkers: '50%', // Use 50% of available CPU cores
   cache: true, // Enable caching

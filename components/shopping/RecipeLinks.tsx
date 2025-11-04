@@ -8,11 +8,8 @@
  * Makes recipe names clickable to open recipe modal.
  */
 
-import { useState, useEffect } from 'react'
-import { collection, doc, getDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
-import type { MealSuggestion } from '@/lib/meal-suggestions'
-import { logger } from '@/lib/logger'
+import { useState } from 'react'
+import { useRecipeNames } from '@/hooks/useRecipeNames'
 
 interface RecipeLinksProps {
   recipeIds?: string[]
@@ -27,48 +24,8 @@ export function RecipeLinks({
   onRecipeClick,
   compact = false
 }: RecipeLinksProps) {
-  const [recipes, setRecipes] = useState<Map<string, string>>(new Map())
-  const [loading, setLoading] = useState(true)
+  const { names, isLoading, error } = useRecipeNames(recipeIds)
   const [expanded, setExpanded] = useState(false)
-
-  // Load recipe names from Firestore
-  useEffect(() => {
-    async function loadRecipeNames() {
-      if (recipeIds.length === 0) {
-        setLoading(false)
-        return
-      }
-
-      try {
-        const recipeMap = new Map<string, string>()
-
-        // Load all recipe names in parallel
-        const promises = recipeIds.map(async (id) => {
-          try {
-            const recipeDoc = await getDoc(doc(db, 'recipes', id))
-            if (recipeDoc.exists()) {
-              const data = recipeDoc.data() as MealSuggestion
-              recipeMap.set(id, data.name || 'Unknown Recipe')
-            } else {
-              recipeMap.set(id, 'Unknown Recipe')
-            }
-          } catch (error) {
-            logger.error('[RecipeLinks] Error loading recipe', error as Error, { recipeId: id })
-            recipeMap.set(id, 'Unknown Recipe')
-          }
-        })
-
-        await Promise.all(promises)
-        setRecipes(recipeMap)
-      } catch (error) {
-        logger.error('[RecipeLinks] Error loading recipe names', error as Error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadRecipeNames()
-  }, [recipeIds])
 
   // No recipes linked
   if (!recipeIds || recipeIds.length === 0) {
@@ -76,7 +33,7 @@ export function RecipeLinks({
   }
 
   // Loading state
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500">
         <span className="animate-pulse">🍳</span>
@@ -85,8 +42,18 @@ export function RecipeLinks({
     )
   }
 
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400">
+        <span>⚠️</span>
+        <span>Failed to load recipes</span>
+      </div>
+    )
+  }
+
   // Get primary recipe name
-  const primaryRecipe = primaryRecipeId ? recipes.get(primaryRecipeId) : null
+  const primaryRecipe = primaryRecipeId ? names[primaryRecipeId] : null
   const additionalRecipes = recipeIds.filter(id => id !== primaryRecipeId)
   const additionalCount = additionalRecipes.length
 
@@ -155,7 +122,7 @@ export function RecipeLinks({
       {expanded && additionalRecipes.length > 0 && (
         <div className="pl-5 space-y-1 mt-1">
           {additionalRecipes.map((recipeId) => {
-            const recipeName = recipes.get(recipeId) || 'Unknown Recipe'
+            const recipeName = names[recipeId] || 'Unknown Recipe'
             return (
               <button
                 key={recipeId}
