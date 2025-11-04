@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
 import { generateRecipesFromAssociations, saveGeneratedRecipes } from '@/lib/ml-recipe-generator'
 
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
           {
             lastRecipeGeneration: new Date(),
             lastRecipeGenerationBy: adminEmail,
-            totalMLRecipesGenerated: adminDb.FieldValue.increment(result.generated)
+            totalMLRecipesGenerated: FieldValue.increment(result.generated)
           },
           { merge: true }
         )
