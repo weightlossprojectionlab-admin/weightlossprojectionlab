@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, adminDb } from '@/lib/firebase-admin'
+import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 
 /**
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     let userId: string | undefined
     if (idToken) {
       try {
-        const decodedToken = await auth.verifyIdToken(idToken)
+        const decodedToken = await verifyIdToken(idToken)
         userId = decodedToken.uid
       } catch {
         // Continue without userId if token invalid

@@ -8,9 +8,13 @@ import { logger } from '@/lib/logger'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { barcode: string } }
+  context: { params: Promise<{ barcode: string }> }
 ) {
   try {
+    // Resolve params first (Next.js 15 requirement)
+    const params = await context.params
+    const barcode = params.barcode
+
     // Verify admin authentication
     const authHeader = request.headers.get('authorization')
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
@@ -32,8 +36,6 @@ export async function GET(
     if (!isSuperAdmin && adminData?.role !== 'admin' && adminData?.role !== 'moderator' && adminData?.role !== 'support') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
-
-    const barcode = params.barcode
 
     // Fetch product document
     const productDoc = await adminDb.collection('product_database').doc(barcode).get()
@@ -166,9 +168,13 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { barcode: string } }
+  context: { params: Promise<{ barcode: string }> }
 ) {
   try {
+    // Resolve params first (Next.js 15 requirement)
+    const params = await context.params
+    const barcode = params.barcode
+
     // Verify admin authentication
     const authHeader = request.headers.get('authorization')
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
@@ -189,8 +195,6 @@ export async function PUT(
     if (!isSuperAdmin && adminData?.role !== 'admin' && adminData?.role !== 'moderator') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
-
-    const barcode = params.barcode
     const body = await request.json()
 
     // Validate required fields

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/firebase-admin'
-import { adminDb } from '@/lib/firebase-admin'
+import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 
 /**
@@ -23,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const decodedToken = await auth.verifyIdToken(idToken)
+    const decodedToken = await verifyIdToken(idToken)
     const userId = decodedToken.uid
 
     // Get user's region from their profile

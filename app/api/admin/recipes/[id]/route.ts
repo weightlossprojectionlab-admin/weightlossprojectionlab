@@ -8,9 +8,12 @@ import { logger } from '@/lib/logger'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Resolve params first (Next.js 15 requirement)
+    const params = await context.params
+
     // Verify admin authentication
     const authHeader = request.headers.get('authorization')
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
@@ -50,9 +53,11 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Resolve params first (Next.js 15 requirement)
+    const params = await context.params
     // Verify admin authentication
     const authHeader = request.headers.get('authorization')
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
@@ -111,9 +116,12 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Resolve params first (Next.js 15 requirement)
+    const params = await context.params
+
     // Verify admin authentication
     const authHeader = request.headers.get('authorization')
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
