@@ -128,8 +128,8 @@ export type UpdateBiometricRequest = z.infer<typeof UpdateBiometricRequestSchema
 // ============================================
 
 export const ResetProfileRequestSchema = z.object({
-  confirmReset: z.literal(true, {
-    errorMap: () => ({ message: 'You must confirm the reset operation' }),
+  confirmReset: z.boolean().refine((val) => val === true, {
+    message: 'You must confirm the reset operation',
   }),
 })
 
