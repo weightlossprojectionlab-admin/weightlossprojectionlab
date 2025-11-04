@@ -70,6 +70,7 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
             carbs: Math.round((params.calories - params.protein * 4) / 4 * 0.6),
             fat: Math.round((params.calories - params.protein * 4) / 9 * 0.4),
             fiber: 6,
+            sodium: 0
           },
           ingredients: ['To be generated'],
           prepTime: 20,

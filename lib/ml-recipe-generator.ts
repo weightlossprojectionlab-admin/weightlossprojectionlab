@@ -376,7 +376,8 @@ async function buildRecipe(
         protein: product.nutrition.protein,
         carbs: product.nutrition.carbs,
         fat: product.nutrition.fat,
-        fiber: product.nutrition.fiber
+        fiber: product.nutrition.fiber,
+        sodium: product.nutrition.sodium
       }
     }))
 

@@ -91,7 +91,8 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
           protein: perServingProtein,
           carbs: perServingCarbs,
           fat: perServingFat,
-          fiber: perServingFiber
+          fiber: perServingFiber,
+          sodium: 0
         },
         prepTime: importedRecipe.prepTime || 30,
         servingSize: importedRecipe.servings || 4,
