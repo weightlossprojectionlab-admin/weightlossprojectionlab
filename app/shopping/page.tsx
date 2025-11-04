@@ -57,7 +57,8 @@ function ShoppingListContent() {
     updateItem,
     getSummary,
     smartSort,
-    addStore
+    addStore,
+    refresh
   } = useShopping()
 
   const [showScanner, setShowScanner] = useState(false)
@@ -400,7 +401,7 @@ function ShoppingListContent() {
           {/* Purchase Confirmation Section */}
           <PurchaseConfirmation
             pendingItems={neededItems.filter(item => !item.inStock)}
-            onConfirm={fetchItems}
+            onConfirm={refresh}
           />
 
           {/* Debug Mode Toggle & Orphaned Items Warning */}
