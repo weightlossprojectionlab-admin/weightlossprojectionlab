@@ -101,7 +101,8 @@ export default function CreateRecipePage() {
         protein: product.nutrition.protein,
         carbs: product.nutrition.carbs,
         fat: product.nutrition.fat,
-        fiber: product.nutrition.fiber
+        fiber: product.nutrition.fiber,
+        sodium: product.nutrition.sodium || 0
       },
       notes: product.notes,
       optional: product.optional
