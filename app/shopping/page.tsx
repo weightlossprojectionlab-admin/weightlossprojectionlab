@@ -29,6 +29,7 @@ import { StorePicker } from '@/components/shopping/StorePicker'
 import { SmartSuggestions } from '@/components/shopping/SmartSuggestions'
 import { SequentialShoppingFlow } from '@/components/shopping/SequentialShoppingFlow'
 import { RecipeLinks } from '@/components/shopping/RecipeLinks'
+import { PurchaseConfirmation } from '@/components/shopping/PurchaseConfirmation'
 import type { ProductCategory, ShoppingItem } from '@/types/shopping'
 import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
 import { Spinner } from '@/components/ui/Spinner'
@@ -395,6 +396,12 @@ function ShoppingListContent() {
               📦 Inventory
             </button>
           </div>
+
+          {/* Purchase Confirmation Section */}
+          <PurchaseConfirmation
+            pendingItems={neededItems.filter(item => !item.inStock)}
+            onConfirm={fetchItems}
+          />
 
           {/* Debug Mode Toggle & Orphaned Items Warning */}
           {orphanedItems.length > 0 && (
