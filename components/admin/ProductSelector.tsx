@@ -18,6 +18,7 @@ interface Product {
     carbs: number
     fat: number
     fiber: number
+    sodium: number
     servingSize: string
   }
 }
