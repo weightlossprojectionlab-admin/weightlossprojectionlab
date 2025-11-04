@@ -110,6 +110,15 @@ export const CATEGORY_METADATA: Record<ProductCategory, CategoryMetadata> = {
     defaultLocation: 'pantry',
     expirationPriority: 'low'
   },
+  condiments: {
+    name: 'condiments',
+    displayName: 'Condiments',
+    icon: '🧂',
+    isPerishable: false,
+    defaultShelfLifeDays: 180,
+    defaultLocation: 'pantry',
+    expirationPriority: 'low'
+  },
   other: {
     name: 'other',
     displayName: 'Other',
@@ -159,8 +168,14 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, string[]> = {
     'juice', 'soda', 'water', 'drink', 'beverage', 'tea', 'coffee', 'milk', 'smoothie'
   ],
   pantry: [
-    'canned', 'pasta', 'rice', 'cereal', 'snack', 'chip', 'cookie', 'cracker', 'sauce',
-    'condiment', 'oil', 'vinegar', 'spice', 'flour', 'sugar', 'salt'
+    'canned', 'pasta', 'rice', 'cereal', 'snack', 'chip', 'cookie', 'cracker',
+    'oil', 'vinegar', 'spice', 'flour', 'sugar', 'salt'
+  ],
+  condiments: [
+    'ketchup', 'mustard', 'mayonnaise', 'mayo', 'sauce', 'salsa', 'relish',
+    'pickle', 'hot sauce', 'bbq', 'barbecue', 'dressing', 'vinaigrette',
+    'soy sauce', 'worcestershire', 'sriracha', 'aioli', 'pesto', 'hummus',
+    'condiment', 'chutney', 'jam', 'jelly', 'honey', 'syrup'
   ],
   other: []
 }
@@ -242,6 +257,8 @@ export function suggestDefaultUnit(category: ProductCategory): import('@/types/s
       return 'package' // Packaged goods
     case 'beverages':
       return 'bottle' // Bottles/cans
+    case 'condiments':
+      return 'bottle' // Bottles/jars of condiments
     default:
       return 'count' // Default to count
   }
@@ -358,6 +375,7 @@ export function getAllCategories(): CategoryMetadata[] {
     'frozen',
     'beverages',
     'pantry',
+    'condiments',
     'other'
   ]
 

@@ -19,6 +19,7 @@ export type ProductCategory =
   | 'frozen'
   | 'pantry'
   | 'beverages'
+  | 'condiments'
   | 'other'
 
 export type StorageLocation =
@@ -237,4 +238,86 @@ export interface PriceHistory {
   unit?: QuantityUnit
   purchasedAt: Date
   createdAt: Date
+}
+
+/**
+ * GlobalProduct - Aggregated product database shared across all users
+ * Root collection: product_database
+ * Document ID: barcode
+ */
+export interface GlobalProduct {
+  // Primary Key
+  barcode: string // Document ID
+
+  // Product Info (from OpenFoodFacts or user verification)
+  productName: string
+  brand: string
+  imageUrl?: string
+
+  // Nutrition Data (verified aggregate from multiple sources)
+  nutrition: {
+    calories: number
+    protein: number // grams
+    carbs: number // grams
+    fat: number // grams
+    fiber: number // grams
+    servingSize: string
+  }
+
+  // Category & Classification
+  category: ProductCategory
+  categories?: string[] // Multiple categories if applicable (e.g., ['dairy', 'beverages'])
+
+  // Aggregated User Data
+  stats: {
+    totalScans: number // How many times this product was scanned
+    uniqueUsers: number // How many different users scanned this
+    totalPurchases: number // How many times this was marked as purchased
+    firstSeenAt: Date | string // When first scanned by any user
+    lastSeenAt: Date | string // Most recent scan
+  }
+
+  // Regional Insights (for locale-specific data)
+  regional: {
+    stores: string[] // Stores where this product was found
+    regions: string[] // Regions/states where scanned (e.g., ['US-CA', 'US-TX'])
+    avgPriceCents: number // Average price across all purchases
+    priceMin: number // Lowest recorded price
+    priceMax: number // Highest recorded price
+    lastPriceUpdate: Date | string // When price was last recorded
+  }
+
+  // Recipe Integration
+  usage: {
+    linkedRecipes: number // Count of recipes that use this product
+    popularityScore: number // Weighted score based on scans, purchases, recipes
+  }
+
+  // Data Quality & Verification
+  quality: {
+    verified: boolean // True if 3+ users confirmed nutrition data matches
+    verificationCount: number // How many users verified this data
+    lastVerified?: Date | string // When last verified
+    dataSource: 'openfoodfacts' | 'usda' | 'user-verified' | 'aggregate'
+    confidence: number // Confidence score 0-100
+  }
+
+  // Metadata
+  createdAt: Date | string
+  updatedAt: Date | string
+}
+
+/**
+ * ProductScanEvent - Track individual scan events for analytics
+ * Subcollection: product_database/{barcode}/scans/{scanId}
+ */
+export interface ProductScanEvent {
+  id: string
+  userId: string // Who scanned
+  scannedAt: Date | string
+  store?: string // Where they scanned
+  region?: string // User's region
+  priceCents?: number // Price if provided
+  purchased: boolean // Did they buy it
+  context: 'shopping' | 'meal-log' | 'inventory' // Why they scanned
 }
