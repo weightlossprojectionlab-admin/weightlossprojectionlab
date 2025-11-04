@@ -244,6 +244,7 @@ export async function PUT(
         carbs: body.nutrition?.carbs || 0,
         fat: body.nutrition?.fat || 0,
         fiber: body.nutrition?.fiber || 0,
+        sodium: body.nutrition?.sodium || 0,
         servingSize: body.nutrition?.servingSize || ''
       },
       'quality.verified': body.quality?.verified || false,
@@ -278,7 +279,7 @@ export async function PUT(
     }
 
     // Track nutrition changes
-    const nutritionFields = ['calories', 'protein', 'carbs', 'fat', 'fiber', 'servingSize']
+    const nutritionFields = ['calories', 'protein', 'carbs', 'fat', 'fiber', 'sodium', 'servingSize']
     nutritionFields.forEach(field => {
       if (currentData?.nutrition?.[field] !== body.nutrition?.[field]) {
         changes[`nutrition.${field}`] = {

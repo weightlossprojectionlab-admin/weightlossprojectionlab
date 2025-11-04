@@ -21,6 +21,7 @@ interface ProductDetail {
     carbs: number
     fat: number
     fiber: number
+    sodium: number
     servingSize: string
   }
   stats: {
@@ -282,6 +283,10 @@ export default function ProductDetailPage() {
               <div className="flex justify-between">
                 <span className="text-gray-700 dark:text-gray-300">Fiber</span>
                 <span className="text-gray-900 dark:text-gray-100">{product.nutrition.fiber}g</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-700 dark:text-gray-300">Sodium</span>
+                <span className="text-gray-900 dark:text-gray-100">{product.nutrition.sodium}mg</span>
               </div>
             </div>
           </div>

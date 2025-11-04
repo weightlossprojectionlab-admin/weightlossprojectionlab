@@ -67,6 +67,7 @@ export async function POST(
     const carbs = nutriments.carbohydrates_serving || nutriments.carbohydrates_100g || nutriments.carbohydrates || 0
     const fat = nutriments.fat_serving || nutriments.fat_100g || nutriments.fat || 0
     const fiber = nutriments.fiber_serving || nutriments.fiber_100g || nutriments.fiber || 0
+    const sodium = nutriments.sodium_serving || nutriments.sodium_100g || nutriments.sodium || 0
 
     // Prepare update data
     const updateData: Record<string, any> = {
@@ -76,6 +77,7 @@ export async function POST(
         carbs: Math.round(carbs * 10) / 10,
         fat: Math.round(fat * 10) / 10,
         fiber: Math.round(fiber * 10) / 10,
+        sodium: Math.round(sodium),
         servingSize: product.serving_size || product.quantity || ''
       },
       'quality.dataSource': 'openfoodfacts',

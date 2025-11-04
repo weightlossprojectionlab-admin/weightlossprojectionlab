@@ -56,6 +56,7 @@ export interface RecipeIngredient {
     carbs: number // grams
     fat: number // grams
     fiber: number // grams
+    sodium: number // milligrams
   }
 
   // Optional: Notes for this ingredient
@@ -81,6 +82,7 @@ export interface MealSuggestion {
     carbs: number
     fat: number
     fiber: number
+    sodium: number
   }
 
   // Enhanced ingredients format (new)
