@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/hooks/useAuth'
 import { bloodSugarOperations, bloodPressureOperations, exerciseOperations } from '@/lib/health-vitals-operations'
 import type { BloodSugarLog, BloodPressureLog, ExerciseLog } from '@/types'
 import { toast } from 'react-hot-toast'
