@@ -14,20 +14,27 @@ import {
 } from '@heroicons/react/24/outline'
 
 interface AIDecision {
-  decisionId: string
-  timestamp: Date
-  decision: string
+  id: string
+  type: 'meal-analysis' | 'health-profile' | 'meal-safety'
+  userId: string
+  payload: any
   confidence: number
-  rationale: string
-  policyReference: string
-  model: string
-  modelTier: string
-  executedBy: string
-  userId?: string
-  templateId: string
-  dataSensitivity: string
-  reviewedBy?: string
+  reviewStatus: 'unreviewed' | 'approved' | 'rejected' | 'reversed'
+  adminNotes?: string
   reviewedAt?: Date
+  reviewedBy?: string
+  createdAt: Date
+  // Legacy fields (for backward compatibility with old AI system)
+  decisionId?: string
+  timestamp?: Date
+  decision?: string
+  rationale?: string
+  policyReference?: string
+  model?: string
+  modelTier?: string
+  executedBy?: string
+  templateId?: string
+  dataSensitivity?: string
   reversalReason?: string
   metadata?: any
 }
@@ -48,6 +55,7 @@ export default function AIDecisionsPage() {
   const [loading, setLoading] = useState(true)
   const [selectedDecision, setSelectedDecision] = useState<AIDecision | null>(null)
   const [filterReviewed, setFilterReviewed] = useState<'all' | 'unreviewed' | 'reviewed'>('unreviewed')
+  const [filterType, setFilterType] = useState<'all' | 'meal-analysis' | 'health-profile' | 'meal-safety'>('all')
   const [filterConfidence, setFilterConfidence] = useState<number>(0.8)
   const [reviewNotes, setReviewNotes] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
@@ -63,14 +71,21 @@ export default function AIDecisionsPage() {
       loadDecisions()
       loadStats()
     }
-  }, [isAdmin, filterReviewed, filterConfidence])
+  }, [isAdmin, filterReviewed, filterType, filterConfidence])
 
   const loadDecisions = async () => {
     setLoading(true)
     try {
       const token = await getAuthToken()
+      const queryParams = new URLSearchParams({
+        reviewed: filterReviewed,
+        maxConfidence: filterConfidence.toString()
+      })
+      if (filterType !== 'all') {
+        queryParams.append('type', filterType)
+      }
       const response = await fetch(
-        `/api/admin/ai-decisions?reviewed=${filterReviewed}&maxConfidence=${filterConfidence}`,
+        `/api/admin/ai-decisions?${queryParams.toString()}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -99,23 +114,22 @@ export default function AIDecisionsPage() {
     }
   }
 
-  const handleReview = async (decisionId: string, action: 'approve' | 'reverse') => {
-    if (!reviewNotes.trim() && action === 'reverse') {
-      alert('Please provide a reason for reversing this decision')
+  const handleReview = async (decisionId: string, action: 'approve' | 'reject' | 'modify') => {
+    if (!reviewNotes.trim() && action === 'reject') {
+      alert('Please provide a reason for rejecting this decision')
       return
     }
 
     setActionLoading(true)
     try {
       const token = await getAuthToken()
-      const response = await fetch('/api/admin/ai-decisions', {
+      const response = await fetch(`/api/admin/ai-decisions/${decisionId}/review`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          decisionId,
           action,
           notes: reviewNotes,
         }),
@@ -123,7 +137,8 @@ export default function AIDecisionsPage() {
 
       if (!response.ok) throw new Error('Failed to review decision')
 
-      alert(action === 'approve' ? 'Decision approved' : 'Decision reversed')
+      const actionText = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'modified'
+      alert(`Decision ${actionText} successfully`)
       setSelectedDecision(null)
       setReviewNotes('')
       await loadDecisions()
@@ -145,6 +160,45 @@ export default function AIDecisionsPage() {
     if (confidence >= 0.9) return 'bg-green-100 dark:bg-green-900/20'
     if (confidence >= 0.7) return 'bg-yellow-100 dark:bg-yellow-900/20'
     return 'bg-red-100 dark:bg-red-900/20'
+  }
+
+  const getDecisionTitle = (decision: AIDecision): string => {
+    if (decision.type === 'health-profile') {
+      const conditions = decision.payload?.restrictions ?
+        Object.keys(decision.payload.restrictions).filter(k => decision.payload.restrictions[k]?.limit).join(', ') :
+        'No restrictions'
+      return `Health Profile: ${conditions || 'General'}`
+    } else if (decision.type === 'meal-safety') {
+      return `Meal Safety Check: ${decision.payload?.safetyCheck?.severity || 'Unknown'}`
+    }
+    // Legacy or meal-analysis
+    return decision.decision || 'AI Decision'
+  }
+
+  const getDecisionDescription = (decision: AIDecision): string => {
+    if (decision.type === 'health-profile') {
+      const restrictionsCount = decision.payload?.restrictions ?
+        Object.keys(decision.payload.restrictions).filter(k => decision.payload.restrictions[k]?.limit).length :
+        0
+      return `Generated ${restrictionsCount} dietary restrictions based on health conditions`
+    } else if (decision.type === 'meal-safety') {
+      const warnings = decision.payload?.safetyCheck?.warnings || []
+      return warnings.length > 0 ? warnings[0] : 'Safety check completed'
+    }
+    return decision.rationale || 'No description available'
+  }
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'health-profile':
+        return '🏥'
+      case 'meal-safety':
+        return '⚠️'
+      case 'meal-analysis':
+        return '🍽️'
+      default:
+        return '🤖'
+    }
   }
 
   if (!isAdmin) {
@@ -221,7 +275,23 @@ export default function AIDecisionsPage() {
             </div>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Decision Type
+            </label>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as any)}
+              disabled={loading}
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="all">All Types</option>
+              <option value="health-profile">Health Profiles</option>
+              <option value="meal-safety">Meal Safety</option>
+              <option value="meal-analysis">Meal Analysis</option>
+            </select>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Review Status
@@ -270,16 +340,16 @@ export default function AIDecisionsPage() {
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {decisions.map((decision) => (
               <div
-                key={decision.decisionId}
+                key={decision.id || decision.decisionId}
                 className="p-6 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                 onClick={() => setSelectedDecision(decision)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <CpuChipIcon className="h-5 w-5 text-primary" />
+                      <span className="text-xl">{getTypeIcon(decision.type)}</span>
                       <span className="font-semibold text-gray-900 dark:text-gray-100">
-                        {decision.decision}
+                        {getDecisionTitle(decision)}
                       </span>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getConfidenceBgColor(decision.confidence)} ${getConfidenceColor(decision.confidence)}`}>
                         {(decision.confidence * 100).toFixed(1)}% confidence
@@ -291,14 +361,14 @@ export default function AIDecisionsPage() {
                       )}
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      {decision.rationale}
+                      {getDecisionDescription(decision)}
                     </p>
                     <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
-                      <span>Model: {decision.model} ({decision.modelTier})</span>
+                      <span className="capitalize">{decision.type.replace('-', ' ')}</span>
                       <span>•</span>
-                      <span>Policy: {decision.policyReference}</span>
+                      <span>User: {decision.userId?.substring(0, 8)}...</span>
                       <span>•</span>
-                      <span>{new Date(decision.timestamp).toLocaleString()}</span>
+                      <span>{new Date(decision.createdAt || decision.timestamp).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -408,20 +478,20 @@ export default function AIDecisionsPage() {
 
                     <div className="flex gap-3">
                       <button
-                        onClick={() => handleReview(selectedDecision.decisionId, 'approve')}
+                        onClick={() => handleReview(selectedDecision.id || selectedDecision.decisionId || '', 'approve')}
                         disabled={actionLoading}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
                       >
                         <CheckCircleIcon className="h-5 w-5" />
-                        Approve Decision
+                        Approve
                       </button>
                       <button
-                        onClick={() => handleReview(selectedDecision.decisionId, 'reverse')}
+                        onClick={() => handleReview(selectedDecision.id || selectedDecision.decisionId || '', 'reject')}
                         disabled={actionLoading}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium"
                       >
                         <XCircleIcon className="h-5 w-5" />
-                        Reverse Decision
+                        Reject
                       </button>
                     </div>
                   </>

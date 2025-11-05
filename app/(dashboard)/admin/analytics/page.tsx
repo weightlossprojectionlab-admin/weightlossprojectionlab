@@ -585,7 +585,7 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
                       {data.profile.lifestyle.alcoholFrequency}
                     </span>
                   </div>
-                  {data.profile.lifestyle.weeklyDrinks > 0 && (
+                  {(data.profile.lifestyle.weeklyDrinks ?? 0) > 0 && (
                     <div className="flex justify-between text-xs mt-1">
                       <span className="text-gray-600 dark:text-gray-400">Weekly Drinks:</span>
                       <span className="font-medium text-gray-900 dark:text-gray-100">

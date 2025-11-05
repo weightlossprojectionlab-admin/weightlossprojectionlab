@@ -250,6 +250,67 @@ export interface AIRecommendation {
   acknowledged: boolean
 }
 
+// AI Health Profile (Gemini-powered health condition management)
+export interface AIRestriction {
+  limit?: number
+  unit?: 'mg' | 'g' | 'kcal' | '%' | 'IU'
+  reason?: string
+}
+
+export interface AIHealthProfile {
+  restrictions: {
+    sodium?: AIRestriction
+    potassium?: AIRestriction
+    phosphorus?: AIRestriction
+    protein?: AIRestriction
+    carbs?: AIRestriction
+    sugar?: AIRestriction
+    saturatedFat?: AIRestriction
+    cholesterol?: AIRestriction
+    // Extensible: Gemini can return any new nutrients
+    [key: string]: AIRestriction | undefined
+  }
+  calorieAdjustment?: {
+    multiplier?: number
+    reason?: string
+  }
+  monitorNutrients?: string[] // Nutrients to track prominently (e.g., ['sodium', 'potassium'])
+  criticalWarnings?: string[] // High-priority warnings (e.g., medication interactions)
+  confidence: number // 0-100 confidence score from Gemini
+  reviewStatus: 'unreviewed' | 'approved' | 'modified'
+  generatedAt: string // ISO timestamp
+  lastReviewedBy?: string // Admin UID who reviewed
+}
+
+// AI Decision (for admin review workflow)
+export interface AIDecision {
+  id: string
+  type: 'meal-analysis' | 'health-profile' | 'meal-safety'
+  userId: string
+  payload: any // Type varies by decision type
+  confidence: number
+  reviewStatus: 'unreviewed' | 'approved' | 'rejected' | 'reversed'
+  adminNotes?: string
+  reviewedAt?: Date
+  reviewedBy?: string // Admin UID
+  createdAt: Date
+}
+
+// Meal Safety Check Response
+export interface MealSafetyCheck {
+  isSafe: boolean
+  warnings: string[] // Human-readable warnings
+  severity: 'safe' | 'caution' | 'critical' // Severity level
+  nutrientBreakdown?: {
+    [nutrient: string]: {
+      amount: number
+      limit: number
+      percentage: number
+    }
+  }
+  confidence: number
+}
+
 // Dashboard Data
 export interface DashboardData {
   weightTrend: WeightTrend
