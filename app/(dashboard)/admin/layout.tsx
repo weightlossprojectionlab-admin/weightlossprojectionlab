@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { AdminNav } from '@/components/admin/AdminNav'
 import { Spinner } from '@/components/ui/Spinner'
+import { AppProgressBar as ProgressBar } from 'next-nprogress-bar'
 
 export default function AdminLayout({
   children,
@@ -47,6 +48,14 @@ export default function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Navigation Progress Bar */}
+      <ProgressBar
+        height="3px"
+        color="#6366f1"
+        options={{ showSpinner: false }}
+        shallowRouting
+      />
+
       {/* Admin Sidebar Navigation */}
       <AdminNav />
 

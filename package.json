@@ -26,6 +26,7 @@
     "firebase-admin": "^12.6.0",
     "html5-qrcode": "^2.3.8",
     "next": "^15.5.0",
+    "next-nprogress-bar": "^2.4.7",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.56.0",
