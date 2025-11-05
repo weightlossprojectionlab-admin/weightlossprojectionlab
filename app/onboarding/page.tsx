@@ -619,6 +619,53 @@ function OnboardingContent() {
         // User can still manually log weight later
       }
 
+      // Generate AI health profile if user has health conditions
+      if (data.healthConditions && data.healthConditions.length > 0) {
+        try {
+          logger.info('Generating AI health profile from onboarding data', {
+            conditions: data.healthConditions
+          })
+
+          // Get Firebase auth token for API call
+          const token = await auth.currentUser?.getIdToken()
+          if (!token) {
+            throw new Error('No auth token available')
+          }
+
+          const response = await fetch('/api/ai/health-profile/generate', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+
+          if (response.ok) {
+            const result = await response.json()
+            logger.info('AI health profile generated successfully', {
+              status: result.status,
+              confidence: result.confidence,
+              restrictionsCount: result.restrictionsCount
+            })
+
+            // Show appropriate message based on status
+            if (result.status === 'approved') {
+              toast.success('AI health profile created with dietary recommendations')
+            } else {
+              toast('Health profile pending admin review', { icon: '⏳' })
+            }
+          } else {
+            throw new Error('Failed to generate health profile')
+          }
+        } catch (healthProfileError) {
+          // Don't block onboarding completion if health profile generation fails
+          logger.warn('Failed to generate AI health profile', {
+            error: healthProfileError instanceof Error ? healthProfileError.message : String(healthProfileError)
+          })
+          // Profile can be generated later by admin or user
+        }
+      }
+
       toast.success('Welcome! Your profile is all set up! 🎉')
       router.push('/dashboard')
     } catch (error) {
