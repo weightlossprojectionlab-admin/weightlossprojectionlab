@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
 import { logger } from '@/lib/logger'
+import { auth } from '@/lib/firebase'
 import {
   CpuChipIcon,
   CheckCircleIcon,
@@ -51,6 +52,12 @@ export default function AIDecisionsPage() {
   const [reviewNotes, setReviewNotes] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
 
+  const getAuthToken = async () => {
+    const user = auth.currentUser
+    if (!user) throw new Error('User not authenticated')
+    return await user.getIdToken()
+  }
+
   useEffect(() => {
     if (isAdmin) {
       loadDecisions()
@@ -61,8 +68,12 @@ export default function AIDecisionsPage() {
   const loadDecisions = async () => {
     setLoading(true)
     try {
+      const token = await getAuthToken()
       const response = await fetch(
-        `/api/admin/ai-decisions?reviewed=${filterReviewed}&maxConfidence=${filterConfidence}`
+        `/api/admin/ai-decisions?reviewed=${filterReviewed}&maxConfidence=${filterConfidence}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
       )
       if (!response.ok) throw new Error('Failed to load AI decisions')
       const data = await response.json()
@@ -76,7 +87,10 @@ export default function AIDecisionsPage() {
 
   const loadStats = async () => {
     try {
-      const response = await fetch('/api/admin/ai-decisions/stats')
+      const token = await getAuthToken()
+      const response = await fetch('/api/admin/ai-decisions/stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
       if (!response.ok) throw new Error('Failed to load stats')
       const data = await response.json()
       setStats(data.stats)
@@ -93,9 +107,13 @@ export default function AIDecisionsPage() {
 
     setActionLoading(true)
     try {
+      const token = await getAuthToken()
       const response = await fetch('/api/admin/ai-decisions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           decisionId,
           action,
