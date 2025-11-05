@@ -12,10 +12,13 @@ import {
   ChartBarIcon,
   ClockIcon,
   ArrowLeftIcon,
+  HeartIcon,
+  BeakerIcon,
 } from '@heroicons/react/24/outline'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import Link from 'next/link'
 import { auth } from '@/lib/firebase'
+import type { HealthVitalsSummary } from '@/types'
 
 interface AnalyticsData {
   userMetrics: {
@@ -179,6 +182,7 @@ interface UserAnalyticsData {
       loggedAt?: string
     }[]
   }
+  healthVitals?: HealthVitalsSummary
   range: string
 }
 
@@ -204,6 +208,8 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
     const url = `/api/admin/users/${uid}/analytics?range=${dateRange}`
     try {
       const token = await getAuthToken()
+
+      // Fetch main analytics
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -212,6 +218,21 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
         throw new Error(errorData.error || 'Failed to load user analytics')
       }
       const result = await response.json()
+
+      // Fetch health vitals (optional - don't fail if unavailable)
+      try {
+        const vitalsResponse = await fetch(`/api/admin/users/${uid}/health-vitals`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (vitalsResponse.ok) {
+          const vitalsData = await vitalsResponse.json()
+          result.healthVitals = vitalsData.summary
+        }
+      } catch (vitalsErr) {
+        // Health vitals are optional, don't fail the whole page
+        logger.warn('Failed to load health vitals', vitalsErr as Error)
+      }
+
       setData(result)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err)
@@ -670,6 +691,155 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
                   </span>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Health Vitals */}
+        {data.healthVitals && (
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <HeartIcon className="h-5 w-5 text-red-500" />
+              Health Vitals
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Blood Sugar */}
+              {data.healthVitals.latestBloodSugar && (
+                <div className={`p-4 rounded-lg border ${
+                  data.healthVitals.latestBloodSugar.isAbnormal
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <BeakerIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Blood Sugar</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className={`text-2xl font-bold ${
+                      data.healthVitals.latestBloodSugar.isAbnormal
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-gray-900 dark:text-gray-100'
+                    }`}>
+                      {data.healthVitals.latestBloodSugar.value}
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">mg/dL</span>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 capitalize">
+                    {data.healthVitals.latestBloodSugar.type.replace('-', ' ')}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                    {new Date(data.healthVitals.latestBloodSugar.date).toLocaleDateString()}
+                  </div>
+                  {data.healthVitals.latestBloodSugar.isAbnormal && (
+                    <div className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">
+                      ⚠️ {data.healthVitals.latestBloodSugar.value < 70 ? 'Low' : 'High'}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Blood Pressure */}
+              {data.healthVitals.latestBloodPressure && (
+                <div className={`p-4 rounded-lg border ${
+                  data.healthVitals.latestBloodPressure.isAbnormal
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <HeartIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Blood Pressure</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className={`text-2xl font-bold ${
+                      data.healthVitals.latestBloodPressure.isAbnormal
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-gray-900 dark:text-gray-100'
+                    }`}>
+                      {data.healthVitals.latestBloodPressure.systolic}/{data.healthVitals.latestBloodPressure.diastolic}
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">mmHg</span>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                    {new Date(data.healthVitals.latestBloodPressure.date).toLocaleDateString()}
+                  </div>
+                  {data.healthVitals.latestBloodPressure.isAbnormal && (
+                    <div className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">
+                      ⚠️ Abnormal
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Weekly Exercise */}
+              <div className="p-4 rounded-lg border bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 md:col-span-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <FireIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Weekly Exercise</span>
+                </div>
+                <div className="flex gap-6">
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {data.healthVitals.weeklyExercise.totalMinutes}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">minutes</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {data.healthVitals.weeklyExercise.sessionsCount}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">sessions</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 capitalize">
+                      {data.healthVitals.weeklyExercise.avgIntensity}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">avg intensity</div>
+                  </div>
+                </div>
+                {data.healthVitals.weeklyExercise.totalMinutes < 150 && (
+                  <div className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
+                    ℹ️ CDC recommends 150+ minutes/week
+                  </div>
+                )}
+              </div>
+
+              {/* 30-Day Trends */}
+              <div className="md:col-span-2 p-4 rounded-lg border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">30-Day Trends</div>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Blood Sugar</div>
+                    <div className={`text-sm font-semibold capitalize ${
+                      data.healthVitals.trends.bloodSugarTrend === 'improving' ? 'text-green-600 dark:text-green-400' :
+                      data.healthVitals.trends.bloodSugarTrend === 'worsening' ? 'text-red-600 dark:text-red-400' :
+                      'text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {data.healthVitals.trends.bloodSugarTrend === 'insufficient-data' ? 'N/A' : data.healthVitals.trends.bloodSugarTrend}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Blood Pressure</div>
+                    <div className={`text-sm font-semibold capitalize ${
+                      data.healthVitals.trends.bloodPressureTrend === 'improving' ? 'text-green-600 dark:text-green-400' :
+                      data.healthVitals.trends.bloodPressureTrend === 'worsening' ? 'text-red-600 dark:text-red-400' :
+                      'text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {data.healthVitals.trends.bloodPressureTrend === 'insufficient-data' ? 'N/A' : data.healthVitals.trends.bloodPressureTrend}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Exercise</div>
+                    <div className={`text-sm font-semibold capitalize ${
+                      data.healthVitals.trends.exerciseTrend === 'improving' ? 'text-green-600 dark:text-green-400' :
+                      data.healthVitals.trends.exerciseTrend === 'worsening' ? 'text-red-600 dark:text-red-400' :
+                      'text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {data.healthVitals.trends.exerciseTrend === 'insufficient-data' ? 'N/A' : data.healthVitals.trends.exerciseTrend}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
