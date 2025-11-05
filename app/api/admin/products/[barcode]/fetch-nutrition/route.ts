@@ -66,20 +66,41 @@ export async function POST(
     const protein = nutriments.proteins_serving || nutriments.proteins_100g || nutriments.proteins || 0
     const carbs = nutriments.carbohydrates_serving || nutriments.carbohydrates_100g || nutriments.carbohydrates || 0
     const fat = nutriments.fat_serving || nutriments.fat_100g || nutriments.fat || 0
+    const saturatedFat = nutriments['saturated-fat_serving'] || nutriments['saturated-fat_100g'] || nutriments['saturated-fat']
+    const transFat = nutriments['trans-fat_serving'] || nutriments['trans-fat_100g'] || nutriments['trans-fat']
     const fiber = nutriments.fiber_serving || nutriments.fiber_100g || nutriments.fiber || 0
+    const sugars = nutriments.sugars_serving || nutriments.sugars_100g || nutriments.sugars
     const sodium = nutriments.sodium_serving || nutriments.sodium_100g || nutriments.sodium || 0
+    const cholesterol = nutriments.cholesterol_serving || nutriments.cholesterol_100g || nutriments.cholesterol
+    const vitaminD = nutriments['vitamin-d_serving'] || nutriments['vitamin-d_100g'] || nutriments['vitamin-d']
+    const calcium = nutriments.calcium_serving || nutriments.calcium_100g || nutriments.calcium
+    const iron = nutriments.iron_serving || nutriments.iron_100g || nutriments.iron
+    const potassium = nutriments.potassium_serving || nutriments.potassium_100g || nutriments.potassium
+
+    // Build nutrition object with optional fields
+    const nutrition: Record<string, any> = {
+      calories: Math.round(calories),
+      protein: Math.round(protein * 10) / 10,
+      carbs: Math.round(carbs * 10) / 10,
+      fat: Math.round(fat * 10) / 10,
+      fiber: Math.round(fiber * 10) / 10,
+      sodium: Math.round(sodium),
+      servingSize: product.serving_size || product.quantity || ''
+    }
+
+    // Add optional nutrition fields only if they exist
+    if (saturatedFat !== undefined) nutrition.saturatedFat = Math.round(saturatedFat * 10) / 10
+    if (transFat !== undefined) nutrition.transFat = Math.round(transFat * 10) / 10
+    if (sugars !== undefined) nutrition.sugars = Math.round(sugars * 10) / 10
+    if (cholesterol !== undefined) nutrition.cholesterol = Math.round(cholesterol * 10) / 10
+    if (vitaminD !== undefined) nutrition.vitaminD = Math.round(vitaminD * 10) / 10
+    if (calcium !== undefined) nutrition.calcium = Math.round(calcium * 10) / 10
+    if (iron !== undefined) nutrition.iron = Math.round(iron * 10) / 10
+    if (potassium !== undefined) nutrition.potassium = Math.round(potassium * 10) / 10
 
     // Prepare update data
     const updateData: Record<string, any> = {
-      nutrition: {
-        calories: Math.round(calories),
-        protein: Math.round(protein * 10) / 10,
-        carbs: Math.round(carbs * 10) / 10,
-        fat: Math.round(fat * 10) / 10,
-        fiber: Math.round(fiber * 10) / 10,
-        sodium: Math.round(sodium),
-        servingSize: product.serving_size || product.quantity || ''
-      },
+      nutrition,
       'quality.dataSource': 'openfoodfacts',
       updatedAt: new Date()
     }

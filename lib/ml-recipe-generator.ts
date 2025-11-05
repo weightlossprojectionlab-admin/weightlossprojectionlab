@@ -38,8 +38,17 @@ interface Product {
     protein: number
     carbs: number
     fat: number
+    saturatedFat?: number
+    transFat?: number
     fiber: number
+    sugars?: number
+    addedSugars?: number
     sodium: number
+    cholesterol?: number
+    vitaminD?: number
+    calcium?: number
+    iron?: number
+    potassium?: number
     servingSize: string
   }
 }
@@ -376,8 +385,17 @@ async function buildRecipe(
         protein: product.nutrition.protein,
         carbs: product.nutrition.carbs,
         fat: product.nutrition.fat,
+        saturatedFat: product.nutrition.saturatedFat,
+        transFat: product.nutrition.transFat,
         fiber: product.nutrition.fiber,
-        sodium: product.nutrition.sodium
+        sugars: product.nutrition.sugars,
+        addedSugars: product.nutrition.addedSugars,
+        sodium: product.nutrition.sodium,
+        cholesterol: product.nutrition.cholesterol,
+        vitaminD: product.nutrition.vitaminD,
+        calcium: product.nutrition.calcium,
+        iron: product.nutrition.iron,
+        potassium: product.nutrition.potassium
       }
     }))
 

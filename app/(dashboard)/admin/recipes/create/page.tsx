@@ -25,8 +25,17 @@ interface SelectedProduct {
     protein: number
     carbs: number
     fat: number
+    saturatedFat?: number
+    transFat?: number
     fiber: number
+    sugars?: number
+    addedSugars?: number
     sodium: number
+    cholesterol?: number
+    vitaminD?: number
+    calcium?: number
+    iron?: number
+    potassium?: number
     servingSize: string
   }
 }
@@ -67,8 +76,17 @@ export default function CreateRecipePage() {
     let totalProtein = 0
     let totalCarbs = 0
     let totalFat = 0
+    let totalSaturatedFat = 0
+    let totalTransFat = 0
     let totalFiber = 0
+    let totalSugars = 0
+    let totalAddedSugars = 0
     let totalSodium = 0
+    let totalCholesterol = 0
+    let totalVitaminD = 0
+    let totalCalcium = 0
+    let totalIron = 0
+    let totalPotassium = 0
 
     ingredients.forEach(ingredient => {
       if (ingredient.nutrition) {
@@ -76,8 +94,17 @@ export default function CreateRecipePage() {
         totalProtein += ingredient.nutrition.protein * ingredient.quantity
         totalCarbs += ingredient.nutrition.carbs * ingredient.quantity
         totalFat += ingredient.nutrition.fat * ingredient.quantity
+        totalSaturatedFat += (ingredient.nutrition.saturatedFat || 0) * ingredient.quantity
+        totalTransFat += (ingredient.nutrition.transFat || 0) * ingredient.quantity
         totalFiber += ingredient.nutrition.fiber * ingredient.quantity
+        totalSugars += (ingredient.nutrition.sugars || 0) * ingredient.quantity
+        totalAddedSugars += (ingredient.nutrition.addedSugars || 0) * ingredient.quantity
         totalSodium += (ingredient.nutrition.sodium || 0) * ingredient.quantity
+        totalCholesterol += (ingredient.nutrition.cholesterol || 0) * ingredient.quantity
+        totalVitaminD += (ingredient.nutrition.vitaminD || 0) * ingredient.quantity
+        totalCalcium += (ingredient.nutrition.calcium || 0) * ingredient.quantity
+        totalIron += (ingredient.nutrition.iron || 0) * ingredient.quantity
+        totalPotassium += (ingredient.nutrition.potassium || 0) * ingredient.quantity
       }
     })
 
@@ -86,8 +113,17 @@ export default function CreateRecipePage() {
       protein: Math.round((totalProtein / servingSize) * 10) / 10,
       carbs: Math.round((totalCarbs / servingSize) * 10) / 10,
       fat: Math.round((totalFat / servingSize) * 10) / 10,
+      saturatedFat: totalSaturatedFat > 0 ? Math.round((totalSaturatedFat / servingSize) * 10) / 10 : undefined,
+      transFat: totalTransFat > 0 ? Math.round((totalTransFat / servingSize) * 10) / 10 : undefined,
       fiber: Math.round((totalFiber / servingSize) * 10) / 10,
-      sodium: Math.round(totalSodium / servingSize)
+      sugars: totalSugars > 0 ? Math.round((totalSugars / servingSize) * 10) / 10 : undefined,
+      addedSugars: totalAddedSugars > 0 ? Math.round((totalAddedSugars / servingSize) * 10) / 10 : undefined,
+      sodium: Math.round(totalSodium / servingSize),
+      cholesterol: totalCholesterol > 0 ? Math.round((totalCholesterol / servingSize) * 10) / 10 : undefined,
+      vitaminD: totalVitaminD > 0 ? Math.round((totalVitaminD / servingSize) * 10) / 10 : undefined,
+      calcium: totalCalcium > 0 ? Math.round((totalCalcium / servingSize) * 10) / 10 : undefined,
+      iron: totalIron > 0 ? Math.round((totalIron / servingSize) * 10) / 10 : undefined,
+      potassium: totalPotassium > 0 ? Math.round((totalPotassium / servingSize) * 10) / 10 : undefined
     }
   }
 
@@ -105,8 +141,17 @@ export default function CreateRecipePage() {
         protein: product.nutrition.protein,
         carbs: product.nutrition.carbs,
         fat: product.nutrition.fat,
+        saturatedFat: product.nutrition.saturatedFat,
+        transFat: product.nutrition.transFat,
         fiber: product.nutrition.fiber,
-        sodium: product.nutrition.sodium || 0
+        sugars: product.nutrition.sugars,
+        addedSugars: product.nutrition.addedSugars,
+        sodium: product.nutrition.sodium || 0,
+        cholesterol: product.nutrition.cholesterol,
+        vitaminD: product.nutrition.vitaminD,
+        calcium: product.nutrition.calcium,
+        iron: product.nutrition.iron,
+        potassium: product.nutrition.potassium
       },
       notes: product.notes,
       optional: product.optional

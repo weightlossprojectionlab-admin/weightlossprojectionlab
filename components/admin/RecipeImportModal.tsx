@@ -92,7 +92,16 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
           carbs: perServingCarbs,
           fat: perServingFat,
           fiber: perServingFiber,
-          sodium: 0
+          sodium: 0,
+          saturatedFat: undefined,
+          transFat: undefined,
+          sugars: undefined,
+          addedSugars: undefined,
+          cholesterol: undefined,
+          vitaminD: undefined,
+          calcium: undefined,
+          iron: undefined,
+          potassium: undefined
         },
         prepTime: importedRecipe.prepTime || 30,
         servingSize: importedRecipe.servings || 4,

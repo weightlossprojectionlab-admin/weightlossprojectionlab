@@ -20,7 +20,17 @@ interface ProductEditData {
     protein: number
     carbs: number
     fat: number
+    saturatedFat?: number
+    transFat?: number
     fiber: number
+    sugars?: number
+    addedSugars?: number
+    sodium: number
+    cholesterol?: number
+    vitaminD?: number
+    calcium?: number
+    iron?: number
+    potassium?: number
     servingSize: string
   }
   quality: {
@@ -54,7 +64,17 @@ export default function ProductEditPage() {
       protein: 0,
       carbs: 0,
       fat: 0,
+      saturatedFat: undefined,
+      transFat: undefined,
       fiber: 0,
+      sugars: undefined,
+      addedSugars: undefined,
+      sodium: 0,
+      cholesterol: undefined,
+      vitaminD: undefined,
+      calcium: undefined,
+      iron: undefined,
+      potassium: undefined,
       servingSize: ''
     },
     quality: {
@@ -405,6 +425,40 @@ export default function ProductEditPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Saturated Fat (g)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.nutrition.saturatedFat ?? ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                nutrition: { ...formData.nutrition, saturatedFat: e.target.value ? parseFloat(e.target.value) : undefined }
+              })}
+              placeholder="Optional"
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Trans Fat (g)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.nutrition.transFat ?? ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                nutrition: { ...formData.nutrition, transFat: e.target.value ? parseFloat(e.target.value) : undefined }
+              })}
+              placeholder="Optional"
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Fiber (g)
             </label>
             <input
@@ -415,6 +469,140 @@ export default function ProductEditPage() {
                 ...formData,
                 nutrition: { ...formData.nutrition, fiber: parseFloat(e.target.value) || 0 }
               })}
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Sugars (g)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.nutrition.sugars ?? ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                nutrition: { ...formData.nutrition, sugars: e.target.value ? parseFloat(e.target.value) : undefined }
+              })}
+              placeholder="Optional"
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Added Sugars (g)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.nutrition.addedSugars ?? ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                nutrition: { ...formData.nutrition, addedSugars: e.target.value ? parseFloat(e.target.value) : undefined }
+              })}
+              placeholder="Optional"
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Sodium (mg)
+            </label>
+            <input
+              type="number"
+              value={formData.nutrition.sodium}
+              onChange={(e) => setFormData({
+                ...formData,
+                nutrition: { ...formData.nutrition, sodium: parseFloat(e.target.value) || 0 }
+              })}
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Cholesterol (mg)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.nutrition.cholesterol ?? ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                nutrition: { ...formData.nutrition, cholesterol: e.target.value ? parseFloat(e.target.value) : undefined }
+              })}
+              placeholder="Optional"
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Vitamin D (mcg)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.nutrition.vitaminD ?? ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                nutrition: { ...formData.nutrition, vitaminD: e.target.value ? parseFloat(e.target.value) : undefined }
+              })}
+              placeholder="Optional"
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Calcium (mg)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.nutrition.calcium ?? ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                nutrition: { ...formData.nutrition, calcium: e.target.value ? parseFloat(e.target.value) : undefined }
+              })}
+              placeholder="Optional"
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Iron (mg)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.nutrition.iron ?? ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                nutrition: { ...formData.nutrition, iron: e.target.value ? parseFloat(e.target.value) : undefined }
+              })}
+              placeholder="Optional"
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Potassium (mg)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={formData.nutrition.potassium ?? ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                nutrition: { ...formData.nutrition, potassium: e.target.value ? parseFloat(e.target.value) : undefined }
+              })}
+              placeholder="Optional"
               className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>

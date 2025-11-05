@@ -55,8 +55,17 @@ export interface RecipeIngredient {
     protein: number // grams
     carbs: number // grams
     fat: number // grams
+    saturatedFat?: number // grams
+    transFat?: number // grams
     fiber: number // grams
+    sugars?: number // grams
+    addedSugars?: number // grams
     sodium: number // milligrams
+    cholesterol?: number // milligrams
+    vitaminD?: number // mcg
+    calcium?: number // mg
+    iron?: number // mg
+    potassium?: number // mg
   }
 
   // Optional: Notes for this ingredient
@@ -81,8 +90,17 @@ export interface MealSuggestion {
     protein: number
     carbs: number
     fat: number
+    saturatedFat?: number
+    transFat?: number
     fiber: number
+    sugars?: number
+    addedSugars?: number
     sodium: number
+    cholesterol?: number
+    vitaminD?: number
+    calcium?: number
+    iron?: number
+    potassium?: number
   }
 
   // Enhanced ingredients format (new)

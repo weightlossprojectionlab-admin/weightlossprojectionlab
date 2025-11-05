@@ -29,12 +29,36 @@ export interface OpenFoodFactsProduct {
     fat?: number
     fat_100g?: number
     fat_serving?: number
+    'saturated-fat'?: number
+    'saturated-fat_100g'?: number
+    'saturated-fat_serving'?: number
+    'trans-fat'?: number
+    'trans-fat_100g'?: number
+    'trans-fat_serving'?: number
     fiber?: number
     fiber_100g?: number
     fiber_serving?: number
+    sugars?: number
+    sugars_100g?: number
+    sugars_serving?: number
     sodium?: number
     sodium_100g?: number
     sodium_serving?: number
+    cholesterol?: number
+    cholesterol_100g?: number
+    cholesterol_serving?: number
+    'vitamin-d'?: number
+    'vitamin-d_100g'?: number
+    'vitamin-d_serving'?: number
+    calcium?: number
+    calcium_100g?: number
+    calcium_serving?: number
+    iron?: number
+    iron_100g?: number
+    iron_serving?: number
+    potassium?: number
+    potassium_100g?: number
+    potassium_serving?: number
   }
   categories?: string
   allergens?: string

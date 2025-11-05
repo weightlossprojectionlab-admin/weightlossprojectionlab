@@ -17,8 +17,17 @@ interface Product {
     protein: number
     carbs: number
     fat: number
+    saturatedFat?: number
+    transFat?: number
     fiber: number
+    sugars?: number
+    addedSugars?: number
     sodium: number
+    cholesterol?: number
+    vitaminD?: number
+    calcium?: number
+    iron?: number
+    potassium?: number
     servingSize: string
   }
 }
