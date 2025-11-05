@@ -192,10 +192,16 @@ export default function AIDecisionsPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-6">
+      <div className={`bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-6 transition-opacity ${loading ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
         <div className="flex items-center gap-2 mb-4">
           <FunnelIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">Filters</h3>
+          {loading && (
+            <div className="ml-auto flex items-center gap-2 text-sm text-primary">
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+              <span>Filtering...</span>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -205,7 +211,8 @@ export default function AIDecisionsPage() {
             <select
               value={filterReviewed}
               onChange={(e) => setFilterReviewed(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={loading}
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="all">All Decisions</option>
               <option value="unreviewed">Unreviewed Only</option>
@@ -222,7 +229,8 @@ export default function AIDecisionsPage() {
               max="100"
               value={filterConfidence * 100}
               onChange={(e) => setFilterConfidence(parseInt(e.target.value) / 100)}
-              className="w-full"
+              disabled={loading}
+              className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>
@@ -231,8 +239,9 @@ export default function AIDecisionsPage() {
       {/* Decisions List */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400 font-medium">Loading AI decisions...</p>
           </div>
         ) : decisions.length === 0 ? (
           <div className="text-center py-12">

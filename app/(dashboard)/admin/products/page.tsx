@@ -178,7 +178,16 @@ export default function AdminProductsPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-6">
+      <div className={`bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-6 transition-opacity ${loading ? 'opacity-60' : 'opacity-100'}`}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Filters</h3>
+          {loading && (
+            <div className="flex items-center gap-2 text-sm text-primary">
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+              <span>Loading...</span>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Search */}
           <div className="relative">
@@ -188,7 +197,8 @@ export default function AdminProductsPage() {
               placeholder="Search by name, brand, or barcode..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={loading}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -196,7 +206,8 @@ export default function AdminProductsPage() {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            disabled={loading}
+            className="px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="all">All Categories</option>
             {Object.keys(categoryBreakdown).sort().map(cat => (
@@ -210,7 +221,8 @@ export default function AdminProductsPage() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            disabled={loading}
+            className="px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="scans">Most Scanned</option>
             <option value="recent">Recently Scanned</option>
@@ -221,10 +233,10 @@ export default function AdminProductsPage() {
 
       {/* Loading State */}
       {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading products...</p>
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-16">
+          <div className="flex flex-col items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400 font-medium">Loading products...</p>
           </div>
         </div>
       )}
