@@ -236,6 +236,72 @@ export interface StepLog {
   source?: 'manual' | 'device' | 'healthkit' | 'googlefit' // Deprecated - use dataSource
 }
 
+// Health Vitals Tracking (HIPAA-sensitive data)
+export interface BloodSugarLog {
+  id: string
+  userId: string
+  glucoseLevel: number // mg/dL
+  measurementType: 'fasting' | 'before-meal' | 'after-meal' | 'bedtime' | 'random'
+  mealContext?: string // Optional: which meal it was related to
+  loggedAt: Date
+  dataSource: 'manual' | 'bluetooth-meter' // Data provenance
+  deviceId?: string // Bluetooth device ID if synced
+  notes?: string
+}
+
+export interface BloodPressureLog {
+  id: string
+  userId: string
+  systolic: number // mmHg
+  diastolic: number // mmHg
+  heartRate?: number // bpm (optional)
+  measurementContext: 'morning' | 'afternoon' | 'evening' | 'post-exercise' | 'other'
+  loggedAt: Date
+  dataSource: 'manual' | 'bluetooth-monitor' // Data provenance
+  deviceId?: string // Bluetooth device ID if synced
+  notes?: string
+}
+
+export interface ExerciseLog {
+  id: string
+  userId: string
+  activityType: 'walking' | 'swimming' | 'cycling' | 'yoga' | 'strength' | 'chair-exercises' | 'stretching' | 'water-aerobics' | 'other'
+  duration: number // minutes
+  intensity: 'low' | 'moderate' | 'high'
+  caloriesBurned?: number // Optional estimate
+  heartRateAvg?: number // Average heart rate during activity (bpm)
+  loggedAt: Date
+  dataSource: 'manual' | 'bluetooth-tracker' // Data provenance
+  deviceId?: string // Fitness tracker device ID if synced
+  notes?: string
+}
+
+// Health Vitals Summary (for admin analytics dashboard)
+export interface HealthVitalsSummary {
+  latestBloodSugar?: {
+    value: number
+    type: string
+    date: Date
+    isAbnormal: boolean // true if <70 (hypoglycemia) or >180 (hyperglycemia)
+  }
+  latestBloodPressure?: {
+    systolic: number
+    diastolic: number
+    date: Date
+    isAbnormal: boolean // true if systolic >140 or <90, or diastolic >90 or <60
+  }
+  weeklyExercise: {
+    totalMinutes: number
+    sessionsCount: number
+    avgIntensity: string
+  }
+  trends: {
+    bloodSugarTrend: 'improving' | 'worsening' | 'stable' | 'insufficient-data'
+    bloodPressureTrend: 'improving' | 'worsening' | 'stable' | 'insufficient-data'
+    exerciseTrend: 'improving' | 'worsening' | 'stable' | 'insufficient-data'
+  }
+}
+
 // AI & Recommendations
 export interface AIRecommendation {
   id: string
