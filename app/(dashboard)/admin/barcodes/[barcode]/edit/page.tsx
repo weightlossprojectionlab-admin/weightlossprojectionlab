@@ -366,7 +366,7 @@ export default function ProductEditPage() {
             </label>
             <input
               type="number"
-              value={formData.nutrition.calories}
+              value={formData.nutrition.calories ?? 0}
               onChange={(e) => setFormData({
                 ...formData,
                 nutrition: { ...formData.nutrition, calories: parseFloat(e.target.value) || 0 }
@@ -382,7 +382,7 @@ export default function ProductEditPage() {
             <input
               type="number"
               step="0.1"
-              value={formData.nutrition.protein}
+              value={formData.nutrition.protein ?? 0}
               onChange={(e) => setFormData({
                 ...formData,
                 nutrition: { ...formData.nutrition, protein: parseFloat(e.target.value) || 0 }
@@ -398,7 +398,7 @@ export default function ProductEditPage() {
             <input
               type="number"
               step="0.1"
-              value={formData.nutrition.carbs}
+              value={formData.nutrition.carbs ?? 0}
               onChange={(e) => setFormData({
                 ...formData,
                 nutrition: { ...formData.nutrition, carbs: parseFloat(e.target.value) || 0 }
@@ -414,7 +414,7 @@ export default function ProductEditPage() {
             <input
               type="number"
               step="0.1"
-              value={formData.nutrition.fat}
+              value={formData.nutrition.fat ?? 0}
               onChange={(e) => setFormData({
                 ...formData,
                 nutrition: { ...formData.nutrition, fat: parseFloat(e.target.value) || 0 }
@@ -464,7 +464,7 @@ export default function ProductEditPage() {
             <input
               type="number"
               step="0.1"
-              value={formData.nutrition.fiber}
+              value={formData.nutrition.fiber ?? 0}
               onChange={(e) => setFormData({
                 ...formData,
                 nutrition: { ...formData.nutrition, fiber: parseFloat(e.target.value) || 0 }
@@ -513,7 +513,7 @@ export default function ProductEditPage() {
             </label>
             <input
               type="number"
-              value={formData.nutrition.sodium}
+              value={formData.nutrition.sodium ?? 0}
               onChange={(e) => setFormData({
                 ...formData,
                 nutrition: { ...formData.nutrition, sodium: parseFloat(e.target.value) || 0 }
@@ -613,7 +613,7 @@ export default function ProductEditPage() {
             </label>
             <input
               type="text"
-              value={formData.nutrition.servingSize}
+              value={formData.nutrition.servingSize ?? ''}
               onChange={(e) => setFormData({
                 ...formData,
                 nutrition: { ...formData.nutrition, servingSize: e.target.value }
