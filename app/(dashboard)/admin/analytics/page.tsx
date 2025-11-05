@@ -14,11 +14,29 @@ import {
   ArrowLeftIcon,
   HeartIcon,
   BeakerIcon,
+  SparklesIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import Link from 'next/link'
 import { auth } from '@/lib/firebase'
 import type { HealthVitalsSummary } from '@/types'
+
+interface AIHealthProfileSummary {
+  hasProfile: boolean
+  profileStatus: 'unreviewed' | 'approved' | 'modified' | null
+  profileConfidence: number | null
+  profileGeneratedAt: string | null
+  restrictionsCount: number
+  criticalWarnings: string[]
+  recentDecisions: {
+    total: number
+    unreviewed: number
+    healthProfileDecisions: number
+    mealSafetyChecks: number
+    criticalMealSafety: number
+  }
+}
 
 interface AnalyticsData {
   userMetrics: {
@@ -183,6 +201,7 @@ interface UserAnalyticsData {
     }[]
   }
   healthVitals?: HealthVitalsSummary
+  aiHealthProfile?: AIHealthProfileSummary
   range: string
 }
 
@@ -231,6 +250,20 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
       } catch (vitalsErr) {
         // Health vitals are optional, don't fail the whole page
         logger.warn('Failed to load health vitals', vitalsErr as Error)
+      }
+
+      // Fetch AI health profile (optional - don't fail if unavailable)
+      try {
+        const aiProfileResponse = await fetch(`/api/admin/users/${uid}/ai-health-profile`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (aiProfileResponse.ok) {
+          const aiProfileData = await aiProfileResponse.json()
+          result.aiHealthProfile = aiProfileData.summary
+        }
+      } catch (aiProfileErr) {
+        // AI health profile is optional, don't fail the whole page
+        logger.warn('Failed to load AI health profile', aiProfileErr as Error)
       }
 
       setData(result)
@@ -837,6 +870,127 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
                     }`}>
                       {data.healthVitals.trends.exerciseTrend === 'insufficient-data' ? 'N/A' : data.healthVitals.trends.exerciseTrend}
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI Health Analysis */}
+        {data.aiHealthProfile && (
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <SparklesIcon className="h-5 w-5 text-purple-500" />
+              AI Health Analysis
+            </h3>
+
+            <div className="space-y-4">
+              {/* Profile Status */}
+              {data.aiHealthProfile.hasProfile ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Status Badge */}
+                  <div className="p-4 rounded-lg border bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Profile Status</div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                        data.aiHealthProfile.profileStatus === 'approved'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                          : data.aiHealthProfile.profileStatus === 'modified'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                      }`}>
+                        {data.aiHealthProfile.profileStatus || 'Unknown'}
+                      </span>
+                    </div>
+                    {data.aiHealthProfile.profileConfidence !== null && (
+                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Confidence: {data.aiHealthProfile.profileConfidence}%
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Restrictions Count */}
+                  <div className="p-4 rounded-lg border bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Dietary Restrictions</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      {data.aiHealthProfile.restrictionsCount}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {data.aiHealthProfile.restrictionsCount === 1 ? 'restriction' : 'restrictions'}
+                    </div>
+                  </div>
+
+                  {/* Generated Date */}
+                  <div className="p-4 rounded-lg border bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Last Generated</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
+                      {data.aiHealthProfile.profileGeneratedAt
+                        ? new Date(data.aiHealthProfile.profileGeneratedAt).toLocaleDateString()
+                        : 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">No AI health profile generated yet</div>
+                </div>
+              )}
+
+              {/* Critical Warnings */}
+              {data.aiHealthProfile.criticalWarnings && data.aiHealthProfile.criticalWarnings.length > 0 && (
+                <div className="p-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    <span className="text-sm font-semibold text-red-900 dark:text-red-300">Critical Warnings</span>
+                  </div>
+                  <ul className="list-disc list-inside space-y-1">
+                    {data.aiHealthProfile.criticalWarnings.map((warning, idx) => (
+                      <li key={idx} className="text-xs text-red-800 dark:text-red-300">
+                        {warning}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Recent AI Decisions */}
+              <div className="p-4 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20">
+                <div className="text-sm font-medium text-purple-900 dark:text-purple-300 mb-3">
+                  Recent AI Decisions (30 days)
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                      {data.aiHealthProfile.recentDecisions.total}
+                    </div>
+                    <div className="text-xs text-purple-700 dark:text-purple-400">Total</div>
+                  </div>
+                  <div>
+                    <div className={`text-2xl font-bold ${
+                      data.aiHealthProfile.recentDecisions.unreviewed > 0
+                        ? 'text-yellow-600 dark:text-yellow-400'
+                        : 'text-purple-900 dark:text-purple-100'
+                    }`}>
+                      {data.aiHealthProfile.recentDecisions.unreviewed}
+                    </div>
+                    <div className="text-xs text-purple-700 dark:text-purple-400">Unreviewed</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                      {data.aiHealthProfile.recentDecisions.mealSafetyChecks}
+                    </div>
+                    <div className="text-xs text-purple-700 dark:text-purple-400">Meal Checks</div>
+                  </div>
+                  <div>
+                    <div className={`text-2xl font-bold ${
+                      data.aiHealthProfile.recentDecisions.criticalMealSafety > 0
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-purple-900 dark:text-purple-100'
+                    }`}>
+                      {data.aiHealthProfile.recentDecisions.criticalMealSafety}
+                    </div>
+                    <div className="text-xs text-purple-700 dark:text-purple-400">Critical</div>
                   </div>
                 </div>
               </div>
