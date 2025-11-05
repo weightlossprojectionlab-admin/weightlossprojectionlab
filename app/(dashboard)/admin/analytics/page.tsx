@@ -249,7 +249,9 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
         }
       } catch (vitalsErr) {
         // Health vitals are optional, don't fail the whole page
-        logger.warn('Failed to load health vitals', vitalsErr as Error)
+        logger.warn('Failed to load health vitals', {
+          error: vitalsErr instanceof Error ? vitalsErr.message : String(vitalsErr)
+        })
       }
 
       // Fetch AI health profile (optional - don't fail if unavailable)
@@ -263,7 +265,9 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
         }
       } catch (aiProfileErr) {
         // AI health profile is optional, don't fail the whole page
-        logger.warn('Failed to load AI health profile', aiProfileErr as Error)
+        logger.warn('Failed to load AI health profile', {
+          error: aiProfileErr instanceof Error ? aiProfileErr.message : String(aiProfileErr)
+        })
       }
 
       setData(result)

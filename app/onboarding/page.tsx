@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
 import OnboardingRouter from '@/components/auth/OnboardingRouter'
 import { useAuth } from '@/hooks/useAuth'
+import { auth } from '@/lib/firebase'
 import { userProfileOperations, weightLogOperations } from '@/lib/firebase-operations'
 import {
   calculateBMR,

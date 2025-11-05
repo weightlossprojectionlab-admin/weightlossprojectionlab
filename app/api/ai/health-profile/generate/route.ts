@@ -44,7 +44,9 @@ export async function POST(request: NextRequest) {
     // 2. Validate Gemini configuration
     const configCheck = validateGeminiConfig()
     if (!configCheck.valid) {
-      logger.error('[Health Profile] Gemini not configured', { error: configCheck.error })
+      logger.error('[Health Profile] Gemini not configured', undefined, {
+        configError: configCheck.error
+      })
       return NextResponse.json(
         { error: 'AI service unavailable' },
         { status: 503 }

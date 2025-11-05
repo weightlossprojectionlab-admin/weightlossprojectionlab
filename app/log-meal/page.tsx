@@ -1798,7 +1798,7 @@ function LogMealContent() {
               <div className="space-y-3 pt-4">
                 <div className="flex space-x-3">
                   <button
-                    onClick={saveMeal}
+                    onClick={() => saveMeal()}
                     disabled={saving}
                     className="btn btn-primary flex-1"
                     aria-label="Save meal log"

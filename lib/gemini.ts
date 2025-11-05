@@ -20,53 +20,53 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
  * Ensures Gemini returns structured, type-safe data
  */
 const healthProfileSchema = {
-  type: SchemaType.OBJECT,
+  type: SchemaType.OBJECT as const,
   properties: {
     restrictions: {
-      type: SchemaType.OBJECT,
+      type: SchemaType.OBJECT as const,
       properties: {
         sodium: {
-          type: SchemaType.OBJECT,
+          type: SchemaType.OBJECT as const,
           properties: {
-            limit: { type: SchemaType.NUMBER },
-            unit: { type: SchemaType.STRING },
-            reason: { type: SchemaType.STRING }
+            limit: { type: SchemaType.NUMBER as const },
+            unit: { type: SchemaType.STRING as const },
+            reason: { type: SchemaType.STRING as const }
           },
           required: []
         },
         potassium: {
-          type: SchemaType.OBJECT,
+          type: SchemaType.OBJECT as const,
           properties: {
-            limit: { type: SchemaType.NUMBER },
-            unit: { type: SchemaType.STRING },
-            reason: { type: SchemaType.STRING }
+            limit: { type: SchemaType.NUMBER as const },
+            unit: { type: SchemaType.STRING as const },
+            reason: { type: SchemaType.STRING as const }
           },
           required: []
         },
         protein: {
-          type: SchemaType.OBJECT,
+          type: SchemaType.OBJECT as const,
           properties: {
-            limit: { type: SchemaType.NUMBER },
-            unit: { type: SchemaType.STRING },
-            reason: { type: SchemaType.STRING }
+            limit: { type: SchemaType.NUMBER as const },
+            unit: { type: SchemaType.STRING as const },
+            reason: { type: SchemaType.STRING as const }
           },
           required: []
         },
         sugar: {
-          type: SchemaType.OBJECT,
+          type: SchemaType.OBJECT as const,
           properties: {
-            limit: { type: SchemaType.NUMBER },
-            unit: { type: SchemaType.STRING },
-            reason: { type: SchemaType.STRING }
+            limit: { type: SchemaType.NUMBER as const },
+            unit: { type: SchemaType.STRING as const },
+            reason: { type: SchemaType.STRING as const }
           },
           required: []
         },
         carbs: {
-          type: SchemaType.OBJECT,
+          type: SchemaType.OBJECT as const,
           properties: {
-            limit: { type: SchemaType.NUMBER },
-            unit: { type: SchemaType.STRING },
-            reason: { type: SchemaType.STRING }
+            limit: { type: SchemaType.NUMBER as const },
+            unit: { type: SchemaType.STRING as const },
+            reason: { type: SchemaType.STRING as const }
           },
           required: []
         }
@@ -74,22 +74,22 @@ const healthProfileSchema = {
       required: []
     },
     calorieAdjustment: {
-      type: SchemaType.OBJECT,
+      type: SchemaType.OBJECT as const,
       properties: {
-        multiplier: { type: SchemaType.NUMBER },
-        reason: { type: SchemaType.STRING }
+        multiplier: { type: SchemaType.NUMBER as const },
+        reason: { type: SchemaType.STRING as const }
       },
       required: []
     },
     monitorNutrients: {
-      type: SchemaType.ARRAY,
-      items: { type: SchemaType.STRING }
+      type: SchemaType.ARRAY as const,
+      items: { type: SchemaType.STRING as const }
     },
     criticalWarnings: {
-      type: SchemaType.ARRAY,
-      items: { type: SchemaType.STRING }
+      type: SchemaType.ARRAY as const,
+      items: { type: SchemaType.STRING as const }
     },
-    confidence: { type: SchemaType.NUMBER }
+    confidence: { type: SchemaType.NUMBER as const }
   },
   required: ['restrictions', 'confidence']
 }
@@ -98,20 +98,20 @@ const healthProfileSchema = {
  * Schema for meal safety check
  */
 const mealSafetySchema = {
-  type: SchemaType.OBJECT,
+  type: SchemaType.OBJECT as const,
   properties: {
-    isSafe: { type: SchemaType.BOOLEAN },
+    isSafe: { type: SchemaType.BOOLEAN as const },
     warnings: {
-      type: SchemaType.ARRAY,
-      items: { type: SchemaType.STRING }
+      type: SchemaType.ARRAY as const,
+      items: { type: SchemaType.STRING as const }
     },
-    severity: { type: SchemaType.STRING }, // 'safe' | 'caution' | 'critical'
+    severity: { type: SchemaType.STRING as const }, // 'safe' | 'caution' | 'critical'
     nutrientBreakdown: {
-      type: SchemaType.OBJECT,
+      type: SchemaType.OBJECT as const,
       properties: {},
       required: []
     },
-    confidence: { type: SchemaType.NUMBER }
+    confidence: { type: SchemaType.NUMBER as const }
   },
   required: ['isSafe', 'warnings', 'severity', 'confidence']
 }

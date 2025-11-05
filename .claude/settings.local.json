@@ -23,7 +23,9 @@
       "Read(//c/Users/percy/Pictures/Screenshots/**)",
       "Bash(npm run lint)",
       "Bash(ls:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebSearch",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
