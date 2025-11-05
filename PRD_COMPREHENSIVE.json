@@ -2,21 +2,24 @@
   "metadata": {
     "documentType": "Product Requirements Document (PRD)",
     "projectName": "Weight Loss Project Lab (WLPL)",
-    "version": "2.1.0",
-    "lastUpdated": "2025-11-04T00:00:00Z",
+    "version": "2.2.0",
+    "lastUpdated": "2025-11-05T00:00:00Z",
     "status": "Active Development",
     "authors": ["Product Team", "Engineering Team", "AI Architecture Team"],
     "reviewers": ["AI Architectural Analysis System"],
     "architectureGrade": "5/5 - EXCEPTIONAL",
-    "productionReadiness": "95%",
+    "productionReadiness": "85%",
     "codeQuality": "A+",
     "documentation": {
       "references": [
         "README.md",
+        "ARCHITECTURE_REVIEW_2025-11-05.md",
         "ARCHITECTURE_REVIEW_2025-11-03.md",
         "PRD.md",
         "MIGRATION.md",
-        "DEPLOYMENT_GUIDE.md"
+        "DEPLOYMENT_GUIDE.md",
+        "FIRESTORE_HEALTH_VITALS_RULES.md",
+        "FIRESTORE_HEALTH_PROFILE_RULES.md"
       ]
     }
   },
@@ -696,6 +699,338 @@
           "status": "✅ Implemented",
           "types": ["Public", "Private", "Invite-only"],
           "features": ["Member management", "Group challenges", "Shared goals"]
+        }
+      ]
+    },
+
+    "healthManagement": {
+      "status": "✅ Implemented - v2.2.0",
+      "version": "2.2.0",
+      "hipaaCompliance": "HIPAA-aware architecture (pending full compliance)",
+      "capabilities": [
+        {
+          "feature": "AI Health Profile Generation",
+          "implementation": "Gemini AI with structured JSON schemas",
+          "model": "gemini-1.5-flash",
+          "input": ["health conditions", "age", "gender", "BMI", "activity level"],
+          "output": {
+            "restrictions": {
+              "example": "sodium: { limit: 1500, unit: 'mg', reason: 'Hypertension management' }",
+              "extensible": "Supports any nutrient (potassium, protein, sugar, carbs, etc.)"
+            },
+            "criticalWarnings": "Medical alerts requiring physician consultation",
+            "monitorNutrients": "Nutrients to track closely",
+            "confidence": "0-100 score for AI accuracy"
+          },
+          "reviewWorkflow": {
+            "autoApproval": "Confidence ≥80%",
+            "adminReview": "Confidence <80% → flagged in AI Decisions dashboard",
+            "humanOversight": "Admin can approve, modify, or reject"
+          },
+          "medicalGuidelines": [
+            "Chronic Kidney Disease (CKD) stages 1-5",
+            "Hypertension (DASH diet recommendations)",
+            "Diabetes (ADA guidelines)",
+            "Heart disease (AHA guidelines)"
+          ],
+          "integration": [
+            "Triggered during onboarding if health conditions present",
+            "Stored in users/{uid}/aiHealthProfile/current",
+            "Used by meal safety checker"
+          ]
+        },
+        {
+          "feature": "Health Vitals Tracking",
+          "types": [
+            {
+              "vital": "Blood Sugar",
+              "dataPoints": ["glucose level (mg/dL)", "measurement type", "meal context", "timestamp"],
+              "measurementTypes": ["fasting", "before-meal", "after-meal", "bedtime", "random"],
+              "validation": "20-600 mg/dL range",
+              "abnormalDetection": "<70 (hypoglycemia) or >180 (hyperglycemia)",
+              "dataSource": "manual (Bluetooth planned Phase 2)"
+            },
+            {
+              "vital": "Blood Pressure",
+              "dataPoints": ["systolic (mmHg)", "diastolic (mmHg)", "heart rate (bpm)", "context", "timestamp"],
+              "validation": "Systolic: 60-250, Diastolic: 40-150, HR: 30-220",
+              "abnormalDetection": "Systolic >140 or <90, Diastolic >90 or <60",
+              "contexts": ["morning", "afternoon", "evening", "post-exercise", "other"],
+              "dataSource": "manual (Bluetooth planned Phase 2)"
+            },
+            {
+              "vital": "Exercise",
+              "dataPoints": ["activity type", "duration (minutes)", "intensity", "calories burned", "timestamp"],
+              "activityTypes": ["walking", "swimming", "cycling", "yoga", "strength", "chair-exercises", "stretching", "water-aerobics", "other"],
+              "intensity": ["low", "moderate", "high"],
+              "validation": "1-600 minutes duration",
+              "cdcRecommendation": "150+ minutes/week moderate intensity",
+              "dataSource": "manual (Bluetooth planned Phase 2)"
+            }
+          ],
+          "userInterface": "/health-vitals",
+          "uiFeatures": [
+            "Tabbed interface (Blood Sugar | Blood Pressure | Exercise)",
+            "Real-time validation with physiological limits",
+            "Abnormal value detection and visual alerts",
+            "Recent logs display (last 7 days)",
+            "Medical disclaimer"
+          ],
+          "dataModel": {
+            "collections": [
+              "blood-sugar-logs/{logId}",
+              "blood-pressure-logs/{logId}",
+              "exercise-logs/{logId}"
+            ],
+            "indexes": ["userId + loggedAt (composite)"],
+            "security": "User read-only their own, Admin read-all"
+          }
+        },
+        {
+          "feature": "Meal Safety Warnings",
+          "purpose": "Warn users before saving meals that exceed dietary restrictions",
+          "workflow": [
+            "1. User logs meal with AI analysis",
+            "2. Before save: Check if user has AIHealthProfile",
+            "3. If profile exists: Send meal + profile to /api/ai/meal-safety",
+            "4. Gemini compares nutrients against restrictions",
+            "5. Returns: isSafe, warnings[], severity, confidence",
+            "6. If unsafe/caution/critical: Show warning modal",
+            "7. User can: Go Back (edit) or Proceed Anyway",
+            "8. If critical + confidence <80%: Create ai-decision for admin review",
+            "9. Save meal regardless (with audit trail)"
+          ],
+          "severityLevels": {
+            "safe": "No restrictions exceeded or minimal impact",
+            "caution": "30-50% of daily limit exceeded in single meal",
+            "critical": ">50% of daily limit exceeded or multiple restrictions breached"
+          },
+          "warningModalFeatures": [
+            "Severity-based visual indicators (🚨 critical, ⚠️ caution, ℹ️ safe)",
+            "Detailed warning messages",
+            "Nutrient breakdown showing % of daily limit",
+            "AI confidence scores",
+            "Two-action flow: Go Back & Edit | Proceed Anyway",
+            "Admin review notice for critical meals"
+          ],
+          "nonBlocking": "Safety check failures don't prevent meal logging",
+          "userControl": "Users can override warnings (informed consent)"
+        },
+        {
+          "feature": "Admin Health Analytics",
+          "location": "/admin/analytics (per user)",
+          "cards": [
+            {
+              "card": "Health Vitals Card",
+              "displays": [
+                "Latest blood sugar reading with abnormal alerts",
+                "Latest blood pressure reading with abnormal alerts",
+                "Weekly exercise summary (minutes, sessions, avg intensity)",
+                "CDC recommendation alerts (<150 min/week)",
+                "30-day trends (improving/worsening/stable/insufficient-data)"
+              ]
+            },
+            {
+              "card": "AI Health Analysis Card",
+              "displays": [
+                "Profile status (approved/modified/unreviewed) with confidence scores",
+                "Count of active dietary restrictions",
+                "Critical health warnings with visual alerts",
+                "Recent AI decisions summary (30 days)",
+                "Meal safety check statistics",
+                "Unreviewed decisions count with color-coded alerts"
+              ]
+            }
+          ],
+          "trendAnalysis": {
+            "period": "30 days",
+            "algorithm": "Compare first half vs second half averages",
+            "thresholds": {
+              "bloodSugar": "±10 mg/dL = stable, negative = improving (lower is better)",
+              "bloodPressure": "±5 mmHg = stable, negative = improving",
+              "exercise": "±30 minutes = stable, positive = improving (more is better)"
+            },
+            "minDataPoints": "4 logs required for trend analysis"
+          }
+        },
+        {
+          "feature": "Onboarding Integration",
+          "trigger": "If user has health conditions during onboarding",
+          "behavior": [
+            "Automatically generates AI health profile after onboarding completion",
+            "Non-blocking: doesn't fail onboarding if generation fails",
+            "Displays appropriate toast based on approval status",
+            "Auto-approved (≥80%): Success message",
+            "Pending review (<80%): Review pending message"
+          ]
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "path": "/api/ai/health-profile/generate",
+          "methods": ["POST", "GET"],
+          "purpose": "Generate or retrieve AI health profile",
+          "authentication": "Firebase ID token (Bearer)",
+          "POST": {
+            "body": "None (uses auth context to fetch user profile)",
+            "returns": {
+              "ok": "boolean",
+              "status": "approved | unreviewed",
+              "confidence": "number",
+              "restrictionsCount": "number",
+              "message": "string"
+            }
+          },
+          "GET": {
+            "returns": {
+              "ok": "boolean",
+              "profile": "AIHealthProfile object or 404"
+            }
+          }
+        },
+        {
+          "path": "/api/ai/meal-safety",
+          "method": "POST",
+          "purpose": "Check if meal is safe against user's health profile",
+          "authentication": "Firebase ID token (Bearer)",
+          "body": {
+            "meal": {
+              "foodItems": "Array<FoodItem>",
+              "totalCalories": "number",
+              "totalMacros": "MacroNutrients object"
+            }
+          },
+          "returns": {
+            "ok": "boolean",
+            "isSafe": "boolean",
+            "warnings": "string[]",
+            "severity": "safe | caution | critical",
+            "nutrientBreakdown": "object (nutrient: { amount, limit, percentage })",
+            "confidence": "number"
+          }
+        },
+        {
+          "path": "/api/admin/users/[uid]/health-vitals",
+          "method": "GET",
+          "purpose": "Fetch user's health vitals summary for admin analytics",
+          "authentication": "Admin Bearer token + role check",
+          "returns": {
+            "ok": "boolean",
+            "summary": "HealthVitalsSummary object (latest + trends)"
+          }
+        },
+        {
+          "path": "/api/admin/users/[uid]/ai-health-profile",
+          "method": "GET",
+          "purpose": "Fetch user's AI health profile summary for admin analytics",
+          "authentication": "Admin Bearer token + role check",
+          "returns": {
+            "ok": "boolean",
+            "summary": "AIHealthProfileSummary object",
+            "healthProfile": "AIHealthProfile object or null",
+            "recentDecisions": "AIDecision[] (top 5)"
+          }
+        }
+      ],
+      "firestoreCollections": [
+        {
+          "path": "blood-sugar-logs/{logId}",
+          "fields": ["id", "userId", "glucoseLevel", "measurementType", "mealContext", "loggedAt", "dataSource", "deviceId", "notes"],
+          "indexes": ["userId + loggedAt"],
+          "security": "User read-own, Admin read-all, Server-only writes"
+        },
+        {
+          "path": "blood-pressure-logs/{logId}",
+          "fields": ["id", "userId", "systolic", "diastolic", "heartRate", "measurementContext", "loggedAt", "dataSource", "deviceId", "notes"],
+          "indexes": ["userId + loggedAt"],
+          "security": "User read-own, Admin read-all, Server-only writes"
+        },
+        {
+          "path": "exercise-logs/{logId}",
+          "fields": ["id", "userId", "activityType", "duration", "intensity", "caloriesBurned", "heartRateAvg", "loggedAt", "dataSource", "deviceId", "notes"],
+          "indexes": ["userId + loggedAt"],
+          "security": "User read-own, Admin read-all, Server-only writes"
+        },
+        {
+          "path": "users/{uid}/aiHealthProfile/current",
+          "fields": ["restrictions", "calorieAdjustment", "monitorNutrients", "criticalWarnings", "confidence", "reviewStatus", "generatedAt", "lastReviewedBy"],
+          "security": "User read-own, Admin read-all, Server-only writes"
+        },
+        {
+          "path": "ai-decisions (extended)",
+          "newTypes": ["health-profile", "meal-safety"],
+          "fields": ["type", "userId", "payload", "confidence", "reviewStatus", "adminNotes", "reviewedAt", "reviewedBy", "createdAt"],
+          "integration": "Admin AI Decisions dashboard"
+        }
+      ],
+      "hipaaArchitecture": {
+        "dataClassification": "PHI (Protected Health Information)",
+        "implemented": [
+          "Server-side PHI writes only (client read-only)",
+          "Data de-identification before external AI calls",
+          "Admin-only full PHI access",
+          "Role-based access control (RBAC)",
+          "HTTPS/TLS encryption in transit",
+          "Firebase encryption at rest (automatic)"
+        ],
+        "pending": [
+          "Business Associate Agreement (BAA) with Firebase",
+          "Audit logging for PHI access",
+          "User data export functionality",
+          "User data deletion functionality",
+          "Privacy policy updates",
+          "Legal HIPAA compliance review"
+        ],
+        "securityRules": "See FIRESTORE_HEALTH_VITALS_RULES.md and FIRESTORE_HEALTH_PROFILE_RULES.md"
+      },
+      "designPatterns": [
+        {
+          "pattern": "Repository Pattern",
+          "implementation": "health-vitals-operations.ts",
+          "purpose": "Abstract Firestore complexity, provide clean CRUD interface"
+        },
+        {
+          "pattern": "Adapter Pattern",
+          "implementation": "lib/gemini.ts",
+          "purpose": "Adapt Gemini API responses to application types"
+        },
+        {
+          "pattern": "Strategy Pattern",
+          "implementation": "Confidence-based routing",
+          "purpose": "Route AI decisions based on confidence scores (≥80% auto-approve, <80% admin review)"
+        },
+        {
+          "pattern": "Factory Pattern",
+          "implementation": "Structured schema generation",
+          "purpose": "Generate type-safe Gemini response schemas"
+        }
+      ],
+      "futureEnhancements": [
+        {
+          "feature": "Bluetooth Device Integration",
+          "phase": "2",
+          "devices": ["Blood glucose meters", "Blood pressure monitors", "Fitness trackers"],
+          "dataSource": "bluetooth-meter | bluetooth-monitor | bluetooth-tracker"
+        },
+        {
+          "feature": "Enhanced Trend Analysis",
+          "improvements": ["ML-based predictions", "Seasonal adjustments", "Anomaly detection"],
+          "phase": "2"
+        },
+        {
+          "feature": "Cumulative Daily Tracking",
+          "purpose": "Track total daily nutrient intake vs restrictions (not just per-meal)",
+          "phase": "2"
+        },
+        {
+          "feature": "Push Notifications",
+          "triggers": ["Critical health values", "Missed logging reminders", "Trend alerts"],
+          "phase": "2"
+        },
+        {
+          "feature": "Telemedicine Integration",
+          "purpose": "Share health data with healthcare providers",
+          "phase": "3"
         }
       ]
     },
@@ -2267,8 +2602,42 @@
 
     "healthData": {
       "hipaa": {
-        "status": "Not applicable (consumer app, not medical)",
-        "disclaimer": "App is for informational purposes only, not medical advice"
+        "status": "HIPAA-aware architecture implemented (v2.2.0)",
+        "compliance": {
+          "implemented": [
+            "Server-side PHI writes only",
+            "Client read-only access with auth validation",
+            "Data de-identification before external AI calls",
+            "Admin-only access to full health data",
+            "Role-based access control (RBAC)",
+            "HTTPS/TLS encryption in transit",
+            "Firebase encryption at rest (automatic)"
+          ],
+          "pending": [
+            "Business Associate Agreement (BAA) with Firebase",
+            "Audit logging for PHI access",
+            "User data export functionality",
+            "User data deletion functionality",
+            "Privacy policy updates",
+            "Legal HIPAA compliance review"
+          ],
+          "complianceChecklist": "See FIRESTORE_HEALTH_VITALS_RULES.md"
+        },
+        "disclaimer": "App is for informational purposes only, not medical advice. Consult healthcare provider for medical decisions."
+      },
+      "healthManagement": {
+        "status": "✅ Implemented - v2.2.0",
+        "features": [
+          "AI health profile generation from conditions",
+          "Blood sugar tracking (manual & Bluetooth planned)",
+          "Blood pressure tracking (manual & Bluetooth planned)",
+          "Exercise logging with intensity tracking",
+          "Meal safety warnings before save",
+          "Admin analytics with health vitals cards",
+          "30-day trend analysis",
+          "Abnormal value detection",
+          "AI-powered dietary restrictions (Gemini)"
+        ]
       }
     }
   },
