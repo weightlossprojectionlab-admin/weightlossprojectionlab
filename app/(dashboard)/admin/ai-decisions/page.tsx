@@ -440,7 +440,7 @@ export default function AIDecisionsPage() {
                 <div>
                   <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Timestamp</div>
                   <div className="text-sm text-gray-900 dark:text-gray-100">
-                    {new Date(selectedDecision.timestamp).toLocaleString()}
+                    {new Date(selectedDecision.createdAt || selectedDecision.timestamp || new Date()).toLocaleString()}
                   </div>
                 </div>
 

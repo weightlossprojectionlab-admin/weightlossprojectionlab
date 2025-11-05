@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, db } from '@/lib/firebase-admin'
+import { adminAuth, adminDb as db } from '@/lib/firebase-admin'
 import { callGeminiMealSafety } from '@/lib/gemini'
 import { logger } from '@/lib/logger'
 import type { AIHealthProfile, MealSafetyCheck } from '@/types'
