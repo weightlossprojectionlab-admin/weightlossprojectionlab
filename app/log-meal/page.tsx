@@ -20,7 +20,7 @@ import { registerBackgroundSync } from '@/lib/sync-manager'
 import { useMissions } from '@/hooks/useMissions'
 import { simplifyProduct } from '@/lib/openfoodfacts-api'
 import { lookupBarcodeWithCache } from '@/lib/cached-product-lookup'
-import type { AIAnalysis, MealTemplate, UserProfile, UserPreferences } from '@/types'
+import type { AIAnalysis, MealTemplate, UserProfile, UserPreferences, MealSafetyCheck } from '@/types'
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
 import { logger } from '@/lib/logger'
@@ -136,6 +136,9 @@ function LogMealContent() {
   const [showManualEntry, setShowManualEntry] = useState(false)
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
   const [loadingBarcode, setLoadingBarcode] = useState(false)
+  const [mealSafetyCheck, setMealSafetyCheck] = useState<MealSafetyCheck | null>(null)
+  const [checkingSafety, setCheckingSafety] = useState(false)
+  const [showSafetyWarning, setShowSafetyWarning] = useState(false)
   const [manualEntryForm, setManualEntryForm] = useState({
     foodItems: [''],
     calories: '',
@@ -750,11 +753,76 @@ function LogMealContent() {
     })
   }
 
-  const saveMeal = async () => {
+  const checkMealSafety = async (mealData: AIAnalysis): Promise<MealSafetyCheck | null> => {
+    try {
+      setCheckingSafety(true)
+      logger.debug('🔍 Checking meal safety...')
+
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) {
+        logger.warn('No auth token for safety check')
+        return null
+      }
+
+      const response = await fetch('/api/ai/meal-safety', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          meal: {
+            foodItems: mealData.foodItems,
+            totalCalories: mealData.totalCalories,
+            totalMacros: mealData.totalMacros
+          }
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Safety check failed')
+      }
+
+      const result = await response.json()
+      logger.debug('✅ Safety check completed', {
+        isSafe: result.isSafe,
+        severity: result.severity,
+        warningsCount: result.warnings?.length || 0
+      })
+
+      return {
+        isSafe: result.isSafe,
+        warnings: result.warnings || [],
+        severity: result.severity || 'safe',
+        nutrientBreakdown: result.nutrientBreakdown,
+        confidence: result.confidence || 100
+      }
+    } catch (error) {
+      logger.error('Safety check error:', error as Error)
+      // Don't block meal logging if safety check fails
+      return null
+    } finally {
+      setCheckingSafety(false)
+    }
+  }
+
+  const saveMeal = async (overrideSafety: boolean = false) => {
     setSaving(true)
 
     try {
       logger.debug('💾 Starting meal save...')
+
+      // Check meal safety if we have AI analysis and haven't overridden
+      if (aiAnalysis && !overrideSafety) {
+        const safetyCheck = await checkMealSafety(aiAnalysis)
+
+        if (safetyCheck && (!safetyCheck.isSafe || safetyCheck.severity === 'caution' || safetyCheck.severity === 'critical')) {
+          setMealSafetyCheck(safetyCheck)
+          setShowSafetyWarning(true)
+          setSaving(false)
+          return // Stop saving and show warning modal
+        }
+      }
 
       // Check if offline - queue instead of saving
       if (!navigator.onLine) {
@@ -2249,6 +2317,108 @@ function LogMealContent() {
           )}
         </div>
       </div>
+
+      {/* Meal Safety Warning Modal */}
+      {showSafetyWarning && mealSafetyCheck && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg max-w-lg w-full p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">
+                {mealSafetyCheck.severity === 'critical' ? '🚨' :
+                 mealSafetyCheck.severity === 'caution' ? '⚠️' : 'ℹ️'}
+              </span>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {mealSafetyCheck.severity === 'critical' ? 'Critical Health Warning' :
+                   mealSafetyCheck.severity === 'caution' ? 'Dietary Caution' : 'Health Notice'}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  This meal may not be suitable for your health profile
+                </p>
+              </div>
+            </div>
+
+            {/* Warnings List */}
+            <div className={`p-4 rounded-lg border ${
+              mealSafetyCheck.severity === 'critical'
+                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+            }`}>
+              <ul className="space-y-2">
+                {mealSafetyCheck.warnings.map((warning, idx) => (
+                  <li key={idx} className={`text-sm flex items-start gap-2 ${
+                    mealSafetyCheck.severity === 'critical'
+                      ? 'text-red-800 dark:text-red-300'
+                      : 'text-yellow-800 dark:text-yellow-300'
+                  }`}>
+                    <span className="flex-shrink-0 mt-0.5">•</span>
+                    <span>{warning}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Nutrient Breakdown (if available) */}
+            {mealSafetyCheck.nutrientBreakdown && Object.keys(mealSafetyCheck.nutrientBreakdown).length > 0 && (
+              <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Nutrient Analysis:</p>
+                <div className="space-y-1">
+                  {Object.entries(mealSafetyCheck.nutrientBreakdown).map(([nutrient, data]: [string, any]) => (
+                    <div key={nutrient} className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                      <span className="capitalize">{nutrient}:</span>
+                      <span className={data.percentage > 30 ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>
+                        {data.amount}{data.unit || ''} / {data.limit}{data.unit || ''} ({Math.round(data.percentage)}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Confidence Score */}
+            <div className="text-xs text-gray-500 dark:text-gray-500 flex items-center gap-2">
+              <span>AI Confidence:</span>
+              <span className="font-medium">{mealSafetyCheck.confidence}%</span>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setShowSafetyWarning(false)
+                  setMealSafetyCheck(null)
+                }}
+                className="btn btn-outline flex-1"
+              >
+                Go Back & Edit
+              </button>
+              <button
+                onClick={async () => {
+                  setShowSafetyWarning(false)
+                  setMealSafetyCheck(null)
+                  // Proceed with saving, bypassing safety check
+                  await saveMeal(true)
+                }}
+                className={`btn flex-1 ${
+                  mealSafetyCheck.severity === 'critical'
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'btn-primary'
+                }`}
+              >
+                {mealSafetyCheck.severity === 'critical' ? 'Log Anyway' : 'Proceed'}
+              </button>
+            </div>
+
+            {mealSafetyCheck.severity === 'critical' && (
+              <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+                Logging this meal may trigger admin review
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Photo Lightbox Modal */}
       {selectedPhotoUrl && (
