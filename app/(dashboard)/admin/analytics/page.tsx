@@ -110,6 +110,7 @@ interface UserAnalyticsData {
     }
     onboardingCompleted?: boolean
     onboardingCompletedAt?: string
+    currentOnboardingStep?: number
     [key: string]: any
   }
   goals: {
@@ -515,6 +516,163 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
             )}
           </div>
         </div>
+
+        {/* Onboarding Status */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Onboarding
+          </h3>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">Status:</span>
+              <span className={`font-medium ${data.profile.onboardingCompleted ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                {data.profile.onboardingCompleted ? 'Completed' : 'Incomplete'}
+              </span>
+            </div>
+            {data.profile.onboardingCompletedAt && (
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Completed:</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {new Date(data.profile.onboardingCompletedAt).toLocaleDateString()}
+                </span>
+              </div>
+            )}
+            {data.profile.currentOnboardingStep && !data.profile.onboardingCompleted && (
+              <div className="flex justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Current Step:</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  Step {data.profile.currentOnboardingStep} of 6
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Lifestyle Factors */}
+        {data.profile.lifestyle && (
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Lifestyle
+            </h3>
+            <div className="space-y-3 text-sm">
+              {data.profile.lifestyle.smoking && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Smoking:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100 capitalize">
+                    {data.profile.lifestyle.smoking.replace('-', ' ')}
+                  </span>
+                </div>
+              )}
+              {data.profile.lifestyle.smokingQuitDate && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-600 dark:text-gray-400">Quit Date:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {new Date(data.profile.lifestyle.smokingQuitDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+              {data.profile.lifestyle.alcoholFrequency && (
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Alcohol:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100 capitalize">
+                      {data.profile.lifestyle.alcoholFrequency}
+                    </span>
+                  </div>
+                  {data.profile.lifestyle.weeklyDrinks > 0 && (
+                    <div className="flex justify-between text-xs mt-1">
+                      <span className="text-gray-600 dark:text-gray-400">Weekly Drinks:</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {data.profile.lifestyle.weeklyDrinks}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {data.profile.lifestyle.recreationalDrugs && data.profile.lifestyle.recreationalDrugs !== 'no' && (
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Recreational Drugs:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100 capitalize">
+                      {data.profile.lifestyle.recreationalDrugs}
+                    </span>
+                  </div>
+                  {data.profile.lifestyle.drugTypes && data.profile.lifestyle.drugTypes.length > 0 && (
+                    <div className="mt-2">
+                      <div className="flex flex-wrap gap-1">
+                        {data.profile.lifestyle.drugTypes.map((drug: string, i: number) => (
+                          <span key={i} className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 rounded text-xs">
+                            {drug}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Body Measurements */}
+        {data.profile.bodyMeasurements && Object.keys(data.profile.bodyMeasurements).length > 0 && (
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+              Body Measurements
+            </h3>
+            <div className="space-y-3 text-sm">
+              {data.profile.bodyMeasurements.waist && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Waist:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {data.profile.bodyMeasurements.waist} {data.preferences.units === 'imperial' ? 'in' : 'cm'}
+                  </span>
+                </div>
+              )}
+              {data.profile.bodyMeasurements.hips && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Hips:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {data.profile.bodyMeasurements.hips} {data.preferences.units === 'imperial' ? 'in' : 'cm'}
+                  </span>
+                </div>
+              )}
+              {data.profile.bodyMeasurements.chest && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Chest:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {data.profile.bodyMeasurements.chest} {data.preferences.units === 'imperial' ? 'in' : 'cm'}
+                  </span>
+                </div>
+              )}
+              {data.profile.bodyMeasurements.arms && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Arms:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {data.profile.bodyMeasurements.arms} {data.preferences.units === 'imperial' ? 'in' : 'cm'}
+                  </span>
+                </div>
+              )}
+              {data.profile.bodyMeasurements.thighs && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Thighs:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {data.profile.bodyMeasurements.thighs} {data.preferences.units === 'imperial' ? 'in' : 'cm'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Weight Stats */}
