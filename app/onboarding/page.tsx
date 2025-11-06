@@ -616,11 +616,52 @@ function OnboardingContent() {
       }
 
       // Save to Firebase
+      logger.info('Saving onboarding completion to Firestore')
       await userProfileOperations.updateUserProfile({
         profile,
         goals,
         preferences
       })
+
+      // CRITICAL: Verify write completed before redirecting (prevents onboarding loop)
+      // Firestore uses eventual consistency - write might not be visible immediately
+      // Retry with exponential backoff: 500ms, 1s, 2s
+      logger.info('Verifying onboarding completion was saved to Firestore')
+      let verified = false
+      for (let attempt = 0; attempt < 3; attempt++) {
+        // Wait before checking (exponential backoff)
+        const delay = 500 * Math.pow(2, attempt) // 500ms, 1000ms, 2000ms
+        await new Promise(resolve => setTimeout(resolve, delay))
+
+        // Refetch profile to verify onboardingCompleted flag
+        try {
+          const savedProfile = await userProfileOperations.getUserProfile()
+          const isCompleted = savedProfile?.data?.profile?.onboardingCompleted === true
+
+          logger.info('Onboarding completion verification attempt', {
+            attempt: attempt + 1,
+            onboardingCompleted: isCompleted,
+            delayMs: delay,
+            timestamp: new Date().toISOString()
+          })
+
+          if (isCompleted) {
+            verified = true
+            logger.info('✅ Onboarding completion verified successfully')
+            break
+          }
+        } catch (verifyError) {
+          logger.warn('Verification attempt failed', {
+            attempt: attempt + 1,
+            error: verifyError instanceof Error ? verifyError.message : String(verifyError)
+          })
+        }
+      }
+
+      if (!verified) {
+        logger.error('Failed to verify onboarding completion after 3 attempts')
+        throw new Error('Failed to save onboarding completion. Please try again or contact support.')
+      }
 
       // Create initial weight log entry so dashboard shows weight immediately
       try {
@@ -705,7 +746,10 @@ function OnboardingContent() {
       }
 
       toast.success('Welcome! Your profile is all set up! 🎉')
-      router.push('/dashboard')
+
+      // Add query param to signal successful onboarding completion
+      // This helps OnboardingRouter skip Firestore check (defense layer #2)
+      router.push('/dashboard?onboardingComplete=true')
     } catch (error) {
       logger.error('Error completing onboarding', error as Error)
       toast.error('Failed to save your profile. Please try again.')

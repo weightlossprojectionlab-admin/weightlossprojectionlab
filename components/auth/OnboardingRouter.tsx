@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { determineUserDestination } from '@/lib/auth-router'
@@ -22,12 +22,23 @@ export default function OnboardingRouter({ children }: OnboardingRouterProps) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
     const checkAccess = async () => {
       if (authLoading) {
         logger.debug('⏳ OnboardingRouter: Waiting for auth to load...')
+        return
+      }
+
+      // Defense Layer #2: Check for onboardingComplete query param
+      // If present, user just completed onboarding - allow access without Firestore check
+      // This prevents race condition with Firestore eventual consistency
+      const justCompleted = searchParams.get('onboardingComplete') === 'true'
+      if (justCompleted) {
+        logger.info('✅ OnboardingRouter: Onboarding just completed (query param), allowing access')
+        setChecking(false)
         return
       }
 
