@@ -10,10 +10,10 @@ import { z } from 'zod'
 // ============================================
 
 export const UserPreferencesSchema = z.object({
-  units: z.enum(['metric', 'imperial']),
-  notifications: z.boolean(),
-  biometricEnabled: z.boolean(),
-  themePreference: z.enum(['light', 'dark', 'system']),
+  units: z.enum(['metric', 'imperial']).optional(),
+  notifications: z.boolean().optional(),
+  biometricEnabled: z.boolean().optional(),
+  themePreference: z.enum(['light', 'dark', 'system']).optional(),
   dietaryPreferences: z.array(z.string()).optional(),
   mealReminderTimes: z.object({
     breakfast: z.string().optional(),

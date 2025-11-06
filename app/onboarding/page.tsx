@@ -289,12 +289,22 @@ function OnboardingContent() {
 
       // Only save if there's data to save
       if (Object.keys(partialUpdate).length > 0) {
-        logger.debug('Saving step data', { step: stepNumber, data: partialUpdate })
+        logger.debug('Saving step data', {
+          step: stepNumber,
+          updateKeys: Object.keys(partialUpdate),
+          profileKeys: partialUpdate.profile ? Object.keys(partialUpdate.profile) : [],
+          goalsKeys: partialUpdate.goals ? Object.keys(partialUpdate.goals) : [],
+          preferencesKeys: partialUpdate.preferences ? Object.keys(partialUpdate.preferences) : []
+        })
         await userProfileOperations.updateUserProfile(partialUpdate)
-        logger.info('Auto-saved onboarding progress to Firebase')
+        logger.info('Auto-saved onboarding progress to Firebase', { step: stepNumber })
       }
     } catch (error) {
-      logger.error('Error auto-saving onboarding', error as Error)
+      logger.error('Error auto-saving onboarding', error as Error, {
+        step: stepToSave !== undefined ? stepToSave : currentStep,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : 'Unknown'
+      })
       toast.error('Failed to save progress. Please check your connection.')
       // Don't block user progression on save failure
     }

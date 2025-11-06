@@ -92,13 +92,19 @@ const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) 
       method: options.method || 'GET',
       status: response.status,
       statusText: response.statusText,
-      errorData,
+      errorData: JSON.stringify(errorData),
       ...(parseError && { parseError }),
     }
 
+    // Extract detailed error message
     const errorMessage = errorData.details || errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`
 
-    logger.error('[FirebaseOps] API Error', new Error(errorMessage), errorContext)
+    // For validation errors, include field details
+    const fullErrorMessage = errorData.details && Array.isArray(errorData.details)
+      ? `${errorMessage} - ${JSON.stringify(errorData.details)}`
+      : errorMessage
+
+    logger.error('[FirebaseOps] API Error', new Error(fullErrorMessage), errorContext)
 
     // Include detailed error message if available
     throw new Error(errorMessage)
