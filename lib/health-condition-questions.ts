@@ -10,7 +10,7 @@
 export interface HealthConditionQuestion {
   id: string
   question: string
-  type: 'select' | 'text' | 'number' | 'date' | 'multiselect'
+  type: 'select' | 'text' | 'number' | 'date' | 'multiselect' | 'medication-scanner'
   options?: Array<{ value: string; label: string }>
   required: boolean
   tooltip?: string // "Why WLPL asks this"
@@ -207,6 +207,13 @@ export const type1DiabetesQuestionnaire: HealthConditionQuestionnaire = {
   description: 'WLPL helps you count carbs, balance meals, and avoid hypo/hyperglycemia.',
   questions: [
     {
+      id: 't1d_medications',
+      question: 'What insulin(s) do you use?',
+      type: 'medication-scanner',
+      required: false,
+      tooltip: 'Scan your insulin vials/pens (Humalog, Novolog, Lantus, Basaglar, etc.) to track your regimen. WLPL needs to know your insulin types to ensure safe carb recommendations.'
+    },
+    {
       id: 't1d_insulin_regimen',
       question: 'What insulin regimen do you use?',
       type: 'select',
@@ -277,18 +284,9 @@ export const type2DiabetesQuestionnaire: HealthConditionQuestionnaire = {
     {
       id: 't2d_medications',
       question: 'What diabetes medications do you take?',
-      type: 'multiselect',
-      options: [
-        { value: 'metformin', label: 'Metformin' },
-        { value: 'insulin', label: 'Insulin' },
-        { value: 'glp1', label: 'GLP-1 agonist (Ozempic, Trulicity, etc.)' },
-        { value: 'sglt2', label: 'SGLT2 inhibitor (Jardiance, Farxiga, etc.)' },
-        { value: 'sulfonylurea', label: 'Sulfonylurea (Glipizide, Glyburide)' },
-        { value: 'none', label: 'No medications (diet-controlled)' },
-        { value: 'other', label: 'Other' }
-      ],
-      required: true,
-      tooltip: 'Insulin/sulfonylureas cause hypos if carbs are too low. GLP-1s reduce appetite. WLPL adjusts meal sizes accordingly.'
+      type: 'medication-scanner',
+      required: false,
+      tooltip: 'Scan your prescription labels for accurate medication tracking. Insulin/sulfonylureas cause hypos if carbs are too low. GLP-1s reduce appetite. WLPL adjusts meal sizes accordingly.'
     },
     {
       id: 't2d_a1c',

@@ -1561,8 +1561,24 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
     }
     setConditionResponses(updatedResponses)
 
-    // Also save to onboarding data
-    updateData({ conditionDetails: updatedResponses })
+    // Extract and consolidate medications from all condition responses
+    const allMedications: UserProfile['medications'] = []
+    Object.entries(updatedResponses).forEach(([condition, conditionData]) => {
+      // Look for medication-scanner question responses
+      Object.entries(conditionData).forEach(([questionId, value]) => {
+        // Check if this is a medication array
+        if (Array.isArray(value) && value.length > 0 && value[0]?.name) {
+          // This is a medications array from a medication-scanner question
+          allMedications.push(...value)
+        }
+      })
+    })
+
+    // Save both condition details and consolidated medications to onboarding data
+    updateData({
+      conditionDetails: updatedResponses,
+      medications: allMedications
+    })
 
     toast.success(`WLPL now understands your ${selectedCondition}`)
   }

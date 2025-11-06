@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { XMarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
 import type { HealthConditionQuestionnaire, HealthConditionQuestion } from '@/lib/health-condition-questions'
+import MedicationList from '@/components/health/MedicationList'
 
 interface HealthConditionModalProps {
   questionnaire: HealthConditionQuestionnaire
@@ -163,6 +164,16 @@ export default function HealthConditionModal({
             value={responses[question.id] || ''}
             onChange={(e) => handleInputChange(question.id, e.target.value)}
             className={`form-input w-full ${hasError ? 'border-error' : ''}`}
+          />
+        )}
+
+        {question.type === 'medication-scanner' && (
+          <MedicationList
+            medications={responses[question.id] || []}
+            onChange={(medications) => handleInputChange(question.id, medications)}
+            prescribedFor={questionnaire.conditionName}
+            label=""
+            description={question.tooltip}
           />
         )}
 
