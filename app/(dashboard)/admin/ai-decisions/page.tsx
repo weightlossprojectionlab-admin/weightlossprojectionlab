@@ -267,7 +267,7 @@ export default function AIDecisionsPage() {
       <div className={`bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-6 transition-opacity ${loading ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
         <div className="flex items-center gap-2 mb-4">
           <FunnelIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Filters</h3>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Filters</h2>
           {loading && (
             <div className="ml-auto flex items-center gap-2 text-sm text-primary">
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
@@ -384,7 +384,7 @@ export default function AIDecisionsPage() {
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Decision Details</h3>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Decision Details</h2>
                 <button
                   onClick={() => {
                     setSelectedDecision(null)
@@ -504,7 +504,7 @@ export default function AIDecisionsPage() {
 
       {/* Info */}
       <div className="mt-8 bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-accent-dark mb-2">AI Decision Review Guidelines</h3>
+        <h2 className="text-lg font-semibold text-accent-dark mb-2">AI Decision Review Guidelines</h2>
         <ul className="space-y-2 text-sm text-accent-dark">
           <li>• Review low-confidence decisions (typically &lt; 80%) to ensure accuracy</li>
           <li>• Approve decisions that align with policy and appear correct</li>

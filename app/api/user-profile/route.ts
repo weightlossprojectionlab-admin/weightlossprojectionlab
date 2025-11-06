@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { UpdateUserProfileRequestSchema } from '@/lib/validations/user-profile'
+import { z } from 'zod'
 
 interface UserProfile {
   email: string
@@ -118,6 +120,9 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
+
+    // Basic validation for required fields (email and name)
+    // Note: Full profile validation happens on update
     const { email, name, preferences, goals } = body
 
     // Validate required fields
@@ -233,9 +238,13 @@ export async function PUT(request: NextRequest) {
     const decodedToken = await verifyIdToken(idToken)
     const userId = decodedToken.uid
 
-    // Parse request body
+    // Parse and validate request body
     const body = await request.json()
-    const updateData = { ...body }
+
+    // Validate with Zod
+    const validatedData = UpdateUserProfileRequestSchema.parse(body)
+
+    const updateData: any = { ...validatedData }
 
     // Convert date strings to Date objects for goals
     if (updateData.goals?.targetDate) {
@@ -270,6 +279,20 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error: any) {
+    // Handle Zod validation errors
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.issues.map((e: z.ZodIssue) => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        },
+        { status: 400 }
+      )
+    }
+
     logger.error('Error updating user profile', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       {

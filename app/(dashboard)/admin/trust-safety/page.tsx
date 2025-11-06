@@ -189,7 +189,7 @@ export default function TrustSafetyAdminPage() {
       {/* Info Box */}
       {!selectedCase && (
         <div className="mt-8 bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-accent-dark mb-2">Trust & Safety Guidelines</h3>
+          <h2 className="text-lg font-semibold text-accent-dark mb-2">Trust & Safety Guidelines</h2>
           <ul className="space-y-2 text-sm text-accent-dark">
             <li>• High-risk cases (score ≥70) require immediate attention</li>
             <li>• Cases with ≥80% confidence can be auto-resolved per PRD policy</li>

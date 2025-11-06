@@ -1,4 +1,117 @@
 import { z } from 'zod'
+import { NextResponse } from 'next/server'
+
+// ============================================
+// VALIDATION HELPER TYPES
+// ============================================
+
+/**
+ * Validation error response interface
+ */
+export interface ValidationError {
+  field: string
+  message: string
+}
+
+/**
+ * Validation result type
+ */
+export type ValidationResult<T> =
+  | { success: true; data: T }
+  | { success: false; errors: ValidationError[] }
+
+// ============================================
+// VALIDATION HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Validate request body with a Zod schema
+ * Returns typed data or validation errors
+ */
+export function validateRequestBody<T>(
+  schema: z.ZodSchema<T>,
+  body: unknown
+): ValidationResult<T> {
+  try {
+    const data = schema.parse(body)
+    return { success: true, data }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errors: ValidationError[] = error.issues.map((e: z.ZodIssue) => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
+      return { success: false, errors }
+    }
+    // Unexpected error
+    throw error
+  }
+}
+
+/**
+ * Validate query parameters with a Zod schema
+ * Returns typed data or validation errors
+ */
+export function validateQueryParams<T>(
+  schema: z.ZodSchema<T>,
+  params: Record<string, string | null>
+): ValidationResult<T> {
+  try {
+    const data = schema.parse(params)
+    return { success: true, data }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errors: ValidationError[] = error.issues.map((e: z.ZodIssue) => ({
+        field: e.path.join('.'),
+        message: e.message
+      }))
+      return { success: false, errors }
+    }
+    // Unexpected error
+    throw error
+  }
+}
+
+/**
+ * Create a validation error response
+ * Returns a NextResponse with validation errors
+ */
+export function validationErrorResponse(
+  errors: ValidationError[],
+  message: string = 'Validation failed'
+): NextResponse {
+  return NextResponse.json(
+    {
+      error: message,
+      details: errors
+    },
+    { status: 400 }
+  )
+}
+
+/**
+ * Handle Zod validation errors in catch blocks
+ * Returns appropriate error response or re-throws non-validation errors
+ */
+export function handleValidationError(
+  error: unknown,
+  fallbackMessage: string = 'An error occurred'
+): NextResponse | never {
+  if (error instanceof z.ZodError) {
+    const errors: ValidationError[] = error.issues.map((e: z.ZodIssue) => ({
+      field: e.path.join('.'),
+      message: e.message
+    }))
+    return validationErrorResponse(errors)
+  }
+
+  // Not a validation error, re-throw
+  throw error
+}
+
+// ============================================
+// SHARED VALIDATION SCHEMAS
+// ============================================
 
 // Shared
 export const MacroSchema = z.object({

@@ -142,7 +142,7 @@ export default function ProductDetailPage() {
     return (
       <div className="p-8 max-w-7xl mx-auto">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-          <h3 className="text-red-900 dark:text-red-200 font-semibold mb-2">Error Loading Product</h3>
+          <h2 className="text-red-900 dark:text-red-200 font-semibold mb-2">Error Loading Product</h2>
           <p className="text-red-700 dark:text-red-300">{error || 'Product not found'}</p>
           <Link href="/admin/products" className="text-primary hover:underline mt-4 inline-block">
             ← Back to Products

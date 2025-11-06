@@ -11,3 +11,6 @@ export * from './weight-logs'
 
 // User profiles and goals
 export * from './user-profile'
+
+// Health vitals
+export * from './health-vitals'

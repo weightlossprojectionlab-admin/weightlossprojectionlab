@@ -19,8 +19,18 @@ import {
 import type { AIAnalysis, UserPreferences, UserGoals, UserProfile, CookingSession, QueuedRecipe } from '@/types'
 import { JsonObject, getErrorMessage } from '@/types/common'
 
+// Token cache to reduce getIdToken() calls (tokens expire after 1 hour, we cache for 55 min)
+let cachedToken: string | null = null
+let tokenExpiry: number = 0
+
 // Helper function to get auth token for API calls (with retry for race conditions)
 const getAuthToken = async () => {
+  // Return cached token if still valid
+  if (cachedToken && Date.now() < tokenExpiry) {
+    logger.debug('[FirebaseOps] Using cached auth token')
+    return cachedToken
+  }
+
   let user = auth.currentUser
 
   if (!user) {
@@ -35,8 +45,14 @@ const getAuthToken = async () => {
     }
   }
 
-  logger.debug('[FirebaseOps] Getting auth token for user', { userId: user.uid })
-  return await user.getIdToken()
+  logger.debug('[FirebaseOps] Getting fresh auth token for user', { userId: user.uid })
+  const token = await user.getIdToken()
+
+  // Cache token for 55 minutes (tokens are valid for 60 minutes)
+  cachedToken = token
+  tokenExpiry = Date.now() + (55 * 60 * 1000)
+
+  return token
 }
 
 // Helper function to make authenticated API calls

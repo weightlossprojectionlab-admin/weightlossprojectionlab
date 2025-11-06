@@ -569,7 +569,7 @@ export default function AdminUsersPage() {
       {!loading && users.length === 0 && !error && (
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-12 text-center">
           <UserCircleIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Users Found</h3>
+          <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Users Found</p>
           <p className="text-gray-600 dark:text-gray-400">
             {searchQuery ? 'Try a different search query' : 'No users registered yet'}
           </p>
@@ -578,7 +578,7 @@ export default function AdminUsersPage() {
 
       {/* Info */}
       <div className="mt-8 bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-accent-dark mb-2">User Management Guidelines</h3>
+        <h2 className="text-lg font-semibold text-accent-dark mb-2">User Management Guidelines</h2>
         <ul className="space-y-2 text-sm text-accent-dark">
           <li>• Search by email or UID to find specific users</li>
           <li>• Suspend users to temporarily disable their account access</li>

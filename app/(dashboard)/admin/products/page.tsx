@@ -180,7 +180,7 @@ export default function AdminProductsPage() {
       {/* Filters */}
       <div className={`bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-6 transition-opacity ${loading ? 'opacity-60' : 'opacity-100'}`}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Filters</h3>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Filters</h2>
           {loading && (
             <div className="flex items-center gap-2 text-sm text-primary">
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
@@ -244,7 +244,7 @@ export default function AdminProductsPage() {
       {/* Error State */}
       {error && !loading && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-          <h3 className="text-red-900 dark:text-red-200 font-semibold mb-2">Error Loading Products</h3>
+          <h2 className="text-red-900 dark:text-red-200 font-semibold mb-2">Error Loading Products</h2>
           <p className="text-red-700 dark:text-red-300">{error}</p>
         </div>
       )}
@@ -330,7 +330,7 @@ export default function AdminProductsPage() {
       {!loading && !error && products.length === 0 && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
           <ShoppingCartIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Products Found</h3>
+          <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Products Found</p>
           <p className="text-gray-600 dark:text-gray-400">
             {searchQuery || selectedCategory !== 'all'
               ? 'Try adjusting your filters'

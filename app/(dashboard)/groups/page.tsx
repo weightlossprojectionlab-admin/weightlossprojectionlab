@@ -115,7 +115,7 @@ export default function GroupsPage() {
 
       {/* Info Box */}
       <div className="mt-8 bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-accent-dark mb-2">About Groups</h3>
+        <h2 className="text-lg font-semibold text-accent-dark mb-2">About Groups</h2>
         <ul className="space-y-2 text-sm text-accent-dark">
           <li>• Join groups to connect with others on similar weight loss journeys</li>
           <li>• Complete group missions to earn bonus XP</li>

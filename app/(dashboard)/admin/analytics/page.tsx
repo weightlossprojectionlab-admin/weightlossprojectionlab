@@ -306,7 +306,7 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
           Back to Platform Analytics
         </Link>
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-          <h3 className="text-red-900 dark:text-red-200 font-semibold mb-2">Error Loading User Analytics</h3>
+          <h2 className="text-red-900 dark:text-red-200 font-semibold mb-2">Error Loading User Analytics</h2>
           <p className="text-red-700 dark:text-red-300">{error || 'Unknown error'}</p>
         </div>
       </div>
@@ -397,13 +397,13 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* User Preferences */}
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
             <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             Preferences
-          </h3>
+          </h2>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Units:</span>
@@ -444,12 +444,12 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
 
         {/* User Profile */}
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
             <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
             Profile
-          </h3>
+          </h2>
           <div className="space-y-3 text-sm">
             {data.profile.age && (
               <div className="flex justify-between">
@@ -506,12 +506,12 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
 
         {/* User Goals */}
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
             <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             Goals
-          </h3>
+          </h2>
           <div className="space-y-3 text-sm">
             {data.goals.primaryGoal && (
               <div className="flex justify-between">
@@ -577,12 +577,12 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
 
         {/* Onboarding Status */}
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
             <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             Onboarding
-          </h3>
+          </h2>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Status:</span>
@@ -612,12 +612,12 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
         {/* Lifestyle Factors */}
         {data.profile.lifestyle && (
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Lifestyle
-            </h3>
+            </h2>
             <div className="space-y-3 text-sm">
               {data.profile.lifestyle.smoking && (
                 <div className="flex justify-between">
@@ -681,12 +681,12 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
         {/* Body Measurements */}
         {data.profile.bodyMeasurements && Object.keys(data.profile.bodyMeasurements).length > 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
               </svg>
               Body Measurements
-            </h3>
+            </h2>
             <div className="space-y-3 text-sm">
               {data.profile.bodyMeasurements.waist && (
                 <div className="flex justify-between">
@@ -735,10 +735,10 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
         {/* Health Vitals */}
         {data.healthVitals && (
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <HeartIcon className="h-5 w-5 text-red-500" />
               Health Vitals
-            </h3>
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Blood Sugar */}
@@ -884,10 +884,10 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
         {/* AI Health Analysis */}
         {data.aiHealthProfile && (
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <SparklesIcon className="h-5 w-5 text-purple-500" />
               AI Health Analysis
-            </h3>
+            </h2>
 
             <div className="space-y-4">
               {/* Profile Status */}
@@ -1006,10 +1006,10 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
       {/* Weight Stats */}
       {data.summary.currentWeight && (
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
             <ScaleIcon className="h-5 w-5 text-primary" />
             Weight Progress
-          </h3>
+          </h2>
           <div className="flex gap-8 items-center">
             <div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Current Weight</div>
@@ -1119,7 +1119,7 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
       {data.charts.weightLogs.length === 0 && data.charts.dailyCalories.length === 0 && data.charts.stepLogs.length === 0 && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
           <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Data Available</h3>
+          <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Data Available</p>
           <p className="text-gray-600 dark:text-gray-400">
             This user has no activity data in the selected date range.
           </p>
@@ -1398,7 +1398,7 @@ function PlatformAnalytics() {
     return (
       <div className="p-8">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-          <h3 className="text-red-900 dark:text-red-200 font-semibold mb-2">Error Loading Analytics</h3>
+          <h2 className="text-red-900 dark:text-red-200 font-semibold mb-2">Error Loading Analytics</h2>
           <p className="text-red-700 dark:text-red-300">{error || 'Unknown error'}</p>
         </div>
       </div>

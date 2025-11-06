@@ -13,6 +13,8 @@ import { adminAuth, adminDb as db } from '@/lib/firebase-admin'
 import { callGeminiHealthProfile, validateGeminiConfig } from '@/lib/gemini'
 import { logger } from '@/lib/logger'
 import type { AIHealthProfile } from '@/types'
+import { GenerateHealthProfileRequestSchema } from '@/lib/validations/health-vitals'
+import { z } from 'zod'
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,23 +68,30 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data()
     const profile = userData?.profile || {}
 
-    // 4. Call Gemini to generate health profile
-    logger.info('[Health Profile] Generating profile', {
-      uid: userId,
-      conditions: profile.healthConditions
-    })
-
-    const aiResult = await callGeminiHealthProfile({
+    // 4. Validate request data with Zod
+    const requestData = {
       healthConditions: profile.healthConditions,
       age: profile.age,
       gender: profile.gender,
       currentWeight: profile.currentWeight,
       height: profile.height,
       activityLevel: profile.activityLevel,
+    }
+
+    const validatedRequest = GenerateHealthProfileRequestSchema.parse(requestData)
+
+    // 5. Call Gemini to generate health profile
+    logger.info('[Health Profile] Generating profile', {
+      uid: userId,
+      conditions: validatedRequest.healthConditions
+    })
+
+    const aiResult = await callGeminiHealthProfile({
+      ...validatedRequest,
       units: userData?.preferences?.units || 'imperial'
     })
 
-    // 5. Determine review status based on confidence
+    // 6. Determine review status based on confidence
     const reviewStatus = aiResult.confidence >= 80 ? 'approved' : 'unreviewed'
 
     const healthProfile: AIHealthProfile = {
@@ -91,7 +100,7 @@ export async function POST(request: NextRequest) {
       generatedAt: new Date().toISOString()
     }
 
-    // 6. Save to Firestore (aiHealthProfile subcollection)
+    // 7. Save to Firestore (aiHealthProfile subcollection)
     await db
       .collection('users')
       .doc(userId)
@@ -105,7 +114,7 @@ export async function POST(request: NextRequest) {
       reviewStatus
     })
 
-    // 7. If low confidence, create ai-decision for admin review
+    // 8. If low confidence, create ai-decision for admin review
     if (reviewStatus === 'unreviewed') {
       await db.collection('ai-decisions').add({
         type: 'health-profile',
@@ -122,7 +131,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 8. Return success response
+    // 9. Return success response
     return NextResponse.json({
       ok: true,
       status: reviewStatus,
@@ -136,6 +145,21 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
+    // Handle Zod validation errors
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          message: 'Please ensure your health profile is complete with required fields',
+          details: error.issues.map((e: z.ZodIssue) => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        },
+        { status: 400 }
+      )
+    }
+
     logger.error('[Health Profile] Generation failed', error as Error)
 
     return NextResponse.json(

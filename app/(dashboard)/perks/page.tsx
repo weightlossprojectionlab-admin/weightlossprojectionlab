@@ -175,7 +175,7 @@ export default function PerksPage() {
       ) : (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-12 text-center">
           <div className="text-gray-600 dark:text-gray-400 text-6xl mb-4">🎁</div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">No Perks Available</h3>
+          <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">No Perks Available</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {isEligible
               ? 'Check back soon for new perks from our sponsors!'
@@ -186,7 +186,7 @@ export default function PerksPage() {
 
       {/* Info Box */}
       <div className="mt-8 bg-purple-50 border border-purple-200 dark:bg-purple-900/20 dark:border-purple-800 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-2">About Sponsor Perks</h3>
+        <h2 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-2">About Sponsor Perks</h2>
         <ul className="space-y-2 text-sm text-purple-800 dark:text-purple-200">
           <li>• Earn {XP_THRESHOLD.toLocaleString()} XP to unlock sponsor perks</li>
           <li>• Perks include discounts, free trials, and exclusive offers from our partners</li>

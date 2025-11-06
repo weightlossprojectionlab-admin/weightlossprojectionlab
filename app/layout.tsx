@@ -28,8 +28,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5, // Allow zooming up to 5x for accessibility
+  userScalable: true, // Enable user scaling for accessibility
   themeColor: '#4F46E5',
   viewportFit: 'cover', // Enable safe area insets for notched devices
 }

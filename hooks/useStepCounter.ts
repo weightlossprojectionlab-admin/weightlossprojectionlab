@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useAuth } from '@/hooks/useAuth'
+import { useLazyAuth } from '@/hooks/useLazyAuth'
 import { stepLogOperations } from '@/lib/firebase-operations'
 import { logger } from '@/lib/logger'
 import {
@@ -79,7 +79,7 @@ interface UseStepCounterReturn {
 export function useStepCounter(
   config?: Partial<StepDetectionConfig>
 ): UseStepCounterReturn {
-  const { user } = useAuth()
+  const { user } = useLazyAuth()
 
   // State
   const [state, setState] = useState<StepCounterState>(INITIAL_STATE)

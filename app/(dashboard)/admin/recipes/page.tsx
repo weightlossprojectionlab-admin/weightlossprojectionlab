@@ -231,9 +231,9 @@ export default function RecipeModerationPage() {
       ) : recipes.length === 0 ? (
         <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-lg shadow">
           <ClockIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
             No {filter} recipes
-          </h3>
+          </h2>
           <p className="text-gray-600 dark:text-gray-400">
             {filter === 'pending'
               ? 'All recipes have been reviewed. Check back later for new submissions.'
