@@ -54,40 +54,14 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
     // Set camera support flag (for UI purposes only, don't block)
     setCameraSupported(isCameraSupported())
 
-    // Check camera permission and start scanner
-    checkCameraPermission()
+    // Start scanner directly - getUserMedia will prompt for permission
+    // iOS Safari doesn't support navigator.permissions.query for camera
+    startScanning()
 
     return () => {
       stopScanning()
     }
   }, [isOpen])
-
-  /**
-   * Check camera permission status
-   */
-  const checkCameraPermission = async () => {
-    try {
-      // Try to query permission status
-      if (navigator.permissions && navigator.permissions.query) {
-        const result = await navigator.permissions.query({ name: 'camera' as PermissionName })
-        setPermissionState(result.state as any)
-
-        if (result.state === 'granted') {
-          startScanning()
-        } else if (result.state === 'denied') {
-          showPermissionError()
-        }
-        // If 'prompt', wait for user to click request button
-      } else {
-        // Permissions API not supported, try to start scanning directly
-        startScanning()
-      }
-    } catch (err) {
-      // If permission check fails, try to start scanning anyway
-      logger.warn('Could not check camera permission:', { error: err instanceof Error ? err.message : String(err) })
-      startScanning()
-    }
-  }
 
   /**
    * Show platform-specific permission error
@@ -97,11 +71,11 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
     let errorMessage = ''
 
     if (platform === 'ios') {
-      errorMessage = 'Camera access denied. Go to Settings > Safari > Camera and select "Allow". Then refresh this page.'
+      errorMessage = 'Camera access denied. In iOS Settings, go to Safari > Camera and select "Allow". Then refresh this page.'
     } else if (platform === 'android') {
-      errorMessage = 'Camera access denied. Tap the lock icon in the address bar, then tap "Permissions" and enable Camera.'
+      errorMessage = 'Camera access denied. In Chrome, tap the lock icon in the address bar > Permissions > Camera > Allow.'
     } else {
-      errorMessage = 'Camera access denied. Click the camera icon in your browser\'s address bar to enable access.'
+      errorMessage = 'Camera access denied. Click the camera icon in your browser\'s address bar to enable camera access.'
     }
 
     setError(errorMessage)
@@ -248,12 +222,6 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
     onClose()
   }
 
-  /**
-   * Request camera permission
-   */
-  const handleRequestPermission = () => {
-    startScanning()
-  }
 
   // Get context-specific messaging
   const getContextTitle = () => {
@@ -314,32 +282,13 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
           {getContextInstructions()}. The scanner will automatically detect and read it.
         </p>
 
-        {/* Scanner Container or Permission Request */}
+        {/* Scanner Container */}
         <div className="relative mb-4">
-          {/* Request Permission Button */}
-          {!isScanning && permissionState === 'prompt' && cameraSupported && !error && !showManualEntry && (
-            <div className="text-center py-12 bg-gray-100 dark:bg-gray-800 rounded-lg">
-              <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Camera Permission Required</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">We need access to your camera to scan barcodes</p>
-              <button
-                type="button"
-                onClick={handleRequestPermission}
-                className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-              >
-                Allow Camera Access
-              </button>
-            </div>
-          )}
-
           {/* Scanner View - Always render the div so html5-qrcode can find it */}
           <div
             id="barcode-reader"
             className={`rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-700 ${
-              showManualEntry || (!isScanning && permissionState === 'prompt') ? 'hidden' : ''
+              showManualEntry ? 'hidden' : ''
             }`}
           ></div>
 

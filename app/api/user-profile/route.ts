@@ -246,9 +246,23 @@ export async function PUT(request: NextRequest) {
 
     const updateData: any = { ...validatedData }
 
-    // Convert date strings to Date objects for goals
+    // Convert date strings to Date objects
+    // Handle nested structure from onboarding { profile: {...}, goals: {...}, preferences: {...} }
     if (updateData.goals?.targetDate) {
       updateData.goals.targetDate = new Date(updateData.goals.targetDate)
+    }
+    if (updateData.profile?.onboardingCompletedAt) {
+      updateData.profile.onboardingCompletedAt = new Date(updateData.profile.onboardingCompletedAt)
+    }
+    if (updateData.profile?.birthDate) {
+      updateData.profile.birthDate = new Date(updateData.profile.birthDate)
+    }
+    // Handle flat structure (legacy) - birthDate at top level
+    if (updateData.birthDate && !updateData.profile) {
+      updateData.birthDate = new Date(updateData.birthDate)
+    }
+    if (updateData.onboardingCompletedAt && !updateData.profile) {
+      updateData.onboardingCompletedAt = new Date(updateData.onboardingCompletedAt)
     }
 
     // Always update lastActiveAt

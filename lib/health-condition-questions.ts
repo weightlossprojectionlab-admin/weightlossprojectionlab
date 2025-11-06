@@ -207,13 +207,6 @@ export const type1DiabetesQuestionnaire: HealthConditionQuestionnaire = {
   description: 'WLPL helps you count carbs, balance meals, and avoid hypo/hyperglycemia.',
   questions: [
     {
-      id: 't1d_medications',
-      question: 'What insulin(s) do you use?',
-      type: 'medication-scanner',
-      required: false,
-      tooltip: 'Scan your insulin vials/pens (Humalog, Novolog, Lantus, Basaglar, etc.) to track your regimen. WLPL needs to know your insulin types to ensure safe carb recommendations.'
-    },
-    {
       id: 't1d_insulin_regimen',
       question: 'What insulin regimen do you use?',
       type: 'select',
@@ -281,13 +274,6 @@ export const type2DiabetesQuestionnaire: HealthConditionQuestionnaire = {
   conditionKey: 'type-2-diabetes',
   description: 'WLPL helps you manage blood sugar with low-glycemic meals and carb control.',
   questions: [
-    {
-      id: 't2d_medications',
-      question: 'What diabetes medications do you take?',
-      type: 'medication-scanner',
-      required: false,
-      tooltip: 'Scan your prescription labels for accurate medication tracking. Insulin/sulfonylureas cause hypos if carbs are too low. GLP-1s reduce appetite. WLPL adjusts meal sizes accordingly.'
-    },
     {
       id: 't2d_a1c',
       question: 'What is your most recent A1C?',

@@ -15,7 +15,7 @@ export interface MedicationInfo {
   strength: string // e.g., "500 mg", "10 mg"
   dosageForm: string // e.g., "tablet", "capsule", "gel", "injection"
   rxcui?: string // RxNorm Concept Unique Identifier
-  ndc: string // National Drug Code
+  ndc?: string // National Drug Code (optional - may not always be scanned)
   manufacturer?: string
   drugClass?: string // Therapeutic class
 }

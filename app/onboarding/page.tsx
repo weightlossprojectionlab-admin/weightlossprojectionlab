@@ -10,6 +10,8 @@ import { auth } from '@/lib/firebase'
 import { userProfileOperations, weightLogOperations } from '@/lib/firebase-operations'
 import HealthConditionModal from '@/components/onboarding/HealthConditionModal'
 import { getQuestionnaireForCondition, hasDetailedQuestionnaire } from '@/lib/health-condition-questions'
+import MedicationList from '@/components/health/MedicationList'
+import { classifyMedicationConditions, getSuggestedConditions, normalizeConditionName } from '@/lib/medication-classifier'
 import {
   calculateBMR,
   calculateTDEE,
@@ -1498,6 +1500,10 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
   const [selectedCondition, setSelectedCondition] = useState<string | null>(null)
   const [conditionResponses, setConditionResponses] = useState<Record<string, Record<string, any>>>({})
 
+  // Medication classification state
+  const [isClassifyingMeds, setIsClassifyingMeds] = useState(false)
+  const [suggestedConditions, setSuggestedConditions] = useState<Array<{ condition: string; confidence: number; medications: string[] }>>([])
+
   // Calculate BMI and health risk profile
   const bmiData = data.currentWeight && data.height && data.units
     ? calculateBMI({ weight: data.currentWeight, height: data.height, units: data.units })
@@ -1513,6 +1519,49 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
       updateData({ healthConditions: healthRisk.likelyConditions })
     }
   }, [healthRisk?.bmiCategory]) // Only run when BMI category is calculated
+
+  // Classify medications and suggest conditions when medications change
+  useEffect(() => {
+    const classifyMeds = async () => {
+      if (data.medications && data.medications.length > 0 && !isClassifyingMeds) {
+        setIsClassifyingMeds(true)
+        try {
+          const classifications = await classifyMedicationConditions(data.medications)
+          const suggested = getSuggestedConditions(classifications)
+
+          // Normalize condition names to match app's condition list
+          const normalizedSuggestions = suggested.map(s => ({
+            ...s,
+            condition: normalizeConditionName(s.condition)
+          }))
+
+          setSuggestedConditions(normalizedSuggestions)
+
+          // Auto-select high-confidence conditions (>= 80)
+          const highConfidenceConditions = normalizedSuggestions
+            .filter(s => s.confidence >= 80)
+            .map(s => s.condition)
+
+          if (highConfidenceConditions.length > 0) {
+            // Merge with existing conditions (don't override user selections)
+            const mergedConditions = Array.from(new Set([
+              ...(data.healthConditions || []),
+              ...highConfidenceConditions
+            ]))
+            updateData({ healthConditions: mergedConditions })
+
+            toast.success(`Based on your medications, WLPL identified ${highConfidenceConditions.length} condition(s)`)
+          }
+        } catch (error) {
+          logger.error('[Onboarding] Medication classification failed', error as Error)
+        } finally {
+          setIsClassifyingMeds(false)
+        }
+      }
+    }
+
+    classifyMeds()
+  }, [data.medications?.length]) // Re-run when medication count changes
 
   const toggleDietaryPref = (pref: string) => {
     const current = data.dietaryPreferences || []
@@ -1745,6 +1794,49 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
             stimulants artificially suppress it, affecting tracking accuracy.
           </p>
         </div>
+      </div>
+
+      {/* Medications Scanner - Universal (Before Conditions) */}
+      <div className="space-y-4">
+        <div className="bg-purple-100 dark:bg-purple-900/20 border-2 border-primary rounded-lg p-4">
+          <h3 className="font-medium text-primary-dark dark:text-primary-light mb-1">📷 Scan Your Medications</h3>
+          <p className="text-sm text-primary-dark dark:text-primary-light">
+            Scan all your prescription bottles - WLPL will identify what conditions they treat. This helps caregivers and family members who may not know medication details.
+          </p>
+        </div>
+
+        <MedicationList
+          medications={data.medications || []}
+          onChange={(medications) => updateData({ medications })}
+          label="Your Medications"
+          description="Scan prescription labels with NDC barcode or OCR. WLPL will auto-suggest health conditions based on your medications."
+        />
+
+        {/* Show suggested conditions from medications */}
+        {suggestedConditions.length > 0 && (
+          <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-400 dark:border-green-600 rounded-lg p-4">
+            <h4 className="font-semibold text-green-900 dark:text-green-200 mb-2">
+              ✓ WLPL identified conditions from your medications:
+            </h4>
+            <ul className="space-y-1">
+              {suggestedConditions.map((suggestion, index) => (
+                <li key={index} className="text-sm text-green-800 dark:text-green-300">
+                  • <strong>{suggestion.condition}</strong> (from {suggestion.medications.join(', ')}) - {suggestion.confidence}% confidence
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-green-700 dark:text-green-400 mt-2">
+              These conditions have been automatically selected below. You can modify them if needed.
+            </p>
+          </div>
+        )}
+
+        {isClassifyingMeds && (
+          <div className="text-center py-4">
+            <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Analyzing medications...</p>
+          </div>
+        )}
       </div>
 
       {/* Health Conditions - BMI-Suggested + Other Conditions */}

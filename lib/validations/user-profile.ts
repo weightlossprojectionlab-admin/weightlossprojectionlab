@@ -104,8 +104,14 @@ export type UserGoals = z.infer<typeof UserGoalsSchema>
 // UPDATE PROFILE REQUEST SCHEMA
 // ============================================
 
+// Support both flat structure (legacy) and nested structure (from onboarding)
+// Nested: { profile: {...}, goals: {...}, preferences: {...} }
+// Flat: { birthDate: ..., age: ..., ... }
 export const UpdateUserProfileRequestSchema = UserProfileSchema.partial().extend({
   preferences: UserPreferencesSchema.partial().optional(),
+  // Support nested structure from onboarding
+  profile: UserProfileSchema.partial().optional(),
+  goals: UserGoalsSchema.partial().optional(),
 })
 
 export type UpdateUserProfileRequest = z.infer<typeof UpdateUserProfileRequestSchema>
