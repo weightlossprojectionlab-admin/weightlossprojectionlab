@@ -68,20 +68,36 @@ const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) 
     },
   })
 
+  // AGGRESSIVE DEBUG: Log response status IMMEDIATELY
+  console.log('[FirebaseOps] Response received:', {
+    url,
+    status: response?.status,
+    statusText: response?.statusText,
+    ok: response?.ok,
+    method: options.method || 'GET'
+  })
+
   if (!response.ok) {
+    // AGGRESSIVE DEBUG: Log error path entry
+    console.log('[FirebaseOps] Response not OK, entering error handler')
+
     // Try to parse error response
     let errorData: any = { error: 'Unknown error' }
     let parseError: string | undefined
 
     try {
       errorData = await response.json()
+      console.log('[FirebaseOps] Parsed error JSON:', errorData)
     } catch (e) {
       parseError = getErrorMessage(e)
+      console.log('[FirebaseOps] Failed to parse JSON, error:', parseError)
       // Try to get response text as fallback
       try {
         const text = await response.text()
+        console.log('[FirebaseOps] Response text fallback:', text)
         if (text) errorData = { error: text }
       } catch {
+        console.log('[FirebaseOps] Failed to get text too')
         // Keep default error
       }
     }
