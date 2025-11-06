@@ -642,7 +642,8 @@ function OnboardingContent() {
       if (data.healthConditions && data.healthConditions.length > 0) {
         try {
           logger.info('Generating AI health profile from onboarding data', {
-            conditions: data.healthConditions
+            conditions: data.healthConditions,
+            conditionCount: data.healthConditions.length
           })
 
           // Get Firebase auth token for API call
@@ -650,6 +651,10 @@ function OnboardingContent() {
           if (!token) {
             throw new Error('No auth token available')
           }
+
+          // Small delay to ensure Firestore write is committed
+          // (The API reads from Firestore, not from request body)
+          await new Promise(resolve => setTimeout(resolve, 500))
 
           const response = await fetch('/api/ai/health-profile/generate', {
             method: 'POST',
@@ -674,14 +679,28 @@ function OnboardingContent() {
               toast('Health profile pending admin review', { icon: '⏳' })
             }
           } else {
-            throw new Error('Failed to generate health profile')
+            // Parse error response for detailed logging
+            let errorDetails: any = { status: response.status, statusText: response.statusText }
+            try {
+              const errorBody = await response.json()
+              errorDetails = { ...errorDetails, ...errorBody }
+            } catch {
+              // If JSON parsing fails, just use status info
+            }
+
+            throw new Error(`Health profile generation failed: ${response.status} - ${errorDetails.error || errorDetails.message || response.statusText}`)
           }
         } catch (healthProfileError) {
           // Don't block onboarding completion if health profile generation fails
           logger.warn('Failed to generate AI health profile', {
-            error: healthProfileError instanceof Error ? healthProfileError.message : String(healthProfileError)
+            error: healthProfileError instanceof Error ? healthProfileError.message : String(healthProfileError),
+            errorName: healthProfileError instanceof Error ? healthProfileError.name : 'Unknown',
+            healthConditionsCount: data.healthConditions?.length || 0,
+            hasConditionDetails: !!data.conditionDetails,
+            medicationCount: data.medications?.length || 0
           })
           // Profile can be generated later by admin or user
+          // This is not a critical failure - user can still complete onboarding
         }
       }
 
