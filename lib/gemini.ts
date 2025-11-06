@@ -125,6 +125,12 @@ const mealSafetySchema = {
 export async function callGeminiHealthProfile(profile: {
   healthConditions?: string[]
   conditionDetails?: Record<string, Record<string, any>>
+  medications?: Array<{
+    name: string
+    strength?: string
+    dosageForm?: string
+    drugClass?: string
+  }>
   age?: number
   gender?: string
   currentWeight?: number
@@ -167,6 +173,19 @@ export async function callGeminiHealthProfile(profile: {
       }
     }
 
+    // Build medications list string
+    let medicationsStr = ''
+    if (profile.medications && profile.medications.length > 0) {
+      medicationsStr = '\n\nCURRENT MEDICATIONS:\n'
+      profile.medications.forEach((med, index) => {
+        medicationsStr += `\n${index + 1}. ${med.name}`
+        if (med.strength) medicationsStr += ` ${med.strength}`
+        if (med.dosageForm) medicationsStr += ` (${med.dosageForm})`
+        if (med.drugClass) medicationsStr += ` - ${med.drugClass}`
+        medicationsStr += '\n'
+      })
+    }
+
     const prompt = `You are WLPL's medical nutrition AI assistant. Analyze the following health profile and generate personalized dietary restrictions and safety guidelines.
 
 USER PROFILE:
@@ -174,7 +193,7 @@ USER PROFILE:
 - Age: ${profile.age || 'Unknown'}
 - Gender: ${profile.gender || 'Unknown'}
 - BMI: ${bmi ? bmi.toFixed(1) : 'Unknown'}
-- Activity Level: ${profile.activityLevel || 'Unknown'}${conditionDetailsStr}
+- Activity Level: ${profile.activityLevel || 'Unknown'}${conditionDetailsStr}${medicationsStr}
 
 TASK:
 Generate dietary restrictions based on medical guidelines for each condition. Consider:
@@ -263,17 +282,77 @@ CONFLICT RESOLUTION MATRIX (for users with multiple conditions):
 - Potassium: <2000mg/day (critical for CKD Stage 4+)
 - Avoid salt substitutes (potassium-based)
 
+DRUG-NUTRIENT INTERACTIONS (based on medications listed above):
+
+**Warfarin (Blood Thinner)**:
+- CRITICAL: Limit Vitamin K to consistent daily amounts (90-120mcg/day)
+- Avoid: Large servings of leafy greens (kale, spinach, collards), Brussels sprouts
+- Warning: Even moderate intake changes can reduce drug effectiveness
+- Monitor: Green vegetables, broccoli, cabbage
+
+**Metformin (Diabetes)**:
+- May reduce Vitamin B12 absorption → monitor for deficiency signs
+- Take with food to reduce GI upset
+- Avoid: Excessive alcohol (increases lactic acidosis risk)
+
+**GLP-1 Agonists (Ozempic, Trulicity, Victoza)**:
+- Reduces appetite significantly (30-50% reduction common)
+- Adjust calorie targets DOWN by 20-30% to match actual intake
+- Prioritize protein to prevent muscle loss during weight loss
+- May cause nausea → recommend small, frequent meals
+
+**SGLT2 Inhibitors (Jardiance, Farxiga)**:
+- Increases urination → ensure adequate hydration (8+ cups water/day)
+- May cause weight loss (5-10 lbs) due to glucose excretion
+- Monitor: Electrolyte balance, especially sodium
+
+**ACE Inhibitors / ARBs (Blood Pressure)**:
+- May increase potassium levels → limit high-potassium foods
+- Avoid: Salt substitutes (potassium-based)
+- Monitor: Bananas, oranges, potatoes, tomatoes
+
+**Statins (Cholesterol)**:
+- Avoid: Grapefruit and grapefruit juice (increases drug levels, risk of muscle damage)
+- Take with evening meal for best effectiveness
+- Monitor: Muscle pain or weakness
+
+**Levothyroxine (Thyroid)**:
+- Take on empty stomach, 30-60 minutes before breakfast
+- Avoid: Calcium supplements, iron, soy within 4 hours (reduces absorption)
+- Consistent timing is critical
+
+**Diuretics (HCTZ, Lasix)**:
+- Increases fluid loss → ensure adequate hydration
+- May deplete potassium (loop diuretics) or increase it (spironolactone)
+- Monitor: Dizziness, muscle cramps
+
+**Insulin / Sulfonylureas (Diabetes)**:
+- CRITICAL: Risk of hypoglycemia if carbs too low
+- Never skip meals or reduce carbs dramatically without adjusting dose
+- Minimum 30g carbs per meal recommended
+- Warning: Exercise lowers blood sugar → may need snack
+
+**Prednisone (Corticosteroid)**:
+- Increases appetite and blood sugar significantly
+- Adjust calorie targets UP by 10-15% to account for increased hunger
+- Monitor: Blood sugar, sodium retention
+- Take with food to reduce GI upset
+
 IMPORTANT:
 - Use detailed condition info (CKD stage, A1C, flare status, etc.) to calculate precise limits
 - When conditions conflict, prioritize life-threatening risks (kidney failure > blood sugar spikes)
-- Only include restrictions relevant to reported conditions
+- **Check medications for drug-nutrient interactions** - if user takes Warfarin, add critical Vitamin K warning
+- **Check medications for appetite effects** - if GLP-1 agonist, adjust calorie targets down 20-30%
+- **Check medications for hypoglycemia risk** - if insulin/sulfonylureas, ensure minimum 30g carbs per meal
+- Only include restrictions relevant to reported conditions AND medications
 - Provide specific numeric limits with units (mg, g, %, etc.)
 - Include clear medical reasoning citing guidelines used
 - List nutrients that should be monitored prominently
 - Flag critical warnings (medication interactions, allergens, conflicting conditions)
+- Add medication-specific warnings to criticalWarnings array
 - Return confidence score (0-100):
-  - 90-100: All conditions have detailed info (CKD stage, A1C, etc.)
-  - 70-89: Basic conditions reported but missing key details
+  - 90-100: All conditions have detailed info (CKD stage, A1C, etc.) AND medications listed
+  - 70-89: Basic conditions reported but missing key details OR no medications listed
   - <70: Vague or conflicting information
 
 If NO health conditions are reported, return empty restrictions with 100 confidence.`

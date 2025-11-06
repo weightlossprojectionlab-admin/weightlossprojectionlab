@@ -80,16 +80,18 @@ export async function POST(request: NextRequest) {
 
     const validatedRequest = GenerateHealthProfileRequestSchema.parse(requestData)
 
-    // 5. Call Gemini to generate health profile with detailed condition data
+    // 5. Call Gemini to generate health profile with detailed condition data and medications
     logger.info('[Health Profile] Generating profile', {
       uid: userId,
       conditions: validatedRequest.healthConditions,
-      hasConditionDetails: !!profile.conditionDetails
+      hasConditionDetails: !!profile.conditionDetails,
+      medicationCount: profile.medications?.length || 0
     })
 
     const aiResult = await callGeminiHealthProfile({
       ...validatedRequest,
       conditionDetails: profile.conditionDetails || {}, // Pass detailed condition responses
+      medications: profile.medications || [], // Pass scanned medications for drug interaction checking
       units: userData?.preferences?.units || 'imperial'
     })
 

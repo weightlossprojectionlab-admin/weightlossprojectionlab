@@ -75,6 +75,7 @@ interface OnboardingData {
   foodAllergies?: string[]
   healthConditions?: string[]
   conditionDetails?: Record<string, Record<string, any>> // Detailed responses from health condition questionnaires
+  medications?: UserProfile['medications'] // Scanned medications
   units?: Units
 
   // Lifestyle Factors
@@ -562,6 +563,7 @@ function OnboardingContent() {
         activityLevel: data.activityLevel!,
         healthConditions: data.healthConditions,
         conditionDetails: data.conditionDetails, // Detailed health condition questionnaire responses
+        medications: data.medications, // Scanned medications
         foodAllergies: data.foodAllergies,
         lifestyle: {
           smoking: data.smoking || 'never',

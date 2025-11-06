@@ -88,6 +88,19 @@ export interface UserProfile {
   activityLevel: 'sedentary' | 'lightly-active' | 'moderately-active' | 'very-active' | 'extremely-active'
   healthConditions?: string[]
   conditionDetails?: Record<string, Record<string, any>> // Detailed health condition questionnaire responses
+  medications?: Array<{
+    name: string           // Generic drug name (e.g., "Metformin")
+    brandName?: string     // Brand name if applicable (e.g., "Glucophage")
+    strength: string       // e.g., "500 mg", "10 mg"
+    dosageForm: string     // e.g., "tablet", "capsule", "gel", "injection"
+    frequency?: string     // e.g., "2 times daily", "once weekly"
+    prescribedFor?: string // Condition name (e.g., "Type 2 Diabetes")
+    rxcui?: string        // RxNorm Concept Unique Identifier
+    ndc?: string          // National Drug Code
+    rxNumber?: string     // Prescription number
+    drugClass?: string    // Therapeutic class
+    scannedAt: string     // ISO timestamp
+  }>
   foodAllergies?: string[]
 
   // Lifestyle Factors (for accurate metabolism calculations)
