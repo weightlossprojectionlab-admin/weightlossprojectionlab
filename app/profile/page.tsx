@@ -8,7 +8,7 @@ import { signOut } from '@/lib/auth'
 import { useAuth } from '@/hooks/useAuth'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { useConfirm } from '@/hooks/useConfirm'
-import { useStepTracking } from '@/components/StepTrackingProvider'
+import { useStepTracking, StepTrackingProvider } from '@/components/StepTrackingProvider'
 import { userProfileOperations } from '@/lib/firebase-operations'
 import {
   isBiometricSupported,
@@ -775,7 +775,9 @@ function ProfileContent() {
 export default function ProfilePage() {
   return (
     <AuthGuard>
-      <ProfileContent />
+      <StepTrackingProvider>
+        <ProfileContent />
+      </StepTrackingProvider>
     </AuthGuard>
   )
 }

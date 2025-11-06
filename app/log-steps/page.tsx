@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
-import { useStepTracking } from '@/components/StepTrackingProvider'
+import { useStepTracking, StepTrackingProvider } from '@/components/StepTrackingProvider'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { stepLogOperations } from '@/lib/firebase-operations'
 import { Spinner } from '@/components/ui/Spinner'
@@ -321,7 +321,9 @@ function LogStepsContent() {
 export default function LogStepsPage() {
   return (
     <AuthGuard>
-      <LogStepsContent />
+      <StepTrackingProvider>
+        <LogStepsContent />
+      </StepTrackingProvider>
     </AuthGuard>
   )
 }

@@ -18,7 +18,7 @@ import { XPBadge } from '@/components/ui/XPBadge'
 import { auth } from '@/lib/auth'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
-import { useStepTracking } from '@/components/StepTrackingProvider'
+import { useStepTracking, StepTrackingProvider } from '@/components/StepTrackingProvider'
 import { useWeightProjection } from '@/hooks/useWeightProjection'
 import { useTrendProjection } from '@/hooks/useTrendProjection'
 import { useInstallPrompt } from '@/hooks/useInstallPrompt'
@@ -1071,9 +1071,11 @@ export default function DashboardPage() {
   return (
     <AuthGuard>
       <DashboardRouter>
-        <DashboardErrorBoundary>
-          <DashboardContent />
-        </DashboardErrorBoundary>
+        <StepTrackingProvider>
+          <DashboardErrorBoundary>
+            <DashboardContent />
+          </DashboardErrorBoundary>
+        </StepTrackingProvider>
       </DashboardRouter>
     </AuthGuard>
   )

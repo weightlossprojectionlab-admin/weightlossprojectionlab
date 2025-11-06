@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation'
 import { Toaster } from 'react-hot-toast'
 import { ServiceWorkerProvider } from '@/components/ServiceWorkerProvider'
-import { StepTrackingProvider } from '@/components/StepTrackingProvider'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { MenuProvider } from '@/contexts/MenuContext'
 import { AppMenu } from '@/components/ui/AppMenu'
@@ -13,6 +12,9 @@ import { AppMenu } from '@/components/ui/AppMenu'
  *
  * Home page gets minimal providers for maximum performance (no Firebase, no menu, no toasts)
  * All other pages get the full provider stack
+ *
+ * Note: StepTrackingProvider removed from global providers (performance optimization)
+ * Pages that need step tracking should wrap themselves with StepTrackingProvider
  */
 export function ConditionalProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -27,42 +29,40 @@ export function ConditionalProviders({ children }: { children: React.ReactNode }
     )
   }
 
-  // All other pages: Full provider stack with all features
+  // All other pages: Provider stack without StepTrackingProvider (loaded per-page as needed)
   return (
     <ThemeProvider>
       <ServiceWorkerProvider>
-        <StepTrackingProvider>
-          <MenuProvider>
-            <div className="flex min-h-full flex-col">
-              {children}
-            </div>
-            <AppMenu />
-            <Toaster
-              position="top-center"
-              toastOptions={{
+        <MenuProvider>
+          <div className="flex min-h-full flex-col">
+            {children}
+          </div>
+          <AppMenu />
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#363636',
+                color: '#fff',
+              },
+              success: {
+                duration: 3000,
+                iconTheme: {
+                  primary: '#10b981',
+                  secondary: '#fff',
+                },
+              },
+              error: {
                 duration: 4000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
+                iconTheme: {
+                  primary: '#ef4444',
+                  secondary: '#fff',
                 },
-                success: {
-                  duration: 3000,
-                  iconTheme: {
-                    primary: '#10b981',
-                    secondary: '#fff',
-                  },
-                },
-                error: {
-                  duration: 4000,
-                  iconTheme: {
-                    primary: '#ef4444',
-                    secondary: '#fff',
-                  },
-                },
-              }}
-            />
-          </MenuProvider>
-        </StepTrackingProvider>
+              },
+            }}
+          />
+        </MenuProvider>
       </ServiceWorkerProvider>
     </ThemeProvider>
   )
