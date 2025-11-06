@@ -104,6 +104,16 @@ const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) 
       ? `${errorMessage} - ${JSON.stringify(errorData.details)}`
       : errorMessage
 
+    // DIRECT console.error to bypass logger serialization issues
+    console.error('[FirebaseOps] API Error Details:', {
+      url,
+      method: options.method || 'GET',
+      status: response.status,
+      statusText: response.statusText,
+      errorMessage: fullErrorMessage,
+      errorData
+    })
+
     logger.error('[FirebaseOps] API Error', new Error(fullErrorMessage), errorContext)
 
     // Include detailed error message if available
