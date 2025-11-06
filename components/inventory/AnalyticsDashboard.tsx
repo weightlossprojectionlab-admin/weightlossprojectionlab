@@ -14,12 +14,26 @@
  */
 
 import { useMemo } from 'react'
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import type { PieLabelRenderProps } from 'recharts'
-import type { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent'
+import dynamic from 'next/dynamic'
 import { TrashIcon, CurrencyDollarIcon, ClockIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 import type { ShoppingItem, ProductCategory } from '@/types/shopping'
 import { getCategoryMetadata } from '@/lib/product-categories'
+
+// Dynamic imports for Recharts components to reduce bundle size
+const WasteByCategoryPieChart = dynamic(() => import('@/components/charts/WasteByCategoryPieChart').then(m => ({ default: m.WasteByCategoryPieChart })), {
+  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
+
+const ExpirationTrendChart = dynamic(() => import('@/components/charts/ExpirationTrendChart').then(m => ({ default: m.ExpirationTrendChart })), {
+  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
+
+const WasteCostBarChart = dynamic(() => import('@/components/charts/WasteCostBarChart').then(m => ({ default: m.WasteCostBarChart })), {
+  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
 
 interface AnalyticsDashboardProps {
   items: ShoppingItem[]
@@ -254,31 +268,7 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
             Waste by Category
           </h3>
           {chartData.categoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={chartData.categoryData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(props: PieLabelRenderProps) => {
-                    const name = props.name || ''
-                    const percent = typeof props.percent === 'number'
-                      ? props.percent
-                      : Number(props.percent ?? 0)
-                    return `${name} ${(percent * 100).toFixed(0)}%`
-                  }}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {chartData.categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <WasteByCategoryPieChart data={chartData.categoryData} />
           ) : (
             <div className="h-[300px] flex items-center justify-center text-gray-500 dark:text-gray-400">
               No waste data available
@@ -291,43 +281,7 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             7-Day Expiration Trend
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData.trendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
-              <XAxis
-                dataKey="date"
-                stroke="#9ca3af"
-                style={{ fontSize: '12px' }}
-              />
-              <YAxis
-                stroke="#9ca3af"
-                style={{ fontSize: '12px' }}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#fff'
-                }}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="wasted"
-                stroke="#ef4444"
-                strokeWidth={2}
-                name="Wasted"
-              />
-              <Line
-                type="monotone"
-                dataKey="expiring"
-                stroke="#f59e0b"
-                strokeWidth={2}
-                name="Expiring"
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <ExpirationTrendChart data={chartData.trendData} />
         </div>
 
         {/* Top Wasted Items */}
@@ -377,38 +331,7 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
             Waste Cost by Category
           </h3>
           {metrics.wasteByCategory.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={metrics.wasteByCategory.slice(0, 8)}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
-                <XAxis
-                  dataKey="category"
-                  stroke="#9ca3af"
-                  style={{ fontSize: '12px' }}
-                  tickFormatter={(value) => getCategoryMetadata(value).displayName}
-                />
-                <YAxis
-                  stroke="#9ca3af"
-                  style={{ fontSize: '12px' }}
-                  tickFormatter={(value) => `$${value}`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1f2937',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff'
-                  }}
-                  formatter={(value: ValueType) => {
-                    const numValue = typeof value === 'number' ? value : 0
-                    return [`$${numValue.toFixed(2)}`, 'Cost']
-                  }}
-                  labelFormatter={(label: NameType) => {
-                    return getCategoryMetadata(label as ProductCategory).displayName
-                  }}
-                />
-                <Bar dataKey="cost" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <WasteCostBarChart data={metrics.wasteByCategory} />
           ) : (
             <div className="h-[300px] flex items-center justify-center text-gray-500 dark:text-gray-400">
               No waste data available

@@ -1,11 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ChartBarIcon, CloudIcon, ClockIcon, CurrencyDollarIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+
+// Dynamic imports for Recharts components to reduce bundle size
+const APIUsageTimeline = dynamic(() => import('@/components/charts/APIUsageTimeline').then(m => ({ default: m.APIUsageTimeline })), {
+  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
+
+const CacheFreshnessChart = dynamic(() => import('@/components/charts/CacheFreshnessChart').then(m => ({ default: m.CacheFreshnessChart })), {
+  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
 
 interface APIUsageData {
   summary: {
@@ -32,8 +43,6 @@ interface APIUsageData {
   cacheFreshnessDistribution: Record<string, number>
   recentLogs: any[]
 }
-
-const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6']
 
 export default function APIUsagePage() {
   const { isAdmin } = useAdminAuth()
@@ -237,27 +246,7 @@ export default function APIUsagePage() {
       {data.dailyTimeline.length > 0 && (
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Daily Usage Timeline</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data.dailyTimeline}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis
-                dataKey="date"
-                stroke="#9ca3af"
-                tick={{ fill: '#9ca3af' }}
-                tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              />
-              <YAxis stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem' }}
-                labelStyle={{ color: '#f3f4f6' }}
-                itemStyle={{ color: '#f3f4f6' }}
-              />
-              <Legend wrapperStyle={{ color: '#9ca3af' }} />
-              <Line type="monotone" dataKey="cache" stroke="#10b981" strokeWidth={2} name="Cache Hits" />
-              <Line type="monotone" dataKey="api" stroke="#ef4444" strokeWidth={2} name="API Calls" />
-              <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} name="Total" />
-            </LineChart>
-          </ResponsiveContainer>
+          <APIUsageTimeline data={data.dailyTimeline} />
         </div>
       )}
 
@@ -266,38 +255,21 @@ export default function APIUsagePage() {
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Cache Freshness Distribution</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={freshnessDistribution}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label={(entry) => `${entry.name}: ${entry.value}`}
-                >
-                  {freshnessDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem' }}
-                  itemStyle={{ color: '#f3f4f6' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <CacheFreshnessChart data={freshnessDistribution} />
             <div className="flex items-center">
               <div className="space-y-3 w-full">
-                {freshnessDistribution.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
-                      <span className="text-gray-900 dark:text-gray-100">{item.name}</span>
+                {freshnessDistribution.map((item, idx) => {
+                  const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6']
+                  return (
+                    <div key={idx} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: colors[idx % colors.length] }}></div>
+                        <span className="text-gray-900 dark:text-gray-100">{item.name}</span>
+                      </div>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">{item.value.toLocaleString()}</span>
                     </div>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">{item.value.toLocaleString()}</span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>

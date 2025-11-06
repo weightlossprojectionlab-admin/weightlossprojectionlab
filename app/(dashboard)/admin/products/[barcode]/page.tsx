@@ -1,13 +1,29 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useParams, useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ArrowLeftIcon, CheckBadgeIcon, ClockIcon, MapPinIcon, ShoppingBagIcon, ChartBarIcon, UsersIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
+
+// Dynamic imports for Recharts components to reduce bundle size
+const ProductScanTimeline = dynamic(() => import('@/components/charts/ProductScanTimeline').then(m => ({ default: m.ProductScanTimeline })), {
+  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
+
+const ProductStoreBreakdown = dynamic(() => import('@/components/charts/ProductStoreBreakdown').then(m => ({ default: m.ProductStoreBreakdown })), {
+  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
+
+const ProductContextBreakdown = dynamic(() => import('@/components/charts/ProductContextBreakdown').then(m => ({ default: m.ProductContextBreakdown })), {
+  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
 
 interface ProductDetail {
   barcode: string
@@ -62,8 +78,6 @@ interface Analytics {
   conversionRate: number
   recentScans: any[]
 }
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
 export default function ProductDetailPage() {
   const params = useParams()
@@ -367,25 +381,7 @@ export default function ProductDetailPage() {
       {analytics.scanTimeline.length > 0 && (
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Scan Timeline (Last 30 Days)</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={analytics.scanTimeline}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis
-                dataKey="date"
-                stroke="#9ca3af"
-                tick={{ fill: '#9ca3af' }}
-                tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              />
-              <YAxis stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem' }}
-                labelStyle={{ color: '#f3f4f6' }}
-                itemStyle={{ color: '#f3f4f6' }}
-              />
-              <Legend wrapperStyle={{ color: '#9ca3af' }} />
-              <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} name="Scans" />
-            </LineChart>
-          </ResponsiveContainer>
+          <ProductScanTimeline data={analytics.scanTimeline} />
         </div>
       )}
 
@@ -395,19 +391,7 @@ export default function ProductDetailPage() {
         {analytics.storeBreakdown.length > 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Store Breakdown</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analytics.storeBreakdown}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="store" stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
-                <YAxis stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem' }}
-                  labelStyle={{ color: '#f3f4f6' }}
-                  itemStyle={{ color: '#f3f4f6' }}
-                />
-                <Bar dataKey="scans" fill="#10b981" name="Scans" />
-              </BarChart>
-            </ResponsiveContainer>
+            <ProductStoreBreakdown data={analytics.storeBreakdown} />
           </div>
         )}
 
@@ -415,27 +399,7 @@ export default function ProductDetailPage() {
         {analytics.contextBreakdown.length > 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Scan Context</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={analytics.contextBreakdown}
-                  dataKey="count"
-                  nameKey="context"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label={(entry) => `${entry.context}: ${entry.count}`}
-                >
-                  {analytics.contextBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem' }}
-                  itemStyle={{ color: '#f3f4f6' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <ProductContextBreakdown data={analytics.contextBreakdown} />
           </div>
         )}
       </div>

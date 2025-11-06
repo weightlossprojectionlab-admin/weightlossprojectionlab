@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import { useSearchParams } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { logger } from '@/lib/logger'
@@ -17,10 +18,25 @@ import {
   SparklesIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import Link from 'next/link'
 import { auth } from '@/lib/firebase'
 import type { HealthVitalsSummary } from '@/types'
+
+// Dynamic imports for Recharts components to reduce bundle size
+const AdminWeightLogsChart = dynamic(() => import('@/components/charts/AdminWeightLogsChart').then(m => ({ default: m.AdminWeightLogsChart })), {
+  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
+
+const AdminDailyCaloriesChart = dynamic(() => import('@/components/charts/AdminDailyCaloriesChart').then(m => ({ default: m.AdminDailyCaloriesChart })), {
+  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
+
+const AdminStepLogsChart = dynamic(() => import('@/components/charts/AdminStepLogsChart').then(m => ({ default: m.AdminStepLogsChart })), {
+  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  ssr: false
+})
 
 interface AIHealthProfileSummary {
   hasProfile: boolean
@@ -1033,28 +1049,7 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
         {data.charts.weightLogs.length > 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Weight Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data.charts.weightLogs}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={formatDate}
-                  stroke="#6B7280"
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis
-                  stroke="#6B7280"
-                  style={{ fontSize: '12px' }}
-                  domain={['dataMin - 2', 'dataMax + 2']}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-                  labelFormatter={formatDate}
-                  formatter={(value: any) => [`${value.toFixed(1)} ${data.charts.weightLogs[0]?.unit || 'kg'}`, 'Weight']}
-                />
-                <Line type="monotone" dataKey="weight" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            <AdminWeightLogsChart data={data.charts.weightLogs} formatDate={formatDate} />
           </div>
         )}
 
@@ -1062,27 +1057,7 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
         {data.charts.dailyCalories.length > 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Daily Calories</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data.charts.dailyCalories}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={formatDate}
-                  stroke="#6B7280"
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis
-                  stroke="#6B7280"
-                  style={{ fontSize: '12px' }}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-                  labelFormatter={formatDate}
-                  formatter={(value: any) => [`${value.toLocaleString()} cal`, 'Calories']}
-                />
-                <Bar dataKey="calories" fill="#F97316" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <AdminDailyCaloriesChart data={data.charts.dailyCalories} formatDate={formatDate} />
           </div>
         )}
 
@@ -1090,27 +1065,7 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
         {data.charts.stepLogs.length > 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Daily Steps</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data.charts.stepLogs}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={formatDate}
-                  stroke="#6B7280"
-                  style={{ fontSize: '12px' }}
-                />
-                <YAxis
-                  stroke="#6B7280"
-                  style={{ fontSize: '12px' }}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-                  labelFormatter={formatDate}
-                  formatter={(value: any) => [`${value.toLocaleString()} steps`, 'Steps']}
-                />
-                <Line type="monotone" dataKey="steps" stroke="#10B981" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            <AdminStepLogsChart data={data.charts.stepLogs} formatDate={formatDate} />
           </div>
         )}
       </div>
