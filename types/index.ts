@@ -87,6 +87,7 @@ export interface UserProfile {
   // Activity & Health
   activityLevel: 'sedentary' | 'lightly-active' | 'moderately-active' | 'very-active' | 'extremely-active'
   healthConditions?: string[]
+  conditionDetails?: Record<string, Record<string, any>> // Detailed health condition questionnaire responses
   foodAllergies?: string[]
 
   // Lifestyle Factors (for accurate metabolism calculations)

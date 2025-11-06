@@ -279,9 +279,22 @@ export function getHealthRiskProfile(params: {
     'Heart Disease',
     'PCOS',
     'Thyroid Issues',
-    'Kidney Disease',
+    'Kidney Disease (CKD)',
     'Pregnancy/Nursing',
-    'Eating Disorder History'
+    'Eating Disorder History',
+    'Cancer (Active or Recent Treatment)',
+    'Liver Disease',
+    'Gout',
+    'Celiac Disease',
+    'Inflammatory Bowel Disease (IBD)',
+    'GERD / Acid Reflux',
+    'Vision Issues',
+    'Edema / Swelling',
+    'Post-Heart Attack (MI)',
+    'Recent Surgery / Wound Healing',
+    'Hyperlipidemia',
+    'Injury Recovery',
+    'Autoimmune Condition'
   ]
 
   const likelyConditions: string[] = []
@@ -483,7 +496,16 @@ export function calculateOptimalTargets(params: {
     }
 
     // Adjust for high-risk health conditions (slower is safer)
-    const highRiskConditions = ['Type 2 Diabetes', 'Type 1 Diabetes', 'Heart Disease', 'Kidney Disease']
+    const highRiskConditions = [
+      'Type 2 Diabetes',
+      'Type 1 Diabetes',
+      'Heart Disease',
+      'Kidney Disease (CKD)',
+      'Cancer (Active or Recent Treatment)',
+      'Liver Disease',
+      'Post-Heart Attack (MI)',
+      'Recent Surgery / Wound Healing'
+    ]
     const hasHighRiskCondition = healthConditions.some(c => highRiskConditions.includes(c))
 
     if (hasHighRiskCondition) {

@@ -124,6 +124,7 @@ const mealSafetySchema = {
  */
 export async function callGeminiHealthProfile(profile: {
   healthConditions?: string[]
+  conditionDetails?: Record<string, Record<string, any>>
   age?: number
   gender?: string
   currentWeight?: number
@@ -154,14 +155,26 @@ export async function callGeminiHealthProfile(profile: {
       }
     }
 
-    const prompt = `You are a medical nutrition AI assistant. Analyze the following health profile and generate personalized dietary restrictions and safety guidelines.
+    // Build detailed condition info string
+    let conditionDetailsStr = ''
+    if (profile.conditionDetails && Object.keys(profile.conditionDetails).length > 0) {
+      conditionDetailsStr = '\n\nDETAILED CONDITION INFORMATION:\n'
+      for (const [condition, details] of Object.entries(profile.conditionDetails)) {
+        conditionDetailsStr += `\n${condition}:\n`
+        for (const [key, value] of Object.entries(details)) {
+          conditionDetailsStr += `  - ${key}: ${JSON.stringify(value)}\n`
+        }
+      }
+    }
+
+    const prompt = `You are WLPL's medical nutrition AI assistant. Analyze the following health profile and generate personalized dietary restrictions and safety guidelines.
 
 USER PROFILE:
 - Health Conditions: ${profile.healthConditions?.join(', ') || 'None reported'}
 - Age: ${profile.age || 'Unknown'}
 - Gender: ${profile.gender || 'Unknown'}
 - BMI: ${bmi ? bmi.toFixed(1) : 'Unknown'}
-- Activity Level: ${profile.activityLevel || 'Unknown'}
+- Activity Level: ${profile.activityLevel || 'Unknown'}${conditionDetailsStr}
 
 TASK:
 Generate dietary restrictions based on medical guidelines for each condition. Consider:
@@ -199,13 +212,69 @@ Generate dietary restrictions based on medical guidelines for each condition. Co
    - Minimum 1,800 calories/day
    - Avoid: alcohol, high mercury fish, unpasteurized foods
 
+9. **Inflammatory Bowel Disease (IBD)**:
+   - During flare: Low-fiber (<10g/day), low-fat, easily digestible
+   - Remission: Gradual fiber increase, identify trigger foods
+
+10. **Post-Surgery / Wound Healing**:
+   - Protein: 1.5-2g/kg body weight for tissue repair
+   - First 2 weeks: Soft foods only if GI surgery
+   - Increase calories 10-20% above maintenance
+
+CONFLICT RESOLUTION MATRIX (for users with multiple conditions):
+
+**CKD + Diabetes**:
+- Prioritize CKD sodium limits (1500mg) over standard diabetes guidelines
+- Limit carbs to 45-60g/meal AND restrict potassium (2000mg/day)
+- Protein: Use lower end (0.6-0.8g/kg) to protect kidneys
+
+**CKD + Cancer**:
+- Cancer increases protein needs, but CKD restricts it → CRITICAL CONFLICT
+- Recommend: 0.8-1.0g/kg (middle ground) + monitor GFR closely
+- If dialysis: Allow higher protein (1.2g/kg) for cancer healing
+- Add warning: "Consult nephrologist about protein intake during cancer treatment"
+
+**IBD + Diabetes**:
+- During IBD flare: Use low-fiber, easily digestible carbs (white rice, bananas)
+- Control blood sugar with small, frequent meals (4-6 times/day)
+- Avoid high-fiber diabetic recommendations during active flare
+
+**Heart Disease + Diabetes**:
+- Limit sodium to <2000mg/day (heart) AND carbs to 45-60g/meal (diabetes)
+- Prioritize unsaturated fats, limit saturated fat <7% calories
+
+**Pregnancy + Diabetes (Gestational or Pre-existing)**:
+- NEVER restrict calories below 1800/day despite diabetes
+- Distribute 150-175g carbs across 3 meals + 2-3 snacks
+- Monitor blood sugar 4+ times daily
+
+**Post-Surgery + Diabetes**:
+- Wound healing takes priority over tight glucose control temporarily
+- Allow slightly higher blood sugar (120-180 mg/dL) first 2 weeks
+- Increase protein to 1.5-2g/kg, adjust insulin accordingly
+
+**Cancer + Diabetes**:
+- Cancer appetite loss makes low-carb difficult → allow flexible carb intake
+- Focus on preventing weight loss over tight glucose control
+- High-calorie, high-protein shakes acceptable even if high-carb
+
+**CKD Stage 4+ + High Blood Pressure**:
+- Sodium: 1500mg/day (most restrictive wins)
+- Potassium: <2000mg/day (critical for CKD Stage 4+)
+- Avoid salt substitutes (potassium-based)
+
 IMPORTANT:
+- Use detailed condition info (CKD stage, A1C, flare status, etc.) to calculate precise limits
+- When conditions conflict, prioritize life-threatening risks (kidney failure > blood sugar spikes)
 - Only include restrictions relevant to reported conditions
 - Provide specific numeric limits with units (mg, g, %, etc.)
-- Include clear medical reasoning
+- Include clear medical reasoning citing guidelines used
 - List nutrients that should be monitored prominently
-- Flag critical warnings (medication interactions, allergens)
-- Return confidence score (0-100) based on condition specificity
+- Flag critical warnings (medication interactions, allergens, conflicting conditions)
+- Return confidence score (0-100):
+  - 90-100: All conditions have detailed info (CKD stage, A1C, etc.)
+  - 70-89: Basic conditions reported but missing key details
+  - <70: Vague or conflicting information
 
 If NO health conditions are reported, return empty restrictions with 100 confidence.`
 

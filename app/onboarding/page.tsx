@@ -8,6 +8,8 @@ import OnboardingRouter from '@/components/auth/OnboardingRouter'
 import { useAuth } from '@/hooks/useAuth'
 import { auth } from '@/lib/firebase'
 import { userProfileOperations, weightLogOperations } from '@/lib/firebase-operations'
+import HealthConditionModal from '@/components/onboarding/HealthConditionModal'
+import { getQuestionnaireForCondition, hasDetailedQuestionnaire } from '@/lib/health-condition-questions'
 import {
   calculateBMR,
   calculateTDEE,
@@ -72,6 +74,7 @@ interface OnboardingData {
   dietaryPreferences?: string[]
   foodAllergies?: string[]
   healthConditions?: string[]
+  conditionDetails?: Record<string, Record<string, any>> // Detailed responses from health condition questionnaires
   units?: Units
 
   // Lifestyle Factors
@@ -558,6 +561,7 @@ function OnboardingContent() {
         currentWeight: data.currentWeight!, // Fallback only - weight-logs is primary source
         activityLevel: data.activityLevel!,
         healthConditions: data.healthConditions,
+        conditionDetails: data.conditionDetails, // Detailed health condition questionnaire responses
         foodAllergies: data.foodAllergies,
         lifestyle: {
           smoking: data.smoking || 'never',
@@ -1487,6 +1491,11 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
   const dietaryOptions = ['Vegan', 'Vegetarian', 'Keto', 'Paleo', 'Gluten-Free', 'Dairy-Free', 'Low-Carb', 'Mediterranean']
   const commonAllergies = ['Peanuts', 'Tree Nuts', 'Dairy', 'Eggs', 'Shellfish', 'Soy', 'Wheat/Gluten', 'Fish']
 
+  // Modal state for detailed health condition questionnaires
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedCondition, setSelectedCondition] = useState<string | null>(null)
+  const [conditionResponses, setConditionResponses] = useState<Record<string, Record<string, any>>>({})
+
   // Calculate BMI and health risk profile
   const bmiData = data.currentWeight && data.height && data.units
     ? calculateBMI({ weight: data.currentWeight, height: data.height, units: data.units })
@@ -1517,17 +1526,58 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
 
   const toggleHealthCondition = (condition: string) => {
     const current = data.healthConditions || []
-    const updated = current.includes(condition) ? current.filter(c => c !== condition) : [...current, condition]
-    updateData({ healthConditions: updated })
+    const isSelected = current.includes(condition)
+
+    if (!isSelected) {
+      // User is selecting the condition
+      const updated = [...current, condition]
+      updateData({ healthConditions: updated })
+
+      // Check if this condition has a detailed questionnaire
+      if (hasDetailedQuestionnaire(condition)) {
+        // Open modal for detailed questions
+        setSelectedCondition(condition)
+        setModalOpen(true)
+      }
+    } else {
+      // User is deselecting the condition
+      const updated = current.filter(c => c !== condition)
+      updateData({ healthConditions: updated })
+
+      // Clear responses for this condition
+      const newResponses = { ...conditionResponses }
+      delete newResponses[condition]
+      setConditionResponses(newResponses)
+    }
+  }
+
+  const handleModalSave = (conditionKey: string, responses: Record<string, any>) => {
+    // Save responses for this condition
+    const updatedResponses = {
+      ...conditionResponses,
+      [selectedCondition!]: responses
+    }
+    setConditionResponses(updatedResponses)
+
+    // Also save to onboarding data
+    updateData({ conditionDetails: updatedResponses })
+
+    toast.success(`WLPL now understands your ${selectedCondition}`)
   }
 
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <h2 className="text-error">⚠️ Critical Safety Information</h2>
-        <p className="text-error font-semibold mt-2">
-          This step prevents dangerous meal suggestions. Please be thorough.
+        <h2>Let WLPL Get to Know You</h2>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">
+          Help WLPL understand your health story to provide safe, personalized guidance
         </p>
+        <div className="bg-purple-100 dark:bg-purple-900/20 border-2 border-primary rounded-lg p-4 mt-4">
+          <h3 className="font-bold text-primary-dark dark:text-primary-light mb-2">You're Seen</h3>
+          <p className="text-sm text-primary-dark dark:text-primary-light">
+            WLPL is designed to support complex health needs. The more you share, the safer and more accurate your meal recommendations will be.
+          </p>
+        </div>
         <div className="bg-error-light dark:bg-error-dark/20 border-2 border-error rounded-lg p-4 mt-4">
           <h3 className="font-bold text-error-dark dark:text-error-light mb-2">Why This Matters</h3>
           <ul className="text-sm text-error-dark dark:text-error-light space-y-1 text-left list-none">
@@ -1679,36 +1729,78 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
         </div>
       </div>
 
-      {/* Health Conditions - Only Show Likely Conditions */}
-      {healthRisk && healthRisk.likelyConditions.length > 0 && (
+      {/* Health Conditions - BMI-Suggested + Other Conditions */}
+      <div>
+        {/* BMI-Suggested Conditions */}
+        {healthRisk && healthRisk.likelyConditions.length > 0 && (
+          <div className="mb-6">
+            <label className="text-label block mb-2">
+              Health Conditions Based on Your Profile
+              <span className="text-xs text-warning dark:text-warning-light ml-2">
+                (Pre-selected based on your BMI - uncheck if not applicable)
+              </span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {healthRisk.likelyConditions.map((condition) => (
+                <button
+                  key={condition}
+                  type="button"
+                  onClick={() => toggleHealthCondition(condition)}
+                  className={`px-4 py-2 rounded-lg border-2 transition-all text-sm ${
+                    data.healthConditions?.includes(condition)
+                      ? 'border-warning bg-warning-light dark:bg-warning-dark/20 text-warning-dark dark:text-warning-light font-medium'
+                      : 'border-warning/30 dark:border-warning/50 hover:border-warning/50 dark:hover:border-warning/70 text-warning-dark dark:text-warning-light/60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span>{condition}</span>
+                    {hasDetailedQuestionnaire(condition) && (
+                      <span className="text-xs bg-primary text-white px-1.5 py-0.5 rounded ml-1">?</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+              These conditions are common at your BMI category and affect your calorie targets for safe weight loss.
+            </p>
+          </div>
+        )}
+
+        {/* Other Conditions */}
         <div>
           <label className="text-label block mb-2">
-            Health Conditions
-            <span className="text-xs text-warning dark:text-warning-light ml-2">
-              (Pre-selected based on your BMI - uncheck if not applicable)
+            Other Health Conditions
+            <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">
+              (Select any that apply to you)
             </span>
           </label>
           <div className="grid grid-cols-2 gap-2">
-            {healthRisk.likelyConditions.map((condition) => (
+            {healthRisk?.otherConditions.map((condition) => (
               <button
                 key={condition}
                 type="button"
                 onClick={() => toggleHealthCondition(condition)}
                 className={`px-4 py-2 rounded-lg border-2 transition-all text-sm ${
                   data.healthConditions?.includes(condition)
-                    ? 'border-warning bg-warning-light dark:bg-warning-dark/20 text-warning-dark dark:text-warning-light font-medium'
-                    : 'border-warning/30 dark:border-warning/50 hover:border-warning/50 dark:hover:border-warning/70 text-warning-dark dark:text-warning-light/60'
+                    ? 'border-primary bg-purple-100 dark:bg-purple-900/20 text-primary dark:text-primary-light font-medium'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
                 }`}
               >
-                {condition}
+                <div className="flex items-center justify-between">
+                  <span>{condition}</span>
+                  {hasDetailedQuestionnaire(condition) && (
+                    <span className="text-xs bg-primary text-white px-1.5 py-0.5 rounded ml-1">?</span>
+                  )}
+                </div>
               </button>
             ))}
           </div>
           <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-            These conditions are common at your BMI category and affect your calorie targets for safe weight loss.
+            WLPL uses this information to ensure meal suggestions are safe for your specific health needs.
           </p>
         </div>
-      )}
+      </div>
 
       {/* Dietary Preferences */}
       <div>
@@ -1798,6 +1890,17 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
       <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
         ⚕️ This is not a medical diagnosis. Consult your doctor for proper medical advice.
       </p>
+
+      {/* Health Condition Modal */}
+      {selectedCondition && (
+        <HealthConditionModal
+          questionnaire={getQuestionnaireForCondition(selectedCondition)!}
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSave={handleModalSave}
+          existingResponses={conditionResponses[selectedCondition]}
+        />
+      )}
     </div>
   )
 }
