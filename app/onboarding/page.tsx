@@ -256,7 +256,8 @@ function OnboardingContent() {
       }
 
       // Prepare data based on what's been filled so far
-      if (data.birthDate) partialUpdate.profile.birthDate = data.birthDate
+      // IMPORTANT: Convert Date objects to ISO strings for Zod validation
+      if (data.birthDate) partialUpdate.profile.birthDate = data.birthDate.toISOString()
       if (data.age) partialUpdate.profile.age = data.age
       if (data.gender) partialUpdate.profile.gender = data.gender
       if (data.height) partialUpdate.profile.height = data.height
@@ -270,7 +271,7 @@ function OnboardingContent() {
         if (data.targetWeight) partialUpdate.goals.targetWeight = data.targetWeight
         if (data.startWeight) partialUpdate.goals.startWeight = data.startWeight
         if (data.weeklyWeightLossGoal) partialUpdate.goals.weeklyWeightLossGoal = data.weeklyWeightLossGoal
-        if (data.targetDate) partialUpdate.goals.targetDate = data.targetDate
+        if (data.targetDate) partialUpdate.goals.targetDate = data.targetDate.toISOString()
         if (data.primaryGoal) partialUpdate.goals.primaryGoal = data.primaryGoal
         if (data.dailyCalorieGoal) partialUpdate.goals.dailyCalorieGoal = data.dailyCalorieGoal
         if (data.dailySteps) partialUpdate.goals.dailySteps = data.dailySteps
@@ -566,8 +567,9 @@ function OnboardingContent() {
     setLoading(true)
     try {
       // Prepare profile data
+      // IMPORTANT: Convert Date objects to ISO strings for Zod validation
       const profile: Partial<UserProfile> = {
-        birthDate: data.birthDate!,
+        birthDate: data.birthDate!.toISOString(),
         age: data.age!,
         gender: data.gender!,
         height: data.height!,
@@ -579,13 +581,13 @@ function OnboardingContent() {
         foodAllergies: data.foodAllergies,
         lifestyle: {
           smoking: data.smoking || 'never',
-          smokingQuitDate: data.smokingQuitDate,
+          smokingQuitDate: data.smokingQuitDate?.toISOString(),
           alcoholFrequency: data.alcoholFrequency || 'never',
           weeklyDrinks: data.weeklyDrinks || 0,
           recreationalDrugs: data.recreationalDrugs || 'no'
         },
         onboardingCompleted: true,
-        onboardingCompletedAt: new Date(),
+        onboardingCompletedAt: new Date().toISOString(),
         currentOnboardingStep: undefined // Clear step tracker on completion
       }
 
@@ -594,7 +596,7 @@ function OnboardingContent() {
         targetWeight: data.targetWeight!,
         startWeight: data.startWeight || data.currentWeight!,
         weeklyWeightLossGoal: data.weeklyWeightLossGoal!,
-        targetDate: data.targetDate,
+        targetDate: data.targetDate?.toISOString(),
         primaryGoal: data.primaryGoal!,
         dailyCalorieGoal: data.dailyCalorieGoal!,
         dailySteps: data.dailySteps!,
