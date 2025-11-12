@@ -546,18 +546,17 @@ function OnboardingContent() {
       setWarnings(prev => [...prev, adjustmentMessage])
     }
 
-    // Get recommended macros based on goal
+    // Get recommended macros based on goal (percentages)
     const macroPercentages = getRecommendedMacros(data.primaryGoal || 'lose-weight')
-    const macroTargets = calculateMacroTargets({
-      dailyCalories: dailyCalorieGoal,
-      proteinPercent: macroPercentages.protein,
-      carbsPercent: macroPercentages.carbs,
-      fatPercent: macroPercentages.fat
-    })
 
+    // Store percentages (not grams) - schema requires they sum to 100
     updateData({
       dailyCalorieGoal,
-      macroTargets
+      macroTargets: {
+        protein: macroPercentages.protein,
+        carbs: macroPercentages.carbs,
+        fat: macroPercentages.fat
+      }
     })
 
     toast.success('Targets calculated! You can adjust them on the next step.')
