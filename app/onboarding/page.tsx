@@ -2091,51 +2091,67 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
 
 // Step 6: Meal Schedule & Notifications
 function StepSix({ data, updateData }: { data: OnboardingData; updateData: (data: Partial<OnboardingData>) => void }) {
-  // Get locale-based default meal times
-  const getLocaleMealTimes = () => {
-    // Could be enhanced to adjust times based on timezone/locale
-    // For now, using universally sensible defaults
-    return {
-      breakfast: '8:00 AM',
-      lunch: '12:00 PM',
-      snacks: '3:00 PM',
-      dinner: '6:00 PM'
-    }
+  // Convert 24-hour time to 12-hour format with AM/PM
+  const convertTo12Hour = (time24: string): string => {
+    const [hours, minutes] = time24.split(':').map(Number)
+    const period = hours >= 12 ? 'PM' : 'AM'
+    const hours12 = hours % 12 || 12
+    return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`
   }
 
-  // Handle notification toggle with auto-set meal times
+  // Handle notification toggle with auto-sync from meal schedule
   const handleNotificationToggle = () => {
     const newValue = !data.notifications
 
-    if (newValue && !data.mealReminderTimes) {
-      // Auto-set locale-based defaults when enabling for first time
+    if (newValue) {
+      // Initialize reminder times from current meal schedule
       updateData({
         notifications: newValue,
-        mealReminderTimes: getLocaleMealTimes()
+        mealReminderTimes: {
+          breakfast: convertTo12Hour(data.mealSchedule?.breakfastTime || '07:00'),
+          lunch: convertTo12Hour(data.mealSchedule?.lunchTime || '12:00'),
+          dinner: convertTo12Hour(data.mealSchedule?.dinnerTime || '18:00'),
+          snacks: data.mealSchedule?.hasSnacks ? convertTo12Hour(data.mealSchedule.snackWindows?.[0] || '15:00') : undefined
+        }
       })
     } else {
       updateData({ notifications: newValue })
     }
   }
 
-  // Update meal schedule time
+  // Update meal schedule time and auto-sync reminder
   const updateMealTime = (meal: 'breakfastTime' | 'lunchTime' | 'dinnerTime', time: string) => {
+    const mealKey = meal.replace('Time', '') as 'breakfast' | 'lunch' | 'dinner'
+
     updateData({
       mealSchedule: {
         ...data.mealSchedule!,
         [meal]: time
-      }
+      },
+      // Auto-sync reminder times if notifications enabled
+      mealReminderTimes: data.notifications ? {
+        ...data.mealReminderTimes,
+        [mealKey]: convertTo12Hour(time)
+      } : data.mealReminderTimes
     })
   }
 
-  // Toggle snacks
+  // Toggle snacks and auto-sync reminder
   const toggleSnacks = () => {
+    const newHasSnacks = !data.mealSchedule?.hasSnacks
+    const defaultSnackTime = '15:00'
+
     updateData({
       mealSchedule: {
         ...data.mealSchedule!,
-        hasSnacks: !data.mealSchedule?.hasSnacks,
-        snackWindows: !data.mealSchedule?.hasSnacks ? ['15:00'] : []
-      }
+        hasSnacks: newHasSnacks,
+        snackWindows: newHasSnacks ? [defaultSnackTime] : []
+      },
+      // Auto-sync snack reminder if notifications enabled
+      mealReminderTimes: data.notifications ? {
+        ...data.mealReminderTimes,
+        snacks: newHasSnacks ? convertTo12Hour(defaultSnackTime) : undefined
+      } : data.mealReminderTimes
     })
   }
 
