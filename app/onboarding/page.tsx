@@ -568,7 +568,7 @@ function OnboardingContent() {
       // Prepare profile data
       // IMPORTANT: Convert Date objects to ISO strings for Zod validation
       const profile: Partial<UserProfile> = {
-        birthDate: data.birthDate!.toISOString(),
+        birthDate: data.birthDate!.toISOString() as unknown as Date,
         age: data.age!,
         gender: data.gender!,
         height: data.height!,
@@ -580,13 +580,13 @@ function OnboardingContent() {
         foodAllergies: data.foodAllergies,
         lifestyle: {
           smoking: data.smoking || 'never',
-          smokingQuitDate: data.smokingQuitDate?.toISOString(),
+          smokingQuitDate: data.smokingQuitDate?.toISOString() as unknown as Date | undefined,
           alcoholFrequency: data.alcoholFrequency || 'never',
           weeklyDrinks: data.weeklyDrinks || 0,
           recreationalDrugs: data.recreationalDrugs || 'no'
         },
         onboardingCompleted: true,
-        onboardingCompletedAt: new Date().toISOString(),
+        onboardingCompletedAt: new Date().toISOString() as unknown as Date,
         currentOnboardingStep: undefined // Clear step tracker on completion
       }
 
@@ -595,7 +595,7 @@ function OnboardingContent() {
         targetWeight: data.targetWeight!,
         startWeight: data.startWeight || data.currentWeight!,
         weeklyWeightLossGoal: data.weeklyWeightLossGoal!,
-        targetDate: data.targetDate?.toISOString(),
+        targetDate: data.targetDate?.toISOString() as unknown as Date | undefined,
         primaryGoal: data.primaryGoal!,
         dailyCalorieGoal: data.dailyCalorieGoal!,
         dailySteps: data.dailySteps!,
