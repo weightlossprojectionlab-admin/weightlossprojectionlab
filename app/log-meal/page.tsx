@@ -13,6 +13,7 @@ import { auth } from '@/lib/firebase'
 import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
 import { formatFileSize } from '@/lib/image-compression'
 import { shareMeal, shareToPlatform, getPlatformInfo } from '@/lib/share-utils'
+import { SharePreviewModal } from '@/components/social/SharePreviewModal'
 import { MealCardSkeleton, TemplateCardSkeleton, SummaryCardSkeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/Spinner'
 import { queueMeal } from '@/lib/offline-queue'
@@ -117,6 +118,8 @@ function LogMealContent() {
   const [filterMealType, setFilterMealType] = useState<'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([])
+  const [duplicateMeal, setDuplicateMeal] = useState<{ id: string; title: string; mealType: string } | null>(null)
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [loadingTemplates, setLoadingTemplates] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
@@ -139,6 +142,8 @@ function LogMealContent() {
   const [mealSafetyCheck, setMealSafetyCheck] = useState<MealSafetyCheck | null>(null)
   const [checkingSafety, setCheckingSafety] = useState(false)
   const [showSafetyWarning, setShowSafetyWarning] = useState(false)
+  const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([])
+  const [uploadingAdditional, setUploadingAdditional] = useState(false)
   const [manualEntryForm, setManualEntryForm] = useState({
     foodItems: [''],
     calories: '',
@@ -160,8 +165,44 @@ function LogMealContent() {
     mealType: filterMealType !== 'all' ? filterMealType : undefined
   })
 
+  // Check if a meal of this type already exists today
+  const checkForDuplicateMeal = (mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
+    // Snacks are unlimited
+    if (mealType === 'snack') return null
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const existingMeal = mealHistory?.find(meal => {
+      const mealDate = new Date(meal.loggedAt)
+      return meal.mealType === mealType &&
+             mealDate >= today &&
+             mealDate < tomorrow
+    })
+
+    return existingMeal || null
+  }
+
   // Weekly missions for progress tracking
   const { checkProgress } = useMissions(auth.currentUser?.uid)
+
+  // Check for duplicate meal on page load
+  useEffect(() => {
+    if (!loadingHistory && mealHistory) {
+      const existingMeal = checkForDuplicateMeal(selectedMealType)
+      if (existingMeal) {
+        setDuplicateMeal({
+          id: existingMeal.id,
+          title: existingMeal.aiAnalysis?.title || 'Untitled meal',
+          mealType: selectedMealType.charAt(0).toUpperCase() + selectedMealType.slice(1)
+        })
+        setShowDuplicateModal(true)
+      }
+    }
+  }, [loadingHistory, mealHistory, selectedMealType])
 
   // Client-side filtering for search query (includes title, keywords, food items, and notes)
   const filteredMeals = searchQuery
@@ -408,6 +449,62 @@ function LogMealContent() {
       logger.error('❌ Image capture error:', error as Error)
       toast.error('Failed to process image. Please try again.')
     }
+  }
+
+  const handleAdditionalPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) {
+      return
+    }
+
+    // Check if adding these photos would exceed limit
+    const remainingSlots = 4 - additionalPhotos.length
+    if (files.length > remainingSlots) {
+      toast.error(`You can only add ${remainingSlots} more photo${remainingSlots !== 1 ? 's' : ''} (max 4 total)`)
+      return
+    }
+
+    // Validate and compress each file
+    setUploadingAdditional(true)
+    const newPhotos: string[] = []
+
+    try {
+      for (const file of files) {
+        // Validate file is an image
+        if (!file.type.startsWith('image/')) {
+          toast.error(`${file.name} is not an image file`)
+          continue
+        }
+
+        // Check file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name} is too large (max 10MB)`)
+          continue
+        }
+
+        // Compress image using existing compression library
+        const { compressImage } = await import('@/lib/image-compression')
+        const compressed = await compressImage(file)
+
+        newPhotos.push(compressed.base64DataUrl)
+      }
+
+      // Add to state
+      setAdditionalPhotos(prev => [...prev, ...newPhotos])
+      toast.success(`Added ${newPhotos.length} photo${newPhotos.length !== 1 ? 's' : ''}`)
+    } catch (error) {
+      logger.error('Failed to process additional photos:', error as Error)
+      toast.error('Failed to process some photos')
+    } finally {
+      setUploadingAdditional(false)
+      // Reset the file input
+      e.target.value = ''
+    }
+  }
+
+  const removeAdditionalPhoto = (index: number) => {
+    setAdditionalPhotos(prev => prev.filter((_, i) => i !== index))
+    toast.success('Photo removed')
   }
 
   const analyzeImage = async (imageData: string) => {
@@ -855,6 +952,7 @@ function LogMealContent() {
         }
         setCapturedImage(null)
         setAiAnalysis(null)
+        setAdditionalPhotos([])
 
         return
       }
@@ -886,13 +984,47 @@ function LogMealContent() {
           setUploadProgress('Uploading photo...')
           logger.debug('📤 Uploading compressed photo to Storage...')
 
-          // Upload compressed image
-          photoUrl = await uploadMealPhoto(compressed.base64DataUrl)
+          // Upload compressed image with 15s timeout (prevents Netlify tunnel crash)
+          photoUrl = await Promise.race([
+            uploadMealPhoto(compressed.base64DataUrl),
+            new Promise<string>((_, reject) =>
+              setTimeout(() => reject(new Error('Upload timeout after 15s')), 15000)
+            )
+          ])
           logger.debug('✅ Photo uploaded:', { photoUrl })
         } catch (uploadError) {
           logger.error('❌ Photo upload failed:', uploadError as Error)
           // Continue saving even if photo upload fails
           toast.error('Photo upload failed, but saving meal data anyway.')
+        }
+      }
+
+      // Upload additional photos if any
+      let additionalPhotoUrls: string[] = []
+      if (additionalPhotos.length > 0) {
+        setUploadProgress(`Uploading additional photos (0/${additionalPhotos.length})...`)
+        logger.debug(`📤 Uploading ${additionalPhotos.length} additional photos...`)
+
+        try {
+          // Upload all additional photos in parallel
+          const uploadPromises = additionalPhotos.map(async (photoData, index) => {
+            try {
+              const url = await uploadMealPhoto(photoData)
+              logger.debug(`✅ Additional photo ${index + 1} uploaded`)
+              setUploadProgress(`Uploading additional photos (${index + 1}/${additionalPhotos.length})...`)
+              return url
+            } catch (error) {
+              logger.error(`❌ Failed to upload additional photo ${index + 1}:`, error as Error)
+              return null
+            }
+          })
+
+          const results = await Promise.all(uploadPromises)
+          additionalPhotoUrls = results.filter((url): url is string => url !== null)
+          logger.debug(`✅ Uploaded ${additionalPhotoUrls.length}/${additionalPhotos.length} additional photos`)
+        } catch (error) {
+          logger.error('❌ Additional photos upload failed:', error as Error)
+          // Continue saving even if additional photos fail
         }
       }
 
@@ -902,6 +1034,7 @@ function LogMealContent() {
       const response = await mealLogOperations.createMealLog({
         mealType: selectedMealType,
         photoUrl: photoUrl || undefined,
+        additionalPhotos: additionalPhotoUrls.length > 0 ? additionalPhotoUrls : undefined,
         aiAnalysis: aiAnalysis || undefined,
         loggedAt: new Date().toISOString()
       })
@@ -923,6 +1056,7 @@ function LogMealContent() {
       }
       setCapturedImage(null)
       setAiAnalysis(null)
+      setAdditionalPhotos([])
 
     } catch (error) {
       logger.error('💥 Save error:', error as Error)
@@ -1795,6 +1929,65 @@ function LogMealContent() {
                 </div>
               )}
 
+              {/* Additional Photos Section */}
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-100">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Additional Photos (Optional)
+                  </h3>
+                  <span className="text-xs bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-full">
+                    {additionalPhotos.length}/4
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                  Add up to 4 extra photos for different angles or social media posts
+                </p>
+
+                {/* Thumbnail Grid */}
+                {additionalPhotos.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {additionalPhotos.map((photo, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={photo}
+                          alt={`Additional photo ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 dark:border-gray-700"
+                        />
+                        <button
+                          onClick={() => removeAdditionalPhoto(index)}
+                          className="absolute top-1 right-1 bg-error text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove photo"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add More Photos Button */}
+                {additionalPhotos.length < 4 && (
+                  <label className={`btn btn-secondary w-full cursor-pointer ${uploadingAdditional ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {uploadingAdditional ? (
+                      <span className="flex items-center justify-center space-x-2">
+                        <Spinner size="sm" />
+                        <span>Processing...</span>
+                      </span>
+                    ) : (
+                      <>📷 Add More Photos ({4 - additionalPhotos.length} remaining)</>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleAdditionalPhotos}
+                      className="hidden"
+                      disabled={uploadingAdditional || saving}
+                    />
+                  </label>
+                )}
+              </div>
+
               <div className="space-y-3 pt-4">
                 <div className="flex space-x-3">
                   <button
@@ -2138,6 +2331,11 @@ function LogMealContent() {
                               alt={`${meal.mealType} photo`}
                               className="w-16 h-16 object-cover rounded-lg cursor-pointer transition-all group-hover/photo:ring-2 group-hover/photo:ring-indigo-400 group-hover/photo:scale-105"
                             />
+                            {meal.additionalPhotos && meal.additionalPhotos.length > 0 && (
+                              <div className="absolute bottom-0 right-0 bg-indigo-600 text-white text-xs px-1.5 py-0.5 rounded-tl-lg rounded-br-lg font-medium">
+                                +{meal.additionalPhotos.length}
+                              </div>
+                            )}
                             <div className="absolute inset-0 bg-black/0 group-hover/photo:bg-black/20 rounded-lg transition-all flex items-center justify-center">
                               <span className="text-white opacity-0 group-hover/photo:opacity-100 transition-opacity text-xl">🔍</span>
                             </div>
@@ -2286,9 +2484,37 @@ function LogMealContent() {
                       </div>
                     )}
 
-                    {isExpanded && !isEditing && meal.aiAnalysis && (
+                    {isExpanded && !isEditing && (
                       <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
-                        {meal.aiAnalysis.foodItems && meal.aiAnalysis.foodItems.length > 0 && (
+                        {/* Additional Photos Gallery */}
+                        {meal.additionalPhotos && meal.additionalPhotos.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-2">Additional Photos</h4>
+                            <div className="grid grid-cols-4 gap-2">
+                              {meal.additionalPhotos.map((photoUrl: string, idx: number) => (
+                                <div
+                                  key={idx}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSelectedPhotoUrl(photoUrl)
+                                  }}
+                                  className="relative group/additional cursor-pointer"
+                                >
+                                  <img
+                                    src={photoUrl}
+                                    alt={`Additional photo ${idx + 1}`}
+                                    className="w-full h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700 group-hover/additional:ring-2 group-hover/additional:ring-indigo-400 transition-all"
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover/additional:bg-black/20 rounded-lg transition-all flex items-center justify-center">
+                                    <span className="text-white opacity-0 group-hover/additional:opacity-100 transition-opacity text-lg">🔍</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {meal.aiAnalysis && meal.aiAnalysis.foodItems && meal.aiAnalysis.foodItems.length > 0 && (
                           <div>
                             <h4 className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Detected Foods</h4>
                             <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
@@ -2298,7 +2524,7 @@ function LogMealContent() {
                             </ul>
                           </div>
                         )}
-                        {meal.aiAnalysis.suggestions && meal.aiAnalysis.suggestions.length > 0 && (
+                        {meal.aiAnalysis && meal.aiAnalysis.suggestions && meal.aiAnalysis.suggestions.length > 0 && (
                           <div>
                             <h4 className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">AI Suggestions</h4>
                             <ul className="text-xs text-success space-y-1">
@@ -2507,6 +2733,78 @@ function LogMealContent() {
         onScan={handleBarcodeScan}
         onClose={() => setShowBarcodeScanner(false)}
       />
+
+      {/* Duplicate Meal Modal */}
+      {showDuplicateModal && duplicateMeal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              {duplicateMeal.mealType} Already Logged
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              You've already logged <span className="font-semibold">{duplicateMeal.title}</span> as your {duplicateMeal.mealType.toLowerCase()} today.
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              You can only log one {duplicateMeal.mealType.toLowerCase()} per day. Choose an option below:
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  // Delete existing meal and allow new entry
+                  try {
+                    await mealLogOperations.deleteMealLog(duplicateMeal.id)
+                    toast.success('Previous meal deleted. You can now log a new one.')
+                    setShowDuplicateModal(false)
+                    setDuplicateMeal(null)
+                  } catch (error) {
+                    toast.error('Failed to delete existing meal')
+                  }
+                }}
+                className="btn btn-primary w-full"
+              >
+                🔄 Replace Existing Meal
+              </button>
+              <button
+                onClick={() => {
+                  // Navigate to edit the existing meal
+                  setExpandedMealId(duplicateMeal.id)
+                  setShowDuplicateModal(false)
+                  setDuplicateMeal(null)
+                  // Scroll to the meal
+                  setTimeout(() => {
+                    document.getElementById(`meal-${duplicateMeal.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  }, 100)
+                  toast.info('Scroll down to edit your existing meal')
+                }}
+                className="btn btn-secondary w-full"
+              >
+                ✏️ Edit Existing Meal
+              </button>
+              <button
+                onClick={() => {
+                  // Change to snack (always allowed)
+                  setSelectedMealType('snack')
+                  setShowDuplicateModal(false)
+                  setDuplicateMeal(null)
+                  toast.success('Changed to Snack - you can log unlimited snacks')
+                }}
+                className="btn btn-secondary w-full"
+              >
+                🍎 Log as Snack Instead
+              </button>
+              <button
+                onClick={() => {
+                  // Go back to dashboard
+                  window.location.href = '/dashboard'
+                }}
+                className="btn btn-outline w-full"
+              >
+                ← Back to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog />
     </main>

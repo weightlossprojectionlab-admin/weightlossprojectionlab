@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import useSWR from 'swr'
 import { auth, db } from '@/lib/firebase'
-import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore'
+import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore'
 import { onAuthStateChanged, type User } from 'firebase/auth'
 import { logger } from '@/lib/logger'
 
@@ -12,6 +11,7 @@ export interface MealLogData {
   title?: string
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
   photoUrl?: string
+  additionalPhotos?: string[]
   aiAnalysis?: any
   manualEntries?: Array<{
     food: string
@@ -32,65 +32,16 @@ export interface MealLogData {
 }
 
 /**
- * Fetcher function for SWR - fetches meal logs from Firestore
- */
-async function fetchMealLogs(
-  userId: string,
-  params?: {
-    limitCount?: number
-    startDate?: string
-    endDate?: string
-    mealType?: string
-  }
-): Promise<MealLogData[]> {
-  const mealLogsRef = collection(db, 'users', userId, 'mealLogs')
-
-  // Build query with filters (WHERE clauses must come before ORDER BY)
-  let q = query(mealLogsRef)
-
-  // Add WHERE filters first
-  if (params?.mealType) {
-    q = query(q, where('mealType', '==', params.mealType))
-  }
-  if (params?.startDate) {
-    q = query(q, where('loggedAt', '>=', new Date(params.startDate)))
-  }
-  if (params?.endDate) {
-    q = query(q, where('loggedAt', '<=', new Date(params.endDate)))
-  }
-
-  // Then add ORDER BY
-  q = query(q, orderBy('loggedAt', 'desc'))
-
-  // Finally add LIMIT
-  q = query(q, limit(params?.limitCount || 10))
-
-  const snapshot = await getDocs(q)
-
-  const logs = snapshot.docs.map((doc) => {
-    const data = doc.data()
-    return {
-      id: doc.id,
-      ...data,
-      // Convert Firestore Timestamp to ISO string
-      loggedAt: data.loggedAt?.toDate?.()?.toISOString() || data.loggedAt,
-    } as MealLogData
-  })
-
-  return logs
-}
-
-/**
- * Optimized hook for fetching meal logs with SWR caching
+ * True real-time hook for fetching meal logs with Firestore onSnapshot
  *
- * PERFORMANCE OPTIMIZATIONS:
- * - Uses one-time fetch (getDocs) instead of real-time subscription (onSnapshot)
- * - Implements 5-minute SWR cache for instant subsequent loads
- * - Automatic background revalidation on focus/reconnect
- * - Deduplicates concurrent requests
+ * REAL-TIME UPDATES:
+ * - Uses onSnapshot for instant updates when meals are added/edited/deleted
+ * - No manual refresh required
+ * - Automatic cleanup on unmount
+ * - Supports filtering by meal type and date range
  *
  * @param params - Optional parameters for filtering
- * @returns Meal logs, loading state, error state, and mutate function
+ * @returns Meal logs, loading state, error state, and refresh function
  */
 export function useMealLogsRealtime(params?: {
   limitCount?: number
@@ -99,6 +50,9 @@ export function useMealLogsRealtime(params?: {
   mealType?: string
 }) {
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser)
+  const [mealLogs, setMealLogs] = useState<MealLogData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
 
   // Listen to auth state changes
   useEffect(() => {
@@ -109,31 +63,83 @@ export function useMealLogsRealtime(params?: {
     return () => unsubscribeAuth()
   }, [])
 
-  // Create SWR key based on user and params
-  const swrKey = currentUser
-    ? ['mealLogs', currentUser.uid, params?.limitCount, params?.startDate, params?.endDate, params?.mealType]
-    : null
-
-  // Use SWR with 5-minute cache
-  const { data, error, isLoading, mutate } = useSWR(
-    swrKey,
-    () => fetchMealLogs(currentUser!.uid, params),
-    {
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
-      dedupingInterval: 5000, // Dedupe requests within 5 seconds
-      refreshInterval: 0, // No automatic polling (only revalidate on focus/reconnect)
-      errorRetryCount: 2,
-      onError: (err) => {
-        logger.error('Error fetching meal logs:', err)
-      }
+  // Set up real-time listener for meal logs
+  useEffect(() => {
+    if (!currentUser) {
+      setMealLogs([])
+      setLoading(false)
+      return
     }
-  )
+
+    setLoading(true)
+    setError(null)
+
+    const mealLogsRef = collection(db, 'users', currentUser.uid, 'mealLogs')
+
+    // Build query with filters (WHERE clauses must come before ORDER BY)
+    let q = query(mealLogsRef)
+
+    // Add WHERE filters first
+    if (params?.mealType) {
+      q = query(q, where('mealType', '==', params.mealType))
+    }
+    if (params?.startDate) {
+      q = query(q, where('loggedAt', '>=', new Date(params.startDate)))
+    }
+    if (params?.endDate) {
+      q = query(q, where('loggedAt', '<=', new Date(params.endDate)))
+    }
+
+    // Then add ORDER BY
+    q = query(q, orderBy('loggedAt', 'desc'))
+
+    // Finally add LIMIT
+    q = query(q, limit(params?.limitCount || 10))
+
+    // Subscribe to real-time updates
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const logs = snapshot.docs.map((doc) => {
+          const data = doc.data()
+          return {
+            id: doc.id,
+            ...data,
+            // Convert Firestore Timestamp to ISO string
+            loggedAt: data.loggedAt?.toDate?.()?.toISOString() || data.loggedAt,
+          } as MealLogData
+        })
+
+        setMealLogs(logs)
+        setLoading(false)
+        setError(null)
+
+        logger.debug(`📊 Real-time update: ${logs.length} meal logs loaded`)
+      },
+      (err) => {
+        logger.error('❌ Error in meal logs real-time listener:', err)
+        setError(err as Error)
+        setLoading(false)
+      }
+    )
+
+    // Cleanup subscription on unmount or when dependencies change
+    return () => {
+      logger.debug('🔌 Unsubscribing from meal logs listener')
+      unsubscribe()
+    }
+  }, [currentUser, params?.limitCount, params?.startDate, params?.endDate, params?.mealType])
+
+  // Manual refresh function (forces re-subscription)
+  const refresh = () => {
+    logger.debug('🔄 Manual refresh requested')
+    setLoading(true)
+  }
 
   return {
-    mealLogs: data || [],
-    loading: isLoading,
-    error: error || null,
-    refresh: mutate // Expose mutate for manual refresh
+    mealLogs,
+    loading,
+    error,
+    refresh
   }
 }

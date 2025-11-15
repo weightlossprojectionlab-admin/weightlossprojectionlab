@@ -2,6 +2,7 @@
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { MacroDataPoint } from '@/lib/chart-data-aggregator'
+import { MacroPieChart } from './MacroPieChart'
 import { useTheme } from '@/hooks/useTheme'
 
 interface MacroDistributionChartProps {
@@ -62,92 +63,94 @@ export function MacroDistributionChart({ data, loading }: MacroDistributionChart
   const tooltipText = isDark ? '#f9fafb' : '#111827'
 
   return (
-    <div className="w-full">
-      <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-          <defs>
-            <linearGradient id="colorProtein" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
-            </linearGradient>
-            <linearGradient id="colorCarbs" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
-            </linearGradient>
-            <linearGradient id="colorFat" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
-            </linearGradient>
-          </defs>
+    <div className="w-full space-y-8">
+      {/* Pie Chart - Aggregate Macro Split */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          Overall Macro Split
+        </h3>
+        <MacroPieChart
+          protein={totals.protein}
+          carbs={totals.carbs}
+          fat={totals.fat}
+          loading={loading}
+        />
+      </div>
 
-          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-          <XAxis
-            dataKey="date"
-            stroke={axisColor}
-            style={{ fontSize: '12px' }}
-          />
-          <YAxis
-            stroke={axisColor}
-            style={{ fontSize: '12px' }}
-            label={{ value: 'Grams', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: axisColor } }}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: tooltipBg,
-              border: `1px solid ${tooltipBorder}`,
-              borderRadius: '8px',
-              padding: '8px 12px'
-            }}
-            labelStyle={{ color: tooltipText, fontWeight: 600 }}
-            formatter={(value: number, name: string) => [`${value}g`, name.charAt(0).toUpperCase() + name.slice(1)]}
-          />
-          <Legend
-            wrapperStyle={{ paddingTop: '20px' }}
-            iconType="rect"
-          />
+      {/* Area Chart - Daily Trend */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          Daily Macro Trend
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <defs>
+                <linearGradient id="colorProtein" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="colorCarbs" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="colorFat" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
 
-          {/* Stacked areas for protein, carbs, fat */}
-          <Area
-            type="monotone"
-            dataKey="protein"
-            stackId="1"
-            stroke="#ef4444"
-            fill="url(#colorProtein)"
-            name="Protein"
-          />
-          <Area
-            type="monotone"
-            dataKey="carbs"
-            stackId="1"
-            stroke="#f59e0b"
-            fill="url(#colorCarbs)"
-            name="Carbs"
-          />
-          <Area
-            type="monotone"
-            dataKey="fat"
-            stackId="1"
-            stroke="#10b981"
-            fill="url(#colorFat)"
-            name="Fat"
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis
+                dataKey="date"
+                stroke={axisColor}
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis
+                stroke={axisColor}
+                style={{ fontSize: '12px' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: tooltipBg,
+                  border: `1px solid ${tooltipBorder}`,
+                  borderRadius: '8px',
+                  padding: '8px 12px'
+                }}
+                labelStyle={{ color: tooltipText, fontWeight: 600 }}
+                formatter={(value: number, name: string) => [`${value}g`, name.charAt(0).toUpperCase() + name.slice(1)]}
+              />
+              <Legend
+                wrapperStyle={{ paddingTop: '20px' }}
+                iconType="rect"
+              />
 
-      {/* Macro breakdown percentages */}
-      <div className="flex items-center justify-center gap-6 mt-4 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-[#ef4444] rounded" />
-          <span className="text-gray-900 dark:text-gray-100">Protein ({percentages.protein}%)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-[#f59e0b] rounded" />
-          <span className="text-gray-900 dark:text-gray-100">Carbs ({percentages.carbs}%)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-[#10b981] rounded" />
-          <span className="text-gray-900 dark:text-gray-100">Fat ({percentages.fat}%)</span>
-        </div>
+              {/* Stacked areas for protein, carbs, fat */}
+              <Area
+                type="monotone"
+                dataKey="protein"
+                stackId="1"
+                stroke="#ef4444"
+                fill="url(#colorProtein)"
+                name="Protein"
+              />
+              <Area
+                type="monotone"
+                dataKey="carbs"
+                stackId="1"
+                stroke="#f59e0b"
+                fill="url(#colorCarbs)"
+                name="Carbs"
+              />
+              <Area
+                type="monotone"
+                dataKey="fat"
+                stackId="1"
+                stroke="#10b981"
+                fill="url(#colorFat)"
+                name="Fat"
+              />
+            </AreaChart>
+        </ResponsiveContainer>
       </div>
     </div>
   )

@@ -67,6 +67,75 @@ service cloud.firestore {
       // Delete: Only admins
       allow delete: if isAdmin();
 
+      // ============================================
+      // MEDICAL RECORDS - PATIENT PROFILES
+      // ============================================
+
+      // Patient profiles
+      match /patients/{patientId} {
+        // Read: Owner can read their patients
+        allow read: if isOwner(userId);
+
+        // Create: Owner can create patients
+        allow create: if isOwner(userId) &&
+                        request.resource.data.userId == userId;
+
+        // Update: Owner can update their patients
+        allow update: if isOwner(userId) &&
+                        resource.data.userId == userId;
+
+        // Delete: Owner can delete their patients
+        allow delete: if isOwner(userId) &&
+                        resource.data.userId == userId;
+
+        // Vital signs subcollection
+        match /vitals/{vitalId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId);
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
+      }
+
+      // ============================================
+      // MEDICAL RECORDS - FAMILY COLLABORATION
+      // ============================================
+
+      // Family members who have access to user's patients
+      match /familyMembers/{memberId} {
+        // Read: Owner can read their family members list
+        allow read: if isOwner(userId);
+
+        // Create: Server-side only (via invitation acceptance)
+        allow create: if false;
+
+        // Update: Owner can update permissions
+        allow update: if isOwner(userId) &&
+                        resource.data.userId == request.resource.data.userId;
+
+        // Delete: Owner can remove family members
+        allow delete: if isOwner(userId);
+      }
+
+      // ============================================
+      // MEDICAL RECORDS - APPOINTMENTS
+      // ============================================
+
+      // Appointments
+      match /appointments/{appointmentId} {
+        // Read: Owner can read their appointments
+        allow read: if isOwner(userId);
+
+        // Create: Owner can create appointments
+        allow create: if isOwner(userId);
+
+        // Update: Owner can update their appointments
+        allow update: if isOwner(userId);
+
+        // Delete: Owner can delete their appointments
+        allow delete: if isOwner(userId);
+      }
+
       // --- Legacy subcollections (from original rules) ---
 
       // Weight logs
@@ -512,6 +581,31 @@ service cloud.firestore {
         allow read: if isAdmin();
         allow write: if false;
       }
+    }
+
+    // ============================================
+    // MEDICAL RECORDS - FAMILY INVITATIONS
+    // ============================================
+
+    // Family invitations (global collection)
+    match /familyInvitations/{invitationId} {
+      // Read: Inviter can read invitations they sent
+      allow read: if isAuthenticated() &&
+                     resource.data.invitedByUserId == request.auth.uid;
+
+      // Read: Recipient can read invitations sent to their email
+      allow read: if isAuthenticated() &&
+                     resource.data.recipientEmail == request.auth.token.email;
+
+      // Create: Any authenticated user can create invitations
+      allow create: if isAuthenticated() &&
+                      request.resource.data.invitedByUserId == request.auth.uid;
+
+      // Update: Server-side only (via accept/decline/revoke API)
+      allow update: if false;
+
+      // Delete: Only admins
+      allow delete: if isAdmin();
     }
 
     // ============================================

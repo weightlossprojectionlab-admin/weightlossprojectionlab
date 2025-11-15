@@ -70,7 +70,6 @@ export function WeightTrendChart({ data, targetWeight, loading }: WeightTrendCha
             domain={yDomain}
             stroke={axisColor}
             style={{ fontSize: '12px' }}
-            label={{ value: 'Weight (lbs)', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: axisColor } }}
           />
           <Tooltip
             contentStyle={{

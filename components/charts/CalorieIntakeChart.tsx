@@ -64,7 +64,6 @@ export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
           <YAxis
             stroke={axisColor}
             style={{ fontSize: '12px' }}
-            label={{ value: 'Calories', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: axisColor } }}
           />
           <Tooltip
             contentStyle={{

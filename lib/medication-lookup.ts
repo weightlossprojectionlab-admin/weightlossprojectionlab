@@ -21,9 +21,18 @@ export interface MedicationInfo {
 }
 
 export interface ScannedMedication extends MedicationInfo {
-  frequency?: string // e.g., "2 times daily", "once weekly"
+  frequency?: string // COMPLETE dosage instructions (e.g., "Take 1 tablet by mouth every day")
   prescribedFor?: string // Condition name
+  patientName?: string // Who this medication is for (e.g., "Mom", "Dad", "Me")
   rxNumber?: string // Prescription number
+  quantity?: string // Quantity dispensed (e.g., "30 tablets", "60 capsules")
+  refills?: string // Refills remaining (e.g., "3 refills", "No refills")
+  fillDate?: string // Date prescription was filled (ISO string)
+  expirationDate?: string // Expiration date (ISO string)
+  warnings?: string[] // Special warnings (e.g., "Do not take with alcohol", "May cause drowsiness")
+  pharmacyName?: string // Pharmacy name
+  pharmacyPhone?: string // Pharmacy phone number
+  patientAddress?: string // Patient address (useful for family member tracking)
   scannedAt: string // ISO timestamp
 }
 

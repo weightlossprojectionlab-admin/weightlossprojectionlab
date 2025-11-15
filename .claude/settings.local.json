@@ -7,9 +7,17 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Read(//c/Users/percy/Pictures/Screenshots/**)"
+      "Read(//c/Users/percy/Pictures/Screenshots/**)",
+      "WebSearch",
+      "Bash(npm run dev:*)",
+      "Bash(taskkill:*)",
+      "Write(**)",
+      "Edit(**)",
+      "Bash(mkdir:*)",
+      "Bash(sleep:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "defaultMode": "bypassPermissions"
   }
 }

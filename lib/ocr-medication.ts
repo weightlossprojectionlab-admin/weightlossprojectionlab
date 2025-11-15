@@ -4,55 +4,93 @@
  * Uses Tesseract.js to extract text from prescription labels and bottles
  * when NDC barcode scanning is not available or fails.
  *
+ * Falls back to Gemini Vision API for low-confidence OCR results.
+ *
  * Tesseract.js Documentation: https://tesseract.projectnaptha.com/
  */
 
-import Tesseract from 'tesseract.js'
+import { createWorker, Worker, LoggerMessage } from 'tesseract.js'
 import { logger } from '@/lib/logger'
 import { ScannedMedication } from './medication-lookup'
+import { auth } from './firebase'
+
+export interface SuggestedCondition {
+  condition: string
+  confidence: number
+  reasoning: string
+  isPrimaryTreatment: boolean
+}
 
 export interface ExtractedMedicationText {
   medicationName: string
   strength?: string
   dosageForm?: string
-  frequency?: string
+  frequency?: string // COMPLETE dosage instructions
   rxNumber?: string
   prescribingDoctor?: string
   patientName?: string
+  patientAddress?: string
+  ndc?: string // NDC number extracted by Gemini Vision
+  pharmacy?: string // Pharmacy name
+  pharmacyPhone?: string
+  quantity?: string // Quantity dispensed
+  refills?: string // Refills remaining
+  fillDate?: string // Fill date
+  expirationDate?: string // Expiration date
+  warnings?: string[] // Special warnings/instructions
   rawText: string
+  suggestedConditions?: SuggestedCondition[]
 }
 
 /**
- * Extract text from image using Tesseract OCR
+ * Extract text from image using Tesseract OCR with Worker API
  *
  * @param imageFile - Image file or blob containing medication label
- * @returns Raw extracted text
+ * @param onProgress - Optional progress callback (0-100)
+ * @returns Object containing raw text and confidence score
  */
-export async function extractTextFromImage(imageFile: File | Blob): Promise<string> {
-  try {
-    logger.debug('[OCR] Starting text extraction')
+export async function extractTextFromImage(
+  imageFile: File | Blob,
+  onProgress?: (progress: number) => void
+): Promise<{ text: string; confidence: number }> {
+  let worker: Worker | null = null
 
-    const result = await Tesseract.recognize(imageFile, 'eng', {
-      logger: (m) => {
-        // Log OCR progress
-        if (m.status === 'recognizing text') {
-          logger.debug('[OCR] Progress', { progress: Math.round(m.progress * 100) })
+  try {
+    logger.debug('[OCR] Starting text extraction with Worker API')
+
+    // Create Tesseract worker
+    worker = await createWorker('eng', 1, {
+      logger: (m: LoggerMessage) => {
+        // Report progress
+        if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+          const progress = Math.round(m.progress * 100)
+          logger.debug('[OCR] Progress', { progress })
+          if (onProgress) {
+            onProgress(progress)
+          }
         }
       }
     })
 
-    const text = result.data.text
+    const { data } = await worker.recognize(imageFile)
+    const text = data.text
+    const confidence = data.confidence
 
     logger.info('[OCR] Text extraction complete', {
       textLength: text.length,
-      confidence: result.data.confidence
+      confidence: Math.round(confidence)
     })
 
-    return text
+    return { text, confidence }
 
   } catch (error) {
     logger.error('[OCR] Text extraction failed', error as Error)
-    return ''
+    return { text: '', confidence: 0 }
+  } finally {
+    // Always clean up worker
+    if (worker) {
+      await worker.terminate()
+    }
   }
 }
 
@@ -76,6 +114,13 @@ export function parseMedicationFromText(text: string): ExtractedMedicationText |
     let rxNumber = ''
     let prescribingDoctor = ''
     let patientName = ''
+    let patientAddress = ''
+    let quantity = ''
+    let refills = ''
+    let fillDate = ''
+    let expirationDate = ''
+    let pharmacyPhone = ''
+    const warnings: string[] = []
 
     // Pattern 1: Medication name (usually in CAPS, first significant line)
     // Look for lines that are likely medication names
@@ -131,13 +176,22 @@ export function parseMedicationFromText(text: string): ExtractedMedicationText |
     }
 
     // Pattern 4: Frequency/Instructions
-    // Common patterns: "Take 1 tablet by mouth twice daily", "Apply once daily"
+    // Capture complete dosage instructions including quantity and frequency
     const frequencyPatterns = [
-      /take\s+(\d+)\s+(tablet|capsule|pill)s?\s+.*?(\d+\s+times?\s+(daily|a day|per day)|twice\s+daily|once\s+daily|three\s+times\s+daily|every\s+\d+\s+hours)/i,
-      /apply\s+.*?(once|twice|three times)\s+(daily|a day)/i,
-      /inject\s+.*?(once|twice)\s+(daily|weekly|monthly)/i,
-      /(\d+)\s+times?\s+(daily|a day|per day|weekly|monthly)/i,
-      /(once|twice|three times)\s+(daily|a day|weekly|monthly)/i
+      // Full instructions: "Take 1 tablet by mouth every day"
+      /take\s+\d+(?:-\d+)?\s+(?:tablet|capsule|pill)s?(?:\s+by\s+mouth)?(?:\s+with\s+(?:food|water|meals?))?\s+(?:once|twice|three times|every)\s+(?:day|daily|morning|evening|night|bedtime|\d+\s+hours)/i,
+      // Shorter version: "Take 1 tablet daily"
+      /take\s+\d+(?:-\d+)?\s+(?:tablet|capsule|pill)s?\s+(?:once|twice|daily|every\s+day|per\s+day)/i,
+      // Apply: "Apply once daily"
+      /apply\s+(?:once|twice|three times)\s+(?:daily|a day|per day)/i,
+      // Inject: "Inject once weekly"
+      /inject\s+(?:\d+\s+)?(?:unit|ml|mg)s?\s+(?:once|twice)\s+(?:daily|weekly|monthly)/i,
+      // Generic times: "3 times daily"
+      /\d+\s+times?\s+(?:daily|a day|per day|weekly|monthly)/i,
+      // Simple frequency: "once daily", "twice daily", "every day"
+      /(?:once|twice|three times)\s+(?:daily|a day|per day|every\s+day)/i,
+      // Every X hours: "every 4 hours", "every 6 hours"
+      /every\s+\d+\s+hours?/i
     ]
 
     for (const pattern of frequencyPatterns) {
@@ -190,6 +244,76 @@ export function parseMedicationFromText(text: string): ExtractedMedicationText |
       }
     }
 
+    // Pattern 8: Patient Address (usually follows patient name)
+    const addressMatch = text.match(/\d+\s+[A-Za-z\s]+(Rd|Rd\.|Road|St|St\.|Street|Ave|Ave\.|Avenue|Dr|Dr\.|Drive|Ln|Lane|Blvd|Blvd\.|Boulevard)(?:\s+(?:Apt|Apt\.|#)\s*\d+)?/i)
+    if (addressMatch) {
+      patientAddress = addressMatch[0].trim()
+    }
+
+    // Pattern 9: Quantity (e.g., "QTY: 30", "Quantity: 60 tablets")
+    const quantityPatterns = [
+      /(?:QTY|Quantity):?\s*(\d+\s*(?:tablet|capsule|pill|patch|ml|gram|unit)?s?)/i,
+      /Dispense:?\s*(\d+\s*(?:tablet|capsule|pill|patch|ml|gram|unit)?s?)/i
+    ]
+    for (const pattern of quantityPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        quantity = match[1].trim()
+        break
+      }
+    }
+
+    // Pattern 10: Refills (e.g., "Refills: 3", "3 Refills", "No Refills")
+    const refillsMatch = text.match(/(?:Refills?|Refills?\s+Remaining):?\s*(No|None|\d+)/i)
+    if (refillsMatch) {
+      const value = refillsMatch[1].toLowerCase()
+      refills = value === 'no' || value === 'none' ? 'No refills' : `${refillsMatch[1]} refills`
+    }
+
+    // Pattern 11: Fill Date (e.g., "Filled: 01/15/2024", "Fill Date: 1/15/24")
+    const fillDateMatch = text.match(/(?:Fill(?:ed)?(?:\s+Date)?):?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i)
+    if (fillDateMatch) {
+      fillDate = fillDateMatch[1]
+    }
+
+    // Pattern 12: Expiration Date (e.g., "Expires: 01/15/2025", "Exp: 1/15/25", "Discard After: 1/15/25")
+    const expirationPatterns = [
+      /(?:Exp(?:ires?)?(?:\s+Date)?|Discard\s+(?:After|By)):?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i,
+      /Use\s+Before:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i
+    ]
+    for (const pattern of expirationPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        expirationDate = match[1]
+        break
+      }
+    }
+
+    // Pattern 13: Pharmacy Phone (e.g., "Phone: (555) 123-4567", "Tel: 555-123-4567")
+    const phoneMatch = text.match(/(?:Phone|Tel|Call):?\s*(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}/i)
+    if (phoneMatch) {
+      pharmacyPhone = phoneMatch[0].replace(/(?:Phone|Tel|Call):?\s*/i, '').trim()
+    }
+
+    // Pattern 14: Warnings (common warning phrases)
+    const warningPatterns = [
+      /(?:WARNING|CAUTION|IMPORTANT):?\s+([^.]+)/gi,
+      /(Do not (?:take|use) (?:with|if)[^.]+)/gi,
+      /(May cause [^.]+)/gi,
+      /(Avoid [^.]+)/gi,
+      /(Take (?:with|without) food)/gi,
+      /(Keep (?:out of reach|refrigerated|at room temperature)[^.]*)/gi
+    ]
+    for (const pattern of warningPatterns) {
+      const matches = text.matchAll(pattern)
+      for (const match of matches) {
+        const warning = match[1] || match[0]
+        if (warning && !warnings.includes(warning.trim())) {
+          warnings.push(warning.trim())
+        }
+      }
+    }
+
     // Validation: Must have at least medication name
     if (!medicationName || medicationName.length < 3) {
       logger.warn('[OCR Parser] Could not identify medication name')
@@ -204,6 +328,13 @@ export function parseMedicationFromText(text: string): ExtractedMedicationText |
       rxNumber: rxNumber || undefined,
       prescribingDoctor: prescribingDoctor || undefined,
       patientName: patientName || undefined,
+      patientAddress: patientAddress || undefined,
+      quantity: quantity || undefined,
+      refills: refills || undefined,
+      fillDate: fillDate || undefined,
+      expirationDate: expirationDate || undefined,
+      pharmacyPhone: pharmacyPhone || undefined,
+      warnings: warnings.length > 0 ? warnings : undefined,
       rawText: text
     }
 
@@ -223,25 +354,113 @@ export function parseMedicationFromText(text: string): ExtractedMedicationText |
 }
 
 /**
- * Extract medication from image (combines OCR + parsing)
+ * Extract medication using Gemini Vision API via server endpoint
+ * (fallback for low-confidence OCR)
  *
  * @param imageFile - Image file containing medication label
- * @returns Parsed medication information
+ * @returns Parsed medication information from Gemini Vision
  */
-export async function extractMedicationFromImage(imageFile: File | Blob): Promise<ExtractedMedicationText | null> {
+async function extractMedicationWithGemini(imageFile: File | Blob): Promise<ExtractedMedicationText | null> {
   try {
-    logger.info('[OCR] Extracting medication from image')
+    logger.info('[Gemini OCR] Using server-side Gemini Vision API for medication extraction')
 
-    // Step 1: Extract raw text
-    const text = await extractTextFromImage(imageFile)
-
-    if (!text || text.length < 10) {
-      logger.warn('[OCR] Insufficient text extracted')
+    // Get current user token for API auth
+    const user = auth.currentUser
+    if (!user) {
+      logger.warn('[Gemini OCR] User not authenticated')
       return null
     }
 
-    // Step 2: Parse medication info
+    const token = await user.getIdToken()
+
+    // Convert image to base64
+    const imageData = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        resolve(reader.result as string)
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(imageFile)
+    })
+
+    // Call server-side OCR API
+    const response = await fetch('/api/ocr/medication', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ imageData })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      logger.error('[Gemini OCR] API request failed', new Error(errorData.error || 'Unknown error'))
+      return null
+    }
+
+    const result = await response.json()
+
+    if (!result.success || !result.data) {
+      logger.warn('[Gemini OCR] No medication data returned')
+      return null
+    }
+
+    logger.info('[Gemini OCR] Successfully extracted medication', {
+      medicationName: result.data.medicationName,
+      strength: result.data.strength,
+      dosageForm: result.data.dosageForm
+    })
+
+    return result.data
+
+  } catch (error) {
+    logger.error('[Gemini OCR] Vision API extraction failed', error as Error)
+    return null
+  }
+}
+
+/**
+ * Extract medication from image (combines OCR + parsing with Gemini fallback)
+ *
+ * @param imageFile - Image file containing medication label
+ * @param onProgress - Optional progress callback (0-100)
+ * @returns Parsed medication information
+ */
+export async function extractMedicationFromImage(
+  imageFile: File | Blob,
+  onProgress?: (progress: number) => void
+): Promise<ExtractedMedicationText | null> {
+  try {
+    logger.info('[OCR] Extracting medication from image')
+
+    // Step 1: Extract raw text with Tesseract
+    const { text, confidence } = await extractTextFromImage(imageFile, onProgress)
+
+    if (!text || text.length < 10) {
+      logger.warn('[OCR] Insufficient text extracted, trying Gemini Vision fallback')
+      return await extractMedicationWithGemini(imageFile)
+    }
+
+    // Step 2: Parse medication info from text
     const medication = parseMedicationFromText(text)
+
+    // Step 3: If parsing failed or confidence is too low, try Gemini Vision
+    if (!medication || confidence < 50) {
+      logger.warn('[OCR] Low confidence or parsing failed', {
+        confidence: Math.round(confidence),
+        medicationFound: !!medication
+      })
+      logger.info('[OCR] Attempting Gemini Vision fallback')
+
+      const geminiResult = await extractMedicationWithGemini(imageFile)
+      if (geminiResult) {
+        return geminiResult
+      }
+
+      // If Gemini also fails, return Tesseract result if we have one
+      return medication
+    }
 
     return medication
 
@@ -258,16 +477,31 @@ export function convertToScannedMedication(
   extracted: ExtractedMedicationText,
   prescribedFor?: string
 ): ScannedMedication {
-  return {
+  // Build medication object, only including fields that have values
+  // This prevents Firestore errors with undefined values
+  const medication: ScannedMedication = {
     name: extracted.medicationName,
     strength: extracted.strength || 'Unknown',
     dosageForm: extracted.dosageForm || 'Unknown',
-    frequency: extracted.frequency,
-    prescribedFor: prescribedFor,
-    rxNumber: extracted.rxNumber,
-    ndc: '', // No NDC from OCR
+    ndc: extracted.ndc || '',
     scannedAt: new Date().toISOString()
   }
+
+  // Only add optional fields if they have actual values
+  if (extracted.frequency) medication.frequency = extracted.frequency
+  if (prescribedFor) medication.prescribedFor = prescribedFor
+  if (extracted.patientName) medication.patientName = extracted.patientName
+  if (extracted.patientAddress) medication.patientAddress = extracted.patientAddress
+  if (extracted.rxNumber) medication.rxNumber = extracted.rxNumber
+  if (extracted.quantity) medication.quantity = extracted.quantity
+  if (extracted.refills) medication.refills = extracted.refills
+  if (extracted.fillDate) medication.fillDate = extracted.fillDate
+  if (extracted.expirationDate) medication.expirationDate = extracted.expirationDate
+  if (extracted.warnings && extracted.warnings.length > 0) medication.warnings = extracted.warnings
+  if (extracted.pharmacy) medication.pharmacyName = extracted.pharmacy
+  if (extracted.pharmacyPhone) medication.pharmacyPhone = extracted.pharmacyPhone
+
+  return medication
 }
 
 /**

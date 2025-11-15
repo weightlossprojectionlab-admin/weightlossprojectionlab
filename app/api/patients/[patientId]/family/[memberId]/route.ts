@@ -12,10 +12,10 @@ import type { FamilyMember } from '@/types/medical'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { patientId: string; memberId: string } }
+  { params }: { params: Promise<{ patientId: string; memberId: string }> }
 ) {
   try {
-    const { patientId, memberId } = params
+    const { patientId, memberId } = await params
 
     // Authenticate user
     const authHeader = request.headers.get('Authorization')
@@ -112,10 +112,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { patientId: string; memberId: string } }
+  { params }: { params: Promise<{ patientId: string; memberId: string }> }
 ) {
   try {
-    const { patientId, memberId } = params
+    const { patientId, memberId } = await params
 
     // Authenticate user
     const authHeader = request.headers.get('Authorization')

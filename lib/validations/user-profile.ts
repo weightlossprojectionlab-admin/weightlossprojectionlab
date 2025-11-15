@@ -54,6 +54,30 @@ export const BodyMeasurementsSchema = z.object({
   thighs: z.number().positive().optional(),
 })
 
+// Medication schema - matches the comprehensive structure from types/index.ts
+export const MedicationSchema = z.object({
+  name: z.string(),
+  brandName: z.string().optional(),
+  strength: z.string(),
+  dosageForm: z.string(),
+  frequency: z.string().optional(),
+  prescribedFor: z.string().optional(),
+  patientName: z.string().optional(),
+  rxcui: z.string().optional(),
+  ndc: z.string().optional(),
+  rxNumber: z.string().optional(),
+  drugClass: z.string().optional(),
+  quantity: z.string().optional(),
+  refills: z.string().optional(),
+  fillDate: z.string().optional(),
+  expirationDate: z.string().optional(),
+  warnings: z.array(z.string()).optional(),
+  pharmacyName: z.string().optional(),
+  pharmacyPhone: z.string().optional(),
+  patientAddress: z.string().optional(),
+  scannedAt: z.string(),
+})
+
 export const UserProfileSchema = z.object({
   birthDate: z.string().datetime(),
   age: z.number().min(13).max(120),
@@ -63,6 +87,7 @@ export const UserProfileSchema = z.object({
   activityLevel: z.enum(['sedentary', 'lightly-active', 'moderately-active', 'very-active', 'extremely-active']),
   healthConditions: z.array(z.string()).optional(),
   foodAllergies: z.array(z.string()).optional(),
+  medications: z.array(MedicationSchema).optional(),
   lifestyle: LifestyleSchema.optional(),
   bodyMeasurements: BodyMeasurementsSchema.optional(),
   onboardingCompleted: z.boolean(),

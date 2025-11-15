@@ -32,6 +32,8 @@ import { useRecipes } from '@/hooks/useRecipes'
 import { generateRecipeAltText } from '@/lib/utils'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger'
+import { shouldShowWeightReminder, getWeightReminderMessage, getWeightReminderColor } from '@/lib/weight-reminder-logic'
 
 // Dynamic imports for heavy components (lazy loaded on demand)
 const GoalsEditor = dynamic(() => import('@/components/ui/GoalsEditor').then(mod => ({ default: mod.GoalsEditor })), {
@@ -46,6 +48,20 @@ const RecipeModal = dynamic(() => import('@/components/ui/RecipeModal').then(mod
 
 const ChatWidget = dynamic(() => import('@/components/ui/ChatInterface').then(mod => ({ default: mod.ChatWidget })), {
   loading: () => null, // Chat widget loads silently in background
+  ssr: false
+})
+
+const QuickWeightLogModal = dynamic(() => import('@/components/ui/QuickWeightLogModal').then(mod => ({ default: mod.QuickWeightLogModal })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><Spinner /></div>,
+  ssr: false
+})
+
+const WeightReminderModal = dynamic(() => import('@/components/ui/WeightReminderModal').then(mod => ({ default: mod.WeightReminderModal })), {
+  ssr: false
+})
+
+const UrgentRecommendationsWidget = dynamic(() => import('@/components/appointments/UrgentRecommendationsWidget').then(mod => ({ default: mod.UrgentRecommendationsWidget })), {
+  loading: () => null,
   ssr: false
 })
 
@@ -65,6 +81,8 @@ function DashboardContent() {
   const [showGoalsEditor, setShowGoalsEditor] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState<MealSuggestion | null>(null)
   const [showRecipeModal, setShowRecipeModal] = useState(false)
+  const [showWeightModal, setShowWeightModal] = useState(false)
+  const [showReminderModal, setShowReminderModal] = useState(false)
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
   // Fetch all dashboard data with optimized hooks
   const {
@@ -107,6 +125,27 @@ function DashboardContent() {
 
   // Get inventory items for ingredient-aware suggestions
   const { allItems: inventoryItems } = useInventory()
+
+  // Calculate weight reminder status
+  // weightData is sorted desc (newest first), so [0] is most recent
+  const lastWeightLog = weightData.length > 0 ? weightData[0] : null
+  const weightReminder = useMemo(() => {
+    const reminder = shouldShowWeightReminder(
+      lastWeightLog,
+      userProfile?.preferences?.weightCheckInFrequency || 'weekly'
+    )
+    // Debug logging
+    if (lastWeightLog) {
+      logger.debug('Weight reminder calculation', {
+        lastLogDate: lastWeightLog.loggedAt,
+        frequency: userProfile?.preferences?.weightCheckInFrequency,
+        shouldShow: reminder.shouldShow,
+        daysSince: reminder.daysSince,
+        status: reminder.status
+      })
+    }
+    return reminder
+  }, [lastWeightLog, userProfile?.preferences?.weightCheckInFrequency])
 
   // Get contextual meal recommendations with personalized suggestions (with images)
   // MEMOIZED: Prevents expensive recalculation on every render (237 lines of logic + 692-line meal array)
@@ -253,9 +292,45 @@ function DashboardContent() {
           </div>
         ) : (
           <>
+            {/* Weight Check-in Reminder Card */}
+            {weightReminder.shouldShow && (
+              <div className={`border-2 rounded-lg p-6 ${getWeightReminderColor(weightReminder.status).border} ${getWeightReminderColor(weightReminder.status).bg}`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">⚖️</span>
+                      <h3 className={`font-semibold ${getWeightReminderColor(weightReminder.status).text}`}>
+                        {weightReminder.isOverdue ? 'Weight Check-in Overdue' : 'Time for Your Weigh-in'}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                      {getWeightReminderMessage(weightReminder, userProfile?.preferences?.weightCheckInFrequency || 'weekly')}
+                    </p>
+                    <button
+                      onClick={() => setShowWeightModal(true)}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
+                    >
+                      Log Weight Now
+                    </button>
+                  </div>
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${getWeightReminderColor(weightReminder.status).badge}`}>
+                    {weightReminder.daysSince === 0 ? 'First check-in' : `${weightReminder.daysSince} days ago`}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Weight Progress Card */}
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-md transition-shadow p-6">
-              <h2 className="mb-4">Starting Weight</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2>Starting Weight</h2>
+                <Link
+                  href="/weight-history"
+                  className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
+                >
+                  View History →
+                </Link>
+              </div>
               {weightTrend.current > 0 ? (
                 <div className="space-y-3">
                   <div className="flex items-end space-x-2">
@@ -420,6 +495,9 @@ function DashboardContent() {
               </div>
             )}
 
+            {/* Urgent AI Recommendations Widget */}
+            <UrgentRecommendationsWidget />
+
             {/* Progress Charts Link */}
             <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
               <div className="flex items-center justify-between">
@@ -453,6 +531,25 @@ function DashboardContent() {
                   <span>View Gallery</span>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+
+            {/* Medical Records Link */}
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold mb-1">🏥 Medical Records</h3>
+                  <p className="text-sm text-green-100">Manage health records for your family</p>
+                </div>
+                <a
+                  href="/medical"
+                  className="px-6 py-3 bg-white dark:bg-gray-900 text-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium flex items-center gap-2"
+                >
+                  <span>View Records</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </a>
               </div>
@@ -917,12 +1014,29 @@ function DashboardContent() {
 
           <button
             onClick={() => {
-              setNavigatingTo('gallery')
-              router.push('/meal-gallery')
+              setNavigatingTo('medications')
+              router.push('/medications')
             }}
             disabled={!!navigatingTo}
             className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Meal gallery"
+            aria-label="Manage medications"
+          >
+            {navigatingTo === 'medications' ? (
+              <Spinner size="md" className="text-primary" />
+            ) : (
+              <span className="text-2xl" role="img" aria-label="medications">💊</span>
+            )}
+            <span className="text-sm font-medium">Medications</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setNavigatingTo('gallery')
+              router.push('/gallery')
+            }}
+            disabled={!!navigatingTo}
+            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-label="Photo gallery with social sharing"
           >
             {navigatingTo === 'gallery' ? (
               <Spinner size="md" className="text-primary" />
@@ -947,6 +1061,16 @@ function DashboardContent() {
               <span className="text-2xl" role="img" aria-label="shopping">🛒</span>
             )}
             <span className="text-sm font-medium">Shopping</span>
+          </button>
+
+          <button
+            onClick={() => setShowWeightModal(true)}
+            disabled={!!navigatingTo}
+            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-label="Log weight"
+          >
+            <span className="text-2xl" role="img" aria-label="scale">⚖️</span>
+            <span className="text-sm font-medium">Log Weight</span>
           </button>
 
           <button
@@ -1060,6 +1184,26 @@ function DashboardContent() {
           userAllergies={userProfile?.profile?.foodAllergies}
         />
       )}
+
+      {/* Weight Reminder Modal (auto-shows on mount if due) - only after weight data loads */}
+      {!loading && (
+        <WeightReminderModal
+          lastWeightLog={lastWeightLog}
+          frequency={userProfile?.preferences?.weightCheckInFrequency || 'weekly'}
+          onLogWeight={() => {
+            setShowReminderModal(false)
+            setShowWeightModal(true)
+          }}
+          onDismiss={() => setShowReminderModal(false)}
+        />
+      )}
+
+      {/* Quick Weight Log Modal */}
+      <QuickWeightLogModal
+        isOpen={showWeightModal}
+        onClose={() => setShowWeightModal(false)}
+        onSuccess={() => window.location.reload()}
+      />
 
       {/* AI Coach Chat Widget */}
       <ChatWidget userId={userProfile?.userId} />

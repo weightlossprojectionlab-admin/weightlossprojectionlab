@@ -69,6 +69,12 @@ export async function determineUserDestination(
       currentStep: profile.profile?.currentOnboardingStep
     })
 
+    // DEBUG: Log entire profile structure to diagnose onboarding redirect
+    console.log('[AuthRouter DEBUG] Full profile:', JSON.stringify(profile, null, 2))
+    console.log('[AuthRouter DEBUG] profile.profile:', profile.profile)
+    console.log('[AuthRouter DEBUG] onboardingCompleted value:', profile.profile?.onboardingCompleted)
+    console.log('[AuthRouter DEBUG] typeof onboardingCompleted:', typeof profile.profile?.onboardingCompleted)
+
     // Step 4: Check onboarding completion status
     const isOnboardingCompleted = profile.profile?.onboardingCompleted === true
 

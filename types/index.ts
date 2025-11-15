@@ -93,12 +93,21 @@ export interface UserProfile {
     brandName?: string     // Brand name if applicable (e.g., "Glucophage")
     strength: string       // e.g., "500 mg", "10 mg"
     dosageForm: string     // e.g., "tablet", "capsule", "gel", "injection"
-    frequency?: string     // e.g., "2 times daily", "once weekly"
+    frequency?: string     // COMPLETE dosage instructions (e.g., "Take 1 tablet by mouth every day")
     prescribedFor?: string // Condition name (e.g., "Type 2 Diabetes")
+    patientName?: string   // Who this medication is for (e.g., "Mom", "Dad", "Me")
     rxcui?: string        // RxNorm Concept Unique Identifier
     ndc?: string          // National Drug Code
     rxNumber?: string     // Prescription number
     drugClass?: string    // Therapeutic class
+    quantity?: string     // Quantity dispensed (e.g., "30 tablets", "60 capsules")
+    refills?: string      // Refills remaining (e.g., "3 refills", "No refills")
+    fillDate?: string     // Date prescription was filled (ISO string)
+    expirationDate?: string // Expiration date (ISO string)
+    warnings?: string[]   // Special warnings
+    pharmacyName?: string // Pharmacy name
+    pharmacyPhone?: string // Pharmacy phone number
+    patientAddress?: string // Patient address
     scannedAt: string     // ISO timestamp
   }>
   foodAllergies?: string[]
@@ -177,6 +186,7 @@ export interface MealLog {
   title?: string
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
   photoUrl?: string
+  additionalPhotos?: string[] // Up to 4 additional photos for social media/documentation
   aiAnalysis: AIAnalysis
   manualAdjustments?: ManualAdjustments
   searchKeywords?: string[]
@@ -531,3 +541,6 @@ export interface QueuedRecipe {
   plannedFor?: Date
   addedAt: Date
 }
+
+// Medical Records System Types
+export * from './medical'

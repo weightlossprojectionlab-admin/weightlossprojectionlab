@@ -71,6 +71,15 @@ export async function GET(request: NextRequest) {
     }
 
     const userData = userDoc.data()
+
+    // DEBUG: Log medications to see what's in Firestore
+    console.log('[GET Profile] Medications in Firestore:', {
+      'profile.medications': userData?.profile?.medications,
+      'medications': userData?.medications,
+      'hasProfile': !!userData?.profile,
+      'profileKeys': userData?.profile ? Object.keys(userData.profile) : []
+    })
+
     const userProfile = {
       id: userDoc.id,
       ...userData,
@@ -241,6 +250,9 @@ export async function PUT(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json()
 
+    // DEBUG: Log incoming data to see what's being sent
+    console.log('[UserProfile API] Incoming body:', JSON.stringify(body, null, 2))
+
     // Validate with Zod
     const validatedData = UpdateUserProfileRequestSchema.parse(body)
 
@@ -268,8 +280,82 @@ export async function PUT(request: NextRequest) {
     // Always update lastActiveAt
     updateData.lastActiveAt = new Date()
 
-    // Update user profile in Firestore (use set with merge to create if doesn't exist)
-    await adminDb.collection('users').doc(userId).set(updateData, { merge: true })
+    // Recursive function to flatten nested objects with dot notation
+    // This ensures Firestore update() properly merges deeply nested objects
+    // IMPORTANT: Arrays are NOT flattened - they are set as complete values
+    function flattenObject(obj: any, prefix: string = ''): Record<string, any> {
+      const flattened: Record<string, any> = {}
+
+      Object.keys(obj).forEach(key => {
+        const value = obj[key]
+        const newKey = prefix ? `${prefix}.${key}` : key
+
+        // Arrays should be set as complete values, not flattened
+        // This is critical for fields like medications, healthConditions, etc.
+        if (Array.isArray(value)) {
+          flattened[newKey] = value
+        }
+        // If value is a plain object (not Date, not Array, not null), recurse
+        else if (
+          value !== null &&
+          typeof value === 'object' &&
+          !(value instanceof Date) &&
+          Object.getPrototypeOf(value) === Object.prototype
+        ) {
+          Object.assign(flattened, flattenObject(value, newKey))
+        }
+        // Primitive values, Dates, null, etc.
+        else {
+          flattened[newKey] = value
+        }
+      })
+
+      return flattened
+    }
+
+    // Convert nested objects to Firestore dot notation for deep merge
+    // This prevents shallow merge from overwriting entire nested objects
+    const flattenedUpdate: any = {}
+
+    // Handle profile object with recursive flattening
+    if (updateData.profile) {
+      console.log('[PUT Profile] About to flatten profile:', JSON.stringify(updateData.profile, null, 2))
+      const profileFlattened = flattenObject(updateData.profile, 'profile')
+      console.log('[PUT Profile] Profile after flattening:', JSON.stringify(profileFlattened, null, 2))
+      Object.assign(flattenedUpdate, profileFlattened)
+    }
+
+    // Handle goals object with recursive flattening
+    if (updateData.goals) {
+      Object.assign(flattenedUpdate, flattenObject(updateData.goals, 'goals'))
+    }
+
+    // Handle preferences object with recursive flattening
+    if (updateData.preferences) {
+      Object.assign(flattenedUpdate, flattenObject(updateData.preferences, 'preferences'))
+    }
+
+    // Add top-level fields
+    Object.keys(updateData).forEach(key => {
+      if (!['profile', 'goals', 'preferences'].includes(key)) {
+        flattenedUpdate[key] = updateData[key]
+      }
+    })
+
+    // DEBUG: Log what we're about to save
+    console.log('[PUT Profile] Flattened update to save:', JSON.stringify(flattenedUpdate, null, 2))
+
+    // Update user profile in Firestore
+    // Try update() first (for existing docs), fallback to set() with merge (for new docs or missing parent objects)
+    try {
+      await adminDb.collection('users').doc(userId).update(flattenedUpdate)
+      console.log('[PUT Profile] update() succeeded')
+    } catch (updateError: any) {
+      // If update fails (doc doesn't exist or parent objects missing), use set with merge
+      console.log('[UserProfile API] update() failed, falling back to set() with merge:', updateError.message)
+      await adminDb.collection('users').doc(userId).set(updateData, { merge: true })
+      console.log('[PUT Profile] set() with merge succeeded')
+    }
 
     // Get updated profile
     const updatedDoc = await adminDb.collection('users').doc(userId).get()
@@ -293,6 +379,15 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error: any) {
+    // Log full error details before serialization
+    console.error('[UserProfile API] Error updating profile:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+      name: error?.name,
+      isZodError: error instanceof z.ZodError
+    })
+
     // Handle Zod validation errors
     if (error instanceof z.ZodError) {
       return NextResponse.json(

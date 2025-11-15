@@ -79,15 +79,22 @@ const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) 
 
   if (!response.ok) {
     // AGGRESSIVE DEBUG: Log error path entry
-    console.log('[FirebaseOps] Response not OK, entering error handler')
+    console.log('[FirebaseOps] Response not OK, entering error handler', {
+      status: response.status,
+      statusText: response.statusText,
+      url,
+      method: options.method || 'GET'
+    })
 
     // Try to parse error response
     let errorData: any = { error: 'Unknown error' }
     let parseError: string | undefined
 
     try {
-      errorData = await response.json()
-      console.log('[FirebaseOps] Parsed error JSON:', errorData)
+      // Clone response before reading to avoid "body already read" errors
+      const clonedResponse = response.clone()
+      errorData = await clonedResponse.json()
+      console.log('[FirebaseOps] Parsed error JSON:', JSON.stringify(errorData, null, 2))
     } catch (e) {
       parseError = getErrorMessage(e)
       console.log('[FirebaseOps] Failed to parse JSON, error:', parseError)
@@ -162,10 +169,33 @@ export const weightLogOperations = {
     unit: 'kg' | 'lbs'
     notes?: string
     loggedAt?: string
+    dataSource?: 'bluetooth-scale' | 'photo-verified' | 'manual'
+    photoUrl?: string
+    scaleDeviceId?: string
   }) {
     return makeAuthenticatedRequest('/api/weight-logs', {
       method: 'POST',
       body: JSON.stringify(data),
+    })
+  },
+
+  // Update weight log
+  async updateWeightLog(weightLogId: string, data: {
+    weight?: number
+    unit?: 'kg' | 'lbs'
+    notes?: string
+    loggedAt?: string
+  }) {
+    return makeAuthenticatedRequest(`/api/weight-logs/${weightLogId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  },
+
+  // Delete weight log
+  async deleteWeightLog(weightLogId: string) {
+    return makeAuthenticatedRequest(`/api/weight-logs/${weightLogId}`, {
+      method: 'DELETE',
     })
   },
 }
@@ -186,6 +216,8 @@ export const mealLogOperations = {
     if (params?.mealType) searchParams.set('mealType', params.mealType)
 
     const url = `/api/meal-logs${searchParams.toString() ? `?${searchParams}` : ''}`
+    console.log('[FirebaseOps] getMealLogs - params:', params)
+    console.log('[FirebaseOps] getMealLogs - URL:', url)
     return makeAuthenticatedRequest(url)
   },
 
@@ -193,6 +225,7 @@ export const mealLogOperations = {
   async createMealLog(data: {
     mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
     photoUrl?: string
+    additionalPhotos?: string[]
     aiAnalysis?: AIAnalysis
     manualEntries?: Array<{
       food: string

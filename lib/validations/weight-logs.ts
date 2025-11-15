@@ -45,8 +45,21 @@ export type WeightLog = z.infer<typeof WeightLogSchema>
 
 export const GetWeightLogsQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(50),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  // Accept both date (YYYY-MM-DD) and datetime (ISO 8601) formats
+  startDate: z.string().optional().transform((val) => {
+    if (!val) return undefined
+    // If already ISO datetime, return as-is
+    if (val.includes('T')) return val
+    // If date-only, add start of day
+    return `${val}T00:00:00Z`
+  }),
+  endDate: z.string().optional().transform((val) => {
+    if (!val) return undefined
+    // If already ISO datetime, return as-is
+    if (val.includes('T')) return val
+    // If date-only, add end of day
+    return `${val}T23:59:59Z`
+  }),
 })
 
 export type GetWeightLogsQuery = z.infer<typeof GetWeightLogsQuerySchema>

@@ -19,6 +19,11 @@ export interface PhotoGalleryItem {
   foodItems: string[]
   notes?: string
   title?: string
+  macros?: {
+    protein: number
+    carbs: number
+    fat: number
+  }
 }
 
 export interface GalleryFilters {
@@ -51,26 +56,44 @@ export async function fetchGalleryPhotos(filters?: GalleryFilters): Promise<Phot
       params.mealType = filters.mealType
     }
 
+    // Debug: Log params being sent
+    console.log('[Gallery] Fetching with params:', params)
+
     // Fetch meals from API
     const response = await mealLogOperations.getMealLogs(params)
-    const meals: MealLog[] = response.meals || []
+    const meals: MealLog[] = response.data || []
 
     // Filter to only meals with photos and transform to gallery items
     const galleryItems: PhotoGalleryItem[] = meals
       .filter(meal => meal.photoUrl && meal.photoUrl.length > 0)
-      .map(meal => ({
-        id: meal.id,
-        photoUrl: meal.photoUrl!,
-        mealType: meal.mealType,
-        loggedAt: new Date(meal.loggedAt),
-        calories: meal.aiAnalysis.totalCalories,
-        foodItems: meal.aiAnalysis.foodItems.map(item => item.name),
-        notes: meal.notes,
-        title: meal.title
-      }))
+      .filter(meal => meal.aiAnalysis) // Only include meals with AI analysis
+      .map(meal => {
+        const item: PhotoGalleryItem = {
+          id: meal.id,
+          photoUrl: meal.photoUrl!,
+          mealType: meal.mealType,
+          loggedAt: new Date(meal.loggedAt),
+          calories: meal.aiAnalysis?.totalCalories || 0,
+          foodItems: meal.aiAnalysis?.foodItems?.map(item => item.name) || [],
+          notes: meal.notes,
+          title: meal.title
+        }
+
+        // Add macros if available
+        if (meal.aiAnalysis?.totalMacros) {
+          item.macros = {
+            protein: meal.aiAnalysis.totalMacros.protein || 0,
+            carbs: meal.aiAnalysis.totalMacros.carbs || 0,
+            fat: meal.aiAnalysis.totalMacros.fat || 0
+          }
+        }
+
+        return item
+      })
 
     return galleryItems
   } catch (error) {
+    console.error('[Gallery] Error fetching photos:', error)
     logger.error('Error fetching gallery photos', error as Error)
     return []
   }
@@ -86,7 +109,7 @@ export async function fetchRecentPhotos(days: number = 30): Promise<PhotoGallery
 
   return fetchGalleryPhotos({
     dateRange: { startDate, endDate },
-    limit: 200
+    limit: 100
   })
 }
 

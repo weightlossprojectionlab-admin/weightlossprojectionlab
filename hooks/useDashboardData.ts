@@ -3,8 +3,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useUserProfile } from './useUserProfile'
 import { useMealLogsRealtime } from './useMealLogs'
-import { weightLogOperations, stepLogOperations } from '@/lib/firebase-operations'
+import { stepLogOperations } from '@/lib/firebase-operations'
 import { logger } from '@/lib/logger'
+import { db } from '@/lib/firebase'
+import { collection, query, where, orderBy, limit, onSnapshot, Timestamp } from 'firebase/firestore'
+import { useAuth } from './useAuth'
 
 /**
  * Progressive loading states for dashboard
@@ -20,6 +23,8 @@ export interface DashboardLoadingPhase {
 }
 
 export function useDashboardData() {
+  const { user } = useAuth()
+
   // Calculate date range once
   const dateRange = useMemo(() => {
     const today = new Date()
@@ -72,57 +77,83 @@ export function useDashboardData() {
     }
   }, [profileLoading, loadingTodayMeals])
 
-  // PHASE 2: Fetch weight/steps after Phase 1 completes (200ms delay for smooth UX)
+  // PHASE 2: Real-time weight subscription + steps fetch after Phase 1 completes (200ms delay)
   useEffect(() => {
-    if (!loadingPhase.phase1Ready) return
+    if (!loadingPhase.phase1Ready || !user) return
 
-    const timer = setTimeout(async () => {
+    let unsubscribeWeight: (() => void) | null = null
+
+    const timer = setTimeout(() => {
       try {
         setDataLoading(true)
         setDataError(null)
 
+        // Real-time weight logs subscription with onSnapshot
+        const weightLogsRef = collection(db, 'users', user.uid, 'weightLogs')
+        const weightQuery = query(
+          weightLogsRef,
+          where('loggedAt', '>=', Timestamp.fromDate(dateRange.sevenDaysAgo)),
+          orderBy('loggedAt', 'desc'),
+          limit(10)
+        )
+
+        unsubscribeWeight = onSnapshot(
+          weightQuery,
+          (snapshot) => {
+            const logs = snapshot.docs.map(doc => {
+              const data = doc.data()
+              return {
+                id: doc.id,
+                userId: user.uid,
+                weight: data.weight,
+                unit: data.unit,
+                loggedAt: data.loggedAt?.toDate ? data.loggedAt.toDate().toISOString() : new Date(data.loggedAt).toISOString(),
+                notes: data.notes,
+                dataSource: data.dataSource || 'manual'
+              }
+            })
+            setWeightData(logs)
+            setDataLoading(false)
+          },
+          (error) => {
+            logger.error('Error in weight logs snapshot (dashboard)', error as Error)
+            setDataError(error as Error)
+            setWeightData([])
+            setDataLoading(false)
+          }
+        )
+
+        // Fetch steps data (one-time)
         const startDate = dateRange.sevenDaysAgo.toISOString().split('T')[0]
         const endDate = dateRange.tomorrow.toISOString().split('T')[0]
-
-        // Parallel API calls for better performance
-        const [weightResponse, stepsResponse] = await Promise.all([
-          weightLogOperations.getWeightLogs({
-            limit: 10,
-            startDate,
-            endDate
-          }),
-          stepLogOperations.getStepLogs({
-            startDate,
-            endDate
+        stepLogOperations.getStepLogs({ startDate, endDate })
+          .then(stepsResponse => {
+            setStepsData(stepsResponse.data || [])
+            setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
           })
-        ])
-
-        setWeightData(weightResponse.data || [])
-        setStepsData(stepsResponse.data || [])
-        setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
+          .catch(error => {
+            logger.error('Error fetching step logs', error as Error)
+            setStepsData([])
+            setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
+          })
       } catch (error) {
-        const errorContext = {
-          phase: 'dashboard-phase2',
-          apis: ['weight-logs', 'step-logs'],
-          startDate: dateRange.sevenDaysAgo.toISOString().split('T')[0],
-          endDate: dateRange.tomorrow.toISOString().split('T')[0],
-        }
-
-        logger.error('Error fetching dashboard data', error as Error, errorContext)
+        logger.error('Error setting up dashboard data listeners', error as Error)
         setDataError(error as Error)
-
-        // Set empty arrays as fallback so dashboard doesn't break
         setWeightData([])
         setStepsData([])
-        // Still mark phase2 ready so app can continue
         setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
-      } finally {
         setDataLoading(false)
       }
     }, 200)
 
-    return () => clearTimeout(timer)
-  }, [loadingPhase.phase1Ready, dateRange.sevenDaysAgo, dateRange.tomorrow])
+    // Cleanup function
+    return () => {
+      clearTimeout(timer)
+      if (unsubscribeWeight) {
+        unsubscribeWeight()
+      }
+    }
+  }, [loadingPhase.phase1Ready, user, dateRange.sevenDaysAgo, dateRange.tomorrow])
 
   // PHASE 3: Fetch historical meals after Phase 2 completes (500ms delay)
   useEffect(() => {

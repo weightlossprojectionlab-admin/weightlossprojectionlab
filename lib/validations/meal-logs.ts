@@ -84,6 +84,7 @@ export type ManualAdjustments = z.infer<typeof ManualAdjustmentsSchema>
 const CreateMealLogRequestBaseSchema = z.object({
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
   photoUrl: z.string().url().optional(),
+  additionalPhotos: z.array(z.string().url()).max(4, 'Maximum 4 additional photos allowed').optional(),
   aiAnalysis: AIAnalysisSchema.optional(),
   manualEntries: z.array(ManualEntrySchema).optional(),
   notes: z.string().optional(),
@@ -112,6 +113,7 @@ export const MealLogSchema = z.object({
   title: z.string().optional(),
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
   photoUrl: z.string().url().optional(),
+  additionalPhotos: z.array(z.string().url()).max(4).optional(),
   aiAnalysis: AIAnalysisSchema.optional(),
   manualEntries: z.array(ManualEntrySchema).optional(),
   totalCalories: z.number().min(0),

@@ -1,0 +1,2117 @@
+{
+  "product": {
+    "name": "Family Health & Medical Records Management System",
+    "version": "1.0.0",
+    "description": "Comprehensive digital health binder with AI-powered appointment recommendations, family collaboration, and smart document processing. Supports managing health records for family members and pets.",
+    "vision": "Transform medical record management from passive tracking to active health coordination, enabling families to collaboratively manage complex medical care with AI-driven insights and proactive recommendations.",
+    "targetUsers": [
+      "Family caregivers managing elderly parents' health",
+      "Parents tracking children's medical records",
+      "Individuals managing their own chronic conditions",
+      "Multi-generational households coordinating care",
+      "Pet owners tracking veterinary care"
+    ],
+    "keyDifferentiators": [
+      "Multi-patient support (humans AND pets)",
+      "AI-powered appointment recommendations based on vitals trends",
+      "Smart form auto-fill from stored patient data (saves 10+ minutes per visit)",
+      "Family collaboration with granular permissions",
+      "Real-time appointment updates and geofencing",
+      "Flexible document scanning with dynamic field extraction",
+      "Conflict detection for multi-provider scheduling",
+      "Secure SSN storage with biometric unlock",
+      "Last/next appointment tracking per provider"
+    ],
+    "successMetrics": {
+      "userEngagement": "80% of users log vitals at least weekly",
+      "appointmentAdherence": "90% of AI-recommended appointments scheduled within suggested timeframe",
+      "familyCollaboration": "60% of patients have at least one family co-manager",
+      "documentDigitization": "Average 5+ documents scanned per patient per year",
+      "timeSavings": "75% reduction in time spent filling intake forms (10min → 30sec)",
+      "vitalsTrends": "70% of chronic condition patients show improved vital trends within 3 months",
+      "appointmentConflicts": "<5% of appointments have unresolved conflicts"
+    }
+  },
+
+  "dataModels": {
+    "PatientProfile": {
+      "description": "Core patient entity supporting family members and pets",
+      "schema": {
+        "id": "string (UUID)",
+        "userId": "string (owner's Firebase Auth UID)",
+        "type": "enum ['human', 'pet']",
+        "name": "string",
+        "photo": "string (URL)",
+        "dateOfBirth": "string (ISO 8601)",
+        "relationship": "string ('self', 'spouse', 'parent', 'child', 'sibling', 'grandparent', 'pet')",
+        "species": "string (for pets: 'dog', 'cat', 'bird', etc.)",
+        "breed": "string (for pets)",
+        "gender": "enum ['male', 'female', 'other', 'prefer-not-to-say']",
+        "microchipNumber": "string (for pets)",
+        "emergencyContacts": "array of EmergencyContact",
+        "createdAt": "string (ISO 8601)",
+        "lastModified": "string (ISO 8601)"
+      },
+      "firestorePath": "users/{userId}/patients/{patientId}"
+    },
+
+    "PatientID": {
+      "description": "Driver's license or government ID with barcode data and SSN",
+      "schema": {
+        "id": "string (UUID)",
+        "patientId": "string (reference to PatientProfile)",
+        "patientName": "string",
+        "dateOfBirth": "string (ISO 8601)",
+        "address": "string",
+        "city": "string",
+        "state": "string",
+        "zipCode": "string",
+        "licenseNumber": "string",
+        "licenseState": "string (issuing state)",
+        "expirationDate": "string (ISO 8601)",
+        "ssn": "string (ENCRYPTED - field-level encryption required)",
+        "ssnLastFour": "string (for display: ***-**-1234)",
+        "ssnEnteredAt": "string (ISO 8601)",
+        "ssnVerified": "boolean",
+        "ssnViewLog": "array of SSNViewLog (audit trail)",
+        "photoUrl": "string (URL to cropped photo)",
+        "frontImageUrl": "string (URL to full front scan)",
+        "backImageUrl": "string (URL to full back scan)",
+        "barcodeData": "string (PDF417 barcode data for regeneration)",
+        "barcodeType": "enum ['PDF417', 'QR', 'Code128']",
+        "scannedAt": "string (ISO 8601)"
+      },
+      "firestorePath": "users/{userId}/patients/{patientId}/identity/id",
+      "security": {
+        "ssnEncryption": "Use Firebase field-level encryption or AES-256",
+        "accessControl": "Requires 'viewSensitiveInfo' permission",
+        "biometricGate": "Require Face ID/Touch ID/PIN before revealing SSN",
+        "autoLock": "Re-hide SSN after 30 seconds of inactivity",
+        "auditLog": "Log every SSN view with timestamp, userId, IP address"
+      }
+    },
+
+    "SSNViewLog": {
+      "description": "Audit trail entry for SSN access",
+      "schema": {
+        "timestamp": "string (ISO 8601)",
+        "viewedBy": "string (userId)",
+        "viewedByName": "string",
+        "ipAddress": "string",
+        "deviceInfo": "string",
+        "action": "enum ['viewed', 'copied', 'screenshot_attempted']"
+      }
+    },
+
+    "InsuranceCard": {
+      "description": "Health insurance card information",
+      "schema": {
+        "id": "string (UUID)",
+        "patientId": "string (reference to PatientProfile)",
+        "type": "enum ['medical', 'dental', 'vision']",
+        "isPrimary": "boolean",
+        "insuranceCompany": "string",
+        "memberId": "string (SENSITIVE - mask like SSN)",
+        "memberIdLastFour": "string",
+        "groupNumber": "string",
+        "rxBIN": "string",
+        "rxPCN": "string",
+        "rxGroup": "string",
+        "policyHolderName": "string",
+        "policyHolderDOB": "string (ISO 8601)",
+        "effectiveDate": "string (ISO 8601)",
+        "expirationDate": "string (ISO 8601)",
+        "customerServicePhone": "string",
+        "claimsAddress": "string",
+        "frontImageUrl": "string (URL)",
+        "backImageUrl": "string (URL)",
+        "scannedAt": "string (ISO 8601)"
+      },
+      "firestorePath": "users/{userId}/patients/{patientId}/insurance/{insuranceId}"
+    },
+
+    "VitalSign": {
+      "description": "Individual vital sign measurement",
+      "schema": {
+        "id": "string (UUID)",
+        "patientId": "string (reference to PatientProfile)",
+        "type": "enum ['blood_sugar', 'blood_pressure', 'heart_rate', 'blood_oxygen', 'temperature', 'weight']",
+        "value": "number | object (for BP: {systolic: number, diastolic: number})",
+        "unit": "string ('mg/dL', 'mmol/L', 'mmHg', 'bpm', '%', '°F', '°C', 'lbs', 'kg')",
+        "recordedAt": "string (ISO 8601)",
+        "notes": "string",
+        "takenBy": "string (userId of family member who recorded)",
+        "method": "enum ['manual', 'device', 'imported'] (future: device integration)",
+        "deviceId": "string (for future smart device integration)",
+        "tags": "array of string ('fasting', 'post-meal', 'morning', 'evening', 'before_medication', 'after_medication')"
+      },
+      "firestorePath": "users/{userId}/patients/{patientId}/vitals/{vitalId}",
+      "indexes": ["patientId", "type", "recordedAt"]
+    },
+
+    "MedicalDocument": {
+      "description": "Flexible medical document with dynamic field extraction",
+      "schema": {
+        "id": "string (UUID)",
+        "patientId": "string (reference to PatientProfile)",
+        "documentType": "enum ['intake_form', 'visit_summary', 'lab_result', 'imaging_report', 'prescription', 'vaccination_record', 'consent_form', 'insurance_eob', 'referral', 'discharge_summary', 'operative_report', 'pathology_report', 'other']",
+        "formType": "string (specific form name: 'New Patient Intake', 'Medical History Questionnaire', etc.)",
+        "providerId": "string (reference to Provider)",
+        "providerName": "string",
+        "visitDate": "string (ISO 8601)",
+        "uploadedAt": "string (ISO 8601)",
+        "uploadedBy": "string (userId of family member)",
+        "imageUrls": "array of string (URLs to document images)",
+        "pdfUrl": "string (URL to generated PDF)",
+        "extractedFields": "object (dynamic key-value pairs)",
+        "rawText": "string (full OCR text)",
+        "tags": "array of string (user-added tags)",
+        "notes": "string (user notes)",
+        "isArchived": "boolean",
+        "linkedAppointmentId": "string (reference to Appointment)",
+        "confidenceScore": "number (0-100, AI extraction confidence)"
+      },
+      "firestorePath": "users/{userId}/patients/{patientId}/documents/{documentId}",
+      "exampleExtractedFields": {
+        "visit_summary": {
+          "chiefComplaint": "Hypertension follow-up",
+          "diagnosis": "Essential hypertension",
+          "bloodPressure": "145/92",
+          "weight": "185 lbs",
+          "medications": ["Lisinopril 10mg"],
+          "nextVisit": "3 months",
+          "providerInstructions": "Continue current medications, monitor BP at home"
+        },
+        "lab_result": {
+          "testDate": "2025-01-10",
+          "A1C": "5.7%",
+          "glucose_fasting": "95 mg/dL",
+          "totalCholesterol": "180 mg/dL",
+          "LDL": "110 mg/dL",
+          "HDL": "55 mg/dL",
+          "triglycerides": "120 mg/dL",
+          "TSH": "2.5 mIU/L",
+          "vitamin_d": "32 ng/mL"
+        },
+        "intake_form": {
+          "patientName": "Barbara Rice",
+          "dateOfBirth": "11/28/1949",
+          "address": "123 Main St",
+          "phone": "555-1234",
+          "currentMedications": ["Metformin 500mg", "Paxil 20mg", "Sodium Bicarbonate 650mg"],
+          "dosages": ["Twice daily", "Once daily", "Three times daily"],
+          "allergies": "None",
+          "familyHistory": {
+            "mother": ["Diabetes", "Glaucoma"],
+            "father": []
+          },
+          "smokingStatus": "Never",
+          "alcoholUse": "Occasional"
+        }
+      }
+    },
+
+    "Appointment": {
+      "description": "Medical appointment with full lifecycle tracking",
+      "schema": {
+        "id": "string (UUID)",
+        "patientId": "string (reference to PatientProfile)",
+        "patientName": "string",
+        "providerId": "string (reference to Provider)",
+        "providerName": "string",
+        "specialty": "string ('Cardiology', 'Endocrinology', 'Primary Care', 'Veterinary', etc.)",
+        "dateTime": "string (ISO 8601)",
+        "duration": "number (minutes)",
+        "type": "enum ['routine', 'follow-up', 'urgent', 'procedure', 'lab_work', 'imaging', 'consultation', 'telehealth']",
+        "purpose": "string",
+        "location": {
+          "name": "string",
+          "address": "string",
+          "city": "string",
+          "state": "string",
+          "zipCode": "string",
+          "coordinates": {
+            "lat": "number",
+            "lng": "number"
+          },
+          "phone": "string",
+          "parkingInstructions": "string",
+          "officeNumber": "string",
+          "floor": "string"
+        },
+        "status": "enum ['scheduled', 'confirmed', 'en-route', 'arrived', 'in-progress', 'completed', 'cancelled', 'no-show', 'rescheduled']",
+        "escort": "string (name of person taking patient)",
+        "escortUserId": "string (userId of family member)",
+        "conflicts": "array of string (appointmentIds in conflict)",
+        "conflictSeverity": "enum ['none', 'warning', 'critical']",
+        "reminderSettings": {
+          "daysBefore": "array of number [7, 1]",
+          "hoursBefore": "array of number [24, 2]",
+          "arrivalNotification": "boolean (geofence trigger)",
+          "geofenceRadius": "number (meters, default 200)"
+        },
+        "travelTime": "number (estimated minutes from home)",
+        "createdAt": "string (ISO 8601)",
+        "createdBy": "string (userId)",
+        "lastModified": "string (ISO 8601)",
+        "modifiedBy": "string (userId)",
+        "arrivedAt": "string (ISO 8601)",
+        "completedAt": "string (ISO 8601)",
+        "cancelledAt": "string (ISO 8601)",
+        "cancellationReason": "string",
+        "liveUpdates": "array of LiveUpdate",
+        "visitSummary": "string (post-visit notes)",
+        "followUpNeeded": "boolean",
+        "nextAppointmentDate": "string (ISO 8601)",
+        "nextAppointmentPurpose": "string",
+        "documentsScanned": "array of string (documentIds)",
+        "prescriptionsReceived": "array of string (medicationIds)",
+        "isRecurring": "boolean",
+        "recurrenceRule": "string ('Every 3 months', 'Annual', 'Every 6 weeks', etc.)",
+        "recurrenceEndDate": "string (ISO 8601)",
+        "seriesId": "string (groups recurring appointments)",
+        "insuranceUsed": "string (insuranceCardId)",
+        "copay": "number",
+        "copayPaid": "boolean",
+        "checkInTime": "string (ISO 8601)",
+        "waitTime": "number (minutes from check-in to seen)",
+        "aiRecommendationId": "string (if scheduled from AI recommendation)"
+      },
+      "firestorePath": "users/{userId}/patients/{patientId}/appointments/{appointmentId}",
+      "indexes": ["patientId", "providerId", "dateTime", "status", "specialty"]
+    },
+
+    "LiveUpdate": {
+      "description": "Real-time appointment status update",
+      "schema": {
+        "id": "string (UUID)",
+        "timestamp": "string (ISO 8601)",
+        "status": "string ('Checked in', 'Waiting', 'With doctor', 'Getting X-ray', 'At pharmacy', 'Lab work', 'Imaging', etc.)",
+        "message": "string (optional additional details)",
+        "updatedBy": "string (userId)",
+        "updatedByName": "string",
+        "location": "string (optional: 'Waiting room', 'Exam room 3', etc.)",
+        "isSystemGenerated": "boolean (true for auto-generated from status changes)"
+      }
+    },
+
+    "FamilyMember": {
+      "description": "Family member with access to patient records",
+      "schema": {
+        "id": "string (UUID)",
+        "userId": "string (their Firebase Auth UID)",
+        "email": "string",
+        "name": "string",
+        "photo": "string (URL)",
+        "relationship": "string ('spouse', 'child', 'parent', 'sibling', 'caregiver', 'friend', 'other')",
+        "invitedBy": "string (userId who sent invite)",
+        "invitedAt": "string (ISO 8601)",
+        "acceptedAt": "string (ISO 8601)",
+        "status": "enum ['pending', 'accepted', 'declined', 'revoked']",
+        "permissions": {
+          "viewMedicalRecords": "boolean",
+          "editMedications": "boolean",
+          "scheduleAppointments": "boolean",
+          "editAppointments": "boolean",
+          "deleteAppointments": "boolean",
+          "uploadDocuments": "boolean",
+          "deleteDocuments": "boolean",
+          "logVitals": "boolean",
+          "viewVitals": "boolean",
+          "chatAccess": "boolean",
+          "inviteOthers": "boolean",
+          "viewSensitiveInfo": "boolean (SSN, full insurance Member ID, financial info)",
+          "editPatientProfile": "boolean"
+        },
+        "notificationPreferences": {
+          "appointmentReminders": "boolean",
+          "appointmentUpdates": "boolean",
+          "vitalAlerts": "boolean",
+          "medicationReminders": "boolean",
+          "documentUploads": "boolean",
+          "aiRecommendations": "boolean",
+          "chatMessages": "boolean",
+          "urgentAlerts": "boolean (always enabled for critical vitals)"
+        },
+        "patientsAccess": "array of string (patientIds they can manage)",
+        "lastActive": "string (ISO 8601)",
+        "deviceTokens": "array of string (FCM tokens for push notifications)"
+      },
+      "firestorePath": "users/{userId}/familyMembers/{memberId}"
+    },
+
+    "FamilyInvitation": {
+      "description": "Pending invitation to join as family co-manager",
+      "schema": {
+        "id": "string (UUID)",
+        "inviteCode": "string (unique 8-char code)",
+        "invitedByUserId": "string",
+        "invitedByName": "string",
+        "recipientEmail": "string",
+        "recipientPhone": "string (optional)",
+        "patientsShared": "array of string (patientIds)",
+        "permissions": "object (same as FamilyMember.permissions)",
+        "message": "string (personal message from inviter)",
+        "createdAt": "string (ISO 8601)",
+        "expiresAt": "string (ISO 8601, default 7 days)",
+        "status": "enum ['pending', 'accepted', 'declined', 'expired', 'revoked']",
+        "acceptedBy": "string (userId)",
+        "acceptedAt": "string (ISO 8601)",
+        "emailSentAt": "string (ISO 8601)",
+        "reminderSentAt": "string (ISO 8601, optional)"
+      },
+      "firestorePath": "familyInvitations/{inviteId}",
+      "indexes": ["inviteCode", "recipientEmail", "status", "expiresAt"]
+    },
+
+    "Provider": {
+      "description": "Healthcare provider (doctor, specialist, vet, pharmacy)",
+      "schema": {
+        "id": "string (UUID)",
+        "userId": "string (owner)",
+        "type": "enum ['physician', 'specialist', 'dentist', 'veterinarian', 'pharmacy', 'lab', 'imaging_center', 'urgent_care', 'hospital', 'therapy', 'other']",
+        "name": "string",
+        "specialty": "string ('Cardiology', 'Endocrinology', 'Family Medicine', 'Pediatrics', 'Veterinary', etc.)",
+        "organization": "string ('Memorial Hospital', 'CVS Pharmacy', 'VCA Animal Hospital', etc.)",
+        "npi": "string (National Provider Identifier)",
+        "taxId": "string (for billing)",
+        "address": "string",
+        "city": "string",
+        "state": "string",
+        "zipCode": "string",
+        "coordinates": {
+          "lat": "number",
+          "lng": "number"
+        },
+        "phone": "string",
+        "fax": "string",
+        "email": "string",
+        "website": "string",
+        "officeHours": {
+          "monday": "string (e.g., '9am-5pm')",
+          "tuesday": "string",
+          "wednesday": "string",
+          "thursday": "string",
+          "friday": "string",
+          "saturday": "string (or 'Closed')",
+          "sunday": "string (or 'Closed')"
+        },
+        "acceptsInsurance": "array of string (insurance company names)",
+        "notes": "string",
+        "isPrimary": "boolean (is this the primary care provider?)",
+        "patientsServed": "array of string (patientIds)",
+        "recommendedVisitFrequency": {
+          "value": "number",
+          "unit": "enum ['days', 'weeks', 'months', 'years']"
+        },
+        "addedAt": "string (ISO 8601)",
+        "averageWaitTime": "number (minutes, user-tracked)",
+        "parkingAvailable": "boolean",
+        "wheelchairAccessible": "boolean"
+      },
+      "firestorePath": "users/{userId}/providers/{providerId}"
+    },
+
+    "ProviderSchedule": {
+      "description": "Track appointment history per provider",
+      "schema": {
+        "providerId": "string",
+        "patientId": "string",
+        "lastVisit": {
+          "appointmentId": "string",
+          "date": "string (ISO 8601)",
+          "purpose": "string",
+          "outcome": "string",
+          "daysAgo": "number (calculated)"
+        },
+        "nextVisit": {
+          "appointmentId": "string",
+          "date": "string (ISO 8601)",
+          "purpose": "string",
+          "daysUntil": "number (calculated)"
+        },
+        "stats": {
+          "totalVisits": "number",
+          "averageInterval": "number (days between visits)",
+          "daysSinceLastVisit": "number",
+          "daysUntilNextVisit": "number"
+        },
+        "isOverdue": "boolean",
+        "overdueBy": "number (days)"
+      },
+      "computed": "Generated on-demand from appointment history"
+    },
+
+    "HealthTrendAnalysis": {
+      "description": "AI analysis of health trends and patterns",
+      "schema": {
+        "id": "string (UUID)",
+        "patientId": "string",
+        "analyzedAt": "string (ISO 8601)",
+        "timeRangeDays": "number (data analyzed from last N days)",
+        "vitalsTrends": {
+          "bloodSugar": "TrendAnalysis",
+          "bloodPressure": "TrendAnalysis",
+          "heartRate": "TrendAnalysis",
+          "bloodOxygen": "TrendAnalysis",
+          "weight": "TrendAnalysis",
+          "temperature": "TrendAnalysis"
+        },
+        "medicationAdherence": {
+          "overallRate": "number (0-100)",
+          "missedDoses": "number",
+          "trend": "enum ['improving', 'stable', 'declining']",
+          "correlationsWithVitals": "array of object ({medication, vital, correlation, strength})"
+        },
+        "healthScore": {
+          "current": "number (0-100)",
+          "previous": "number",
+          "trend": "enum ['improving', 'stable', 'declining']",
+          "changeRate": "number (points per week)",
+          "factors": "array of string (what's affecting the score)"
+        },
+        "recommendations": "array of AppointmentRecommendation",
+        "aiInsights": "array of string (natural language insights)",
+        "concerningPatterns": "array of object ({pattern, severity, recommendation})",
+        "nextAnalysisAt": "string (ISO 8601, auto-schedule next analysis)"
+      },
+      "firestorePath": "users/{userId}/patients/{patientId}/healthAnalysis/{analysisId}"
+    },
+
+    "TrendAnalysis": {
+      "description": "Statistical analysis of a specific vital sign",
+      "schema": {
+        "metric": "string ('Blood Sugar', 'Systolic BP', 'Diastolic BP', 'Heart Rate', etc.)",
+        "currentValue": "number",
+        "previousValue": "number (from previous analysis period)",
+        "change": "number (absolute change)",
+        "changePercent": "number",
+        "trend": "enum ['improving', 'stable', 'worsening']",
+        "trendConfidence": "number (0-100)",
+        "average": "number (mean over period)",
+        "median": "number",
+        "min": "number",
+        "max": "number",
+        "stdDeviation": "number",
+        "variance": "number",
+        "coefficientOfVariation": "number (measure of volatility)",
+        "pattern": "enum ['volatile', 'steady', 'seasonal', 'progressive', 'cyclic']",
+        "isOutOfRange": "boolean",
+        "exceedsThreshold": "boolean",
+        "rapidChange": "boolean (sudden spike/drop >15% in 24hrs)",
+        "clinicalStatus": "enum ['normal', 'borderline', 'concerning', 'critical']",
+        "targetRange": {
+          "min": "number",
+          "max": "number"
+        },
+        "daysOutOfRange": "number (how many days had out-of-range readings)",
+        "percentageInRange": "number (0-100)",
+        "consecutiveHighReadings": "number",
+        "consecutiveLowReadings": "number",
+        "timeOfDayPattern": "object ({morning: avg, afternoon: avg, evening: avg})"
+      }
+    },
+
+    "AppointmentRecommendation": {
+      "description": "AI-generated recommendation to schedule appointment",
+      "schema": {
+        "id": "string (UUID)",
+        "patientId": "string",
+        "createdAt": "string (ISO 8601)",
+        "priority": "enum ['urgent', 'high', 'medium', 'low']",
+        "confidence": "number (0-100, AI confidence level)",
+        "trigger": {
+          "type": "enum ['vital_trend', 'medication_change', 'missed_appointment', 'symptom_pattern', 'lab_result', 'medication_followup', 'routine_overdue', 'multi_factor']",
+          "details": "string (what specifically triggered this)",
+          "data": "object (supporting data)"
+        },
+        "message": "string (user-facing recommendation)",
+        "suggestedProvider": "string (specialty or specific provider name)",
+        "suggestedProviderId": "string (if specific provider identified)",
+        "suggestedTimeframe": "string ('Within 24 hours', 'Within 1 week', 'Within 2 weeks', 'This month', 'Next 3 months')",
+        "urgency": "string (expanded explanation)",
+        "evidence": "array of object ({metric, currentValue, previousValue, trend, concern})",
+        "reasoning": "string (AI explanation in natural language)",
+        "clinicalGuideline": "string (which guideline this is based on)",
+        "status": "enum ['new', 'viewed', 'scheduled', 'dismissed', 'expired']",
+        "scheduledAppointmentId": "string",
+        "dismissedReason": "string",
+        "dismissedAt": "string (ISO 8601)",
+        "viewedAt": "string (ISO 8601)",
+        "expiresAt": "string (ISO 8601)",
+        "notificationSent": "boolean",
+        "notificationSentAt": "string (ISO 8601)",
+        "familyNotified": "boolean",
+        "outcome": "AppointmentRecommendationOutcome (after appointment completed)",
+        "autoScheduleSuggestion": {
+          "date": "string (AI-suggested date)",
+          "reason": "string (why this date)"
+        }
+      },
+      "firestorePath": "users/{userId}/patients/{patientId}/recommendations/{recommendationId}",
+      "indexes": ["patientId", "status", "priority", "createdAt"]
+    },
+
+    "AppointmentRecommendationOutcome": {
+      "description": "Tracks outcome of recommendation for AI learning",
+      "schema": {
+        "userAction": "enum ['scheduled', 'dismissed', 'ignored']",
+        "appointmentCompleted": "boolean",
+        "appointmentDate": "string (ISO 8601)",
+        "diagnosis": "string",
+        "treatmentChanged": "boolean",
+        "medicationAdjusted": "boolean",
+        "wasHelpful": "boolean (user feedback)",
+        "userFeedback": "string",
+        "aiLearning": {
+          "wasUrgent": "boolean (was it actually urgent?)",
+          "wasNecessary": "boolean (was appointment actually needed?)",
+          "timeliness": "enum ['too_early', 'just_right', 'too_late']",
+          "accuracyScore": "number (0-100)"
+        }
+      }
+    },
+
+    "MedicalHistory": {
+      "description": "Patient's comprehensive medical history",
+      "schema": {
+        "patientId": "string",
+        "currentConditions": "array of Condition",
+        "pastConditions": "array of Condition",
+        "surgeries": "array of Surgery",
+        "allergies": "array of Allergy",
+        "familyHistory": {
+          "mother": "FamilyMemberHistory",
+          "father": "FamilyMemberHistory",
+          "siblings": "array of FamilyMemberHistory",
+          "maternalGrandmother": "FamilyMemberHistory",
+          "maternalGrandfather": "FamilyMemberHistory",
+          "paternalGrandmother": "FamilyMemberHistory",
+          "paternalGrandfather": "FamilyMemberHistory"
+        },
+        "socialHistory": {
+          "smoking": "enum ['never', 'former', 'current']",
+          "smokingPackYears": "number (packs per day × years smoked)",
+          "quitDate": "string (ISO 8601)",
+          "alcohol": "enum ['never', 'occasional', 'moderate', 'heavy']",
+          "drinksPerWeek": "number",
+          "drugsRecreational": "enum ['never', 'former', 'current']",
+          "drugTypes": "array of string",
+          "occupation": "string",
+          "occupationalHazards": "array of string",
+          "exerciseFrequency": "enum ['sedentary', 'light', 'moderate', 'active', 'very_active']",
+          "exerciseMinutesPerWeek": "number",
+          "diet": "enum ['standard', 'vegetarian', 'vegan', 'mediterranean', 'keto', 'low_carb', 'other']",
+          "stressLevel": "enum ['low', 'moderate', 'high']"
+        },
+        "immunizations": "array of Immunization",
+        "screenings": "array of Screening",
+        "hospitalizations": "array of Hospitalization",
+        "lastUpdated": "string (ISO 8601)"
+      },
+      "firestorePath": "users/{userId}/patients/{patientId}/history/medical"
+    },
+
+    "Condition": {
+      "description": "Medical condition or diagnosis",
+      "schema": {
+        "id": "string (UUID)",
+        "name": "string",
+        "icdCode": "string (ICD-10 code)",
+        "diagnosedDate": "string (ISO 8601)",
+        "diagnosedBy": "string (provider name)",
+        "diagnosingProviderId": "string",
+        "status": "enum ['active', 'resolved', 'chronic', 'in-remission', 'controlled', 'uncontrolled']",
+        "severity": "enum ['mild', 'moderate', 'severe']",
+        "notes": "string",
+        "relatedMedications": "array of string (medication names)",
+        "relatedProviders": "array of string (providerIds)",
+        "symptoms": "array of string",
+        "triggers": "array of string",
+        "lastFlareUp": "string (ISO 8601)"
+      }
+    },
+
+    "Allergy": {
+      "description": "Medication or substance allergy",
+      "schema": {
+        "id": "string (UUID)",
+        "allergen": "string (medication name or substance)",
+        "allergenType": "enum ['medication', 'food', 'environmental', 'latex', 'insect', 'other']",
+        "reactionType": "string ('rash', 'anaphylaxis', 'swelling', 'hives', 'difficulty_breathing', etc.)",
+        "severity": "enum ['mild', 'moderate', 'severe', 'life-threatening']",
+        "onsetDate": "string (ISO 8601)",
+        "notes": "string",
+        "verifiedBy": "string (provider name)",
+        "requiresEpiPen": "boolean"
+      }
+    },
+
+    "Surgery": {
+      "description": "Past surgical procedure",
+      "schema": {
+        "id": "string (UUID)",
+        "procedureName": "string",
+        "cptCode": "string",
+        "date": "string (ISO 8601)",
+        "surgeon": "string",
+        "hospital": "string",
+        "indication": "string (reason for surgery)",
+        "outcome": "enum ['successful', 'complicated', 'unsuccessful']",
+        "complications": "string",
+        "notes": "string"
+      }
+    },
+
+    "Immunization": {
+      "description": "Vaccination record",
+      "schema": {
+        "id": "string (UUID)",
+        "vaccineName": "string",
+        "cvsCode": "string (vaccine code)",
+        "date": "string (ISO 8601)",
+        "provider": "string",
+        "lotNumber": "string",
+        "siteOfAdministration": "string (left arm, right arm, etc.)",
+        "nextDoseDate": "string (ISO 8601, if applicable)",
+        "reactions": "string",
+        "notes": "string"
+      }
+    },
+
+    "Screening": {
+      "description": "Preventive screening (colonoscopy, mammogram, etc.)",
+      "schema": {
+        "id": "string (UUID)",
+        "screeningType": "string (colonoscopy, mammogram, pap smear, etc.)",
+        "date": "string (ISO 8601)",
+        "provider": "string",
+        "result": "enum ['normal', 'abnormal', 'pending']",
+        "findings": "string",
+        "nextScreeningDate": "string (ISO 8601)",
+        "notes": "string"
+      }
+    },
+
+    "Hospitalization": {
+      "description": "Past hospital stay",
+      "schema": {
+        "id": "string (UUID)",
+        "hospital": "string",
+        "admissionDate": "string (ISO 8601)",
+        "dischargeDate": "string (ISO 8601)",
+        "lengthOfStay": "number (days)",
+        "reason": "string",
+        "diagnosis": "string",
+        "procedures": "array of string",
+        "attendingPhysician": "string",
+        "dischargeMedications": "array of string",
+        "followUpInstructions": "string",
+        "notes": "string"
+      }
+    },
+
+    "FamilyMemberHistory": {
+      "description": "Family member's medical history for genetic risk assessment",
+      "schema": {
+        "name": "string (optional)",
+        "relationship": "string",
+        "isAlive": "boolean",
+        "ageAtDeath": "number (if deceased)",
+        "causeOfDeath": "string",
+        "conditions": "array of string (diabetes, heart disease, cancer, etc.)",
+        "ageAtOnset": "object ({condition: age})",
+        "notes": "string"
+      }
+    },
+
+    "FamilyChat": {
+      "description": "Family group chat per patient",
+      "schema": {
+        "id": "string (patientId - one chat per patient)",
+        "patientId": "string",
+        "patientName": "string",
+        "participants": "array of string (userIds)",
+        "createdAt": "string (ISO 8601)",
+        "lastMessageAt": "string (ISO 8601)",
+        "unreadCount": "object ({userId: count})"
+      },
+      "firestorePath": "users/{userId}/patients/{patientId}/chat/metadata"
+    },
+
+    "ChatMessage": {
+      "description": "Individual chat message",
+      "schema": {
+        "id": "string (UUID)",
+        "senderId": "string (userId)",
+        "senderName": "string",
+        "senderPhoto": "string (URL)",
+        "message": "string",
+        "timestamp": "string (ISO 8601)",
+        "type": "enum ['text', 'image', 'document', 'appointment', 'vital', 'medication', 'recommendation', 'system']",
+        "attachments": "array of object ({url, type, name, size})",
+        "linkedAppointmentId": "string (if sharing appointment)",
+        "linkedDocumentId": "string (if sharing document)",
+        "linkedVitalId": "string (if sharing vital)",
+        "linkedRecommendationId": "string (if sharing AI recommendation)",
+        "readBy": "array of string (userIds who have read this)",
+        "reactions": "object ({emoji: [userIds]})",
+        "editedAt": "string (ISO 8601, if edited)",
+        "deletedAt": "string (ISO 8601, if deleted)"
+      },
+      "firestorePath": "users/{userId}/patients/{patientId}/chat/messages/{messageId}",
+      "realtimeListener": true
+    },
+
+    "EmergencyContact": {
+      "description": "Emergency contact for patient",
+      "schema": {
+        "id": "string (UUID)",
+        "name": "string",
+        "relationship": "string",
+        "phone": "string",
+        "alternatePhone": "string",
+        "email": "string",
+        "address": "string",
+        "city": "string",
+        "state": "string",
+        "zipCode": "string",
+        "isPrimary": "boolean",
+        "notes": "string (e.g., 'Available 24/7', 'Call only in emergency')"
+      }
+    },
+
+    "Notification": {
+      "description": "In-app notification",
+      "schema": {
+        "id": "string (UUID)",
+        "userId": "string",
+        "type": "enum ['appointment_reminder', 'appointment_update', 'vital_alert', 'medication_reminder', 'document_upload', 'ai_recommendation', 'chat_message', 'family_invite', 'urgent_alert']",
+        "title": "string",
+        "message": "string",
+        "priority": "enum ['low', 'medium', 'high', 'urgent']",
+        "createdAt": "string (ISO 8601)",
+        "readAt": "string (ISO 8601)",
+        "actionUrl": "string (deep link to relevant page)",
+        "actionLabel": "string (e.g., 'Schedule Now', 'View Details')",
+        "relatedPatientId": "string",
+        "relatedAppointmentId": "string",
+        "relatedRecommendationId": "string",
+        "imageUrl": "string (optional icon/image)",
+        "expiresAt": "string (ISO 8601, auto-delete old notifications)"
+      },
+      "firestorePath": "users/{userId}/notifications/{notificationId}",
+      "indexes": ["userId", "readAt", "createdAt", "priority"]
+    }
+  },
+
+  "firestoreStructure": {
+    "description": "Complete Firestore database structure with security rules",
+    "collections": {
+      "/users/{userId}": {
+        "description": "User root collection",
+        "documents": ["User profile (existing)"],
+        "subcollections": {
+          "/patients/{patientId}": {
+            "description": "Patients managed by this user (family members, pets)",
+            "documents": ["PatientProfile"],
+            "subcollections": {
+              "/identity": {
+                "documents": ["PatientID (single document)"],
+                "security": "Requires viewSensitiveInfo permission for SSN"
+              },
+              "/insurance/{insuranceId}": {
+                "documents": ["InsuranceCard"],
+                "security": "Requires viewSensitiveInfo permission for full Member ID"
+              },
+              "/medications/{medicationId}": {
+                "description": "Already implemented",
+                "documents": ["ScannedMedication"]
+              },
+              "/vitals/{vitalId}": {
+                "documents": ["VitalSign"],
+                "indexes": ["type", "recordedAt", "patientId"]
+              },
+              "/documents/{documentId}": {
+                "documents": ["MedicalDocument"],
+                "indexes": ["documentType", "visitDate", "providerId", "uploadedAt"]
+              },
+              "/appointments/{appointmentId}": {
+                "documents": ["Appointment"],
+                "indexes": ["dateTime", "status", "providerId", "specialty"]
+              },
+              "/healthAnalysis/{analysisId}": {
+                "documents": ["HealthTrendAnalysis"],
+                "indexes": ["analyzedAt"]
+              },
+              "/recommendations/{recommendationId}": {
+                "documents": ["AppointmentRecommendation"],
+                "indexes": ["status", "priority", "createdAt"]
+              },
+              "/history": {
+                "documents": ["MedicalHistory (single document)"]
+              },
+              "/chat": {
+                "metadata": "FamilyChat (single document)",
+                "messages": {
+                  "/messages/{messageId}": {
+                    "documents": ["ChatMessage"],
+                    "realtimeListener": true,
+                    "indexes": ["timestamp"]
+                  }
+                }
+              }
+            }
+          },
+          "/familyMembers/{memberId}": {
+            "documents": ["FamilyMember"],
+            "indexes": ["status", "userId", "patientsAccess"]
+          },
+          "/providers/{providerId}": {
+            "documents": ["Provider"],
+            "indexes": ["type", "specialty", "patientsServed"]
+          },
+          "/notifications/{notificationId}": {
+            "documents": ["Notification"],
+            "indexes": ["userId", "readAt", "createdAt", "priority", "type"]
+          }
+        }
+      },
+      "/familyInvitations/{inviteId}": {
+        "description": "Global invitations collection (shared across all users)",
+        "documents": ["FamilyInvitation"],
+        "indexes": ["inviteCode", "recipientEmail", "status", "expiresAt"],
+        "security": "Readable by inviter and recipient email"
+      }
+    },
+    "securityRules": {
+      "description": "Firebase security rules requirements",
+      "rules": [
+        "Users can read/write their own /users/{userId} documents",
+        "Users can read patients they have familyMember access to (check /users/{ownerId}/familyMembers/{userId}/patientsAccess array)",
+        "FamilyMembers can read/write based on their permissions object",
+        "SSN and sensitive insurance info require viewSensitiveInfo permission",
+        "Family invitations readable by recipient email or inviter userId",
+        "Chat messages readable/writable by all participants",
+        "Appointments editable only by users with editAppointments permission",
+        "Vitals logged by users with logVitals permission",
+        "Documents uploaded by users with uploadDocuments permission"
+      ],
+      "exampleRule": {
+        "path": "/users/{ownerId}/patients/{patientId}/identity/id",
+        "read": "request.auth.uid == ownerId || (exists(/databases/$(database)/documents/users/$(ownerId)/familyMembers/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(ownerId)/familyMembers/$(request.auth.uid)).data.permissions.viewSensitiveInfo == true)"
+      }
+    },
+    "indexes": {
+      "composite": [
+        {
+          "collection": "vitals",
+          "fields": ["patientId ASC", "type ASC", "recordedAt DESC"]
+        },
+        {
+          "collection": "appointments",
+          "fields": ["patientId ASC", "dateTime DESC", "status ASC"]
+        },
+        {
+          "collection": "recommendations",
+          "fields": ["patientId ASC", "status ASC", "priority ASC", "createdAt DESC"]
+        },
+        {
+          "collection": "notifications",
+          "fields": ["userId ASC", "readAt ASC", "priority DESC", "createdAt DESC"]
+        }
+      ]
+    }
+  },
+
+  "features": {
+    "familyCollaboration": {
+      "name": "Family Collaboration System",
+      "priority": "P0 (Critical)",
+      "description": "Allow multiple family members to co-manage patient health records with granular permissions and secure access to sensitive info (SSN, insurance)",
+      "components": [
+        {
+          "name": "Family Invitation System",
+          "userStory": "As a caregiver, I want to invite my sister to help manage Mom's health, so we can share the responsibility",
+          "requirements": [
+            "Send invite via email with unique 8-char code",
+            "Invite expires after 7 days (configurable)",
+            "Set granular permissions with checkboxes",
+            "Special permission: 'viewSensitiveInfo' for SSN and full insurance Member ID",
+            "Personal message from inviter",
+            "Email notification with 'Accept Invite' button",
+            "Deep link to accept invite page",
+            "Recipient creates account or logs in to accept",
+            "Revoke invite before acceptance",
+            "Resend invite if expired",
+            "View pending invitations list"
+          ],
+          "ui": [
+            "InviteModal with permission checkboxes (grouped categories)",
+            "Sensitive Info permission with warning icon and tooltip",
+            "Invitation status tracker",
+            "Pending invitations list with resend/revoke buttons",
+            "Accept invite page with invitation details preview"
+          ]
+        },
+        {
+          "name": "Permission Management",
+          "requirements": [
+            "Granular permissions per family member per patient",
+            "Owner (primary user) has full control, cannot be removed",
+            "Invited members have subset of permissions based on grant",
+            "Edit permissions after acceptance (owner only)",
+            "Remove family member access (owner only)",
+            "Audit log of actions by each member (who edited what, when)",
+            "Permission categories: View, Edit, Sensitive Info, Notifications",
+            "Bulk permission sets: 'Full Access', 'View Only', 'Limited Edit', 'Custom'"
+          ],
+          "permissions": {
+            "view": ["viewMedicalRecords", "viewVitals"],
+            "edit": ["editMedications", "scheduleAppointments", "editAppointments", "uploadDocuments", "logVitals", "editPatientProfile"],
+            "delete": ["deleteAppointments", "deleteDocuments"],
+            "sensitive": ["viewSensitiveInfo (SSN, full insurance Member ID)"],
+            "collaboration": ["chatAccess", "inviteOthers"]
+          }
+        },
+        {
+          "name": "Family Group Chat",
+          "requirements": [
+            "One chat per patient (e.g., 'Mom's Care Team')",
+            "Real-time messaging using Firestore listeners",
+            "Share documents, vitals, appointments in chat (rich embeds)",
+            "Typing indicators ('Sarah is typing...')",
+            "Read receipts (checkmarks when read)",
+            "Push notifications for new messages (respects user preferences)",
+            "Image attachments (compress before upload)",
+            "File attachments (PDFs, documents)",
+            "System messages (e.g., 'Sarah scheduled an appointment with Dr. Johnson')",
+            "Message reactions (emoji)",
+            "Edit/delete own messages (within 5 minutes)",
+            "Search chat history",
+            "Mute notifications per chat"
+          ]
+        },
+        {
+          "name": "Family Notifications",
+          "requirements": [
+            "Broadcast notifications to all family members with permission",
+            "Per-member notification preferences (granular on/off toggles)",
+            "Notification types: appointment scheduled/updated/cancelled, vitals alert, medication changed, document uploaded, AI recommendation, chat message, urgent alert",
+            "In-app notification center (bell icon with badge count)",
+            "Push notifications (Firebase Cloud Messaging)",
+            "Email notifications for critical events",
+            "Notification history (last 30 days)",
+            "Mark as read / Mark all as read",
+            "Deep links to relevant content",
+            "Urgent alerts always delivered (cannot be disabled)"
+          ]
+        },
+        {
+          "name": "SSN & Sensitive Info Security",
+          "requirements": [
+            "SSN encrypted at rest in Firestore (field-level encryption)",
+            "SSN masked by default: •••-••-1234 (show last 4)",
+            "Eye icon to reveal/hide full SSN",
+            "Biometric gate: Require Face ID/Touch ID/PIN before revealing",
+            "Auto-hide after 30 seconds of inactivity",
+            "One-time copy button (copies to clipboard, then auto-hides)",
+            "Disable screenshots when SSN visible (mobile)",
+            "Audit log: Track who viewed SSN (timestamp, userId, IP, device)",
+            "Insurance Member ID similarly masked and gated",
+            "Permission required: viewSensitiveInfo",
+            "Warning when granting viewSensitiveInfo permission to family member"
+          ]
+        }
+      ],
+      "implementation": {
+        "phase": "Phase 2",
+        "estimatedWeeks": 4,
+        "dependencies": ["Phase 1: Data models"],
+        "technicalRequirements": [
+          "Firebase Cloud Messaging for push notifications",
+          "Firestore real-time listeners for chat",
+          "Email service (SendGrid or Firebase Extensions)",
+          "Secure invite code generation (crypto.randomBytes)",
+          "Field-level encryption library for SSN (AES-256)",
+          "Biometric authentication (Face ID/Touch ID)",
+          "IP address tracking for audit logs"
+        ]
+      }
+    },
+
+    "appointmentManagement": {
+      "name": "Appointment Management & Tracking",
+      "priority": "P0 (Critical)",
+      "description": "Complete appointment lifecycle from scheduling to post-visit documentation, with conflict detection and last/next tracking",
+      "components": [
+        {
+          "name": "Appointment CRUD",
+          "requirements": [
+            "Create appointment with provider, date/time, location",
+            "Edit appointment details (any family member with permission)",
+            "Cancel appointment with reason (track cancellation rate)",
+            "Mark as no-show",
+            "Recurring appointments (every 3 months, annual, every 6 weeks, custom)",
+            "Link to provider from provider directory (auto-fill location)",
+            "Auto-fill provider location from provider data",
+            "Estimate travel time using Google Maps API",
+            "Set geofence radius (default 200m)",
+            "Add appointment notes and pre-visit questions"
+          ]
+        },
+        {
+          "name": "Last/Next Appointment Tracking",
+          "requirements": [
+            "Display 'Last appointment: X days ago' globally and per-provider",
+            "Display 'Next appointment: in X days' globally and per-provider",
+            "Per-provider tracking dashboard: 'Last saw Cardiologist: 45 days ago'",
+            "Overdue appointment alerts: 'Haven't seen endocrinologist in 6 months (recommended every 3 months)'",
+            "Recommended frequency per provider (set by user or AI)",
+            "Visual timeline of past/future appointments",
+            "Provider-specific stats: total visits, average interval, current gap",
+            "Quick-schedule next visit based on recommended frequency"
+          ]
+        },
+        {
+          "name": "Conflict Detection & Resolution",
+          "requirements": [
+            "Real-time conflict detection when scheduling",
+            "Detect overlapping appointment times (same patient, overlapping hours)",
+            "Detect same-day conflicts (multiple appointments same day)",
+            "Calculate travel time between locations (flag if insufficient)",
+            "Flag appointments too close together (<30min apart without travel buffer)",
+            "Conflict severity levels: none (green), warning (yellow), critical (red)",
+            "Visual indicators in calendar view",
+            "Suggest alternative times to resolve conflict",
+            "One-tap reschedule to suggested time",
+            "Override option with confirmation ('Schedule anyway')",
+            "Notify family members of conflicts"
+          ]
+        },
+        {
+          "name": "Geofencing & Arrival Detection",
+          "requirements": [
+            "Request background location permission",
+            "Create circular geofence around appointment location (customizable radius)",
+            "Background location monitoring (battery-efficient)",
+            "Trigger push notification when entering geofence: 'You've arrived at Dr. Smith's office. Log your visit?'",
+            "One-tap to mark 'Arrived' from notification",
+            "Auto-update appointment status: scheduled → arrived",
+            "Record arrival time (arrivedAt timestamp)",
+            "Notify family members automatically: 'Mom has arrived at her appointment with Sarah'",
+            "Disable geofence after appointment completed or cancelled",
+            "Manual 'Mark as Arrived' option if geofence fails"
+          ]
+        },
+        {
+          "name": "Live Visit Updates",
+          "requirements": [
+            "Timeline feed of visit status updates",
+            "Family members can post updates: 'Checked in', 'Waiting', 'With doctor', 'Getting X-ray', 'At pharmacy'",
+            "Real-time sync across all family members (Firestore listeners)",
+            "Timestamp each update",
+            "Display update author: 'Sarah posted: With doctor now'",
+            "System-generated updates for status changes: 'Appointment marked as Arrived'",
+            "Push notifications for updates (optional per family member)",
+            "Add photos to updates (e.g., photo of waiting room)",
+            "Location tags within facility ('Waiting room', 'Exam room 3')"
+          ]
+        },
+        {
+          "name": "Post-Visit Workflow",
+          "requirements": [
+            "Automatic prompt when appointment marked completed",
+            "Step 1: 'Scan any documents you received?' (visit summary, prescriptions, lab orders)",
+            "Quick-scan flow optimized for multiple documents",
+            "Auto-link scanned documents to appointment",
+            "Step 2: 'Did you receive any new prescriptions?' → Quick-scan medication labels",
+            "Auto-add new medications to medications list",
+            "Step 3: 'Schedule follow-up appointment?' → Pre-fill based on provider recommendation",
+            "Step 4: Add visit summary notes (free text)",
+            "Step 5: 'Notify family?' → Send visit summary to all family members",
+            "Track wait time (check-in to seen by doctor)",
+            "Rate visit experience (optional feedback)"
+          ]
+        },
+        {
+          "name": "Escort Tracking",
+          "requirements": [
+            "'Who's taking them to appointment?' field (select from family members)",
+            "Display escort name on appointment card",
+            "History of who escorted to past appointments",
+            "Filter appointments by escort (useful for coordinating multiple caregivers)",
+            "Escort receives targeted notifications for their appointments",
+            "Track escort reliability (% of appointments attended)"
+          ]
+        },
+        {
+          "name": "Calendar Views & Export",
+          "requirements": [
+            "List view: Chronological with last/next indicators, status badges",
+            "Calendar grid view: Month/week view with color-coded appointments",
+            "Timeline view: Visual timeline with provider grouping",
+            "Provider view: Grouped by doctor showing appointment history",
+            "Filter by: patient, provider, type, status, date range",
+            "Color-coded by status: scheduled (blue), arrived (yellow), completed (green), cancelled (red)",
+            "Export to Google Calendar (.ics file)",
+            "Export to Apple Calendar (.ics file)",
+            "Share calendar with family (view-only link)",
+            "Print calendar for monthly overview"
+          ]
+        }
+      ],
+      "implementation": {
+        "phase": "Phase 3",
+        "estimatedWeeks": 6,
+        "dependencies": ["Phase 1: Data models", "Phase 2: Family collaboration"],
+        "technicalRequirements": [
+          "Geolocation API (navigator.geolocation)",
+          "Background location permissions (requestBackgroundPermission)",
+          "Push notifications for geofence triggers",
+          "Calendar integration libraries (ical-generator for .ics export)",
+          "Conflict detection algorithm (interval tree data structure)",
+          "Google Maps API for travel time estimation (optional)",
+          "Firestore real-time listeners for live updates"
+        ]
+      }
+    },
+
+    "aiHealthMonitoring": {
+      "name": "AI-Powered Health Monitoring & Appointment Recommendations",
+      "priority": "P1 (High)",
+      "description": "Analyze health trends and proactively recommend appointments before issues become serious, with outcome tracking to improve AI accuracy over time",
+      "components": [
+        {
+          "name": "Trend Analysis Engine",
+          "requirements": [
+            "Daily background analysis of vitals (last 30 days by default)",
+            "Statistical analysis: mean, median, min, max, std deviation, variance",
+            "Coefficient of variation (measure of volatility)",
+            "Detect trends: improving, stable, worsening",
+            "Trend confidence scoring (0-100%)",
+            "Identify patterns: volatile, steady, seasonal, progressive, cyclic",
+            "Calculate percentage of readings in target range",
+            "Detect rapid changes (>15% change in 24 hours)",
+            "Track consecutive high/low readings",
+            "Time-of-day pattern analysis (morning vs evening readings)",
+            "Multi-factor correlation: e.g., missed meds correlate with high blood sugar",
+            "Compare current period vs previous period (% change)"
+          ]
+        },
+        {
+          "name": "Clinical Guidelines Engine",
+          "requirements": [
+            "Pre-programmed guidelines for common conditions (diabetes, hypertension, heart disease, etc.)",
+            "Check compliance: A1C every 3 months for diabetics, annual physical, lipid panel annually, etc.",
+            "Alert when overdue for routine tests",
+            "Medication follow-up reminders: 2 weeks after starting BP med, 3 months after starting diabetes med",
+            "Customizable guidelines per provider recommendation (override defaults)",
+            "Age-based screening reminders: colonoscopy at 50, mammogram at 40, etc.",
+            "Gender-specific guidelines",
+            "Guidelines database with references to medical standards (ADA, AHA, USPSTF)"
+          ]
+        },
+        {
+          "name": "AI Recommendation Generator (Gemini Integration)",
+          "requirements": [
+            "Gemini API integration for complex pattern recognition",
+            "Generate natural language recommendations",
+            "Multi-factor analysis: vitals + medications + appointment history + conditions",
+            "Priority scoring (urgent, high, medium, low)",
+            "Confidence scoring (0-100%)",
+            "Evidence-based reasoning (show which vitals/factors triggered recommendation)",
+            "Timeframe suggestion: 'Within 24 hours', 'Within 1 week', 'This month', 'Next 3 months'",
+            "Suggest appropriate provider type (Cardiologist, Endocrinologist) or specific provider",
+            "Auto-suggest appointment date based on urgency and availability",
+            "Include pre-visit questions to ask doctor",
+            "Attach supporting vitals data to recommendation"
+          ]
+        },
+        {
+          "name": "Recommendations Dashboard",
+          "requirements": [
+            "Display all active recommendations sorted by priority",
+            "Visual priority indicators: red banner (urgent), yellow banner (high), blue banner (medium), gray (low)",
+            "Expandable cards showing evidence, reasoning, supporting charts",
+            "Actions: Schedule Now, Dismiss (with reason), Remind Tomorrow, Snooze 1 Week",
+            "Dismissal reasons: 'Already scheduled', 'Not relevant', 'Will monitor', 'Too sensitive'",
+            "Track dismissed recommendations (don't re-surface same recommendation)",
+            "Show recommendation history (past 90 days)",
+            "Filter by priority, patient, status",
+            "Badge count on Medical Records tab showing # of new recommendations"
+          ]
+        },
+        {
+          "name": "Smart Scheduling from Recommendations",
+          "requirements": [
+            "One-tap 'Schedule Now' from recommendation card",
+            "Auto-fill appointment purpose from recommendation text",
+            "Pre-fill provider from recommendation (or provider type)",
+            "Suggest timeframe based on urgency (urgent = next available, high = within week)",
+            "Attach supporting vitals data to appointment notes",
+            "Pre-populate 'Questions to ask doctor' from recommendation",
+            "Link recommendation to appointment (track if recommendation led to appointment)",
+            "If appointment scheduled, mark recommendation as 'Scheduled'"
+          ]
+        },
+        {
+          "name": "Trend Visualizations",
+          "requirements": [
+            "Line charts for each vital over time (interactive)",
+            "Overlay target ranges as shaded areas (green zone)",
+            "Highlight concerning periods (out-of-range zones in red/yellow)",
+            "Show medication changes as vertical lines/annotations on timeline",
+            "Annotations for missed doses (correlate with spikes)",
+            "Compare multiple vitals on same chart (dual y-axis)",
+            "Zoom and pan functionality",
+            "Hover tooltips showing exact values and dates",
+            "Trend arrows showing direction (↑↓→)",
+            "Export chart as image (PNG)",
+            "Print chart for doctor visits"
+          ]
+        },
+        {
+          "name": "Outcome Tracking & AI Learning",
+          "requirements": [
+            "Track what happened after recommendation (scheduled, dismissed, ignored)",
+            "If scheduled: Link to appointment",
+            "After appointment: Was it helpful? (yes/no feedback)",
+            "Was diagnosis made? Did treatment change?",
+            "User feedback: 'Was this recommendation helpful?' (thumbs up/down)",
+            "Timeliness feedback: 'Was the urgency level appropriate?' (too early, just right, too late)",
+            "Accuracy score: How often do recommendations lead to actual medical interventions?",
+            "Use outcomes to adjust thresholds and improve future recommendations",
+            "Track false positive rate (recommendations dismissed as not relevant)",
+            "Track false negative rate (issues caught late that should have triggered earlier recommendation)",
+            "Periodic AI model retraining based on outcome data"
+          ]
+        },
+        {
+          "name": "Health Score & Summary",
+          "requirements": [
+            "Overall health score (0-100) based on: vitals trends, medication adherence, appointment adherence, risk factors",
+            "Score trend over time (improving, stable, declining)",
+            "Factors affecting score (positive and negative)",
+            "Actionable insights: 'Your health score improved 8 points this month due to consistent BP control'",
+            "Weekly/monthly health summary email (optional)",
+            "Share health score with family members",
+            "Celebrate milestones: 'You've maintained healthy BP for 30 days straight!'"
+          ]
+        }
+      ],
+      "implementation": {
+        "phase": "Phase 5",
+        "estimatedWeeks": 6,
+        "dependencies": ["Phase 1: Data models", "Phase 4: Vitals tracking", "Phase 3: Appointments"],
+        "technicalRequirements": [
+          "Gemini API (gemini-1.5-flash-002 for text analysis)",
+          "Background Cloud Functions (Firebase or Vercel) for daily analysis (runs at 2am daily)",
+          "Chart visualization library (Recharts recommended)",
+          "Statistical analysis: calculate mean, median, std dev, correlation",
+          "Push notifications for urgent recommendations",
+          "Email service for weekly health summaries",
+          "Machine learning pipeline for outcome-based model improvement (future enhancement)"
+        ]
+      }
+    }
+  },
+
+  "executionModel": {
+    "description": "Vertical slice-based execution model for continuous delivery without artificial deadlines",
+    "developmentPhilosophy": {
+      "approach": "Feature-driven, not date-driven",
+      "methodology": "Kanban + Continuous Delivery + Feature Flags",
+      "implementationLoop": "User prompts → AI builds complete slice → User validates/deploys",
+      "autonomy": {
+        "developmentProcess": "Collaborative (requires user prompts, not fully autonomous)",
+        "systemBehavior": "Autonomous runtime with guardrails (background analysis, auto-recommendations, smart notifications)"
+      },
+      "principles": [
+        "Each slice ships when done, not when calendar says so",
+        "Dark launch behind feature flags (deploy continuously, enable when confident)",
+        "Parallel work on independent slices when dependencies met",
+        "No sprint cadence required (optional weekly/bi-weekly reviews for alignment)",
+        "Low coordination overhead (slice backlog defines all work)",
+        "Slice backlog is prioritized queue, not rigid timeline",
+        "Dependencies naturally enforce build order",
+        "Test-driven: done = automated tests pass + manual validation checklist complete"
+      ],
+      "workflow": "Pick top slice → Build (DB + API + UI + tests) → Deploy (flag OFF) → Validate → Enable (flag ON) → Move to next slice"
+    },
+
+    "verticalSlices": [
+      {
+        "id": "S1",
+        "name": "Single Patient Vitals (Foundation)",
+        "priority": "P0 - Must Build First",
+        "dependencies": [],
+        "description": "Foundation layer establishing core infrastructure: Firestore schema, TypeScript interfaces, auth operations, and basic vitals tracking for a single patient.",
+        "scope": {
+          "database": [
+            "Firestore schema for /users/{userId}/patients/{patientId}",
+            "Firestore schema for /users/{userId}/patients/{patientId}/vitals/{vitalId}",
+            "Security rules for patient and vitals read/write",
+            "Composite indexes: [patientId ASC, type ASC, recordedAt DESC]"
+          ],
+          "backend": [
+            "TypeScript interfaces: PatientProfile, VitalSign",
+            "Zod validation schemas for patient and vitals",
+            "lib/firebase-operations.ts: patients.operations.ts with CRUD",
+            "lib/firebase-operations.ts: vitals.operations.ts with CRUD",
+            "API route: /api/patients (GET, POST, PUT, DELETE)",
+            "API route: /api/patients/[id]/vitals (GET, POST)",
+            "Observability: Sentry error tracking, basic metrics (request counts, error rates)"
+          ],
+          "frontend": [
+            "app/patients/page.tsx - Patient list view",
+            "app/patients/new/page.tsx - Create patient form",
+            "app/patients/[id]/page.tsx - Patient detail view",
+            "app/patients/[id]/vitals/page.tsx - Vitals logging and trend view",
+            "components/patients/PatientCard.tsx",
+            "components/vitals/VitalLogForm.tsx - Form to log BP, blood sugar, heart rate, O2",
+            "components/vitals/VitalTrendChart.tsx - Simple line chart (Recharts)",
+            "hooks/usePatients.ts - Fetch patients",
+            "hooks/useVitals.ts - Fetch vitals for patient"
+          ],
+          "testing": [
+            "Unit tests: vitals.operations.ts CRUD functions",
+            "Unit tests: Zod schema validation (valid/invalid inputs)",
+            "Integration tests: API routes with mock Firestore",
+            "E2E test: Create patient → Log vital → View trend chart"
+          ]
+        },
+        "doneCriteria": {
+          "automated": [
+            "All unit tests pass (vitals CRUD, schema validation)",
+            "All integration tests pass (API routes return expected data)",
+            "E2E test passes: Full user flow works end-to-end",
+            "Firestore security rules tested (user can only access own patients)",
+            "TypeScript compiles with zero errors",
+            "ESLint passes with zero warnings"
+          ],
+          "manual": [
+            "Create a patient profile successfully",
+            "Log blood pressure reading and see it in list",
+            "Log blood sugar reading and see trend chart update",
+            "Chart displays correctly with proper labels and axes",
+            "UI is responsive on mobile and desktop",
+            "Error states handled gracefully (network error, validation error)",
+            "Loading states show spinners appropriately"
+          ]
+        },
+        "featureFlag": "ENABLE_VITALS_TRACKING",
+        "estimatedComplexity": "Medium (3-5 days)",
+        "risks": [
+          "Firestore security rules misconfiguration (test thoroughly)",
+          "Chart library performance with large datasets (test with 1000+ vitals)",
+          "Mobile responsiveness for trend charts (test on real devices)"
+        ],
+        "deliverable": "Working single-patient vitals tracking app with foundation for all future slices"
+      },
+
+      {
+        "id": "S2",
+        "name": "Family View of Vitals (Permissions Core)",
+        "priority": "P0 - Critical Path",
+        "dependencies": ["S1"],
+        "description": "Multi-user access control allowing family members to view patient vitals with granular permissions. This establishes the permission model used throughout the app.",
+        "scope": {
+          "database": [
+            "Firestore schema for /users/{userId}/familyMembers/{memberId}",
+            "Firestore schema for /familyInvitations/{inviteId}",
+            "Security rules: Check familyMember permissions before read/write",
+            "Indexes: [inviteCode, recipientEmail, status, expiresAt]"
+          ],
+          "backend": [
+            "TypeScript interfaces: FamilyMember, FamilyInvitation",
+            "Zod schemas for family members and invitations",
+            "lib/firebase-operations.ts: familyMembers.operations.ts",
+            "lib/firebase-operations.ts: invitations.operations.ts",
+            "lib/permissions.ts - Helper to check permissions (hasPermission(userId, patientId, 'viewVitals'))",
+            "lib/invite-code-generator.ts - Secure 8-char code generation",
+            "API route: /api/family-members (GET, POST, PUT, DELETE)",
+            "API route: /api/invitations (POST - send invite, PUT - accept/decline)",
+            "Email service: Send invitation email (SendGrid or Firebase Extensions)"
+          ],
+          "frontend": [
+            "app/patients/[id]/settings/family/page.tsx - Manage family access",
+            "components/family/InviteFamilyModal.tsx - Send invitation with permission checkboxes",
+            "components/family/FamilyMemberCard.tsx - Shows member with permissions, edit/remove buttons",
+            "components/family/PermissionsMatrix.tsx - Visual grid of permissions (grouped by category)",
+            "components/family/AcceptInvitePage.tsx - Accept invitation flow",
+            "hooks/useFamilyMembers.ts - Fetch family members for patient",
+            "Permission-gated UI: Hide edit buttons if user lacks editMedications permission"
+          ],
+          "testing": [
+            "Unit tests: Permission helper functions (hasPermission)",
+            "Integration tests: Security rules prevent unauthorized access",
+            "E2E test: User A invites User B → User B accepts → User B sees vitals read-only",
+            "E2E test: User without viewVitals permission gets 403 error",
+            "Red test (non-negotiable): Unauthorized user CANNOT access patient vitals"
+          ]
+        },
+        "doneCriteria": {
+          "automated": [
+            "All permission helper tests pass",
+            "Security rules tested: unauthorized access blocked",
+            "E2E test: Full invitation flow works",
+            "Red test passes: Unauthorized access returns 403"
+          ],
+          "manual": [
+            "Send invitation email and verify email received",
+            "Accept invitation and verify access granted",
+            "Verify family member sees only permitted data",
+            "Edit permissions and verify changes take effect immediately",
+            "Remove family member and verify access revoked",
+            "Permissions UI is clear and intuitive (conduct mini usability test with 2-3 users)"
+          ]
+        },
+        "featureFlag": "ENABLE_FAMILY_COLLABORATION",
+        "estimatedComplexity": "High (5-7 days)",
+        "risks": [
+          "Permission model complexity (avoid role explosion, use granular permissions)",
+          "Real-time permission updates (use Firestore listeners for instant revocation)",
+          "Email deliverability (test with multiple email providers: Gmail, Outlook, Yahoo)",
+          "Invite code collisions (use crypto.randomBytes for secure generation)"
+        ],
+        "deliverable": "Multi-user family access with granular permissions, establishing permission model for entire app"
+      },
+
+      {
+        "id": "S3",
+        "name": "SSN & Sensitive Identity (HIPAA Compliance)",
+        "priority": "P0 - Security Critical",
+        "dependencies": ["S2"],
+        "description": "Secure storage and display of SSN with field-level encryption, biometric unlock, and comprehensive audit logging. Establishes security patterns for all sensitive data.",
+        "scope": {
+          "database": [
+            "Firestore schema for /users/{userId}/patients/{patientId}/identity/id (PatientID)",
+            "Firestore schema for /audit_logs/{logId} (global audit log)",
+            "Field-level encryption for SSN (AES-256 with KMS)",
+            "Security rules: Require viewSensitiveInfo permission + biometric verification",
+            "SSNViewLog embedded in PatientID document",
+            "Global audit log for compliance queries"
+          ],
+          "backend": [
+            "TypeScript interfaces: PatientID, SSNViewLog",
+            "lib/encryption.ts - AES-256 encryption/decryption with KMS integration",
+            "lib/audit-logger.ts - Log SSN views, document downloads, sensitive access",
+            "lib/firebase-operations.ts: patientID.operations.ts with encryption",
+            "API route: /api/patients/[id]/identity (GET, PUT - encrypt before save)",
+            "API route: /api/patients/[id]/identity/ssn/view (POST - log view, return decrypted SSN)",
+            "API route: /api/audit-logs (GET - admin only, query audit trail)",
+            "KMS setup: GCP KMS / AWS KMS / HashiCorp Vault for key storage",
+            "Key rotation procedure documented in security doc"
+          ],
+          "frontend": [
+            "app/patients/[id]/identity/page.tsx - Driver's license view with SSN masked",
+            "components/identity/SSNRevealButton.tsx - Eye icon with biometric gate",
+            "components/identity/BiometricPrompt.tsx - Face ID/Touch ID/PIN prompt (Web Authentication API)",
+            "components/identity/SSNDisplay.tsx - Masked by default (•••-••-1234), reveal on biometric auth",
+            "Auto-hide SSN after 30 seconds (useEffect with timeout)",
+            "Screenshot prevention (mobile only, CSS property: -webkit-user-select: none)",
+            "Copy to clipboard button (one-time copy, then auto-hide)",
+            "Audit log viewer (admin only): app/admin/audit-logs/page.tsx"
+          ],
+          "testing": [
+            "Unit tests: Encryption/decryption functions (encrypt → decrypt = original)",
+            "Unit tests: Audit logging (verify all SSN views logged)",
+            "Integration tests: API routes require biometric verification",
+            "E2E test: User reveals SSN with biometric → SSN visible → auto-hides after 30s",
+            "E2E test: User without viewSensitiveInfo permission CANNOT see SSN reveal button",
+            "Red test (non-negotiable): Unauthorized user CANNOT access encrypted SSN"
+          ]
+        },
+        "doneCriteria": {
+          "automated": [
+            "Encryption tests pass (roundtrip encryption/decryption)",
+            "Audit log tests pass (every SSN view logged)",
+            "Security rules tested (unauthorized access blocked)",
+            "Red test passes: No unauthorized SSN access",
+            "Biometric prompt triggers before reveal"
+          ],
+          "manual": [
+            "Add SSN to patient identity and verify encrypted in Firestore (view raw data)",
+            "Reveal SSN with biometric and verify decryption works",
+            "Verify auto-hide after 30 seconds",
+            "Copy to clipboard and verify SSN copied correctly",
+            "Check audit log shows SSN view with timestamp, userId, IP, device",
+            "Revoke viewSensitiveInfo permission and verify reveal button disappears",
+            "Test on mobile: Screenshot prevention works (iOS/Android)",
+            "Compliance checklist: HIPAA requirements met (encryption at rest, access logging, minimum necessary access)"
+          ]
+        },
+        "featureFlag": "ENABLE_SENSITIVE_INFO_MANAGEMENT",
+        "estimatedComplexity": "High (6-8 days)",
+        "risks": [
+          "Encryption key management (CRITICAL: Use KMS, never hardcode keys)",
+          "Key rotation complexity (need migration plan for re-encrypting existing SSNs)",
+          "Biometric API browser support (fallback to PIN on unsupported browsers)",
+          "Audit log retention (legal requirement: 7 years for HIPAA, configure Firestore TTL carefully)",
+          "Performance: Decryption on every SSN reveal (acceptable latency <500ms)"
+        ],
+        "deliverable": "HIPAA-compliant SSN storage with biometric unlock and audit logging, establishing security standard for all sensitive data"
+      },
+
+      {
+        "id": "S4",
+        "name": "Appointment Brain (Scheduling Intelligence)",
+        "priority": "P0 - Critical Path",
+        "dependencies": ["S1"],
+        "description": "Complete appointment management with CRUD, last/next tracking, conflict detection, and provider directory. This is the scheduling intelligence layer.",
+        "scope": {
+          "database": [
+            "Firestore schema for /users/{userId}/providers/{providerId}",
+            "Firestore schema for /users/{userId}/patients/{patientId}/appointments/{appointmentId}",
+            "Security rules for providers and appointments",
+            "Indexes: [patientId ASC, dateTime DESC, status ASC], [providerId, specialty]"
+          ],
+          "backend": [
+            "TypeScript interfaces: Provider, Appointment, ProviderSchedule, LiveUpdate",
+            "Zod schemas for providers and appointments",
+            "lib/firebase-operations.ts: providers.operations.ts",
+            "lib/firebase-operations.ts: appointments.operations.ts",
+            "lib/appointment-conflict-detector.ts - Interval tree algorithm for conflict detection",
+            "lib/appointment-scheduler.ts - Last/next tracking, overdue detection",
+            "API route: /api/providers (GET, POST, PUT, DELETE)",
+            "API route: /api/patients/[id]/appointments (GET, POST, PUT, DELETE)",
+            "API route: /api/patients/[id]/appointments/conflicts (GET - check conflicts)",
+            "API route: /api/patients/[id]/appointments/schedule-summary (GET - last/next per provider)"
+          ],
+          "frontend": [
+            "app/providers/page.tsx - Provider directory",
+            "app/providers/new/page.tsx - Add provider form",
+            "app/patients/[id]/appointments/page.tsx - Appointment list with calendar view",
+            "app/patients/[id]/appointments/new/page.tsx - Schedule appointment form",
+            "components/appointments/AppointmentCard.tsx - Status badge, conflict indicator",
+            "components/appointments/ConflictWarning.tsx - Visual conflict alert with suggested times",
+            "components/appointments/LastNextWidget.tsx - 'Last: 45 days ago, Next: in 12 days'",
+            "components/appointments/ProviderScheduleCard.tsx - Per-provider stats and timeline",
+            "components/appointments/CalendarView.tsx - Month/week grid with color-coded appointments",
+            "lib/ics-generator.ts - Export to .ics for Google/Apple Calendar",
+            "hooks/useProviders.ts",
+            "hooks/useAppointments.ts",
+            "hooks/useAppointmentConflicts.ts"
+          ],
+          "testing": [
+            "Unit tests: Conflict detection algorithm (overlapping times, same-day, travel buffer)",
+            "Unit tests: Last/next tracking calculations",
+            "Integration tests: API routes with various appointment scenarios",
+            "E2E test: Schedule appointment → Detect conflict → Reschedule to suggested time",
+            "E2E test: View last/next appointments per provider",
+            "E2E test: Export appointment to .ics and import to Google Calendar"
+          ]
+        },
+        "doneCriteria": {
+          "automated": [
+            "Conflict detection tests pass (all conflict types detected)",
+            "Last/next calculation tests pass",
+            "E2E test: Full appointment scheduling flow works",
+            "ICS export generates valid calendar file"
+          ],
+          "manual": [
+            "Create provider and verify saved",
+            "Schedule appointment and verify appears in list and calendar",
+            "Schedule overlapping appointment and verify conflict warning appears",
+            "Reschedule using suggested time and verify conflict resolves",
+            "Verify last/next widgets show correct dates and days",
+            "Mark appointment overdue and verify overdue alert shows",
+            "Export to .ics and import to Google Calendar successfully",
+            "Test calendar views: list, month, week, timeline all render correctly"
+          ]
+        },
+        "featureFlag": "ENABLE_APPOINTMENT_MANAGEMENT",
+        "estimatedComplexity": "High (7-9 days)",
+        "risks": [
+          "Conflict detection performance with 1000+ appointments (use interval tree, not naive O(n²))",
+          "Recurring appointments complexity (handle series updates carefully)",
+          "Timezone handling (store all times in UTC, display in user's timezone)",
+          "Calendar export format compliance (.ics must be RFC 5545 compliant)",
+          "Provider directory scale (search/filter for users with 50+ providers)"
+        ],
+        "deliverable": "Full appointment brain with scheduling intelligence, conflict detection, and last/next tracking"
+      },
+
+      {
+        "id": "S5",
+        "name": "Visit Experience (Real-Time Coordination)",
+        "priority": "P1 - High Value",
+        "dependencies": ["S4"],
+        "description": "Real-time appointment tracking with manual arrival, status transitions, live updates, and family notifications. Builds the live coordination layer.",
+        "scope": {
+          "database": [
+            "Appointment.liveUpdates array (LiveUpdate objects)",
+            "Appointment status transitions (scheduled → confirmed → arrived → in-progress → completed)",
+            "Real-time Firestore listeners for appointment updates"
+          ],
+          "backend": [
+            "lib/firebase-operations.ts: Update appointment status with LiveUpdate creation",
+            "lib/notification-sender.ts - Send push notifications to family members",
+            "API route: /api/patients/[id]/appointments/[appointmentId]/status (PUT - update status)",
+            "API route: /api/patients/[id]/appointments/[appointmentId]/live-updates (POST - add update)",
+            "Firebase Cloud Messaging setup for push notifications"
+          ],
+          "frontend": [
+            "app/patients/[id]/appointments/[appointmentId]/page.tsx - Live appointment view",
+            "components/appointments/AppointmentTimeline.tsx - Real-time status feed",
+            "components/appointments/StatusUpdateForm.tsx - Post live updates ('With doctor', 'At pharmacy')",
+            "components/appointments/MarkArrivedButton.tsx - Manual arrival button",
+            "components/appointments/PostVisitPrompt.tsx - Prompt to scan docs after completion",
+            "Real-time updates via Firestore listeners (useEffect with onSnapshot)",
+            "Push notification handling (service worker for FCM)"
+          ],
+          "testing": [
+            "Integration tests: Status transitions trigger LiveUpdate creation",
+            "E2E test: User A marks arrived → User B sees update in real-time",
+            "E2E test: Post live update → Family members receive push notification",
+            "E2E test: Complete appointment → Post-visit prompt appears"
+          ]
+        },
+        "doneCriteria": {
+          "automated": [
+            "Real-time listener tests pass (updates propagate instantly)",
+            "Push notification tests pass (FCM sends correctly)",
+            "E2E test: Multi-user real-time coordination works"
+          ],
+          "manual": [
+            "Mark appointment as arrived and verify status changes",
+            "Post live update and verify appears in timeline immediately",
+            "Verify family members see update in real-time (test with 2 devices)",
+            "Verify push notification received on second device",
+            "Complete appointment and verify post-visit prompt appears",
+            "Timeline shows all updates in chronological order with timestamps"
+          ]
+        },
+        "featureFlag": "ENABLE_LIVE_VISIT_UPDATES",
+        "estimatedComplexity": "Medium (4-6 days)",
+        "risks": [
+          "Real-time listener performance (limit onSnapshot to active appointments only)",
+          "Push notification reliability (FCM delivery not guaranteed, test extensively)",
+          "Notification spam (rate-limit live updates to avoid notification fatigue)",
+          "Battery drain from real-time listeners (detach listeners when app backgrounded)"
+        ],
+        "deliverable": "Real-time visit coordination with live updates and family notifications"
+      },
+
+      {
+        "id": "S6",
+        "name": "AI Health Trends (Intelligent Monitoring)",
+        "priority": "P1 - High Value",
+        "dependencies": ["S1", "S4"],
+        "description": "AI-powered health trend analysis with rule-based nudges and Gemini-generated recommendations. Includes outcome tracking for AI learning.",
+        "scope": {
+          "database": [
+            "Firestore schema for /users/{userId}/patients/{patientId}/healthAnalysis/{analysisId}",
+            "Firestore schema for /users/{userId}/patients/{patientId}/recommendations/{recommendationId}",
+            "Indexes: [status, priority, createdAt]"
+          ],
+          "backend": [
+            "TypeScript interfaces: HealthTrendAnalysis, AppointmentRecommendation, TrendAnalysis",
+            "lib/trend-analyzer.ts - Statistical analysis (mean, median, std dev, variance, CV)",
+            "lib/rule-based-alerts.ts - Deterministic alerts (3 consecutive high readings, rapid spike >15%)",
+            "lib/gemini-health-advisor.ts - Gemini API for narrative insights and recommendations",
+            "lib/clinical-guidelines.ts - Pre-programmed guidelines (A1C every 3mo for diabetics, etc.)",
+            "lib/recommendation-generator.ts - Combine rules + AI for recommendations",
+            "API route: /api/patients/[id]/analyze-trends (POST - trigger analysis)",
+            "API route: /api/patients/[id]/recommendations (GET, PUT - dismiss/schedule)",
+            "Cloud Function: Daily trend analysis cron job (runs at 2am daily)",
+            "De-identification before Gemini: Strip name, SSN, exact DOB (send only age, vitals, conditions)"
+          ],
+          "frontend": [
+            "app/patients/[id]/health-trends/page.tsx - Trend visualizations and insights",
+            "app/patients/[id]/recommendations/page.tsx - Recommendations dashboard",
+            "components/health/TrendChart.tsx - Interactive line chart with target ranges",
+            "components/health/RecommendationCard.tsx - Priority banner, evidence, actions",
+            "components/health/HealthScoreWidget.tsx - Overall health score (0-100) with trend",
+            "components/health/AIInsightCard.tsx - Natural language insights from Gemini",
+            "Schedule from recommendation: Pre-fill appointment form from recommendation data",
+            "Outcome tracking: After appointment, ask 'Was this recommendation helpful?'"
+          ],
+          "testing": [
+            "Unit tests: Statistical calculations (mean, std dev correct)",
+            "Unit tests: Rule-based alerts trigger at correct thresholds",
+            "Integration tests: Gemini API returns valid recommendations",
+            "E2E test: Trend analysis detects concerning pattern → generates recommendation → user schedules appointment",
+            "E2E test: User dismisses recommendation → doesn't re-surface",
+            "Red test (non-negotiable): App works without AI (rule-based alerts sufficient)"
+          ]
+        },
+        "doneCriteria": {
+          "automated": [
+            "Statistical analysis tests pass (correct calculations)",
+            "Rule-based alert tests pass (thresholds enforced)",
+            "Gemini integration tests pass (API returns structured data)",
+            "E2E test: Full recommendation flow works",
+            "Red test passes: App functional without AI (feature flag OFF)"
+          ],
+          "manual": [
+            "Trigger trend analysis and verify insights generated",
+            "Verify concerning pattern creates recommendation with correct priority",
+            "Schedule appointment from recommendation and verify link created",
+            "Dismiss recommendation and verify doesn't reappear",
+            "Verify AI-generated insights are helpful and accurate (review 10+ samples)",
+            "Test with real-world vitals data (import sample patient data)",
+            "Verify guardrails: All AI text includes disclaimer 'Informational, not diagnostic advice'"
+          ]
+        },
+        "featureFlag": "ENABLE_AI_HEALTH_MONITORING",
+        "estimatedComplexity": "High (8-10 days)",
+        "risks": [
+          "AI hallucinations (mitigate with structured output, confidence thresholds, disclaimers)",
+          "Gemini API downtime (fallback to rule-based alerts only)",
+          "Cost: Gemini API calls (estimate ~$0.01 per analysis, budget accordingly)",
+          "De-identification compliance (ensure no PHI in Gemini requests, audit logs)",
+          "False positives (over-alerting causes alert fatigue, tune thresholds carefully)",
+          "Outcome tracking adoption (users may not provide feedback, need nudges)"
+        ],
+        "deliverable": "AI-powered health monitoring with rule-based safety net and outcome tracking for continuous improvement"
+      },
+
+      {
+        "id": "S7",
+        "name": "Chat & Notifications (Family Coordination)",
+        "priority": "P1 - High Value",
+        "dependencies": ["S2", "S4"],
+        "description": "Real-time family chat per patient with notification center, read receipts, and 90-day retention policy. Core coordination tool.",
+        "scope": {
+          "database": [
+            "Firestore schema for /users/{userId}/patients/{patientId}/chat/metadata (FamilyChat)",
+            "Firestore schema for /users/{userId}/patients/{patientId}/chat/messages/{messageId} (ChatMessage)",
+            "Firestore schema for /users/{userId}/notifications/{notificationId} (Notification)",
+            "Real-time listeners for chat messages",
+            "TTL (Time To Live) for 90-day retention (Firestore TTL policy)",
+            "Indexes: [timestamp DESC], [readAt, createdAt, priority]"
+          ],
+          "backend": [
+            "TypeScript interfaces: FamilyChat, ChatMessage, Notification",
+            "lib/firebase-operations.ts: chat.operations.ts with real-time messaging",
+            "lib/firebase-operations.ts: notifications.operations.ts",
+            "lib/notification-router.ts - Route notifications based on user preferences",
+            "lib/chat-exporter.ts - Export chat to PDF before 90-day deletion",
+            "API route: /api/patients/[id]/chat/messages (GET with real-time listener, POST)",
+            "API route: /api/notifications (GET, PUT - mark read)",
+            "Cloud Function: Chat retention cleanup (runs daily, deletes messages >90 days)",
+            "Cloud Function: Pre-deletion export (7 days before deletion, auto-export to PDF)"
+          ],
+          "frontend": [
+            "app/patients/[id]/chat/page.tsx - Real-time chat interface",
+            "app/notifications/page.tsx - Notification center",
+            "components/chat/ChatWindow.tsx - Real-time message list with Firestore listener",
+            "components/chat/ChatInput.tsx - Text input with file attachments",
+            "components/chat/MessageBubble.tsx - Message with read receipts, reactions",
+            "components/chat/TypingIndicator.tsx - 'Sarah is typing...'",
+            "components/chat/RichEmbed.tsx - Share appointments, vitals, documents in chat",
+            "components/notifications/NotificationBell.tsx - Badge count, dropdown preview",
+            "components/notifications/NotificationCard.tsx - Deep link to content",
+            "Real-time read receipts (update readBy array on message view)"
+          ],
+          "testing": [
+            "Integration tests: Real-time messaging works (message sent → received instantly)",
+            "E2E test: User A sends message → User B receives in real-time",
+            "E2E test: Share appointment in chat → User B sees rich embed",
+            "E2E test: Message auto-deletes after 90 days",
+            "E2E test: Export chat to PDF before deletion"
+          ]
+        },
+        "doneCriteria": {
+          "automated": [
+            "Real-time messaging tests pass (instant delivery)",
+            "TTL cleanup tests pass (messages deleted after 90 days)",
+            "Export tests pass (PDF generated correctly)",
+            "E2E test: Multi-device chat synchronization works"
+          ],
+          "manual": [
+            "Send message and verify appears instantly on second device",
+            "Upload image attachment and verify displays correctly",
+            "Share appointment in chat and verify rich embed renders",
+            "Verify typing indicator shows when user is typing",
+            "Verify read receipts update when message viewed",
+            "React to message with emoji and verify reaction displays",
+            "Mark notification as read and verify badge count updates",
+            "Test retention: Create message, fast-forward date 90 days (manual test), verify deletion",
+            "Export chat to PDF and verify formatting correct"
+          ]
+        },
+        "featureFlag": "ENABLE_FAMILY_CHAT",
+        "estimatedComplexity": "Medium (5-7 days)",
+        "risks": [
+          "Real-time listener scalability (limit to 100 messages loaded initially, lazy-load older)",
+          "Notification fatigue (default to conservative settings, let users opt-in to more)",
+          "Retention policy legal compliance (verify 90 days sufficient for medical record laws)",
+          "Export format (PDF generation performance with 1000s of messages)",
+          "Read receipts privacy (some users may want to disable, make it optional)"
+        ],
+        "deliverable": "Real-time family chat with notifications and 90-day retention, core coordination layer for families"
+      },
+
+      {
+        "id": "S8",
+        "name": "Document Scanning (OCR Foundation)",
+        "priority": "P1 - High Value",
+        "dependencies": ["S1"],
+        "description": "Flexible document scanning with Gemini Vision for OCR and dynamic field extraction. Establishes OCR foundation for smart form auto-fill.",
+        "scope": {
+          "database": [
+            "Firestore schema for /users/{userId}/patients/{patientId}/documents/{documentId}",
+            "MedicalDocument with extractedFields (dynamic JSON), rawText, imageUrls",
+            "Indexes: [documentType, visitDate, providerId, uploadedAt]"
+          ],
+          "backend": [
+            "TypeScript interfaces: MedicalDocument",
+            "lib/gemini-ocr.ts - Gemini Vision API for OCR (extract text from images)",
+            "lib/document-classifier.ts - Classify document type (intake_form, lab_result, prescription, etc.)",
+            "lib/field-extractor.ts - Extract dynamic fields based on document type",
+            "lib/image-uploader.ts - Upload to Firebase Storage with compression",
+            "API route: /api/patients/[id]/documents (POST - upload image, trigger OCR)",
+            "API route: /api/patients/[id]/documents (GET - list documents)",
+            "API route: /api/patients/[id]/documents/[docId] (GET, PUT, DELETE)"
+          ],
+          "frontend": [
+            "app/patients/[id]/documents/page.tsx - Document library",
+            "app/patients/[id]/documents/scan/page.tsx - Camera scan flow",
+            "components/documents/DocumentScanner.tsx - Camera interface with capture button",
+            "components/documents/DocumentCard.tsx - Thumbnail, type badge, extracted fields preview",
+            "components/documents/DocumentViewer.tsx - Full-screen image viewer with extracted text overlay",
+            "components/documents/FieldExtractionView.tsx - Show extracted fields as key-value pairs",
+            "Image compression before upload (reduce file size 70-80%)",
+            "Multi-page scanning: Scan multiple pages, merge into single document"
+          ],
+          "testing": [
+            "Integration tests: Gemini Vision API extracts text correctly (test with sample images)",
+            "Unit tests: Document classifier correctly identifies document types",
+            "E2E test: Scan insurance card → Extract fields → Save to Firestore",
+            "E2E test: Scan lab result → Extract A1C, glucose, cholesterol → Display in structured view",
+            "OCR accuracy test: Test with 50 real-world document images, measure accuracy (target >90%)"
+          ]
+        },
+        "doneCriteria": {
+          "automated": [
+            "Gemini Vision integration tests pass",
+            "Document classification tests pass (correct document type identified)",
+            "E2E test: Full scan-to-save flow works",
+            "Image compression tests pass (file size reduced >70%)"
+          ],
+          "manual": [
+            "Scan insurance card and verify all fields extracted (member ID, group, RxBIN, etc.)",
+            "Scan lab result and verify key values extracted (A1C, glucose, cholesterol)",
+            "Scan intake form and verify patient info, medications, allergies extracted",
+            "Verify image quality after compression (still readable)",
+            "Test with poor quality images (blurry, low light) and verify OCR handles gracefully",
+            "Multi-page scan works (scan 3 pages, merge into 1 document)",
+            "Document viewer displays images correctly with zoom/pan"
+          ]
+        },
+        "featureFlag": "ENABLE_DOCUMENT_SCANNING",
+        "estimatedComplexity": "High (6-8 days)",
+        "risks": [
+          "OCR accuracy with poor quality images (lighting, blur, wrinkles)",
+          "Gemini Vision API cost (~$0.025 per image, budget for 100+ scans/month)",
+          "Field extraction brittleness (different form layouts break extraction)",
+          "Image storage costs (Firebase Storage, monitor monthly usage)",
+          "Camera permissions (users may deny, need fallback to file upload)"
+        ],
+        "deliverable": "OCR-powered document scanning with dynamic field extraction, foundation for auto-fill feature"
+      },
+
+      {
+        "id": "S9",
+        "name": "Smart Form Auto-Fill (Killer Feature)",
+        "priority": "P2 - Differentiator",
+        "dependencies": ["S8"],
+        "description": "AI-powered form auto-fill: Scan blank intake form, detect fillable fields, map to stored patient data, generate completed form. The 'killer feature'.",
+        "scope": {
+          "database": [
+            "No new schema (uses existing PatientProfile, MedicalHistory, medications, vitals)"
+          ],
+          "backend": [
+            "lib/form-field-detector.ts - Gemini Vision detects fillable fields in blank form",
+            "lib/data-mapper.ts - Map form fields to stored patient data (name → patient.name, DOB → patient.dateOfBirth)",
+            "lib/form-filler.ts - Generate completed form (overlay text on image or generate PDF)",
+            "lib/pdf-generator.ts - Generate PDF with filled fields (use pdfkit or puppeteer)",
+            "API route: /api/patients/[id]/auto-fill-form (POST - upload blank form, return filled form)"
+          ],
+          "frontend": [
+            "app/patients/[id]/auto-fill/page.tsx - Auto-fill form wizard",
+            "components/autofill/BlankFormScanner.tsx - Scan blank form",
+            "components/autofill/FieldMapper.tsx - Review detected fields, confirm mappings",
+            "components/autofill/FilledFormPreview.tsx - Preview completed form before saving",
+            "components/autofill/DownloadFilledForm.tsx - Download PDF or print",
+            "Step-by-step wizard: Scan → Review mappings → Generate → Download"
+          ],
+          "testing": [
+            "Integration tests: Field detection works (Gemini Vision detects form fields)",
+            "Unit tests: Data mapper correctly maps fields to patient data",
+            "E2E test: Scan blank form → Auto-fill → Download PDF → Verify all fields filled",
+            "Accuracy test: Test with 20 different intake forms, measure mapping accuracy (target >85%)"
+          ]
+        },
+        "doneCriteria": {
+          "automated": [
+            "Field detection tests pass (form fields identified)",
+            "Data mapping tests pass (fields mapped to patient data)",
+            "E2E test: Full auto-fill flow works",
+            "PDF generation tests pass (valid PDF with filled fields)"
+          ],
+          "manual": [
+            "Scan blank intake form and verify fields detected",
+            "Review field mappings and verify correctness",
+            "Generate filled form and verify all fields populated",
+            "Download PDF and verify formatting correct (aligned with form fields)",
+            "Print filled form and verify printout matches original layout",
+            "Test with diverse forms: Medical, dental, veterinary (verify universality)",
+            "Time savings test: Measure time to manually fill vs auto-fill (target 75% reduction)"
+          ]
+        },
+        "featureFlag": "ENABLE_AUTO_FILL_FORMS",
+        "estimatedComplexity": "Very High (10-12 days)",
+        "risks": [
+          "Field detection accuracy (different form layouts, checkboxes, signatures)",
+          "PDF overlay alignment (text must align perfectly with form fields)",
+          "Signature handling (digital signatures vs scanned signatures)",
+          "HIPAA compliance for PDF generation (ensure no data leakage to third-party services)",
+          "Gemini Vision cost (double API calls: blank form scan + filled form generation)",
+          "User expectations (may expect 100% accuracy, need to set realistic expectations)"
+        ],
+        "deliverable": "AI-powered form auto-fill reducing intake form time from 10 minutes to 30 seconds (75% reduction), the killer differentiator"
+      },
+
+      {
+        "id": "S10",
+        "name": "Geofencing & Arrival Detection (Optional Enhancement)",
+        "priority": "P2 - Optional Enhancement",
+        "dependencies": ["S5"],
+        "description": "Automatic arrival detection using geofencing and background location monitoring. Optional enhancement to visit experience.",
+        "scope": {
+          "database": [
+            "Appointment.location.coordinates (lat, lng) already exists",
+            "Appointment.reminderSettings.geofenceRadius (default 200m)"
+          ],
+          "backend": [
+            "lib/geofence-manager.ts - Create/delete geofences for appointments",
+            "Background location permission request",
+            "Cloud Function: Trigger on geofence entry → Update appointment status to 'arrived'"
+          ],
+          "frontend": [
+            "Request background location permission (Permissions API)",
+            "Geofence visualization on map (show geofence radius around appointment location)",
+            "Push notification when entering geofence: 'You've arrived at Dr. Smith's office. Log visit?'",
+            "One-tap 'Mark Arrived' from notification",
+            "Battery-efficient background monitoring (use significant location changes, not continuous GPS)"
+          ],
+          "testing": [
+            "Integration tests: Geofence creation/deletion works",
+            "E2E test: Simulate location change → Enter geofence → Notification sent → Appointment marked arrived",
+            "Battery test: Monitor battery drain during background location (target <5% per hour)"
+          ]
+        },
+        "doneCriteria": {
+          "automated": [
+            "Geofence tests pass (creation, deletion, trigger)",
+            "E2E test: Geofence entry triggers notification and status update"
+          ],
+          "manual": [
+            "Enable geofencing for appointment and verify geofence created",
+            "Walk to appointment location and verify notification received",
+            "Tap notification and verify appointment marked arrived",
+            "Verify battery drain acceptable (<5% per hour)",
+            "Test edge cases: Geofence trigger when app backgrounded, app killed, airplane mode",
+            "Test on iOS and Android (different location APIs)"
+          ]
+        },
+        "featureFlag": "ENABLE_GEOFENCING",
+        "estimatedComplexity": "High (7-9 days)",
+        "risks": [
+          "Battery drain (background location monitoring is battery-intensive)",
+          "Location permission denial (many users deny background location, need graceful fallback)",
+          "Geofence reliability (triggers may be delayed or missed, not 100% reliable)",
+          "Cross-platform differences (iOS vs Android location APIs differ significantly)",
+          "Privacy concerns (some users uncomfortable with background tracking, make opt-in)"
+        ],
+        "deliverable": "Automatic arrival detection with geofencing, optional enhancement for seamless visit tracking"
+      },
+
+      {
+        "id": "S11",
+        "name": "Provider Multi-Tenancy (Scale Feature)",
+        "priority": "P3 - Future Scale",
+        "dependencies": ["S4"],
+        "description": "Allow healthcare providers to manage multiple families, with clear boundaries and reassignment logic. Future scale feature.",
+        "scope": {
+          "database": [
+            "Provider.families (array of familyIds they serve)",
+            "FamilyProfile.assignedProviders (array of providerIds)",
+            "ProviderAccessLog (audit trail of provider access to patient records)"
+          ],
+          "backend": [
+            "lib/provider-access-control.ts - Check if provider has access to patient",
+            "lib/provider-assignment.ts - Assign/unassign provider to family",
+            "API route: /api/providers/[id]/families (GET - list families, POST - assign family)",
+            "API route: /api/providers/[id]/access-logs (GET - audit provider access)"
+          ],
+          "frontend": [
+            "app/providers/[id]/families/page.tsx - Families managed by provider",
+            "app/admin/provider-assignment/page.tsx - Admin panel for reassignment",
+            "Provider dashboard showing all patients across families",
+            "Access control: Providers see only families explicitly assigned to them"
+          ],
+          "testing": [
+            "Integration tests: Provider access control (authorized/unauthorized)",
+            "E2E test: Assign provider to family → Provider sees family patients",
+            "E2E test: Unassign provider → Provider loses access",
+            "E2E test: Reassign provider → Old provider loses access, new provider gains access"
+          ]
+        },
+        "doneCriteria": {
+          "automated": [
+            "Provider access control tests pass",
+            "E2E test: Provider assignment flow works",
+            "Audit log tests pass (provider access logged)"
+          ],
+          "manual": [
+            "Assign provider to family and verify access granted",
+            "Unassign provider and verify access revoked immediately",
+            "Test reassignment: Old provider loses access, new provider gains access",
+            "Verify provider sees only assigned families (not all families in system)",
+            "Audit log shows all provider access to patient records"
+          ]
+        },
+        "featureFlag": "ENABLE_PROVIDER_MULTI_TENANCY",
+        "estimatedComplexity": "Medium (4-6 days)",
+        "risks": [
+          "Access control complexity (multiple layers: family permissions + provider assignments)",
+          "Reassignment edge cases (what happens to appointments when provider reassigned?)",
+          "Privacy boundaries (ensure providers can't access unassigned families)",
+          "Scalability (provider dashboard may have 100s of patients across families)"
+        ],
+        "deliverable": "Provider multi-tenancy with clear boundaries and audit logging, future scale feature"
+      }
+    ],
+
+    "sliceRelationships": {
+      "description": "Dependency graph showing slice build order",
+      "criticalPath": ["S1", "S2", "S3", "S4", "S5", "S6", "S7"],
+      "parallelTracks": {
+        "track1_foundation": ["S1 → S2 → S3"],
+        "track2_appointments": ["S1 → S4 → S5"],
+        "track3_ai": ["S1 + S4 → S6"],
+        "track4_chat": ["S2 + S4 → S7"],
+        "track5_documents": ["S1 → S8 → S9"],
+        "track6_enhancements": ["S5 → S10", "S4 → S11"]
+      },
+      "minimumViableProduct": ["S1", "S2", "S4", "S6"],
+      "fullProduct": ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9"],
+      "optionalEnhancements": ["S10", "S11"]
+    },
+
+    "phaseViewMapping": {
+      "description": "How vertical slices map to original phase view (for reference)",
+      "phase1_foundation": ["S1"],
+      "phase2_family": ["S2", "S3", "S7"],
+      "phase3_appointments": ["S4", "S5", "S10"],
+      "phase4_documents": ["S8", "S9"],
+      "phase5_ai": ["S6"],
+      "phase6_scale": ["S11"]
+    }
+  }
+}

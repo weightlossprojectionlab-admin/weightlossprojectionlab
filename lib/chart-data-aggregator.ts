@@ -21,6 +21,7 @@ import {
   Timestamp
 } from 'firebase/firestore'
 import { logger } from '@/lib/logger'
+import { COLLECTIONS } from '@/constants/firestore'
 
 // ============================================================================
 // Types
@@ -54,6 +55,13 @@ export interface MacroDataPoint {
   timestamp: Date
 }
 
+export interface StepDataPoint {
+  date: string // YYYY-MM-DD
+  steps: number
+  goal: number
+  timestamp: Date
+}
+
 export interface WeeklyAverages {
   weekStart: string // YYYY-MM-DD
   avgWeight: number | null
@@ -77,20 +85,20 @@ export async function getWeightTrendData(
   endDate: Date
 ): Promise<WeightDataPoint[]> {
   try {
-    const weightRef = collection(db, 'weight_entries')
+    // Query subcollection: users/{userId}/weightLogs
+    const weightRef = collection(db, COLLECTIONS.USERS, userId, 'weightLogs')
     const q = query(
       weightRef,
-      where('userId', '==', userId),
-      where('date', '>=', Timestamp.fromDate(startDate)),
-      where('date', '<=', Timestamp.fromDate(endDate)),
-      orderBy('date', 'asc')
+      where('loggedAt', '>=', Timestamp.fromDate(startDate)),
+      where('loggedAt', '<=', Timestamp.fromDate(endDate)),
+      orderBy('loggedAt', 'asc')
     )
 
     const snapshot = await getDocs(q)
 
     const dataPoints: WeightDataPoint[] = snapshot.docs.map(doc => {
       const data = doc.data()
-      const timestamp = data.date.toDate()
+      const timestamp = data.loggedAt.toDate()
 
       return {
         date: timestamp.toISOString().split('T')[0],
@@ -134,13 +142,13 @@ export async function getCalorieIntakeData(
   calorieGoal: number
 ): Promise<CalorieDataPoint[]> {
   try {
-    const mealsRef = collection(db, 'meals')
+    // Query subcollection: users/{userId}/mealLogs
+    const mealsRef = collection(db, COLLECTIONS.USERS, userId, 'mealLogs')
     const q = query(
       mealsRef,
-      where('userId', '==', userId),
-      where('timestamp', '>=', Timestamp.fromDate(startDate)),
-      where('timestamp', '<=', Timestamp.fromDate(endDate)),
-      orderBy('timestamp', 'asc')
+      where('loggedAt', '>=', Timestamp.fromDate(startDate)),
+      where('loggedAt', '<=', Timestamp.fromDate(endDate)),
+      orderBy('loggedAt', 'asc')
     )
 
     const snapshot = await getDocs(q)
@@ -150,9 +158,9 @@ export async function getCalorieIntakeData(
 
     snapshot.docs.forEach(doc => {
       const data = doc.data()
-      const timestamp = data.timestamp.toDate()
+      const timestamp = data.loggedAt.toDate()
       const dateKey = timestamp.toISOString().split('T')[0]
-      const calories = data.estimatedCalories || 0
+      const calories = data.totalCalories || data.estimatedCalories || 0
 
       const currentCalories = dailyCalories.get(dateKey) || 0
       dailyCalories.set(dateKey, currentCalories + calories)
@@ -203,13 +211,13 @@ export async function getMacroDistributionData(
   endDate: Date
 ): Promise<MacroDataPoint[]> {
   try {
-    const mealsRef = collection(db, 'meals')
+    // Query subcollection: users/{userId}/mealLogs
+    const mealsRef = collection(db, COLLECTIONS.USERS, userId, 'mealLogs')
     const q = query(
       mealsRef,
-      where('userId', '==', userId),
-      where('timestamp', '>=', Timestamp.fromDate(startDate)),
-      where('timestamp', '<=', Timestamp.fromDate(endDate)),
-      orderBy('timestamp', 'asc')
+      where('loggedAt', '>=', Timestamp.fromDate(startDate)),
+      where('loggedAt', '<=', Timestamp.fromDate(endDate)),
+      orderBy('loggedAt', 'asc')
     )
 
     const snapshot = await getDocs(q)
@@ -219,7 +227,7 @@ export async function getMacroDistributionData(
 
     snapshot.docs.forEach(doc => {
       const data = doc.data()
-      const timestamp = data.timestamp.toDate()
+      const timestamp = data.loggedAt.toDate()
       const dateKey = timestamp.toISOString().split('T')[0]
 
       const protein = data.macros?.protein || 0
@@ -266,6 +274,77 @@ export async function getMacroDistributionLastNDays(
   startDate.setDate(startDate.getDate() - days)
 
   return getMacroDistributionData(userId, startDate, endDate)
+}
+
+// ============================================================================
+// Step Count Data
+// ============================================================================
+
+/**
+ * Get step count data for the specified date range
+ */
+export async function getStepCountData(
+  userId: string,
+  startDate: Date,
+  endDate: Date,
+  goalSteps: number = 10000
+): Promise<StepDataPoint[]> {
+  try {
+    // Query subcollection: users/{userId}/stepLogs
+    const stepsRef = collection(db, COLLECTIONS.USERS, userId, 'stepLogs')
+    const q = query(
+      stepsRef,
+      where('loggedAt', '>=', Timestamp.fromDate(startDate)),
+      where('loggedAt', '<=', Timestamp.fromDate(endDate)),
+      orderBy('loggedAt', 'asc')
+    )
+
+    const snapshot = await getDocs(q)
+
+    // Group steps by date
+    const dailySteps = new Map<string, number>()
+
+    snapshot.docs.forEach(doc => {
+      const data = doc.data()
+      const timestamp = data.loggedAt.toDate()
+      const dateKey = timestamp.toISOString().split('T')[0]
+
+      const steps = data.steps || 0
+      const current = dailySteps.get(dateKey) || 0
+
+      dailySteps.set(dateKey, current + steps)
+    })
+
+    // Convert to array and sort
+    const dataPoints: StepDataPoint[] = Array.from(dailySteps.entries())
+      .map(([date, steps]) => ({
+        date,
+        steps,
+        goal: goalSteps,
+        timestamp: new Date(date)
+      }))
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+
+    return dataPoints
+  } catch (error) {
+    logger.error('Error fetching step count data', error as Error)
+    return []
+  }
+}
+
+/**
+ * Get step count for last N days
+ */
+export async function getStepCountLastNDays(
+  userId: string,
+  days: number = 30,
+  goalSteps: number = 10000
+): Promise<StepDataPoint[]> {
+  const endDate = new Date()
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - days)
+
+  return getStepCountData(userId, startDate, endDate, goalSteps)
 }
 
 // ============================================================================

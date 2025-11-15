@@ -30,12 +30,12 @@ export async function GET(request: NextRequest) {
 
     // Get and validate query parameters
     const { searchParams } = new URL(request.url)
-    const queryParams = {
-      limit: searchParams.get('limit'),
-      startDate: searchParams.get('startDate'),
-      endDate: searchParams.get('endDate'),
-      mealType: searchParams.get('mealType'),
-    }
+    const queryParams: Record<string, any> = {}
+
+    if (searchParams.get('limit')) queryParams.limit = searchParams.get('limit')
+    if (searchParams.get('startDate')) queryParams.startDate = searchParams.get('startDate')
+    if (searchParams.get('endDate')) queryParams.endDate = searchParams.get('endDate')
+    if (searchParams.get('mealType')) queryParams.mealType = searchParams.get('mealType')
 
     // Validate with Zod
     const validatedQuery = GetMealLogsQuerySchema.parse(queryParams)
@@ -114,11 +114,44 @@ export async function POST(request: NextRequest) {
     const {
       mealType,
       photoUrl,
+      additionalPhotos,
       aiAnalysis,
       manualEntries,
       notes,
       loggedAt
     } = validatedData
+
+    // Check for duplicate meal type on the same day (except snacks)
+    if (mealType !== 'snack') {
+      const mealDate = loggedAt ? new Date(loggedAt) : new Date()
+
+      // Get start and end of the day
+      const startOfDay = new Date(mealDate)
+      startOfDay.setHours(0, 0, 0, 0)
+
+      const endOfDay = new Date(mealDate)
+      endOfDay.setHours(23, 59, 59, 999)
+
+      // Check if a meal of this type already exists for this day
+      const mealLogsRef = adminDb.collection('users').doc(userId).collection('mealLogs')
+      const existingMeal = await mealLogsRef
+        .where('mealType', '==', mealType)
+        .where('loggedAt', '>=', Timestamp.fromDate(startOfDay))
+        .where('loggedAt', '<=', Timestamp.fromDate(endOfDay))
+        .limit(1)
+        .get()
+
+      if (!existingMeal.empty) {
+        const mealTypeCapitalized = mealType.charAt(0).toUpperCase() + mealType.slice(1)
+        return NextResponse.json(
+          {
+            error: `You've already logged ${mealType} for today. You can edit your existing meal or delete it to log a new one.`,
+            code: 'DUPLICATE_MEAL_TYPE'
+          },
+          { status: 400 }
+        )
+      }
+    }
 
     // Calculate totals
     let totalCalories = 0
@@ -161,6 +194,9 @@ export async function POST(request: NextRequest) {
     // Only add optional fields if they have values
     if (photoUrl) {
       mealLogData.photoUrl = photoUrl
+    }
+    if (additionalPhotos && additionalPhotos.length > 0) {
+      mealLogData.additionalPhotos = additionalPhotos
     }
     if (aiAnalysis) {
       mealLogData.aiAnalysis = aiAnalysis

@@ -44,9 +44,9 @@ export const generateMealShareCard = async (meal: MealShareData): Promise<Blob> 
     throw new Error('Canvas not supported')
   }
 
-  // Set canvas dimensions (Instagram square format: 1080x1080)
+  // Set canvas dimensions (9:16 vertical format for Stories/Reels/TikTok: 1080x1920)
   const width = 1080
-  const height = 1080
+  const height = 1920
   canvas.width = width
   canvas.height = height
 
@@ -62,8 +62,8 @@ export const generateMealShareCard = async (meal: MealShareData): Promise<Blob> 
     try {
       const img = await loadImage(meal.photoUrl)
 
-      // Draw photo in top section (centered, cover style)
-      const photoHeight = height * 0.5
+      // Draw photo in top section (centered, cover style) - 65% of canvas
+      const photoHeight = height * 0.65
       const scale = Math.max(width / img.width, photoHeight / img.height)
       const scaledWidth = img.width * scale
       const scaledHeight = img.height * scale
@@ -80,8 +80,8 @@ export const generateMealShareCard = async (meal: MealShareData): Promise<Blob> 
     }
   }
 
-  // Content area
-  const contentY = meal.photoUrl ? height * 0.5 : height * 0.25
+  // Content area - positioned below photo
+  const contentY = meal.photoUrl ? height * 0.65 : height * 0.25
 
   // White rounded rectangle for content
   ctx.fillStyle = 'white'
@@ -90,7 +90,7 @@ export const generateMealShareCard = async (meal: MealShareData): Promise<Blob> 
 
   // Meal type emoji and title
   ctx.fillStyle = '#1F2937'
-  ctx.font = 'bold 64px system-ui, -apple-system, sans-serif'
+  ctx.font = 'bold 56px system-ui, -apple-system, sans-serif'
   ctx.textAlign = 'center'
 
   const mealEmojis: Record<string, string> = {
@@ -101,30 +101,30 @@ export const generateMealShareCard = async (meal: MealShareData): Promise<Blob> 
   }
   const emoji = mealEmojis[meal.mealType] || '🍽️'
 
-  let textY = contentY + 120
+  let textY = contentY + 100
   ctx.fillText(emoji, width / 2, textY)
 
   // Title or meal type
-  textY += 80
-  ctx.font = 'bold 56px system-ui, -apple-system, sans-serif'
+  textY += 70
+  ctx.font = 'bold 48px system-ui, -apple-system, sans-serif'
   const displayTitle = meal.title || meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1)
   ctx.fillText(displayTitle, width / 2, textY)
 
   // Calories (large)
-  textY += 120
+  textY += 100
   ctx.fillStyle = '#4F46E5'
-  ctx.font = 'bold 96px system-ui, -apple-system, sans-serif'
+  ctx.font = 'bold 80px system-ui, -apple-system, sans-serif'
   ctx.fillText(`${meal.totalCalories}`, width / 2, textY)
 
-  textY += 50
+  textY += 45
   ctx.fillStyle = '#6B7280'
-  ctx.font = '36px system-ui, -apple-system, sans-serif'
+  ctx.font = '32px system-ui, -apple-system, sans-serif'
   ctx.fillText('calories', width / 2, textY)
 
   // Macros
   if (meal.macros) {
-    textY += 100
-    ctx.font = 'bold 42px system-ui, -apple-system, sans-serif'
+    textY += 80
+    ctx.font = 'bold 36px system-ui, -apple-system, sans-serif'
     ctx.fillStyle = '#1F2937'
 
     const macrosText = `P: ${meal.macros.protein}g  •  C: ${meal.macros.carbs}g  •  F: ${meal.macros.fat}g`
@@ -132,8 +132,8 @@ export const generateMealShareCard = async (meal: MealShareData): Promise<Blob> 
   }
 
   // Footer branding
-  textY = height - 80
-  ctx.font = '32px system-ui, -apple-system, sans-serif'
+  textY = height - 70
+  ctx.font = '28px system-ui, -apple-system, sans-serif'
   ctx.fillStyle = '#9CA3AF'
   ctx.fillText('Tracked with Weight Loss Project Lab', width / 2, textY)
 
@@ -187,33 +187,115 @@ const roundRect = (
 }
 
 /**
- * Generate caption text for social media
+ * Generate caption text for social media (platform-specific)
  */
-export const generateShareCaption = (meal: MealShareData): string => {
+export const generateShareCaption = (meal: MealShareData, platform?: string): string => {
   const mealName = meal.title || `${meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1)}`
   const date = new Date(meal.loggedAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric'
   })
 
-  let caption = `🍽️ ${mealName}\n`
-  caption += `📊 ${meal.totalCalories} calories`
+  let caption = ''
 
-  if (meal.macros) {
-    caption += ` | P: ${meal.macros.protein}g | C: ${meal.macros.carbs}g | F: ${meal.macros.fat}g`
+  // Platform-specific formatting
+  switch (platform) {
+    case 'instagram-story':
+    case 'instagram-post':
+      // Instagram: First-person, emoji-heavy, engaging
+      caption = `💪 Staying on track with this ${mealName.toLowerCase()}!\n\n`
+      caption += `📊 ${meal.totalCalories} cal`
+      if (meal.macros) {
+        caption += ` | P:${meal.macros.protein}g C:${meal.macros.carbs}g F:${meal.macros.fat}g`
+      }
+      caption += `\n`
+      if (meal.foodItems && meal.foodItems.length > 0) {
+        const foodNames = meal.foodItems
+          .slice(0, 3)
+          .map((item: any) => typeof item === 'string' ? item : item.name)
+          .join(', ')
+        caption += `🥗 ${foodNames}${meal.foodItems.length > 3 ? '...' : ''}\n\n`
+      }
+      caption += `\nMy fitness journey continues. Every meal counts! 💯\n\n`
+      caption += `#MyFitnessJourney #Tracking #HealthGoals #Dedication #Macros #Accountability #HealthyLifestyle #WeightLossJourney #FitFam #StayingConsistent`
+      break
+
+    case 'tiktok':
+      // TikTok: First-person, trendy, energetic
+      caption = `POV: I'm actually sticking to my goals 💪\n\n`
+      caption += `${mealName} - ${meal.totalCalories} cals ⚡\n`
+      if (meal.macros) {
+        caption += `P${meal.macros.protein} C${meal.macros.carbs} F${meal.macros.fat}\n\n`
+      }
+      caption += `Still showing up. Still tracking. 🔥\n\n`
+      caption += `#MyJourney #FitnessGoals #WhatIEat #Accountability #CalorieDeficit #MacroTracking #StillGoing #FitTok #WIEIAD #ConsistencyIsKey`
+      break
+
+    case 'facebook':
+      // Facebook: First-person, longer form, accountability
+      caption = `Keeping myself accountable! 💪\n\n`
+      caption = `Here's my ${meal.mealType} today:\n`
+      caption += `• ${meal.totalCalories} calories\n`
+      if (meal.macros) {
+        caption += `• ${meal.macros.protein}g protein, ${meal.macros.carbs}g carbs, ${meal.macros.fat}g fat\n`
+      }
+      if (meal.foodItems && meal.foodItems.length > 0) {
+        const foodNames = meal.foodItems
+          .slice(0, 4)
+          .map((item: any) => typeof item === 'string' ? item : item.name)
+          .join(', ')
+        caption += `\n🥗 ${foodNames}${meal.foodItems.length > 4 ? ', and more' : ''}\n`
+      }
+      caption += `\nI'm seeing real progress. Every meal tracked is a step toward my goal! 🎯\n\n`
+      caption += `Who else is staying consistent this week? 👇\n\n`
+      caption += `#MyJourney #Accountability #HealthGoals #Progress #StayingOnTrack`
+      break
+
+    case 'pinterest':
+      // Pinterest: First-person but SEO-friendly
+      caption = `My ${mealName} - ${meal.totalCalories} Calories\n\n`
+      caption += `What I eat to stay on track: `
+      if (meal.macros) {
+        caption += `${meal.macros.protein}g protein, ${meal.macros.carbs}g carbs, ${meal.macros.fat}g fat. `
+      }
+      if (meal.foodItems && meal.foodItems.length > 0) {
+        const foodNames = meal.foodItems
+          .slice(0, 4)
+          .map((item: any) => typeof item === 'string' ? item : item.name)
+          .join(', ')
+        caption += `\n\nIncludes: ${foodNames}. `
+      }
+      caption += `\n\nDocumenting my fitness journey one meal at a time. Consistency > Perfection 💪\n\n`
+      caption += `#MyJourney #HealthyMeals #WeightLoss #MacroFriendly #NutritionGoals #FitnessFood #MealIdeas #BalancedDiet`
+      break
+
+    case 'twitter':
+      // Twitter: First-person, concise, under 280 chars
+      caption = `My ${meal.mealType} today: ${mealName} 🍽️\n${meal.totalCalories} cal`
+      if (meal.macros) {
+        caption += ` | P${meal.macros.protein} C${meal.macros.carbs} F${meal.macros.fat}`
+      }
+      caption += `\n\nStaying consistent! 💪\n\n#MyJourney #Tracking #Consistency`
+      break
+
+    default:
+      // Default: First-person, balanced, works everywhere
+      caption = `💪 Making progress with my ${meal.mealType}!\n\n`
+      caption += `📊 ${meal.totalCalories} calories`
+      if (meal.macros) {
+        caption += ` | P:${meal.macros.protein}g C:${meal.macros.carbs}g F:${meal.macros.fat}g`
+      }
+      caption += `\n`
+      if (meal.foodItems && meal.foodItems.length > 0) {
+        const foodNames = meal.foodItems
+          .slice(0, 3)
+          .map((item: any) => typeof item === 'string' ? item : item.name)
+          .join(', ')
+        caption += `🥗 ${foodNames}${meal.foodItems.length > 3 ? ', and more' : ''}\n\n`
+      }
+      caption += `\nMy fitness journey continues - every meal counts! 🎯\n\n`
+      caption += `#MyFitnessJourney #Tracking #HealthGoals #Progress`
   }
-
-  caption += `\n📅 ${date}\n\n`
-
-  if (meal.foodItems && meal.foodItems.length > 0) {
-    const foodNames = meal.foodItems
-      .slice(0, 3) // Limit to first 3 items
-      .map((item: any) => typeof item === 'string' ? item : item.name)
-      .join(', ')
-    caption += `🥗 ${foodNames}${meal.foodItems.length > 3 ? ', and more' : ''}\n\n`
-  }
-
-  caption += `#HealthyEating #NutritionTracking #FitnessJourney #HealthGoals`
 
   return caption
 }

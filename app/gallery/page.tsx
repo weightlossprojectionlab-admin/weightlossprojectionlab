@@ -44,16 +44,21 @@ export default function GalleryPage() {
 
   // Load photos
   useEffect(() => {
+    console.log('[Gallery] useEffect triggered, timeRange:', timeRange)
     loadPhotos()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRange])
 
   const loadPhotos = async () => {
     setLoading(true)
     try {
+      console.log('[Gallery] Starting to fetch photos, timeRange:', timeRange)
       const fetchedPhotos = await fetchRecentPhotos(timeRange)
+      console.log('[Gallery] Fetched photos:', fetchedPhotos.length)
       setPhotos(fetchedPhotos)
       setFilteredPhotos(fetchedPhotos)
     } catch (error) {
+      console.error('[Gallery] Error loading photos:', error)
       logger.error('Error loading photos:', error as Error)
       toast.error('Failed to load photos')
     } finally {
@@ -115,8 +120,8 @@ export default function GalleryPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">📸 Photo Gallery</h1>
-              <p className="text-purple-100">Browse your meal history</p>
+              <h1 className="text-3xl font-bold mb-2">💪 My Progress</h1>
+              <p className="text-purple-100">Documenting my journey, one meal at a time</p>
             </div>
             <div className="flex gap-2">
               <ShareButton
@@ -140,24 +145,24 @@ export default function GalleryPage() {
             </div>
           </div>
 
-          {/* Stats Cards */}
+          {/* Stats Cards - First Person Achievements */}
           {!loading && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                 <div className="text-2xl font-bold">{stats.totalPhotos}</div>
-                <div className="text-sm text-purple-100">Total Photos</div>
+                <div className="text-sm text-purple-100">Wins Documented 🎯</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                 <div className="text-2xl font-bold">{stats.avgCalories}</div>
-                <div className="text-sm text-purple-100">Avg Calories</div>
+                <div className="text-sm text-purple-100">My Average 📊</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                 <div className="text-2xl font-bold">{stats.mealTypeCounts.breakfast || 0}</div>
-                <div className="text-sm text-purple-100">🌅 Breakfasts</div>
+                <div className="text-sm text-purple-100">Mornings On Track 🌅</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                 <div className="text-2xl font-bold">{stats.mealTypeCounts.dinner || 0}</div>
-                <div className="text-sm text-purple-100">🌙 Dinners</div>
+                <div className="text-sm text-purple-100">Evenings Crushed 🌙</div>
               </div>
             </div>
           )}
@@ -224,7 +229,7 @@ export default function GalleryPage() {
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
-                Grid
+                Grid View
               </button>
               <button
                 onClick={() => setViewMode('grouped')}
@@ -269,9 +274,29 @@ export default function GalleryPage() {
           )}
         </div>
 
+        {/* Motivational Banner */}
+        {!loading && filteredPhotos.length > 0 && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-700">
+            <div className="flex items-start gap-3">
+              <div className="text-3xl">🔥</div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                  {filteredPhotos.length >= 7
+                    ? `I've logged ${filteredPhotos.length} meals - that's ${filteredPhotos.length} wins! Time to show my progress. 🚀`
+                    : `Every meal I track is proof of my dedication. Keep going! 💪`
+                  }
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Hover over any meal to share on Instagram, TikTok, Facebook, Pinterest, or Twitter. My journey might inspire someone! ✨
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Gallery Content */}
         {loading ? (
-          <PhotoGridSkeleton count={12} />
+          <PhotoGridSkeleton count={8} />
         ) : viewMode === 'grid' ? (
           <PhotoGalleryGrid
             photos={filteredPhotos}

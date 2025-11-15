@@ -9,15 +9,36 @@ import { ErrorHandler } from '@/lib/utils/error-handler'
 
 // Fallback mock data if Gemini fails
 const getMockAnalysis = () => {
-  const mockFoods = [
-    { foods: ['Grilled chicken breast', 'Brown rice', 'Steamed broccoli'], calories: 420, protein: 35, carbs: 45, fat: 8, fiber: 6 },
-    { foods: ['Salmon fillet', 'Quinoa', 'Roasted vegetables'], calories: 485, protein: 38, carbs: 42, fat: 18, fiber: 8 },
-    { foods: ['Turkey sandwich', 'Whole wheat bread', 'Lettuce', 'Tomato'], calories: 340, protein: 24, carbs: 38, fat: 12, fiber: 5 },
-    { foods: ['Greek yogurt', 'Mixed berries', 'Granola'], calories: 220, protein: 15, carbs: 28, fat: 6, fiber: 4 },
-    { foods: ['Avocado toast', 'Poached egg', 'Cherry tomatoes'], calories: 380, protein: 14, carbs: 32, fat: 22, fiber: 8 }
+  const mockMeals = [
+    {
+      items: [
+        { name: 'Grilled chicken breast', portion: '6 oz', calories: 280, protein: 53, carbs: 0, fat: 6, fiber: 0 },
+        { name: 'Brown rice', portion: '1 cup', calories: 215, protein: 5, carbs: 45, fat: 2, fiber: 3 },
+        { name: 'Steamed broccoli', portion: '1 cup', calories: 55, protein: 4, carbs: 11, fat: 0, fiber: 5 }
+      ],
+      totalCalories: 550,
+      totalMacros: { protein: 62, carbs: 56, fat: 8, fiber: 8 }
+    },
+    {
+      items: [
+        { name: 'Salmon fillet', portion: '5 oz', calories: 290, protein: 39, carbs: 0, fat: 14, fiber: 0 },
+        { name: 'Quinoa', portion: '1 cup', calories: 220, protein: 8, carbs: 39, fat: 4, fiber: 5 },
+        { name: 'Roasted vegetables', portion: '1.5 cups', calories: 90, protein: 3, carbs: 15, fat: 3, fiber: 5 }
+      ],
+      totalCalories: 600,
+      totalMacros: { protein: 50, carbs: 54, fat: 21, fiber: 10 }
+    },
+    {
+      items: [
+        { name: 'Turkey sandwich', portion: '1 sandwich', calories: 320, protein: 28, carbs: 35, fat: 8, fiber: 4 },
+        { name: 'Apple slices', portion: '1 medium', calories: 95, protein: 0, carbs: 25, fat: 0, fiber: 4 }
+      ],
+      totalCalories: 415,
+      totalMacros: { protein: 28, carbs: 60, fat: 8, fiber: 8 }
+    }
   ]
 
-  const randomFood = mockFoods[Math.floor(Math.random() * mockFoods.length)]
+  const randomMeal = mockMeals[Math.floor(Math.random() * mockMeals.length)]
 
   const hour = new Date().getHours()
   let suggestedType: 'breakfast' | 'lunch' | 'dinner' | 'snack' = 'lunch'
@@ -27,13 +48,13 @@ const getMockAnalysis = () => {
   else suggestedType = 'snack'
 
   return {
-    foodItems: randomFood.foods,
-    totalCalories: randomFood.calories + Math.floor(Math.random() * 100) - 50,
+    foodItems: randomMeal.items,
+    totalCalories: randomMeal.totalCalories + Math.floor(Math.random() * 50) - 25,
     totalMacros: {
-      protein: randomFood.protein + Math.floor(Math.random() * 10) - 5,
-      carbs: randomFood.carbs + Math.floor(Math.random() * 10) - 5,
-      fat: randomFood.fat + Math.floor(Math.random() * 5) - 2,
-      fiber: randomFood.fiber + Math.floor(Math.random() * 3) - 1
+      protein: randomMeal.totalMacros.protein + Math.floor(Math.random() * 6) - 3,
+      carbs: randomMeal.totalMacros.carbs + Math.floor(Math.random() * 6) - 3,
+      fat: randomMeal.totalMacros.fat + Math.floor(Math.random() * 4) - 2,
+      fiber: randomMeal.totalMacros.fiber + Math.floor(Math.random() * 2) - 1
     },
     confidence: Math.floor(Math.random() * 25) + 75,
     suggestions: [
@@ -136,16 +157,24 @@ export async function POST(request: NextRequest) {
 
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-2.0-flash-exp',
+          generationConfig: {
+            temperature: 0.4,
+            topK: 32,
+            topP: 1,
+            maxOutputTokens: 2048,
+          }
+        })
 
         // Convert base64 image to Gemini format
-        // Remove the data:image/jpeg;base64, prefix
         const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '')
+        const mimeType = imageData.match(/data:(image\/\w+);base64,/)?.[1] || 'image/jpeg'
 
         const imagePart = {
           inlineData: {
             data: base64Data,
-            mimeType: imageData.match(/data:(image\/\w+);base64,/)?.[1] || 'image/jpeg'
+            mimeType: mimeType
           }
         }
 
@@ -205,6 +234,12 @@ Guidelines:
         logger.debug('Analysis parsed successfully', { analysis })
       }
     } catch (error) {
+      logger.error('❌ Gemini API Error - Falling back to mock data:', error as Error)
+      logger.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : undefined
+      })
       ErrorHandler.handle(error, {
         operation: 'gemini_meal_analysis',
         userId,

@@ -187,9 +187,15 @@ function ProfileContent() {
   const handleSaveProfile = async () => {
     setSaving(true)
     try {
+      // Only send user-editable fields, not system fields
       await userProfileOperations.updateUserProfile({
-        preferences: profileData.preferences,
-        profile: profileData.profile
+        preferences: {
+          dietaryPreferences: profileData.preferences?.dietaryPreferences || []
+        },
+        profile: {
+          foodAllergies: profileData.profile?.foodAllergies || [],
+          healthConditions: profileData.profile?.healthConditions || []
+        }
       })
 
       toast.success('Profile updated successfully!')

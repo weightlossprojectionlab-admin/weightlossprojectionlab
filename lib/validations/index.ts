@@ -14,3 +14,6 @@ export * from './user-profile'
 
 // Health vitals
 export * from './health-vitals'
+
+// Medical records system (patients, vitals, providers, appointments)
+export * from './medical'

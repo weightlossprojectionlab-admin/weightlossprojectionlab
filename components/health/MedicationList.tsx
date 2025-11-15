@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { TrashIcon, PencilIcon, PlusIcon, CameraIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, CameraIcon } from '@heroicons/react/24/outline'
 import MedicationScanner from './MedicationScanner'
+import { MedicationCard } from './MedicationCard'
 import { ScannedMedication } from '@/lib/medication-lookup'
 
 interface MedicationListProps {
@@ -60,47 +61,15 @@ export default function MedicationList({
 
       {/* Medication list */}
       {medications.length > 0 && (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {medications.map((med, index) => (
-            <div
+            <MedicationCard
               key={index}
-              className="flex items-start justify-between p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
-            >
-              <div className="flex-1">
-                <div className="font-semibold text-gray-900 dark:text-gray-100">
-                  {med.name}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {med.strength} {med.dosageForm}
-                </div>
-                {med.frequency && (
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {med.frequency}
-                  </div>
-                )}
-                {med.prescribedFor && (
-                  <div className="text-xs text-primary mt-1">
-                    For: {med.prescribedFor}
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-2 ml-4">
-                <button
-                  onClick={() => handleEditMedication(index)}
-                  className="text-gray-600 dark:text-gray-400 hover:text-primary"
-                  aria-label="Edit medication"
-                >
-                  <PencilIcon className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleRemoveMedication(index)}
-                  className="text-gray-600 dark:text-gray-400 hover:text-error"
-                  aria-label="Remove medication"
-                >
-                  <TrashIcon className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+              medication={med}
+              onEdit={() => handleEditMedication(index)}
+              onDelete={() => handleRemoveMedication(index)}
+              showActions={true}
+            />
           ))}
         </div>
       )}
