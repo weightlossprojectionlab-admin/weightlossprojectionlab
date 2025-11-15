@@ -96,7 +96,9 @@ export async function POST(
         documentUploads: true,
         aiRecommendations: true,
         chatMessages: true,
-        urgentAlerts: true
+        urgentAlerts: true,
+        driverAssignmentNotifications: true,
+        driverReminderDaysBefore: [7, 3, 1]
       },
       patientsAccess: invitation.patientsShared,
       lastActive: acceptedAt
