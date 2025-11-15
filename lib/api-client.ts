@@ -43,6 +43,9 @@ export interface ApiResponse<T = unknown> {
 class ApiClient {
   private baseUrl: string
   private defaultOptions: ApiClientOptions
+  // Token cache to reduce getIdToken() calls (tokens expire after 1 hour, we cache for 55 min)
+  private cachedToken: string | null = null
+  private tokenExpiry: number = 0
 
   constructor(baseUrl: string = '/api', options: ApiClientOptions = {}) {
     this.baseUrl = baseUrl
@@ -55,14 +58,32 @@ class ApiClient {
   }
 
   /**
-   * Get Firebase ID token for authenticated requests
+   * Get Firebase ID token for authenticated requests (with caching)
    */
   private async getAuthToken(): Promise<string | null> {
     try {
+      // Return cached token if still valid
+      if (this.cachedToken && Date.now() < this.tokenExpiry) {
+        return this.cachedToken
+      }
+
       const auth = getAuth()
-      const user = auth.currentUser
-      if (!user) return null
-      return await user.getIdToken()
+      let user = auth.currentUser
+
+      if (!user) {
+        // Wait briefly for Firebase Auth to initialize, then retry
+        await new Promise(resolve => setTimeout(resolve, 200))
+        user = auth.currentUser
+        if (!user) return null
+      }
+
+      const token = await user.getIdToken()
+
+      // Cache token for 55 minutes (tokens are valid for 60 minutes)
+      this.cachedToken = token
+      this.tokenExpiry = Date.now() + (55 * 60 * 1000)
+
+      return token
     } catch (error) {
       ErrorHandler.handle(error, {
         operation: 'get_auth_token',
@@ -71,6 +92,14 @@ class ApiClient {
       })
       return null
     }
+  }
+
+  /**
+   * Clear cached token (useful after logout or token refresh)
+   */
+  clearTokenCache(): void {
+    this.cachedToken = null
+    this.tokenExpiry = 0
   }
 
   /**
