@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { appointmentFormSchema } from '@/lib/validations/medical'
-import type { Appointment } from '@/types/medical'
+import type { Appointment, PatientProfile, Provider } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
 
 export async function GET(request: NextRequest) {
@@ -122,8 +122,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const patient = { id: patientDoc.id, ...patientDoc.data() }
-    const provider = { id: providerDoc.id, ...providerDoc.data() }
+    const patient = { id: patientDoc.id, ...patientDoc.data() } as PatientProfile
+    const provider = { id: providerDoc.id, ...providerDoc.data() } as Provider
 
     // Create appointment
     const appointmentId = uuidv4()
@@ -131,31 +131,27 @@ export async function POST(request: NextRequest) {
 
     const appointment: Appointment = {
       id: appointmentId,
+      userId,
       patientId: validatedData.patientId,
-      patientName: patient.name as string,
+      patientName: patient.name,
       providerId: validatedData.providerId,
-      providerName: provider.name as string,
-      specialty: provider.specialty as string | undefined,
+      providerName: provider.name,
+      specialty: provider.specialty,
       dateTime: validatedData.dateTime,
+      endTime: validatedData.endTime,
       duration: validatedData.duration,
       type: validatedData.type,
-      purpose: validatedData.purpose,
-      location: validatedData.location || {
-        name: provider.name as string,
-        address: provider.address as string,
-        city: provider.city as string,
-        state: provider.state as string,
-        zipCode: provider.zipCode as string,
-        phone: provider.phone as string
-      },
-      status: 'scheduled',
-      escort: validatedData.escort,
-      escortUserId: validatedData.escortUserId,
-      conflictSeverity: 'none',
+      reason: validatedData.reason,
+      location: validatedData.location || `${provider.name}, ${provider.address || ''}`.trim(),
+      status: validatedData.status || 'scheduled',
+      notes: validatedData.notes,
+      createdFrom: validatedData.createdFrom,
+      requiresDriver: validatedData.requiresDriver || false,
+      driverStatus: validatedData.requiresDriver ? 'pending' : 'not-needed',
       createdAt: now,
       createdBy: userId,
-      lastModified: now,
-      modifiedBy: userId
+      updatedAt: now,
+      updatedBy: userId
     }
 
     const appointmentRef = adminDb
