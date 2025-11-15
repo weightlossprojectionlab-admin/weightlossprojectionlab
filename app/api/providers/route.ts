@@ -107,13 +107,13 @@ export async function POST(request: NextRequest) {
     const providerId = uuidv4()
     const now = new Date().toISOString()
 
-    const provider: Provider = {
+    const provider = {
       id: providerId,
       userId,
       ...validatedData,
       patientsServed: [],
       addedAt: now
-    }
+    } as Provider
 
     const providerRef = adminDb
       .collection('users')
