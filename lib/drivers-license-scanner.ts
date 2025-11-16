@@ -4,58 +4,149 @@
  * Scans PDF417 barcodes on US driver's licenses using ZXing (free open-source library)
  */
 
-import { BrowserPDF417Reader } from '@zxing/library'
+import { BrowserPDF417Reader, DecodeHintType, BarcodeFormat } from '@zxing/library'
 import { parseAAMVA, type AAMVAData } from './aamva-parser'
 import { logger } from './logger'
+import imageCompression from 'browser-image-compression'
 
 /**
- * Scan driver's license from image file
+ * Preprocess image for better barcode detection
+ */
+async function preprocessImage(imageFile: File): Promise<File> {
+  try {
+    // Compress and optimize image for better barcode detection
+    const options = {
+      maxSizeMB: 2,
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+      initialQuality: 0.9,
+      preserveExif: false
+    }
+
+    const processedFile = await imageCompression(imageFile, options)
+
+    logger.info('[DL Scanner] Image preprocessed', {
+      originalSize: imageFile.size,
+      processedSize: processedFile.size,
+      reduction: `${Math.round((1 - processedFile.size / imageFile.size) * 100)}%`
+    })
+
+    return processedFile
+  } catch (error) {
+    logger.warn('[DL Scanner] Image preprocessing failed, using original', error)
+    return imageFile
+  }
+}
+
+/**
+ * Scan driver's license from image file with multiple attempts and preprocessing
  * Returns parsed AAMVA data
  */
 export async function scanDriverLicense(imageFile: File): Promise<AAMVAData | null> {
   let imageUrl: string | null = null
 
   try {
-    logger.info('[DL Scanner] Scanning driver license with ZXing', {
+    logger.info('[DL Scanner] Starting scan process', {
       fileName: imageFile.name,
       fileSize: imageFile.size,
       fileType: imageFile.type
     })
 
-    // Create barcode reader instance
+    // Preprocess image for better detection
+    const processedFile = await preprocessImage(imageFile)
+
+    // Create barcode reader instance with hints
     const codeReader = new BrowserPDF417Reader()
 
-    // Create object URL from file
-    imageUrl = URL.createObjectURL(imageFile)
+    // Create hints for better detection
+    const hints = new Map()
+    hints.set(DecodeHintType.TRY_HARDER, true)
+    hints.set(DecodeHintType.PURE_BARCODE, false)
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.PDF_417])
 
-    // Decode PDF417 barcode from image
-    const result = await codeReader.decodeFromImageUrl(imageUrl)
+    // Create object URL from processed file
+    imageUrl = URL.createObjectURL(processedFile)
 
-    const barcodeText = result.getText()
+    // Attempt 1: Try with hints
+    try {
+      logger.info('[DL Scanner] Attempt 1: Scanning with TRY_HARDER hints')
+      const result = await codeReader.decodeFromImageUrl(imageUrl)
+      const barcodeText = result.getText()
 
-    logger.info('[DL Scanner] Barcode detected', {
-      textLength: barcodeText.length,
-      format: result.getBarcodeFormat()
+      logger.info('[DL Scanner] ✓ Barcode detected on attempt 1', {
+        textLength: barcodeText.length,
+        format: result.getBarcodeFormat()
+      })
+
+      const aamvaData = parseAAMVA(barcodeText)
+      if (aamvaData) {
+        return aamvaData
+      }
+    } catch (error1) {
+      logger.warn('[DL Scanner] Attempt 1 failed, trying alternative approach', {
+        error: error1 instanceof Error ? error1.message : 'Unknown error'
+      })
+    }
+
+    // Attempt 2: Try without hints (sometimes works better)
+    try {
+      logger.info('[DL Scanner] Attempt 2: Scanning without hints')
+      const codeReader2 = new BrowserPDF417Reader()
+      const result = await codeReader2.decodeFromImageUrl(imageUrl)
+      const barcodeText = result.getText()
+
+      logger.info('[DL Scanner] ✓ Barcode detected on attempt 2', {
+        textLength: barcodeText.length,
+        format: result.getBarcodeFormat()
+      })
+
+      const aamvaData = parseAAMVA(barcodeText)
+      if (aamvaData) {
+        return aamvaData
+      }
+    } catch (error2) {
+      logger.warn('[DL Scanner] Attempt 2 failed', {
+        error: error2 instanceof Error ? error2.message : 'Unknown error'
+      })
+    }
+
+    // Attempt 3: Try with original unprocessed image
+    if (processedFile !== imageFile) {
+      try {
+        logger.info('[DL Scanner] Attempt 3: Trying original unprocessed image')
+        URL.revokeObjectURL(imageUrl)
+        imageUrl = URL.createObjectURL(imageFile)
+
+        const codeReader3 = new BrowserPDF417Reader()
+        const result = await codeReader3.decodeFromImageUrl(imageUrl)
+        const barcodeText = result.getText()
+
+        logger.info('[DL Scanner] ✓ Barcode detected on attempt 3', {
+          textLength: barcodeText.length,
+          format: result.getBarcodeFormat()
+        })
+
+        const aamvaData = parseAAMVA(barcodeText)
+        if (aamvaData) {
+          return aamvaData
+        }
+      } catch (error3) {
+        logger.warn('[DL Scanner] Attempt 3 failed', {
+          error: error3 instanceof Error ? error3.message : 'Unknown error'
+        })
+      }
+    }
+
+    // All attempts failed
+    logger.error('[DL Scanner] All scan attempts failed - no barcode detected', {
+      totalAttempts: processedFile !== imageFile ? 3 : 2,
+      suggestion: 'Try taking a clearer photo with better lighting, ensure barcode is visible and in focus'
     })
 
-    // Parse AAMVA data from barcode
-    const aamvaData = parseAAMVA(barcodeText)
-
-    if (!aamvaData) {
-      logger.warn('[DL Scanner] Failed to parse AAMVA data from barcode')
-      return null
-    }
-
-    return aamvaData
+    return null
 
   } catch (error: any) {
-    // Check if it's a "not found" error (no barcode in image)
-    if (error?.message?.includes('No MultiFormat Readers') || error?.message?.includes('NotFoundException')) {
-      logger.warn('[DL Scanner] No PDF417 barcode found in image')
-      return null
-    }
-
-    logger.error('[DL Scanner] Failed to scan driver license', error as Error)
+    logger.error('[DL Scanner] Unexpected error during scan', error as Error)
     return null
   } finally {
     // Clean up object URL to free memory

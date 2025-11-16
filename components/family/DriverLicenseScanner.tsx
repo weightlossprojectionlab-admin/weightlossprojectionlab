@@ -55,7 +55,10 @@ export function DriverLicenseScanner({ onScanComplete, onClose, isOpen }: Driver
       const aamvaData = await scanDriverLicense(file)
 
       if (!aamvaData) {
-        toast.error('Could not read driver\'s license barcode. Please try again or enter manually.')
+        toast.error(
+          'Could not detect barcode. Try:\n• Better lighting\n• Clearer focus on barcode\n• Different angle\n\nOr enter information manually.',
+          { duration: 6000 }
+        )
         setScanning(false)
         return
       }
@@ -118,13 +121,14 @@ export function DriverLicenseScanner({ onScanComplete, onClose, isOpen }: Driver
               {/* Instructions */}
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
                 <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                  How to scan:
+                  📸 Tips for best results:
                 </h3>
                 <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
                   <li>Take a clear photo of the <strong>back</strong> of the driver's license</li>
-                  <li>Make sure the PDF417 barcode is visible and in focus</li>
-                  <li>Upload the photo below</li>
-                  <li>Review and confirm the extracted information</li>
+                  <li>Ensure good lighting - avoid shadows on the barcode</li>
+                  <li>Keep the barcode straight and in focus (no blur)</li>
+                  <li>Include the entire barcode in the frame</li>
+                  <li>Hold camera steady or use a flat surface</li>
                 </ol>
               </div>
 
