@@ -59,8 +59,8 @@ function MedicalDashboardContent() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <PageHeader
-        title="Medical Records"
-        subtitle="Manage health information for your family"
+        title="Medical Info"
+        subtitle="Manage health information for you or your family"
       />
 
       <main className="container mx-auto px-4 py-8">
@@ -74,7 +74,7 @@ function MedicalDashboardContent() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <StatCard
                 icon={<UserGroupIcon className="w-6 h-6" />}
-                title="Patients"
+                title="Family Members"
                 count={totalPatients}
                 color="purple"
                 onClick={() => router.push('/patients')}
@@ -106,7 +106,7 @@ function MedicalDashboardContent() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <ActionButton
                   icon={<PlusIcon className="w-5 h-5" />}
-                  label="Add Patient"
+                  label="Add Family Member"
                   onClick={() => router.push('/patients/new')}
                 />
                 <ActionButton

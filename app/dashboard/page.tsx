@@ -536,18 +536,18 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* Medical Records Link */}
+            {/* Medical Info Link */}
             <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold mb-1">🏥 Medical Records</h3>
+                  <h3 className="text-lg font-bold mb-1">🏥 Medical Info</h3>
                   <p className="text-sm text-green-100">Manage health records for your family</p>
                 </div>
                 <a
                   href="/medical"
                   className="px-6 py-3 bg-white dark:bg-gray-900 text-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium flex items-center gap-2"
                 >
-                  <span>View Records</span>
+                  <span>View Info</span>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>

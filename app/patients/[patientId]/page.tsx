@@ -50,7 +50,7 @@ function PatientDetailContent() {
         setPatient(data)
       } catch (error: any) {
         logger.error('[PatientDetail] Error fetching patient', error)
-        toast.error('Failed to load patient details')
+        toast.error('Failed to load family member details')
       } finally {
         setLoading(false)
       }
@@ -106,7 +106,7 @@ function PatientDetailContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
         <div className="text-center">
-          <p className="text-xl font-bold text-gray-900 dark:text-gray-100">Patient not found</p>
+          <p className="text-xl font-bold text-gray-900 dark:text-gray-100">Family member not found</p>
         </div>
       </div>
     )
@@ -135,7 +135,7 @@ function PatientDetailContent() {
           <div className="lg:col-span-1">
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
               <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                Patient Information
+                Family Member Information
               </h2>
               <div className="space-y-3 text-sm">
                 <div>

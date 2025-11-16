@@ -144,7 +144,7 @@ export function InviteModal({ isOpen, onClose }: InviteModalProps) {
             {/* Patient Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Select Patients to Share *
+                Select Family Members to Share *
               </label>
               <div className="space-y-2 max-h-40 overflow-y-auto border-2 border-gray-200 dark:border-gray-700 rounded-lg p-3">
                 {patients.map(patient => (

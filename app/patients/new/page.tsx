@@ -58,7 +58,7 @@ function NewPatientContent() {
       toast.success(`${newPatient.name} added successfully`)
       router.push(`/patients/${newPatient.id}`)
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create patient')
+      toast.error(error.message || 'Failed to create family member')
     } finally {
       setLoading(false)
     }
@@ -67,8 +67,8 @@ function NewPatientContent() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <PageHeader
-        title="Add Patient"
-        subtitle="Create a new patient profile"
+        title="Add Family Member"
+        subtitle="Create a new family member profile"
         backHref="/patients"
       />
 
@@ -78,7 +78,7 @@ function NewPatientContent() {
             {/* Patient Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Patient Type
+                Member Type
               </label>
               <div className="grid grid-cols-2 gap-4">
                 <button
@@ -213,7 +213,7 @@ function NewPatientContent() {
                 disabled={loading}
                 className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
               >
-                {loading ? 'Creating...' : 'Create Patient'}
+                {loading ? 'Creating...' : 'Create Family Member'}
               </button>
               <button
                 type="button"

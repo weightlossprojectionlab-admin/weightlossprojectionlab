@@ -366,7 +366,7 @@ function AppointmentDetailContent() {
               onClick={() => router.push(`/patients/${appointment.patientId}`)}
               className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
             >
-              View Patient
+              View Family Member
             </button>
             <button
               onClick={() => router.push(`/providers/${appointment.providerId}`)}

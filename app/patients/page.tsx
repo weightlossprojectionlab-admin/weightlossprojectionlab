@@ -33,7 +33,7 @@ function PatientsContent() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <PageHeader
-        title="Patients"
+        title="Family Members"
         subtitle="Manage health records for family members and pets"
         actions={
           <Link
@@ -41,7 +41,7 @@ function PatientsContent() {
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
           >
             <PlusIcon className="w-5 h-5" />
-            Add Patient
+            Add Family Member
           </Link>
         }
       />
@@ -91,7 +91,7 @@ function PatientsContent() {
         {/* Error State */}
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
-            <p className="font-medium">Error loading patients</p>
+            <p className="font-medium">Error loading family members</p>
             <p className="text-sm mt-1">{error}</p>
           </div>
         )}
@@ -101,17 +101,17 @@ function PatientsContent() {
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-12 text-center">
             <div className="text-6xl mb-4">👥</div>
             <p className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              {filter === 'all' ? 'No Patients Yet' : `No ${filter}s Found`}
+              {filter === 'all' ? 'No Family Members Yet' : `No ${filter}s Found`}
             </p>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Start tracking health records by adding your first patient
+              Start tracking health records by adding your first family member
             </p>
             <Link
               href="/patients/new"
               className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
             >
               <PlusIcon className="w-5 h-5" />
-              Add Your First Patient
+              Add Your First Family Member
             </Link>
           </div>
         )}
