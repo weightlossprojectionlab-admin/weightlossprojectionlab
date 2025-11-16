@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import { AppointmentRecommendation } from '@/types/medical'
 import { usePatients } from '@/hooks/usePatients'
 import { useProviders } from '@/hooks/useProviders'
@@ -28,6 +29,7 @@ export function RecommendationModal({
   onScheduled
 }: RecommendationModalProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const { patients } = usePatients()
   const { providers } = useProviders()
   const { createAppointment } = useAppointments()

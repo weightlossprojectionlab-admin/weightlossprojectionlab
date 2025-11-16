@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
 import { useAppointments } from '@/hooks/useAppointments'
 import { usePatients } from '@/hooks/usePatients'
 import { useProviders } from '@/hooks/useProviders'
@@ -26,6 +27,7 @@ export default function NewAppointmentPage() {
 
 function NewAppointmentContent() {
   const router = useRouter()
+  const { user } = useAuth()
   const { createAppointment } = useAppointments()
   const { patients } = usePatients()
   const { providers } = useProviders()

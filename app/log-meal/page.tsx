@@ -2774,7 +2774,7 @@ function LogMealContent() {
                   setTimeout(() => {
                     document.getElementById(`meal-${duplicateMeal.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
                   }, 100)
-                  toast.info('Scroll down to edit your existing meal')
+                  toast('Scroll down to edit your existing meal')
                 }}
                 className="btn btn-secondary w-full"
               >

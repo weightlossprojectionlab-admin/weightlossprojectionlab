@@ -82,7 +82,7 @@ export function useFamilyMembers({
         const updatedMember = await medicalOperations.family.updateMemberPermissions(
           patientId,
           memberId,
-          permissions
+          { permissions }
         )
 
         // Update with server response
