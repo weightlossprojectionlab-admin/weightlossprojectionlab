@@ -86,10 +86,12 @@ function NewAppointmentContent() {
         : null
 
       const appointmentData = {
+        userId: user?.uid || '',
         patientId: formData.patientId,
         patientName: patient.name,
         providerId: formData.providerId,
         providerName: provider.name,
+        specialty: provider.specialty,
         dateTime: new Date(formData.dateTime).toISOString(),
         type: formData.type,
         reason: formData.reason,
@@ -105,7 +107,8 @@ function NewAppointmentContent() {
         driverStatus: formData.requiresDriver
           ? (formData.assignedDriverId ? 'pending' as const : 'not-needed' as const)
           : 'not-needed' as const,
-        pickupTime: formData.pickupTime ? new Date(formData.pickupTime).toISOString() : undefined
+        pickupTime: formData.pickupTime ? new Date(formData.pickupTime).toISOString() : undefined,
+        updatedAt: new Date().toISOString()
       }
 
       const newAppointment = await createAppointment(appointmentData)

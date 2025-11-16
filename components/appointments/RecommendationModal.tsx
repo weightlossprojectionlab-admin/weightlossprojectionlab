@@ -76,10 +76,12 @@ export function RecommendationModal({
       }
 
       const appointmentData = {
+        userId: user?.uid || '',
         patientId: formData.patientId,
         patientName: patient.name,
         providerId: formData.providerId,
         providerName: provider.name,
+        specialty: provider.specialty,
         dateTime: new Date(formData.dateTime).toISOString(),
         type: recommendation.type as any, // Map recommendation type to appointment type
         reason: formData.reason,
@@ -93,7 +95,8 @@ export function RecommendationModal({
         recommendationSeverity: recommendation.severity,
         // Driver defaults
         requiresDriver: false,
-        driverStatus: 'not-needed' as const
+        driverStatus: 'not-needed' as const,
+        updatedAt: new Date().toISOString()
       }
 
       const newAppointment = await createAppointment(appointmentData)
