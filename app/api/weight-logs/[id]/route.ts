@@ -53,7 +53,7 @@ export async function PATCH(
       .collection('users')
       .doc(userId)
       .collection('weightLogs')
-      .doc(params.id)
+      .doc(id)
 
     // Check if document exists and belongs to user
     const doc = await weightLogRef.get()
@@ -122,7 +122,7 @@ export async function DELETE(
       .collection('users')
       .doc(userId)
       .collection('weightLogs')
-      .doc(params.id)
+      .doc(id)
 
     // Check if document exists and belongs to user
     const doc = await weightLogRef.get()
@@ -135,7 +135,7 @@ export async function DELETE(
 
     await weightLogRef.delete()
 
-    logger.info('Weight log deleted', { userId, weightLogId: params.id })
+    logger.info('Weight log deleted', { userId, weightLogId: id })
 
     return NextResponse.json({
       success: true,
