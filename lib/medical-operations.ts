@@ -56,7 +56,7 @@ export const patientOperations = {
     try {
       logger.info('[MedicalOps] Creating patient', { type: patientData.type, name: patientData.name })
 
-      const patient = await makeAuthenticatedRequest<PatientProfile>('/api/patients', {
+      const patient = await makeAuthenticatedRequest<PatientProfile>('/patients', {
         method: 'POST',
         body: JSON.stringify(patientData)
       })
@@ -76,7 +76,7 @@ export const patientOperations = {
     try {
       logger.debug('[MedicalOps] Fetching patients')
 
-      const patients = await makeAuthenticatedRequest<PatientProfile[]>('/api/patients', {
+      const patients = await makeAuthenticatedRequest<PatientProfile[]>('/patients', {
         method: 'GET'
       })
 
@@ -284,7 +284,7 @@ export const familyOperations = {
     try {
       logger.info('[MedicalOps] Sending family invitation', { recipientEmail: invitationData.recipientEmail })
 
-      const invitation = await makeAuthenticatedRequest<FamilyInvitation>('/api/invitations', {
+      const invitation = await makeAuthenticatedRequest<FamilyInvitation>('/invitations', {
         method: 'POST',
         body: JSON.stringify(invitationData)
       })
@@ -304,7 +304,7 @@ export const familyOperations = {
     try {
       logger.debug('[MedicalOps] Fetching invitations')
 
-      const invitations = await makeAuthenticatedRequest<{ sent: FamilyInvitation[]; received: FamilyInvitation[] }>('/api/invitations', {
+      const invitations = await makeAuthenticatedRequest<{ sent: FamilyInvitation[]; received: FamilyInvitation[] }>('/invitations', {
         method: 'GET'
       })
 
@@ -442,7 +442,7 @@ export const providerOperations = {
     try {
       logger.info('[MedicalOps] Creating provider', { name: providerData.name, type: providerData.type })
 
-      const provider = await makeAuthenticatedRequest<Provider>('/api/providers', {
+      const provider = await makeAuthenticatedRequest<Provider>('/providers', {
         method: 'POST',
         body: JSON.stringify(providerData)
       })
@@ -462,7 +462,7 @@ export const providerOperations = {
     try {
       logger.debug('[MedicalOps] Fetching all providers')
 
-      const providers = await makeAuthenticatedRequest<Provider[]>('/api/providers')
+      const providers = await makeAuthenticatedRequest<Provider[]>('/providers')
 
       logger.info('[MedicalOps] Providers fetched successfully', { count: providers.length })
       return providers
@@ -594,7 +594,7 @@ export const appointmentOperations = {
     try {
       logger.info('[MedicalOps] Creating appointment', { patientId: appointmentData.patientId, providerId: appointmentData.providerId })
 
-      const appointment = await makeAuthenticatedRequest<Appointment>('/api/appointments', {
+      const appointment = await makeAuthenticatedRequest<Appointment>('/appointments', {
         method: 'POST',
         body: JSON.stringify(appointmentData)
       })
