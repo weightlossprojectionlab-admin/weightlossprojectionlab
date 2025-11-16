@@ -62,10 +62,7 @@ function NewPatientContent() {
       }
 
       if (formData.type === 'human') {
-        // Only include gender if it's not empty
-        if (formData.gender) {
-          data.gender = formData.gender
-        }
+        data.gender = formData.gender
       } else {
         data.species = formData.species
         if (formData.breed) data.breed = formData.breed
@@ -192,11 +189,12 @@ function NewPatientContent() {
             {formData.type === 'human' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Gender
+                  Gender *
                 </label>
                 <select
                   value={formData.gender}
                   onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                  required
                   className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20"
                 >
                   <option value="">Select gender</option>
