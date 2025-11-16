@@ -169,21 +169,21 @@ function MedicalDashboardContent() {
                 )}
               </div>
 
-              {/* Recent Patients */}
+              {/* Recent Family Members */}
               <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                  Patients
+                  Family Members
                 </h2>
                 {patients.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-gray-500 dark:text-gray-400 text-sm mb-3">
-                      No patients added yet
+                      No family members added yet
                     </p>
                     <button
                       onClick={() => router.push('/patients/new')}
                       className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
                     >
-                      Add Your First Patient
+                      Add Your First Family Member
                     </button>
                   </div>
                 ) : (
