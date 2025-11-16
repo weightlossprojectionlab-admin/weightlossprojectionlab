@@ -95,7 +95,7 @@ export const patientOperations = {
     try {
       logger.debug('[MedicalOps] Fetching patient', { patientId })
 
-      const patient = await makeAuthenticatedRequest<PatientProfile>(`/api/patients/${patientId}`, {
+      const patient = await makeAuthenticatedRequest<PatientProfile>(`/patients/${patientId}`, {
         method: 'GET'
       })
 
@@ -114,7 +114,7 @@ export const patientOperations = {
     try {
       logger.info('[MedicalOps] Updating patient', { patientId, updates })
 
-      const patient = await makeAuthenticatedRequest<PatientProfile>(`/api/patients/${patientId}`, {
+      const patient = await makeAuthenticatedRequest<PatientProfile>(`/patients/${patientId}`, {
         method: 'PUT',
         body: JSON.stringify(updates)
       })
@@ -134,7 +134,7 @@ export const patientOperations = {
     try {
       logger.info('[MedicalOps] Deleting patient', { patientId })
 
-      await makeAuthenticatedRequest<void>(`/api/patients/${patientId}`, {
+      await makeAuthenticatedRequest<void>(`/patients/${patientId}`, {
         method: 'DELETE'
       })
 
@@ -156,7 +156,7 @@ export const vitalOperations = {
     try {
       logger.info('[MedicalOps] Logging vital sign', { patientId, type: vitalData.type })
 
-      const vital = await makeAuthenticatedRequest<VitalSign>(`/api/patients/${patientId}/vitals`, {
+      const vital = await makeAuthenticatedRequest<VitalSign>(`/patients/${patientId}/vitals`, {
         method: 'POST',
         body: JSON.stringify(vitalData)
       })
@@ -187,7 +187,7 @@ export const vitalOperations = {
       if (options?.startDate) queryParams.append('startDate', options.startDate)
       if (options?.endDate) queryParams.append('endDate', options.endDate)
 
-      const url = `/api/patients/${patientId}/vitals${queryParams.toString() ? `?${queryParams}` : ''}`
+      const url = `/patients/${patientId}/vitals${queryParams.toString() ? `?${queryParams}` : ''}`
 
       const vitals = await makeAuthenticatedRequest<VitalSign[]>(url, {
         method: 'GET'
@@ -208,7 +208,7 @@ export const vitalOperations = {
     try {
       logger.debug('[MedicalOps] Fetching vital sign', { patientId, vitalId })
 
-      const vital = await makeAuthenticatedRequest<VitalSign>(`/api/patients/${patientId}/vitals/${vitalId}`, {
+      const vital = await makeAuthenticatedRequest<VitalSign>(`/patients/${patientId}/vitals/${vitalId}`, {
         method: 'GET'
       })
 
@@ -227,7 +227,7 @@ export const vitalOperations = {
     try {
       logger.info('[MedicalOps] Updating vital sign', { patientId, vitalId, updates })
 
-      const vital = await makeAuthenticatedRequest<VitalSign>(`/api/patients/${patientId}/vitals/${vitalId}`, {
+      const vital = await makeAuthenticatedRequest<VitalSign>(`/patients/${patientId}/vitals/${vitalId}`, {
         method: 'PUT',
         body: JSON.stringify(updates)
       })
@@ -247,7 +247,7 @@ export const vitalOperations = {
     try {
       logger.info('[MedicalOps] Deleting vital sign', { patientId, vitalId })
 
-      await makeAuthenticatedRequest<void>(`/api/patients/${patientId}/vitals/${vitalId}`, {
+      await makeAuthenticatedRequest<void>(`/patients/${patientId}/vitals/${vitalId}`, {
         method: 'DELETE'
       })
 
@@ -326,7 +326,7 @@ export const familyOperations = {
     try {
       logger.info('[MedicalOps] Accepting invitation', { invitationId })
 
-      const member = await makeAuthenticatedRequest<FamilyMember>(`/api/invitations/${invitationId}/accept`, {
+      const member = await makeAuthenticatedRequest<FamilyMember>(`/invitations/${invitationId}/accept`, {
         method: 'POST'
       })
 
@@ -345,7 +345,7 @@ export const familyOperations = {
     try {
       logger.info('[MedicalOps] Declining invitation', { invitationId })
 
-      await makeAuthenticatedRequest<void>(`/api/invitations/${invitationId}/decline`, {
+      await makeAuthenticatedRequest<void>(`/invitations/${invitationId}/decline`, {
         method: 'POST'
       })
 
@@ -363,7 +363,7 @@ export const familyOperations = {
     try {
       logger.info('[MedicalOps] Revoking invitation', { invitationId })
 
-      await makeAuthenticatedRequest<void>(`/api/invitations/${invitationId}/revoke`, {
+      await makeAuthenticatedRequest<void>(`/invitations/${invitationId}/revoke`, {
         method: 'POST'
       })
 
@@ -381,7 +381,7 @@ export const familyOperations = {
     try {
       logger.debug('[MedicalOps] Fetching family members', { patientId })
 
-      const members = await makeAuthenticatedRequest<FamilyMember[]>(`/api/patients/${patientId}/family`, {
+      const members = await makeAuthenticatedRequest<FamilyMember[]>(`/patients/${patientId}/family`, {
         method: 'GET'
       })
 
@@ -400,7 +400,7 @@ export const familyOperations = {
     try {
       logger.info('[MedicalOps] Updating member permissions', { patientId, memberId })
 
-      const member = await makeAuthenticatedRequest<FamilyMember>(`/api/patients/${patientId}/family/${memberId}`, {
+      const member = await makeAuthenticatedRequest<FamilyMember>(`/patients/${patientId}/family/${memberId}`, {
         method: 'PUT',
         body: JSON.stringify(permissions)
       })
@@ -420,7 +420,7 @@ export const familyOperations = {
     try {
       logger.info('[MedicalOps] Removing family member', { patientId, memberId })
 
-      await makeAuthenticatedRequest<void>(`/api/patients/${patientId}/family/${memberId}`, {
+      await makeAuthenticatedRequest<void>(`/patients/${patientId}/family/${memberId}`, {
         method: 'DELETE'
       })
 
@@ -479,7 +479,7 @@ export const providerOperations = {
     try {
       logger.debug('[MedicalOps] Fetching providers for patient', { patientId })
 
-      const providers = await makeAuthenticatedRequest<Provider[]>(`/api/providers?patientId=${patientId}`)
+      const providers = await makeAuthenticatedRequest<Provider[]>(`/providers?patientId=${patientId}`)
 
       logger.info('[MedicalOps] Patient providers fetched', { patientId, count: providers.length })
       return providers
@@ -496,7 +496,7 @@ export const providerOperations = {
     try {
       logger.debug('[MedicalOps] Fetching provider', { providerId })
 
-      const provider = await makeAuthenticatedRequest<Provider>(`/api/providers/${providerId}`)
+      const provider = await makeAuthenticatedRequest<Provider>(`/providers/${providerId}`)
 
       logger.info('[MedicalOps] Provider fetched successfully', { providerId })
       return provider
@@ -513,7 +513,7 @@ export const providerOperations = {
     try {
       logger.info('[MedicalOps] Updating provider', { providerId, updates })
 
-      const provider = await makeAuthenticatedRequest<Provider>(`/api/providers/${providerId}`, {
+      const provider = await makeAuthenticatedRequest<Provider>(`/providers/${providerId}`, {
         method: 'PUT',
         body: JSON.stringify(updates)
       })
@@ -533,7 +533,7 @@ export const providerOperations = {
     try {
       logger.info('[MedicalOps] Deleting provider', { providerId })
 
-      await makeAuthenticatedRequest<void>(`/api/providers/${providerId}`, {
+      await makeAuthenticatedRequest<void>(`/providers/${providerId}`, {
         method: 'DELETE'
       })
 
@@ -551,7 +551,7 @@ export const providerOperations = {
     try {
       logger.info('[MedicalOps] Linking provider to patient', { providerId, patientId })
 
-      const provider = await makeAuthenticatedRequest<Provider>(`/api/providers/${providerId}/patients`, {
+      const provider = await makeAuthenticatedRequest<Provider>(`/providers/${providerId}/patients`, {
         method: 'POST',
         body: JSON.stringify({ patientId })
       })
@@ -571,7 +571,7 @@ export const providerOperations = {
     try {
       logger.info('[MedicalOps] Unlinking provider from patient', { providerId, patientId })
 
-      const provider = await makeAuthenticatedRequest<Provider>(`/api/providers/${providerId}/patients/${patientId}`, {
+      const provider = await makeAuthenticatedRequest<Provider>(`/providers/${providerId}/patients/${patientId}`, {
         method: 'DELETE'
       })
 
@@ -637,7 +637,7 @@ export const appointmentOperations = {
     try {
       logger.debug('[MedicalOps] Fetching appointment', { appointmentId })
 
-      const appointment = await makeAuthenticatedRequest<Appointment>(`/api/appointments/${appointmentId}`)
+      const appointment = await makeAuthenticatedRequest<Appointment>(`/appointments/${appointmentId}`)
 
       logger.info('[MedicalOps] Appointment fetched successfully', { appointmentId })
       return appointment
@@ -654,7 +654,7 @@ export const appointmentOperations = {
     try {
       logger.info('[MedicalOps] Updating appointment', { appointmentId, updates })
 
-      const appointment = await makeAuthenticatedRequest<Appointment>(`/api/appointments/${appointmentId}`, {
+      const appointment = await makeAuthenticatedRequest<Appointment>(`/appointments/${appointmentId}`, {
         method: 'PUT',
         body: JSON.stringify(updates)
       })
@@ -674,7 +674,7 @@ export const appointmentOperations = {
     try {
       logger.info('[MedicalOps] Updating appointment status', { appointmentId, status })
 
-      const appointment = await makeAuthenticatedRequest<Appointment>(`/api/appointments/${appointmentId}/status`, {
+      const appointment = await makeAuthenticatedRequest<Appointment>(`/appointments/${appointmentId}/status`, {
         method: 'PUT',
         body: JSON.stringify({ status })
       })
@@ -694,7 +694,7 @@ export const appointmentOperations = {
     try {
       logger.info('[MedicalOps] Cancelling appointment', { appointmentId, reason })
 
-      const appointment = await makeAuthenticatedRequest<Appointment>(`/api/appointments/${appointmentId}`, {
+      const appointment = await makeAuthenticatedRequest<Appointment>(`/appointments/${appointmentId}`, {
         method: 'PUT',
         body: JSON.stringify({
           status: 'cancelled',
@@ -718,7 +718,7 @@ export const appointmentOperations = {
     try {
       logger.info('[MedicalOps] Deleting appointment', { appointmentId })
 
-      await makeAuthenticatedRequest<void>(`/api/appointments/${appointmentId}`, {
+      await makeAuthenticatedRequest<void>(`/appointments/${appointmentId}`, {
         method: 'DELETE'
       })
 
