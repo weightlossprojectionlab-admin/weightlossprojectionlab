@@ -36,7 +36,7 @@ function MedicationsContent() {
   // Get unique patient names and conditions for filtering
   const uniquePatients = useMemo(() => {
     const patients = new Set<string>()
-    medications.forEach(med => {
+    medications.forEach((med: ScannedMedication) => {
       if (med.patientName) {
         patients.add(med.patientName)
       }
@@ -46,7 +46,7 @@ function MedicationsContent() {
 
   const uniqueConditions = useMemo(() => {
     const conditions = new Set<string>()
-    medications.forEach(med => {
+    medications.forEach((med: ScannedMedication) => {
       if (med.prescribedFor) {
         conditions.add(med.prescribedFor)
       }
@@ -134,7 +134,7 @@ function MedicationsContent() {
     }
 
     try {
-      const updatedMedications = medications.filter((_, i) => i !== index)
+      const updatedMedications = medications.filter((_: ScannedMedication, i: number) => i !== index)
       await handleSaveMedications(updatedMedications)
       toast.success(`${medicationName} removed successfully`)
     } catch (error) {
@@ -326,9 +326,9 @@ function MedicationsContent() {
 
                 {/* Medication Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {meds.map((med) => {
+                  {meds.map((med: ScannedMedication) => {
                     // Find the global index of this medication in the full medications array
-                    const globalIndex = medications.findIndex(m =>
+                    const globalIndex = medications.findIndex((m: ScannedMedication) =>
                       m.name === med.name &&
                       m.scannedAt === med.scannedAt &&
                       m.patientName === med.patientName
