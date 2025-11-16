@@ -65,12 +65,6 @@ export default function RootLayout({
           })();`}
         </Script>
 
-        {/* Dynamsoft Barcode Reader SDK for driver's license scanning */}
-        <Script
-          src="https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@11.2.4000/dist/dbr.bundle.js"
-          strategy="lazyOnload"
-        />
-
         <ConditionalProviders>{children}</ConditionalProviders>
       </body>
     </html>
