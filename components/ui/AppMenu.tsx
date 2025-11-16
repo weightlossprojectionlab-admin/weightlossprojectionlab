@@ -21,7 +21,9 @@ import {
   AcademicCapIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
-  UserCircleIcon
+  UserCircleIcon,
+  HeartIcon,
+  BeakerIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -52,6 +54,14 @@ export function AppMenu() {
       items: [
         { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
         { name: 'Profile', href: '/profile', icon: UserCircleIcon },
+      ],
+    },
+    {
+      title: 'Health',
+      items: [
+        { name: 'Medical Info', href: '/medical', icon: HeartIcon },
+        { name: 'Family Members', href: '/patients', icon: UserGroupIcon },
+        { name: 'Medications', href: '/medications', icon: BeakerIcon },
       ],
     },
     {
