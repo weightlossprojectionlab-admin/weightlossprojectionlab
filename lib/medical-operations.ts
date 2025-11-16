@@ -620,7 +620,7 @@ export const appointmentOperations = {
       if (options?.startDate) params.append('startDate', options.startDate)
       if (options?.endDate) params.append('endDate', options.endDate)
 
-      const appointments = await makeAuthenticatedRequest<Appointment[]>(`/api/appointments?${params.toString()}`)
+      const appointments = await makeAuthenticatedRequest<Appointment[]>(`/appointments?${params.toString()}`)
 
       logger.info('[MedicalOps] Appointments fetched successfully', { count: appointments.length })
       return appointments
