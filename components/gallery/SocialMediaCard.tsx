@@ -74,7 +74,7 @@ export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false }
             setShowPlatformSelector(false)
             return
           } else {
-            logger.warn('Web Share API failed, falling back to download', shareError as Error)
+            logger.warn('Web Share API failed, falling back to download', { error: shareError.message })
           }
         }
       }

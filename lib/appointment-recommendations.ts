@@ -173,9 +173,20 @@ async function analyzeVitalTrends(userId: string): Promise<VitalTrends> {
       }
 
       // Check for elevated BP
-      const bpReadings = vitals.filter(v => v.type === 'blood-pressure')
+      const bpReadings = vitals.filter(v => v.type === 'blood_pressure')
       for (const bp of bpReadings) {
-        const [systolic, diastolic] = bp.value.split('/').map(Number)
+        // BP value can be BloodPressureValue object or string format "120/80"
+        let systolic = 0
+        let diastolic = 0
+
+        if (typeof bp.value === 'object' && bp.value !== null && 'systolic' in bp.value) {
+          systolic = bp.value.systolic
+          diastolic = bp.value.diastolic
+        } else if (typeof bp.value === 'string') {
+          const parts = (bp.value as string).split('/')
+          systolic = Number(parts[0]) || 0
+          diastolic = Number(parts[1]) || 0
+        }
         if (systolic >= THRESHOLDS.BP_SYSTOLIC_THRESHOLD || diastolic >= THRESHOLDS.BP_DIASTOLIC_THRESHOLD) {
           hasElevatedBP = true
           break
@@ -183,7 +194,7 @@ async function analyzeVitalTrends(userId: string): Promise<VitalTrends> {
       }
 
       // Check for irregular glucose
-      const glucoseReadings = vitals.filter(v => v.type === 'glucose')
+      const glucoseReadings = vitals.filter(v => v.type === 'blood_sugar')
       for (const glucose of glucoseReadings) {
         const value = Number(glucose.value)
         if (value >= THRESHOLDS.GLUCOSE_HIGH_THRESHOLD || value <= THRESHOLDS.GLUCOSE_LOW_THRESHOLD) {
@@ -193,7 +204,7 @@ async function analyzeVitalTrends(userId: string): Promise<VitalTrends> {
       }
 
       // Check for abnormal heart rate
-      const hrReadings = vitals.filter(v => v.type === 'heart-rate')
+      const hrReadings = vitals.filter(v => v.type === 'heart_rate')
       for (const hr of hrReadings) {
         const value = Number(hr.value)
         if (value >= THRESHOLDS.HEART_RATE_HIGH_THRESHOLD || value <= THRESHOLDS.HEART_RATE_LOW_THRESHOLD) {
@@ -249,13 +260,13 @@ async function analyzeAppointmentHistory(userId: string): Promise<AppointmentHis
       const reason = apt.reason.toLowerCase()
       const type = apt.type
 
-      if ((reason.includes('nutrition') || type === 'nutritionist') && !lastNutritionistVisit) {
+      if ((reason.includes('nutrition') || type === 'routine-checkup') && !lastNutritionistVisit) {
         lastNutritionistVisit = apt.dateTime
       }
-      if ((reason.includes('doctor') || reason.includes('physician') || type === 'primary-care') && !lastDoctorVisit) {
+      if ((reason.includes('doctor') || reason.includes('physician') || type === 'routine-checkup') && !lastDoctorVisit) {
         lastDoctorVisit = apt.dateTime
       }
-      if ((reason.includes('psych') || reason.includes('mental') || type === 'mental-health') && !lastPsychologistVisit) {
+      if ((reason.includes('psych') || reason.includes('mental') || type === 'specialist') && !lastPsychologistVisit) {
         lastPsychologistVisit = apt.dateTime
       }
     }

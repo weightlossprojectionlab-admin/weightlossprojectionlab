@@ -67,6 +67,7 @@ import { db } from '@/lib/firebase'
 import { collection, query, where, orderBy, limit, onSnapshot, Timestamp } from 'firebase/firestore'
 import toast from 'react-hot-toast'
 import { ScannedMedication } from '@/lib/medication-lookup'
+import type { WeightLog } from '@/types'
 
 export default function ProgressPage() {
   return (
@@ -457,7 +458,7 @@ function ProgressContent() {
                     {(showAllHealthConditions
                       ? profile.profile.healthConditions
                       : profile.profile.healthConditions.slice(0, 3)
-                    ).map((condition, idx) => (
+                    ).map((condition: string, idx: number) => (
                       <button
                         key={idx}
                         onClick={() => {
@@ -523,7 +524,7 @@ function ProgressContent() {
                       {(showAllMedications
                         ? profile.profile.medications
                         : profile.profile.medications.slice(0, 2)
-                      ).map((med, idx) => (
+                      ).map((med: ScannedMedication, idx: number) => (
                         <span key={idx} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs rounded flex items-center gap-1">
                           {med.name}
                           {med.patientName && (

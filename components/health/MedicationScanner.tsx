@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { XMarkIcon, CameraIcon, DocumentTextIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { BarcodeScanner } from '@/components/BarcodeScanner'
-import { lookupMedicationByNDC, ScannedMedication, searchMedicationByName } from '@/lib/medication-lookup'
+import { lookupMedicationByNDC, ScannedMedication, searchMedicationByName, MedicationInfo } from '@/lib/medication-lookup'
 import { extractMedicationFromImage, convertToScannedMedication, calculateExtractionConfidence, SuggestedCondition } from '@/lib/ocr-medication'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
@@ -38,7 +38,7 @@ export default function MedicationScanner({
 
   // Manual entry state
   const [manualSearchQuery, setManualSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<ScannedMedication[]>([])
+  const [searchResults, setSearchResults] = useState<MedicationInfo[]>([])
   const [isSearching, setIsSearching] = useState(false)
 
   // Patient name state
@@ -87,11 +87,6 @@ export default function MedicationScanner({
         }
 
         setScannedMedication(scanned)
-
-        // Auto-populate patient name if available from NDC lookup
-        if (medication.patientName && !patientName) {
-          setPatientName(medication.patientName)
-        }
 
         setScanStatus('success')
         toast.success(`Medication found: ${medication.name}`)
@@ -229,7 +224,7 @@ export default function MedicationScanner({
   /**
    * Handle manual medication selection
    */
-  const handleManualSelect = (result: ScannedMedication) => {
+  const handleManualSelect = (result: MedicationInfo) => {
     const scanned: ScannedMedication = {
       name: result.name,
       strength: result.strength,

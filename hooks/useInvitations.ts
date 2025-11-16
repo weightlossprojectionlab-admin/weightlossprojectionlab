@@ -53,7 +53,7 @@ export function useInvitations(autoFetch = true): UseInvitationsReturn {
   const sendInvitation = useCallback(
     async (data: FamilyInvitationForm): Promise<FamilyInvitation> => {
       try {
-        const newInvitation = await medicalOperations.family.sendInvitation(data)
+        const newInvitation = await medicalOperations.family.sendInvitation(data as any) // API adds invitedByUserId and invitedByName server-side
 
         // Add to sent invitations
         setSentInvitations(prev => [newInvitation, ...prev])

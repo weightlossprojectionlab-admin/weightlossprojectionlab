@@ -59,7 +59,7 @@ export function usePatients(): UsePatientsReturn {
     try {
       logger.info('[usePatients] Creating patient', { type: data.type, name: data.name })
 
-      const newPatient = await medicalOperations.patients.createPatient(data)
+      const newPatient = await medicalOperations.patients.createPatient(data as any) // API adds userId server-side
 
       // Add to local state
       setPatients(prev => [newPatient, ...prev])

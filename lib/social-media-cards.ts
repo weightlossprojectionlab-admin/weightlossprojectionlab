@@ -398,7 +398,8 @@ const loadImage = async (url: string): Promise<HTMLImageElement> => {
           resolve(img)
         }
         img.onerror = (error) => {
-          logger.error('Failed to load image from proxy API', { url, proxyUrl, error })
+          const errorMessage = error instanceof Error ? error.message : 'Failed to load image from proxy'
+          logger.error('Failed to load image from proxy API', new Error(errorMessage), { url, proxyUrl })
           reject(new Error('Failed to load image from proxy'))
         }
         // No crossOrigin needed - same origin (proxy API)
@@ -416,7 +417,8 @@ const loadImage = async (url: string): Promise<HTMLImageElement> => {
     img.crossOrigin = 'anonymous'
     img.onload = () => resolve(img)
     img.onerror = (error) => {
-      logger.error('Failed to load image for social media card', { url, error })
+      const errorMessage = error instanceof Error ? error.message : `Failed to load image: ${url}`
+      logger.error('Failed to load image for social media card', new Error(errorMessage), { url })
       reject(new Error(`Failed to load image: ${url}`))
     }
     img.src = url

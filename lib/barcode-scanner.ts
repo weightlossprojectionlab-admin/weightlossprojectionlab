@@ -57,10 +57,7 @@ export async function scanBarcodeFromImage(imageFile: File): Promise<string | nu
     return result
 
   } catch (error: any) {
-    logger.error('[Barcode Scanner] Failed to scan barcode from image', {
-      error: error.message,
-      errorType: error.name
-    })
+    logger.error('[Barcode Scanner] Failed to scan barcode from image', error)
 
     // Clean up on error
     if (tempElement && tempElement.parentNode) {
