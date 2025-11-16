@@ -541,7 +541,7 @@ function DashboardContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold mb-1">🏥 Medical Info</h3>
-                  <p className="text-sm text-green-100">Manage health records for your family</p>
+                  <p className="text-sm text-green-100">Manage health information for you or your family</p>
                 </div>
                 <a
                   href="/medical"
