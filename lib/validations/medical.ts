@@ -57,18 +57,6 @@ export const patientProfileSchema = z.object({
     message: 'Species is required for pets',
     path: ['species']
   }
-).refine(
-  (data) => {
-    // If type is 'human', gender should be provided
-    if (data.type === 'human') {
-      return !!data.gender
-    }
-    return true
-  },
-  {
-    message: 'Gender is recommended for humans',
-    path: ['gender']
-  }
 )
 
 // Form schema (for creating/updating patients)

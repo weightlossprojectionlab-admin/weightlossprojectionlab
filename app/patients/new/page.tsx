@@ -62,7 +62,10 @@ function NewPatientContent() {
       }
 
       if (formData.type === 'human') {
-        data.gender = formData.gender
+        // Only include gender if it's not empty
+        if (formData.gender) {
+          data.gender = formData.gender
+        }
       } else {
         data.species = formData.species
         if (formData.breed) data.breed = formData.breed
@@ -72,6 +75,7 @@ function NewPatientContent() {
       toast.success(`${newPatient.name} added successfully`)
       router.push(`/patients/${newPatient.id}`)
     } catch (error: any) {
+      console.error('Failed to create patient:', error)
       toast.error(error.message || 'Failed to create family member')
     } finally {
       setLoading(false)
