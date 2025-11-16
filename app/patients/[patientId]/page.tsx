@@ -9,11 +9,12 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useVitals } from '@/hooks/useVitals'
+import { usePatientPermissions } from '@/hooks/usePatientPermissions'
 import { PatientProfile, VitalType } from '@/types/medical'
 import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { ChartBarIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { ChartBarIcon, PlusIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
 import AuthGuard from '@/components/auth/AuthGuard'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
@@ -40,6 +41,15 @@ function PatientDetailContent() {
     patientId,
     autoFetch: true
   })
+
+  const {
+    role,
+    isOwner,
+    canLogVitals,
+    canViewVitals,
+    canEditProfile,
+    loading: permissionsLoading
+  } = usePatientPermissions(patientId)
 
   // Fetch patient details
   useEffect(() => {
@@ -116,16 +126,28 @@ function PatientDetailContent() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <PageHeader
         title={patient.name}
-        subtitle={`${patient.type} • ${patient.relationship}`}
+        subtitle={
+          <div className="flex items-center gap-2">
+            <span>{`${patient.type} • ${patient.relationship}`}</span>
+            {role && !isOwner && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full">
+                <ShieldCheckIcon className="w-3 h-3" />
+                Family Access
+              </span>
+            )}
+          </div>
+        }
         backHref="/patients"
         actions={
-          <button
-            onClick={() => setShowLogForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-          >
-            <PlusIcon className="w-5 h-5" />
-            Log Vital
-          </button>
+          canLogVitals && (
+            <button
+              onClick={() => setShowLogForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+            >
+              <PlusIcon className="w-5 h-5" />
+              Log Vital
+            </button>
+          )
         }
       />
 
@@ -172,20 +194,52 @@ function PatientDetailContent() {
                 )}
               </div>
 
-              {/* Family Access */}
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                  Family Access
-                </h3>
-                <button
-                  onClick={() => window.location.href = `/patients/${patientId}/family`}
-                  className="w-full px-4 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors text-sm font-medium"
-                >
-                  {familyMemberCount === 0
-                    ? 'Manage Family Access'
-                    : `${familyMemberCount} Family Member${familyMemberCount > 1 ? 's' : ''}`}
-                </button>
-              </div>
+              {/* Access Level Info */}
+              {!isOwner && role === 'family' && (
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                    <ShieldCheckIcon className="w-4 h-4 text-blue-600" />
+                    Your Permissions
+                  </h3>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">View Vitals</span>
+                      <span className={canViewVitals ? 'text-green-600' : 'text-gray-400'}>
+                        {canViewVitals ? '✓' : '✗'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Log Vitals</span>
+                      <span className={canLogVitals ? 'text-green-600' : 'text-gray-400'}>
+                        {canLogVitals ? '✓' : '✗'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Edit Profile</span>
+                      <span className={canEditProfile ? 'text-green-600' : 'text-gray-400'}>
+                        {canEditProfile ? '✓' : '✗'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Family Access (Owners Only) */}
+              {isOwner && (
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                    Family Access
+                  </h3>
+                  <button
+                    onClick={() => window.location.href = `/patients/${patientId}/family`}
+                    className="w-full px-4 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors text-sm font-medium"
+                  >
+                    {familyMemberCount === 0
+                      ? 'Manage Family Access'
+                      : `${familyMemberCount} Family Member${familyMemberCount > 1 ? 's' : ''}`}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Log Vital Form */}
