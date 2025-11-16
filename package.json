@@ -22,6 +22,7 @@
     "browser-image-compression": "^2.0.2",
     "capacitor-health": "^7.0.0",
     "date-fns": "^4.1.0",
+    "dynamsoft-barcode-reader-bundle": "^11.0.6000",
     "firebase": "^11.0.2",
     "firebase-admin": "^12.6.0",
     "html5-qrcode": "^2.3.8",

@@ -10,6 +10,8 @@ import { useRouter } from 'next/navigation'
 import { usePatients } from '@/hooks/usePatients'
 import { PageHeader } from '@/components/ui/PageHeader'
 import AuthGuard from '@/components/auth/AuthGuard'
+import { DriverLicenseScanner } from '@/components/family/DriverLicenseScanner'
+import { DocumentTextIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
 export default function NewPatientPage() {
@@ -24,6 +26,7 @@ function NewPatientContent() {
   const router = useRouter()
   const { createPatient } = usePatients()
   const [loading, setLoading] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -34,6 +37,17 @@ function NewPatientContent() {
     species: '',
     breed: ''
   })
+
+  const handleScanComplete = (scannedData: any) => {
+    setFormData({
+      ...formData,
+      name: scannedData.name,
+      dateOfBirth: scannedData.dateOfBirth,
+      gender: scannedData.gender || '',
+      type: 'human' // Driver's licenses are for humans
+    })
+    toast.success('Information auto-filled from license!')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -73,6 +87,21 @@ function NewPatientContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
+        {/* Scan License Button - Outside Form */}
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={() => setShowScanner(true)}
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all font-medium shadow-lg hover:shadow-xl"
+          >
+            <DocumentTextIcon className="w-6 h-6" />
+            <div className="text-left">
+              <div className="font-semibold">Scan Driver's License</div>
+              <div className="text-sm text-purple-100">Auto-fill information from ID</div>
+            </div>
+          </button>
+        </div>
+
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Patient Type */}
@@ -225,6 +254,13 @@ function NewPatientContent() {
             </div>
           </form>
         </div>
+
+        {/* Driver's License Scanner Modal */}
+        <DriverLicenseScanner
+          isOpen={showScanner}
+          onClose={() => setShowScanner(false)}
+          onScanComplete={handleScanComplete}
+        />
       </main>
     </div>
   )
