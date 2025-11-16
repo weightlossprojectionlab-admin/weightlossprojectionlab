@@ -5,6 +5,17 @@
  * Based on MEDICAL_RECORDS_PRD.json specification
  */
 
+// ==================== RBAC / AUTHORIZATION ====================
+
+export type UserRole = 'owner' | 'family'
+
+export interface AuthorizationResult {
+  authorized: boolean
+  role?: UserRole
+  permissions?: FamilyMemberPermissions
+  userId?: string
+}
+
 // ==================== PATIENT PROFILE ====================
 
 export interface PatientProfile {

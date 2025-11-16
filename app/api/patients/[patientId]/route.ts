@@ -8,10 +8,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { patientProfileSchema } from '@/lib/validations/medical'
-import type { PatientProfile } from '@/types/medical'
+import { authorizePatientAccess } from '@/lib/rbac-middleware'
+import type { PatientProfile, AuthorizationResult } from '@/types/medical'
 
 // GET /api/patients/[patientId] - Get a single patient
 export async function GET(
@@ -80,32 +81,48 @@ export async function PUT(
   try {
     const { patientId } = await params
 
-    // Extract and verify auth token
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      logger.warn('[API /patients/[id] PUT] Missing or invalid Authorization header')
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    // Check authorization - requires editPatientProfile permission for family members
+    const authResult = await authorizePatientAccess(request, patientId, 'editPatientProfile')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
     }
 
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    const { userId, role } = authResult as AuthorizationResult
 
     // Parse request body
     const body = await request.json()
-    logger.debug('[API /patients/[id] PUT] Request body', { body })
+    logger.debug('[API /patients/[id] PUT] Request body', { body, userId, role })
+
+    // Get patient owner's userId (for database query)
+    let ownerUserId = userId
+    if (role === 'family') {
+      // Find the patient's owner
+      const patientSnapshot = await adminDb
+        .collectionGroup('patients')
+        .where('__name__', '==', patientId)
+        .limit(1)
+        .get()
+
+      if (patientSnapshot.empty) {
+        return NextResponse.json({ success: false, error: 'Patient not found' }, { status: 404 })
+      }
+
+      // Extract owner userId from the path
+      const patientDocRef = patientSnapshot.docs[0].ref
+      ownerUserId = patientDocRef.parent.parent!.id
+    }
 
     // Get existing patient
     const patientRef = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
 
     const patientDoc = await patientRef.get()
 
     if (!patientDoc.exists) {
-      logger.warn('[API /patients/[id] PUT] Patient not found', { userId, patientId })
+      logger.warn('[API /patients/[id] PUT] Patient not found', { userId: ownerUserId, patientId })
       return NextResponse.json(
         { success: false, error: 'Patient not found' },
         { status: 404 }

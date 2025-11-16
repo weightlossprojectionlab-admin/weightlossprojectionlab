@@ -7,10 +7,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { vitalSignFormSchema } from '@/lib/validations/medical'
-import type { VitalSign } from '@/types/medical'
+import { authorizePatientAccess } from '@/lib/rbac-middleware'
+import type { VitalSign, AuthorizationResult } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
 
 // GET /api/patients/[patientId]/vitals - List vital signs with optional filtering
@@ -22,16 +23,13 @@ export async function GET(
     const { patientId } = await params
     const { searchParams } = new URL(request.url)
 
-    // Extract and verify auth token
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      logger.warn('[API /patients/[id]/vitals GET] Missing or invalid Authorization header')
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    // Check authorization - requires viewVitals permission for family members
+    const authResult = await authorizePatientAccess(request, patientId, 'viewVitals')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
     }
 
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    const { userId, role } = authResult as AuthorizationResult
 
     // Parse query parameters
     const type = searchParams.get('type')
@@ -42,27 +40,38 @@ export async function GET(
     logger.debug('[API /patients/[id]/vitals GET] Fetching vitals', {
       userId,
       patientId,
+      role,
       type,
       limit,
       startDate,
       endDate
     })
 
-    // Verify patient belongs to user
+    // Get patient owner's userId (for database query)
+    let ownerUserId = userId
+    if (role === 'family') {
+      // Find the patient's owner
+      const patientSnapshot = await adminDb
+        .collectionGroup('patients')
+        .where('__name__', '==', patientId)
+        .limit(1)
+        .get()
+
+      if (patientSnapshot.empty) {
+        return NextResponse.json({ success: false, error: 'Patient not found' }, { status: 404 })
+      }
+
+      // Extract owner userId from the path
+      const patientDocRef = patientSnapshot.docs[0].ref
+      ownerUserId = patientDocRef.parent.parent!.id
+    }
+
+    // Get patient reference
     const patientRef = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
-
-    const patientDoc = await patientRef.get()
-    if (!patientDoc.exists) {
-      logger.warn('[API /patients/[id]/vitals GET] Patient not found', { userId, patientId })
-      return NextResponse.json(
-        { success: false, error: 'Patient not found' },
-        { status: 404 }
-      )
-    }
 
     // Build query
     let vitalsQuery = patientRef
@@ -123,36 +132,43 @@ export async function POST(
   try {
     const { patientId } = await params
 
-    // Extract and verify auth token
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      logger.warn('[API /patients/[id]/vitals POST] Missing or invalid Authorization header')
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    // Check authorization - requires logVitals permission for family members
+    const authResult = await authorizePatientAccess(request, patientId, 'logVitals')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
     }
 
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    const { userId, role } = authResult as AuthorizationResult
 
     // Parse and validate request body
     const body = await request.json()
-    logger.debug('[API /patients/[id]/vitals POST] Request body', { body })
+    logger.debug('[API /patients/[id]/vitals POST] Request body', { body, userId, role })
 
-    // Verify patient belongs to user
+    // Get patient owner's userId (for database query)
+    let ownerUserId = userId
+    if (role === 'family') {
+      // Find the patient's owner
+      const patientSnapshot = await adminDb
+        .collectionGroup('patients')
+        .where('__name__', '==', patientId)
+        .limit(1)
+        .get()
+
+      if (patientSnapshot.empty) {
+        return NextResponse.json({ success: false, error: 'Patient not found' }, { status: 404 })
+      }
+
+      // Extract owner userId from the path
+      const patientDocRef = patientSnapshot.docs[0].ref
+      ownerUserId = patientDocRef.parent.parent!.id
+    }
+
+    // Get patient reference
     const patientRef = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
-
-    const patientDoc = await patientRef.get()
-    if (!patientDoc.exists) {
-      logger.warn('[API /patients/[id]/vitals POST] Patient not found', { userId, patientId })
-      return NextResponse.json(
-        { success: false, error: 'Patient not found' },
-        { status: 404 }
-      )
-    }
 
     // Validate vital sign data
     const validationResult = vitalSignFormSchema.safeParse(body)

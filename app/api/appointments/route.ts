@@ -6,9 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
 import { appointmentFormSchema } from '@/lib/validations/medical'
-import type { Appointment, PatientProfile, Provider } from '@/types/medical'
+import { authorizePatientAccess, verifyAuthToken } from '@/lib/rbac-middleware'
+import type { Appointment, PatientProfile, Provider, AuthorizationResult } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
 
 export async function GET(request: NextRequest) {
@@ -75,27 +76,41 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Authenticate user
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
-
-    // Parse and validate request body
+    // Parse and validate request body first to get patientId
     const body = await request.json()
     const validatedData = appointmentFormSchema.parse(body)
+
+    // Check authorization - requires scheduleAppointments permission for family members
+    const authResult = await authorizePatientAccess(request, validatedData.patientId, 'scheduleAppointments')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
+    }
+
+    const { userId, role } = authResult as AuthorizationResult
+
+    // Get patient owner's userId (for database query)
+    let ownerUserId = userId
+    if (role === 'family') {
+      // Find the patient's owner
+      const patientSnapshot = await adminDb
+        .collectionGroup('patients')
+        .where('__name__', '==', validatedData.patientId)
+        .limit(1)
+        .get()
+
+      if (patientSnapshot.empty) {
+        return NextResponse.json({ success: false, error: 'Patient not found' }, { status: 404 })
+      }
+
+      // Extract owner userId from the path
+      const patientDocRef = patientSnapshot.docs[0].ref
+      ownerUserId = patientDocRef.parent.parent!.id
+    }
 
     // Verify patient exists
     const patientRef = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(validatedData.patientId)
 
