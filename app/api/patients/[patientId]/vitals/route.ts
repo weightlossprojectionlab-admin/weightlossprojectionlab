@@ -66,6 +66,14 @@ export async function GET(
       ownerUserId = patientDocRef.parent.parent!.id
     }
 
+    // Ensure ownerUserId is defined
+    if (!ownerUserId) {
+      return NextResponse.json(
+        { success: false, error: 'Unable to determine patient owner' },
+        { status: 400 }
+      )
+    }
+
     // Get patient reference
     const patientRef = adminDb
       .collection('users')
@@ -161,6 +169,14 @@ export async function POST(
       // Extract owner userId from the path
       const patientDocRef = patientSnapshot.docs[0].ref
       ownerUserId = patientDocRef.parent.parent!.id
+    }
+
+    // Ensure ownerUserId is defined
+    if (!ownerUserId) {
+      return NextResponse.json(
+        { success: false, error: 'Unable to determine patient owner' },
+        { status: 400 }
+      )
     }
 
     // Get patient reference
