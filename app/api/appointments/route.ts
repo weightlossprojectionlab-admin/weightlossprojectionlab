@@ -88,6 +88,14 @@ export async function POST(request: NextRequest) {
 
     const { userId, role } = authResult as AuthorizationResult
 
+    // Ensure userId is defined
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'User ID not found in authorization result' },
+        { status: 401 }
+      )
+    }
+
     // Get patient owner's userId (for database query)
     let ownerUserId = userId
     if (role === 'family') {
