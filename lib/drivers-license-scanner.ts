@@ -32,8 +32,8 @@ async function preprocessImage(imageFile: File): Promise<File> {
     })
 
     return processedFile
-  } catch (error) {
-    logger.warn('[DL Scanner] Image preprocessing failed, using original', error)
+  } catch (error: any) {
+    logger.warn('[DL Scanner] Image preprocessing failed, using original', { error: error.message })
     return imageFile
   }
 }
