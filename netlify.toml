@@ -1,14 +1,55 @@
-# Netlify configuration for optimal caching
+# Netlify configuration for optimal caching and deployment
 
 [build]
   command = "npm run build"
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20.19.0"
+  NPM_VERSION = "10.8.2"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Redirect all routes to Next.js handler
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200
+  force = false
+
+# API routes
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200
+
+# Environment variables configuration
+# Set these in Netlify UI: Site settings > Environment variables
+#
+# Required:
+# - NEXT_PUBLIC_FIREBASE_API_KEY
+# - NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+# - NEXT_PUBLIC_FIREBASE_PROJECT_ID
+# - NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+# - NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+# - NEXT_PUBLIC_FIREBASE_APP_ID
+# - FIREBASE_PROJECT_ID
+# - FIREBASE_CLIENT_EMAIL
+# - FIREBASE_PRIVATE_KEY
+# - SENDGRID_API_KEY
+# - SENDGRID_FROM_EMAIL
+# - SENDGRID_FROM_NAME
+# - STRIPE_SECRET_KEY
+# - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+# - STRIPE_WEBHOOK_SECRET
+#
+# Optional:
+# - NEXT_PUBLIC_GEMINI_API_KEY
+# - NEXT_PUBLIC_BASE_URL
 
 # Cache static assets for 1 year
 [[headers]]
@@ -83,3 +124,19 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# Context-specific configurations
+[context.production]
+  command = "npm run build"
+  [context.production.environment]
+    NODE_ENV = "production"
+
+[context.deploy-preview]
+  command = "npm run build"
+  [context.deploy-preview.environment]
+    NODE_ENV = "production"
+
+[context.branch-deploy]
+  command = "npm run build"
+  [context.branch-deploy.environment]
+    NODE_ENV = "production"
