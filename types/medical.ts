@@ -467,6 +467,63 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   hasMore: boolean
 }
 
+// ==================== DOCUMENTS ====================
+
+export type DocumentCategory =
+  | 'insurance'
+  | 'identification'
+  | 'medical-records'
+  | 'lab-results'
+  | 'prescriptions'
+  | 'imaging'
+  | 'other'
+
+export type DocumentFileType = 'image' | 'pdf' | 'other'
+
+export type OcrStatus = 'pending' | 'processing' | 'completed' | 'failed'
+
+export interface DocumentImage {
+  url: string
+  label?: string
+  position: number
+}
+
+export interface DocumentMetadata {
+  provider?: string
+  memberName?: string
+  memberId?: string
+  groupNumber?: string
+  rxBin?: string
+  rxPcn?: string
+  rxGroup?: string
+  policyNumber?: string
+  effectiveDate?: string
+  expirationDate?: string
+  issueDate?: string
+  licenseNumber?: string
+  dateOfBirth?: string
+  address?: string
+  [key: string]: any
+}
+
+export interface PatientDocument {
+  id: string
+  patientId: string
+  userId: string
+  name: string
+  category: DocumentCategory
+  fileType: DocumentFileType
+  originalUrl: string
+  images?: DocumentImage[]
+  metadata?: DocumentMetadata
+  extractedText?: string
+  ocrStatus?: OcrStatus
+  uploadedAt: string
+  uploadedBy: string
+  tags?: string[]
+  notes?: string
+}
+
 // ==================== VALIDATION HELPERS ====================
 
 export function isBloodPressureValue(value: VitalValue): value is BloodPressureValue {
