@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb } from '@/lib/firebase-admin'
+import { adminDb, adminAuth } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { patientProfileSchema } from '@/lib/validations/medical'
 import { authorizePatientAccess } from '@/lib/rbac-middleware'
