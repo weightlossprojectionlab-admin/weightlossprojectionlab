@@ -7,7 +7,7 @@ interface PageHeaderProps {
   backHref?: string
   backLabel?: string
   actions?: ReactNode
-  subtitle?: string
+  subtitle?: ReactNode
   className?: string
   showMenu?: boolean
 }
@@ -70,7 +70,7 @@ export function PageHeader({
  * <SimplePageHeader title="Dashboard" />
  * ```
  */
-export function SimplePageHeader({ title, subtitle, showMenu = true }: { title: string; subtitle?: string; showMenu?: boolean }) {
+export function SimplePageHeader({ title, subtitle, showMenu = true }: { title: string; subtitle?: ReactNode; showMenu?: boolean }) {
   return (
     <header className="page-header">
       <div className="page-header-content">
