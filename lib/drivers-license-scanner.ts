@@ -138,7 +138,7 @@ export async function scanDriverLicense(imageFile: File): Promise<AAMVAData | nu
     }
 
     // All attempts failed
-    logger.error('[DL Scanner] All scan attempts failed - no barcode detected', {
+    logger.error('[DL Scanner] All scan attempts failed - no barcode detected', undefined, {
       totalAttempts: processedFile !== imageFile ? 3 : 2,
       suggestion: 'Try taking a clearer photo with better lighting, ensure barcode is visible and in focus'
     })
