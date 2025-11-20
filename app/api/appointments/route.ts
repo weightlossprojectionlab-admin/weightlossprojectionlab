@@ -107,6 +107,14 @@ export async function POST(request: NextRequest) {
       ownerUserId = patientDocRef.parent.parent!.id
     }
 
+    // Ensure ownerUserId is defined
+    if (!ownerUserId) {
+      return NextResponse.json(
+        { success: false, error: 'Unable to determine patient owner' },
+        { status: 400 }
+      )
+    }
+
     // Verify patient exists
     const patientRef = adminDb
       .collection('users')
