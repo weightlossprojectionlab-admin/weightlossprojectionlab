@@ -148,6 +148,14 @@ export async function POST(
 
     const { userId, role } = authResult as AuthorizationResult
 
+    // Ensure userId is defined
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'User ID not found in authorization result' },
+        { status: 401 }
+      )
+    }
+
     // Parse and validate request body
     const body = await request.json()
     logger.debug('[API /patients/[id]/vitals POST] Request body', { body, userId, role })
