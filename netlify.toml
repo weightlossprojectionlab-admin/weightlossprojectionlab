@@ -3,10 +3,12 @@
 [build]
   command = "npm run build"
   publish = ".next"
+  ignore = ".next/cache/**"
 
 [build.environment]
   NODE_VERSION = "20.19.0"
   NPM_VERSION = "10.8.2"
+  SECRETS_SCAN_PATH_EXCLUSIONS = ".next/cache/**"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
