@@ -467,7 +467,9 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
               <CalendarIcon className="w-4 h-4" />
               {new Date(document.uploadedAt).toLocaleDateString()}
             </div>
-            <div>{(document.fileSize / 1024).toFixed(0)} KB</div>
+            {document.fileSize && (
+              <div>{(document.fileSize / 1024).toFixed(0)} KB</div>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <a
