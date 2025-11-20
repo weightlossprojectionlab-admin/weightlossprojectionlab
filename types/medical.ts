@@ -513,6 +513,7 @@ export interface PatientDocument {
   name: string
   category: DocumentCategory
   fileType: DocumentFileType
+  fileSize?: number
   originalUrl: string
   images?: DocumentImage[]
   metadata?: DocumentMetadata
