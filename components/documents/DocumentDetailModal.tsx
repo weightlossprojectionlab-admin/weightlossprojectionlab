@@ -1,7 +1,7 @@
 'use client'
 
 import { PatientDocument } from '@/types/medical'
-import { XMarkIcon, DocumentTextIcon, CalendarIcon, UserIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, DocumentTextIcon, CalendarIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 
 interface DocumentDetailModalProps {
