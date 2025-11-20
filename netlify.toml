@@ -1,8 +1,7 @@
 # Netlify configuration for optimal caching and deployment
 
 [build]
-  command = "rm -rf .next/cache && npm run build"
-  publish = ".next"
+  command = "npm run build"
 
 [build.environment]
   NODE_VERSION = "20.19.0"
@@ -10,9 +9,6 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-[functions]
-  node_bundler = "esbuild"
 
 # Redirect all routes to Next.js handler
 [[redirects]]
