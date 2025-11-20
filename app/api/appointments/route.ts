@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb } from '@/lib/firebase-admin'
+import { adminDb, adminAuth } from '@/lib/firebase-admin'
 import { appointmentFormSchema } from '@/lib/validations/medical'
 import { authorizePatientAccess, verifyAuthToken } from '@/lib/rbac-middleware'
 import type { Appointment, PatientProfile, Provider, AuthorizationResult } from '@/types/medical'
