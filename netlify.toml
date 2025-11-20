@@ -128,15 +128,9 @@
 # Context-specific configurations
 [context.production]
   command = "npm run build"
-  [context.production.environment]
-    NODE_ENV = "production"
 
 [context.deploy-preview]
   command = "npm run build"
-  [context.deploy-preview.environment]
-    NODE_ENV = "production"
 
 [context.branch-deploy]
   command = "npm run build"
-  [context.branch-deploy.environment]
-    NODE_ENV = "production"
