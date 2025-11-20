@@ -511,6 +511,7 @@ export interface PatientDocument {
   patientId: string
   userId: string
   name: string
+  fileName?: string
   category: DocumentCategory
   fileType: DocumentFileType
   fileSize?: number
