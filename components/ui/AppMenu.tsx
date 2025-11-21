@@ -59,7 +59,8 @@ export function AppMenu() {
     {
       title: 'Health',
       items: [
-        { name: 'Medical Info', href: '/medical', icon: HeartIcon },
+        { name: 'Health Vitals', href: '/health-vitals', icon: HeartIcon },
+        { name: 'Medical Info', href: '/medical', icon: BeakerIcon },
         { name: 'Family Members', href: '/patients', icon: UserGroupIcon },
         { name: 'Medications', href: '/medications', icon: BeakerIcon },
       ],
