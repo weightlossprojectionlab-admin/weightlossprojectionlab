@@ -1,0 +1,17 @@
+refs/heads/docs/repository-cleanup
+refs/heads/feature/inventory-enhancements
+refs/heads/feature/native-wrapper
+refs/heads/feature/premium-subscription
+refs/heads/feature/recipe-library-migration
+refs/heads/feature/recipe-marketplace
+refs/heads/feature/shopping-list-enhancements
+refs/heads/feature/social-expansion
+refs/heads/main
+refs/heads/perf/bundle-optimization
+refs/heads/test/e2e-suite
+refs/remotes/origin/feature/cooking-vs-preparing
+refs/remotes/origin/feature/scanner-shopping-inventory
+refs/remotes/origin/hotfix/firestore-permissions
+refs/remotes/origin/main
+refs/remotes/origin/perf/phase-3a-dashboard-optimization
+refs/stash

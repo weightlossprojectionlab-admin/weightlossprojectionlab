@@ -24,7 +24,7 @@ export async function GET(
     const { patientId } = await params
 
     // Check authorization and get owner userId
-    const authResult = await assertPatientAccess(request, patientId, 'viewPatientProfile')
+    const authResult = await assertPatientAccess(request, patientId, 'viewMedicalRecords')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }

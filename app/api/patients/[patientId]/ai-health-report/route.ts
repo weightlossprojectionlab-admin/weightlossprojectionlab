@@ -14,7 +14,7 @@ export async function POST(
     const { patientId } = await params
 
     // Check patient access
-    const accessInfo = await assertPatientAccess(request, patientId, 'viewPatientProfile')
+    const accessInfo = await assertPatientAccess(request, patientId, 'viewMedicalRecords')
     if (accessInfo instanceof Response) {
       return accessInfo
     }

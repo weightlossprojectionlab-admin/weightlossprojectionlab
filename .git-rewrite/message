@@ -1,0 +1,9 @@
+Fix: Update RecipeImportModal and RecipeMediaUpload type errors
+
+- Change servings to servingSize to match MealSuggestion interface
+- Add nullish coalescing to handle undefined imageUrl values
+- Fixes TypeScript strict type checking errors
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>

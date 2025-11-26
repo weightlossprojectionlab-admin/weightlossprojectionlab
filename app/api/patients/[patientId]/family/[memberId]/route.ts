@@ -21,7 +21,7 @@ export async function PUT(
     const { patientId, memberId } = await params
 
     // Check authorization and get owner userId (only owner can manage family permissions)
-    const authResult = await assertPatientAccess(request, patientId, 'viewPatientProfile')
+    const authResult = await assertPatientAccess(request, patientId, 'viewMedicalRecords')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }
@@ -132,7 +132,7 @@ export async function DELETE(
     const { patientId, memberId } = await params
 
     // Check authorization and get owner userId (only owner can remove family access)
-    const authResult = await assertPatientAccess(request, patientId, 'viewPatientProfile')
+    const authResult = await assertPatientAccess(request, patientId, 'viewMedicalRecords')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }

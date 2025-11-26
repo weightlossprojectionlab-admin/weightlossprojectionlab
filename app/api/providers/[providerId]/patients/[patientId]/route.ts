@@ -19,7 +19,7 @@ export async function DELETE(
     const { providerId, patientId } = await params
 
     // Check authorization - user must have access to the patient
-    const authResult = await assertPatientAccess(request, patientId, 'viewPatientProfile')
+    const authResult = await assertPatientAccess(request, patientId, 'viewMedicalRecords')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }

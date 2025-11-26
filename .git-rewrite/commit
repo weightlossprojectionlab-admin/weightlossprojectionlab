@@ -1,0 +1,14 @@
+tree 401fa6441c19560f0edc312f965b9459ca71fac3
+parent 5bf85f3aa0f6a7795c85b561f6fbd9420c34bfa2
+author Percy Rice <perriceconsulting@gmail.com> 1761230057 -0400
+committer Percy Rice <perriceconsulting@gmail.com> 1761230057 -0400
+
+Fix: Update RecipeImportModal and RecipeMediaUpload type errors
+
+- Change servings to servingSize to match MealSuggestion interface
+- Add nullish coalescing to handle undefined imageUrl values
+- Fixes TypeScript strict type checking errors
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
