@@ -11,9 +11,9 @@ interface MacroPieChartProps {
 }
 
 const COLORS = {
-  protein: '#ef4444', // Red
-  carbs: '#f59e0b',   // Orange/Yellow
-  fat: '#10b981'      // Green
+  protein: 'hsl(var(--error))', // Red
+  carbs: 'hsl(var(--warning))',   // Orange/Yellow
+  fat: 'hsl(var(--success))'      // Green
 }
 
 export function MacroPieChart({ protein, carbs, fat, loading }: MacroPieChartProps) {
@@ -21,8 +21,8 @@ export function MacroPieChart({ protein, carbs, fat, loading }: MacroPieChartPro
 
   if (loading) {
     return (
-      <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse flex items-center justify-center">
-        <p className="text-gray-600 dark:text-gray-400">Loading chart...</p>
+      <div className="w-full h-64 bg-muted rounded-lg animate-pulse flex items-center justify-center">
+        <p className="text-muted-foreground">Loading chart...</p>
       </div>
     )
   }
@@ -31,10 +31,10 @@ export function MacroPieChart({ protein, carbs, fat, loading }: MacroPieChartPro
 
   if (total === 0) {
     return (
-      <div className="w-full h-64 bg-gray-50 dark:bg-gray-950 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
+      <div className="w-full h-64 bg-background rounded-lg border-2 border-dashed border-border flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">No macro data available</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Log meals to track your macronutrients!</p>
+          <p className="text-foreground font-medium mb-1">No macro data available</p>
+          <p className="text-sm text-muted-foreground">Log meals to track your macronutrients!</p>
         </div>
       </div>
     )
@@ -56,10 +56,10 @@ export function MacroPieChart({ protein, carbs, fat, loading }: MacroPieChartPro
 
   // Theme-aware colors
   const isDark = resolvedTheme === 'dark'
-  const tooltipBg = isDark ? '#1f2937' : '#ffffff'
-  const tooltipBorder = isDark ? '#374151' : '#e5e7eb'
-  const tooltipText = isDark ? '#f9fafb' : '#111827'
-  const labelColor = isDark ? '#f9fafb' : '#111827'
+  const tooltipBg = 'hsl(var(--card))'
+  const tooltipBorder = 'hsl(var(--border))'
+  const tooltipText = 'hsl(var(--card-foreground))'
+  const labelColor = 'hsl(var(--card-foreground))'
 
   return (
     <div className="w-full">
@@ -72,7 +72,7 @@ export function MacroPieChart({ protein, carbs, fat, loading }: MacroPieChartPro
             labelLine={false}
             label={({ percent }) => `${((percent as number) * 100).toFixed(0)}%`}
             outerRadius={100}
-            fill="#8884d8"
+            fill="hsl(var(--primary))"
             dataKey="value"
             animationBegin={0}
             animationDuration={800}
@@ -100,19 +100,19 @@ export function MacroPieChart({ protein, carbs, fat, loading }: MacroPieChartPro
       {/* Summary stats below chart */}
       <div className="mt-4 grid grid-cols-3 gap-4 text-center">
         <div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Protein</p>
-          <p className="text-lg font-bold text-[#ef4444]">{Math.round(protein)}g</p>
-          <p className="text-xs text-gray-500 dark:text-gray-500">{percentages.protein}%</p>
+          <p className="text-sm text-muted-foreground">Protein</p>
+          <p className="text-lg font-bold text-error">{Math.round(protein)}g</p>
+          <p className="text-xs text-muted-foreground">{percentages.protein}%</p>
         </div>
         <div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Carbs</p>
-          <p className="text-lg font-bold text-[#f59e0b]">{Math.round(carbs)}g</p>
-          <p className="text-xs text-gray-500 dark:text-gray-500">{percentages.carbs}%</p>
+          <p className="text-sm text-muted-foreground">Carbs</p>
+          <p className="text-lg font-bold text-warning">{Math.round(carbs)}g</p>
+          <p className="text-xs text-muted-foreground">{percentages.carbs}%</p>
         </div>
         <div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Fat</p>
-          <p className="text-lg font-bold text-[#10b981]">{Math.round(fat)}g</p>
-          <p className="text-xs text-gray-500 dark:text-gray-500">{percentages.fat}%</p>
+          <p className="text-sm text-muted-foreground">Fat</p>
+          <p className="text-lg font-bold text-success">{Math.round(fat)}g</p>
+          <p className="text-xs text-muted-foreground">{percentages.fat}%</p>
         </div>
       </div>
     </div>

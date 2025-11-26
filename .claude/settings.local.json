@@ -14,7 +14,10 @@
       "Write(**)",
       "Edit(**)",
       "Bash(mkdir:*)",
-      "Bash(sleep:*)"
+      "Bash(sleep:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsx:*)"
     ],
     "deny": [],
     "ask": [],

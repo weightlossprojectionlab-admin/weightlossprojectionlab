@@ -16,6 +16,18 @@ export interface AuthorizationResult {
   userId?: string
 }
 
+// ==================== FAMILY ROLES (Account Management) ====================
+
+/**
+ * Family Role Hierarchy
+ *
+ * account_owner: The primary account holder (highest authority)
+ * co_admin: Trusted family member with elevated privileges
+ * caregiver: Standard caregiver with assigned permissions
+ * viewer: Read-only access to assigned patients
+ */
+export type FamilyRole = 'account_owner' | 'co_admin' | 'caregiver' | 'viewer'
+
 // ==================== PATIENT PROFILE ====================
 
 export interface PatientProfile {
@@ -35,6 +47,28 @@ export interface PatientProfile {
   // Human-specific fields
   gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say'
   emergencyContacts?: EmergencyContact[]
+
+  // Health vitals (for both humans and pets)
+  height?: number // in inches (imperial) or cm (metric)
+  heightUnit?: 'imperial' | 'metric'
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active'
+  targetWeight?: number
+  targetWeightUnit?: 'lbs' | 'kg'
+  weightGoal?: 'lose-weight' | 'maintain-weight' | 'gain-muscle' | 'improve-health'
+
+  // Check-in preferences (set during onboarding)
+  weightCheckInFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+
+  // Health Goals (patient-specific)
+  goals?: {
+    targetWeight?: number // Target weight goal
+    startWeight?: number // Starting weight (for progress calculation)
+    dailyCalorieGoal?: number // Daily calorie target
+    dailyStepGoal?: number // Daily step goal
+  }
+
+  // Onboarding status
+  vitalsComplete?: boolean // true if height + initial weight provided
 
   // Metadata
   createdAt: string // ISO 8601
@@ -61,10 +95,78 @@ export interface EmergencyContact {
 export type VitalType =
   | 'blood_sugar'
   | 'blood_pressure'
-  | 'heart_rate'
-  | 'blood_oxygen'
+  | 'pulse_oximeter'
   | 'temperature'
   | 'weight'
+
+// ==================== WEIGHT LOGS ====================
+
+export interface WeightLog {
+  id: string
+  patientId: string
+  userId: string // Owner of the patient record
+  weight: number
+  unit: 'lbs' | 'kg'
+  loggedAt: string // ISO 8601
+  loggedBy: string // userId of family member who recorded
+  notes?: string
+  bodyFat?: number // Optional body fat percentage
+  bmi?: number // Calculated BMI
+  source: 'manual' | 'scale' | 'health_app'
+  deviceId?: string // For smart scale integration
+  tags?: string[] // 'morning', 'evening', 'after_workout', 'before_meal'
+}
+
+// ==================== MEAL LOGS ====================
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
+
+export interface MealLog {
+  id: string
+  patientId: string
+  userId: string // Owner of the patient record
+  mealType: MealType
+  foodItems: string[]
+  description?: string
+  photoUrl?: string
+  photoHash?: string // For deduplication
+  calories?: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  fiber?: number
+  loggedAt: string // ISO 8601
+  loggedBy: string // userId of family member who recorded
+  consumedAt?: string // ISO 8601 - when meal was actually eaten
+  notes?: string
+  tags?: string[] // 'homemade', 'restaurant', 'takeout', 'meal-prep'
+  location?: string // Restaurant name or location
+  aiAnalyzed?: boolean
+  aiConfidence?: number
+}
+
+// ==================== STEP LOGS ====================
+
+export type StepSource = 'manual' | 'fitbit' | 'apple-health' | 'google-fit' | 'samsung-health' | 'garmin' | 'other'
+
+export interface StepLog {
+  id: string
+  patientId: string
+  userId: string // Owner of the patient record
+  steps: number
+  date: string // YYYY-MM-DD format
+  distance?: number // kilometers
+  calories?: number // Calories burned from activity
+  activeMinutes?: number
+  floors?: number // Flights of stairs
+  source: StepSource
+  deviceId?: string
+  loggedAt: string // ISO 8601 - when logged to system
+  loggedBy: string // userId of family member who recorded
+  notes?: string
+  synced?: boolean // If from external app
+  lastSyncedAt?: string // ISO 8601
+}
 
 export type VitalUnit =
   | 'mg/dL'
@@ -82,7 +184,13 @@ export interface BloodPressureValue {
   diastolic: number
 }
 
-export type VitalValue = number | BloodPressureValue
+export interface PulseOximeterValue {
+  spo2: number          // Blood oxygen saturation (%)
+  pulseRate: number     // Heart rate (bpm)
+  perfusionIndex?: number // Optional perfusion index (%)
+}
+
+export type VitalValue = number | BloodPressureValue | PulseOximeterValue
 
 export interface VitalSign {
   id: string
@@ -371,6 +479,13 @@ export interface FamilyMember {
   patientsAccess: string[] // patientIds they can manage
   lastActive?: string // ISO 8601
   deviceTokens?: string[] // FCM tokens for push notifications
+
+  // Family Role Management (Account Owner System)
+  familyRole: FamilyRole // Default: 'caregiver'
+  managedBy: string // userId of who invited/manages them
+  canBeEditedBy: string[] // Array of userIds who can modify this member
+  roleAssignedAt?: string // ISO 8601 - when role was last changed
+  roleAssignedBy?: string // userId who assigned the current role
 }
 
 export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'revoked'
@@ -384,6 +499,7 @@ export interface FamilyInvitation {
   recipientPhone?: string
   patientsShared: string[] // patientIds
   permissions: FamilyMemberPermissions
+  familyRole?: FamilyRole // Role to assign (default: caregiver)
   message?: string // Personal message from inviter
   createdAt: string // ISO 8601
   expiresAt: string // ISO 8601 (default 7 days)
@@ -532,6 +648,60 @@ export function isBloodPressureValue(value: VitalValue): value is BloodPressureV
   return typeof value === 'object' && 'systolic' in value && 'diastolic' in value
 }
 
+export function isPulseOximeterValue(value: VitalValue): value is PulseOximeterValue {
+  return typeof value === 'object' && 'spo2' in value && 'pulseRate' in value
+}
+
 export function isNumericVitalValue(value: VitalValue): value is number {
   return typeof value === 'number'
+}
+
+// ==================== MEDICATIONS ====================
+
+export interface PatientMedication {
+  id: string
+  patientId: string
+  userId: string // Owner of the patient record
+
+  // Drug Information
+  name: string // Generic drug name (e.g., "Metformin")
+  brandName?: string // Brand name if applicable (e.g., "Glucophage")
+  strength: string // e.g., "500 mg", "10 mg"
+  dosageForm: string // e.g., "tablet", "capsule", "gel", "injection"
+
+  // Prescription Details
+  frequency?: string // COMPLETE dosage instructions (e.g., "Take 1 tablet by mouth every day")
+  prescribedFor?: string // Condition name (e.g., "Type 2 Diabetes")
+  prescribingDoctor?: string // Prescribing doctor name (e.g., "V.Atieh")
+  rxNumber?: string // Prescription number
+  quantity?: string // Quantity dispensed (e.g., "30 tablets", "60 capsules")
+  refills?: string // Refills remaining (e.g., "3 refills", "No refills")
+  fillDate?: string // Date prescription was filled (ISO string)
+  expirationDate?: string // Expiration date (ISO string)
+
+  // Adherence Tracking
+  quantityRemaining?: number // Pills/doses remaining
+  lastTaken?: string // ISO string of last dose taken
+  adherenceRate?: number // Percentage (0-100) of doses taken on time
+
+  // Clinical Data
+  rxcui?: string // RxNorm Concept Unique Identifier
+  ndc?: string // National Drug Code
+  drugClass?: string // Therapeutic class
+  warnings?: string[] // Special warnings
+
+  // Pharmacy Info
+  pharmacyName?: string
+  pharmacyPhone?: string
+
+  // Image/Photo
+  imageUrl?: string // URL to medication bottle image
+  photoUrl?: string // Alternative field name for image URL (for compatibility)
+
+  // Metadata
+  addedAt: string // ISO 8601
+  addedBy: string // userId of person who added
+  scannedAt?: string // ISO 8601 - if scanned from label
+  lastModified: string // ISO 8601
+  notes?: string
 }

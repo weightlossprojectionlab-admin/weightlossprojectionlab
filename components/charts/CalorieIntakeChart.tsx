@@ -14,18 +14,18 @@ export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
 
   if (loading) {
     return (
-      <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse flex items-center justify-center">
-        <p className="text-gray-600 dark:text-gray-400">Loading chart...</p>
+      <div className="w-full h-64 bg-muted rounded-lg animate-pulse flex items-center justify-center">
+        <p className="text-muted-foreground">Loading chart...</p>
       </div>
     )
   }
 
   if (data.length === 0) {
     return (
-      <div className="w-full h-64 bg-gray-50 dark:bg-gray-950 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
+      <div className="w-full h-64 bg-background rounded-lg border-2 border-dashed border-border flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">No calorie data available</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Log meals to track your calorie intake!</p>
+          <p className="text-foreground font-medium mb-1">No calorie data available</p>
+          <p className="text-sm text-muted-foreground">Log meals to track your calorie intake!</p>
         </div>
       </div>
     )
@@ -45,11 +45,11 @@ export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
 
   // Theme-aware colors
   const isDark = resolvedTheme === 'dark'
-  const gridColor = isDark ? '#374151' : '#e5e7eb'
-  const axisColor = isDark ? '#9ca3af' : '#6b7280'
-  const tooltipBg = isDark ? '#1f2937' : '#ffffff'
-  const tooltipBorder = isDark ? '#374151' : '#e5e7eb'
-  const tooltipText = isDark ? '#f9fafb' : '#111827'
+  const gridColor = 'hsl(var(--border))'
+  const axisColor = 'hsl(var(--muted-foreground))'
+  const tooltipBg = 'hsl(var(--card))'
+  const tooltipBorder = 'hsl(var(--border))'
+  const tooltipText = 'hsl(var(--card-foreground))'
 
   return (
     <div className="w-full">
@@ -87,12 +87,12 @@ export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
           {/* Goal reference line */}
           <ReferenceLine
             y={avgGoal}
-            stroke="#10b981"
+            stroke="hsl(var(--success))"
             strokeDasharray="5 5"
             label={{
               value: `Goal: ${avgGoal} cal`,
               position: 'right',
-              fill: '#10b981',
+              fill: 'hsl(var(--success))',
               fontSize: 12
             }}
           />
@@ -100,7 +100,7 @@ export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
           {/* Calorie bars */}
           <Bar
             dataKey="calories"
-            fill="#8b5cf6"
+            fill="hsl(var(--primary))"
             radius={[4, 4, 0, 0]}
             name="Calories"
           />
@@ -110,12 +110,12 @@ export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
       {/* Stats summary */}
       <div className="flex items-center justify-center gap-6 mt-4 text-sm">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-[#8b5cf6] rounded" />
-          <span className="text-gray-900 dark:text-gray-100">Daily Intake</span>
+          <div className="w-4 h-4 bg-primary rounded" />
+          <span className="text-foreground">Daily Intake</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-1 bg-[#10b981] border-t-2 border-dashed" />
-          <span className="text-gray-900 dark:text-gray-100">Calorie Goal</span>
+          <div className="w-4 h-1 bg-success border-t-2 border-dashed" />
+          <span className="text-foreground">Calorie Goal</span>
         </div>
       </div>
     </div>

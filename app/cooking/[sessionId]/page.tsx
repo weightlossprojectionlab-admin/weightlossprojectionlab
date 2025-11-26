@@ -185,8 +185,8 @@ function CookingSessionContent() {
   if (!session || !recipe) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-100 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 text-center max-w-md">
-          <p className="text-gray-900 dark:text-gray-100 mb-4">Cooking session not found</p>
+        <div className="bg-card rounded-lg shadow-lg p-8 text-center max-w-md">
+          <p className="text-foreground mb-4">Cooking session not found</p>
           <Link
             href="/dashboard"
             className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
@@ -211,12 +211,12 @@ function CookingSessionContent() {
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Progress Bar */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-4 mb-6">
+        <div className="bg-card rounded-lg shadow-lg p-4 mb-6">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Overall Progress</span>
-            <span className="text-sm text-gray-600 dark:text-gray-400">{Math.round(progress)}%</span>
+            <span className="text-sm font-medium text-foreground">Overall Progress</span>
+            <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
           </div>
-          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3">
+          <div className="w-full bg-muted rounded-full h-3">
             <div
               className="bg-success h-3 rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
@@ -228,17 +228,17 @@ function CookingSessionContent() {
           {/* Main Content - Steps & Timer */}
           <div className="lg:col-span-2 space-y-6">
             {/* Current Step */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6">
+            <div className="bg-card rounded-lg shadow-lg p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <h2 className="text-2xl font-bold text-foreground">
                   Step {session.currentStep + 1}
                 </h2>
-                <span className="text-sm bg-purple-100 dark:bg-purple-900/20 text-primary px-3 py-1 rounded-full font-medium">
+                <span className="text-sm bg-primary-light dark:bg-purple-900/20 text-primary px-3 py-1 rounded-full font-medium">
                   {recipe.mealType}
                 </span>
               </div>
 
-              <p className="text-lg text-gray-900 dark:text-gray-100 mb-6 leading-relaxed">
+              <p className="text-lg text-foreground mb-6 leading-relaxed">
                 {currentStepData.stepText}
               </p>
 
@@ -253,8 +253,8 @@ function CookingSessionContent() {
               )}
 
               {!currentStepData.duration && (
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-center">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
                     No timer needed for this step. Mark it complete when ready!
                   </p>
                 </div>
@@ -262,12 +262,12 @@ function CookingSessionContent() {
             </div>
 
             {/* Navigation Controls */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6">
+            <div className="bg-card rounded-lg shadow-lg p-6">
               <div className="flex items-center justify-between space-x-4">
                 <button
                   onClick={handlePreviousStep}
                   disabled={session.currentStep === 0}
-                  className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  className="px-6 py-3 bg-muted text-foreground rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -298,42 +298,42 @@ function CookingSessionContent() {
           {/* Sidebar - Ingredients & Info */}
           <div className="space-y-6">
             {/* Recipe Info */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6">
-              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Recipe Info</h3>
+            <div className="bg-card rounded-lg shadow-lg p-6">
+              <h3 className="font-bold text-foreground mb-4">Recipe Info</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Servings:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{session.servingSize}</span>
+                  <span className="text-muted-foreground">Servings:</span>
+                  <span className="font-medium text-foreground">{session.servingSize}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Calories:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{session.scaledCalories}</span>
+                  <span className="text-muted-foreground">Calories:</span>
+                  <span className="font-medium text-foreground">{session.scaledCalories}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Protein:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{session.scaledMacros.protein}g</span>
+                  <span className="text-muted-foreground">Protein:</span>
+                  <span className="font-medium text-foreground">{session.scaledMacros.protein}g</span>
                 </div>
               </div>
             </div>
 
             {/* Ingredients Checklist */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6">
-              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Ingredients</h3>
+            <div className="bg-card rounded-lg shadow-lg p-6">
+              <h3 className="font-bold text-foreground mb-4">Ingredients</h3>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {session.scaledIngredients.map((ingredient, idx) => (
                   <label
                     key={idx}
-                    className={`flex items-start space-x-3 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-800 cursor-pointer transition-colors ${
-                      checkedIngredients.has(idx) ? 'bg-purple-100 dark:bg-purple-900/20/30' : ''
+                    className={`flex items-start space-x-3 p-2 rounded hover:bg-muted cursor-pointer transition-colors ${
+                      checkedIngredients.has(idx) ? 'bg-primary-light dark:bg-purple-900/20/30' : ''
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={checkedIngredients.has(idx)}
                       onChange={() => toggleIngredient(idx)}
-                      className="mt-1 w-4 h-4 text-primary border-gray-200 dark:border-gray-700 rounded focus:ring-primary"
+                      className="mt-1 w-4 h-4 text-primary border-border rounded focus:ring-primary"
                     />
-                    <span className={`text-sm flex-1 ${checkedIngredients.has(idx) ? 'line-through text-gray-600 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                    <span className={`text-sm flex-1 ${checkedIngredients.has(idx) ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                       {ingredient}
                     </span>
                   </label>
@@ -347,15 +347,15 @@ function CookingSessionContent() {
       {/* Completion Modal */}
       {showCompletionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-w-md w-full p-8 text-center">
+          <div className="bg-card border border-border rounded-lg shadow-xl max-w-md w-full p-8 text-center">
             <div className="text-6xl mb-4">🎉</div>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">You Did It!</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <h2 className="text-3xl font-bold text-foreground mb-4">You Did It!</h2>
+            <p className="text-muted-foreground mb-6">
               Congratulations on completing <strong>{session.recipeName}</strong>! Now let's log this delicious meal.
             </p>
 
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Meal summary:</p>
+            <div className="bg-muted rounded-lg p-4 mb-6">
+              <p className="text-sm text-muted-foreground mb-2">Meal summary:</p>
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
                   <span>Servings:</span>
@@ -381,7 +381,7 @@ function CookingSessionContent() {
 
             <button
               onClick={() => setShowCompletionModal(false)}
-              className="w-full px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+              className="w-full px-6 py-3 bg-muted text-foreground rounded-lg hover:bg-gray-200 transition-colors font-medium"
             >
               Continue Cooking
             </button>

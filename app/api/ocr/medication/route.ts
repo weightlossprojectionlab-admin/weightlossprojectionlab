@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const prompt = `Analyze this prescription medication label and extract ALL information visible.
+    const prompt = `Analyze this prescription medication label and extract ALL information visible. Look carefully at EVERY line of text on the label, even if blurry or at an angle.
 
 This may be the FRONT label (showing dosage instructions) or BACK label (showing NDC barcode, Rx number, pharmacy info).
 
@@ -138,7 +138,7 @@ Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
   "frequency": "COMPLETE dosage instructions - see requirements below",
   "rxNumber": "prescription number (Rx# or Rx No)",
   "ndc": "NDC number if visible (11-digit with dashes)",
-  "prescribingDoctor": "doctor/prescriber name",
+  "prescribingDoctor": "doctor/prescriber name (look for Dr, Doctor, Prescriber, Physician - VERY IMPORTANT)",
   "patientName": "patient name",
   "patientAddress": "patient address (street, apt, city)",
   "pharmacy": "pharmacy name",
@@ -179,7 +179,16 @@ CRITICAL REQUIREMENTS:
   - "Keep refrigerated"
   - "Do not crush or chew"
 
-If any field is not visible or unclear, use null for that field. Focus on ACCURACY and COMPLETENESS.`
+**prescribingDoctor field** - VERY IMPORTANT - Look carefully for doctor name:
+  - May appear as: "Dr Smith", "Dr. John Smith", "Dr V.Atieh", "Prescriber: Smith", "Physician: Jones"
+  - Check EVERY line on the label, even small print
+  - Common locations: near patient name, near Rx#, in pharmacy info section
+  - Format: Extract the name as shown (e.g., "V.Atieh", "John Smith", "J. Doe")
+  - DO NOT include "Dr" or "Dr." prefix in the extracted name
+
+If any field is not visible or unclear, use null for that field. Focus on ACCURACY and COMPLETENESS.
+
+IMPORTANT: Make your best effort to find the prescribing doctor name - this is critical medical information.`
 
     const result = await model.generateContent([prompt, imagePart])
     const response = await result.response

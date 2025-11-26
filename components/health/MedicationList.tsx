@@ -54,7 +54,7 @@ export default function MedicationList({
         <div>
           <label className="text-label block mb-1">{label}</label>
           {description && (
-            <p className="text-xs text-gray-600 dark:text-gray-400">{description}</p>
+            <p className="text-xs text-muted-foreground">{description}</p>
           )}
         </div>
       )}
@@ -76,9 +76,9 @@ export default function MedicationList({
 
       {/* Empty state */}
       {medications.length === 0 && (
-        <div className="text-center py-8 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
-          <CameraIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        <div className="text-center py-8 rounded-lg border-2 border-dashed border-border">
+          <CameraIcon className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground mb-4">
             No medications added yet
           </p>
         </div>

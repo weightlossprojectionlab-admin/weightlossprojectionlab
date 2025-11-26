@@ -77,11 +77,11 @@ export async function POST(
     const acceptedAt = new Date().toISOString()
 
     // Create family member record in inviter's family members collection
-    const familyMember: Omit<FamilyMember, 'id'> = {
+    // Only include defined values to avoid Firestore errors
+    const familyMember: any = {
       userId,
       email: userEmail,
       name: userName,
-      photo: userData?.photoURL || userData?.photo,
       relationship: 'family', // Can be updated later
       invitedBy: invitation.invitedByUserId,
       invitedAt: invitation.createdAt,
@@ -101,7 +101,20 @@ export async function POST(
         driverReminderDaysBefore: [7, 3, 1]
       },
       patientsAccess: invitation.patientsShared,
-      lastActive: acceptedAt
+      lastActive: acceptedAt,
+
+      // Family Role Management (Account Owner System)
+      familyRole: invitation.familyRole || 'caregiver', // Default to caregiver if not specified
+      managedBy: invitation.invitedByUserId, // Who invited/manages them
+      canBeEditedBy: [invitation.invitedByUserId], // Initial editor is the inviter
+      roleAssignedAt: acceptedAt,
+      roleAssignedBy: invitation.invitedByUserId
+    }
+
+    // Only add photo if it exists
+    const photo = userData?.photoURL || userData?.photo
+    if (photo) {
+      familyMember.photo = photo
     }
 
     const memberRef = await adminDb
@@ -117,12 +130,31 @@ export async function POST(
       acceptedAt
     })
 
+    // Update the accepting user's profile to set userMode='caregiver'
+    // This ensures they see the caregiver dashboard
+    const userRef = adminDb.collection('users').doc(userId)
+    await userRef.set({
+      preferences: {
+        userMode: 'caregiver',
+        onboardingAnswers: {
+          userMode: 'caregiver',
+          primaryRole: 'caregiver',
+          featurePreferences: ['medical_tracking', 'caregiving', 'vitals', 'medications'],
+          kitchenMode: 'self',
+          mealLoggingMode: 'both',
+          automationLevel: 'no',
+          addFamilyNow: false,
+          completedAt: acceptedAt
+        }
+      }
+    }, { merge: true })
+
     const createdMember: FamilyMember = {
       id: memberRef.id,
       ...familyMember
     }
 
-    console.log(`Invitation ${invitationId} accepted by ${userId}`)
+    console.log(`Invitation ${invitationId} accepted by ${userId}, userMode set to 'caregiver'`)
 
     return NextResponse.json({
       success: true,

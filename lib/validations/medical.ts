@@ -87,8 +87,7 @@ export const patientProfileFormSchema = patientProfileSchema.omit({
 export const vitalTypeSchema = z.enum([
   'blood_sugar',
   'blood_pressure',
-  'heart_rate',
-  'blood_oxygen',
+  'pulse_oximeter',
   'temperature',
   'weight'
 ])
@@ -116,9 +115,16 @@ export const bloodPressureValueSchema = z.object({
   }
 )
 
+export const pulseOximeterValueSchema = z.object({
+  spo2: z.number().min(70).max(100, 'SpO₂ value out of range (70-100%)'),
+  pulseRate: z.number().min(30).max(220, 'Pulse rate out of range (30-220 bpm)'),
+  perfusionIndex: z.number().min(0).max(20).optional()
+})
+
 export const vitalValueSchema = z.union([
   z.number().positive('Value must be positive'),
-  bloodPressureValueSchema
+  bloodPressureValueSchema,
+  pulseOximeterValueSchema
 ])
 
 export const vitalSignSchema = z.object({
@@ -139,10 +145,14 @@ export const vitalSignSchema = z.object({
     if (data.type === 'blood_pressure') {
       return typeof data.value === 'object' && 'systolic' in data.value && 'diastolic' in data.value
     }
+    // Pulse oximeter must have pulse oximeter value structure
+    if (data.type === 'pulse_oximeter') {
+      return typeof data.value === 'object' && 'spo2' in data.value && 'pulseRate' in data.value
+    }
     return typeof data.value === 'number'
   },
   {
-    message: 'Blood pressure value must include systolic and diastolic',
+    message: 'Value structure does not match vital type',
     path: ['value']
   }
 ).refine(
@@ -151,8 +161,7 @@ export const vitalSignSchema = z.object({
     const validUnits: Record<string, string[]> = {
       'blood_sugar': ['mg/dL', 'mmol/L'],
       'blood_pressure': ['mmHg'],
-      'heart_rate': ['bpm'],
-      'blood_oxygen': ['%'],
+      'pulse_oximeter': ['SpO₂% / bpm'],
       'temperature': ['°F', '°C'],
       'weight': ['lbs', 'kg']
     }
@@ -460,6 +469,7 @@ export const appointmentFormSchema = appointmentSchema.omit({
 // ==================== FAMILY COLLABORATION SCHEMAS ====================
 
 export const familyMemberPermissionsSchema = z.object({
+  viewPatientProfile: z.boolean().default(true), // Allow viewing basic patient info
   viewMedicalRecords: z.boolean().default(false),
   editMedications: z.boolean().default(false),
   scheduleAppointments: z.boolean().default(false),
@@ -472,7 +482,8 @@ export const familyMemberPermissionsSchema = z.object({
   chatAccess: z.boolean().default(false),
   inviteOthers: z.boolean().default(false),
   viewSensitiveInfo: z.boolean().default(false),
-  editPatientProfile: z.boolean().default(false)
+  editPatientProfile: z.boolean().default(false),
+  deletePatient: z.boolean().default(false) // Allow deleting patient records
 })
 
 export const notificationPreferencesSchema = z.object({

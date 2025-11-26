@@ -8,8 +8,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebase-admin'
 import { appointmentFormSchema } from '@/lib/validations/medical'
-import { authorizePatientAccess, verifyAuthToken } from '@/lib/rbac-middleware'
-import type { Appointment, PatientProfile, Provider, AuthorizationResult } from '@/types/medical'
+import { assertPatientAccess, verifyAuthToken, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
+import { logger } from '@/lib/logger'
+import type { Appointment, PatientProfile, Provider } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
 
 export async function GET(request: NextRequest) {
@@ -26,6 +28,19 @@ export async function GET(request: NextRequest) {
     const token = authHeader.substring(7)
     const decodedToken = await adminAuth.verifyIdToken(token)
     const userId = decodedToken.uid
+
+    // Check rate limit (per-user)
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /appointments GET] Rate limit exceeded', { userId })
+      return NextResponse.json(
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
+      )
+    }
 
     const { searchParams } = new URL(request.url)
     const patientId = searchParams.get('patientId')
@@ -80,48 +95,33 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = appointmentFormSchema.parse(body)
 
-    // Check authorization - requires scheduleAppointments permission for family members
-    const authResult = await authorizePatientAccess(request, validatedData.patientId, 'scheduleAppointments')
+    // Check authorization and get owner userId
+    const authResult = await assertPatientAccess(request, validatedData.patientId, 'scheduleAppointments')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }
 
-    const { userId, role } = authResult as AuthorizationResult
+    const { userId, ownerUserId } = authResult as AssertPatientAccessResult
 
-    // Ensure userId is defined
-    if (!userId) {
+    // Check rate limit (per-user)
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /appointments POST] Rate limit exceeded', { userId, patientId: validatedData.patientId })
       return NextResponse.json(
-        { success: false, error: 'User ID not found in authorization result' },
-        { status: 401 }
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
       )
     }
 
-    // Get patient owner's userId (for database query)
-    let ownerUserId = userId
-    if (role === 'family') {
-      // Find the patient's owner
-      const patientSnapshot = await adminDb
-        .collectionGroup('patients')
-        .where('__name__', '==', validatedData.patientId)
-        .limit(1)
-        .get()
-
-      if (patientSnapshot.empty) {
-        return NextResponse.json({ success: false, error: 'Patient not found' }, { status: 404 })
-      }
-
-      // Extract owner userId from the path
-      const patientDocRef = patientSnapshot.docs[0].ref
-      ownerUserId = patientDocRef.parent.parent!.id
-    }
-
-    // Ensure ownerUserId is defined
-    if (!ownerUserId) {
-      return NextResponse.json(
-        { success: false, error: 'Unable to determine patient owner' },
-        { status: 400 }
-      )
-    }
+    logger.debug('[API /appointments POST] Creating appointment', {
+      userId,
+      ownerUserId,
+      patientId: validatedData.patientId,
+      providerId: validatedData.providerId
+    })
 
     // Verify patient exists
     const patientRef = adminDb

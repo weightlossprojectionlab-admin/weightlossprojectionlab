@@ -58,9 +58,9 @@ export default function PerksPage() {
   if (!PERKS_ENABLED) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-yellow-50 border border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800 rounded-lg p-8 max-w-md text-center">
-          <div className="text-yellow-600 dark:text-yellow-400 text-5xl mb-4">🎁</div>
-          <h2 className="text-2xl font-bold text-yellow-900 dark:text-yellow-100 mb-2">Perks Coming Soon!</h2>
+        <div className="bg-warning-light border border-warning-light rounded-lg p-8 max-w-md text-center">
+          <div className="text-warning text-5xl mb-4">🎁</div>
+          <h2 className="text-2xl font-bold text-warning-dark mb-2">Perks Coming Soon!</h2>
           <p className="text-yellow-700 dark:text-yellow-100">
             Sponsor perks are currently disabled. Check back later for exclusive rewards from our partners!
           </p>
@@ -74,7 +74,7 @@ export default function PerksPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-dark mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading perks...</p>
+          <p className="text-muted-foreground">Loading perks...</p>
         </div>
       </div>
     );
@@ -96,7 +96,7 @@ export default function PerksPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Sponsor Perks</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Exclusive rewards and discounts from our partners</p>
+        <p className="text-muted-foreground mt-1">Exclusive rewards and discounts from our partners</p>
       </div>
 
       {/* Eligibility Badge */}
@@ -115,9 +115,9 @@ export default function PerksPage() {
           <div className="relative max-w-2xl w-full">
             <button
               onClick={handleCancelRedemption}
-              className="absolute -top-2 -right-2 bg-white dark:bg-gray-900 rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
+              className="absolute -top-2 -right-2 bg-card rounded-full p-2 shadow-lg hover:bg-muted transition-colors"
             >
-              <svg className="h-6 w-6 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -173,10 +173,10 @@ export default function PerksPage() {
           )}
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-12 text-center">
-          <div className="text-gray-600 dark:text-gray-400 text-6xl mb-4">🎁</div>
-          <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">No Perks Available</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="bg-card border border-border rounded-lg p-12 text-center">
+          <div className="text-muted-foreground text-6xl mb-4">🎁</div>
+          <p className="text-lg font-medium text-foreground mb-1">No Perks Available</p>
+          <p className="text-sm text-muted-foreground">
             {isEligible
               ? 'Check back soon for new perks from our sponsors!'
               : `Earn ${(XP_THRESHOLD - userXP).toLocaleString()} more XP to unlock sponsor perks!`}
@@ -186,7 +186,7 @@ export default function PerksPage() {
 
       {/* Info Box */}
       <div className="mt-8 bg-purple-50 border border-purple-200 dark:bg-purple-900/20 dark:border-purple-800 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-2">About Sponsor Perks</h2>
+        <h2 className="text-lg font-semibold text-primary-dark mb-2">About Sponsor Perks</h2>
         <ul className="space-y-2 text-sm text-purple-800 dark:text-purple-200">
           <li>• Earn {XP_THRESHOLD.toLocaleString()} XP to unlock sponsor perks</li>
           <li>• Perks include discounts, free trials, and exclusive offers from our partners</li>

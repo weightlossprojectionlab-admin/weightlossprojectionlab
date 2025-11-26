@@ -12,7 +12,14 @@ interface ProductContextBreakdownProps {
   data: ContextBreakdownData[]
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+const COLORS = [
+  'hsl(var(--secondary))',
+  'hsl(var(--success))',
+  'hsl(var(--warning))',
+  'hsl(var(--error))',
+  'hsl(var(--primary))',
+  'hsl(var(--accent))'
+]
 
 export function ProductContextBreakdown({ data }: ProductContextBreakdownProps) {
   return (
@@ -32,8 +39,8 @@ export function ProductContextBreakdown({ data }: ProductContextBreakdownProps) 
           ))}
         </Pie>
         <Tooltip
-          contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem' }}
-          itemStyle={{ color: '#f3f4f6' }}
+          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+          itemStyle={{ color: 'hsl(var(--card-foreground))' }}
         />
       </PieChart>
     </ResponsiveContainer>

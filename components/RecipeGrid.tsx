@@ -60,11 +60,11 @@ export function RecipeGrid({
   if (recipes.length === 0 && !loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <svg className="w-16 h-16 text-gray-600 dark:text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-16 h-16 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No recipes found</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Try adjusting your filters or check back later</p>
+        <h3 className="text-lg font-semibold text-foreground mb-2">No recipes found</h3>
+        <p className="text-sm text-muted-foreground">Try adjusting your filters or check back later</p>
       </div>
     )
   }
@@ -90,14 +90,14 @@ export function RecipeGrid({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="animate-pulse">
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-                <div className="aspect-[3/4] bg-gray-100 dark:bg-gray-800-foreground/20" />
+              <div className="bg-muted rounded-lg overflow-hidden">
+                <div className="aspect-[3/4] bg-muted-foreground/20" />
                 <div className="p-3 space-y-2">
-                  <div className="h-4 bg-gray-100 dark:bg-gray-800-foreground/20 rounded w-3/4" />
-                  <div className="h-3 bg-gray-100 dark:bg-gray-800-foreground/20 rounded w-1/2" />
+                  <div className="h-4 bg-muted-foreground/20 rounded w-3/4" />
+                  <div className="h-3 bg-muted-foreground/20 rounded w-1/2" />
                   <div className="flex space-x-2">
-                    <div className="h-3 bg-gray-100 dark:bg-gray-800-foreground/20 rounded w-12" />
-                    <div className="h-3 bg-gray-100 dark:bg-gray-800-foreground/20 rounded w-12" />
+                    <div className="h-3 bg-muted-foreground/20 rounded w-12" />
+                    <div className="h-3 bg-muted-foreground/20 rounded w-12" />
                   </div>
                 </div>
               </div>
@@ -111,7 +111,7 @@ export function RecipeGrid({
 
       {/* End of Results */}
       {!hasMore && recipes.length > 0 && (
-        <div className="text-center py-8 text-sm text-gray-600 dark:text-gray-400">
+        <div className="text-center py-8 text-sm text-muted-foreground">
           You've reached the end! 🎉
         </div>
       )}

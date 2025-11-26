@@ -57,7 +57,7 @@ export function ThemeToggle() {
 
   return (
     <div
-      className="inline-flex items-center rounded-lg bg-gray-100 dark:bg-gray-800 p-1 gap-1"
+      className="inline-flex items-center rounded-lg bg-muted p-1 gap-1"
       role="radiogroup"
       aria-label="Theme selection"
     >
@@ -73,8 +73,8 @@ export function ThemeToggle() {
             focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900
             ${
               theme === option.value
-                ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }
           `}
           role="radio"
@@ -106,7 +106,7 @@ export function CompactThemeToggle() {
 
   return (
     <div
-      className="inline-flex items-center rounded-lg bg-gray-100 dark:bg-gray-800 p-1 gap-1"
+      className="inline-flex items-center rounded-lg bg-muted p-1 gap-1"
       role="radiogroup"
       aria-label="Theme selection"
     >
@@ -122,8 +122,8 @@ export function CompactThemeToggle() {
             focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900
             ${
               theme === option.value
-                ? 'bg-white dark:bg-gray-900 shadow-sm'
-                : 'hover:bg-white/50 dark:hover:bg-gray-700/50'
+                ? 'bg-card shadow-sm'
+                : 'hover:bg-background/50/50'
             }
           `}
           role="radio"

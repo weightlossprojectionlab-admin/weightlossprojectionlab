@@ -203,13 +203,15 @@ async function analyzeVitalTrends(userId: string): Promise<VitalTrends> {
         }
       }
 
-      // Check for abnormal heart rate
-      const hrReadings = vitals.filter(v => v.type === 'heart_rate')
+      // Check for abnormal heart rate (from pulse oximeter)
+      const hrReadings = vitals.filter(v => v.type === 'pulse_oximeter')
       for (const hr of hrReadings) {
-        const value = Number(hr.value)
-        if (value >= THRESHOLDS.HEART_RATE_HIGH_THRESHOLD || value <= THRESHOLDS.HEART_RATE_LOW_THRESHOLD) {
-          hasAbnormalHeartRate = true
-          break
+        if (typeof hr.value === 'object' && 'pulseRate' in hr.value) {
+          const value = hr.value.pulseRate
+          if (value >= THRESHOLDS.HEART_RATE_HIGH_THRESHOLD || value <= THRESHOLDS.HEART_RATE_LOW_THRESHOLD) {
+            hasAbnormalHeartRate = true
+            break
+          }
         }
       }
     }

@@ -175,7 +175,7 @@ function KitchenInventoryContent() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen bg-background">
         <PageHeader
           title="Kitchen Inventory"
           subtitle={`${summary.inStockItems} items in stock`}
@@ -206,13 +206,13 @@ function KitchenInventoryContent() {
 
           {/* Summary Cards */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
+            <div className="bg-card rounded-lg shadow p-4">
               <div className="text-2xl font-bold text-primary">{summary.inStockItems}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Items</div>
+              <div className="text-sm text-muted-foreground">Total Items</div>
             </div>
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-              <div className="text-2xl font-bold text-orange-500">{summary.expiringWithin7Days}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Expiring Soon</div>
+            <div className="bg-card rounded-lg shadow p-4">
+              <div className="text-2xl font-bold text-warning">{summary.expiringWithin7Days}</div>
+              <div className="text-sm text-muted-foreground">Expiring Soon</div>
             </div>
           </div>
 
@@ -240,7 +240,7 @@ function KitchenInventoryContent() {
                 className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
                   selectedLocation === loc
                     ? 'bg-primary text-white'
-                    : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    : 'bg-card text-foreground hover:bg-muted'
                 }`}
               >
                 {loc === 'all' ? '🏠 All' :
@@ -259,15 +259,15 @@ function KitchenInventoryContent() {
               <Spinner />
             </div>
           ) : items.length === 0 ? (
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
+            <div className="bg-card rounded-lg shadow p-8 text-center">
               <div className="text-6xl mb-4">📦</div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              <h3 className="text-xl font-semibold text-foreground mb-2">
                 Your Kitchen Inventory
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Scan everything in your kitchen to track ingredients and find recipes you can make
               </p>
-              <div className="flex items-center justify-center gap-6 text-sm text-gray-500 dark:text-gray-500">
+              <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground dark:text-muted-foreground">
                 <span>🧊 Fridge</span>
                 <span>❄️ Freezer</span>
                 <span>🗄️ Pantry</span>
@@ -284,7 +284,7 @@ function KitchenInventoryContent() {
                 return (
                   <div
                     key={item.id}
-                    className={`bg-white dark:bg-gray-900 rounded-lg shadow p-4 ${
+                    className={`bg-card rounded-lg shadow p-4 ${
                       expirationColors ? `border-l-4 ${expirationColors.border}` : ''
                     }`}
                   >
@@ -297,26 +297,26 @@ function KitchenInventoryContent() {
                           className="w-16 h-16 object-cover rounded-lg"
                         />
                       ) : (
-                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-3xl">
+                        <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-3xl">
                           {categoryMeta.icon}
                         </div>
                       )}
 
                       {/* Product Info */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                        <h3 className="font-semibold text-foreground truncate">
                           {item.productName}
                         </h3>
                         {item.brand && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          <p className="text-sm text-muted-foreground truncate">
                             {item.brand}
                           </p>
                         )}
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">
+                          <span className="text-xs px-2 py-1 bg-muted rounded">
                             {categoryMeta.displayName}
                           </span>
-                          <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">
+                          <span className="text-xs px-2 py-1 bg-muted rounded">
                             {item.displayQuantity || formatQuantityDisplay(item.quantity, item.unit)}
                           </span>
                           {item.expiresAt && expirationAlert && (
@@ -381,7 +381,7 @@ function KitchenInventoryContent() {
                               toast.error(`Failed to add: ${error?.message || 'Unknown error'}`)
                             }
                           }}
-                          className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
+                          className="px-3 py-1 text-xs bg-blue-100 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
                           title="Add to shopping list for restocking"
                         >
                           Buy Again

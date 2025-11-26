@@ -73,22 +73,22 @@ export function ProviderScanner({ onExtracted, onClose }: ProviderScannerProps) 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <h2 className="text-xl font-bold text-foreground">
               Scan Provider Document
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Take a photo or upload a business card, appointment card, or referral letter
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
           >
-            <XMarkIcon className="w-6 h-6 text-gray-500" />
+            <XMarkIcon className="w-6 h-6 text-muted-foreground" />
           </button>
         </div>
 
@@ -100,23 +100,23 @@ export function ProviderScanner({ onExtracted, onClose }: ProviderScannerProps) 
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <button
                   onClick={() => cameraInputRef.current?.click()}
-                  className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors"
+                  className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-border dark:border-gray-600 rounded-lg hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors"
                 >
-                  <CameraIcon className="w-12 h-12 text-purple-600" />
+                  <CameraIcon className="w-12 h-12 text-primary" />
                   <div className="text-center">
-                    <p className="font-medium text-gray-900 dark:text-gray-100">Take Photo</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Use camera</p>
+                    <p className="font-medium text-foreground">Take Photo</p>
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">Use camera</p>
                   </div>
                 </button>
 
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors"
+                  className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-border dark:border-gray-600 rounded-lg hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors"
                 >
-                  <DocumentIcon className="w-12 h-12 text-purple-600" />
+                  <DocumentIcon className="w-12 h-12 text-primary" />
                   <div className="text-center">
-                    <p className="font-medium text-gray-900 dark:text-gray-100">Upload Image</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">From gallery</p>
+                    <p className="font-medium text-foreground">Upload Image</p>
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">From gallery</p>
                   </div>
                 </button>
               </div>
@@ -139,11 +139,11 @@ export function ProviderScanner({ onExtracted, onClose }: ProviderScannerProps) 
               />
 
               {/* Tips */}
-              <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+              <div className="bg-secondary-light dark:bg-blue-900/10 border border-secondary-light rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-secondary-dark mb-2">
                   📋 Tips for Best Results
                 </h3>
-                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                <ul className="text-sm text-secondary-dark space-y-1">
                   <li>• Ensure good lighting and avoid shadows</li>
                   <li>• Keep the document flat and in focus</li>
                   <li>• Include the entire card or document in frame</li>
@@ -156,15 +156,15 @@ export function ProviderScanner({ onExtracted, onClose }: ProviderScannerProps) 
           {/* Scanning State */}
           {scanning && (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
-              <p className="text-gray-600 dark:text-gray-400">Scanning document...</p>
-              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Extracting provider information</p>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+              <p className="text-muted-foreground">Scanning document...</p>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground mt-2">Extracting provider information</p>
             </div>
           )}
 
           {/* Error State */}
           {error && !scanning && (
-            <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+            <div className="bg-error-light dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
               <p className="text-red-800 dark:text-red-200">{error}</p>
             </div>
           )}
@@ -174,7 +174,7 @@ export function ProviderScanner({ onExtracted, onClose }: ProviderScannerProps) 
             <>
               {/* Preview Image */}
               <div className="mb-6">
-                <div className="relative w-full aspect-[3/2] bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                <div className="relative w-full aspect-[3/2] bg-muted rounded-lg overflow-hidden">
                   <Image
                     src={previewUrl}
                     alt="Scanned document"
@@ -185,13 +185,13 @@ export function ProviderScanner({ onExtracted, onClose }: ProviderScannerProps) 
               </div>
 
               {/* Extracted Information */}
-              <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+              <div className="bg-success-light dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                  <CheckCircleIcon className="w-5 h-5 text-success" />
                   <h3 className="font-semibold text-green-900 dark:text-green-100">
                     Extracted Information
                   </h3>
-                  <span className="ml-auto text-xs text-green-700 dark:text-green-300">
+                  <span className="ml-auto text-xs text-success-dark dark:text-green-300">
                     {Math.round(extractedInfo.confidence * 100)}% confidence
                   </span>
                 </div>
@@ -199,43 +199,43 @@ export function ProviderScanner({ onExtracted, onClose }: ProviderScannerProps) 
                 <div className="space-y-2 text-sm">
                   {extractedInfo.name && (
                     <div className="flex">
-                      <span className="text-green-700 dark:text-green-300 font-medium w-24">Name:</span>
+                      <span className="text-success-dark dark:text-green-300 font-medium w-24">Name:</span>
                       <span className="text-green-900 dark:text-green-100">{extractedInfo.name}</span>
                     </div>
                   )}
                   {extractedInfo.specialty && (
                     <div className="flex">
-                      <span className="text-green-700 dark:text-green-300 font-medium w-24">Specialty:</span>
+                      <span className="text-success-dark dark:text-green-300 font-medium w-24">Specialty:</span>
                       <span className="text-green-900 dark:text-green-100">{extractedInfo.specialty}</span>
                     </div>
                   )}
                   {extractedInfo.type && (
                     <div className="flex">
-                      <span className="text-green-700 dark:text-green-300 font-medium w-24">Type:</span>
+                      <span className="text-success-dark dark:text-green-300 font-medium w-24">Type:</span>
                       <span className="text-green-900 dark:text-green-100 capitalize">{extractedInfo.type.replace('_', ' ')}</span>
                     </div>
                   )}
                   {extractedInfo.phone && (
                     <div className="flex">
-                      <span className="text-green-700 dark:text-green-300 font-medium w-24">Phone:</span>
+                      <span className="text-success-dark dark:text-green-300 font-medium w-24">Phone:</span>
                       <span className="text-green-900 dark:text-green-100">{extractedInfo.phone}</span>
                     </div>
                   )}
                   {extractedInfo.fax && (
                     <div className="flex">
-                      <span className="text-green-700 dark:text-green-300 font-medium w-24">Fax:</span>
+                      <span className="text-success-dark dark:text-green-300 font-medium w-24">Fax:</span>
                       <span className="text-green-900 dark:text-green-100">{extractedInfo.fax}</span>
                     </div>
                   )}
                   {extractedInfo.email && (
                     <div className="flex">
-                      <span className="text-green-700 dark:text-green-300 font-medium w-24">Email:</span>
+                      <span className="text-success-dark dark:text-green-300 font-medium w-24">Email:</span>
                       <span className="text-green-900 dark:text-green-100">{extractedInfo.email}</span>
                     </div>
                   )}
                   {extractedInfo.address && (
                     <div className="flex">
-                      <span className="text-green-700 dark:text-green-300 font-medium w-24">Address:</span>
+                      <span className="text-success-dark dark:text-green-300 font-medium w-24">Address:</span>
                       <span className="text-green-900 dark:text-green-100">
                         {extractedInfo.address}
                         {extractedInfo.city && `, ${extractedInfo.city}`}
@@ -246,13 +246,13 @@ export function ProviderScanner({ onExtracted, onClose }: ProviderScannerProps) 
                   )}
                   {extractedInfo.npiNumber && (
                     <div className="flex">
-                      <span className="text-green-700 dark:text-green-300 font-medium w-24">NPI:</span>
+                      <span className="text-success-dark dark:text-green-300 font-medium w-24">NPI:</span>
                       <span className="text-green-900 dark:text-green-100">{extractedInfo.npiNumber}</span>
                     </div>
                   )}
                   {extractedInfo.officeHours && (
                     <div className="flex">
-                      <span className="text-green-700 dark:text-green-300 font-medium w-24">Hours:</span>
+                      <span className="text-success-dark dark:text-green-300 font-medium w-24">Hours:</span>
                       <span className="text-green-900 dark:text-green-100">{extractedInfo.officeHours}</span>
                     </div>
                   )}
@@ -263,13 +263,13 @@ export function ProviderScanner({ onExtracted, onClose }: ProviderScannerProps) 
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleUseInfo}
-                  className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                  className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
                 >
                   Use This Information
                 </button>
                 <button
                   onClick={handleRetry}
-                  className="px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  className="px-4 py-3 text-muted-foreground hover:bg-muted rounded-lg transition-colors"
                 >
                   Scan Again
                 </button>

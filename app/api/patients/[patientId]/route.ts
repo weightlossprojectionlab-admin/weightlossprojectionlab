@@ -8,10 +8,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, adminAuth } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { patientProfileSchema } from '@/lib/validations/medical'
-import { authorizePatientAccess } from '@/lib/rbac-middleware'
+import { assertPatientAccess, authorizePatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { PatientProfile, AuthorizationResult } from '@/types/medical'
 
 // GET /api/patients/[patientId] - Get a single patient
@@ -22,30 +23,40 @@ export async function GET(
   try {
     const { patientId } = await params
 
-    // Extract and verify auth token
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      logger.warn('[API /patients/[id] GET] Missing or invalid Authorization header')
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    // Check authorization and get owner userId
+    const authResult = await assertPatientAccess(request, patientId, 'viewPatientProfile')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
     }
 
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    const { userId, ownerUserId } = authResult as AssertPatientAccessResult
 
-    logger.debug('[API /patients/[id] GET] Fetching patient', { userId, patientId })
+    // Check rate limit (per-user)
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /patients/[id] GET] Rate limit exceeded', { userId, patientId })
+      return NextResponse.json(
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
+      )
+    }
 
-    // Get patient document
+    logger.debug('[API /patients/[id] GET] Fetching patient', { userId, ownerUserId, patientId })
+
+    // Get patient document (using ownerUserId supports family member access)
     const patientRef = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
 
     const patientDoc = await patientRef.get()
 
     if (!patientDoc.exists) {
-      logger.warn('[API /patients/[id] GET] Patient not found', { userId, patientId })
+      logger.warn('[API /patients/[id] GET] Patient not found', { userId, ownerUserId, patientId })
       return NextResponse.json(
         { success: false, error: 'Patient not found' },
         { status: 404 }
@@ -57,7 +68,7 @@ export async function GET(
       ...patientDoc.data()
     } as PatientProfile
 
-    logger.info('[API /patients/[id] GET] Patient fetched successfully', { userId, patientId })
+    logger.info('[API /patients/[id] GET] Patient fetched successfully', { userId, ownerUserId, patientId })
 
     return NextResponse.json({
       success: true,
@@ -81,44 +92,30 @@ export async function PUT(
   try {
     const { patientId } = await params
 
-    // Check authorization - requires editPatientProfile permission for family members
-    const authResult = await authorizePatientAccess(request, patientId, 'editPatientProfile')
+    // Check authorization and get owner userId
+    const authResult = await assertPatientAccess(request, patientId, 'editPatientProfile')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }
 
-    const { userId, role } = authResult as AuthorizationResult
+    const { userId, ownerUserId, role } = authResult as AssertPatientAccessResult
+
+    // Check rate limit (per-user)
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /patients/[id] PUT] Rate limit exceeded', { userId, patientId })
+      return NextResponse.json(
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
+      )
+    }
 
     // Parse request body
     const body = await request.json()
-    logger.debug('[API /patients/[id] PUT] Request body', { body, userId, role })
-
-    // Get patient owner's userId (for database query)
-    let ownerUserId = userId
-    if (role === 'family') {
-      // Find the patient's owner
-      const patientSnapshot = await adminDb
-        .collectionGroup('patients')
-        .where('__name__', '==', patientId)
-        .limit(1)
-        .get()
-
-      if (patientSnapshot.empty) {
-        return NextResponse.json({ success: false, error: 'Patient not found' }, { status: 404 })
-      }
-
-      // Extract owner userId from the path
-      const patientDocRef = patientSnapshot.docs[0].ref
-      ownerUserId = patientDocRef.parent.parent!.id
-    }
-
-    // Ensure ownerUserId is defined
-    if (!ownerUserId) {
-      return NextResponse.json(
-        { success: false, error: 'Unable to determine patient owner' },
-        { status: 400 }
-      )
-    }
+    logger.debug('[API /patients/[id] PUT] Request body', { body, userId, ownerUserId, role })
 
     // Get existing patient
     const patientRef = adminDb
@@ -130,7 +127,7 @@ export async function PUT(
     const patientDoc = await patientRef.get()
 
     if (!patientDoc.exists) {
-      logger.warn('[API /patients/[id] PUT] Patient not found', { userId: ownerUserId, patientId })
+      logger.warn('[API /patients/[id] PUT] Patient not found', { userId, ownerUserId, patientId })
       return NextResponse.json(
         { success: false, error: 'Patient not found' },
         { status: 404 }
@@ -172,7 +169,7 @@ export async function PUT(
       lastModified: now
     })
 
-    logger.info('[API /patients/[id] PUT] Patient updated successfully', { userId, patientId })
+    logger.info('[API /patients/[id] PUT] Patient updated successfully', { userId, ownerUserId, patientId })
 
     return NextResponse.json({
       success: true,
@@ -196,30 +193,40 @@ export async function DELETE(
   try {
     const { patientId } = await params
 
-    // Extract and verify auth token
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      logger.warn('[API /patients/[id] DELETE] Missing or invalid Authorization header')
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    // Check authorization and get owner userId (requires deletePatient permission)
+    const authResult = await assertPatientAccess(request, patientId, 'deletePatient')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
     }
 
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    const { userId, ownerUserId } = authResult as AssertPatientAccessResult
 
-    logger.debug('[API /patients/[id] DELETE] Deleting patient', { userId, patientId })
+    // Check rate limit (per-user, stricter for delete operations)
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /patients/[id] DELETE] Rate limit exceeded', { userId, patientId })
+      return NextResponse.json(
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
+      )
+    }
 
-    // Get patient reference
+    logger.debug('[API /patients/[id] DELETE] Deleting patient', { userId, ownerUserId, patientId })
+
+    // Get patient reference (using ownerUserId supports family member access)
     const patientRef = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
 
     const patientDoc = await patientRef.get()
 
     if (!patientDoc.exists) {
-      logger.warn('[API /patients/[id] DELETE] Patient not found', { userId, patientId })
+      logger.warn('[API /patients/[id] DELETE] Patient not found', { userId, ownerUserId, patientId })
       return NextResponse.json(
         { success: false, error: 'Patient not found' },
         { status: 404 }
@@ -230,7 +237,7 @@ export async function DELETE(
     // Note: In production, you may want to soft-delete or archive instead
     await patientRef.delete()
 
-    logger.info('[API /patients/[id] DELETE] Patient deleted successfully', { userId, patientId })
+    logger.info('[API /patients/[id] DELETE] Patient deleted successfully', { userId, ownerUserId, patientId })
 
     return NextResponse.json({
       success: true,

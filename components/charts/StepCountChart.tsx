@@ -16,8 +16,8 @@ export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }
 
   if (loading) {
     return (
-      <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse flex items-center justify-center">
-        <p className="text-gray-600 dark:text-gray-400">Loading chart...</p>
+      <div className="w-full h-64 bg-muted rounded-lg animate-pulse flex items-center justify-center">
+        <p className="text-muted-foreground">Loading chart...</p>
       </div>
     )
   }
@@ -26,16 +26,16 @@ export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }
     // Tracking disabled - guide user to enable it
     if (isTrackingEnabled === false) {
       return (
-        <div className="w-full h-64 bg-gray-50 dark:bg-gray-950 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
+        <div className="w-full h-64 bg-background rounded-lg border-2 border-dashed border-border flex items-center justify-center">
           <div className="text-center px-6">
             <div className="text-5xl mb-3">👟</div>
-            <p className="text-gray-900 dark:text-gray-100 font-bold mb-2">Step Tracking Not Enabled</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-foreground font-bold mb-2">Step Tracking Not Enabled</p>
+            <p className="text-sm text-muted-foreground mb-4">
               Enable automatic step tracking to see your daily activity
             </p>
             <a
               href="/dashboard"
-              className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
+              className="inline-block px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium text-sm"
             >
               Go to Dashboard to Enable
             </a>
@@ -50,18 +50,18 @@ export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }
         <div className="w-full h-64 bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg border-2 border-green-200 dark:border-green-800 flex items-center justify-center">
           <div className="text-center px-6">
             <div className="text-5xl mb-3">🚶</div>
-            <p className="text-gray-900 dark:text-gray-100 font-bold mb-2">Start Moving!</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <p className="text-foreground font-bold mb-2">Start Moving!</p>
+            <p className="text-sm text-muted-foreground mb-2">
               Tracking is active. Walk around to see your steps counted!
             </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 rounded-full text-xs font-medium text-green-700 dark:text-green-300">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 rounded-full text-xs font-medium text-success-dark dark:text-green-300">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-success-light0"></span>
               </span>
               Tracking Active
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-3">
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-3">
               Steps save automatically after 100 steps or 5 minutes
             </p>
           </div>
@@ -72,14 +72,14 @@ export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }
     // Tracking enabled, has some steps, but not saved to history yet
     if (todaysSteps !== undefined && todaysSteps > 0) {
       return (
-        <div className="w-full h-64 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800 flex items-center justify-center">
+        <div className="w-full h-64 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border-2 border-primary-light flex items-center justify-center">
           <div className="text-center px-6">
             <div className="text-5xl mb-3">⏳</div>
-            <p className="text-gray-900 dark:text-gray-100 font-bold mb-2">Building Your History...</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              You have <span className="font-bold text-purple-600">{todaysSteps} steps</span> today!
+            <p className="text-foreground font-bold mb-2">Building Your History...</p>
+            <p className="text-sm text-muted-foreground mb-3">
+              You have <span className="font-bold text-primary">{todaysSteps} steps</span> today!
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500">
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground">
               Keep walking! Your step history will appear here after reaching 100 steps or 5 minutes.
             </p>
           </div>
@@ -89,11 +89,11 @@ export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }
 
     // Default fallback (tracking status unknown)
     return (
-      <div className="w-full h-64 bg-gray-50 dark:bg-gray-950 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
+      <div className="w-full h-64 bg-background rounded-lg border-2 border-dashed border-border flex items-center justify-center">
         <div className="text-center px-6">
           <div className="text-5xl mb-3">📊</div>
-          <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">No Step Data Yet</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Start tracking steps to see your activity!</p>
+          <p className="text-foreground font-medium mb-1">No Step Data Yet</p>
+          <p className="text-sm text-muted-foreground">Start tracking steps to see your activity!</p>
         </div>
       </div>
     )
@@ -113,11 +113,11 @@ export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }
 
   // Theme-aware colors
   const isDark = resolvedTheme === 'dark'
-  const gridColor = isDark ? '#374151' : '#e5e7eb'
-  const axisColor = isDark ? '#9ca3af' : '#6b7280'
-  const tooltipBg = isDark ? '#1f2937' : '#ffffff'
-  const tooltipBorder = isDark ? '#374151' : '#e5e7eb'
-  const tooltipText = isDark ? '#f9fafb' : '#111827'
+  const gridColor = 'hsl(var(--border))'
+  const axisColor = 'hsl(var(--muted-foreground))'
+  const tooltipBg = 'hsl(var(--card))'
+  const tooltipBorder = 'hsl(var(--border))'
+  const tooltipText = 'hsl(var(--card-foreground))'
 
   return (
     <div className="w-full">
@@ -158,18 +158,18 @@ export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }
           />
           <ReferenceLine
             y={avgGoal}
-            stroke={isDark ? '#10b981' : '#059669'}
+            stroke="hsl(var(--success))"
             strokeDasharray="3 3"
           />
           <Bar
             dataKey="steps"
-            fill="#8b5cf6"
+            fill="hsl(var(--primary))"
             radius={[4, 4, 0, 0]}
           />
           <Bar
             dataKey="goal"
             fill="transparent"
-            stroke={isDark ? '#10b981' : '#059669'}
+            stroke="hsl(var(--success))"
             strokeWidth={2}
             strokeDasharray="5 5"
           />
@@ -179,20 +179,20 @@ export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }
       {/* Summary Stats */}
       <div className="mt-4 grid grid-cols-3 gap-4 text-center">
         <div>
-          <p className="text-xs text-gray-600 dark:text-gray-400">Total Steps</p>
-          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <p className="text-xs text-muted-foreground">Total Steps</p>
+          <p className="text-lg font-semibold text-foreground">
             {data.reduce((sum, d) => sum + d.steps, 0).toLocaleString()}
           </p>
         </div>
         <div>
-          <p className="text-xs text-gray-600 dark:text-gray-400">Daily Average</p>
-          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <p className="text-xs text-muted-foreground">Daily Average</p>
+          <p className="text-lg font-semibold text-foreground">
             {Math.round(data.reduce((sum, d) => sum + d.steps, 0) / data.length).toLocaleString()}
           </p>
         </div>
         <div>
-          <p className="text-xs text-gray-600 dark:text-gray-400">Days Met Goal</p>
-          <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <p className="text-xs text-muted-foreground">Days Met Goal</p>
+          <p className="text-lg font-semibold text-foreground">
             {data.filter(d => d.steps >= d.goal).length} / {data.length}
           </p>
         </div>

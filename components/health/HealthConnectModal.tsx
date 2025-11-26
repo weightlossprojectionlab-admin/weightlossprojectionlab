@@ -69,29 +69,29 @@ export function HealthConnectModal({
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+        className="bg-card rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-6">
+        <div className="sticky top-0 bg-card border-b border-border p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-3xl">{appIcon}</span>
               <div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                <h3 className="text-xl font-bold text-foreground">
                   Connect {appName}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   Sync your steps automatically
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+              className="p-2 hover:bg-muted rounded-full transition-colors"
               aria-label="Close"
             >
-              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -102,12 +102,12 @@ export function HealthConnectModal({
         <div className="p-6 space-y-6">
           {/* Benefits */}
           <div>
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+            <h4 className="font-semibold text-foreground mb-3">
               ✨ Benefits
             </h4>
             <ul className="space-y-2">
               {benefits.map((benefit, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
                   <span className="text-success mt-0.5">✓</span>
                   <span>{benefit}</span>
                 </li>
@@ -117,7 +117,7 @@ export function HealthConnectModal({
 
           {/* Instructions */}
           <div>
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+            <h4 className="font-semibold text-foreground mb-3">
               📋 Setup Instructions
             </h4>
             <ol className="space-y-3">
@@ -126,7 +126,7 @@ export function HealthConnectModal({
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center">
                     {index + 1}
                   </span>
-                  <span className="text-sm text-gray-600 dark:text-gray-400 pt-0.5">
+                  <span className="text-sm text-muted-foreground pt-0.5">
                     {instruction}
                   </span>
                 </li>
@@ -174,14 +174,14 @@ export function HealthConnectModal({
 
             <button
               onClick={onClose}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
+              className="w-full px-4 py-3 border border-border text-foreground rounded-lg hover:bg-background transition-colors font-medium"
             >
               Maybe Later
             </button>
           </div>
 
           {/* Help Text */}
-          <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-center text-muted-foreground dark:text-muted-foreground">
             Need help? Contact support or check our documentation
           </p>
         </div>

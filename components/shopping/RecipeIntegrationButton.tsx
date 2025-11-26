@@ -31,7 +31,7 @@ export function RecipeIntegrationButton({
     <>
       <button
         onClick={() => setShowModal(true)}
-        className={`flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors ${className}`}
+        className={`flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary-hover text-white rounded-lg transition-colors ${className}`}
         aria-label={`Add ${recipeName} ingredients to shopping list`}
       >
         <ShoppingCartIcon className="h-5 w-5" />

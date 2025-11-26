@@ -161,16 +161,16 @@ export const RecipeQueue = memo(function RecipeQueue() {
           <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Recipe Queue</h2>
+          <h2 className="text-xl font-bold text-foreground">Recipe Queue</h2>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm bg-purple-100 dark:bg-purple-900/20 text-primary px-3 py-1 rounded-full font-medium">
+          <span className="text-sm bg-primary-light dark:bg-purple-900/20 text-primary px-3 py-1 rounded-full font-medium">
             {queue.length} {queue.length === 1 ? 'recipe' : 'recipes'}
           </span>
           <button
             onClick={handleAddAllToShoppingList}
             disabled={addingToShoppingList || queue.length === 0}
-            className="px-3 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1 text-xs bg-secondary text-white rounded-full hover:bg-secondary-hover transition-colors font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Add all recipe ingredients to shopping list"
           >
             {addingToShoppingList ? (
@@ -201,20 +201,20 @@ export const RecipeQueue = memo(function RecipeQueue() {
           return (
             <div
               key={queueItem.id}
-              className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary transition-colors"
+              className="border border-border rounded-lg p-4 hover:border-primary transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{queueItem.recipeName}</h3>
+                    <h3 className="font-semibold text-foreground">{queueItem.recipeName}</h3>
                     {queueItem.mealType && (
-                      <span className="text-xs bg-gray-100 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded capitalize">
+                      <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded capitalize">
                         {queueItem.mealType}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
                     <span>{queueItem.servingSize} serving{queueItem.servingSize > 1 ? 's' : ''}</span>
                     <span>•</span>
                     <span>{recipe.prepTime} min</span>

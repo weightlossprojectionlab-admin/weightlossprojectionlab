@@ -175,6 +175,40 @@ Return JSON:
     createdAt: new Date('2025-10-07'),
     updatedAt: new Date('2025-10-07'),
   },
+
+  patient_health_report: {
+    id: 'patient_health_report',
+    name: 'Comprehensive Patient Health Report',
+    category: 'coaching',
+    template: `You are a compassionate and knowledgeable health analyst. Based on the comprehensive health data below, create a clear, actionable health summary report for this patient.
+
+{{healthDataSummary}}
+
+Please provide:
+1. **Overall Health Status**: A brief overview of the patient's current health based on the data
+2. **Positive Highlights**: What they're doing well (medications adherence, activity, weight management, etc.)
+3. **Areas for Attention**: Gentle recommendations or areas that could use improvement
+4. **Key Observations**: Any notable trends, patterns, or concerns from the data
+5. **Actionable Next Steps**: 2-3 specific, achievable recommendations
+
+Use a warm, encouraging tone. Be specific but not overwhelming. Format with clear sections and bullet points for readability.
+
+Remember this is for {{patientType}}, so adjust your language appropriately.
+
+Return JSON format:
+{
+  "decision": "The full health report in markdown format with sections and bullet points",
+  "confidence": 0.85,
+  "rationale": "Brief summary of what was analyzed"
+}`,
+    variables: ['healthDataSummary', 'patientType'],
+    piiFields: [],  // PHI but already aggregated
+    modelPreference: 'balanced',
+    maxTokens: 2048,
+    temperature: 0.7,
+    createdAt: new Date('2025-11-26'),
+    updatedAt: new Date('2025-11-26'),
+  },
 };
 
 /**

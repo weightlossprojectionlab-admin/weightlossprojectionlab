@@ -19,7 +19,7 @@ export function MenuButton({ className = '', showLabel = false }: MenuButtonProp
     <button
       type="button"
       onClick={toggleMenu}
-      className={`flex items-center gap-2 p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors ${className}`}
+      className={`flex items-center gap-2 p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:text-white transition-colors ${className}`}
       aria-label="Open menu"
     >
       <Bars3Icon className="h-6 w-6" />

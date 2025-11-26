@@ -178,30 +178,30 @@ export function getWeightReminderColor(status: 'on-track' | 'due-soon' | 'overdu
     case 'on-track':
       return {
         border: 'border-green-200 dark:border-green-800',
-        bg: 'bg-green-50 dark:bg-green-900/20',
-        text: 'text-green-700 dark:text-green-300',
+        bg: 'bg-success-light dark:bg-green-900/20',
+        text: 'text-success-dark dark:text-green-300',
         badge: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
       }
     case 'due-soon':
       return {
-        border: 'border-yellow-200 dark:border-yellow-800',
-        bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+        border: 'border-warning-light',
+        bg: 'bg-warning-light',
         text: 'text-yellow-700 dark:text-yellow-300',
-        badge: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+        badge: 'bg-yellow-100 dark:bg-yellow-900 text-warning-dark'
       }
     case 'overdue':
       return {
         border: 'border-red-200 dark:border-red-800',
-        bg: 'bg-red-50 dark:bg-red-900/20',
-        text: 'text-red-700 dark:text-red-300',
+        bg: 'bg-error-light dark:bg-red-900/20',
+        text: 'text-error-dark dark:text-red-300',
         badge: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
       }
     case 'inactive':
       return {
-        border: 'border-blue-200 dark:border-blue-800',
-        bg: 'bg-blue-50 dark:bg-blue-900/20',
+        border: 'border-secondary-light',
+        bg: 'bg-secondary-light',
         text: 'text-blue-700 dark:text-blue-300',
-        badge: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+        badge: 'bg-blue-100 dark:bg-blue-900 text-secondary-dark'
       }
   }
 }

@@ -2,6 +2,19 @@
 
 An AI-powered weight loss tracking application built with Next.js 15, featuring biometric authentication and meal image analysis.
 
+## 📋 Product Requirements
+
+**For complete product requirements, features, roadmap, and technical specifications, see:**
+**[`MASTER_PRD.md`](./MASTER_PRD.md)** - The authoritative Product Requirements Document
+
+This PRD includes:
+- Product vision and evolution (v1.5 → v3.0)
+- User modes (Single/Household/Caregiver) with adaptive UI
+- Complete feature catalog (287 features)
+- Monetization strategy (Free/Premium/Family tiers)
+- Data models and technical architecture
+- Success metrics and roadmap through 2026
+
 ## 🎯 Project Overview
 
 WLPL v2 is a simplified, mobile-first weight loss tracking app that focuses on core functionality without enterprise complexity. This version includes:

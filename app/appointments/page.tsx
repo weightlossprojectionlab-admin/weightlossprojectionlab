@@ -46,7 +46,7 @@ function AppointmentsContent() {
   const pastAppointments = appointments.filter(apt => new Date(apt.dateTime) < now)
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title="Appointments"
         subtitle="Manage medical appointments"
@@ -58,7 +58,7 @@ function AppointmentsContent() {
         <div className="mb-6">
           <button
             onClick={() => router.push('/appointments/new')}
-            className="flex items-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+            className="flex items-center gap-2 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
           >
             <PlusIcon className="w-5 h-5" />
             Schedule Appointment
@@ -67,20 +67,20 @@ function AppointmentsContent() {
 
         {loading ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">Loading appointments...</p>
+            <p className="text-muted-foreground dark:text-muted-foreground">Loading appointments...</p>
           </div>
         ) : appointments.length === 0 ? (
-          <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-lg shadow-sm">
-            <CalendarDaysIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+          <div className="text-center py-12 bg-card rounded-lg shadow-sm">
+            <CalendarDaysIcon className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">
               No appointments scheduled
             </h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">
+            <p className="text-muted-foreground dark:text-muted-foreground mb-6">
               Get started by scheduling your first appointment
             </p>
             <button
               onClick={() => router.push('/appointments/new')}
-              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+              className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
             >
               Schedule Appointment
             </button>
@@ -90,7 +90,7 @@ function AppointmentsContent() {
             {/* Upcoming Appointments */}
             {upcomingAppointments.length > 0 && (
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                <h2 className="text-lg font-bold text-foreground mb-4">
                   Upcoming Appointments ({upcomingAppointments.length})
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -98,32 +98,32 @@ function AppointmentsContent() {
                     <div
                       key={appointment.id}
                       onClick={() => router.push(`/appointments/${appointment.id}`)}
-                      className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border-2 border-purple-200 dark:border-purple-800"
+                      className="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border-2 border-primary-light"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                          <h3 className="font-semibold text-foreground mb-1">
                             {appointment.patientName}
                           </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-muted-foreground">
                             {appointment.providerName}
                           </p>
                         </div>
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
-                          <CalendarDaysIcon className="w-4 h-4 text-purple-600" />
-                          <span className="text-gray-700 dark:text-gray-300">
+                          <CalendarDaysIcon className="w-4 h-4 text-primary" />
+                          <span className="text-foreground">
                             {formatDate(appointment.dateTime)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
-                          <span className="text-purple-600 font-medium">
+                          <span className="text-primary font-medium">
                             {formatTime(appointment.dateTime)}
                           </span>
                         </div>
                         {appointment.reason && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
+                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                             {appointment.reason}
                           </p>
                         )}
@@ -137,7 +137,7 @@ function AppointmentsContent() {
             {/* Past Appointments */}
             {pastAppointments.length > 0 && (
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                <h2 className="text-lg font-bold text-foreground mb-4">
                   Past Appointments ({pastAppointments.length})
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -145,32 +145,32 @@ function AppointmentsContent() {
                     <div
                       key={appointment.id}
                       onClick={() => router.push(`/appointments/${appointment.id}`)}
-                      className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer opacity-75"
+                      className="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer opacity-75"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                          <h3 className="font-semibold text-foreground mb-1">
                             {appointment.patientName}
                           </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-muted-foreground">
                             {appointment.providerName}
                           </p>
                         </div>
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
-                          <CalendarDaysIcon className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-700 dark:text-gray-300">
+                          <CalendarDaysIcon className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-foreground">
                             {formatDate(appointment.dateTime)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
-                          <span className="text-gray-600 font-medium">
+                          <span className="text-muted-foreground font-medium">
                             {formatTime(appointment.dateTime)}
                           </span>
                         </div>
                         {appointment.reason && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
+                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                             {appointment.reason}
                           </p>
                         )}

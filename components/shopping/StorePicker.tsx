@@ -74,19 +74,19 @@ export function StorePicker({
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 bg-background border border-border dark:border-gray-600 rounded-lg hover:bg-background transition-colors"
         aria-label="Select store"
       >
-        <MapPinIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <MapPinIcon className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
+        <span className="text-sm font-medium text-foreground">
           {selectedStore ? selectedStore.name : 'All Stores'}
         </span>
-        <ChevronDownIcon className={`h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDownIcon className={`h-4 w-4 text-muted-foreground dark:text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-10 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-10 mt-2 w-64 bg-background border border-border dark:border-gray-600 rounded-lg shadow-lg overflow-hidden">
           {!showAddStore ? (
             <>
               {/* Store List */}
@@ -94,21 +94,21 @@ export function StorePicker({
                 {/* All Stores Option */}
                 <button
                   onClick={() => handleSelect(undefined)}
-                  className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                    !selectedStoreId ? 'bg-blue-50 dark:bg-blue-900/30' : ''
+                  className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors ${
+                    !selectedStoreId ? 'bg-secondary-light dark:bg-blue-900/30' : ''
                   }`}
                 >
-                  <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="font-medium text-foreground dark:text-white">
                     All Stores
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                     Show all items
                   </div>
                 </button>
 
                 {/* Divider */}
                 {stores.length > 0 && (
-                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                  <div className="border-t border-border my-1" />
                 )}
 
                 {/* Recent Stores */}
@@ -116,15 +116,15 @@ export function StorePicker({
                   <button
                     key={store.id}
                     onClick={() => handleSelect(store.id)}
-                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                      selectedStoreId === store.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''
+                    className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors ${
+                      selectedStoreId === store.id ? 'bg-secondary-light dark:bg-blue-900/30' : ''
                     }`}
                   >
-                    <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="font-medium text-foreground dark:text-white">
                       {store.name}
                     </div>
                     {store.lastVisitedAt && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                         Last visited {new Date(store.lastVisitedAt).toLocaleDateString()}
                       </div>
                     )}
@@ -135,10 +135,10 @@ export function StorePicker({
               {/* Add Store Button */}
               {onAddStore && (
                 <>
-                  <div className="border-t border-gray-200 dark:border-gray-700" />
+                  <div className="border-t border-border" />
                   <button
                     onClick={() => setShowAddStore(true)}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    className="w-full flex items-center gap-2 px-4 py-2 text-secondary hover:bg-muted transition-colors"
                   >
                     <PlusIcon className="h-4 w-4" />
                     <span className="text-sm font-medium">Add New Store</span>
@@ -149,7 +149,7 @@ export function StorePicker({
           ) : (
             /* Add Store Form */
             <form onSubmit={handleAddStore} className="p-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Store Name
               </label>
               <input
@@ -157,7 +157,7 @@ export function StorePicker({
                 value={newStoreName}
                 onChange={(e) => setNewStoreName(e.target.value)}
                 placeholder="e.g., Walmart, Kroger"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-border dark:border-gray-600 rounded-lg bg-background dark:bg-gray-700 text-foreground dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 autoFocus
                 disabled={adding}
               />
@@ -168,7 +168,7 @@ export function StorePicker({
                     setShowAddStore(false)
                     setNewStoreName('')
                   }}
-                  className="flex-1 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="flex-1 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-lg transition-colors"
                   disabled={adding}
                 >
                   Cancel
@@ -176,7 +176,7 @@ export function StorePicker({
                 <button
                   type="submit"
                   disabled={!newStoreName.trim() || adding}
-                  className="flex-1 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-3 py-2 text-sm bg-secondary hover:bg-secondary-hover text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {adding ? 'Adding...' : 'Add'}
                 </button>

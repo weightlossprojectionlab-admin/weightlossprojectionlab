@@ -72,6 +72,13 @@ export async function extractTextFromImage(
       }
     })
 
+    // Set better parameters for prescription label reading
+    await worker.setParameters({
+      tessedit_pageseg_mode: '3', // Fully automatic page segmentation (better for labels)
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,:-()/#% ',
+      preserve_interword_spaces: '1',
+    })
+
     const { data } = await worker.recognize(imageFile)
     const text = data.text
     const confidence = data.confidence
@@ -209,18 +216,86 @@ export function parseMedicationFromText(text: string): ExtractedMedicationText |
     }
 
     // Pattern 6: Prescribing Doctor
-    const doctorPatterns = [
-      /(?:DR|Dr|DOCTOR)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/,
-      /Prescriber:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
-      /Physician:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i
-    ]
+    // Search for doctor in each line individually to catch any doctor name format
+    for (const line of lines) {
+      const doctorPatterns = [
+        // Dr followed by any name (Dr Smith, Dr. John Smith, DR JONES, Dr V.Atieh, etc)
+        /(?:dr|DR|Dr)\.?\s+([A-Z][A-Za-z\.]+(?:\s+[A-Z][A-Za-z\.]+)*)/i,
+        // Prescriber: followed by name
+        /prescriber:?\s+([A-Z][A-Za-z\.]+(?:\s+[A-Z][A-Za-z\.]+)*)/i,
+        // Physician: followed by name
+        /physician:?\s+([A-Z][A-Za-z\.]+(?:\s+[A-Z][A-Za-z\.]+)*)/i,
+        // Doctor: followed by name
+        /doctor:?\s+([A-Z][A-Za-z\.]+(?:\s+[A-Z][A-Za-z\.]+)*)/i,
+        // Prescribed by: followed by name
+        /prescribed\s+by:?\s+([A-Z][A-Za-z\.]+(?:\s+[A-Z][A-Za-z\.]+)*)/i,
+        // MD or M.D. followed by name or name followed by MD
+        /(?:MD|M\.D\.):?\s+([A-Z][A-Za-z\.]+(?:\s+[A-Z][A-Za-z\.]+)*)/i,
+        // Name followed by , MD or , M.D.
+        /([A-Z][A-Za-z\.]+(?:\s+[A-Z][A-Za-z\.]+)*),?\s+(?:MD|M\.D\.)/i
+      ]
 
-    for (const pattern of doctorPatterns) {
-      const match = text.match(pattern)
-      if (match) {
-        prescribingDoctor = match[1].trim()
-        break
+      for (const pattern of doctorPatterns) {
+        const match = line.match(pattern)
+        if (match && match[1]) {
+          const name = match[1].trim()
+          // Filter out common non-names and short matches
+          const excludeWords = ['Pharmacy', 'Patient', 'Name', 'Date', 'For', 'By', 'The', 'A', 'An']
+          if (name.length > 2 && !excludeWords.some(word => name === word)) {
+            prescribingDoctor = name
+            logger.info('[OCR Parser] Doctor found', { doctor: prescribingDoctor, line: line.substring(0, 60) })
+            break
+          }
+        }
       }
+
+      if (prescribingDoctor) break
+    }
+
+    // If still no doctor found, try a more aggressive search
+    if (!prescribingDoctor) {
+      logger.warn('[OCR Parser] First pass: No prescriber found, trying aggressive search', {
+        lineCount: lines.length,
+        firstFewLines: lines.slice(0, 10)
+      })
+
+      // Look for any capitalized name pattern that might be a doctor
+      for (const line of lines) {
+        // Skip lines that are clearly not doctor names
+        if (line.match(/(?:PHARMACY|STORE|STREET|AVENUE|BLVD|ROAD|TAKE|TABLET|CAPSULE|MG|ML|QUANTITY|QTY|REFILL|EXPIRE)/i)) {
+          continue
+        }
+
+        // Look for capitalized names (First Last or Initial Last)
+        const nameMatch = line.match(/\b([A-Z]\.?\s*[A-Z][a-z]+)\b/)
+        if (nameMatch) {
+          const possibleName = nameMatch[1].trim()
+          // Additional filtering
+          if (possibleName.length > 3 && !['For', 'The', 'And', 'Date'].includes(possibleName)) {
+            prescribingDoctor = possibleName
+            logger.info('[OCR Parser] Doctor found (aggressive search)', {
+              doctor: prescribingDoctor,
+              line: line.substring(0, 60)
+            })
+            break
+          }
+        }
+      }
+    }
+
+    if (!prescribingDoctor) {
+      logger.error('[OCR Parser] No prescriber found after all attempts', {
+        fullText: text.substring(0, 800),
+        allLines: lines.slice(0, 20),
+        totalLines: lines.length
+      })
+
+      // Log each line individually for debugging
+      console.log('====== FULL OCR TEXT FOR DEBUGGING ======')
+      lines.forEach((line, idx) => {
+        console.log(`Line ${idx + 1}: "${line}"`)
+      })
+      console.log('=========================================')
     }
 
     // Pattern 7: Patient Name (first proper-cased name found, not pharmacy/location)

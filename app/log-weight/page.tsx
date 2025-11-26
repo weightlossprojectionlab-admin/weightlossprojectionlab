@@ -103,14 +103,14 @@ function LogWeightContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title="Log Weight"
         subtitle="Track your weight progress"
         actions={
           <a
             href="/weight-history"
-            className="px-4 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-primary-light text-primary-dark rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
           >
             View History
           </a>
@@ -118,11 +118,11 @@ function LogWeightContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+        <div className="bg-card rounded-lg shadow-sm p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Date Input */}
             <div>
-              <label htmlFor="logDate" className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              <label htmlFor="logDate" className="block text-sm font-medium text-foreground mb-2">
                 Date
               </label>
               <input
@@ -131,17 +131,17 @@ function LogWeightContent() {
                 value={logDate}
                 onChange={(e) => setLogDate(e.target.value)}
                 max={new Date().toISOString().split('T')[0]}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-background text-foreground"
                 required
               />
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                 When was this weight measured? Defaults to today.
               </p>
             </div>
 
             {/* Weight Input */}
             <div>
-              <label htmlFor="weight" className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              <label htmlFor="weight" className="block text-sm font-medium text-foreground mb-2">
                 Weight
               </label>
               <div className="flex gap-3">
@@ -153,20 +153,20 @@ function LogWeightContent() {
                   step="0.1"
                   min="0"
                   placeholder={`Enter weight in ${unit}`}
-                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  className="flex-1 px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-background text-foreground"
                   required
                   autoFocus
                 />
 
                 {/* Unit Toggle */}
-                <div className="flex rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden">
+                <div className="flex rounded-lg border border-border overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setUnit('lbs')}
                     className={`px-4 py-3 text-sm font-medium transition-colors ${
                       unit === 'lbs'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        ? 'bg-primary text-white'
+                        : 'bg-background text-foreground hover:bg-background'
                     }`}
                   >
                     lbs
@@ -174,10 +174,10 @@ function LogWeightContent() {
                   <button
                     type="button"
                     onClick={() => setUnit('kg')}
-                    className={`px-4 py-3 text-sm font-medium transition-colors border-l border-gray-300 dark:border-gray-700 ${
+                    className={`px-4 py-3 text-sm font-medium transition-colors border-l border-border ${
                       unit === 'kg'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        ? 'bg-primary text-white'
+                        : 'bg-background text-foreground hover:bg-background'
                     }`}
                   >
                     kg
@@ -188,7 +188,7 @@ function LogWeightContent() {
 
             {/* Notes (Optional) */}
             <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              <label htmlFor="notes" className="block text-sm font-medium text-foreground mb-2">
                 Notes (Optional)
               </label>
               <textarea
@@ -197,15 +197,15 @@ function LogWeightContent() {
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 placeholder="How are you feeling? Any observations?"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-background text-foreground"
               />
             </div>
 
             {/* Info Box */}
-            <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+            <div className="bg-primary-light border border-primary-light rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <span className="text-2xl">💡</span>
-                <div className="text-sm text-gray-700 dark:text-gray-300">
+                <div className="text-sm text-foreground">
                   <p className="font-medium mb-1">Best practices for accurate tracking:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
                     <li>Weigh yourself at the same time each day (morning is best)</li>
@@ -223,14 +223,14 @@ function LogWeightContent() {
                 type="button"
                 onClick={() => router.back()}
                 disabled={loading}
-                className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                className="flex-1 px-6 py-3 border border-border rounded-lg text-foreground hover:bg-background transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading || !weight || parseFloat(weight) <= 0}
-                className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 {loading ? 'Logging...' : 'Log Weight'}
               </button>

@@ -291,9 +291,9 @@ export default function CreateRecipePage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
+        <div className="bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
           <h2 className="text-xl font-bold text-red-900 dark:text-red-200 mb-2">Access Denied</h2>
-          <p className="text-red-700 dark:text-red-300">
+          <p className="text-error-dark dark:text-red-300">
             You do not have permission to create recipes.
           </p>
         </div>
@@ -307,47 +307,47 @@ export default function CreateRecipePage() {
       <div className="mb-8">
         <Link
           href="/admin/recipes"
-          className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-4"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4"
         >
           <ArrowLeftIcon className="h-5 w-5" />
           Back to Recipes
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Create New Recipe</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Build recipes using verified products from the database</p>
+        <h1 className="text-3xl font-bold text-foreground">Create New Recipe</h1>
+        <p className="text-muted-foreground mt-1">Build recipes using verified products from the database</p>
       </div>
 
       {/* Basic Info */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Basic Information</h2>
+      <div className="bg-card rounded-lg shadow p-6 mb-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Basic Information</h2>
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Recipe Name</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Recipe Name</label>
             <input
               type="text"
               value={recipeName}
               onChange={(e) => setRecipeName(e.target.value)}
               placeholder="e.g., High Protein Egg Breakfast"
-              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what makes this recipe special..."
               rows={3}
-              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Meal Type</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Meal Type</label>
             <select
               value={mealType}
               onChange={(e) => setMealType(e.target.value as MealType)}
-              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="breakfast">Breakfast</option>
               <option value="lunch">Lunch</option>
@@ -357,30 +357,30 @@ export default function CreateRecipePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prep Time (minutes)</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Prep Time (minutes)</label>
             <input
               type="number"
               value={prepTime}
               onChange={(e) => setPrepTime(parseInt(e.target.value) || 0)}
-              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Servings</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Servings</label>
             <input
               type="number"
               min="1"
               value={servingSize}
               onChange={(e) => setServingSize(parseInt(e.target.value) || 1)}
-              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
         </div>
 
         {/* Dietary Tags */}
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Dietary Tags</label>
+          <label className="block text-sm font-medium text-foreground mb-2">Dietary Tags</label>
           <div className="flex flex-wrap gap-2">
             {(['vegan', 'vegetarian', 'keto', 'paleo', 'gluten-free', 'dairy-free', 'high-protein', 'low-carb'] as DietaryTag[]).map(tag => (
               <button
@@ -389,7 +389,7 @@ export default function CreateRecipePage() {
                 className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
                   dietaryTags.includes(tag)
                     ? 'bg-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-muted text-foreground hover:bg-gray-200'
                 }`}
               >
                 {tag}
@@ -400,9 +400,9 @@ export default function CreateRecipePage() {
       </div>
 
       {/* Ingredients */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-6">
+      <div className="bg-card rounded-lg shadow p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Ingredients ({ingredients.length})</h2>
+          <h2 className="text-lg font-semibold text-foreground">Ingredients ({ingredients.length})</h2>
           <div className="flex gap-2">
             <button
               onClick={() => setShowProductSelector(true)}
@@ -417,20 +417,20 @@ export default function CreateRecipePage() {
         {/* Ingredients List */}
         <div className="space-y-3">
           {ingredients.map((ingredient, index) => (
-            <div key={index} className="flex items-start gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div key={index} className="flex items-start gap-3 p-3 border border-border rounded-lg">
               {ingredient.productImageUrl && (
                 <img src={ingredient.productImageUrl} alt={ingredient.productName} className="w-12 h-12 object-cover rounded" />
               )}
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{ingredient.ingredientText}</p>
+                <p className="text-sm font-medium text-foreground">{ingredient.ingredientText}</p>
                 {ingredient.productBarcode && (
-                  <p className="text-xs text-gray-500">{ingredient.productBrand} • {ingredient.productBarcode}</p>
+                  <p className="text-xs text-muted-foreground">{ingredient.productBrand} • {ingredient.productBarcode}</p>
                 )}
                 {ingredient.notes && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 italic mt-1">{ingredient.notes}</p>
+                  <p className="text-xs text-muted-foreground italic mt-1">{ingredient.notes}</p>
                 )}
                 {ingredient.nutrition && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {Math.round(ingredient.nutrition.calories * ingredient.quantity)} cal •{' '}
                     {Math.round(ingredient.nutrition.protein * ingredient.quantity * 10) / 10}g protein
                   </p>
@@ -438,7 +438,7 @@ export default function CreateRecipePage() {
               </div>
               <button
                 onClick={() => handleRemoveIngredient(index)}
-                className="text-red-600 hover:text-red-700"
+                className="text-error hover:text-error-dark"
               >
                 <TrashIcon className="h-5 w-5" />
               </button>
@@ -446,7 +446,7 @@ export default function CreateRecipePage() {
           ))}
 
           {ingredients.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               No ingredients added yet. Click "Add from Database" to get started.
             </div>
           )}
@@ -460,7 +460,7 @@ export default function CreateRecipePage() {
             onChange={(e) => setTextIngredient(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleAddTextIngredient()}
             placeholder="Or add text ingredient (e.g., '2 cups milk', 'salt to taste')"
-            className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+            className="flex-1 px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           />
           <button
             onClick={handleAddTextIngredient}
@@ -473,40 +473,40 @@ export default function CreateRecipePage() {
 
       {/* Nutrition Summary */}
       <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg shadow p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Nutrition (per serving)</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">Nutrition (per serving)</h2>
         <div className="grid grid-cols-5 gap-4">
           <div className="text-center">
-            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{nutrition.calories}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Calories</div>
+            <div className="text-3xl font-bold text-foreground">{nutrition.calories}</div>
+            <div className="text-sm text-muted-foreground">Calories</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-green-600">{nutrition.protein}g</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Protein</div>
+            <div className="text-3xl font-bold text-success">{nutrition.protein}g</div>
+            <div className="text-sm text-muted-foreground">Protein</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">{nutrition.carbs}g</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Carbs</div>
+            <div className="text-3xl font-bold text-secondary">{nutrition.carbs}g</div>
+            <div className="text-sm text-muted-foreground">Carbs</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-orange-600">{nutrition.fat}g</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Fat</div>
+            <div className="text-3xl font-bold text-warning">{nutrition.fat}g</div>
+            <div className="text-sm text-muted-foreground">Fat</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-yellow-600">{nutrition.fiber}g</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Fiber</div>
+            <div className="text-3xl font-bold text-warning">{nutrition.fiber}g</div>
+            <div className="text-sm text-muted-foreground">Fiber</div>
           </div>
         </div>
         {ingredients.some(i => i.nutrition) && (
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-3 text-center">
+          <p className="text-xs text-muted-foreground mt-3 text-center">
             ✓ Auto-calculated from {ingredients.filter(i => i.nutrition).length} verified products
           </p>
         )}
       </div>
 
       {/* Recipe Steps */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-6">
+      <div className="bg-card rounded-lg shadow p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cooking Steps</h2>
+          <h2 className="text-lg font-semibold text-foreground">Cooking Steps</h2>
           <button
             onClick={handleAddStep}
             className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors"
@@ -527,11 +527,11 @@ export default function CreateRecipePage() {
                 onChange={(e) => handleUpdateStep(index, e.target.value)}
                 placeholder="Enter step description..."
                 rows={2}
-                className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                className="flex-1 px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <button
                 onClick={() => handleRemoveStep(index)}
-                className="text-red-600 hover:text-red-700"
+                className="text-error hover:text-error-dark"
               >
                 <TrashIcon className="h-5 w-5" />
               </button>
@@ -541,9 +541,9 @@ export default function CreateRecipePage() {
       </div>
 
       {/* Cooking Tips */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-6">
+      <div className="bg-card rounded-lg shadow p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cooking Tips (Optional)</h2>
+          <h2 className="text-lg font-semibold text-foreground">Cooking Tips (Optional)</h2>
           <button
             onClick={handleAddTip}
             className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors"
@@ -561,11 +561,11 @@ export default function CreateRecipePage() {
                 value={tip}
                 onChange={(e) => handleUpdateTip(index, e.target.value)}
                 placeholder="Enter cooking tip..."
-                className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                className="flex-1 px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <button
                 onClick={() => handleRemoveTip(index)}
-                className="text-red-600 hover:text-red-700"
+                className="text-error hover:text-error-dark"
               >
                 <TrashIcon className="h-5 w-5" />
               </button>

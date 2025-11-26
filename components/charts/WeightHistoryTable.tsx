@@ -232,10 +232,10 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
   }
 
   const getChangeColor = (change?: number) => {
-    if (!change) return 'text-gray-600 dark:text-gray-400'
-    if (change < 0) return 'text-green-600 dark:text-green-400' // Weight loss
-    if (change > 0) return 'text-red-600 dark:text-red-400' // Weight gain
-    return 'text-gray-600 dark:text-gray-400' // No change
+    if (!change) return 'text-muted-foreground'
+    if (change < 0) return 'text-success dark:text-green-400' // Weight loss
+    if (change > 0) return 'text-error' // Weight gain
+    return 'text-muted-foreground' // No change
   }
 
   const getChangeIcon = (change?: number) => {
@@ -247,7 +247,7 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
     return (
       <div className="w-full space-y-3">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="bg-gray-100 dark:bg-gray-800 rounded-lg h-20 animate-pulse" />
+          <div key={i} className="bg-muted rounded-lg h-20 animate-pulse" />
         ))}
       </div>
     )
@@ -255,10 +255,10 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
 
   if (entries.length === 0) {
     return (
-      <div className="bg-gray-50 dark:bg-gray-950 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-8 text-center">
+      <div className="bg-background rounded-lg border-2 border-dashed border-border p-8 text-center">
         <div className="text-5xl mb-3">📊</div>
-        <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">No Weight Entries Yet</p>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Start tracking your weight to see your history here</p>
+        <p className="text-foreground font-medium mb-1">No Weight Entries Yet</p>
+        <p className="text-sm text-muted-foreground">Start tracking your weight to see your history here</p>
       </div>
     )
   }
@@ -266,21 +266,21 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
   return (
     <div className="space-y-3">
       {/* Batch Edit Toggle & Action Bar */}
-      <div className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between gap-3 p-3 bg-background rounded-lg border border-border">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setBatchEditMode(!batchEditMode)}
             disabled={saving}
             className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               batchEditMode
-                ? 'bg-purple-600 text-white hover:bg-purple-700'
-                : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                ? 'bg-primary text-white hover:bg-primary-hover'
+                : 'bg-background text-foreground border border-border hover:bg-background'
             }`}
           >
             {batchEditMode ? '✓ Batch Edit Mode' : 'Edit Multiple'}
           </button>
           {batchEditMode && pendingChanges.size > 0 && (
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="text-sm text-muted-foreground">
               {pendingChanges.size} {pendingChanges.size === 1 ? 'change' : 'changes'} pending
             </span>
           )}
@@ -291,14 +291,14 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
             <button
               onClick={handleCancelBatchEdit}
               disabled={saving}
-              className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleSaveAllChanges}
               disabled={saving || pendingChanges.size === 0}
-              className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="px-4 py-2 text-sm bg-success text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {saving ? 'Saving...' : `Save All Changes ${pendingChanges.size > 0 ? `(${pendingChanges.size})` : ''}`}
             </button>
@@ -310,30 +310,30 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b-2 border-gray-200 dark:border-gray-700">
-              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900 dark:text-gray-100">Date</th>
-              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900 dark:text-gray-100">Weight</th>
-              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900 dark:text-gray-100">Change</th>
-              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900 dark:text-gray-100">Notes</th>
-              <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900 dark:text-gray-100">Actions</th>
+            <tr className="border-b-2 border-border">
+              <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Date</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Weight</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Change</th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Notes</th>
+              <th className="text-right py-3 px-4 text-sm font-semibold text-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
             {entries.map((entry) => (
               <tr
                 key={entry.id}
-                className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/50 ${
-                  hasPendingChanges(entry.id) ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
+                className={`border-b border-border hover:bg-background dark:hover:bg-gray-900/50 ${
+                  hasPendingChanges(entry.id) ? 'bg-warning-light' : ''
                 }`}
               >
-                <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
+                <td className="py-3 px-4 text-sm text-foreground">
                   {batchEditMode || editingId === entry.id ? (
                     <input
                       type="date"
                       value={batchEditMode ? getBatchValue(entry.id, 'loggedAt', entry.loggedAt.toISOString().split('T')[0]) : editDate}
                       onChange={(e) => batchEditMode ? handleBatchFieldChange(entry.id, 'loggedAt', e.target.value) : setEditDate(e.target.value)}
                       max={new Date().toISOString().split('T')[0]}
-                      className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+                      className="px-2 py-1 border border-border rounded bg-background text-foreground text-sm"
                       disabled={processingId === entry.id || saving}
                     />
                   ) : (
@@ -351,11 +351,11 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
                       value={batchEditMode ? getBatchValue(entry.id, 'weight', entry.weight) : editWeight}
                       onChange={(e) => batchEditMode ? handleBatchFieldChange(entry.id, 'weight', parseFloat(e.target.value)) : setEditWeight(e.target.value)}
                       step="0.1"
-                      className="w-24 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+                      className="w-24 px-2 py-1 border border-border rounded bg-background text-foreground text-sm"
                       disabled={processingId === entry.id || saving}
                     />
                   ) : (
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                    <span className="font-medium text-foreground">
                       {entry.weight} {entry.unit}
                     </span>
                   )}
@@ -374,11 +374,11 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
                       value={batchEditMode ? getBatchValue(entry.id, 'notes', entry.notes || '') : editNotes}
                       onChange={(e) => batchEditMode ? handleBatchFieldChange(entry.id, 'notes', e.target.value) : setEditNotes(e.target.value)}
                       placeholder="Add notes..."
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+                      className="w-full px-2 py-1 border border-border rounded bg-background text-foreground text-sm"
                       disabled={processingId === entry.id || saving}
                     />
                   ) : (
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-sm text-muted-foreground">
                       {entry.notes || '—'}
                     </span>
                   )}
@@ -391,14 +391,14 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
                           <button
                             onClick={() => handleSaveEdit(entry.id, entry.unit)}
                             disabled={processingId === entry.id}
-                            className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 disabled:opacity-50"
+                            className="px-3 py-1 bg-primary text-white text-sm rounded hover:bg-primary-hover disabled:opacity-50"
                           >
                             Save
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
                             disabled={processingId === entry.id}
-                            className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm rounded hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+                            className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-foreground text-sm rounded hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
                           >
                             Cancel
                           </button>
@@ -408,14 +408,14 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
                           <button
                             onClick={() => handleEdit(entry)}
                             disabled={processingId === entry.id}
-                            className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 text-sm font-medium disabled:opacity-50"
+                            className="text-primary dark:text-purple-400 hover:text-primary-dark dark:hover:text-purple-300 text-sm font-medium disabled:opacity-50"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => setDeleteConfirmId(entry.id)}
                             disabled={processingId === entry.id}
-                            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm font-medium disabled:opacity-50"
+                            className="text-error hover:text-error-dark dark:hover:text-red-300 text-sm font-medium disabled:opacity-50"
                           >
                             Delete
                           </button>
@@ -435,7 +435,7 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
         {entries.map((entry) => (
           <div
             key={entry.id}
-            className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
+            className="bg-card rounded-lg border border-border p-4"
           >
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
@@ -446,7 +446,7 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
                       value={editDate}
                       onChange={(e) => setEditDate(e.target.value)}
                       max={new Date().toISOString().split('T')[0]}
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+                      className="w-full px-2 py-1 border border-border rounded bg-background text-foreground text-sm"
                       disabled={processingId === entry.id}
                     />
                     <input
@@ -454,20 +454,20 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
                       value={editWeight}
                       onChange={(e) => setEditWeight(e.target.value)}
                       step="0.1"
-                      className="w-32 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      className="w-32 px-2 py-1 border border-border rounded bg-background text-foreground"
                       disabled={processingId === entry.id}
                     />
                   </div>
                 ) : (
                   <>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-muted-foreground">
                       {entry.loggedAt.toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric'
                       })}
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    <p className="text-2xl font-bold text-foreground">
                       {entry.weight} {entry.unit}
                     </p>
                   </>
@@ -491,29 +491,29 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
                 value={editNotes}
                 onChange={(e) => setEditNotes(e.target.value)}
                 placeholder="Add notes..."
-                className="w-full mb-3 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+                className="w-full mb-3 px-2 py-1 border border-border rounded bg-background text-foreground text-sm"
                 disabled={processingId === entry.id}
               />
             ) : (
               entry.notes && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{entry.notes}</p>
+                <p className="text-sm text-muted-foreground mb-3">{entry.notes}</p>
               )
             )}
 
-            <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex gap-2 pt-2 border-t border-border">
               {editingId === entry.id ? (
                 <>
                   <button
                     onClick={() => handleSaveEdit(entry.id, entry.unit)}
                     disabled={processingId === entry.id}
-                    className="flex-1 px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 disabled:opacity-50"
+                    className="flex-1 px-3 py-2 bg-primary text-white text-sm rounded hover:bg-primary-hover disabled:opacity-50"
                   >
                     Save
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
                     disabled={processingId === entry.id}
-                    className="flex-1 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm rounded hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+                    className="flex-1 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-foreground text-sm rounded hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -523,14 +523,14 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
                   <button
                     onClick={() => handleEdit(entry)}
                     disabled={processingId === entry.id}
-                    className="flex-1 px-3 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm rounded hover:bg-purple-200 dark:hover:bg-purple-900/50 disabled:opacity-50"
+                    className="flex-1 px-3 py-2 bg-primary-light text-primary-dark text-sm rounded hover:bg-purple-200 disabled:opacity-50"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => setDeleteConfirmId(entry.id)}
                     disabled={processingId === entry.id}
-                    className="flex-1 px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm rounded hover:bg-red-200 dark:hover:bg-red-900/50 disabled:opacity-50"
+                    className="flex-1 px-3 py-2 bg-red-100 dark:bg-red-900/30 text-error-dark dark:text-red-300 text-sm rounded hover:bg-red-200 dark:hover:bg-red-900/50 disabled:opacity-50"
                   >
                     Delete
                   </button>
@@ -544,25 +544,25 @@ export function WeightHistoryTable({ weightLogs, loading }: WeightHistoryTablePr
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+          <div className="bg-card rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-bold text-foreground mb-2">
               Delete Weight Log?
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               This action cannot be undone. This will permanently delete this weight entry.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirmId(null)}
                 disabled={processingId === deleteConfirmId}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
+                className="flex-1 px-4 py-2 border border-border rounded text-foreground hover:bg-background disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDelete(deleteConfirmId)}
                 disabled={processingId === deleteConfirmId}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-error text-white rounded hover:bg-red-700 disabled:opacity-50"
               >
                 {processingId === deleteConfirmId ? 'Deleting...' : 'Delete'}
               </button>

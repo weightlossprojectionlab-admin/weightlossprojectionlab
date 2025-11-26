@@ -12,6 +12,8 @@ interface DocumentDetailModalProps {
 export default function DocumentDetailModal({ document, onClose }: DocumentDetailModalProps) {
   const [isFlipped, setIsFlipped] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [showLightbox, setShowLightbox] = useState(false)
+  const [lightboxImageUrl, setLightboxImageUrl] = useState<string>('')
 
   const hasOcrData = document.ocrStatus === 'completed' && document.extractedText
 
@@ -39,25 +41,60 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)
   }
 
+  const openLightbox = (imageUrl: string) => {
+    setLightboxImageUrl(imageUrl)
+    setShowLightbox(true)
+  }
+
+  const closeLightbox = () => {
+    setShowLightbox(false)
+    setLightboxImageUrl('')
+  }
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <>
+      {/* Lightbox for Full-Screen Image */}
+      {showLightbox && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-[60] p-4"
+          onClick={closeLightbox}
+        >
+          <div className="relative max-w-full max-h-full">
+            <button
+              onClick={closeLightbox}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+            >
+              <XMarkIcon className="w-8 h-8" />
+            </button>
+            <img
+              src={lightboxImageUrl}
+              alt="Full size document"
+              className="max-w-full max-h-[90vh] object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <p className="text-white text-center mt-4 text-sm">Click outside image to close</p>
+          </div>
+        </div>
+      )}
+
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
-            <DocumentTextIcon className="w-6 h-6 text-purple-600" />
+            <DocumentTextIcon className="w-6 h-6 text-primary" />
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="text-xl font-semibold text-foreground">
                 {document.name}
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                 {document.category}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300 transition-colors"
           >
             <XMarkIcon className="w-6 h-6" />
           </button>
@@ -69,11 +106,11 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left: Original Document */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                   <DocumentTextIcon className="w-4 h-4" />
                   Original Document
                 </h3>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                <div className="bg-muted rounded-lg overflow-hidden">
                   {document.fileType === 'image' ? (
                     hasFrontAndBack ? (
                       /* 3D Flip Animation for Front/Back Cards */
@@ -90,7 +127,8 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
                             <img
                               src={images[0].url}
                               alt={images[0].label || 'Front'}
-                              className="w-full h-auto"
+                              className="w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => openLightbox(images[0].url)}
                             />
                           </div>
 
@@ -105,9 +143,17 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
                             <img
                               src={images[1].url}
                               alt={images[1].label || 'Back'}
-                              className="w-full h-auto"
+                              className="w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => openLightbox(images[1].url)}
                             />
                           </div>
+                        </div>
+
+                        {/* Zoom Icon Hint */}
+                        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                          </svg>
                         </div>
 
                         {/* Flip Button */}
@@ -130,8 +176,16 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
                         <img
                           src={images[currentImageIndex].url}
                           alt={images[currentImageIndex].label || document.name}
-                          className="w-full h-auto"
+                          className="w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => openLightbox(images[currentImageIndex].url)}
                         />
+
+                        {/* Zoom Icon Hint */}
+                        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                          </svg>
+                        </div>
 
                         {/* Image Label */}
                         {hasMultipleImages && (
@@ -170,8 +224,8 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
                                   onClick={() => setCurrentImageIndex(idx)}
                                   className={`w-2 h-2 rounded-full transition-all ${
                                     idx === currentImageIndex
-                                      ? 'bg-white w-4'
-                                      : 'bg-white/50 hover:bg-white/75'
+                                      ? 'bg-background w-4'
+                                      : 'bg-background/50 hover:bg-background/75'
                                   }`}
                                 />
                               ))}
@@ -182,12 +236,12 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
                     )
                   ) : (
                     <div className="p-8 text-center">
-                      <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                      <DocumentTextIcon className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
                       <a
                         href={document.originalUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-purple-600 hover:text-purple-700 font-medium"
+                        className="text-primary hover:text-primary-dark font-medium"
                       >
                         Open PDF in new tab
                       </a>
@@ -198,8 +252,8 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
 
               {/* Right: Extracted Data */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                  <CheckCircleIcon className="w-4 h-4 text-green-600" />
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <CheckCircleIcon className="w-4 h-4 text-success" />
                   Extracted Information
                 </h3>
 
@@ -208,33 +262,33 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
                   <div className="space-y-4 mb-6">
                     {/* Insurance Card Data */}
                     {(document.metadata.policyNumber || document.metadata.memberName || document.metadata.provider) && (
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-3">
+                      <div className="bg-secondary-light border border-secondary-light rounded-lg p-4">
+                        <h4 className="font-semibold text-secondary-dark mb-3">
                           Insurance Information
                         </h4>
                         <dl className="space-y-2 text-sm">
                           {document.metadata.provider && (
                             <div>
                               <dt className="text-blue-700 dark:text-blue-300 font-medium">Provider</dt>
-                              <dd className="text-blue-900 dark:text-blue-100">{document.metadata.provider}</dd>
+                              <dd className="text-secondary-dark">{document.metadata.provider}</dd>
                             </div>
                           )}
                           {document.metadata.memberName && (
                             <div>
                               <dt className="text-blue-700 dark:text-blue-300 font-medium">Member Name</dt>
-                              <dd className="text-blue-900 dark:text-blue-100">{document.metadata.memberName}</dd>
+                              <dd className="text-secondary-dark">{document.metadata.memberName}</dd>
                             </div>
                           )}
                           {document.metadata.policyNumber && (
                             <div>
                               <dt className="text-blue-700 dark:text-blue-300 font-medium">Policy Number</dt>
-                              <dd className="text-blue-900 dark:text-blue-100 font-mono">{document.metadata.policyNumber}</dd>
+                              <dd className="text-secondary-dark font-mono">{document.metadata.policyNumber}</dd>
                             </div>
                           )}
                           {document.metadata.groupNumber && (
                             <div>
                               <dt className="text-blue-700 dark:text-blue-300 font-medium">Group Number</dt>
-                              <dd className="text-blue-900 dark:text-blue-100 font-mono">{document.metadata.groupNumber}</dd>
+                              <dd className="text-secondary-dark font-mono">{document.metadata.groupNumber}</dd>
                             </div>
                           )}
                         </dl>
@@ -243,26 +297,26 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
 
                     {/* ID Card Data */}
                     {(document.metadata.licenseNumber || document.metadata.idNumber) && (
-                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                      <div className="bg-success-light dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                         <h4 className="font-semibold text-green-900 dark:text-green-100 mb-3">
                           ID Information
                         </h4>
                         <dl className="space-y-2 text-sm">
                           {document.metadata.licenseNumber && (
                             <div>
-                              <dt className="text-green-700 dark:text-green-300 font-medium">License Number</dt>
+                              <dt className="text-success-dark dark:text-green-300 font-medium">License Number</dt>
                               <dd className="text-green-900 dark:text-green-100 font-mono">{document.metadata.licenseNumber}</dd>
                             </div>
                           )}
                           {document.metadata.idNumber && (
                             <div>
-                              <dt className="text-green-700 dark:text-green-300 font-medium">ID Number</dt>
+                              <dt className="text-success-dark dark:text-green-300 font-medium">ID Number</dt>
                               <dd className="text-green-900 dark:text-green-100 font-mono">{document.metadata.idNumber}</dd>
                             </div>
                           )}
                           {document.metadata.stateIssued && (
                             <div>
-                              <dt className="text-green-700 dark:text-green-300 font-medium">State</dt>
+                              <dt className="text-success-dark dark:text-green-300 font-medium">State</dt>
                               <dd className="text-green-900 dark:text-green-100">{document.metadata.stateIssued}</dd>
                             </div>
                           )}
@@ -272,31 +326,31 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
 
                     {/* Generic Data */}
                     {(document.metadata.dates || document.metadata.phoneNumbers || document.metadata.addresses) && (
-                      <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-                        <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-3">
+                      <div className="bg-primary-light border border-primary-light rounded-lg p-4">
+                        <h4 className="font-semibold text-primary-dark mb-3">
                           Additional Details
                         </h4>
                         <dl className="space-y-2 text-sm">
                           {document.metadata.dates && document.metadata.dates.length > 0 && (
                             <div>
-                              <dt className="text-purple-700 dark:text-purple-300 font-medium">Dates</dt>
-                              <dd className="text-purple-900 dark:text-purple-100">
+                              <dt className="text-primary-dark font-medium">Dates</dt>
+                              <dd className="text-primary-dark">
                                 {document.metadata.dates.join(', ')}
                               </dd>
                             </div>
                           )}
                           {document.metadata.phoneNumbers && document.metadata.phoneNumbers.length > 0 && (
                             <div>
-                              <dt className="text-purple-700 dark:text-purple-300 font-medium">Phone Numbers</dt>
-                              <dd className="text-purple-900 dark:text-purple-100">
+                              <dt className="text-primary-dark font-medium">Phone Numbers</dt>
+                              <dd className="text-primary-dark">
                                 {document.metadata.phoneNumbers.join(', ')}
                               </dd>
                             </div>
                           )}
                           {document.metadata.addresses && document.metadata.addresses.length > 0 && (
                             <div>
-                              <dt className="text-purple-700 dark:text-purple-300 font-medium">Addresses</dt>
-                              <dd className="text-purple-900 dark:text-purple-100">
+                              <dt className="text-primary-dark font-medium">Addresses</dt>
+                              <dd className="text-primary-dark">
                                 {document.metadata.addresses.join(' • ')}
                               </dd>
                             </div>
@@ -308,18 +362,18 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
                 )}
 
                 {/* Full Extracted Text */}
-                <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                <div className="bg-background border border-border rounded-lg p-4">
+                  <h4 className="font-semibold text-foreground mb-3">
                     Full Extracted Text
                   </h4>
-                  <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
+                  <pre className="text-sm text-foreground whitespace-pre-wrap font-mono">
                     {document.extractedText}
                   </pre>
                 </div>
 
                 {/* Confidence Score */}
                 {document.metadata?.confidenceScore && (
-                  <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="mt-4 text-sm text-muted-foreground dark:text-muted-foreground">
                     Extraction confidence: {Math.round(document.metadata.confidenceScore * 100)}%
                   </div>
                 )}
@@ -327,16 +381,16 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
             </div>
           ) : (
             <div className="text-center py-12">
-              <DocumentTextIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+              <DocumentTextIcon className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
                 {document.ocrStatus === 'processing' ? 'Processing Document...' : 'No OCR Data Available'}
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
+              <p className="text-muted-foreground mb-6">
                 {document.ocrStatus === 'processing'
                   ? 'Text extraction is in progress. This usually takes a few seconds.'
                   : 'OCR processing has not been completed for this document.'}
               </p>
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden max-w-2xl mx-auto">
+              <div className="bg-muted rounded-lg overflow-hidden max-w-2xl mx-auto">
                 {document.fileType === 'image' ? (
                   hasFrontAndBack ? (
                     /* 3D Flip Animation for Front/Back Cards */
@@ -433,8 +487,8 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
                                 onClick={() => setCurrentImageIndex(idx)}
                                 className={`w-2 h-2 rounded-full transition-all ${
                                   idx === currentImageIndex
-                                    ? 'bg-white w-4'
-                                    : 'bg-white/50 hover:bg-white/75'
+                                    ? 'bg-background w-4'
+                                    : 'bg-background/50 hover:bg-background/75'
                                 }`}
                               />
                             ))}
@@ -449,7 +503,7 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
                       href={document.originalUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-purple-600 hover:text-purple-700 font-medium"
+                      className="text-primary hover:text-primary-dark font-medium"
                     >
                       Open document in new tab
                     </a>
@@ -461,8 +515,8 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center justify-between p-6 border-t border-border bg-background">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <CalendarIcon className="w-4 h-4" />
               {new Date(document.uploadedAt).toLocaleDateString()}
@@ -475,13 +529,13 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
             <a
               href={document.originalUrl}
               download={document.fileName}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-foreground rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
               Download Original
             </a>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
             >
               Close
             </button>
@@ -489,5 +543,6 @@ export default function DocumentDetailModal({ document, onClose }: DocumentDetai
         </div>
       </div>
     </div>
+    </>
   )
 }

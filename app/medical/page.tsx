@@ -57,7 +57,7 @@ function MedicalDashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title="Medical Info"
         subtitle="Manage health information for you or your family"
@@ -66,7 +66,7 @@ function MedicalDashboardContent() {
       <main className="container mx-auto px-4 py-8">
         {loading ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">Loading dashboard...</p>
+            <p className="text-muted-foreground dark:text-muted-foreground">Loading dashboard...</p>
           </div>
         ) : (
           <>
@@ -100,7 +100,7 @@ function MedicalDashboardContent() {
 
             {/* Quick Actions */}
             <div className="mb-8">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+              <h2 className="text-lg font-bold text-foreground mb-4">
                 Quick Actions
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -129,12 +129,12 @@ function MedicalDashboardContent() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Upcoming Appointments */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-bold text-foreground mb-4">
                   Upcoming Appointments
                 </h2>
                 {upcomingAppointments.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  <p className="text-muted-foreground dark:text-muted-foreground text-sm">
                     No upcoming appointments
                   </p>
                 ) : (
@@ -143,22 +143,22 @@ function MedicalDashboardContent() {
                       <div
                         key={apt.id}
                         onClick={() => router.push(`/appointments/${apt.id}`)}
-                        className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-750 cursor-pointer transition-colors"
+                        className="p-3 bg-background rounded-lg hover:bg-muted dark:hover:bg-gray-750 cursor-pointer transition-colors"
                       >
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
+                            <p className="font-medium text-foreground">
                               {apt.patientName}
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-muted-foreground">
                               {apt.providerName}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                            <p className="text-sm font-medium text-primary dark:text-purple-400">
                               {formatDate(apt.dateTime)}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                            <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                               {formatTime(apt.dateTime)}
                             </p>
                           </div>
@@ -170,18 +170,18 @@ function MedicalDashboardContent() {
               </div>
 
               {/* Recent Family Members */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-bold text-foreground mb-4">
                   Family Members
                 </h2>
                 {patients.length === 0 ? (
                   <div className="text-center py-4">
-                    <p className="text-gray-500 dark:text-gray-400 text-sm mb-3">
+                    <p className="text-muted-foreground dark:text-muted-foreground text-sm mb-3">
                       No family members added yet
                     </p>
                     <button
                       onClick={() => router.push('/patients/new')}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm"
                     >
                       Add Your First Family Member
                     </button>
@@ -192,18 +192,18 @@ function MedicalDashboardContent() {
                       <div
                         key={patient.id}
                         onClick={() => router.push(`/patients/${patient.id}`)}
-                        className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-750 cursor-pointer transition-colors"
+                        className="p-3 bg-background rounded-lg hover:bg-muted dark:hover:bg-gray-750 cursor-pointer transition-colors"
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
+                            <p className="font-medium text-foreground">
                               {patient.name}
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+                            <p className="text-sm text-muted-foreground capitalize">
                               {patient.relationship}
                             </p>
                           </div>
-                          <span className="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded capitalize">
+                          <span className="text-xs px-2 py-1 bg-primary-light dark:bg-purple-900/20 text-primary-dark dark:text-purple-400 rounded capitalize">
                             {patient.type}
                           </span>
                         </div>
@@ -231,25 +231,25 @@ interface StatCardProps {
 
 function StatCard({ icon, title, count, color, onClick, actionLabel }: StatCardProps) {
   const colorClasses = {
-    purple: 'bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
-    blue: 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
-    green: 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+    purple: 'bg-primary-light dark:bg-purple-900/20 text-primary dark:text-purple-400',
+    blue: 'bg-blue-100 text-secondary',
+    green: 'bg-green-100 dark:bg-green-900/20 text-success dark:text-green-400'
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+    <div className="bg-card rounded-lg shadow-sm p-6">
       <div className="flex items-center justify-between mb-4">
         <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
           {icon}
         </div>
         <div className="text-right">
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{count}</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{title}</p>
+          <p className="text-3xl font-bold text-foreground">{count}</p>
+          <p className="text-sm text-muted-foreground">{title}</p>
         </div>
       </div>
       <button
         onClick={onClick}
-        className="w-full px-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+        className="w-full px-4 py-2 text-sm bg-background text-foreground rounded-lg hover:bg-muted dark:hover:bg-gray-750 transition-colors"
       >
         {actionLabel}
       </button>
@@ -267,12 +267,12 @@ function ActionButton({ icon, label, onClick }: ActionButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-purple-300 dark:hover:border-purple-700 transition-colors"
+      className="flex items-center gap-3 px-4 py-3 bg-card border-2 border-border rounded-lg hover:border-purple-300 dark:hover:border-purple-700 transition-colors"
     >
-      <div className="p-2 bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-lg">
+      <div className="p-2 bg-primary-light dark:bg-purple-900/20 text-primary dark:text-purple-400 rounded-lg">
         {icon}
       </div>
-      <span className="font-medium text-gray-900 dark:text-gray-100">{label}</span>
+      <span className="font-medium text-foreground">{label}</span>
     </button>
   )
 }

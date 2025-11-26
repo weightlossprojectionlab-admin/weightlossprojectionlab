@@ -13,22 +13,22 @@ import { ShareModal } from '@/components/social/ShareModal'
 
 // Dynamic imports for charts to reduce initial bundle size
 const WeightTrendChart = dynamic(() => import('@/components/charts/WeightTrendChart').then(mod => ({ default: mod.WeightTrendChart })), {
-  loading: () => <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  loading: () => <div className="h-80 bg-muted rounded-lg animate-pulse" />,
   ssr: false
 })
 
 const CalorieIntakeChart = dynamic(() => import('@/components/charts/CalorieIntakeChart').then(mod => ({ default: mod.CalorieIntakeChart })), {
-  loading: () => <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  loading: () => <div className="h-80 bg-muted rounded-lg animate-pulse" />,
   ssr: false
 })
 
 const MacroDistributionChart = dynamic(() => import('@/components/charts/MacroDistributionChart').then(mod => ({ default: mod.MacroDistributionChart })), {
-  loading: () => <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  loading: () => <div className="h-80 bg-muted rounded-lg animate-pulse" />,
   ssr: false
 })
 
 const StepCountChart = dynamic(() => import('@/components/charts/StepCountChart').then(mod => ({ default: mod.StepCountChart })), {
-  loading: () => <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  loading: () => <div className="h-80 bg-muted rounded-lg animate-pulse" />,
   ssr: false
 })
 
@@ -46,7 +46,7 @@ const MedicationManagementModal = dynamic(() => import('@/components/health/Medi
 })
 
 const RecommendationsSection = dynamic(() => import('@/components/appointments/RecommendationsSection').then(mod => ({ default: mod.RecommendationsSection })), {
-  loading: () => <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 animate-pulse"><div className="h-32 bg-gray-100 dark:bg-gray-800 rounded"></div></div>,
+  loading: () => <div className="bg-card rounded-lg shadow-sm p-6 animate-pulse"><div className="h-32 bg-muted rounded"></div></div>,
   ssr: false
 })
 
@@ -383,7 +383,7 @@ function ProgressContent() {
   }, [profile, weightData, user])
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title="Progress & Trends"
         subtitle="Visualize your weight loss journey with interactive charts"
@@ -405,11 +405,11 @@ function ProgressContent() {
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Time Range Selector */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4 mb-6">
+        <div className="bg-card rounded-lg shadow-sm p-4 mb-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Time Range</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Select the period to visualize</p>
+              <h2 className="text-lg font-semibold text-foreground">Time Range</h2>
+              <p className="text-sm text-muted-foreground">Select the period to visualize</p>
             </div>
             <div className="flex gap-2">
               {[7, 14, 30, 60, 90].map((days) => (
@@ -418,8 +418,8 @@ function ProgressContent() {
                   onClick={() => setTimeRange(days)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     timeRange === days
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      ? 'bg-primary text-white'
+                      : 'bg-muted text-foreground hover:bg-gray-200'
                   }`}
                 >
                   {days === 7 ? '1 Week' : days === 30 ? '1 Month' : days === 60 ? '2 Months' : days === 90 ? '3 Months' : `${days} Days`}
@@ -431,17 +431,17 @@ function ProgressContent() {
 
         {/* Health Context Section */}
         {profile && !loading && (
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Health Profile</h2>
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-bold text-foreground mb-4">Health Profile</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Activity Level */}
               {profile.profile?.activityLevel && (
                 <div className="border-l-4 border-purple-500 pl-4">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Activity Level</p>
-                  <p className="font-bold text-gray-900 dark:text-gray-100 capitalize">
+                  <p className="text-xs text-muted-foreground mb-1">Activity Level</p>
+                  <p className="font-bold text-foreground capitalize">
                     {profile.profile.activityLevel.replace('-', ' ')}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                     TDEE: {getActivityMultiplier(profile.profile.activityLevel)}x BMR
                   </p>
                 </div>
@@ -450,9 +450,9 @@ function ProgressContent() {
               {/* Health Conditions */}
               {profile.profile?.healthConditions && profile.profile.healthConditions.length > 0 && (
                 <div className="border-l-4 border-red-500 pl-4">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                  <p className="text-xs text-muted-foreground mb-2">
                     Health Conditions
-                    <span className="ml-1 text-gray-500 dark:text-gray-500">(tap to manage medications)</span>
+                    <span className="ml-1 text-muted-foreground dark:text-muted-foreground">(tap to manage medications)</span>
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {(showAllHealthConditions
@@ -473,7 +473,7 @@ function ProgressContent() {
                     {profile.profile.healthConditions.length > 3 && (
                       <button
                         onClick={() => setShowAllHealthConditions(!showAllHealthConditions)}
-                        className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors min-h-[44px] sm:min-h-0 sm:py-1 flex items-center"
+                        className="px-3 py-2 bg-muted text-muted-foreground text-xs rounded hover:bg-gray-200 transition-colors min-h-[44px] sm:min-h-0 sm:py-1 flex items-center"
                       >
                         {showAllHealthConditions
                           ? 'Show less'
@@ -487,18 +487,18 @@ function ProgressContent() {
               {/* Medications */}
               <div className="border-l-4 border-blue-500 pl-4">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <p className="text-xs text-muted-foreground">
                     Medications
                     {/* DEBUG */}
                     {profile.profile?.medications && (
-                      <span className="ml-2 text-purple-600">({profile.profile.medications.length} total)</span>
+                      <span className="ml-2 text-primary">({profile.profile.medications.length} total)</span>
                     )}
                   </p>
                   <div className="flex items-center gap-2">
                     {profile.profile?.medications && profile.profile.medications.length > 0 && (
                       <Link
                         href="/medications"
-                        className="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium underline min-h-[44px] sm:min-h-0 flex items-center active:scale-95 transition-transform"
+                        className="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs text-secondary hover:text-blue-700 dark:hover:text-blue-300 font-medium underline min-h-[44px] sm:min-h-0 flex items-center active:scale-95 transition-transform"
                       >
                         View All
                       </Link>
@@ -509,7 +509,7 @@ function ProgressContent() {
                         setSelectedCondition(undefined)
                         setShowMedicationModal(true)
                       }}
-                      className="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium underline min-h-[44px] sm:min-h-0 flex items-center active:scale-95 transition-transform"
+                      className="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs text-primary hover:text-primary-dark dark:text-purple-400 dark:hover:text-purple-300 font-medium underline min-h-[44px] sm:min-h-0 flex items-center active:scale-95 transition-transform"
                     >
                       {profile.profile?.medications && profile.profile.medications.length > 0 ? '⚙️ Manage' : '➕ Add'}
                     </button>
@@ -517,7 +517,7 @@ function ProgressContent() {
                 </div>
                 {profile.profile?.medications && profile.profile.medications.length > 0 ? (
                   <>
-                    <p className="font-bold text-gray-900 dark:text-gray-100">
+                    <p className="font-bold text-foreground">
                       {profile.profile.medications.length} Active
                     </p>
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -525,10 +525,10 @@ function ProgressContent() {
                         ? profile.profile.medications
                         : profile.profile.medications.slice(0, 2)
                       ).map((med: ScannedMedication, idx: number) => (
-                        <span key={idx} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs rounded flex items-center gap-1">
+                        <span key={idx} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-secondary-dark text-xs rounded flex items-center gap-1">
                           {med.name}
                           {med.patientName && (
-                            <span className="text-blue-600 dark:text-blue-300 font-semibold">
+                            <span className="text-secondary dark:text-blue-300 font-semibold">
                               ({med.patientName})
                             </span>
                           )}
@@ -537,7 +537,7 @@ function ProgressContent() {
                       {profile.profile.medications.length > 2 && (
                         <button
                           onClick={() => setShowAllMedications(!showAllMedications)}
-                          className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                          className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded hover:bg-gray-200 transition-colors"
                         >
                           {showAllMedications
                             ? 'Show less'
@@ -547,7 +547,7 @@ function ProgressContent() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                     No medications added yet
                   </p>
                 )}
@@ -558,12 +558,12 @@ function ProgressContent() {
                 (profile.profile?.lifestyle?.alcoholFrequency && profile.profile.lifestyle.alcoholFrequency !== 'never') ||
                 (profile.profile?.lifestyle?.recreationalDrugs && profile.profile.lifestyle.recreationalDrugs !== 'no')) && (
                 <div className="border-l-4 border-yellow-500 pl-4">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Lifestyle Factors</p>
+                  <p className="text-xs text-muted-foreground mb-2">Lifestyle Factors</p>
                   <div className="space-y-1">
                     {profile.profile.lifestyle.smoking !== 'never' && (
                       <div className="flex items-center gap-2 text-sm">
                         <span>🚬</span>
-                        <span className="text-gray-900 dark:text-gray-100 capitalize">
+                        <span className="text-foreground capitalize">
                           {profile.profile.lifestyle.smoking.replace('-', ' ')}
                         </span>
                       </div>
@@ -571,7 +571,7 @@ function ProgressContent() {
                     {profile.profile.lifestyle.alcoholFrequency !== 'never' && (
                       <div className="flex items-center gap-2 text-sm">
                         <span>🍺</span>
-                        <span className="text-gray-900 dark:text-gray-100 capitalize">
+                        <span className="text-foreground capitalize">
                           {profile.profile.lifestyle.alcoholFrequency} drinker
                         </span>
                       </div>
@@ -579,7 +579,7 @@ function ProgressContent() {
                     {profile.profile.lifestyle.recreationalDrugs !== 'no' && (
                       <div className="flex items-center gap-2 text-sm">
                         <span>⚠️</span>
-                        <span className="text-gray-900 dark:text-gray-100 capitalize">
+                        <span className="text-foreground capitalize">
                           {profile.profile.lifestyle.recreationalDrugs} use
                         </span>
                       </div>
@@ -593,22 +593,22 @@ function ProgressContent() {
 
         {/* Profile & Goals Summary */}
         {profile && !loading && (
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Your Journey</h2>
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-bold text-foreground mb-4">Your Journey</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               {/* Current Weight */}
               {weightData.length > 0 && (
                 <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Current Weight</p>
-                  <p className="text-xl font-bold text-purple-600">{weightData[weightData.length - 1].weight} lbs</p>
+                  <p className="text-xs text-muted-foreground">Current Weight</p>
+                  <p className="text-xl font-bold text-primary">{weightData[weightData.length - 1].weight} lbs</p>
                 </div>
               )}
 
               {/* Starting Weight */}
               {weightData.length > 0 && (
                 <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Starting Weight</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-xs text-muted-foreground">Starting Weight</p>
+                  <p className="text-xl font-bold text-foreground">
                     {profile.goals?.startWeight && profile.goals.startWeight >= 50
                       ? profile.goals.startWeight
                       : weightData[0].weight} lbs
@@ -617,7 +617,7 @@ function ProgressContent() {
                     <button
                       onClick={handleFixStartWeight}
                       disabled={fixingStartWeight}
-                      className="mt-1 text-xs text-purple-600 hover:text-purple-700 underline"
+                      className="mt-1 text-xs text-primary hover:text-primary-dark underline"
                     >
                       {fixingStartWeight ? 'Fixing...' : 'Fix in database'}
                     </button>
@@ -628,16 +628,16 @@ function ProgressContent() {
               {/* Goal Weight */}
               {profile.goals?.targetWeight && (
                 <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Goal Weight</p>
-                  <p className="text-xl font-bold text-green-600">{profile.goals.targetWeight} lbs</p>
+                  <p className="text-xs text-muted-foreground">Goal Weight</p>
+                  <p className="text-xl font-bold text-success">{profile.goals.targetWeight} lbs</p>
                 </div>
               )}
 
               {/* BMI (calculated) */}
               {profile.height && weightData.length > 0 && (
                 <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Current BMI</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-xs text-muted-foreground">Current BMI</p>
+                  <p className="text-xl font-bold text-foreground">
                     {(() => {
                       const heightInInches = profile.height
                       const currentWeight = weightData[weightData.length - 1].weight
@@ -651,30 +651,30 @@ function ProgressContent() {
               {/* BMR */}
               {profile.goals?.bmr && (
                 <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">BMR</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{Math.round(profile.goals.bmr)}</p>
+                  <p className="text-xs text-muted-foreground">BMR</p>
+                  <p className="text-xl font-bold text-foreground">{Math.round(profile.goals.bmr)}</p>
                 </div>
               )}
 
               {/* TDEE */}
               {profile.goals?.tdee && (
                 <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">TDEE</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{Math.round(profile.goals.tdee)}</p>
+                  <p className="text-xs text-muted-foreground">TDEE</p>
+                  <p className="text-xl font-bold text-foreground">{Math.round(profile.goals.tdee)}</p>
                 </div>
               )}
             </div>
 
             {/* Log New Weight Button */}
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-6 pt-6 border-t border-border">
               <button
                 onClick={() => setShowWeightModal(true)}
-                className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <span className="text-xl">⚖️</span>
                 Log New Weight Entry
               </button>
-              <p className="text-xs text-center text-gray-500 dark:text-gray-500 mt-2">
+              <p className="text-xs text-center text-muted-foreground dark:text-muted-foreground mt-2">
                 Keep your progress up to date
               </p>
             </div>
@@ -688,21 +688,21 @@ function ProgressContent() {
               ? 'from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200 dark:border-red-800'
               : goalProgress.hasExceededGoal
               ? 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800'
-              : 'from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-800'
+              : 'from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-primary-light'
           }`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              <h2 className="text-lg font-bold text-foreground">
                 {goalProgress.isWeightGain ? 'Weight Gain Alert' : goalProgress.hasExceededGoal ? 'Goal Exceeded! 🎉' : 'Goal Progress'}
               </h2>
               <div className="flex items-center gap-3">
                 <Link
                   href="/weight-history"
-                  className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
+                  className="text-sm text-primary dark:text-purple-400 hover:text-primary-dark dark:hover:text-purple-300 font-medium"
                 >
                   View History
                 </Link>
                 <span className={`px-3 py-1 text-white text-sm font-semibold rounded-full ${
-                  goalProgress.isWeightGain ? 'bg-red-600' : goalProgress.hasExceededGoal ? 'bg-green-600' : 'bg-purple-600'
+                  goalProgress.isWeightGain ? 'bg-error' : goalProgress.hasExceededGoal ? 'bg-success' : 'bg-primary'
                 }`}>
                   {goalProgress.progressPercentage}% Complete
                 </span>
@@ -716,7 +716,7 @@ function ProgressContent() {
                   <span className="text-3xl">⚠️</span>
                   <div>
                     <p className="font-bold text-red-900 dark:text-red-200">You've gained {goalProgress.totalWeightLoss} lbs since starting</p>
-                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    <p className="text-sm text-error-dark dark:text-red-300 mt-1">
                       This is the opposite direction of your goal. Review your calorie intake and activity levels.
                     </p>
                   </div>
@@ -731,7 +731,7 @@ function ProgressContent() {
                   <span className="text-3xl">🎉</span>
                   <div>
                     <p className="font-bold text-green-900 dark:text-green-200">Congratulations! You've exceeded your goal!</p>
-                    <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                    <p className="text-sm text-success-dark dark:text-green-300 mt-1">
                       You've lost {goalProgress.totalWeightLoss} lbs (Goal was {goalProgress.goalWeightLoss} lbs). Consider setting a new goal or switching to maintenance mode.
                     </p>
                   </div>
@@ -754,7 +754,7 @@ function ProgressContent() {
                   )}
                 </div>
                 {/* Arrow indicator showing wrong direction */}
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 text-red-600 text-lg font-bold">
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 text-error text-lg font-bold">
                   →
                 </div>
               </div>
@@ -777,43 +777,43 @@ function ProgressContent() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               {/* Weight Lost/Gained */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+              <div className="bg-card rounded-lg p-4">
+                <p className="text-xs text-muted-foreground mb-1">
                   {goalProgress.isWeightGain ? 'Weight Gained' : 'Weight Lost'}
                 </p>
-                <p className={`text-2xl font-bold ${goalProgress.isWeightGain ? 'text-red-600' : 'text-purple-600'}`}>
+                <p className={`text-2xl font-bold ${goalProgress.isWeightGain ? 'text-error' : 'text-primary'}`}>
                   {goalProgress.totalWeightLoss} lbs
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                   {goalProgress.isWeightGain ? 'Moving away from' : 'of'} {goalProgress.goalWeightLoss} lbs total goal
                 </p>
               </div>
 
               {/* Current Pace */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Current Pace</p>
+              <div className="bg-card rounded-lg p-4">
+                <p className="text-xs text-muted-foreground mb-1">Current Pace</p>
                 <p className={`text-2xl font-bold ${
-                  goalProgress.isWeightGain ? 'text-red-600' :
-                  goalProgress.isPaceOnTrack ? 'text-green-600' :
-                  goalProgress.isPaceTooFast ? 'text-red-600' :
-                  'text-yellow-600'
+                  goalProgress.isWeightGain ? 'text-error' :
+                  goalProgress.isPaceOnTrack ? 'text-success' :
+                  goalProgress.isPaceTooFast ? 'text-error' :
+                  'text-warning'
                 }`}>
                   {goalProgress.avgWeeklyLoss} lbs/week {goalProgress.isWeightGain ? 'gaining' : 'losing'}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                   {goalProgress.isWeightGain ? 'Target: Weight loss' : `Goal: ${goalProgress.targetWeeklyLoss} lbs/week`}
                   {goalProgress.isPaceOnTrack && ' ✓'}
                 </p>
               </div>
 
               {/* ETA to Goal */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg p-4">
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">ETA to Goal</p>
-                <p className="text-2xl font-bold text-blue-600">
+              <div className="bg-card rounded-lg p-4">
+                <p className="text-xs text-muted-foreground mb-1">ETA to Goal</p>
+                <p className="text-2xl font-bold text-secondary">
                   {goalProgress.weeksRemaining ? `${goalProgress.weeksRemaining} weeks` : 'N/A'}
                 </p>
                 {goalProgress.estimatedCompletionDate && (
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                     ~{new Date(goalProgress.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
                 )}
@@ -822,12 +822,12 @@ function ProgressContent() {
 
             {/* Pace Warnings */}
             {goalProgress.isPaceTooFast && (
-              <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+              <div className="bg-error-light dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">⚠️</span>
                   <div>
                     <p className="font-semibold text-red-900 dark:text-red-200">Losing Weight Too Fast</p>
-                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    <p className="text-sm text-error-dark dark:text-red-300 mt-1">
                       Losing more than 2 lbs/week can be unsafe and lead to muscle loss. Consider increasing your calorie intake slightly.
                     </p>
                   </div>
@@ -836,11 +836,11 @@ function ProgressContent() {
             )}
 
             {goalProgress.isPaceTooSlow && (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
+              <div className="bg-warning-light border-2 border-warning-light rounded-lg p-4 mb-4">
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">🐌</span>
                   <div>
-                    <p className="font-semibold text-yellow-900 dark:text-yellow-200">Progress Slower Than Goal</p>
+                    <p className="font-semibold text-yellow-900">Progress Slower Than Goal</p>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
                       You're losing {goalProgress.avgWeeklyLoss} lbs/week but targeting {goalProgress.targetWeeklyLoss} lbs/week.
                       Consider reducing calorie intake or increasing activity.
@@ -854,7 +854,7 @@ function ProgressContent() {
             {goalProgress.daysAheadOrBehind !== null && goalProgress.targetCompletionDate && (
               <div className={`rounded-lg p-4 ${
                 goalProgress.daysAheadOrBehind >= 0
-                  ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800'
+                  ? 'bg-success-light dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800'
                   : 'bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-200 dark:border-orange-800'
               }`}>
                 <div className="flex items-center justify-between">
@@ -870,7 +870,7 @@ function ProgressContent() {
                     </p>
                     <p className={`text-sm mt-1 ${
                       goalProgress.daysAheadOrBehind >= 0
-                        ? 'text-green-700 dark:text-green-300'
+                        ? 'text-success-dark dark:text-green-300'
                         : 'text-orange-700 dark:text-orange-300'
                     }`}>
                       Target date: {new Date(goalProgress.targetCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -885,15 +885,15 @@ function ProgressContent() {
         {/* Summary Stats */}
         {summaryStats && !loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+            <div className="bg-card rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Weight Change</p>
-                  <p className={`text-2xl font-bold ${summaryStats.weightChange < 0 ? 'text-green-600' : 'text-gray-900 dark:text-gray-100'}`}>
+                  <p className="text-sm text-muted-foreground">Weight Change</p>
+                  <p className={`text-2xl font-bold ${summaryStats.weightChange < 0 ? 'text-success' : 'text-foreground'}`}>
                     {summaryStats.weightChange > 0 ? '+' : ''}{summaryStats.weightChange} lbs
                   </p>
                   {profile?.goals?.startWeight && weightData.length > 0 && (
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                       Total: {(profile.goals.startWeight - weightData[weightData.length - 1].weight).toFixed(1)} lbs
                     </p>
                   )}
@@ -904,13 +904,13 @@ function ProgressContent() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+            <div className="bg-card rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Avg Calories/Day</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{summaryStats.avgCalories}</p>
+                  <p className="text-sm text-muted-foreground">Avg Calories/Day</p>
+                  <p className="text-2xl font-bold text-foreground">{summaryStats.avgCalories}</p>
                   {profile?.goals?.dailyCalorieGoal && (
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                       Goal: {profile.goals.dailyCalorieGoal} cal
                     </p>
                   )}
@@ -919,12 +919,12 @@ function ProgressContent() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+            <div className="bg-card rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Meals Logged</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{summaryStats.mealsLogged}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  <p className="text-sm text-muted-foreground">Meals Logged</p>
+                  <p className="text-2xl font-bold text-foreground">{summaryStats.mealsLogged}</p>
+                  <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                     Last {timeRange} days
                   </p>
                 </div>
@@ -932,21 +932,21 @@ function ProgressContent() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
+            <div className="bg-card rounded-lg shadow-sm p-6">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Macro Split</p>
+                <p className="text-sm text-muted-foreground mb-2">Macro Split</p>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-red-600 font-semibold">P: {summaryStats.macroPercentages.protein}%</span>
-                  <span className="text-yellow-600 font-semibold">C: {summaryStats.macroPercentages.carbs}%</span>
-                  <span className="text-green-600 font-semibold">F: {summaryStats.macroPercentages.fat}%</span>
+                  <span className="text-error font-semibold">P: {summaryStats.macroPercentages.protein}%</span>
+                  <span className="text-warning font-semibold">C: {summaryStats.macroPercentages.carbs}%</span>
+                  <span className="text-success font-semibold">F: {summaryStats.macroPercentages.fat}%</span>
                 </div>
                 <div className="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
-                  <div className="bg-red-500" style={{ width: `${summaryStats.macroPercentages.protein}%` }} />
-                  <div className="bg-yellow-500" style={{ width: `${summaryStats.macroPercentages.carbs}%` }} />
-                  <div className="bg-green-500" style={{ width: `${summaryStats.macroPercentages.fat}%` }} />
+                  <div className="bg-error-light0" style={{ width: `${summaryStats.macroPercentages.protein}%` }} />
+                  <div className="bg-warning-light0" style={{ width: `${summaryStats.macroPercentages.carbs}%` }} />
+                  <div className="bg-success-light0" style={{ width: `${summaryStats.macroPercentages.fat}%` }} />
                 </div>
                 {profile?.goals?.macroTargets && (
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                  <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
                     Goal: {profile.goals.macroTargets.protein}% / {profile.goals.macroTargets.carbs}% / {profile.goals.macroTargets.fat}%
                   </p>
                 )}
@@ -962,8 +962,8 @@ function ProgressContent() {
         {!loading && (
           <div className="space-y-6">
             {/* Weight Trend Chart */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Weight Trend</h2>
+            <div className="bg-card rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-bold text-foreground mb-4">Weight Trend</h2>
               <WeightTrendChart
                 data={weightData}
                 targetWeight={targetWeight}
@@ -972,8 +972,8 @@ function ProgressContent() {
             </div>
 
             {/* Calorie Intake Chart */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Daily Calorie Intake</h2>
+            <div className="bg-card rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-bold text-foreground mb-4">Daily Calorie Intake</h2>
               <CalorieIntakeChart
                 data={calorieData}
                 loading={loading}
@@ -981,8 +981,8 @@ function ProgressContent() {
             </div>
 
             {/* Macro Distribution Chart */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Macronutrient Distribution</h2>
+            <div className="bg-card rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-bold text-foreground mb-4">Macronutrient Distribution</h2>
               <MacroDistributionChart
                 data={macroData}
                 loading={loading}
@@ -990,8 +990,8 @@ function ProgressContent() {
             </div>
 
             {/* Step Count Chart */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Daily Step Count</h2>
+            <div className="bg-card rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-bold text-foreground mb-4">Daily Step Count</h2>
               <StepCountChart
                 data={stepData}
                 loading={loading}
@@ -1011,22 +1011,22 @@ function ProgressContent() {
 
         {/* Empty State */}
         {!loading && weightData.length === 0 && calorieData.length === 0 && (
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-12 text-center">
+          <div className="bg-card rounded-lg shadow-sm p-12 text-center">
             <div className="text-6xl mb-4">📊</div>
-            <p className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">No Data Available Yet</p>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-xl font-bold text-foreground mb-2">No Data Available Yet</p>
+            <p className="text-muted-foreground mb-6">
               Start logging meals and tracking your weight to see your progress visualized here!
             </p>
             <div className="flex gap-4 justify-center">
               <a
                 href="/log-meal"
-                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
               >
                 Log a Meal
               </a>
               <a
                 href="/dashboard"
-                className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+                className="px-6 py-3 bg-muted text-foreground rounded-lg hover:bg-gray-200 transition-colors font-medium"
               >
                 Go to Dashboard
               </a>
@@ -1038,7 +1038,7 @@ function ProgressContent() {
       {/* Floating Action Button - Log Weight */}
       <button
         onClick={() => setShowWeightModal(true)}
-        className="fixed bottom-6 right-6 bg-purple-600 hover:bg-purple-700 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all z-50 flex items-center gap-2 group"
+        className="fixed bottom-6 right-6 bg-primary hover:bg-primary-hover text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all z-50 flex items-center gap-2 group"
         aria-label="Log weight"
       >
         <span className="text-2xl">⚖️</span>
@@ -1081,6 +1081,7 @@ function ProgressContent() {
           setShowWeightModal(false)
           // Weight data updates automatically via real-time subscription
         }}
+        patientId={profile?.preferences?.primaryPatientId}
       />
 
       {/* Medication Management Modal */}

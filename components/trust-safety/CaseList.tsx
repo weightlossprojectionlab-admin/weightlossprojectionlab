@@ -54,14 +54,14 @@ export default function CaseList({ cases, onViewCase }: CaseListProps) {
 
   if (cases.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-12 text-center">
-        <div className="text-gray-600 dark:text-gray-400 mb-3">
+      <div className="bg-card border border-border rounded-lg p-12 text-center">
+        <div className="text-muted-foreground mb-3">
           <svg className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">No Cases</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">All clear! No dispute cases at this time.</p>
+        <h3 className="text-lg font-medium text-foreground mb-1">No Cases</h3>
+        <p className="text-sm text-muted-foreground">All clear! No dispute cases at this time.</p>
       </div>
     );
   }
@@ -69,43 +69,43 @@ export default function CaseList({ cases, onViewCase }: CaseListProps) {
   return (
     <div className="space-y-4">
       {/* Stats Bar */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-4">
+      <div className="bg-card border border-border rounded-lg p-4">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Pending</div>
+            <div className="text-2xl font-bold text-warning">{pendingCount}</div>
+            <div className="text-xs text-muted-foreground">Pending</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-accent-dark">{underReviewCount}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Under Review</div>
+            <div className="text-xs text-muted-foreground">Under Review</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-error-dark">{escalatedCount}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Escalated</div>
+            <div className="text-xs text-muted-foreground">Escalated</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-success-dark">{resolvedCount}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Resolved</div>
+            <div className="text-xs text-muted-foreground">Resolved</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-error-dark">{overdueCount}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Overdue</div>
+            <div className="text-xs text-muted-foreground">Overdue</div>
           </div>
         </div>
       </div>
 
       {/* Filters and Sort */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-4">
+      <div className="bg-card border border-border rounded-lg p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           {/* Filter Tabs */}
           <div className="flex items-center space-x-2 flex-wrap gap-2">
-            <FunnelIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <FunnelIcon className="h-5 w-5 text-muted-foreground" />
             <button
               onClick={() => setStatusFilter('all')}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === 'all'
                   ? 'bg-primary text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  : 'bg-muted text-foreground hover:bg-gray-200'
               }`}
             >
               All
@@ -114,8 +114,8 @@ export default function CaseList({ cases, onViewCase }: CaseListProps) {
               onClick={() => setStatusFilter('pending')}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === 'pending'
-                  ? 'bg-yellow-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  ? 'bg-warning text-white'
+                  : 'bg-muted text-foreground hover:bg-gray-200'
               }`}
             >
               Pending
@@ -125,7 +125,7 @@ export default function CaseList({ cases, onViewCase }: CaseListProps) {
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === 'under_review'
                   ? 'bg-primary text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  : 'bg-muted text-foreground hover:bg-gray-200'
               }`}
             >
               Under Review
@@ -135,7 +135,7 @@ export default function CaseList({ cases, onViewCase }: CaseListProps) {
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === 'escalated'
                   ? 'bg-error-dark text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  : 'bg-muted text-foreground hover:bg-gray-200'
               }`}
             >
               Escalated
@@ -145,7 +145,7 @@ export default function CaseList({ cases, onViewCase }: CaseListProps) {
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === 'resolved'
                   ? 'bg-success text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  : 'bg-muted text-foreground hover:bg-gray-200'
               }`}
             >
               Resolved
@@ -156,7 +156,7 @@ export default function CaseList({ cases, onViewCase }: CaseListProps) {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="risk">Highest Risk</option>
             <option value="date">Most Recent</option>
@@ -177,8 +177,8 @@ export default function CaseList({ cases, onViewCase }: CaseListProps) {
           ))}
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-8 text-center">
-          <p className="text-gray-600 dark:text-gray-400">No cases found with the selected filter.</p>
+        <div className="bg-card border border-border rounded-lg p-8 text-center">
+          <p className="text-muted-foreground">No cases found with the selected filter.</p>
         </div>
       )}
     </div>

@@ -50,14 +50,14 @@ export class DashboardErrorBoundary extends Component<Props, State> {
 
       // Default fallback UI
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
-          <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 text-center">
+        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+          <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-8 text-center">
             <div className="mb-6">
               <div className="text-6xl mb-4">⚠️</div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              <h2 className="text-2xl font-bold text-foreground mb-2">
                 Something went wrong
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-muted-foreground mb-4">
                 We're having trouble loading your dashboard. This has been logged and we'll look into it.
               </p>
             </div>
@@ -73,7 +73,7 @@ export class DashboardErrorBoundary extends Component<Props, State> {
                     <p className="font-bold">{this.state.error.name}</p>
                     <p>{this.state.error.message}</p>
                     {this.state.error.stack && (
-                      <pre className="overflow-x-auto whitespace-pre-wrap mt-2 p-2 bg-white dark:bg-gray-800 rounded">
+                      <pre className="overflow-x-auto whitespace-pre-wrap mt-2 p-2 bg-background rounded">
                         {this.state.error.stack}
                       </pre>
                     )}
@@ -94,21 +94,21 @@ export class DashboardErrorBoundary extends Component<Props, State> {
                 onClick={() => {
                   this.setState({ hasError: false, error: undefined })
                 }}
-                className="w-full px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+                className="w-full px-6 py-3 bg-gray-200 dark:bg-gray-700 text-foreground rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
               >
                 Try Again
               </button>
 
               <a
                 href="/"
-                className="block w-full px-6 py-3 text-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                className="block w-full px-6 py-3 text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Go to Home
               </a>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-xs text-gray-500 dark:text-gray-500">
+            <div className="mt-6 pt-6 border-t border-border">
+              <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                 If this problem persists, please contact support.
               </p>
             </div>

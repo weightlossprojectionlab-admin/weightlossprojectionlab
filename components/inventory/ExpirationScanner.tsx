@@ -317,18 +317,18 @@ export function ExpirationScanner({
 
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-card rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h2 className="text-xl font-bold text-foreground dark:text-white">
             Scan Expiration Date
           </h2>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
             aria-label="Close"
           >
-            <XMarkIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+            <XMarkIcon className="h-6 w-6 text-muted-foreground" />
           </button>
         </div>
 
@@ -371,7 +371,7 @@ export function ExpirationScanner({
               <div className="mt-3 text-center">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  className="text-sm text-muted-foreground hover:text-foreground dark:hover:text-white"
                 >
                   Or upload an image instead
                 </button>
@@ -399,10 +399,10 @@ export function ExpirationScanner({
               {processing && (
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <span className="text-sm font-medium text-foreground">
                       Processing image...
                     </span>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">{progress}%</span>
+                    <span className="text-sm text-muted-foreground">{progress}%</span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
@@ -416,7 +416,7 @@ export function ExpirationScanner({
               {/* Detected Dates */}
               {!processing && detectedDates.length > 0 && (
                 <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <h3 className="text-sm font-semibold text-foreground mb-2">
                     Detected Dates
                   </h3>
                   <div className="space-y-2">
@@ -426,20 +426,20 @@ export function ExpirationScanner({
                         onClick={() => setSelectedDate(detected.date)}
                         className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
                           selectedDate?.getTime() === detected.date.getTime()
-                            ? 'border-primary bg-blue-50 dark:bg-blue-900/20'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                            ? 'border-primary bg-secondary-light'
+                            : 'border-border hover:border-border dark:hover:border-gray-600'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="font-medium text-gray-900 dark:text-white">
+                            <div className="font-medium text-foreground dark:text-white">
                               {detected.date.toLocaleDateString('en-US', {
                                 month: 'long',
                                 day: 'numeric',
                                 year: 'numeric'
                               })}
                             </div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                            <div className="text-xs text-muted-foreground">
                               From: "{detected.rawText}" • Confidence: {detected.confidence}
                             </div>
                           </div>
@@ -455,8 +455,8 @@ export function ExpirationScanner({
 
               {/* No Dates Found */}
               {!processing && detectedDates.length === 0 && (
-                <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                <div className="mb-4 p-4 bg-warning-light rounded-lg">
+                  <p className="text-sm text-warning-dark">
                     No expiration date detected. Try another photo or enter the date manually.
                   </p>
                 </div>
@@ -465,10 +465,10 @@ export function ExpirationScanner({
               {/* OCR Debug Text (collapsible) */}
               {ocrText && (
                 <details className="mb-4">
-                  <summary className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+                  <summary className="text-sm text-muted-foreground cursor-pointer hover:text-foreground dark:hover:text-white">
                     View raw OCR text
                   </summary>
-                  <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto max-h-32">
+                  <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-auto max-h-32">
                     {ocrText}
                   </pre>
                 </details>
@@ -478,7 +478,7 @@ export function ExpirationScanner({
               <div className="flex gap-3">
                 <button
                   onClick={handleRetry}
-                  className="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-3 border-2 border-border text-foreground rounded-lg font-semibold hover:bg-background transition-colors flex items-center justify-center gap-2"
                 >
                   <ArrowPathIcon className="h-5 w-5" />
                   Try Again

@@ -5,7 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
+import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
+import { logger } from '@/lib/logger'
 import type { Provider } from '@/types/medical'
 
 export async function DELETE(
@@ -15,20 +18,35 @@ export async function DELETE(
   try {
     const { providerId, patientId } = await params
 
-    // Authenticate user
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Check authorization - user must have access to the patient
+    const authResult = await assertPatientAccess(request, patientId, 'viewPatientProfile')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
+    }
+
+    const { userId, ownerUserId } = authResult as AssertPatientAccessResult
+
+    // Check rate limit (per-user)
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /providers/[id]/patients/[id] DELETE] Rate limit exceeded', { userId, patientId, providerId })
       return NextResponse.json(
-        { success: false, error: 'Missing or invalid authorization header' },
-        { status: 401 }
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
       )
     }
 
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    logger.debug('[API /providers/[id]/patients/[id] DELETE] Unlinking provider', {
+      userId,
+      ownerUserId,
+      providerId,
+      patientId
+    })
 
-    // Get provider
+    // Get provider (providers are stored under the userId, not ownerUserId)
     const providerRef = adminDb
       .collection('users')
       .doc(userId)
@@ -67,7 +85,12 @@ export async function DELETE(
       ...updatedDoc.data()
     } as Provider
 
-    console.log(`Provider ${providerId} unlinked from patient ${patientId}`)
+    logger.info('[API /providers/[id]/patients/[id] DELETE] Provider unlinked from patient', {
+      userId,
+      providerId,
+      patientId,
+      remainingPatients: updatedPatientsServed.length
+    })
 
     return NextResponse.json({
       success: true,
@@ -75,7 +98,7 @@ export async function DELETE(
       message: 'Provider unlinked from patient successfully'
     })
   } catch (error: any) {
-    console.error('Error unlinking provider from patient:', error)
+    logger.error('[API /providers/[id]/patients/[id] DELETE] Error unlinking provider', error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to unlink provider from patient' },
       { status: 500 }

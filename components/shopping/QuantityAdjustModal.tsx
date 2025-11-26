@@ -36,17 +36,17 @@ export function QuantityAdjustModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6">
+      <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6">
         {/* Header */}
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+        <h2 className="text-xl font-bold text-foreground mb-2">
           Adjust Quantity
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           How many units are you buying?
         </p>
 
         {/* Product Display */}
-        <div className="flex items-center gap-3 mb-6 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="flex items-center gap-3 mb-6 p-3 bg-background rounded-lg">
           {item.imageUrl ? (
             <img
               src={item.imageUrl}
@@ -54,16 +54,16 @@ export function QuantityAdjustModal({
               className="w-12 h-12 rounded-lg object-cover"
             />
           ) : (
-            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-2xl">
+            <div className="w-12 h-12 bg-muted dark:bg-gray-700 rounded-lg flex items-center justify-center text-2xl">
               {categoryMeta.icon}
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+            <h3 className="font-semibold text-sm text-foreground truncate">
               {item.productName}
             </h3>
             {item.brand && (
-              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+              <p className="text-xs text-muted-foreground truncate">
                 {item.brand}
               </p>
             )}
@@ -82,7 +82,7 @@ export function QuantityAdjustModal({
           </button>
           <div className="text-center min-w-[100px]">
             <div className="text-5xl font-bold text-primary">{quantity}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <div className="text-sm text-muted-foreground mt-1">
               unit{quantity > 1 ? 's' : ''}
             </div>
           </div>
@@ -105,7 +105,7 @@ export function QuantityAdjustModal({
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 quantity === num
                   ? 'bg-primary text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  : 'bg-muted text-foreground hover:bg-gray-200'
               }`}
             >
               {num}
@@ -117,7 +117,7 @@ export function QuantityAdjustModal({
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium text-gray-900 dark:text-gray-100"
+            className="flex-1 px-4 py-3 bg-muted rounded-lg hover:bg-gray-200 transition-colors font-medium text-foreground"
           >
             Cancel
           </button>

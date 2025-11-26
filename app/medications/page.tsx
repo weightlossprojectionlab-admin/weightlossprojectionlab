@@ -1,17 +1,19 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useAuth } from '@/hooks/useAuth'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MedicationCard } from '@/components/health/MedicationCard'
-import { MedicationManagementModal } from '@/components/health/MedicationManagementModal'
+import MedicationScanner from '@/components/health/MedicationScanner'
 import { ScannedMedication } from '@/lib/medication-lookup'
-import { userProfileOperations } from '@/lib/firebase-operations'
+import { medicalOperations } from '@/lib/medical-operations'
+import { PatientProfile, PatientMedication } from '@/types/medical'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import { PlusIcon, FunnelIcon, UserGroupIcon } from '@heroicons/react/24/outline'
+import { Spinner } from '@/components/ui/Spinner'
 
 export default function MedicationsPage() {
   return (
@@ -23,30 +25,80 @@ export default function MedicationsPage() {
 
 function MedicationsContent() {
   const { user } = useAuth()
-  const { profile, refetch: refetchProfile } = useUserProfile()
-  const [showMedicationModal, setShowMedicationModal] = useState(false)
+  const { profile } = useUserProfile()
+  const [showMedicationScanner, setShowMedicationScanner] = useState(false)
   const [selectedCondition, setSelectedCondition] = useState<string | undefined>(undefined)
   const [filterByPatient, setFilterByPatient] = useState<string | null>(null)
   const [filterByCondition, setFilterByCondition] = useState<string | null>(null)
-  const [editingMedication, setEditingMedication] = useState<ScannedMedication | null>(null)
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
 
-  const medications = profile?.profile?.medications || []
+  // Patient and medication state
+  const [patients, setPatients] = useState<PatientProfile[]>([])
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
+  const [medications, setMedications] = useState<PatientMedication[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Get unique patient names and conditions for filtering
-  const uniquePatients = useMemo(() => {
-    const patients = new Set<string>()
-    medications.forEach((med: ScannedMedication) => {
-      if (med.patientName) {
-        patients.add(med.patientName)
+  // Load patients on mount
+  useEffect(() => {
+    loadPatients()
+  }, [])
+
+  // Load medications when patient is selected
+  useEffect(() => {
+    if (selectedPatientId) {
+      loadMedications(selectedPatientId)
+    }
+  }, [selectedPatientId])
+
+  const loadPatients = async () => {
+    try {
+      const data = await medicalOperations.patients.getPatients()
+      setPatients(data)
+
+      // Auto-select patient (priority: primary preference > self > first)
+      if (data.length > 0) {
+        let defaultPatient: PatientProfile | undefined
+
+        // Priority 1: Use primaryPatientId from user preferences
+        if (profile?.preferences?.primaryPatientId) {
+          defaultPatient = data.find(p => p.id === profile.preferences.primaryPatientId)
+        }
+
+        // Priority 2: Fall back to "Self" patient
+        if (!defaultPatient) {
+          defaultPatient = data.find(p => p.relationship === 'self')
+        }
+
+        // Priority 3: Use first patient in list
+        if (!defaultPatient) {
+          defaultPatient = data[0]
+        }
+
+        if (defaultPatient) {
+          setSelectedPatientId(defaultPatient.id)
+        }
       }
-    })
-    return Array.from(patients).sort()
-  }, [medications])
+    } catch (error) {
+      logger.error('[Medications Page] Error loading patients', error as Error)
+      toast.error('Failed to load patients')
+    } finally {
+      setLoading(false)
+    }
+  }
 
+  const loadMedications = async (patientId: string) => {
+    try {
+      const data = await medicalOperations.medications.getMedications(patientId)
+      setMedications(data)
+    } catch (error) {
+      logger.error('[Medications Page] Error loading medications', error as Error)
+      toast.error('Failed to load medications')
+    }
+  }
+
+  // Get unique conditions for filtering
   const uniqueConditions = useMemo(() => {
     const conditions = new Set<string>()
-    medications.forEach((med: ScannedMedication) => {
+    medications.forEach((med: PatientMedication) => {
       if (med.prescribedFor) {
         conditions.add(med.prescribedFor)
       }
@@ -54,137 +106,92 @@ function MedicationsContent() {
     return Array.from(conditions).sort()
   }, [medications])
 
-  // Filter medications
+  // Filter medications by condition
   const filteredMedications = useMemo(() => {
-    let filtered = [...medications]
+    if (!filterByCondition) return medications
+    return medications.filter(med => med.prescribedFor === filterByCondition)
+  }, [medications, filterByCondition])
 
-    if (filterByPatient) {
-      filtered = filtered.filter(med => med.patientName === filterByPatient)
+  // Handle scanned medication
+  const handleMedicationScanned = async (scannedData: ScannedMedication) => {
+    if (!selectedPatientId) {
+      toast.error('No patient selected')
+      return
     }
-
-    if (filterByCondition) {
-      filtered = filtered.filter(med => med.prescribedFor === filterByCondition)
-    }
-
-    return filtered
-  }, [medications, filterByPatient, filterByCondition])
-
-  // Group medications by patient
-  const medicationsByPatient = useMemo(() => {
-    const grouped = new Map<string, ScannedMedication[]>()
-
-    filteredMedications.forEach(med => {
-      const patient = med.patientName || 'Unassigned'
-      if (!grouped.has(patient)) {
-        grouped.set(patient, [])
-      }
-      grouped.get(patient)!.push(med)
-    })
-
-    return grouped
-  }, [filteredMedications])
-
-  // Save medications handler
-  const handleSaveMedications = async (medications: ScannedMedication[]) => {
-    if (!user) return
 
     try {
-      const token = await user.getIdToken()
-
-      logger.debug('[Medications Page] Saving medications', { count: medications.length })
-
-      const response = await fetch('/api/user-profile', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          profile: {
-            medications
-          }
-        })
+      await medicalOperations.medications.addMedication(selectedPatientId, {
+        name: scannedData.name,
+        brandName: scannedData.brandName,
+        strength: scannedData.strength || 'Unknown',
+        dosageForm: scannedData.dosageForm || 'Unknown',
+        frequency: scannedData.frequency,
+        prescribedFor: scannedData.prescribedFor,
+        rxcui: scannedData.rxcui,
+        ndc: scannedData.ndc,
+        drugClass: scannedData.drugClass,
+        rxNumber: scannedData.rxNumber,
+        quantity: scannedData.quantity,
+        refills: scannedData.refills,
+        fillDate: scannedData.fillDate,
+        expirationDate: scannedData.expirationDate,
+        warnings: scannedData.warnings,
+        pharmacyName: scannedData.pharmacyName,
+        pharmacyPhone: scannedData.pharmacyPhone,
+        scannedAt: new Date().toISOString()
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        logger.error('[Medications Page] Failed to save medications', new Error(errorData.error || 'Unknown error'))
-        throw new Error(errorData.error || 'Failed to update medications')
-      }
+      toast.success(`${scannedData.name} added successfully`)
+      setShowMedicationScanner(false)
 
-      // Refetch profile to get updated medications
-      const responseData = await response.json()
-      if (responseData.success) {
-        await refetchProfile()
-        logger.debug('[Medications Page] Profile refetched with new medications')
-      }
-    } catch (error) {
-      logger.error('[Medications Page] Error in handleSaveMedications', error as Error)
-      throw error
+      // Reload medications
+      await loadMedications(selectedPatientId)
+    } catch (error: any) {
+      logger.error('[Medications Page] Error adding medication', error)
+      toast.error(error.message || 'Failed to add medication')
     }
   }
 
   // Delete medication handler
-  const handleDeleteMedication = async (index: number) => {
-    if (!user) return
+  const handleDeleteMedication = async (medicationId: string, medicationName: string) => {
+    if (!selectedPatientId) return
 
-    const medicationName = medications[index]?.name
     if (!confirm(`Are you sure you want to delete ${medicationName}?`)) {
       return
     }
 
     try {
-      const updatedMedications = medications.filter((_: ScannedMedication, i: number) => i !== index)
-      await handleSaveMedications(updatedMedications)
+      await medicalOperations.medications.deleteMedication(selectedPatientId, medicationId)
       toast.success(`${medicationName} removed successfully`)
+
+      // Reload medications
+      await loadMedications(selectedPatientId)
     } catch (error) {
       logger.error('[Medications Page] Error deleting medication', error as Error)
       toast.error('Failed to delete medication')
     }
   }
 
-  // Edit medication handler
-  const handleEditMedication = (index: number) => {
-    const med = medications[index]
-    if (med) {
-      setEditingMedication(med)
-      setEditingIndex(index)
-      setShowMedicationModal(true)
-    }
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    )
   }
 
-  // Save edited medication
-  const handleSaveEdit = async (updatedMedications: ScannedMedication[]) => {
-    if (editingIndex !== null && editingMedication) {
-      // Replace the medication at editingIndex with the updated one
-      const allMedications = [...medications]
-      // Find the updated medication in the list (it should be the last one if newly scanned)
-      const newMed = updatedMedications[updatedMedications.length - 1]
-      if (newMed) {
-        allMedications[editingIndex] = newMed
-        await handleSaveMedications(allMedications)
-        toast.success(`${newMed.name} updated successfully`)
-      }
-    } else {
-      // Regular add flow
-      await handleSaveMedications(updatedMedications)
-    }
-    setEditingMedication(null)
-    setEditingIndex(null)
-  }
+  const selectedPatient = patients.find(p => p.id === selectedPatientId)
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title="Medication Management"
-        subtitle="Track and manage medications for you and your family"
+        subtitle={selectedPatient ? `Medications for ${selectedPatient.name}` : 'Track and manage medications'}
         actions={
           <button
-            onClick={() => {
-              setSelectedCondition(undefined)
-              setShowMedicationModal(true)
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+            onClick={() => setShowMedicationScanner(true)}
+            disabled={!selectedPatientId}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <PlusIcon className="w-5 h-5" />
             Add Medication
@@ -194,176 +201,100 @@ function MedicationsContent() {
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Filter Bar */}
-        {(uniquePatients.length > 0 || uniqueConditions.length > 0) && (
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4 mb-6">
+        {uniqueConditions.length > 0 && (
+          <div className="bg-card rounded-lg shadow-sm p-4 mb-6">
             <div className="flex items-center gap-2 mb-3">
-              <FunnelIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Filter Medications</h2>
+              <FunnelIcon className="w-5 h-5 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground">Filter by Condition</h2>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              {/* Filter by Patient */}
-              {uniquePatients.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <UserGroupIcon className="w-4 h-4 text-gray-500" />
-                  <select
-                    value={filterByPatient || ''}
-                    onChange={(e) => setFilterByPatient(e.target.value || null)}
-                    className="px-3 py-1.5 text-sm border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 transition-colors"
-                  >
-                    <option value="">All Patients</option>
-                    {uniquePatients.map(patient => (
-                      <option key={patient} value={patient}>
-                        {patient}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
               {/* Filter by Condition */}
-              {uniqueConditions.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">Condition:</span>
-                  <select
-                    value={filterByCondition || ''}
-                    onChange={(e) => setFilterByCondition(e.target.value || null)}
-                    className="px-3 py-1.5 text-sm border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 transition-colors"
-                  >
-                    <option value="">All Conditions</option>
-                    {uniqueConditions.map(condition => (
-                      <option key={condition} value={condition}>
-                        {condition}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <select
+                  value={filterByCondition || ''}
+                  onChange={(e) => setFilterByCondition(e.target.value || null)}
+                  className="px-3 py-1.5 text-sm border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20 transition-colors"
+                >
+                  <option value="">All Conditions</option>
+                  {uniqueConditions.map(condition => (
+                    <option key={condition} value={condition}>
+                      {condition}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               {/* Clear Filters */}
-              {(filterByPatient || filterByCondition) && (
+              {filterByCondition && (
                 <button
-                  onClick={() => {
-                    setFilterByPatient(null)
-                    setFilterByCondition(null)
-                  }}
-                  className="px-3 py-1.5 text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium underline"
+                  onClick={() => setFilterByCondition(null)}
+                  className="px-3 py-1.5 text-sm text-primary hover:text-primary-dark dark:text-purple-400 dark:hover:text-purple-300 font-medium underline"
                 >
-                  Clear Filters
+                  Clear Filter
                 </button>
               )}
             </div>
 
             {/* Filter Results Summary */}
-            <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+            <div className="mt-3 text-sm text-muted-foreground">
               Showing {filteredMedications.length} of {medications.length} medication{medications.length !== 1 ? 's' : ''}
             </div>
           </div>
         )}
 
-        {/* Medications Grouped by Patient */}
+        {/* Medications Display */}
         {medications.length === 0 ? (
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-12 text-center">
+          <div className="bg-card rounded-lg shadow-sm p-12 text-center">
             <div className="text-6xl mb-4">💊</div>
-            <p className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">No Medications Yet</p>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Start tracking medications for you and your family members
+            <p className="text-xl font-bold text-foreground mb-2">No Medications Yet</p>
+            <p className="text-muted-foreground mb-6">
+              Start tracking medications for {selectedPatient?.name || 'this patient'}
             </p>
             <button
-              onClick={() => setShowMedicationModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+              onClick={() => setShowMedicationScanner(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
             >
               <PlusIcon className="w-5 h-5" />
               Add Your First Medication
             </button>
           </div>
         ) : filteredMedications.length === 0 ? (
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-12 text-center">
+          <div className="bg-card rounded-lg shadow-sm p-12 text-center">
             <div className="text-6xl mb-4">🔍</div>
-            <p className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">No Matching Medications</p>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Try adjusting your filters to see more results
+            <p className="text-xl font-bold text-foreground mb-2">No Matching Medications</p>
+            <p className="text-muted-foreground mb-6">
+              Try adjusting your filter to see more results
             </p>
             <button
-              onClick={() => {
-                setFilterByPatient(null)
-                setFilterByCondition(null)
-              }}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+              onClick={() => setFilterByCondition(null)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
             >
-              Clear All Filters
+              Clear Filter
             </button>
           </div>
         ) : (
-          <div className="space-y-8">
-            {Array.from(medicationsByPatient.entries()).map(([patient, meds]) => (
-              <div key={patient} className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6">
-                {/* Patient Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                      <UserGroupIcon className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                        {patient}
-                      </h2>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {meds.length} medication{meds.length !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
-
-                  {patient !== 'Unassigned' && (
-                    <button
-                      onClick={() => setFilterByPatient(patient)}
-                      className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
-                    >
-                      View Only
-                    </button>
-                  )}
-                </div>
-
-                {/* Medication Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {meds.map((med: ScannedMedication) => {
-                    // Find the global index of this medication in the full medications array
-                    const globalIndex = medications.findIndex((m: ScannedMedication) =>
-                      m.name === med.name &&
-                      m.scannedAt === med.scannedAt &&
-                      m.patientName === med.patientName
-                    )
-                    return (
-                      <MedicationCard
-                        key={globalIndex}
-                        medication={med}
-                        onEdit={() => handleEditMedication(globalIndex)}
-                        onDelete={() => handleDeleteMedication(globalIndex)}
-                        showActions={true}
-                      />
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
+          <div className="bg-card rounded-lg shadow-sm p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredMedications.map((med: PatientMedication) => (
+                <MedicationCard
+                  key={med.id}
+                  medication={med}
+                  onDelete={() => handleDeleteMedication(med.id, med.name)}
+                  showActions={true}
+                />
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Medication Management Modal */}
-        {profile?.profile && (
-          <MedicationManagementModal
-            isOpen={showMedicationModal}
-            onClose={() => {
-              setShowMedicationModal(false)
-              setSelectedCondition(undefined)
-              setEditingMedication(null)
-              setEditingIndex(null)
-            }}
-            medications={medications}
-            onSave={editingIndex !== null ? handleSaveEdit : handleSaveMedications}
-            prescribedFor={selectedCondition}
-          />
-        )}
+        {/* Medication Scanner Modal */}
+        <MedicationScanner
+          isOpen={showMedicationScanner}
+          onClose={() => setShowMedicationScanner(false)}
+          onMedicationScanned={handleMedicationScanned}
+          prescribedFor={selectedCondition}
+        />
       </main>
     </div>
   )

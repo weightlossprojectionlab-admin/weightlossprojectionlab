@@ -62,18 +62,18 @@ export function SearchFilter({
     <div className={`space-y-2 ${className}`}>
       {/* Search Bar */}
       <div className="relative">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
+        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
         <input
           type="text"
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Search shopping list..."
-          className="w-full pl-10 pr-10 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full pl-10 pr-10 py-2 bg-background border border-border dark:border-gray-600 rounded-lg text-foreground dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         {searchQuery && (
           <button
             onClick={handleClearSearch}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300"
             aria-label="Clear search"
           >
             <XMarkIcon className="h-5 w-5" />
@@ -85,15 +85,15 @@ export function SearchFilter({
       <div className="relative">
         <button
           onClick={() => setShowCategoryFilter(!showCategoryFilter)}
-          className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 bg-background border border-border dark:border-gray-600 rounded-lg hover:bg-background transition-colors"
           aria-label="Filter by category"
         >
-          <FunnelIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <FunnelIcon className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground">
             {CATEGORIES.find(c => c.value === selectedCategory)?.label || 'All Categories'}
           </span>
           {selectedCategory !== 'all' && (
-            <span className="ml-auto px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs rounded-full">
+            <span className="ml-auto px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 text-xs rounded-full">
               Filter active
             </span>
           )}
@@ -109,22 +109,22 @@ export function SearchFilter({
             />
 
             {/* Dropdown */}
-            <div className="absolute z-20 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg overflow-hidden max-h-96 overflow-y-auto">
+            <div className="absolute z-20 mt-2 w-64 bg-background border border-border dark:border-gray-600 rounded-lg shadow-lg overflow-hidden max-h-96 overflow-y-auto">
               {CATEGORIES.map((category) => (
                 <button
                   key={category.value}
                   onClick={() => handleCategorySelect(category.value)}
-                  className={`w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                    selectedCategory === category.value ? 'bg-blue-50 dark:bg-blue-900/30' : ''
+                  className={`w-full text-left px-4 py-2 hover:bg-muted transition-colors ${
+                    selectedCategory === category.value ? 'bg-secondary-light dark:bg-blue-900/30' : ''
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-xl">{category.emoji}</span>
-                    <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="font-medium text-foreground dark:text-white">
                       {category.label}
                     </span>
                     {selectedCategory === category.value && (
-                      <span className="ml-auto text-blue-600 dark:text-blue-400">✓</span>
+                      <span className="ml-auto text-secondary">✓</span>
                     )}
                   </div>
                 </button>

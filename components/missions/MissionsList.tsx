@@ -54,14 +54,14 @@ export default function MissionsList({
 
   if (missions.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-12 text-center">
-        <div className="text-gray-600 dark:text-gray-400 mb-3">
+      <div className="bg-card border border-border rounded-lg p-12 text-center">
+        <div className="text-muted-foreground mb-3">
           <svg className="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">No Missions Yet</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Check back soon for new missions to complete!</p>
+        <h3 className="text-lg font-medium text-foreground mb-1">No Missions Yet</h3>
+        <p className="text-sm text-muted-foreground">Check back soon for new missions to complete!</p>
       </div>
     );
   }
@@ -70,17 +70,17 @@ export default function MissionsList({
     <div className="space-y-4">
       {/* Filters and Stats */}
       {showFilters && (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-4">
+        <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             {/* Stats */}
             <div className="flex items-center space-x-6">
               <div>
-                <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{activeMissionsCount}</span>
-                <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">Active</span>
+                <span className="text-2xl font-bold text-foreground">{activeMissionsCount}</span>
+                <span className="text-sm text-muted-foreground ml-2">Active</span>
               </div>
               <div>
                 <span className="text-2xl font-bold text-success-dark">{completedMissionsCount}</span>
-                <span className="text-sm text-gray-600 dark:text-gray-400 ml-2">Completed</span>
+                <span className="text-sm text-muted-foreground ml-2">Completed</span>
               </div>
             </div>
 
@@ -91,7 +91,7 @@ export default function MissionsList({
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   filter === 'all'
                     ? 'bg-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-muted text-foreground hover:bg-gray-200'
                 }`}
               >
                 All
@@ -101,7 +101,7 @@ export default function MissionsList({
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   filter === 'active'
                     ? 'bg-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-muted text-foreground hover:bg-gray-200'
                 }`}
               >
                 Active
@@ -111,7 +111,7 @@ export default function MissionsList({
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   filter === 'completed'
                     ? 'bg-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-muted text-foreground hover:bg-gray-200'
                 }`}
               >
                 Completed
@@ -122,7 +122,7 @@ export default function MissionsList({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="px-4 py-2 border border-border rounded-lg text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="recent">Most Recent</option>
               <option value="xp">Highest XP</option>
@@ -146,8 +146,8 @@ export default function MissionsList({
           })}
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-8 text-center">
-          <p className="text-gray-600 dark:text-gray-400">No missions found with the selected filter.</p>
+        <div className="bg-card border border-border rounded-lg p-8 text-center">
+          <p className="text-muted-foreground">No missions found with the selected filter.</p>
         </div>
       )}
     </div>

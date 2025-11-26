@@ -16,8 +16,8 @@ const PLATFORMS: Array<{
   { id: 'instagram-story', icon: '📸', color: 'bg-gradient-to-br from-purple-500 to-pink-500', cta: 'Share My Story' },
   { id: 'instagram-post', icon: '📷', color: 'bg-gradient-to-br from-purple-600 to-pink-600', cta: 'Post My Win' },
   { id: 'tiktok', icon: '🎵', color: 'bg-black', cta: 'My Journey' },
-  { id: 'facebook', icon: '📘', color: 'bg-blue-600', cta: 'Tell Friends' },
-  { id: 'pinterest', icon: '📍', color: 'bg-red-600', cta: 'Pin Progress' },
+  { id: 'facebook', icon: '📘', color: 'bg-secondary', cta: 'Tell Friends' },
+  { id: 'pinterest', icon: '📍', color: 'bg-error', cta: 'Pin Progress' },
   { id: 'twitter', icon: '𝕏', color: 'bg-black', cta: 'Share Win' }
 ]
 

@@ -5,6 +5,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
   onAuthStateChanged,
@@ -39,10 +40,25 @@ export const signInWithGoogle = async () => {
     provider.addScope('email')
     provider.addScope('profile')
 
+    // Use redirect for better compatibility with custom auth domains
     const result = await signInWithPopup(auth, provider)
     return result.user
   } catch (error) {
     logger.error('Google sign in error', error as Error)
+    throw error
+  }
+}
+
+export const signInWithGoogleRedirect = async () => {
+  try {
+    const provider = new GoogleAuthProvider()
+    provider.addScope('email')
+    provider.addScope('profile')
+
+    // Use redirect method for custom auth domains
+    await signInWithRedirect(auth, provider)
+  } catch (error) {
+    logger.error('Google sign in redirect error', error as Error)
     throw error
   }
 }

@@ -25,8 +25,8 @@ export function AdminModeToggle({ isAdminMode, onToggle }: AdminModeToggleProps)
         ${isAnimating ? 'scale-95' : 'scale-100'}
         ${
           isAdminMode
-            ? 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg'
-            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+            ? 'bg-primary text-white hover:bg-primary-hover shadow-lg'
+            : 'bg-gray-200 dark:bg-gray-700 text-foreground hover:bg-gray-300 dark:hover:bg-gray-600'
         }
       `}
     >

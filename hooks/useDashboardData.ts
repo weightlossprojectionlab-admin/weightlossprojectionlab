@@ -22,7 +22,7 @@ export interface DashboardLoadingPhase {
   fullyLoaded: boolean
 }
 
-export function useDashboardData() {
+export function useDashboardData(patientId?: string | null) {
   const { user } = useAuth()
 
   // Calculate date range once
@@ -49,6 +49,7 @@ export function useDashboardData() {
 
   // Fetch TODAY's meals ONLY (critical data) - PHASE 1
   const { mealLogs: todayMeals, loading: loadingTodayMeals } = useMealLogsRealtime({
+    patientId,
     startDate: dateRange.today.toISOString(),
     endDate: dateRange.tomorrow.toISOString(),
     limitCount: 10
@@ -57,7 +58,8 @@ export function useDashboardData() {
   // Fetch HISTORICAL meals (7 days) - PHASE 3 (delayed)
   const [fetchHistorical, setFetchHistorical] = useState(false)
   const { mealLogs: allMeals, loading: loadingAllMeals } = useMealLogsRealtime(
-    fetchHistorical ? {
+    fetchHistorical && patientId ? {
+      patientId,
       startDate: dateRange.sevenDaysAgo.toISOString(),
       endDate: dateRange.tomorrow.toISOString(),
       limitCount: 30
@@ -79,7 +81,16 @@ export function useDashboardData() {
 
   // PHASE 2: Real-time weight subscription + steps fetch after Phase 1 completes (200ms delay)
   useEffect(() => {
-    if (!loadingPhase.phase1Ready || !user) return
+    if (!loadingPhase.phase1Ready || !user || !patientId) {
+      // If no patientId, set empty data and phase as ready
+      if (!patientId) {
+        setWeightData([])
+        setStepsData([])
+        setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
+        setDataLoading(false)
+      }
+      return
+    }
 
     let unsubscribeWeight: (() => void) | null = null
 
@@ -88,8 +99,8 @@ export function useDashboardData() {
         setDataLoading(true)
         setDataError(null)
 
-        // Real-time weight logs subscription with onSnapshot
-        const weightLogsRef = collection(db, 'users', user.uid, 'weightLogs')
+        // Real-time weight logs subscription from patient subcollection
+        const weightLogsRef = collection(db, 'users', user.uid, 'patients', patientId, 'weight-logs')
         const weightQuery = query(
           weightLogsRef,
           where('loggedAt', '>=', Timestamp.fromDate(dateRange.sevenDaysAgo)),
@@ -104,12 +115,13 @@ export function useDashboardData() {
               const data = doc.data()
               return {
                 id: doc.id,
+                patientId: patientId,
                 userId: user.uid,
                 weight: data.weight,
                 unit: data.unit,
                 loggedAt: data.loggedAt?.toDate ? data.loggedAt.toDate().toISOString() : new Date(data.loggedAt).toISOString(),
                 notes: data.notes,
-                dataSource: data.dataSource || 'manual'
+                source: data.source || 'manual'
               }
             })
             setWeightData(logs)
@@ -123,19 +135,43 @@ export function useDashboardData() {
           }
         )
 
-        // Fetch steps data (one-time)
+        // Fetch steps data from patient subcollection
+        const stepsLogsRef = collection(db, 'users', user.uid, 'patients', patientId, 'step-logs')
         const startDate = dateRange.sevenDaysAgo.toISOString().split('T')[0]
         const endDate = dateRange.tomorrow.toISOString().split('T')[0]
-        stepLogOperations.getStepLogs({ startDate, endDate })
-          .then(stepsResponse => {
-            setStepsData(stepsResponse.data || [])
+
+        const stepsQuery = query(
+          stepsLogsRef,
+          where('date', '>=', startDate),
+          where('date', '<=', endDate),
+          orderBy('date', 'desc')
+        )
+
+        onSnapshot(
+          stepsQuery,
+          (snapshot) => {
+            const logs = snapshot.docs.map(doc => {
+              const data = doc.data()
+              return {
+                id: doc.id,
+                patientId: patientId,
+                userId: user.uid,
+                steps: data.steps,
+                date: data.date,
+                distance: data.distance,
+                loggedAt: data.loggedAt?.toDate ? data.loggedAt.toDate().toISOString() : new Date(data.loggedAt).toISOString(),
+                source: data.source || 'manual'
+              }
+            })
+            setStepsData(logs)
             setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
-          })
-          .catch(error => {
+          },
+          (error) => {
             logger.error('Error fetching step logs', error as Error)
             setStepsData([])
             setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
-          })
+          }
+        )
       } catch (error) {
         logger.error('Error setting up dashboard data listeners', error as Error)
         setDataError(error as Error)
@@ -153,7 +189,7 @@ export function useDashboardData() {
         unsubscribeWeight()
       }
     }
-  }, [loadingPhase.phase1Ready, user, dateRange.sevenDaysAgo, dateRange.tomorrow])
+  }, [loadingPhase.phase1Ready, user, patientId, dateRange.sevenDaysAgo, dateRange.tomorrow])
 
   // PHASE 3: Fetch historical meals after Phase 2 completes (500ms delay)
   useEffect(() => {

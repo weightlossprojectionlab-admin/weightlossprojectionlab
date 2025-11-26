@@ -6,7 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
+import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
+import { logger } from '@/lib/logger'
 import { familyMemberPermissionsSchema } from '@/lib/validations/medical'
 import type { FamilyMember } from '@/types/medical'
 
@@ -17,34 +20,41 @@ export async function PUT(
   try {
     const { patientId, memberId } = await params
 
-    // Authenticate user
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Check authorization and get owner userId (only owner can manage family permissions)
+    const authResult = await assertPatientAccess(request, patientId, 'viewPatientProfile')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
+    }
+
+    const { userId, ownerUserId, role } = authResult as AssertPatientAccessResult
+
+    // Check rate limit (per-user)
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /patients/[id]/family/[memberId] PUT] Rate limit exceeded', { userId, patientId, memberId })
       return NextResponse.json(
-        { success: false, error: 'Missing or invalid authorization header' },
-        { status: 401 }
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
       )
     }
 
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
-
-    // Verify patient exists and user owns it
-    const patientRef = adminDb
-      .collection('users')
-      .doc(userId)
-      .collection('patients')
-      .doc(patientId)
-
-    const patientDoc = await patientRef.get()
-
-    if (!patientDoc.exists) {
+    // Only the patient owner can modify family member permissions
+    if (role === 'family') {
+      logger.warn('[API /patients/[id]/family/[memberId] PUT] Family member attempted to modify permissions', {
+        userId,
+        patientId,
+        memberId
+      })
       return NextResponse.json(
-        { success: false, error: 'Patient not found or access denied' },
-        { status: 404 }
+        { success: false, error: 'Only the patient owner can modify family member permissions' },
+        { status: 403 }
       )
     }
+
+    logger.debug('[API /patients/[id]/family/[memberId] PUT] Updating permissions', { userId, patientId, memberId })
 
     // Parse and validate permissions
     const body = await request.json()
@@ -53,7 +63,7 @@ export async function PUT(
     // Get family member
     const memberRef = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('familyMembers')
       .doc(memberId)
 
@@ -86,7 +96,11 @@ export async function PUT(
       permissions: validatedPermissions
     }
 
-    console.log(`Updated permissions for family member ${memberId} on patient ${patientId}`)
+    logger.info('[API /patients/[id]/family/[memberId] PUT] Permissions updated', {
+      userId,
+      patientId,
+      memberId
+    })
 
     return NextResponse.json({
       success: true,
@@ -94,7 +108,7 @@ export async function PUT(
       message: 'Permissions updated successfully'
     })
   } catch (error: any) {
-    console.error('Error updating family member permissions:', error)
+    logger.error('[API /patients/[id]/family/[memberId] PUT] Error updating permissions', error)
 
     if (error.name === 'ZodError') {
       return NextResponse.json(
@@ -117,39 +131,50 @@ export async function DELETE(
   try {
     const { patientId, memberId } = await params
 
-    // Authenticate user
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Check authorization and get owner userId (only owner can remove family access)
+    const authResult = await assertPatientAccess(request, patientId, 'viewPatientProfile')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
+    }
+
+    const { userId, ownerUserId, role } = authResult as AssertPatientAccessResult
+
+    // Check rate limit (per-user)
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /patients/[id]/family/[memberId] DELETE] Rate limit exceeded', { userId, patientId, memberId })
       return NextResponse.json(
-        { success: false, error: 'Missing or invalid authorization header' },
-        { status: 401 }
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
       )
     }
 
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
-
-    // Verify patient exists and user owns it
-    const patientRef = adminDb
-      .collection('users')
-      .doc(userId)
-      .collection('patients')
-      .doc(patientId)
-
-    const patientDoc = await patientRef.get()
-
-    if (!patientDoc.exists) {
+    // Only the patient owner can remove family member access
+    if (role === 'family') {
+      logger.warn('[API /patients/[id]/family/[memberId] DELETE] Family member attempted to remove access', {
+        userId,
+        patientId,
+        memberId
+      })
       return NextResponse.json(
-        { success: false, error: 'Patient not found or access denied' },
-        { status: 404 }
+        { success: false, error: 'Only the patient owner can remove family member access' },
+        { status: 403 }
       )
     }
+
+    logger.debug('[API /patients/[id]/family/[memberId] DELETE] Removing family access', {
+      userId,
+      patientId,
+      memberId
+    })
 
     // Get family member
     const memberRef = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('familyMembers')
       .doc(memberId)
 
@@ -170,13 +195,22 @@ export async function DELETE(
     if (updatedPatientsAccess.length === 0) {
       // No more patients - remove family member entirely
       await memberRef.delete()
-      console.log(`Removed family member ${memberId} (no remaining patient access)`)
+      logger.info('[API /patients/[id]/family/[memberId] DELETE] Removed family member (no remaining access)', {
+        userId,
+        patientId,
+        memberId
+      })
     } else {
       // Update with remaining patients
       await memberRef.update({
         patientsAccess: updatedPatientsAccess
       })
-      console.log(`Removed patient ${patientId} from family member ${memberId} access`)
+      logger.info('[API /patients/[id]/family/[memberId] DELETE] Removed patient from family member access', {
+        userId,
+        patientId,
+        memberId,
+        remainingPatients: updatedPatientsAccess.length
+      })
     }
 
     return NextResponse.json({
@@ -184,7 +218,7 @@ export async function DELETE(
       message: 'Family member access removed'
     })
   } catch (error: any) {
-    console.error('Error removing family member access:', error)
+    logger.error('[API /patients/[id]/family/[memberId] DELETE] Error removing family member access', error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to remove family member' },
       { status: 500 }

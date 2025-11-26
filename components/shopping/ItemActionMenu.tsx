@@ -40,7 +40,7 @@ export function ItemActionMenu({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6">
+      <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           {item.imageUrl ? (
@@ -50,16 +50,16 @@ export function ItemActionMenu({
               className="w-16 h-16 rounded-lg object-cover"
             />
           ) : (
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-3xl">
+            <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-3xl">
               {categoryMeta.icon}
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
+            <h2 className="text-lg font-bold text-foreground truncate">
               {item.productName}
             </h2>
             {item.brand && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+              <p className="text-sm text-muted-foreground truncate">
                 {item.brand}
               </p>
             )}
@@ -85,7 +85,7 @@ export function ItemActionMenu({
           {/* Adjust Quantity */}
           <button
             onClick={onAdjustQuantity}
-            className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-3"
+            className="w-full px-4 py-3 bg-secondary-light0 text-white rounded-lg hover:bg-secondary transition-colors flex items-center gap-3"
           >
             <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
@@ -114,7 +114,7 @@ export function ItemActionMenu({
           <button
             onClick={onChat}
             disabled
-            className="w-full px-4 py-3 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg cursor-not-allowed flex items-center gap-3 relative opacity-60"
+            className="w-full px-4 py-3 bg-gray-300 dark:bg-gray-700 text-muted-foreground rounded-lg cursor-not-allowed flex items-center gap-3 relative opacity-60"
             title="Coming soon - collaborate with family on shopping"
           >
             <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,7 +132,7 @@ export function ItemActionMenu({
           {/* Cancel */}
           <button
             onClick={onClose}
-            className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium text-gray-900 dark:text-gray-100"
+            className="w-full px-4 py-3 bg-muted rounded-lg hover:bg-gray-200 transition-colors font-medium text-foreground"
           >
             Cancel
           </button>

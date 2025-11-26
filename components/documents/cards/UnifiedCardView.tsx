@@ -101,14 +101,14 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
                 {metadata?.provider || metadata?.memberName || document.name}
               </h3>
             </div>
-            <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-lg text-xs font-medium">
+            <div className="bg-background/20 backdrop-blur-sm px-3 py-1 rounded-lg text-xs font-medium">
               {document.category}
             </div>
           </div>
         </div>
 
         {/* Document Image/Preview with Flip or Carousel */}
-        <div className="bg-white dark:bg-gray-900 border-t-4 border-white/30">
+        <div className="bg-card border-t-4 border-white/30">
           {document.fileType === 'image' ? (
             hasFrontAndBack ? (
               /* 3D Flip Animation for Front/Back Cards */
@@ -165,8 +165,8 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-none"
                   onClick={() => setShowImageModal(true)}
                 >
-                  <div className="bg-white/90 backdrop-blur-sm rounded-full p-3 transform scale-90 group-hover:scale-100 transition-transform pointer-events-auto">
-                    <MagnifyingGlassIcon className="w-6 h-6 text-gray-900" />
+                  <div className="bg-background/90 backdrop-blur-sm rounded-full p-3 transform scale-90 group-hover:scale-100 transition-transform pointer-events-auto">
+                    <MagnifyingGlassIcon className="w-6 h-6 text-foreground" />
                   </div>
                 </div>
               </div>
@@ -226,8 +226,8 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
                         }}
                         className={`w-2 h-2 rounded-full transition-all ${
                           idx === currentImageIndex
-                            ? 'bg-white w-4'
-                            : 'bg-white/50 hover:bg-white/75'
+                            ? 'bg-background w-4'
+                            : 'bg-background/50 hover:bg-background/75'
                         }`}
                       />
                     ))}
@@ -239,8 +239,8 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer"
                 onClick={() => setShowImageModal(true)}
               >
-                <div className="bg-white/90 backdrop-blur-sm rounded-full p-3 transform scale-90 group-hover:scale-100 transition-transform">
-                  <MagnifyingGlassIcon className="w-6 h-6 text-gray-900" />
+                <div className="bg-background/90 backdrop-blur-sm rounded-full p-3 transform scale-90 group-hover:scale-100 transition-transform">
+                  <MagnifyingGlassIcon className="w-6 h-6 text-foreground" />
                 </div>
               </div>
             </div>
@@ -248,10 +248,10 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
           ) : (
             <button
               onClick={() => setShowImageModal(true)}
-              className="w-full p-8 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex flex-col items-center gap-3"
+              className="w-full p-8 bg-background hover:bg-muted transition-colors flex flex-col items-center gap-3"
             >
-              <DocumentTextIcon className="w-16 h-16 text-gray-400" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <DocumentTextIcon className="w-16 h-16 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">
                 Tap to view PDF
               </span>
             </button>
@@ -259,11 +259,11 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
         </div>
 
       {/* Card Body - Extracted Data */}
-      <div className="bg-white dark:bg-gray-900 p-6 space-y-4">
+      <div className="bg-card p-6 space-y-4">
         {/* Insurance Information */}
         {(metadata?.policyNumber || metadata?.memberName || metadata?.provider || metadata?.groupNumber) && (
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            <h4 className="text-sm font-semibold text-muted-foreground dark:text-muted-foreground uppercase tracking-wide">
               Insurance Information
             </h4>
 
@@ -309,8 +309,8 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
 
         {/* ID Information */}
         {(metadata?.licenseNumber || metadata?.idNumber || metadata?.stateIssued) && (
-          <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <div className="space-y-3 pt-4 border-t border-border">
+            <h4 className="text-sm font-semibold text-muted-foreground dark:text-muted-foreground uppercase tracking-wide">
               ID Information
             </h4>
 
@@ -347,8 +347,8 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
 
         {/* Additional Details */}
         {(metadata?.dates?.length || metadata?.phoneNumbers?.length || metadata?.addresses?.length || metadata?.names?.length || metadata?.amounts?.length) && (
-          <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <div className="space-y-3 pt-4 border-t border-border">
+            <h4 className="text-sm font-semibold text-muted-foreground dark:text-muted-foreground uppercase tracking-wide">
               Additional Details
             </h4>
 
@@ -401,20 +401,20 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
 
         {/* Full Extracted Text */}
         {document.extractedText && (
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="pt-4 border-t border-border">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <h4 className="text-sm font-semibold text-muted-foreground dark:text-muted-foreground uppercase tracking-wide">
                 Full Text
               </h4>
               <button
                 onClick={() => copyToClipboard(document.extractedText!, 'Full Text')}
-                className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                className="text-xs text-primary hover:text-primary-dark font-medium"
               >
                 {copiedField === 'Full Text' ? 'Copied!' : 'Copy All'}
               </button>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 max-h-32 overflow-y-auto">
-              <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
+            <div className="bg-background rounded-lg p-3 max-h-32 overflow-y-auto">
+              <pre className="text-xs text-foreground whitespace-pre-wrap font-mono">
                 {document.extractedText}
               </pre>
             </div>
@@ -422,7 +422,7 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
         )}
 
         {/* Footer Info */}
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+        <div className="pt-4 border-t border-border text-xs text-muted-foreground dark:text-muted-foreground">
           Uploaded: {new Date(document.uploadedAt).toLocaleDateString()}
           {metadata?.confidenceScore && (
             <span className="ml-3">
@@ -438,7 +438,7 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
       <div className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center p-4" onClick={closeModal}>
         <button
           onClick={closeModal}
-          className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full text-white transition-colors z-10"
+          className="absolute top-4 right-4 p-3 bg-background/10 hover:bg-background/20 backdrop-blur-sm rounded-full text-white transition-colors z-10"
         >
           <XMarkIcon className="w-6 h-6" />
         </button>
@@ -452,7 +452,7 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
                 zoomIn()
               }}
               disabled={zoomLevel >= 3}
-              className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-3 bg-background/10 hover:bg-background/20 backdrop-blur-sm rounded-full text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Zoom In"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -465,7 +465,7 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
                 zoomOut()
               }}
               disabled={zoomLevel <= 0.5}
-              className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-3 bg-background/10 hover:bg-background/20 backdrop-blur-sm rounded-full text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Zoom Out"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -478,7 +478,7 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
                   e.stopPropagation()
                   resetZoom()
                 }}
-                className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full text-white transition-colors"
+                className="p-3 bg-background/10 hover:bg-background/20 backdrop-blur-sm rounded-full text-white transition-colors"
                 title="Reset Zoom"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -537,7 +537,7 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
                     e.stopPropagation()
                     toggleFlip()
                   }}
-                  className="absolute bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full text-white text-lg font-medium transition-all flex items-center gap-3 shadow-2xl border border-white/30"
+                  className="absolute bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 bg-background/20 hover:bg-background/30 backdrop-blur-md rounded-full text-white text-lg font-medium transition-all flex items-center gap-3 shadow-2xl border border-white/30"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -578,7 +578,7 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
                     {/* Navigation Buttons */}
                     <button
                       onClick={prevImage}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full text-white transition-colors"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 p-4 bg-background/10 hover:bg-background/20 backdrop-blur-sm rounded-full text-white transition-colors"
                     >
                       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -586,7 +586,7 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
                     </button>
                     <button
                       onClick={nextImage}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 p-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full text-white transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-4 bg-background/10 hover:bg-background/20 backdrop-blur-sm rounded-full text-white transition-colors"
                     >
                       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -618,16 +618,16 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
               </div>
             )
           ) : (
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <div className="bg-card rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col">
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-foreground">
                   {document.name}
                 </h3>
                 <button
                   onClick={() => setShowImageModal(false)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
                 >
-                  <XMarkIcon className="w-5 h-5 text-gray-500" />
+                  <XMarkIcon className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
               <div className="flex-1 overflow-hidden">
@@ -637,12 +637,12 @@ export default function UnifiedCardView({ document }: UnifiedCardViewProps) {
                   title={document.name}
                 />
               </div>
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              <div className="p-4 border-t border-border bg-background">
                 <a
                   href={document.originalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-purple-600 hover:text-purple-700 font-medium text-sm"
+                  className="text-primary hover:text-primary-dark font-medium text-sm"
                 >
                   Open in new tab →
                 </a>
@@ -671,20 +671,20 @@ function DataField({
   mono?: boolean
 }) {
   return (
-    <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group">
+    <div className="flex items-center justify-between bg-background rounded-lg p-3 hover:bg-muted transition-colors group">
       <div className="flex-1 min-w-0 mr-3">
-        <dt className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{label}</dt>
-        <dd className={`text-sm font-medium text-gray-900 dark:text-gray-100 break-words ${mono ? 'font-mono' : ''}`}>
+        <dt className="text-xs text-muted-foreground dark:text-muted-foreground mb-0.5">{label}</dt>
+        <dd className={`text-sm font-medium text-foreground break-words ${mono ? 'font-mono' : ''}`}>
           {value}
         </dd>
       </div>
       <button
         onClick={onCopy}
-        className="flex-shrink-0 p-2 text-gray-400 hover:text-purple-600 hover:bg-white dark:hover:bg-gray-600 rounded-md transition-all opacity-0 group-hover:opacity-100"
+        className="flex-shrink-0 p-2 text-muted-foreground hover:text-primary hover:bg-background dark:hover:bg-gray-600 rounded-md transition-all opacity-0 group-hover:opacity-100"
         title={`Copy ${label}`}
       >
         {copied ? (
-          <CheckIcon className="w-4 h-4 text-green-600" />
+          <CheckIcon className="w-4 h-4 text-success" />
         ) : (
           <ClipboardDocumentIcon className="w-4 h-4" />
         )}

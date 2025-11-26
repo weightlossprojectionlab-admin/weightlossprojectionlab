@@ -84,29 +84,29 @@ export default async function RecipeDetailPage({ params }: PageProps) {
         </Link>
 
         {/* Recipe Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl overflow-hidden">
+        <div className="bg-card rounded-lg shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="p-8 border-b border-gray-200 dark:border-gray-700">
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">{recipe.name}</h1>
-            <p className="text-lg text-gray-600 dark:text-gray-400">{recipe.description}</p>
+          <div className="p-8 border-b border-border">
+            <h1 className="text-4xl font-bold text-foreground mb-2">{recipe.name}</h1>
+            <p className="text-lg text-muted-foreground">{recipe.description}</p>
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <div className="text-center p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+              <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-3xl font-bold text-primary">{recipe.calories}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">calories</p>
+                <p className="text-xs text-muted-foreground">calories</p>
               </div>
-              <div className="text-center p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+              <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-3xl font-bold text-primary">{recipe.macros.protein}g</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">protein</p>
+                <p className="text-xs text-muted-foreground">protein</p>
               </div>
-              <div className="text-center p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+              <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-3xl font-bold text-primary">{recipe.prepTime} min</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">prep time</p>
+                <p className="text-xs text-muted-foreground">prep time</p>
               </div>
-              <div className="text-center p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+              <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-3xl font-bold text-primary">{recipe.servingSize}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">serving{recipe.servingSize > 1 ? 's' : ''}</p>
+                <p className="text-xs text-muted-foreground">serving{recipe.servingSize > 1 ? 's' : ''}</p>
               </div>
             </div>
           </div>
@@ -115,18 +115,18 @@ export default async function RecipeDetailPage({ params }: PageProps) {
           <div className="p-8 space-y-8">
             {/* Nutrition */}
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Nutrition</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">Nutrition</h2>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded">
-                  <span className="text-gray-600 dark:text-gray-400">Carbs:</span>
+                <div className="flex justify-between p-3 bg-muted rounded">
+                  <span className="text-muted-foreground">Carbs:</span>
                   <span className="font-medium">{recipe.macros.carbs}g</span>
                 </div>
-                <div className="flex justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded">
-                  <span className="text-gray-600 dark:text-gray-400">Fat:</span>
+                <div className="flex justify-between p-3 bg-muted rounded">
+                  <span className="text-muted-foreground">Fat:</span>
                   <span className="font-medium">{recipe.macros.fat}g</span>
                 </div>
-                <div className="flex justify-between p-3 bg-gray-100 dark:bg-gray-800 rounded">
-                  <span className="text-gray-600 dark:text-gray-400">Fiber:</span>
+                <div className="flex justify-between p-3 bg-muted rounded">
+                  <span className="text-muted-foreground">Fiber:</span>
                   <span className="font-medium">{recipe.macros.fiber}g</span>
                 </div>
               </div>
@@ -135,10 +135,10 @@ export default async function RecipeDetailPage({ params }: PageProps) {
             {/* Dietary Tags */}
             {recipe.dietaryTags.length > 0 && (
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Dietary Info</h3>
+                <h3 className="text-xl font-semibold text-foreground mb-3">Dietary Info</h3>
                 <div className="flex flex-wrap gap-2">
                   {recipe.dietaryTags.map(tag => (
-                    <span key={tag} className="text-sm bg-purple-100 dark:bg-purple-900/20 text-primary px-3 py-1.5 rounded-full">
+                    <span key={tag} className="text-sm bg-primary-light dark:bg-purple-900/20 text-primary px-3 py-1.5 rounded-full">
                       {tag}
                     </span>
                   ))}
@@ -149,7 +149,7 @@ export default async function RecipeDetailPage({ params }: PageProps) {
             {/* Allergens */}
             {recipe.allergens.length > 0 && (
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Allergen Warning</h3>
+                <h3 className="text-xl font-semibold text-foreground mb-3">Allergen Warning</h3>
                 <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
                   <p className="text-sm font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-200 mb-2">Contains:</p>
                   <div className="flex flex-wrap gap-2">
@@ -165,10 +165,10 @@ export default async function RecipeDetailPage({ params }: PageProps) {
 
             {/* Ingredients */}
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Ingredients</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">Ingredients</h2>
               <ul className="space-y-2">
                 {recipe.ingredients.map((ingredient, idx) => (
-                  <li key={idx} className="flex items-start text-gray-900 dark:text-gray-100">
+                  <li key={idx} className="flex items-start text-foreground">
                     <span className="text-primary mr-3 font-bold">•</span>
                     <span>{ingredient}</span>
                   </li>
@@ -179,10 +179,10 @@ export default async function RecipeDetailPage({ params }: PageProps) {
             {/* Recipe Steps */}
             {recipe.recipeSteps && recipe.recipeSteps.length > 0 && (
               <div>
-                <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Instructions</h2>
+                <h2 className="text-2xl font-semibold text-foreground mb-4">Instructions</h2>
                 <ol className="space-y-4">
                   {recipe.recipeSteps.map((step, idx) => (
-                    <li key={idx} className="flex items-start text-gray-900 dark:text-gray-100">
+                    <li key={idx} className="flex items-start text-foreground">
                       <span className="font-bold text-primary text-xl mr-4 min-w-[32px]">{idx + 1}.</span>
                       <span className="pt-1">{step}</span>
                     </li>
@@ -194,11 +194,11 @@ export default async function RecipeDetailPage({ params }: PageProps) {
             {/* Cooking Tips */}
             {recipe.cookingTips && recipe.cookingTips.length > 0 && (
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Cooking Tips</h3>
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+                <h3 className="text-xl font-semibold text-foreground mb-3">Cooking Tips</h3>
+                <div className="bg-secondary-light border border-secondary-light rounded-lg p-4 space-y-3">
                   {recipe.cookingTips.map((tip, idx) => (
-                    <p key={idx} className="text-sm text-blue-900 dark:text-blue-100 flex items-start">
-                      <span className="text-blue-600 dark:text-blue-300 mr-2 text-lg">💡</span>
+                    <p key={idx} className="text-sm text-secondary-dark flex items-start">
+                      <span className="text-secondary dark:text-blue-300 mr-2 text-lg">💡</span>
                       <span>{tip}</span>
                     </p>
                   ))}
@@ -208,8 +208,8 @@ export default async function RecipeDetailPage({ params }: PageProps) {
 
             {/* No Recipe Available */}
             {(!recipe.recipeSteps || recipe.recipeSteps.length === 0) && (
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 text-center">
-                <p className="text-gray-600 dark:text-gray-400">
+              <div className="bg-muted rounded-lg p-6 text-center">
+                <p className="text-muted-foreground">
                   Full recipe instructions coming soon! In the meantime, use the ingredients list above to recreate this meal.
                 </p>
               </div>
@@ -226,13 +226,13 @@ export default async function RecipeDetailPage({ params }: PageProps) {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               href="/auth"
-              className="btn bg-white dark:bg-gray-900 text-primary hover:bg-gray-100 px-8 py-4 text-lg font-bold rounded-lg shadow-lg"
+              className="btn bg-card text-primary hover:bg-muted px-8 py-4 text-lg font-bold rounded-lg shadow-lg"
             >
               Start Tracking Free
             </Link>
             <Link
               href="/recipes"
-              className="btn bg-transparent border-2 border-white text-white hover:bg-white dark:bg-gray-900/10 px-8 py-4 text-lg font-medium rounded-lg"
+              className="btn bg-transparent border-2 border-white text-white hover:bg-card/10 px-8 py-4 text-lg font-medium rounded-lg"
             >
               Browse More Recipes
             </Link>
@@ -244,19 +244,19 @@ export default async function RecipeDetailPage({ params }: PageProps) {
 
         {/* Social Proof */}
         <div className="mt-12 text-center">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">Join thousands tracking their nutrition</p>
+          <p className="text-muted-foreground mb-4">Join thousands tracking their nutrition</p>
           <div className="flex flex-col md:flex-row justify-center gap-8 text-sm">
             <div className="flex items-center justify-center space-x-2">
               <span className="text-3xl">⚡</span>
-              <span className="text-gray-900 dark:text-gray-100">30-second meal logging</span>
+              <span className="text-foreground">30-second meal logging</span>
             </div>
             <div className="flex items-center justify-center space-x-2">
               <span className="text-3xl">🎯</span>
-              <span className="text-gray-900 dark:text-gray-100">AI-powered analysis</span>
+              <span className="text-foreground">AI-powered analysis</span>
             </div>
             <div className="flex items-center justify-center space-x-2">
               <span className="text-3xl">📈</span>
-              <span className="text-gray-900 dark:text-gray-100">Real results</span>
+              <span className="text-foreground">Real results</span>
             </div>
           </div>
         </div>

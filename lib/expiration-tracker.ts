@@ -310,7 +310,7 @@ export function getExpirationColor(severity: 'info' | 'warning' | 'critical' | '
   switch (severity) {
     case 'expired':
       return {
-        bg: 'bg-red-50 dark:bg-red-900/20',
+        bg: 'bg-error-light dark:bg-red-900/20',
         text: 'text-red-900 dark:text-red-200',
         border: 'border-red-500 dark:border-red-700'
       }
@@ -322,14 +322,14 @@ export function getExpirationColor(severity: 'info' | 'warning' | 'critical' | '
       }
     case 'warning':
       return {
-        bg: 'bg-yellow-50 dark:bg-yellow-900/20',
-        text: 'text-yellow-900 dark:text-yellow-200',
+        bg: 'bg-warning-light',
+        text: 'text-yellow-900',
         border: 'border-yellow-500 dark:border-yellow-700'
       }
     case 'info':
       return {
-        bg: 'bg-blue-50 dark:bg-blue-900/20',
-        text: 'text-blue-900 dark:text-blue-200',
+        bg: 'bg-secondary-light',
+        text: 'text-blue-900',
         border: 'border-blue-500 dark:border-blue-700'
       }
   }

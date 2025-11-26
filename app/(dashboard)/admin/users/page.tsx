@@ -329,9 +329,9 @@ export default function AdminUsersPage() {
   if (!isAdmin || !permissions.canViewUsers) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
+        <div className="bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
           <h2 className="text-xl font-bold text-red-900 dark:text-red-200 mb-2">Access Denied</h2>
-          <p className="text-red-700 dark:text-red-300">
+          <p className="text-error-dark dark:text-red-300">
             You do not have permission to access user management.
           </p>
         </div>
@@ -343,19 +343,19 @@ export default function AdminUsersPage() {
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">User Management</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Search and manage user accounts</p>
+        <h1 className="text-3xl font-bold text-foreground">User Management</h1>
+        <p className="text-muted-foreground mt-1">Search and manage user accounts</p>
       </div>
 
       {/* Search */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-6">
+      <div className="bg-card rounded-lg shadow p-6 mb-6">
         <div className="flex gap-4">
           <div className="flex-1">
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="search" className="block text-sm font-medium text-foreground mb-2">
               Search by Email or UID
             </label>
             <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <input
                 id="search"
                 type="text"
@@ -363,7 +363,7 @@ export default function AdminUsersPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="user@example.com or uid123..."
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full pl-10 pr-4 py-3 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -379,7 +379,7 @@ export default function AdminUsersPage() {
               <button
                 onClick={handleClearSearch}
                 disabled={loading}
-                className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 font-medium"
+                className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-foreground rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 font-medium"
               >
                 Clear
               </button>
@@ -388,73 +388,73 @@ export default function AdminUsersPage() {
         </div>
 
         {error && (
-          <div className="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-            <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
+          <div className="mt-4 bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+            <p className="text-error-dark dark:text-red-300 text-sm">{error}</p>
           </div>
         )}
       </div>
 
       {/* Loading State */}
       {loading && users.length === 0 && (
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-12 text-center">
+        <div className="bg-card rounded-lg shadow p-12 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading users...</p>
+          <p className="mt-4 text-muted-foreground">Loading users...</p>
         </div>
       )}
 
       {/* Results */}
       {!loading && users.length > 0 && (
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
+        <div className="bg-card rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <thead className="bg-background border-b border-border">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
                     UID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
                     Activity
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground dark:text-muted-foreground uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {users.map((user) => (
-                  <tr key={user.uid} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <tr key={user.uid} className="hover:bg-background">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <UserCircleIcon className="h-8 w-8 text-gray-400" />
+                        <UserCircleIcon className="h-8 w-8 text-muted-foreground" />
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                          <div className="font-medium text-foreground">
                             {user.displayName || 'No name'}
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
+                          <div className="text-sm text-muted-foreground dark:text-muted-foreground">{user.email}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <code className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                      <code className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
                         {user.uid.slice(0, 12)}...
                       </code>
                     </td>
                     <td className="px-6 py-4">
                       {user.role ? (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-200">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary-light dark:bg-purple-900/20 text-purple-800 dark:text-purple-200">
                           {user.role}
                         </span>
                       ) : (
-                        <span className="text-gray-400 dark:text-gray-500 text-sm">User</span>
+                        <span className="text-muted-foreground dark:text-muted-foreground text-sm">User</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -469,10 +469,10 @@ export default function AdminUsersPage() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 dark:text-gray-100">
+                      <div className="text-sm text-foreground">
                         {user.mealLogsCount ?? 0} meals
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                         Last active: {user.lastActiveAt ? new Date(user.lastActiveAt).toLocaleDateString() : 'Never'}
                       </div>
                     </td>
@@ -494,8 +494,8 @@ export default function AdminUsersPage() {
                             disabled={actionLoading}
                             className={`p-2 rounded-lg transition-colors ${
                               user.suspended
-                                ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/30'
-                                : 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/30'
+                                ? 'bg-green-100 dark:bg-green-900/20 text-success-dark dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/30'
+                                : 'bg-yellow-100 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/30'
                             }`}
                             title={user.suspended ? 'Unsuspend' : 'Suspend'}
                           >
@@ -509,7 +509,7 @@ export default function AdminUsersPage() {
                               handleExportData(user.uid, user.email)
                             }}
                             disabled={actionLoading}
-                            className="p-2 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
+                            className="p-2 bg-blue-100 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
                             title="Export GDPR data"
                           >
                             <DocumentArrowDownIcon className="h-5 w-5" />
@@ -522,7 +522,7 @@ export default function AdminUsersPage() {
                               handleDelete(user.uid, user.email)
                             }}
                             disabled={actionLoading}
-                            className="p-2 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors"
+                            className="p-2 bg-red-100 dark:bg-red-900/20 text-error-dark dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors"
                             title="Delete user"
                           >
                             <TrashIcon className="h-5 w-5" />
@@ -538,20 +538,20 @@ export default function AdminUsersPage() {
 
           {/* Lazy Loading Indicator */}
           {!searchQuery && (
-            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="px-6 py-4 border-t border-border">
               {isLoadingMore && (
-                <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
                   <span className="text-sm">Loading more users...</span>
                 </div>
               )}
               {!isLoadingMore && hasMore && (
-                <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-center text-sm text-muted-foreground dark:text-muted-foreground">
                   Scroll down to load more users
                 </div>
               )}
               {!hasMore && users.length > 0 && (
-                <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-center text-sm text-muted-foreground dark:text-muted-foreground">
                   All users loaded ({users.length} total)
                 </div>
               )}
@@ -567,10 +567,10 @@ export default function AdminUsersPage() {
 
       {/* Empty State */}
       {!loading && users.length === 0 && !error && (
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-12 text-center">
-          <UserCircleIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Users Found</p>
-          <p className="text-gray-600 dark:text-gray-400">
+        <div className="bg-card rounded-lg shadow p-12 text-center">
+          <UserCircleIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <p className="text-lg font-medium text-foreground mb-2">No Users Found</p>
+          <p className="text-muted-foreground">
             {searchQuery ? 'Try a different search query' : 'No users registered yet'}
           </p>
         </div>

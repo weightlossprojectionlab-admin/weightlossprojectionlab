@@ -126,9 +126,9 @@ export function QuantityAdjuster({
    * Get color based on percentage
    */
   const getProgressColor = () => {
-    if (percentageRemaining > 66) return 'bg-green-500'
-    if (percentageRemaining > 33) return 'bg-yellow-500'
-    return 'bg-red-500'
+    if (percentageRemaining > 66) return 'bg-success-light0'
+    if (percentageRemaining > 33) return 'bg-warning-light0'
+    return 'bg-error-light0'
   }
 
   if (!isOpen) return null
@@ -139,20 +139,20 @@ export function QuantityAdjuster({
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full"
+        className="bg-card rounded-lg shadow-xl max-w-md w-full"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h2 className="text-xl font-bold text-foreground dark:text-white">
             Adjust Quantity
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
             aria-label="Close"
           >
-            <XMarkIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+            <XMarkIcon className="h-6 w-6 text-muted-foreground" />
           </button>
         </div>
 
@@ -170,11 +170,11 @@ export function QuantityAdjuster({
               <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg" />
             )}
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 dark:text-white">
+              <h3 className="font-semibold text-foreground dark:text-white">
                 {item.productName}
               </h3>
               {item.brand && (
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   {item.brand}
                 </p>
               )}
@@ -184,10 +184,10 @@ export function QuantityAdjuster({
           {/* Progress Bar */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="text-sm font-medium text-foreground">
                 Remaining
               </span>
-              <span className="text-sm font-bold text-gray-900 dark:text-white">
+              <span className="text-sm font-bold text-foreground dark:text-white">
                 {percentageRemaining.toFixed(0)}%
               </span>
             </div>
@@ -201,7 +201,7 @@ export function QuantityAdjuster({
 
           {/* Quick Presets */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Quick Select
             </label>
             <div className="grid grid-cols-4 gap-2">
@@ -213,7 +213,7 @@ export function QuantityAdjuster({
                   className={`px-3 py-2 rounded-lg font-medium transition-colors ${
                     Math.abs(quantity - preset.value) < 0.01
                       ? 'bg-primary text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      : 'bg-muted text-foreground hover:bg-gray-200'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {preset.label}
@@ -224,17 +224,17 @@ export function QuantityAdjuster({
 
           {/* Manual Adjustment */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Precise Amount
             </label>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleDecrement}
                 disabled={loading || quantity <= 0}
-                className="p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-3 bg-muted hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Decrease quantity"
               >
-                <MinusIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                <MinusIcon className="h-5 w-5 text-foreground" />
               </button>
 
               <div className="flex-1 relative">
@@ -246,9 +246,9 @@ export function QuantityAdjuster({
                   min={0}
                   max={initialQuantity}
                   step={getStepSize(unit)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-center text-lg font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
+                  className="w-full px-4 py-3 bg-background border border-border dark:border-gray-600 rounded-lg text-center text-lg font-bold text-foreground dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-600 dark:text-gray-400">
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                   {unit}
                 </span>
               </div>
@@ -256,13 +256,13 @@ export function QuantityAdjuster({
               <button
                 onClick={handleIncrement}
                 disabled={loading || quantity >= initialQuantity}
-                className="p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-3 bg-muted hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Increase quantity"
               >
-                <PlusIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                <PlusIcon className="h-5 w-5 text-foreground" />
               </button>
             </div>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 text-center">
+            <p className="text-xs text-muted-foreground mt-2 text-center">
               Original: {initialQuantity.toFixed(2)} {unit}
             </p>
           </div>
@@ -281,7 +281,7 @@ export function QuantityAdjuster({
             <button
               onClick={handleUseUp}
               disabled={loading}
-              className="w-full px-4 py-3 border-2 border-red-500 text-red-600 dark:text-red-400 rounded-lg font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 border-2 border-red-500 text-error rounded-lg font-semibold hover:bg-error-light dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Mark as Used Up
             </button>

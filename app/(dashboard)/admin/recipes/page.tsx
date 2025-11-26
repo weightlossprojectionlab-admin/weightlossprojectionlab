@@ -168,9 +168,9 @@ export default function RecipeModerationPage() {
   if (!permissions.canModerateRecipes) {
     return (
       <div className="p-8">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
+        <div className="bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
           <h2 className="text-xl font-bold text-red-900 mb-2">Access Denied</h2>
-          <p className="text-red-700">
+          <p className="text-error-dark">
             You do not have permission to moderate recipes.
           </p>
         </div>
@@ -183,8 +183,8 @@ export default function RecipeModerationPage() {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Recipe Management</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Create, review, and moderate recipes</p>
+          <h1 className="text-3xl font-bold text-foreground">Recipe Management</h1>
+          <p className="text-muted-foreground mt-1">Create, review, and moderate recipes</p>
         </div>
         <button
           onClick={() => router.push('/admin/recipes/create')}
@@ -196,7 +196,7 @@ export default function RecipeModerationPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="mb-6 border-b border-border">
         <nav className="-mb-px flex space-x-8">
           {(['pending', 'approved', 'rejected'] as const).map((status) => (
             <button
@@ -206,14 +206,14 @@ export default function RecipeModerationPage() {
                 py-4 px-1 border-b-2 font-medium text-sm capitalize
                 ${
                   filter === status
-                    ? 'border-purple-500 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:border-gray-300'
+                    ? 'border-purple-500 text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
                 }
               `}
             >
               {status}
               {status === 'pending' && recipes.length > 0 && (
-                <span className="ml-2 bg-purple-100 dark:bg-purple-900/20 text-purple-600 py-0.5 px-2 rounded-full text-xs">
+                <span className="ml-2 bg-primary-light dark:bg-purple-900/20 text-primary py-0.5 px-2 rounded-full text-xs">
                   {recipes.length}
                 </span>
               )}
@@ -225,16 +225,16 @@ export default function RecipeModerationPage() {
       {/* Recipe List or Empty State */}
       {loading ? (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading recipes...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading recipes...</p>
         </div>
       ) : recipes.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-lg shadow">
-          <ClockIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+        <div className="text-center py-12 bg-card rounded-lg shadow">
+          <ClockIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-foreground mb-2">
             No {filter} recipes
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             {filter === 'pending'
               ? 'All recipes have been reviewed. Check back later for new submissions.'
               : `No ${filter} recipes to display.`}
@@ -245,7 +245,7 @@ export default function RecipeModerationPage() {
           {recipes.map((recipe) => (
             <div
               key={recipe.id}
-              className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
+              className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden cursor-pointer"
               onClick={() => setSelectedRecipe(recipe)}
             >
               {/* Recipe Image */}
@@ -259,7 +259,7 @@ export default function RecipeModerationPage() {
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full">
-                    <span className="text-gray-400">No image</span>
+                    <span className="text-muted-foreground">No image</span>
                   </div>
                 )}
                 <div className="absolute top-2 right-2">
@@ -268,10 +268,10 @@ export default function RecipeModerationPage() {
                       px-2 py-1 rounded-full text-xs font-semibold
                       ${
                         recipe.moderationStatus === 'approved'
-                          ? 'bg-green-500 text-white'
+                          ? 'bg-success-light0 text-white'
                           : recipe.moderationStatus === 'rejected'
-                          ? 'bg-red-500 text-white'
-                          : 'bg-yellow-500 text-white'
+                          ? 'bg-error-light0 text-white'
+                          : 'bg-warning-light0 text-white'
                       }
                     `}
                   >
@@ -282,11 +282,11 @@ export default function RecipeModerationPage() {
 
               {/* Recipe Info */}
               <div className="p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1 line-clamp-1">{recipe.title}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                <h3 className="font-semibold text-foreground mb-1 line-clamp-1">{recipe.title}</h3>
+                <p className="text-sm text-muted-foreground mb-2">
                   by {recipe.createdByName}
                 </p>
-                <div className="flex items-center gap-4 text-sm text-gray-500">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span>{recipe.prepTime} min</span>
                   <span>•</span>
                   <span className="capitalize">{recipe.difficulty}</span>
@@ -306,15 +306,15 @@ export default function RecipeModerationPage() {
           onClick={() => setSelectedRecipe(null)}
         >
           <div
-            className="bg-white dark:bg-gray-900 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-card rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Content */}
-            <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{selectedRecipe.title}</h2>
+            <div className="sticky top-0 bg-card border-b border-border p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-foreground">{selectedRecipe.title}</h2>
               <button
                 onClick={() => setSelectedRecipe(null)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-300"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <XCircleIcon className="h-6 w-6" />
               </button>
@@ -335,70 +335,70 @@ export default function RecipeModerationPage() {
 
               {/* Creator Info */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Creator</h3>
-                <p className="text-gray-900 dark:text-gray-100">{selectedRecipe.createdByName}</p>
-                <p className="text-sm text-gray-500">ID: {selectedRecipe.createdBy}</p>
+                <h3 className="text-sm font-semibold text-foreground mb-2">Creator</h3>
+                <p className="text-foreground">{selectedRecipe.createdByName}</p>
+                <p className="text-sm text-muted-foreground">ID: {selectedRecipe.createdBy}</p>
               </div>
 
               {/* Recipe Details */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Prep Time</h3>
-                  <p className="text-gray-900 dark:text-gray-100">{selectedRecipe.prepTime} minutes</p>
+                  <h3 className="text-sm font-semibold text-foreground mb-1">Prep Time</h3>
+                  <p className="text-foreground">{selectedRecipe.prepTime} minutes</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Servings</h3>
-                  <p className="text-gray-900 dark:text-gray-100">{selectedRecipe.servings}</p>
+                  <h3 className="text-sm font-semibold text-foreground mb-1">Servings</h3>
+                  <p className="text-foreground">{selectedRecipe.servings}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Difficulty</h3>
-                  <p className="text-gray-900 dark:text-gray-100 capitalize">{selectedRecipe.difficulty}</p>
+                  <h3 className="text-sm font-semibold text-foreground mb-1">Difficulty</h3>
+                  <p className="text-foreground capitalize">{selectedRecipe.difficulty}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Cuisine</h3>
-                  <p className="text-gray-900 dark:text-gray-100">{selectedRecipe.cuisine || 'N/A'}</p>
+                  <h3 className="text-sm font-semibold text-foreground mb-1">Cuisine</h3>
+                  <p className="text-foreground">{selectedRecipe.cuisine || 'N/A'}</p>
                 </div>
               </div>
 
               {/* Nutrition */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Nutrition (per serving)</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-2">Nutrition (per serving)</h3>
                 <div className="grid grid-cols-4 gap-2">
-                  <div className="bg-gray-50 dark:bg-gray-950 p-3 rounded">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Calories</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedRecipe.totalCalories}</p>
+                  <div className="bg-background p-3 rounded">
+                    <p className="text-sm text-muted-foreground">Calories</p>
+                    <p className="text-lg font-semibold text-foreground">{selectedRecipe.totalCalories}</p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-950 p-3 rounded">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Protein</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedRecipe.macros.protein}g</p>
+                  <div className="bg-background p-3 rounded">
+                    <p className="text-sm text-muted-foreground">Protein</p>
+                    <p className="text-lg font-semibold text-foreground">{selectedRecipe.macros.protein}g</p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-950 p-3 rounded">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Carbs</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedRecipe.macros.carbs}g</p>
+                  <div className="bg-background p-3 rounded">
+                    <p className="text-sm text-muted-foreground">Carbs</p>
+                    <p className="text-lg font-semibold text-foreground">{selectedRecipe.macros.carbs}g</p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-950 p-3 rounded">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Fat</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedRecipe.macros.fat}g</p>
+                  <div className="bg-background p-3 rounded">
+                    <p className="text-sm text-muted-foreground">Fat</p>
+                    <p className="text-lg font-semibold text-foreground">{selectedRecipe.macros.fat}g</p>
                   </div>
                 </div>
               </div>
 
               {/* Ingredients */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Ingredients</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-2">Ingredients</h3>
                 <ul className="list-disc list-inside space-y-1">
                   {selectedRecipe.ingredients.map((ingredient, index) => (
-                    <li key={index} className="text-gray-900 dark:text-gray-100">{ingredient}</li>
+                    <li key={index} className="text-foreground">{ingredient}</li>
                   ))}
                 </ul>
               </div>
 
               {/* Steps */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Instructions</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-2">Instructions</h3>
                 <ol className="list-decimal list-inside space-y-2">
                   {selectedRecipe.steps.map((step, index) => (
-                    <li key={index} className="text-gray-900 dark:text-gray-100">{step}</li>
+                    <li key={index} className="text-foreground">{step}</li>
                   ))}
                 </ol>
               </div>
@@ -406,12 +406,12 @@ export default function RecipeModerationPage() {
               {/* Tags */}
               {selectedRecipe.tags.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Tags</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Tags</h3>
                   <div className="flex flex-wrap gap-2">
                     {selectedRecipe.tags.map((tag, index) => (
                       <span
                         key={index}
-                        className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm"
+                        className="bg-muted text-foreground px-3 py-1 rounded-full text-sm"
                       >
                         {tag}
                       </span>
@@ -422,18 +422,18 @@ export default function RecipeModerationPage() {
 
               {/* Moderation Actions (only for pending) */}
               {selectedRecipe.moderationStatus === 'pending' && (
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Moderation Actions</h3>
+                <div className="border-t border-border pt-6">
+                  <h3 className="text-sm font-semibold text-foreground mb-4">Moderation Actions</h3>
 
                   {/* Rejection Reason */}
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Rejection Reason (required to reject)
                     </label>
                     <select
                       value={rejectionReason}
                       onChange={(e) => setRejectionReason(e.target.value as RejectionReason)}
-                      className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2"
+                      className="w-full border border-border dark:border-gray-600 bg-background text-foreground rounded-lg px-3 py-2"
                     >
                       <option value="">Select a reason...</option>
                       {rejectionReasons.map((reason) => (
@@ -446,7 +446,7 @@ export default function RecipeModerationPage() {
 
                   {/* Notes */}
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Notes (optional)
                     </label>
                     <textarea
@@ -454,7 +454,7 @@ export default function RecipeModerationPage() {
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Add any additional notes..."
                       rows={3}
-                      className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 rounded-lg px-3 py-2"
+                      className="w-full border border-border dark:border-gray-600 bg-background text-foreground placeholder-gray-500 dark:placeholder-gray-400 rounded-lg px-3 py-2"
                     />
                   </div>
 
@@ -463,7 +463,7 @@ export default function RecipeModerationPage() {
                     <button
                       onClick={() => handleApprove(selectedRecipe.id, false)}
                       disabled={processing}
-                      className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 flex items-center justify-center gap-2"
+                      className="flex-1 bg-success text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 flex items-center justify-center gap-2"
                     >
                       <CheckCircleIcon className="h-5 w-5" />
                       Approve
@@ -472,7 +472,7 @@ export default function RecipeModerationPage() {
                       <button
                         onClick={() => handleApprove(selectedRecipe.id, true)}
                         disabled={processing}
-                        className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 disabled:bg-gray-400 flex items-center justify-center gap-2"
+                        className="flex-1 bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-hover disabled:bg-gray-400 flex items-center justify-center gap-2"
                       >
                         <StarIconSolid className="h-5 w-5" />
                         Approve & Feature
@@ -481,7 +481,7 @@ export default function RecipeModerationPage() {
                     <button
                       onClick={() => handleReject(selectedRecipe.id)}
                       disabled={processing}
-                      className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:bg-gray-400 flex items-center justify-center gap-2"
+                      className="flex-1 bg-error text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 disabled:bg-gray-400 flex items-center justify-center gap-2"
                     >
                       <XCircleIcon className="h-5 w-5" />
                       Reject

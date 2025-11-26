@@ -16,36 +16,36 @@ export function ExpirationTrendChart({ data }: ExpirationTrendChartProps) {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} />
         <XAxis
           dataKey="date"
-          stroke="#9ca3af"
+          stroke="hsl(var(--muted-foreground))"
           style={{ fontSize: '12px' }}
         />
         <YAxis
-          stroke="#9ca3af"
+          stroke="hsl(var(--muted-foreground))"
           style={{ fontSize: '12px' }}
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: '#1f2937',
+            backgroundColor: 'hsl(var(--card))',
             border: 'none',
             borderRadius: '8px',
-            color: '#fff'
+            color: 'hsl(var(--card-foreground))'
           }}
         />
         <Legend />
         <Line
           type="monotone"
           dataKey="wasted"
-          stroke="#ef4444"
+          stroke="hsl(var(--error))"
           strokeWidth={2}
           name="Wasted"
         />
         <Line
           type="monotone"
           dataKey="expiring"
-          stroke="#f59e0b"
+          stroke="hsl(var(--warning))"
           strokeWidth={2}
           name="Expiring"
         />

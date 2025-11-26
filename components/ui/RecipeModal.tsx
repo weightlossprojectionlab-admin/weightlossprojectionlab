@@ -551,16 +551,16 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="relative bg-white dark:bg-gray-900 border border-gray-200 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden m-4">
+      <div className="relative bg-card border border-border rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden m-4">
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 p-4 flex justify-between items-center">
+        <div className="sticky top-0 bg-card border-b border-border p-4 flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{suggestion.name}</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{suggestion.description}</p>
+            <h2 className="text-2xl font-bold text-foreground">{suggestion.name}</h2>
+            <p className="text-sm text-muted-foreground mt-1">{suggestion.description}</p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-600 hover:text-gray-900 dark:text-gray-100 transition-colors p-2"
+            className="text-muted-foreground hover:text-foreground transition-colors p-2"
             aria-label="Close modal"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -570,14 +570,14 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-gray-700">
+        <div className="border-b border-border">
           <div className="flex space-x-1 px-4">
             <button
               onClick={() => setActiveTab('recipe')}
               className={`px-4 py-3 font-medium transition-colors ${
                 activeTab === 'recipe'
                   ? 'text-primary border-b-2 border-primary'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Recipe
@@ -587,7 +587,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
               className={`px-4 py-3 font-medium transition-colors ${
                 activeTab === 'shopping'
                   ? 'text-primary border-b-2 border-primary'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Shopping List
@@ -603,26 +603,26 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
               <div className="bg-gradient-to-r from-purple-100 to-blue-50 dark:from-purple-900/30 dark:to-blue-900/20 border-2 border-primary rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Servings</h3>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Adjust to scale recipe</p>
+                    <h3 className="font-semibold text-foreground text-sm">Servings</h3>
+                    <p className="text-xs text-muted-foreground">Adjust to scale recipe</p>
                   </div>
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={decrementServings}
                       disabled={servingSize <= 1}
-                      className="w-8 h-8 rounded-full bg-primary text-white font-bold hover:bg-primary-hover disabled:bg-gray-100 disabled:text-gray-600 dark:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                      className="w-8 h-8 rounded-full bg-primary text-white font-bold hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
                       aria-label="Decrease servings"
                     >
                       −
                     </button>
                     <div className="text-center min-w-[60px]">
                       <div className="text-3xl font-bold text-primary">{servingSize}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">serving{servingSize > 1 ? 's' : ''}</div>
+                      <div className="text-xs text-muted-foreground">serving{servingSize > 1 ? 's' : ''}</div>
                     </div>
                     <button
                       onClick={incrementServings}
                       disabled={servingSize >= 8}
-                      className="w-8 h-8 rounded-full bg-primary text-white font-bold hover:bg-primary-hover disabled:bg-gray-100 disabled:text-gray-600 dark:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                      className="w-8 h-8 rounded-full bg-primary text-white font-bold hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
                       aria-label="Increase servings"
                     >
                       +
@@ -643,38 +643,38 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
               {/* Quick Info - Scaled */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                  <p className="text-2xl font-bold text-primary dark:text-gray-400">{scaledRecipe.scaledCalories}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">calories (total)</p>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">{scaledRecipe.scaledCalories}</p>
+                  <p className="text-xs text-muted-foreground">calories (total)</p>
                 </div>
-                <div className="text-center p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                  <p className="text-2xl font-bold text-primary dark:text-gray-400">{scaledRecipe.scaledMacros.protein}g</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">protein (total)</p>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">{scaledRecipe.scaledMacros.protein}g</p>
+                  <p className="text-xs text-muted-foreground">protein (total)</p>
                 </div>
-                <div className="text-center p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                  <p className="text-2xl font-bold text-primary dark:text-gray-400">{adjustedPrepTime} min</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">prep time</p>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">{adjustedPrepTime} min</p>
+                  <p className="text-xs text-muted-foreground">prep time</p>
                 </div>
-                <div className="text-center p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                  <p className="text-2xl font-bold text-primary dark:text-gray-400">{Math.round(scaledRecipe.scaledCalories / servingSize)}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">cal per serving</p>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">{Math.round(scaledRecipe.scaledCalories / servingSize)}</p>
+                  <p className="text-xs text-muted-foreground">cal per serving</p>
                 </div>
               </div>
 
               {/* Macros - Scaled */}
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Nutrition (Total for {servingSize} serving{servingSize > 1 ? 's' : ''})</h3>
+                <h3 className="font-semibold text-foreground mb-2">Nutrition (Total for {servingSize} serving{servingSize > 1 ? 's' : ''})</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Carbs:</span>
+                    <span className="text-muted-foreground">Carbs:</span>
                     <span className="font-medium">{scaledRecipe.scaledMacros.carbs}g</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Fat:</span>
+                    <span className="text-muted-foreground">Fat:</span>
                     <span className="font-medium">{scaledRecipe.scaledMacros.fat}g</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Fiber:</span>
+                    <span className="text-muted-foreground">Fiber:</span>
                     <span className="font-medium">{scaledRecipe.scaledMacros.fiber}g</span>
                   </div>
                 </div>
@@ -683,10 +683,10 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
               {/* Dietary Tags */}
               {suggestion.dietaryTags.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Dietary Info</h3>
+                  <h3 className="font-semibold text-foreground mb-2">Dietary Info</h3>
                   <div className="flex flex-wrap gap-2">
                     {suggestion.dietaryTags.map(tag => (
-                      <span key={tag} className="text-xs bg-purple-100 dark:bg-purple-900/20 text-primary px-2 py-1 rounded">
+                      <span key={tag} className="text-xs bg-primary-light dark:bg-purple-900/20 text-primary px-2 py-1 rounded">
                         {tag}
                       </span>
                     ))}
@@ -697,7 +697,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
               {/* Allergens */}
               {suggestion.allergens.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Allergen Warning</h3>
+                  <h3 className="font-semibold text-foreground mb-2">Allergen Warning</h3>
                   <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
                     <p className="text-sm font-medium text-orange-800 dark:text-orange-300 mb-1">Contains:</p>
                     <div className="flex flex-wrap gap-1">
@@ -714,7 +714,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
               {/* Ingredients - Scaled with Substitutions */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">Ingredients</h3>
+                  <h3 className="font-semibold text-foreground">Ingredients</h3>
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={handleSelectAllIngredients}
@@ -722,10 +722,10 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     >
                       I have all
                     </button>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">•</span>
+                    <span className="text-xs text-muted-foreground">•</span>
                     <button
                       onClick={handleClearAllIngredients}
-                      className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-100"
+                      className="text-xs text-muted-foreground hover:text-foreground"
                     >
                       Clear all
                     </button>
@@ -737,7 +737,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                   return (
                     <div className={`mb-3 p-3 rounded-lg border-2 ${
                       readiness.canMake
-                        ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-700'
+                        ? 'bg-success-light dark:bg-green-900/20 border-green-500 dark:border-green-700'
                         : 'bg-orange-50 dark:bg-orange-900/20 border-orange-500 dark:border-orange-700'
                     }`}>
                       <div className="flex items-center justify-between">
@@ -749,7 +749,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                           }`}>
                             {readiness.canMake ? '✓ Ready to cook!' : '⚠️ Missing ingredients'}
                           </p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             {readiness.haveEnough} of {readiness.totalIngredients} ingredients
                             {readiness.insufficient > 0 && ` • ${readiness.insufficient} insufficient`}
                             {readiness.missing > 0 && ` • ${readiness.missing} missing`}
@@ -765,7 +765,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                   )
                 })()}
                 {swappedIngredients.size > 0 && (
-                  <div className="mb-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2">
+                  <div className="mb-3 bg-secondary-light border border-secondary-light rounded-lg px-3 py-2">
                     <p className="text-xs text-blue-900 dark:text-blue-300">
                       <span className="font-medium">Note:</span> Nutrition info reflects the original recipe. Swapped ingredients may have different nutritional values.
                     </p>
@@ -795,16 +795,16 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     const hasIngredient = haveIngredients.has(idx)
 
                     return (
-                      <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                      <div key={idx} className="border border-border rounded-lg overflow-hidden">
                         {/* Main Ingredient */}
-                        <div className={`p-3 flex items-start ${isSwapped ? 'bg-purple-100 dark:bg-purple-900/20' : ''} transition-colors`}>
+                        <div className={`p-3 flex items-start ${isSwapped ? 'bg-primary-light dark:bg-purple-900/20' : ''} transition-colors`}>
                           {/* Checkbox - I have this */}
                           <div className="flex items-center mr-2">
                             <input
                               type="checkbox"
                               checked={hasIngredient}
                               onChange={() => toggleHaveIngredient(idx)}
-                              className="w-4 h-4 text-success border-gray-200 dark:border-gray-700 rounded focus:ring-success cursor-pointer"
+                              className="w-4 h-4 text-success border-border rounded focus:ring-success cursor-pointer"
                               onClick={(e) => e.stopPropagation()}
                             />
                           </div>
@@ -817,20 +817,20 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                             <div className="flex items-start flex-1">
                               <span className={`text-primary mr-2 mt-0.5 ${hasIngredient ? 'opacity-50' : ''}`}>•</span>
                               <div className="flex-1">
-                                <span className={`text-sm text-gray-900 dark:text-gray-100 ${hasIngredient ? 'line-through opacity-60' : ''}`}>
+                                <span className={`text-sm text-foreground ${hasIngredient ? 'line-through opacity-60' : ''}`}>
                                   {displayIngredient}
                                 </span>
                                 {isSwapped && swappedSub.ratio && (
-                                  <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">({swappedSub.ratio})</span>
+                                  <span className="text-xs text-muted-foreground ml-2">({swappedSub.ratio})</span>
                                 )}
                                 {isSwapped && swappedSub.notes && (
-                                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{swappedSub.notes}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">{swappedSub.notes}</p>
                                 )}
                                 {/* Show quantity-aware inventory status */}
                                 {ingredientResults[idx] && (
                                   <div className="mt-1">
                                     {ingredientResults[idx].hasEnough === true && (
-                                      <p className="text-xs text-green-700 dark:text-green-400 flex items-center gap-1">
+                                      <p className="text-xs text-success-dark dark:text-green-400 flex items-center gap-1">
                                         <span>✓</span>
                                         <span>{ingredientResults[idx].comparison}</span>
                                       </p>
@@ -842,13 +842,13 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                                       </p>
                                     )}
                                     {!ingredientResults[idx].matched && (
-                                      <p className="text-xs text-red-700 dark:text-red-400 flex items-center gap-1">
+                                      <p className="text-xs text-error-dark flex items-center gap-1">
                                         <span>❌</span>
                                         <span>{ingredientResults[idx].comparison}</span>
                                       </p>
                                     )}
                                     {ingredientResults[idx].hasEnough === null && ingredientResults[idx].matched && (
-                                      <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                      <p className="text-xs text-muted-foreground flex items-center gap-1">
                                         <span>ℹ️</span>
                                         <span>{ingredientResults[idx].comparison}</span>
                                       </p>
@@ -868,7 +868,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                                     e.stopPropagation()
                                     handleResetIngredient(idx)
                                   }}
-                                  className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-100 underline"
+                                  className="text-xs text-muted-foreground hover:text-foreground underline"
                                   aria-label="Reset to original"
                                 >
                                   Reset
@@ -897,23 +897,23 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
                         {/* Substitutions */}
                         {hasSubstitutions && isExpanded && !isSwapped && (
-                          <div className="bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3">
-                            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Alternatives:</p>
+                          <div className="bg-muted border-t border-border p-3">
+                            <p className="text-xs font-semibold text-muted-foreground mb-2">Alternatives:</p>
                             <div className="space-y-2">
                               {substitutions.map((sub, subIdx) => (
-                                <div key={subIdx} className="bg-white dark:bg-gray-900 rounded-md p-2 border border-gray-200 hover:border-primary transition-colors group">
+                                <div key={subIdx} className="bg-card rounded-md p-2 border border-border hover:border-primary transition-colors group">
                                   <div className="flex items-start justify-between">
                                     <div className="flex-1">
-                                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{sub.name}</p>
+                                      <p className="text-sm font-medium text-foreground">{sub.name}</p>
                                       {sub.ratio && (
-                                        <p className="text-xs text-gray-600 dark:text-gray-400">Ratio: {sub.ratio}</p>
+                                        <p className="text-xs text-muted-foreground">Ratio: {sub.ratio}</p>
                                       )}
                                       {sub.notes && (
-                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{sub.notes}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">{sub.notes}</p>
                                       )}
                                       <div className="flex flex-wrap gap-1 mt-1">
                                         {sub.dietaryTags.slice(0, 2).map(tag => (
-                                          <span key={tag} className="text-[10px] bg-purple-100 dark:bg-purple-900/20 text-primary px-1.5 py-0.5 rounded">
+                                          <span key={tag} className="text-[10px] bg-primary-light dark:bg-purple-900/20 text-primary px-1.5 py-0.5 rounded">
                                             {tag}
                                           </span>
                                         ))}
@@ -949,13 +949,13 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
                 return (
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Instructions</h3>
+                    <h3 className="font-semibold text-foreground mb-2">Instructions</h3>
 
                     {hasAllIngredients ? (
                       /* Show instructions when user has everything */
                       <ol className="space-y-3">
                         {suggestion.recipeSteps.map((step, idx) => (
-                          <li key={idx} className="text-sm text-gray-900 dark:text-gray-100 flex items-start">
+                          <li key={idx} className="text-sm text-foreground flex items-start">
                             <span className="font-bold text-primary mr-3 min-w-[24px]">{idx + 1}.</span>
                             <span>{step}</span>
                           </li>
@@ -975,12 +975,12 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                         </div>
 
                         {/* Show what's needed */}
-                        <div className="bg-white dark:bg-gray-900 rounded-lg p-4 mb-4">
+                        <div className="bg-card rounded-lg p-4 mb-4">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <span className="text-sm font-medium text-foreground">
                               Ingredient Progress
                             </span>
-                            <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                            <span className="text-sm font-bold text-warning dark:text-orange-400">
                               {availableCount} / {totalIngredientsCount}
                             </span>
                           </div>
@@ -1023,11 +1023,11 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
                 return (
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Cooking Tips</h3>
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-2">
+                    <h3 className="font-semibold text-foreground mb-2">Cooking Tips</h3>
+                    <div className="bg-secondary-light border border-secondary-light rounded-lg p-4 space-y-2">
                       {suggestion.cookingTips.map((tip, idx) => (
                         <p key={idx} className="text-sm text-blue-900 dark:text-blue-300 flex items-start">
-                          <span className="text-blue-600 dark:text-blue-400 mr-2">💡</span>
+                          <span className="text-secondary mr-2">💡</span>
                           <span>{tip}</span>
                         </p>
                       ))}
@@ -1038,8 +1038,8 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
               {/* No Recipe Available */}
               {(!suggestion.recipeSteps || suggestion.recipeSteps.length === 0) && (
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-center">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
                     Full recipe instructions coming soon! For now, use the ingredients list above.
                   </p>
                 </div>
@@ -1060,12 +1060,12 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                   <>
                     <div className="flex justify-between items-center mb-4">
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">Shopping List</h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        <h3 className="font-semibold text-foreground">Shopping List</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
                           {neededCount} of {totalCount} items needed
                         </p>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">For {servingSize} serving{servingSize > 1 ? 's' : ''}</p>
+                      <p className="text-sm text-muted-foreground">For {servingSize} serving{servingSize > 1 ? 's' : ''}</p>
                     </div>
 
                     {/* Add to Shopping List Button / Status */}
@@ -1079,12 +1079,12 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                       if (allOnList) {
                         // All missing items are on shopping list
                         return (
-                          <div className="w-full mb-4 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500 dark:border-blue-700 rounded-lg text-center">
+                          <div className="w-full mb-4 px-4 py-3 bg-secondary-light border-2 border-blue-500 dark:border-blue-700 rounded-lg text-center">
                             <div className="flex items-center justify-center gap-2 text-blue-700 dark:text-blue-300">
                               <span className="text-lg">📋</span>
                               <span className="font-semibold">All {neededCount} missing item{neededCount > 1 ? 's are' : ' is'} on your shopping list!</span>
                             </div>
-                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            <p className="text-xs text-secondary mt-1">
                               Shop for these items, then scan them to cook this recipe
                             </p>
                           </div>
@@ -1119,7 +1119,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                       <div className="bg-success-light border border-success rounded-lg p-6 text-center">
                         <div className="text-4xl mb-2">🎉</div>
                         <p className="text-lg font-semibold text-success-dark mb-1">You have everything!</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">All ingredients are checked off. Ready to cook!</p>
+                        <p className="text-sm text-muted-foreground">All ingredients are checked off. Ready to cook!</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -1139,12 +1139,12 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                           return (
                             <div key={idx} className={`p-3 rounded-lg ${
                               isSwapped
-                                ? 'bg-purple-100 dark:bg-purple-900/20'
+                                ? 'bg-primary-light dark:bg-purple-900/20'
                                 : result && result.matched && result.hasEnough === true
-                                  ? 'bg-green-50 dark:bg-green-900/10' // Green background for in-stock
+                                  ? 'bg-success-light dark:bg-green-900/10' // Green background for in-stock
                                   : isIngredientOnShoppingList(ingredient)
                                     ? 'bg-amber-50 dark:bg-amber-900/10' // Amber background for on list
-                                    : 'bg-gray-100 dark:bg-gray-800' // Default
+                                    : 'bg-muted' // Default
                             }`}>
                               <div className="flex items-start space-x-3">
                                 <input
@@ -1156,17 +1156,17 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                                   readOnly
                                   className={`w-4 h-4 mt-0.5 rounded focus:ring-0 pointer-events-none ${
                                     result && result.matched && result.hasEnough === true
-                                      ? 'text-green-500 border-green-500 dark:border-green-500 bg-green-500' // Green checkbox
+                                      ? 'text-green-500 border-green-500 dark:border-green-500 bg-success-light0' // Green checkbox
                                       : isIngredientOnShoppingList(ingredient)
                                         ? 'text-amber-500 border-amber-500 dark:border-amber-500 bg-amber-500' // Amber checkbox
-                                        : 'border-gray-300 dark:border-gray-600' // Default unchecked
+                                        : 'border-border dark:border-gray-600' // Default unchecked
                                   }`}
                                 />
                                 <div className="flex-1">
-                                  <span className="text-sm text-gray-900 dark:text-gray-100 block">
+                                  <span className="text-sm text-foreground block">
                                     {displayIngredient}
                                     {isSwapped && swappedSub.ratio && (
-                                      <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">({swappedSub.ratio})</span>
+                                      <span className="text-xs text-muted-foreground ml-2">({swappedSub.ratio})</span>
                                     )}
                                   </span>
                                   {/* Show quantity status */}
@@ -1185,18 +1185,18 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                                               e.stopPropagation() // Prevent modal from closing
                                               router.push('/shopping')
                                             }}
-                                            className="text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 hover:underline cursor-pointer flex items-center gap-1.5 transition-colors"
+                                            className="text-blue-700 hover:text-blue-900 dark:hover:text-blue-200 hover:underline cursor-pointer flex items-center gap-1.5 transition-colors"
                                             aria-label="View shopping list"
                                           >
                                             <span>📋</span>
                                             <span>On Shopping List</span>
                                           </button>
                                           {recentlyAddedIngredients.has(ingredient) && (
-                                            <span className="text-green-600 dark:text-green-400 font-medium">✓ Just Added</span>
+                                            <span className="text-success dark:text-green-400 font-medium">✓ Just Added</span>
                                           )}
                                         </div>
                                       ) : (
-                                        <p className="text-xs text-red-700 dark:text-red-400 mt-1">
+                                        <p className="text-xs text-error-dark mt-1">
                                           ❌ Not in stock
                                         </p>
                                       )}
@@ -1216,7 +1216,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     )}
 
                     {/* Category Tips */}
-                    <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="mt-6 bg-secondary-light border border-secondary-light rounded-lg p-4">
                       <p className="text-xs text-blue-900 dark:text-blue-300 font-medium mb-2">Shopping Tips:</p>
                       <ul className="text-xs text-blue-800 dark:text-blue-300 space-y-1">
                         <li>• Check your pantry first to avoid duplicate purchases</li>
@@ -1232,7 +1232,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 p-4">
+        <div className="sticky bottom-0 bg-card border-t border-border p-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
               {/* Try This Recipe Button */}
@@ -1251,7 +1251,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
               <button
                 onClick={handlePrint}
-                className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-100 transition-colors flex items-center space-x-1"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center space-x-1"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -1275,21 +1275,21 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                 )}
                 {/* Template Selector */}
                 {showTemplateSelector && (
-                  <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-900 border border-gray-200 rounded-lg shadow-xl p-3 min-w-[250px] z-50">
-                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-3">Choose design style:</p>
+                  <div className="absolute bottom-full left-0 mb-2 bg-card border border-border rounded-lg shadow-xl p-3 min-w-[250px] z-50">
+                    <p className="text-xs font-semibold text-muted-foreground mb-3">Choose design style:</p>
                     <div className="space-y-2">
                       {getAvailableTemplates().map((template) => (
                         <button
                           key={template.style}
                           onClick={() => handleTemplateSelect(template.style)}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:bg-gray-800 rounded group"
+                          className="w-full text-left px-3 py-2 hover:bg-muted rounded group"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                               <span className="text-2xl">{template.icon}</span>
                               <div>
                                 <p className="text-sm font-medium">{template.name}</p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400">{template.description}</p>
+                                <p className="text-xs text-muted-foreground">{template.description}</p>
                               </div>
                             </div>
                             {selectedTemplate === template.style && (
@@ -1305,68 +1305,68 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                 )}
                 {/* Aspect Ratio Selector */}
                 {showAspectRatioSelector && (
-                  <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-900 border border-gray-200 rounded-lg shadow-xl p-3 min-w-[200px]">
-                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-3">Choose format:</p>
+                  <div className="absolute bottom-full left-0 mb-2 bg-card border border-border rounded-lg shadow-xl p-3 min-w-[200px]">
+                    <p className="text-xs font-semibold text-muted-foreground mb-3">Choose format:</p>
                     <div className="space-y-2">
                       <button
                         onClick={() => handleAspectRatioSelect('1:1')}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-between group"
+                        className="w-full text-left px-3 py-2 hover:bg-muted rounded flex items-center justify-between group"
                       >
                         <div>
                           <p className="text-sm font-medium">Square (1:1)</p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">Instagram Feed</p>
+                          <p className="text-xs text-muted-foreground">Instagram Feed</p>
                         </div>
-                        <div className="w-8 h-8 border-2 border-primary rounded bg-purple-100 dark:bg-purple-900/20 group-hover:bg-primary-hover"></div>
+                        <div className="w-8 h-8 border-2 border-primary rounded bg-primary-light dark:bg-purple-900/20 group-hover:bg-primary-hover"></div>
                       </button>
                       <button
                         onClick={() => handleAspectRatioSelect('9:16')}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-between group"
+                        className="w-full text-left px-3 py-2 hover:bg-muted rounded flex items-center justify-between group"
                       >
                         <div>
                           <p className="text-sm font-medium">Story (9:16)</p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">Instagram/FB Stories</p>
+                          <p className="text-xs text-muted-foreground">Instagram/FB Stories</p>
                         </div>
-                        <div className="w-5 h-8 border-2 border-primary rounded bg-purple-100 dark:bg-purple-900/20 group-hover:bg-primary-hover"></div>
+                        <div className="w-5 h-8 border-2 border-primary rounded bg-primary-light dark:bg-purple-900/20 group-hover:bg-primary-hover"></div>
                       </button>
                       <button
                         onClick={() => handleAspectRatioSelect('3:2')}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-between group"
+                        className="w-full text-left px-3 py-2 hover:bg-muted rounded flex items-center justify-between group"
                       >
                         <div>
                           <p className="text-sm font-medium">Landscape (3:2)</p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">Twitter/Facebook</p>
+                          <p className="text-xs text-muted-foreground">Twitter/Facebook</p>
                         </div>
-                        <div className="w-10 h-6 border-2 border-primary rounded bg-purple-100 dark:bg-purple-900/20 group-hover:bg-primary-hover"></div>
+                        <div className="w-10 h-6 border-2 border-primary rounded bg-primary-light dark:bg-purple-900/20 group-hover:bg-primary-hover"></div>
                       </button>
                     </div>
                   </div>
                 )}
                 {showShareMenu && (
-                  <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-gray-900 border border-gray-200 rounded-lg shadow-xl p-2 space-y-1 min-w-[150px]">
+                  <div className="absolute bottom-full left-0 mb-2 bg-card border border-border rounded-lg shadow-xl p-2 space-y-1 min-w-[150px]">
                     <button
                       onClick={() => handlePlatformShare('facebook')}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:bg-gray-800 rounded text-sm flex items-center space-x-2"
+                      className="w-full text-left px-3 py-2 hover:bg-muted rounded text-sm flex items-center space-x-2"
                     >
                       <span>📘</span>
                       <span>Facebook</span>
                     </button>
                     <button
                       onClick={() => handlePlatformShare('twitter')}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:bg-gray-800 rounded text-sm flex items-center space-x-2"
+                      className="w-full text-left px-3 py-2 hover:bg-muted rounded text-sm flex items-center space-x-2"
                     >
                       <span>✖️</span>
                       <span>Twitter</span>
                     </button>
                     <button
                       onClick={() => handlePlatformShare('pinterest')}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:bg-gray-800 rounded text-sm flex items-center space-x-2"
+                      className="w-full text-left px-3 py-2 hover:bg-muted rounded text-sm flex items-center space-x-2"
                     >
                       <span>📍</span>
                       <span>Pinterest</span>
                     </button>
                     <button
                       onClick={() => handlePlatformShare('whatsapp')}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:bg-gray-800 rounded text-sm flex items-center space-x-2"
+                      className="w-full text-left px-3 py-2 hover:bg-muted rounded text-sm flex items-center space-x-2"
                     >
                       <span>💬</span>
                       <span>WhatsApp</span>
@@ -1387,12 +1387,12 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
         {/* Cooking Options Modal */}
         {showCookingOptions && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4 z-10">
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg shadow-xl max-w-md w-full p-6">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Start {actionLabel}ing</h3>
+            <div className="bg-card border border-border rounded-lg shadow-xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold text-foreground mb-4">Start {actionLabel}ing</h3>
 
               {/* Meal Type Selector */}
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                <label className="block text-sm font-semibold text-foreground mb-2">
                   What meal is this for?
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -1403,7 +1403,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                       className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
                         selectedMealType === type
                           ? 'bg-primary text-white'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                          : 'bg-muted text-foreground hover:bg-gray-200'
                       }`}
                     >
                       {type}
@@ -1413,22 +1413,22 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
               </div>
 
               {/* Recipe Info */}
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 mb-6 space-y-1">
+              <div className="bg-muted rounded-lg p-3 mb-6 space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Recipe:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{suggestion.name}</span>
+                  <span className="text-muted-foreground">Recipe:</span>
+                  <span className="font-medium text-foreground">{suggestion.name}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Servings:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{servingSize}</span>
+                  <span className="text-muted-foreground">Servings:</span>
+                  <span className="font-medium text-foreground">{servingSize}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Prep time:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{adjustedPrepTime} min</span>
+                  <span className="text-muted-foreground">Prep time:</span>
+                  <span className="font-medium text-foreground">{adjustedPrepTime} min</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Total calories:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{scaledRecipe.scaledCalories}</span>
+                  <span className="text-muted-foreground">Total calories:</span>
+                  <span className="font-medium text-foreground">{scaledRecipe.scaledCalories}</span>
                 </div>
               </div>
 
@@ -1459,7 +1459,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
                 <button
                   onClick={() => setShowCookingOptions(false)}
-                  className="w-full px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+                  className="w-full px-6 py-3 bg-muted text-foreground rounded-lg hover:bg-gray-200 transition-colors font-medium"
                   disabled={startingSession}
                 >
                   Cancel
@@ -1472,11 +1472,11 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
         {/* Missing Ingredients Modal */}
         {showMissingIngredientsModal && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center p-4 z-10">
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="bg-card border border-border rounded-lg shadow-xl max-w-md w-full p-6">
               <div className="text-center mb-4">
                 <div className="text-4xl mb-2">🛒</div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Missing Ingredients</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <h3 className="text-xl font-bold text-foreground">Missing Ingredients</h3>
+                <p className="text-sm text-muted-foreground mt-2">
                   You need all ingredients to start cooking. Timers depend on having everything ready!
                 </p>
               </div>
@@ -1497,8 +1497,8 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
               </div>
 
               {/* Smart Suggestions Message */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
-                <p className="text-xs text-blue-900 dark:text-blue-200">
+              <div className="bg-secondary-light border border-secondary-light rounded-lg p-3 mb-4">
+                <p className="text-xs text-blue-900">
                   💡 <strong>Smart tip:</strong> {missingIngredients.length <= 3 ?
                     'Just a few items - quick store trip?' :
                     'Several items needed - plan your shopping!'}
@@ -1536,7 +1536,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     setShowMissingIngredientsModal(false)
                     setShowCookingOptions(true) // Go back to cooking options
                   }}
-                  className="w-full px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+                  className="w-full px-6 py-3 bg-muted text-foreground rounded-lg hover:bg-gray-200 transition-colors font-medium"
                   disabled={addingToShoppingList}
                 >
                   Cancel

@@ -5,7 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
+import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
+import { logger } from '@/lib/logger'
 import type { FamilyMember } from '@/types/medical'
 
 export async function GET(
@@ -15,23 +18,33 @@ export async function GET(
   try {
     const { patientId } = await params
 
-    // Authenticate user
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Check authorization and get owner userId
+    const authResult = await assertPatientAccess(request, patientId, 'viewPatientProfile')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
+    }
+
+    const { userId, ownerUserId } = authResult as AssertPatientAccessResult
+
+    // Check rate limit (per-user)
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /patients/[id]/family GET] Rate limit exceeded', { userId, patientId })
       return NextResponse.json(
-        { success: false, error: 'Missing or invalid authorization header' },
-        { status: 401 }
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
       )
     }
 
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    logger.debug('[API /patients/[id]/family GET] Fetching family members', { userId, ownerUserId, patientId })
 
-    // Verify patient exists and user has access
+    // Verify patient exists
     const patientRef = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
 
@@ -39,7 +52,7 @@ export async function GET(
 
     if (!patientDoc.exists) {
       return NextResponse.json(
-        { success: false, error: 'Patient not found or access denied' },
+        { success: false, error: 'Patient not found' },
         { status: 404 }
       )
     }
@@ -47,7 +60,7 @@ export async function GET(
     // Get all family members who have access to this patient
     const familyMembersSnapshot = await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('familyMembers')
       .where('patientsAccess', 'array-contains', patientId)
       .where('status', '==', 'accepted')
@@ -58,12 +71,19 @@ export async function GET(
       ...doc.data()
     })) as FamilyMember[]
 
+    logger.info('[API /patients/[id]/family GET] Family members fetched', {
+      userId,
+      ownerUserId,
+      patientId,
+      count: familyMembers.length
+    })
+
     return NextResponse.json({
       success: true,
       data: familyMembers
     })
   } catch (error: any) {
-    console.error('Error fetching family members:', error)
+    logger.error('[API /patients/[id]/family GET] Error fetching family members', error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch family members' },
       { status: 500 }

@@ -11,6 +11,8 @@ interface ConfirmModalProps {
   confirmText?: string
   cancelText?: string
   variant?: 'danger' | 'warning' | 'info'
+  customIcon?: React.ReactNode // Allow custom icon override
+  iconSize?: 'small' | 'medium' | 'large' // Icon size option
 }
 
 export default function ConfirmModal({
@@ -21,7 +23,9 @@ export default function ConfirmModal({
   message,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
-  variant = 'danger'
+  variant = 'danger',
+  customIcon,
+  iconSize = 'medium'
 }: ConfirmModalProps) {
   if (!isOpen) return null
 
@@ -33,17 +37,29 @@ export default function ConfirmModal({
     },
     warning: {
       icon: '⚠️',
-      confirmButton: 'bg-yellow-600 hover:bg-yellow-700 text-white',
-      headerBg: 'bg-yellow-50 dark:bg-yellow-900/20'
+      confirmButton: 'bg-warning hover:bg-warning-dark text-white',
+      headerBg: 'bg-warning-light'
     },
     info: {
       icon: 'ℹ️',
       confirmButton: 'bg-primary hover:bg-primary-hover text-white',
-      headerBg: 'bg-purple-100 dark:bg-purple-900/20'
+      headerBg: 'bg-primary-light dark:bg-purple-900/20'
     }
   }
 
   const styles = variantStyles[variant]
+
+  const iconSizeStyles = {
+    small: 'h-10 w-10',
+    medium: 'h-12 w-12',
+    large: 'h-16 w-16'
+  }
+
+  const iconTextSizeStyles = {
+    small: 'text-2xl',
+    medium: 'text-3xl',
+    large: 'text-4xl'
+  }
 
   const handleConfirm = () => {
     onConfirm()
@@ -66,21 +82,27 @@ export default function ConfirmModal({
         </span>
 
         {/* Modal panel */}
-        <div className="inline-block transform overflow-hidden rounded-lg bg-white dark:bg-gray-900 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
+        <div className="inline-block transform overflow-hidden rounded-lg bg-card text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
           {/* Header */}
           <div className={`px-6 pt-5 pb-4 ${styles.headerBg}`}>
             <div className="flex items-start">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full">
-                <span className="text-3xl" role="img" aria-label={variant}>
-                  {styles.icon}
-                </span>
+              <div className={`flex ${iconSizeStyles[iconSize]} flex-shrink-0 items-center justify-center rounded-full`}>
+                {customIcon ? (
+                  <div className="flex items-center justify-center w-full h-full">
+                    {customIcon}
+                  </div>
+                ) : (
+                  <span className={iconTextSizeStyles[iconSize]} role="img" aria-label={variant}>
+                    {styles.icon}
+                  </span>
+                )}
               </div>
               <div className="ml-4 mt-0 text-left">
-                <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100" id="modal-title">
+                <h3 className="text-lg font-medium leading-6 text-foreground" id="modal-title">
                   {title}
                 </h3>
                 <div className="mt-2">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line">
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">
                     {message}
                   </p>
                 </div>
@@ -89,7 +111,7 @@ export default function ConfirmModal({
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+          <div className="bg-muted px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
             <button
               type="button"
               onClick={handleConfirm}
@@ -100,7 +122,7 @@ export default function ConfirmModal({
             <button
               type="button"
               onClick={onClose}
-              className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-base font-medium text-gray-900 dark:text-gray-100 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm"
+              className="mt-3 inline-flex w-full justify-center rounded-md border border-border bg-background px-4 py-2 text-base font-medium text-foreground shadow-sm hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm"
             >
               {cancelText}
             </button>

@@ -5,31 +5,10 @@ import { auth, db } from '@/lib/firebase'
 import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore'
 import { onAuthStateChanged, type User } from 'firebase/auth'
 import { logger } from '@/lib/logger'
+import type { MealLog } from '@/types/medical'
 
-export interface MealLogData {
-  id: string
-  title?: string
-  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
-  photoUrl?: string
-  additionalPhotos?: string[]
-  aiAnalysis?: any
-  manualEntries?: Array<{
-    food: string
-    calories: number
-    quantity: string
-  }>
-  totalCalories: number
-  macros: {
-    carbs: number
-    protein: number
-    fat: number
-    fiber?: number
-  }
-  searchKeywords?: string[]
-  loggedAt: string
-  source: string
-  notes?: string
-}
+// Re-export MealLog as MealLogData for backward compatibility
+export type MealLogData = MealLog
 
 /**
  * True real-time hook for fetching meal logs with Firestore onSnapshot
@@ -44,6 +23,7 @@ export interface MealLogData {
  * @returns Meal logs, loading state, error state, and refresh function
  */
 export function useMealLogsRealtime(params?: {
+  patientId?: string | null
   limitCount?: number
   startDate?: string
   endDate?: string
@@ -71,64 +51,76 @@ export function useMealLogsRealtime(params?: {
       return
     }
 
+    // Clear meals immediately when switching patients
+    logger.debug(`🔄 Setting up meal logs listener for patient: ${params?.patientId || 'none'}`)
+    setMealLogs([])
     setLoading(true)
     setError(null)
 
-    const mealLogsRef = collection(db, 'users', currentUser.uid, 'mealLogs')
+    // If patientId is provided, query from patient subcollection
+    if (params?.patientId) {
 
-    // Build query with filters (WHERE clauses must come before ORDER BY)
-    let q = query(mealLogsRef)
+      const mealLogsRef = collection(db, 'users', currentUser.uid, 'patients', params.patientId, 'meal-logs')
+      logger.debug(`📍 Querying meals from: users/${currentUser.uid}/patients/${params.patientId}/meal-logs`)
 
-    // Add WHERE filters first
-    if (params?.mealType) {
-      q = query(q, where('mealType', '==', params.mealType))
-    }
-    if (params?.startDate) {
-      q = query(q, where('loggedAt', '>=', new Date(params.startDate)))
-    }
-    if (params?.endDate) {
-      q = query(q, where('loggedAt', '<=', new Date(params.endDate)))
-    }
+      // Build query with filters (WHERE clauses must come before ORDER BY)
+      let q = query(mealLogsRef)
 
-    // Then add ORDER BY
-    q = query(q, orderBy('loggedAt', 'desc'))
-
-    // Finally add LIMIT
-    q = query(q, limit(params?.limitCount || 10))
-
-    // Subscribe to real-time updates
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const logs = snapshot.docs.map((doc) => {
-          const data = doc.data()
-          return {
-            id: doc.id,
-            ...data,
-            // Convert Firestore Timestamp to ISO string
-            loggedAt: data.loggedAt?.toDate?.()?.toISOString() || data.loggedAt,
-          } as MealLogData
-        })
-
-        setMealLogs(logs)
-        setLoading(false)
-        setError(null)
-
-        logger.debug(`📊 Real-time update: ${logs.length} meal logs loaded`)
-      },
-      (err) => {
-        logger.error('❌ Error in meal logs real-time listener:', err)
-        setError(err as Error)
-        setLoading(false)
+      // Add WHERE filters first
+      if (params?.mealType) {
+        q = query(q, where('mealType', '==', params.mealType))
       }
-    )
+      if (params?.startDate) {
+        q = query(q, where('loggedAt', '>=', params.startDate))
+      }
+      if (params?.endDate) {
+        q = query(q, where('loggedAt', '<=', params.endDate))
+      }
 
-    // Cleanup subscription on unmount or when dependencies change
-    return () => {
-      logger.debug('🔌 Unsubscribing from meal logs listener')
-      unsubscribe()
+      // Then add ORDER BY
+      q = query(q, orderBy('loggedAt', 'desc'))
+
+      // Finally add LIMIT
+      q = query(q, limit(params?.limitCount || 10))
+
+      // Subscribe to real-time updates
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const logs = snapshot.docs.map((doc) => {
+            const data = doc.data()
+            return {
+              id: doc.id,
+              ...data,
+              // Convert Firestore Timestamp to ISO string
+              loggedAt: data.loggedAt?.toDate?.()?.toISOString() || data.loggedAt,
+            } as MealLogData
+          })
+
+          setMealLogs(logs)
+          setLoading(false)
+          setError(null)
+
+          logger.debug(`📊 Real-time update: ${logs.length} meal logs loaded for patient ${params.patientId}`)
+        },
+        (err) => {
+          logger.error('❌ Error in meal logs real-time listener:', err)
+          setError(err as Error)
+          setLoading(false)
+        }
+      )
+
+      // Cleanup subscription on unmount or when dependencies change
+      return () => {
+        logger.debug('🔌 Unsubscribing from meal logs listener')
+        unsubscribe()
+      }
+    } else {
+      // No patientId - set empty data
+      setMealLogs([])
+      setLoading(false)
     }
-  }, [currentUser, params?.limitCount, params?.startDate, params?.endDate, params?.mealType])
+  }, [currentUser, params?.patientId, params?.limitCount, params?.startDate, params?.endDate, params?.mealType])
 
   // Manual refresh function (forces re-subscription)
   const refresh = () => {

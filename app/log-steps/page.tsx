@@ -104,9 +104,9 @@ function LogStepsContent() {
   const progressPercentage = Math.min((currentSteps / goalSteps) * 100, 100)
 
   return (
-    <main className="min-h-screen bg-white dark:bg-gray-900">
+    <main className="min-h-screen bg-card">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-900 shadow-sm">
+      <header className="bg-card shadow-sm">
         <div className="mx-auto max-w-md px-4 py-4">
           <div className="flex items-center space-x-4">
             <Link
@@ -116,16 +116,16 @@ function LogStepsContent() {
             >
               ← Back
             </Link>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Log Steps</h1>
+            <h1 className="text-xl font-semibold text-foreground">Log Steps</h1>
           </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-md px-4 py-6 space-y-6">
         {/* Automatic Tracking Card - PRIMARY */}
-        <div className={`border rounded-lg p-6 shadow-sm ${isEnabled ? 'bg-success-light dark:bg-success-dark/20 border-success dark:border-success' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'}`}>
+        <div className={`border rounded-lg p-6 shadow-sm ${isEnabled ? 'bg-success-light dark:bg-success-dark/20 border-success dark:border-success' : 'bg-card border-border'}`}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Today's Steps</h2>
+            <h2 className="text-lg font-medium text-foreground">Today's Steps</h2>
             {isEnabled && isTracking && (
               <span className="flex items-center space-x-2 text-sm text-success-dark dark:text-success">
                 <span className="relative flex h-3 w-3">
@@ -139,10 +139,10 @@ function LogStepsContent() {
 
           {/* Step Count Display */}
           <div className="text-center mb-6">
-            <div className="text-6xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            <div className="text-6xl font-bold text-foreground mb-2">
               {currentSteps.toLocaleString()}
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {isEnabled ? 'steps tracked automatically' : 'steps today'}
             </p>
           </div>
@@ -150,12 +150,12 @@ function LogStepsContent() {
           {/* Progress Bar */}
           <div className="space-y-3 mb-6">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Daily Goal</span>
+              <span className="text-sm text-muted-foreground">Daily Goal</span>
               <span className="font-medium">
                 {currentSteps.toLocaleString()} / {goalSteps.toLocaleString()}
               </span>
             </div>
-            <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3">
+            <div className="w-full bg-muted rounded-full h-3">
               <div
                 className="bg-primary h-3 rounded-full transition-all duration-300"
                 style={{ width: `${progressPercentage}%` }}
@@ -166,7 +166,7 @@ function LogStepsContent() {
                 aria-label={`Step progress: ${Math.round(progressPercentage)}%`}
               />
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+            <p className="text-sm text-muted-foreground text-center">
               {currentSteps >= goalSteps ? (
                 <span className="text-success font-medium">🎉 Goal achieved!</span>
               ) : (
@@ -191,8 +191,8 @@ function LogStepsContent() {
 
               {/* Save Progress Info */}
               {currentSteps > lastSaveStepCount && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                  <p className="text-xs text-blue-900 dark:text-blue-100 mb-2">
+                <div className="bg-secondary-light border border-secondary-light rounded-lg p-3">
+                  <p className="text-xs text-secondary-dark mb-2">
                     💾 {currentSteps - lastSaveStepCount} unsaved steps
                   </p>
                   <p className="text-xs text-blue-700 dark:text-blue-300">
@@ -260,18 +260,18 @@ function LogStepsContent() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Recent Activity</h3>
+        <div className="bg-card rounded-lg p-6 shadow-sm">
+          <h3 className="text-lg font-medium text-foreground mb-4">Recent Activity</h3>
 
           {loadingLogs ? (
             <div className="text-center py-8">
               <div className="animate-spin w-6 h-6 border-3 border-primary border-t-transparent rounded-full mx-auto"></div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Loading activity...</p>
+              <p className="text-sm text-muted-foreground mt-2">Loading activity...</p>
             </div>
           ) : recentLogs.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-600 dark:text-gray-400 mb-2">No activity logged yet</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Enable automatic tracking to start recording your steps</p>
+              <p className="text-muted-foreground mb-2">No activity logged yet</p>
+              <p className="text-sm text-muted-foreground">Enable automatic tracking to start recording your steps</p>
             </div>
           ) : (
             <>
@@ -283,11 +283,11 @@ function LogStepsContent() {
                   return (
                     <div
                       key={log.id}
-                      className={`flex items-center justify-between py-2 ${!isLastItem ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
+                      className={`flex items-center justify-between py-2 ${!isLastItem ? 'border-b border-border' : ''}`}
                     >
                       <div>
                         <p className="font-medium">{log.steps.toLocaleString()} steps</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{formatRelativeDate(log.date)}</p>
+                        <p className="text-sm text-muted-foreground">{formatRelativeDate(log.date)}</p>
                       </div>
                       <div className="text-right">
                         {goalProgress >= 100 ? (
@@ -295,7 +295,7 @@ function LogStepsContent() {
                         ) : goalProgress >= 75 ? (
                           <span className="text-sm text-accent-dark">{goalProgress}% of goal</span>
                         ) : (
-                          <span className="text-sm text-orange-600">{goalProgress}% of goal</span>
+                          <span className="text-sm text-warning">{goalProgress}% of goal</span>
                         )}
                       </div>
                     </div>

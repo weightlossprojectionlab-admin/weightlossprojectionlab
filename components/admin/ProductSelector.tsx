@@ -152,11 +152,11 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-card rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Add Product to Recipe</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+        <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-foreground">Add Product to Recipe</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-muted-foreground">
             <XMarkIcon className="w-6 h-6" />
           </button>
         </div>
@@ -168,13 +168,13 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
               <div className="flex gap-4">
                 {/* Search */}
                 <div className="flex-1 relative">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <input
                     type="text"
                     placeholder="Search products..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full pl-10 pr-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
@@ -182,7 +182,7 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">All Categories</option>
                   <option value="produce">Produce</option>
@@ -202,9 +202,9 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
               {/* Products List */}
               <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {loading ? (
-                  <div className="text-center py-8 text-gray-500">Loading products...</div>
+                  <div className="text-center py-8 text-muted-foreground">Loading products...</div>
                 ) : filteredProducts.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">No products found</div>
+                  <div className="text-center py-8 text-muted-foreground">No products found</div>
                 ) : (
                   filteredProducts.map((product) => (
                     <div
@@ -212,8 +212,8 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
                       onClick={() => handleSelectProduct(product)}
                       className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                         selectedProduct?.barcode === product.barcode
-                          ? 'border-primary bg-purple-50 dark:bg-purple-900/20'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          ? 'border-primary bg-primary-light'
+                          : 'border-border hover:border-border dark:hover:border-gray-600'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -221,9 +221,9 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
                           <img src={product.imageUrl} alt={product.productName} className="w-12 h-12 object-cover rounded" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{product.productName}</p>
-                          <p className="text-xs text-gray-500 truncate">{product.brand}</p>
-                          <p className="text-xs text-gray-400">{product.nutrition.calories} cal | {product.nutrition.protein}g protein</p>
+                          <p className="text-sm font-medium text-foreground truncate">{product.productName}</p>
+                          <p className="text-xs text-muted-foreground truncate">{product.brand}</p>
+                          <p className="text-xs text-muted-foreground">{product.nutrition.calories} cal | {product.nutrition.protein}g protein</p>
                         </div>
                       </div>
                     </div>
@@ -233,7 +233,7 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
             </div>
 
             {/* Right: Product Details & Configuration */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+            <div className="border border-border rounded-lg p-6">
               {selectedProduct ? (
                 <div className="space-y-6">
                   {/* Product Info */}
@@ -241,38 +241,38 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
                     {selectedProduct.imageUrl && (
                       <img src={selectedProduct.imageUrl} alt={selectedProduct.productName} className="w-32 h-32 object-cover rounded mb-4" />
                     )}
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedProduct.productName}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{selectedProduct.brand}</p>
-                    <p className="text-xs text-gray-500 mt-1">Barcode: {selectedProduct.barcode}</p>
+                    <h3 className="text-lg font-semibold text-foreground">{selectedProduct.productName}</h3>
+                    <p className="text-sm text-muted-foreground">{selectedProduct.brand}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Barcode: {selectedProduct.barcode}</p>
                   </div>
 
                   {/* Nutrition Facts */}
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Nutrition Facts</h4>
+                  <div className="bg-background rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-foreground mb-2">Nutrition Facts</h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="text-gray-500">Calories:</span>
-                        <span className="ml-2 text-gray-900 dark:text-gray-100">{selectedProduct.nutrition.calories}</span>
+                        <span className="text-muted-foreground">Calories:</span>
+                        <span className="ml-2 text-foreground">{selectedProduct.nutrition.calories}</span>
                       </div>
                       <div>
-                        <span className="text-gray-500">Protein:</span>
-                        <span className="ml-2 text-gray-900 dark:text-gray-100">{selectedProduct.nutrition.protein}g</span>
+                        <span className="text-muted-foreground">Protein:</span>
+                        <span className="ml-2 text-foreground">{selectedProduct.nutrition.protein}g</span>
                       </div>
                       <div>
-                        <span className="text-gray-500">Carbs:</span>
-                        <span className="ml-2 text-gray-900 dark:text-gray-100">{selectedProduct.nutrition.carbs}g</span>
+                        <span className="text-muted-foreground">Carbs:</span>
+                        <span className="ml-2 text-foreground">{selectedProduct.nutrition.carbs}g</span>
                       </div>
                       <div>
-                        <span className="text-gray-500">Fat:</span>
-                        <span className="ml-2 text-gray-900 dark:text-gray-100">{selectedProduct.nutrition.fat}g</span>
+                        <span className="text-muted-foreground">Fat:</span>
+                        <span className="ml-2 text-foreground">{selectedProduct.nutrition.fat}g</span>
                       </div>
                       <div>
-                        <span className="text-gray-500">Fiber:</span>
-                        <span className="ml-2 text-gray-900 dark:text-gray-100">{selectedProduct.nutrition.fiber}g</span>
+                        <span className="text-muted-foreground">Fiber:</span>
+                        <span className="ml-2 text-foreground">{selectedProduct.nutrition.fiber}g</span>
                       </div>
                       <div className="col-span-2">
-                        <span className="text-gray-500">Serving:</span>
-                        <span className="ml-2 text-gray-900 dark:text-gray-100">{selectedProduct.nutrition.servingSize}</span>
+                        <span className="text-muted-foreground">Serving:</span>
+                        <span className="ml-2 text-foreground">{selectedProduct.nutrition.servingSize}</span>
                       </div>
                     </div>
                   </div>
@@ -280,22 +280,22 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
                   {/* Quantity & Unit */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">Quantity</label>
                       <input
                         type="number"
                         min="0.1"
                         step="0.1"
                         value={quantity}
                         onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full px-3 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Unit</label>
+                      <label className="block text-sm font-medium text-foreground mb-1">Unit</label>
                       <select
                         value={unit}
                         onChange={(e) => setUnit(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full px-3 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       >
                         <option value="count">count</option>
                         <option value="cups">cups</option>
@@ -313,13 +313,13 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
 
                   {/* Notes */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes (optional)</label>
+                    <label className="block text-sm font-medium text-foreground mb-1">Notes (optional)</label>
                     <input
                       type="text"
                       placeholder="e.g., or substitute with almond milk"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-3 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
 
@@ -332,7 +332,7 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
                       onChange={(e) => setOptional(e.target.checked)}
                       className="rounded"
                     />
-                    <label htmlFor="optional" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                    <label htmlFor="optional" className="ml-2 text-sm text-foreground">
                       Mark as optional ingredient
                     </label>
                   </div>
@@ -347,7 +347,7 @@ export function ProductSelector({ onSelectProduct, onClose }: ProductSelectorPro
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="flex items-center justify-center h-full text-muted-foreground">
                   Select a product from the list
                 </div>
               )}

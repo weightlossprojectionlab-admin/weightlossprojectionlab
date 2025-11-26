@@ -86,7 +86,7 @@ export function SwipeableShoppingItem({
     } else if (swipeOffset < -swipeThreshold) {
       return 'bg-red-100 dark:bg-red-900/30'
     }
-    return 'bg-white dark:bg-gray-800'
+    return 'bg-background'
   }
 
   // Show action icons when swiping
@@ -103,8 +103,8 @@ export function SwipeableShoppingItem({
             showPurchaseIcon ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          <CheckCircleIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
-          <span className="font-medium text-green-600 dark:text-green-400">
+          <CheckCircleIcon className="h-6 w-6 text-success dark:text-green-400" />
+          <span className="font-medium text-success dark:text-green-400">
             Purchase
           </span>
         </div>
@@ -115,10 +115,10 @@ export function SwipeableShoppingItem({
             showDeleteIcon ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          <span className="font-medium text-red-600 dark:text-red-400">
+          <span className="font-medium text-error">
             Delete
           </span>
-          <TrashIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+          <TrashIcon className="h-6 w-6 text-error" />
         </div>
       </div>
 
@@ -130,11 +130,11 @@ export function SwipeableShoppingItem({
           transform: `translateX(${swipeOffset}px)`,
           transition: isSwiping ? 'none' : 'transform 0.3s ease-out',
         }}
-        className={`relative p-4 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer ${getBackgroundColor()} transition-colors`}
+        className={`relative p-4 border border-border rounded-lg cursor-pointer ${getBackgroundColor()} transition-colors`}
       >
         {/* Priority indicator */}
         {item.priority === 'high' && (
-          <div className="absolute top-2 left-2 w-2 h-2 bg-red-500 rounded-full" />
+          <div className="absolute top-2 left-2 w-2 h-2 bg-error-light0 rounded-full" />
         )}
 
         {/* Item content */}
@@ -154,10 +154,10 @@ export function SwipeableShoppingItem({
 
           {/* Item info */}
           <div className="flex-1 min-w-0">
-            <div className="font-medium text-gray-900 dark:text-white">
+            <div className="font-medium text-foreground dark:text-white">
               {item.productName}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-muted-foreground">
               {item.displayQuantity || `${item.quantity} ${item.unit || 'units'}`}
             </div>
             {/* Recipe badge */}
@@ -172,7 +172,7 @@ export function SwipeableShoppingItem({
               </Link>
             )}
             {item.brand && !recipeName && (
-              <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                 {item.brand}
               </div>
             )}
@@ -180,7 +180,7 @@ export function SwipeableShoppingItem({
 
           {/* Expected price */}
           {item.expectedPriceCents && (
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="text-sm font-medium text-foreground">
               ${(item.expectedPriceCents / 100).toFixed(2)}
             </div>
           )}
@@ -188,7 +188,7 @@ export function SwipeableShoppingItem({
 
         {/* Swipe hint for first-time users */}
         {!isSwiping && (
-          <div className="absolute bottom-1 right-2 text-xs text-gray-400 dark:text-gray-600">
+          <div className="absolute bottom-1 right-2 text-xs text-muted-foreground dark:text-muted-foreground">
             ← swipe →
           </div>
         )}

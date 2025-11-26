@@ -114,24 +114,24 @@ export function ShareListButton({
   return (
     <button
       onClick={handleShare}
-      className={`flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${className}`}
+      className={`flex items-center gap-2 px-4 py-2 bg-background border border-border dark:border-gray-600 rounded-lg hover:bg-background transition-colors ${className}`}
       aria-label="Share shopping list"
     >
       {copied ? (
         <>
-          <CheckIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-          <span className="text-sm font-medium text-green-600 dark:text-green-400">
+          <CheckIcon className="h-5 w-5 text-success dark:text-green-400" />
+          <span className="text-sm font-medium text-success dark:text-green-400">
             Copied!
           </span>
         </>
       ) : (
         <>
           {hasShareAPI(navigator) ? (
-            <ShareIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <ShareIcon className="h-5 w-5 text-muted-foreground" />
           ) : (
-            <ClipboardDocumentIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <ClipboardDocumentIcon className="h-5 w-5 text-muted-foreground" />
           )}
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="text-sm font-medium text-foreground">
             Share List
           </span>
         </>

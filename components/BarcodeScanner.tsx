@@ -259,26 +259,26 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-lg w-full p-6">
+      <div className="bg-card rounded-lg shadow-xl max-w-lg w-full p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          <h2 className="text-xl font-bold text-foreground">
             {getContextTitle()}
           </h2>
           <button
             type="button"
             onClick={handleClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            className="p-2 hover:bg-muted rounded-full transition-colors"
             aria-label="Close"
           >
-            <svg className="w-6 h-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         {/* Instructions */}
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           {getContextInstructions()}. The scanner will automatically detect and read it.
         </p>
 
@@ -287,7 +287,7 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
           {/* Scanner View - Always render the div so html5-qrcode can find it */}
           <div
             id="barcode-reader"
-            className={`rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-700 ${
+            className={`rounded-lg overflow-hidden border-2 border-border ${
               showManualEntry ? 'hidden' : ''
             }`}
           ></div>
@@ -303,9 +303,9 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
 
           {/* Manual Entry Form */}
           {showManualEntry && (
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Enter Barcode Manually</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <div className="bg-muted rounded-lg p-6">
+              <h3 className="font-semibold text-foreground mb-3">Enter Barcode Manually</h3>
+              <p className="text-sm text-muted-foreground mb-4">
                 Type the barcode number (usually found below the barcode)
               </p>
               <input
@@ -316,7 +316,7 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
                 onChange={(e) => setManualBarcode(e.target.value.replace(/\D/g, ''))}
                 onKeyPress={(e) => e.key === 'Enter' && handleManualSubmit()}
                 placeholder="e.g. 012345678912"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg mb-4 text-center text-lg tracking-wider"
+                className="w-full px-4 py-3 border border-border rounded-lg mb-4 text-center text-lg tracking-wider"
                 autoFocus
               />
               <div className="flex space-x-2">
@@ -330,7 +330,7 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
                 <button
                   type="button"
                   onClick={() => setShowManualEntry(false)}
-                  className="px-4 py-3 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="px-4 py-3 border border-border text-foreground rounded-lg hover:bg-background transition-colors"
                 >
                   Cancel
                 </button>
@@ -347,8 +347,8 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
         )}
 
         {/* Tips */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-          <p className="text-xs text-blue-900 dark:text-blue-200">
+        <div className="bg-secondary-light rounded-lg p-4">
+          <p className="text-xs text-blue-900">
             <strong>Tips:</strong> Ensure good lighting, hold the barcode steady, and keep it flat. Works with EAN, UPC, QR codes, and more.
           </p>
         </div>
@@ -360,7 +360,7 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
             <button
               type="button"
               onClick={() => setShowManualEntry(true)}
-              className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+              className="w-full px-4 py-3 bg-muted text-foreground rounded-lg hover:bg-gray-200 transition-colors font-medium"
             >
               Can't scan? Enter barcode manually
             </button>
@@ -370,7 +370,7 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
           <button
             type="button"
             onClick={handleClose}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
+            className="w-full px-4 py-3 border border-border text-foreground rounded-lg hover:bg-background transition-colors font-medium"
           >
             Cancel
           </button>

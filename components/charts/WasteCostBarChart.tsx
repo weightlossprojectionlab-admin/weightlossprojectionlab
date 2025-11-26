@@ -19,24 +19,24 @@ export function WasteCostBarChart({ data }: WasteCostBarChartProps) {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data.slice(0, 8)}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} />
         <XAxis
           dataKey="category"
-          stroke="#9ca3af"
+          stroke="hsl(var(--muted-foreground))"
           style={{ fontSize: '12px' }}
           tickFormatter={(value) => getCategoryMetadata(value).displayName}
         />
         <YAxis
-          stroke="#9ca3af"
+          stroke="hsl(var(--muted-foreground))"
           style={{ fontSize: '12px' }}
           tickFormatter={(value) => `$${value}`}
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: '#1f2937',
+            backgroundColor: 'hsl(var(--card))',
             border: 'none',
             borderRadius: '8px',
-            color: '#fff'
+            color: 'hsl(var(--card-foreground))'
           }}
           formatter={(value: ValueType) => {
             const numValue = typeof value === 'number' ? value : 0
@@ -46,7 +46,7 @@ export function WasteCostBarChart({ data }: WasteCostBarChartProps) {
             return getCategoryMetadata(label as ProductCategory).displayName
           }}
         />
-        <Bar dataKey="cost" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+        <Bar dataKey="cost" fill="hsl(var(--secondary))" radius={[8, 8, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )

@@ -160,7 +160,7 @@ async function handleHealthProfileReview(params: {
   modifiedData?: Partial<AIHealthProfile>
   adminUid: string
 }) {
-  const { decisionRef, decision, action, notes, modifiedData, adminUid } = params
+  const { decisionRef, decision, action, notes, modifiedData, adminUid } = await params
 
   if (action === 'approve' || action === 'modify') {
     // Update user's health profile
@@ -216,7 +216,7 @@ async function handleMealSafetyReview(params: {
   notes?: string
   adminUid: string
 }) {
-  const { decisionRef, action, notes, adminUid } = params
+  const { decisionRef, action, notes, adminUid } = await params
 
   // For meal safety, we just log the admin's decision
   // The meal was already flagged, this is for auditing

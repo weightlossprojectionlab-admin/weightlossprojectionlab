@@ -83,19 +83,19 @@ export function IngredientDiffModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-background rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-border">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-2xl font-bold text-foreground dark:text-white">
                 Add to Shopping List
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">{recipeName}</p>
+              <p className="text-muted-foreground mt-1">{recipeName}</p>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300"
               aria-label="Close modal"
             >
               <XMarkIcon className="h-6 w-6" />
@@ -106,21 +106,21 @@ export function IngredientDiffModal({
           <div className="flex gap-4 mt-4 text-sm">
             <div className="flex items-center gap-1">
               <CheckCircleIcon className="h-5 w-5 text-green-500" />
-              <span className="text-gray-700 dark:text-gray-300">
+              <span className="text-foreground">
                 {haveCount} in stock
               </span>
             </div>
             {partialCount > 0 && (
               <div className="flex items-center gap-1">
-                <ExclamationCircleIcon className="h-5 w-5 text-orange-500" />
-                <span className="text-gray-700 dark:text-gray-300">
+                <ExclamationCircleIcon className="h-5 w-5 text-warning" />
+                <span className="text-foreground">
                   {partialCount} partial
                 </span>
               </div>
             )}
             <div className="flex items-center gap-1">
               <PlusCircleIcon className="h-5 w-5 text-blue-500" />
-              <span className="text-gray-700 dark:text-gray-300">
+              <span className="text-foreground">
                 {needCount} needed
               </span>
             </div>
@@ -140,8 +140,8 @@ export function IngredientDiffModal({
                   key={index}
                   className={`flex items-center gap-3 p-3 rounded-lg border ${
                     diff.status === 'have'
-                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                      : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600'
+                      ? 'bg-success-light dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                      : 'bg-background dark:bg-gray-700/50 border-border dark:border-gray-600'
                   }`}
                 >
                   {/* Checkbox (only for items that need to be added) */}
@@ -150,7 +150,7 @@ export function IngredientDiffModal({
                       type="checkbox"
                       checked={selectedItems.has(index)}
                       onChange={() => toggleItem(index)}
-                      className="h-4 w-4 text-blue-600 rounded"
+                      className="h-4 w-4 text-secondary rounded"
                     />
                   )}
 
@@ -159,7 +159,7 @@ export function IngredientDiffModal({
                     <CheckCircleIcon className="h-5 w-5 text-green-500 flex-shrink-0" />
                   )}
                   {diff.status === 'partial' && (
-                    <ExclamationCircleIcon className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                    <ExclamationCircleIcon className="h-5 w-5 text-warning flex-shrink-0" />
                   )}
                   {diff.status === 'need' && (
                     <PlusCircleIcon className="h-5 w-5 text-blue-500 flex-shrink-0" />
@@ -167,10 +167,10 @@ export function IngredientDiffModal({
 
                   {/* Ingredient Info */}
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="font-medium text-foreground dark:text-white">
                       {diff.ingredient.name}
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="text-sm text-muted-foreground">
                       {diff.status === 'have' && (
                         <span>
                           ✓ Have {diff.haveQuantity} {diff.haveUnit || 'units'}
@@ -196,17 +196,17 @@ export function IngredientDiffModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3 justify-end">
+        <div className="p-6 border-t border-border flex gap-3 justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleAddToList}
             disabled={addingItems || selectedItems.size === 0}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-secondary hover:bg-secondary-hover text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {addingItems ? (
               <>

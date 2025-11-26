@@ -15,7 +15,12 @@ import type {
   Provider,
   Appointment,
   FamilyMember,
-  FamilyInvitation
+  FamilyInvitation,
+  WeightLog,
+  MealLog,
+  StepLog,
+  PatientMedication,
+  PatientDocument
 } from '@/types/medical'
 
 // Helper: Make authenticated API request (uses unified API client)
@@ -375,6 +380,24 @@ export const familyOperations = {
   },
 
   /**
+   * Resend an invitation email (sender only)
+   */
+  async resendInvitation(invitationId: string): Promise<void> {
+    try {
+      logger.info('[MedicalOps] Resending invitation', { invitationId })
+
+      await makeAuthenticatedRequest<void>(`/invitations/${invitationId}/resend`, {
+        method: 'POST'
+      })
+
+      logger.info('[MedicalOps] Invitation resent successfully', { invitationId })
+    } catch (error) {
+      logger.error('[MedicalOps] Error resending invitation', error as Error, { invitationId })
+      throw error
+    }
+  },
+
+  /**
    * Get family members for a specific patient
    */
   async getFamilyMembers(patientId: string): Promise<FamilyMember[]> {
@@ -427,6 +450,68 @@ export const familyOperations = {
       logger.info('[MedicalOps] Family member removed successfully', { patientId, memberId })
     } catch (error) {
       logger.error('[MedicalOps] Error removing family member', error as Error, { patientId, memberId })
+      throw error
+    }
+  },
+
+  /**
+   * Assign role to family member
+   */
+  async assignRole(memberId: string, newRole: string): Promise<FamilyMember> {
+    try {
+      logger.info('[MedicalOps] Assigning role to family member', { memberId, newRole })
+
+      const member = await makeAuthenticatedRequest<FamilyMember>(`/family-members/${memberId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ familyRole: newRole })
+      })
+
+      logger.info('[MedicalOps] Role assigned successfully', { memberId, newRole })
+      return member
+    } catch (error) {
+      logger.error('[MedicalOps] Error assigning role', error as Error, { memberId, newRole })
+      throw error
+    }
+  },
+
+  /**
+   * Transfer Account Owner status to another family member
+   */
+  async transferOwnership(newOwnerId: string): Promise<{ oldOwner: FamilyMember; newOwner: FamilyMember }> {
+    try {
+      logger.info('[MedicalOps] Transferring ownership', { newOwnerId })
+
+      const result = await makeAuthenticatedRequest<{ oldOwner: FamilyMember; newOwner: FamilyMember }>(
+        '/family-members/transfer-ownership',
+        {
+          method: 'POST',
+          body: JSON.stringify({ newOwnerId })
+        }
+      )
+
+      logger.info('[MedicalOps] Ownership transferred successfully', { newOwnerId })
+      return result
+    } catch (error) {
+      logger.error('[MedicalOps] Error transferring ownership', error as Error, { newOwnerId })
+      throw error
+    }
+  },
+
+  /**
+   * Get family hierarchy (all family members across all patients)
+   */
+  async getFamilyHierarchy(): Promise<FamilyMember[]> {
+    try {
+      logger.debug('[MedicalOps] Fetching family hierarchy')
+
+      const members = await makeAuthenticatedRequest<FamilyMember[]>('/family-members', {
+        method: 'GET'
+      })
+
+      logger.debug('[MedicalOps] Family hierarchy fetched', { count: members?.length || 0 })
+      return members || []
+    } catch (error) {
+      logger.error('[MedicalOps] Error fetching family hierarchy', error as Error)
       throw error
     }
   }
@@ -730,12 +815,401 @@ export const appointmentOperations = {
   }
 }
 
+// ==================== WEIGHT LOG OPERATIONS ====================
+
+export const weightLogOperations = {
+  /**
+   * Log a new weight entry for a patient
+   */
+  async logWeight(patientId: string, weightData: Omit<WeightLog, 'id' | 'patientId' | 'userId' | 'loggedBy'>): Promise<WeightLog> {
+    try {
+      logger.info('[MedicalOps] Logging weight', { patientId, weight: weightData.weight })
+
+      const weightLog = await makeAuthenticatedRequest<WeightLog>(`/patients/${patientId}/weight-logs`, {
+        method: 'POST',
+        body: JSON.stringify(weightData)
+      })
+
+      logger.info('[MedicalOps] Weight logged successfully', { patientId, logId: weightLog.id })
+      return weightLog
+    } catch (error) {
+      logger.error('[MedicalOps] Error logging weight', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /**
+   * Get weight logs for a patient
+   */
+  async getWeightLogs(patientId: string, options?: {
+    limit?: number
+    startDate?: string
+    endDate?: string
+  }): Promise<WeightLog[]> {
+    try {
+      logger.debug('[MedicalOps] Fetching weight logs', { patientId, options })
+
+      const queryParams = new URLSearchParams()
+      if (options?.limit) queryParams.append('limit', options.limit.toString())
+      if (options?.startDate) queryParams.append('startDate', options.startDate)
+      if (options?.endDate) queryParams.append('endDate', options.endDate)
+
+      const url = `/patients/${patientId}/weight-logs${queryParams.toString() ? `?${queryParams}` : ''}`
+
+      const weightLogs = await makeAuthenticatedRequest<WeightLog[]>(url, {
+        method: 'GET'
+      })
+
+      logger.debug('[MedicalOps] Weight logs fetched', { patientId, count: weightLogs?.length || 0 })
+      return weightLogs || []
+    } catch (error) {
+      logger.error('[MedicalOps] Error fetching weight logs', error as Error, { patientId })
+      throw error
+    }
+  }
+}
+
+// ==================== MEAL LOG OPERATIONS ====================
+
+export const mealLogOperations = {
+  /**
+   * Log a new meal for a patient
+   */
+  async logMeal(patientId: string, mealData: Omit<MealLog, 'id' | 'patientId' | 'userId' | 'loggedBy'>): Promise<MealLog> {
+    try {
+      logger.info('[MedicalOps] Logging meal', { patientId, mealType: mealData.mealType })
+
+      const mealLog = await makeAuthenticatedRequest<MealLog>(`/patients/${patientId}/meal-logs`, {
+        method: 'POST',
+        body: JSON.stringify(mealData)
+      })
+
+      logger.info('[MedicalOps] Meal logged successfully', { patientId, logId: mealLog.id })
+      return mealLog
+    } catch (error) {
+      logger.error('[MedicalOps] Error logging meal', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /**
+   * Get meal logs for a patient
+   */
+  async getMealLogs(patientId: string, options?: {
+    limit?: number
+    mealType?: string
+    startDate?: string
+    endDate?: string
+  }): Promise<MealLog[]> {
+    try {
+      logger.debug('[MedicalOps] Fetching meal logs', { patientId, options })
+
+      const queryParams = new URLSearchParams()
+      if (options?.limit) queryParams.append('limit', options.limit.toString())
+      if (options?.mealType) queryParams.append('mealType', options.mealType)
+      if (options?.startDate) queryParams.append('startDate', options.startDate)
+      if (options?.endDate) queryParams.append('endDate', options.endDate)
+
+      const url = `/patients/${patientId}/meal-logs${queryParams.toString() ? `?${queryParams}` : ''}`
+
+      const mealLogs = await makeAuthenticatedRequest<MealLog[]>(url, {
+        method: 'GET'
+      })
+
+      logger.debug('[MedicalOps] Meal logs fetched', { patientId, count: mealLogs?.length || 0 })
+      return mealLogs || []
+    } catch (error) {
+      logger.error('[MedicalOps] Error fetching meal logs', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /**
+   * Delete a meal log for a patient
+   */
+  async deleteMealLog(patientId: string, logId: string): Promise<void> {
+    try {
+      logger.debug('[MedicalOps] Deleting meal log', { patientId, logId })
+
+      await makeAuthenticatedRequest(`/patients/${patientId}/meal-logs/${logId}`, {
+        method: 'DELETE'
+      })
+
+      logger.info('[MedicalOps] Meal log deleted successfully', { patientId, logId })
+    } catch (error) {
+      logger.error('[MedicalOps] Error deleting meal log', error as Error, { patientId, logId })
+      throw error
+    }
+  }
+}
+
+// ==================== STEP LOG OPERATIONS ====================
+
+export const stepLogOperations = {
+  /**
+   * Log steps for a patient
+   */
+  async logSteps(patientId: string, stepData: Omit<StepLog, 'id' | 'patientId' | 'userId' | 'loggedBy' | 'loggedAt'>): Promise<StepLog> {
+    try {
+      logger.info('[MedicalOps] Logging steps', { patientId, steps: stepData.steps, date: stepData.date })
+
+      const stepLog = await makeAuthenticatedRequest<StepLog>(`/patients/${patientId}/step-logs`, {
+        method: 'POST',
+        body: JSON.stringify(stepData)
+      })
+
+      logger.info('[MedicalOps] Steps logged successfully', { patientId, logId: stepLog.id })
+      return stepLog
+    } catch (error) {
+      logger.error('[MedicalOps] Error logging steps', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /**
+   * Get step logs for a patient
+   */
+  async getStepLogs(patientId: string, options?: {
+    limit?: number
+    source?: string
+    startDate?: string
+    endDate?: string
+  }): Promise<StepLog[]> {
+    try {
+      logger.debug('[MedicalOps] Fetching step logs', { patientId, options })
+
+      const queryParams = new URLSearchParams()
+      if (options?.limit) queryParams.append('limit', options.limit.toString())
+      if (options?.source) queryParams.append('source', options.source)
+      if (options?.startDate) queryParams.append('startDate', options.startDate)
+      if (options?.endDate) queryParams.append('endDate', options.endDate)
+
+      const url = `/patients/${patientId}/step-logs${queryParams.toString() ? `?${queryParams}` : ''}`
+
+      const stepLogs = await makeAuthenticatedRequest<StepLog[]>(url, {
+        method: 'GET'
+      })
+
+      logger.debug('[MedicalOps] Step logs fetched', { patientId, count: stepLogs?.length || 0 })
+      return stepLogs || []
+    } catch (error) {
+      logger.error('[MedicalOps] Error fetching step logs', error as Error, { patientId })
+      throw error
+    }
+  }
+}
+
+// ==================== MEDICATION OPERATIONS ====================
+
+export const medicationOperations = {
+  /**
+   * Add a new medication for a patient
+   */
+  async addMedication(patientId: string, medicationData: Omit<PatientMedication, 'id' | 'patientId' | 'userId' | 'addedBy' | 'addedAt' | 'lastModified'>): Promise<PatientMedication> {
+    try {
+      logger.info('[MedicalOps] Adding medication', { patientId, name: medicationData.name })
+
+      const medication = await makeAuthenticatedRequest<PatientMedication>(`/patients/${patientId}/medications`, {
+        method: 'POST',
+        body: JSON.stringify(medicationData)
+      })
+
+      logger.info('[MedicalOps] Medication added successfully', { patientId, medicationId: medication.id })
+      return medication
+    } catch (error) {
+      logger.error('[MedicalOps] Error adding medication', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /**
+   * Get all medications for a patient
+   */
+  async getMedications(patientId: string): Promise<PatientMedication[]> {
+    try {
+      logger.debug('[MedicalOps] Fetching medications', { patientId })
+
+      const medications = await makeAuthenticatedRequest<PatientMedication[]>(`/patients/${patientId}/medications`, {
+        method: 'GET'
+      })
+
+      logger.debug('[MedicalOps] Medications fetched', { patientId, count: medications?.length || 0 })
+      return medications || []
+    } catch (error) {
+      logger.error('[MedicalOps] Error fetching medications', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /**
+   * Update a medication
+   */
+  async updateMedication(patientId: string, medicationId: string, updates: Partial<PatientMedication>): Promise<PatientMedication> {
+    try {
+      logger.info('[MedicalOps] Updating medication', { patientId, medicationId })
+
+      const medication = await makeAuthenticatedRequest<PatientMedication>(`/patients/${patientId}/medications/${medicationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      })
+
+      logger.info('[MedicalOps] Medication updated successfully', { patientId, medicationId })
+      return medication
+    } catch (error) {
+      logger.error('[MedicalOps] Error updating medication', error as Error, { patientId, medicationId })
+      throw error
+    }
+  },
+
+  /**
+   * Delete a medication
+   */
+  async deleteMedication(patientId: string, medicationId: string): Promise<void> {
+    try {
+      logger.info('[MedicalOps] Deleting medication', { patientId, medicationId })
+
+      await makeAuthenticatedRequest<void>(`/patients/${patientId}/medications/${medicationId}`, {
+        method: 'DELETE'
+      })
+
+      logger.info('[MedicalOps] Medication deleted successfully', { patientId, medicationId })
+    } catch (error) {
+      logger.error('[MedicalOps] Error deleting medication', error as Error, { patientId, medicationId })
+      throw error
+    }
+  },
+
+  /**
+   * Log a medication dose as taken
+   */
+  async logDose(patientId: string, medicationId: string, doseData: {
+    takenAt?: string
+    notes?: string
+  }): Promise<PatientMedication> {
+    try {
+      logger.info('[MedicalOps] Logging medication dose', { patientId, medicationId })
+
+      const medication = await makeAuthenticatedRequest<PatientMedication>(
+        `/patients/${patientId}/medications/${medicationId}/log-dose`,
+        {
+          method: 'POST',
+          body: JSON.stringify(doseData)
+        }
+      )
+
+      logger.info('[MedicalOps] Dose logged successfully', { patientId, medicationId })
+      return medication
+    } catch (error) {
+      logger.error('[MedicalOps] Error logging dose', error as Error, { patientId, medicationId })
+      throw error
+    }
+  },
+
+  /**
+   * Get medication adherence logs
+   */
+  async getAdherenceLogs(patientId: string, medicationId: string, options?: {
+    limit?: number
+    startDate?: string
+    endDate?: string
+  }): Promise<any[]> {
+    try {
+      logger.debug('[MedicalOps] Fetching adherence logs', { patientId, medicationId, options })
+
+      const queryParams = new URLSearchParams()
+      if (options?.limit) queryParams.append('limit', options.limit.toString())
+      if (options?.startDate) queryParams.append('startDate', options.startDate)
+      if (options?.endDate) queryParams.append('endDate', options.endDate)
+
+      const url = `/patients/${patientId}/medications/${medicationId}/adherence-logs${
+        queryParams.toString() ? `?${queryParams}` : ''
+      }`
+
+      const logs = await makeAuthenticatedRequest<any[]>(url, {
+        method: 'GET'
+      })
+
+      logger.debug('[MedicalOps] Adherence logs fetched', { patientId, medicationId, count: logs?.length || 0 })
+      return logs || []
+    } catch (error) {
+      logger.error('[MedicalOps] Error fetching adherence logs', error as Error, { patientId, medicationId })
+      throw error
+    }
+  }
+}
+
 // ==================== EXPORT ALL OPERATIONS ====================
+
+// ==================== DOCUMENT OPERATIONS ====================
+
+export const documentOperations = {
+  /**
+   * Upload a document for a patient
+   */
+  async uploadDocument(patientId: string, documentData: Omit<PatientDocument, 'id' | 'patientId' | 'userId' | 'uploadedAt' | 'uploadedBy'>): Promise<PatientDocument> {
+    try {
+      logger.info('[MedicalOps] Uploading document', { patientId, name: documentData.name })
+
+      const document = await makeAuthenticatedRequest<PatientDocument>(`/patients/${patientId}/documents`, {
+        method: 'POST',
+        body: JSON.stringify(documentData)
+      })
+
+      logger.info('[MedicalOps] Document uploaded successfully', { patientId, documentId: document.id })
+      return document
+    } catch (error) {
+      logger.error('[MedicalOps] Error uploading document', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /**
+   * Get all documents for a patient
+   */
+  async getDocuments(patientId: string): Promise<PatientDocument[]> {
+    try {
+      logger.debug('[MedicalOps] Fetching documents', { patientId })
+
+      const documents = await makeAuthenticatedRequest<PatientDocument[]>(`/patients/${patientId}/documents`, {
+        method: 'GET'
+      })
+
+      logger.debug('[MedicalOps] Documents fetched', { patientId, count: documents?.length || 0 })
+      return documents || []
+    } catch (error) {
+      logger.error('[MedicalOps] Error fetching documents', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /**
+   * Delete a document
+   */
+  async deleteDocument(patientId: string, documentId: string): Promise<void> {
+    try {
+      logger.debug('[MedicalOps] Deleting document', { patientId, documentId })
+
+      await makeAuthenticatedRequest(`/patients/${patientId}/documents/${documentId}`, {
+        method: 'DELETE'
+      })
+
+      logger.info('[MedicalOps] Document deleted successfully', { patientId, documentId })
+    } catch (error) {
+      logger.error('[MedicalOps] Error deleting document', error as Error, { patientId, documentId })
+      throw error
+    }
+  }
+}
 
 export const medicalOperations = {
   patients: patientOperations,
   vitals: vitalOperations,
   family: familyOperations,
   providers: providerOperations,
-  appointments: appointmentOperations
+  appointments: appointmentOperations,
+  weightLogs: weightLogOperations,
+  mealLogs: mealLogOperations,
+  stepLogs: stepLogOperations,
+  medications: medicationOperations,
+  documents: documentOperations
 }

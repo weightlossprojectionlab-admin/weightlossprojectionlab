@@ -113,7 +113,7 @@ export function HealthSyncCard({ onSetupClick }: HealthSyncCardProps) {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 animate-pulse">
+      <div className="bg-card rounded-lg shadow p-6 animate-pulse">
         <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
         <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
       </div>
@@ -122,17 +122,17 @@ export function HealthSyncCard({ onSetupClick }: HealthSyncCardProps) {
 
   if (!supported) {
     return (
-      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 p-6">
+      <div className="bg-background rounded-lg border-2 border-dashed border-border p-6">
         <div className="flex items-start gap-4">
           <div className="text-3xl">📱</div>
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            <h3 className="font-semibold text-foreground mb-2">
               Health App Sync
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            <p className="text-sm text-muted-foreground mb-3">
               {getHealthSyncLimitations(platform)}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500">
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground">
               Current platform: <span className="font-medium capitalize">{platform}</span>
             </p>
           </div>
@@ -142,15 +142,15 @@ export function HealthSyncCard({ onSetupClick }: HealthSyncCardProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
+    <div className="bg-card rounded-lg shadow p-6">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="text-3xl">{getHealthAppIcon(healthApp)}</div>
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+            <h3 className="font-semibold text-foreground">
               {getHealthAppName(healthApp)}
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               Sync steps automatically
             </p>
           </div>
@@ -166,7 +166,7 @@ export function HealthSyncCard({ onSetupClick }: HealthSyncCardProps) {
           aria-label={syncEnabled ? 'Disable sync' : 'Enable sync'}
         >
           <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+            className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
               syncEnabled ? 'translate-x-6' : 'translate-x-1'
             }`}
           />
@@ -176,16 +176,16 @@ export function HealthSyncCard({ onSetupClick }: HealthSyncCardProps) {
       {/* Status */}
       <div className="space-y-3">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Status</span>
-          <span className={`font-medium ${syncEnabled ? 'text-success' : 'text-gray-500 dark:text-gray-400'}`}>
+          <span className="text-muted-foreground">Status</span>
+          <span className={`font-medium ${syncEnabled ? 'text-success' : 'text-muted-foreground dark:text-muted-foreground'}`}>
             {syncEnabled ? '✓ Connected' : 'Not connected'}
           </span>
         </div>
 
         {syncEnabled && (
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">Last sync</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">
+            <span className="text-muted-foreground">Last sync</span>
+            <span className="text-foreground font-medium">
               {formatLastSync(lastSyncAt || undefined)}
             </span>
           </div>
@@ -195,15 +195,15 @@ export function HealthSyncCard({ onSetupClick }: HealthSyncCardProps) {
         {!syncEnabled && onSetupClick && (
           <button
             onClick={onSetupClick}
-            className="w-full mt-3 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+            className="w-full mt-3 px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
           >
             Setup Instructions
           </button>
         )}
 
         {/* Info Note */}
-        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <p className="text-xs text-blue-900 dark:text-blue-200">
+        <div className="mt-4 p-3 bg-secondary-light rounded-lg">
+          <p className="text-xs text-blue-900">
             💡 {syncEnabled
               ? `Your steps are being synced with ${getHealthAppName(healthApp)}. Keep the app permissions enabled.`
               : `Enable sync to automatically track steps from ${getHealthAppName(healthApp)}.`

@@ -29,27 +29,80 @@ export async function GET(request: NextRequest) {
 
     logger.debug('[API /patients GET] Fetching patients', { userId })
 
-    // Query all patients for this user
-    const patientsRef = adminDb
+    // 1. Fetch patients owned by this user
+    const ownedPatientsRef = adminDb
       .collection('users')
       .doc(userId)
       .collection('patients')
 
-    const snapshot = await patientsRef.get()
-
-    const patients: PatientProfile[] = snapshot.docs.map(doc => ({
+    const ownedSnapshot = await ownedPatientsRef.get()
+    const ownedPatients = ownedSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
-    })) as PatientProfile[]
+      ...doc.data(),
+      _source: 'owned' // Mark as owned patient
+    }))
 
-    logger.info('[API /patients GET] Patients fetched successfully', {
+    logger.debug('[API /patients GET] Owned patients fetched', { count: ownedPatients.length })
+
+    // 2. Check if user is a family member with access to other patients
+    const familyMembersSnapshot = await adminDb
+      .collectionGroup('familyMembers')
+      .where('userId', '==', userId)
+      .where('status', '==', 'accepted')
+      .get()
+
+    const caregiverPatients: PatientProfile[] = []
+
+    // For each family member record, fetch patients from patientsAccess
+    for (const familyMemberDoc of familyMembersSnapshot.docs) {
+      const familyMember = familyMemberDoc.data()
+      const patientsAccess = familyMember.patientsAccess || []
+
+      logger.debug('[API /patients GET] Found family member record', {
+        familyMemberId: familyMemberDoc.id,
+        patientsAccessCount: patientsAccess.length
+      })
+
+      // Fetch each patient in patientsAccess
+      for (const patientId of patientsAccess) {
+        try {
+          // Find patient using collectionGroup
+          const patientSnapshot = await adminDb
+            .collectionGroup('patients')
+            .get()
+
+          const patientDoc = patientSnapshot.docs.find(doc => doc.id === patientId)
+
+          if (patientDoc) {
+            caregiverPatients.push({
+              id: patientDoc.id,
+              ...patientDoc.data(),
+              _source: 'caregiver', // Mark as caregiver access
+              _permissions: familyMember.permissions // Include permissions
+            } as any)
+          }
+        } catch (err) {
+          logger.warn('[API /patients GET] Failed to fetch caregiver patient', { patientId, error: err })
+        }
+      }
+    }
+
+    logger.debug('[API /patients GET] Caregiver patients fetched', { count: caregiverPatients.length })
+
+    // 3. Combine both lists and filter deleted patients
+    const allPatients = [...ownedPatients, ...caregiverPatients]
+      .filter((patient: any) => patient.name !== '[DELETED USER]') as PatientProfile[]
+
+    logger.info('[API /patients GET] All patients fetched successfully', {
       userId,
-      count: patients.length
+      total: allPatients.length,
+      owned: ownedPatients.length,
+      caregiver: caregiverPatients.length
     })
 
     return NextResponse.json({
       success: true,
-      data: patients
+      data: allPatients
     })
 
   } catch (error: any) {
@@ -96,6 +149,47 @@ export async function POST(request: NextRequest) {
 
     const patientData = validationResult.data
 
+    // Check patient limit based on subscription
+    // Get user document to check subscription
+    const userDoc = await adminDb.collection('users').doc(userId).get()
+    const userData = userDoc.data()
+    const subscription = userData?.subscription
+
+    // Count existing patients (exclude deleted patients)
+    const patientsSnapshot = await adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('patients')
+      .get()
+
+    const currentPatientCount = patientsSnapshot.docs
+      .filter(doc => doc.data().name !== '[DELETED USER]')
+      .length
+
+    // Check if user can add more patients
+    const maxPatients = subscription?.maxPatients || 1 // Default to 1 if no subscription
+
+    if (currentPatientCount >= maxPatients) {
+      logger.warn('[API /patients POST] Patient limit reached', {
+        userId,
+        current: currentPatientCount,
+        max: maxPatients,
+        plan: subscription?.plan || 'none'
+      })
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'PATIENT_LIMIT_REACHED',
+          message: 'You have reached your patient limit. Upgrade to Family Plan to add more family members.',
+          current: currentPatientCount,
+          max: maxPatients,
+          suggestedUpgrade: 'family'
+        },
+        { status: 403 }
+      )
+    }
+
     // Create patient document
     const patientId = uuidv4()
     const now = new Date().toISOString()
@@ -116,11 +210,31 @@ export async function POST(request: NextRequest) {
 
     await patientRef.set(newPatient)
 
+    // Create initial weight log if currentWeight provided
+    if (newPatient.currentWeight) {
+      const weightLogRef = patientRef.collection('weight-logs').doc()
+      await weightLogRef.set({
+        weight: newPatient.currentWeight,
+        unit: newPatient.weightUnit || 'lbs',
+        loggedAt: now,
+        source: 'initial',
+        tags: ['baseline'],
+        createdAt: now
+      })
+
+      logger.info('[API /patients POST] Initial weight log created', {
+        patientId,
+        weight: newPatient.currentWeight,
+        unit: newPatient.weightUnit
+      })
+    }
+
     logger.info('[API /patients POST] Patient created successfully', {
       userId,
       patientId,
       type: newPatient.type,
-      name: newPatient.name
+      name: newPatient.name,
+      vitalsComplete: newPatient.vitalsComplete || false
     })
 
     return NextResponse.json({

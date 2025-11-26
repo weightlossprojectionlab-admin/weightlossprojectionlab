@@ -8,10 +8,12 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useInvitations } from '@/hooks/useInvitations'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { InviteModal } from '@/components/family/InviteModal'
 import AuthGuard from '@/components/auth/AuthGuard'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import type { FamilyInvitation } from '@/types/medical'
 
 export default function FamilyPage() {
@@ -29,44 +31,101 @@ function FamilyContent() {
     loading,
     acceptInvitation,
     declineInvitation,
-    revokeInvitation
+    revokeInvitation,
+    resendInvitation,
+    refetch
   } = useInvitations()
 
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'sent' | 'received'>('sent')
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean
+    type: 'accept' | 'decline' | 'revoke' | 'resend'
+    invitationId: string
+  }>({ isOpen: false, type: 'accept', invitationId: '' })
 
   const handleAccept = async (invitationId: string) => {
-    if (confirm('Accept this invitation?')) {
-      await acceptInvitation(invitationId)
-    }
+    setConfirmModal({ isOpen: true, type: 'accept', invitationId })
   }
 
   const handleDecline = async (invitationId: string) => {
-    if (confirm('Decline this invitation?')) {
-      await declineInvitation(invitationId)
-    }
+    setConfirmModal({ isOpen: true, type: 'decline', invitationId })
   }
 
   const handleRevoke = async (invitationId: string) => {
-    if (confirm('Revoke this invitation? The recipient will no longer be able to accept it.')) {
-      await revokeInvitation(invitationId)
+    setConfirmModal({ isOpen: true, type: 'revoke', invitationId })
+  }
+
+  const handleResend = async (invitationId: string) => {
+    setConfirmModal({ isOpen: true, type: 'resend', invitationId })
+  }
+
+  const handleConfirmAction = async () => {
+    const { type, invitationId } = confirmModal
+
+    switch (type) {
+      case 'accept':
+        await acceptInvitation(invitationId)
+        break
+      case 'decline':
+        await declineInvitation(invitationId)
+        break
+      case 'revoke':
+        await revokeInvitation(invitationId)
+        break
+      case 'resend':
+        await resendInvitation(invitationId)
+        break
+    }
+  }
+
+  const getConfirmModalContent = () => {
+    switch (confirmModal.type) {
+      case 'accept':
+        return {
+          title: 'Accept Invitation',
+          message: 'Are you sure you want to accept this invitation? You will gain access to the shared patient records.',
+          confirmText: 'Accept',
+          variant: 'info' as const
+        }
+      case 'decline':
+        return {
+          title: 'Decline Invitation',
+          message: 'Are you sure you want to decline this invitation? This action cannot be undone.',
+          confirmText: 'Decline',
+          variant: 'danger' as const
+        }
+      case 'revoke':
+        return {
+          title: 'Revoke Invitation',
+          message: 'Are you sure you want to revoke this invitation? The recipient will no longer be able to accept it.',
+          confirmText: 'Revoke',
+          variant: 'danger' as const
+        }
+      case 'resend':
+        return {
+          title: 'Resend Invitation',
+          message: 'Resend the invitation email to the recipient?',
+          confirmText: 'Resend Email',
+          variant: 'info' as const
+        }
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
+        return 'bg-yellow-100 text-yellow-700'
       case 'accepted':
-        return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+        return 'bg-green-100 text-success-dark dark:bg-green-900/20 dark:text-green-400'
       case 'declined':
-        return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+        return 'bg-red-100 text-error-dark dark:bg-red-900/20'
       case 'expired':
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+        return 'bg-muted text-foreground dark:text-muted-foreground'
       case 'revoked':
         return 'bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'
       default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+        return 'bg-muted text-foreground dark:text-muted-foreground'
     }
   }
 
@@ -80,29 +139,37 @@ function FamilyContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title="Family & Invitations"
         subtitle="Manage family access to patient records"
         actions={
-          <button
-            onClick={() => setShowInviteModal(true)}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            + Invite Family Member
-          </button>
+          <div className="flex gap-2">
+            <Link
+              href="/family/manage-roles"
+              className="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary-dark transition-colors"
+            >
+              Manage Roles
+            </Link>
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+            >
+              + Invite Family Member
+            </button>
+          </div>
         }
       />
 
       <main className="container mx-auto px-4 py-8">
         {/* Tabs */}
-        <div className="flex items-center gap-4 mb-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-4 mb-6 border-b border-border">
           <button
             onClick={() => setActiveTab('sent')}
             className={`px-4 py-2 font-medium transition-colors border-b-2 ${
               activeTab === 'sent'
-                ? 'border-purple-600 text-purple-600 dark:text-purple-400'
-                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                ? 'border-primary text-primary dark:text-purple-400'
+                : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-200'
             }`}
           >
             Sent Invitations ({sentInvitations.length})
@@ -111,8 +178,8 @@ function FamilyContent() {
             onClick={() => setActiveTab('received')}
             className={`px-4 py-2 font-medium transition-colors border-b-2 ${
               activeTab === 'received'
-                ? 'border-purple-600 text-purple-600 dark:text-purple-400'
-                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                ? 'border-primary text-primary dark:text-purple-400'
+                : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-200'
             }`}
           >
             Received Invitations ({receivedInvitations.length})
@@ -121,7 +188,7 @@ function FamilyContent() {
 
         {loading ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">Loading invitations...</p>
+            <p className="text-muted-foreground dark:text-muted-foreground">Loading invitations...</p>
           </div>
         ) : (
           <>
@@ -129,13 +196,13 @@ function FamilyContent() {
             {activeTab === 'sent' && (
               <div className="space-y-4">
                 {sentInvitations.length === 0 ? (
-                  <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  <div className="text-center py-12 bg-card rounded-lg border-2 border-border">
+                    <p className="text-muted-foreground dark:text-muted-foreground mb-4">
                       No sent invitations yet
                     </p>
                     <button
                       onClick={() => setShowInviteModal(true)}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
                     >
                       Send Your First Invitation
                     </button>
@@ -147,6 +214,7 @@ function FamilyContent() {
                       invitation={invitation}
                       type="sent"
                       onRevoke={() => handleRevoke(invitation.id)}
+                      onResend={() => handleResend(invitation.id)}
                       getStatusColor={getStatusColor}
                       formatDate={formatDate}
                     />
@@ -159,8 +227,8 @@ function FamilyContent() {
             {activeTab === 'received' && (
               <div className="space-y-4">
                 {receivedInvitations.length === 0 ? (
-                  <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-                    <p className="text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-12 bg-card rounded-lg border-2 border-border">
+                    <p className="text-muted-foreground dark:text-muted-foreground">
                       No pending invitations
                     </p>
                   </div>
@@ -185,6 +253,14 @@ function FamilyContent() {
 
       {/* Invite Modal */}
       <InviteModal isOpen={showInviteModal} onClose={() => setShowInviteModal(false)} />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={handleConfirmAction}
+        {...getConfirmModalContent()}
+      />
     </div>
   )
 }
@@ -195,6 +271,7 @@ interface InvitationCardProps {
   onAccept?: () => void
   onDecline?: () => void
   onRevoke?: () => void
+  onResend?: () => void
   getStatusColor: (status: string) => string
   formatDate: (date: string) => string
 }
@@ -205,19 +282,20 @@ function InvitationCard({
   onAccept,
   onDecline,
   onRevoke,
+  onResend,
   getStatusColor,
   formatDate
 }: InvitationCardProps) {
   const permissionCount = Object.values(invitation.permissions).filter(Boolean).length
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-6">
+    <div className="bg-card rounded-lg border-2 border-border p-6">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+          <h3 className="font-semibold text-foreground">
             {type === 'sent' ? invitation.recipientEmail : invitation.invitedByName}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground">
             {type === 'sent' ? `Sent by you` : `From ${invitation.invitedByName}`}
           </p>
         </div>
@@ -228,70 +306,82 @@ function InvitationCard({
 
       {/* Invite Code */}
       <div className="mb-3">
-        <span className="text-xs text-gray-500 dark:text-gray-400">Invite Code: </span>
-        <code className="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+        <span className="text-xs text-muted-foreground dark:text-muted-foreground">Invite Code: </span>
+        <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
           {invitation.inviteCode}
         </code>
       </div>
 
       {/* Patients Shared */}
       <div className="mb-3">
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+        <span className="text-xs text-muted-foreground dark:text-muted-foreground">
           Patients shared: {invitation.patientsShared.length}
         </span>
       </div>
 
       {/* Permissions */}
       <div className="mb-3">
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+        <span className="text-xs text-muted-foreground dark:text-muted-foreground">
           Permissions granted: {permissionCount} of {Object.keys(invitation.permissions).length}
         </span>
       </div>
 
       {/* Personal Message */}
       {invitation.message && (
-        <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <p className="text-sm text-gray-700 dark:text-gray-300 italic">
+        <div className="mb-4 p-3 bg-background rounded-lg">
+          <p className="text-sm text-foreground italic">
             "{invitation.message}"
           </p>
         </div>
       )}
 
       {/* Dates */}
-      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-4">
+      <div className="flex items-center gap-4 text-xs text-muted-foreground dark:text-muted-foreground mb-4">
         <span>Created: {formatDate(invitation.createdAt)}</span>
         <span>Expires: {formatDate(invitation.expiresAt)}</span>
       </div>
 
       {/* Actions */}
-      {invitation.status === 'pending' && (
-        <div className="flex items-center gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-          {type === 'received' && (
-            <>
-              <button
-                onClick={onAccept}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-              >
-                Accept
-              </button>
-              <button
-                onClick={onDecline}
-                className="px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm"
-              >
-                Decline
-              </button>
-            </>
-          )}
-          {type === 'sent' && (
+      <div className="flex items-center gap-2 pt-4 border-t border-border">
+        {invitation.status === 'pending' && type === 'received' && (
+          <>
+            <button
+              onClick={onAccept}
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium"
+            >
+              Accept
+            </button>
+            <button
+              onClick={onDecline}
+              className="px-4 py-2 text-error hover:bg-error-light dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm"
+            >
+              Decline
+            </button>
+          </>
+        )}
+        {invitation.status === 'pending' && type === 'sent' && (
+          <>
+            <button
+              onClick={onResend}
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium"
+            >
+              Resend Email
+            </button>
             <button
               onClick={onRevoke}
-              className="px-4 py-2 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors text-sm"
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 transition-colors text-sm font-medium"
             >
               Revoke
             </button>
-          )}
-        </div>
-      )}
+          </>
+        )}
+        {invitation.status !== 'pending' && (
+          <div className="text-sm text-muted-foreground italic">
+            This invitation has been {invitation.status}
+            {invitation.acceptedAt && ` on ${formatDate(invitation.acceptedAt)}`}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

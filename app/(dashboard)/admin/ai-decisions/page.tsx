@@ -151,14 +151,14 @@ export default function AIDecisionsPage() {
   }
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.9) return 'text-green-600 dark:text-green-400'
-    if (confidence >= 0.7) return 'text-yellow-600 dark:text-yellow-400'
-    return 'text-red-600 dark:text-red-400'
+    if (confidence >= 0.9) return 'text-success dark:text-green-400'
+    if (confidence >= 0.7) return 'text-warning'
+    return 'text-error'
   }
 
   const getConfidenceBgColor = (confidence: number) => {
     if (confidence >= 0.9) return 'bg-green-100 dark:bg-green-900/20'
-    if (confidence >= 0.7) return 'bg-yellow-100 dark:bg-yellow-900/20'
+    if (confidence >= 0.7) return 'bg-yellow-100'
     return 'bg-red-100 dark:bg-red-900/20'
   }
 
@@ -204,9 +204,9 @@ export default function AIDecisionsPage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
+        <div className="bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
           <h2 className="text-xl font-bold text-red-900 dark:text-red-200 mb-2">Access Denied</h2>
-          <p className="text-red-700 dark:text-red-300">
+          <p className="text-error-dark dark:text-red-300">
             You do not have permission to access AI decision review.
           </p>
         </div>
@@ -218,8 +218,8 @@ export default function AIDecisionsPage() {
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">AI Decision Review</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
+        <h1 className="text-3xl font-bold text-foreground">AI Decision Review</h1>
+        <p className="text-muted-foreground mt-1">
           Review and oversee low-confidence AI decisions
         </p>
       </div>
@@ -227,35 +227,35 @@ export default function AIDecisionsPage() {
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm mb-1">
+          <div className="bg-card rounded-lg shadow p-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
               <ChartBarIcon className="h-4 w-4" />
               <span>Total Decisions</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="text-2xl font-bold text-foreground">
               {stats.totalDecisions.toLocaleString()}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-            <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Low Confidence</div>
-            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+          <div className="bg-card rounded-lg shadow p-4">
+            <div className="text-muted-foreground text-sm mb-1">Low Confidence</div>
+            <div className="text-2xl font-bold text-warning">
               {stats.lowConfidenceCount.toLocaleString()}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-            <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Avg Confidence</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <div className="bg-card rounded-lg shadow p-4">
+            <div className="text-muted-foreground text-sm mb-1">Avg Confidence</div>
+            <div className="text-2xl font-bold text-foreground">
               {(stats.avgConfidence * 100).toFixed(1)}%
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-            <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Reversal Rate</div>
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+          <div className="bg-card rounded-lg shadow p-4">
+            <div className="text-muted-foreground text-sm mb-1">Reversal Rate</div>
+            <div className="text-2xl font-bold text-error">
               {(stats.reversalRate * 100).toFixed(1)}%
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-            <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Unreviewed</div>
+          <div className="bg-card rounded-lg shadow p-4">
+            <div className="text-muted-foreground text-sm mb-1">Unreviewed</div>
             <div className="text-2xl font-bold text-primary">
               {stats.unreviewedCount.toLocaleString()}
             </div>
@@ -264,10 +264,10 @@ export default function AIDecisionsPage() {
       )}
 
       {/* Filters */}
-      <div className={`bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-6 transition-opacity ${loading ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`bg-card rounded-lg shadow p-4 mb-6 transition-opacity ${loading ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
         <div className="flex items-center gap-2 mb-4">
-          <FunnelIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Filters</h2>
+          <FunnelIcon className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
+          <h2 className="text-xl font-semibold text-foreground">Filters</h2>
           {loading && (
             <div className="ml-auto flex items-center gap-2 text-sm text-primary">
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
@@ -277,14 +277,14 @@ export default function AIDecisionsPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Decision Type
             </label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as any)}
               disabled={loading}
-              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="all">All Types</option>
               <option value="health-profile">Health Profiles</option>
@@ -293,14 +293,14 @@ export default function AIDecisionsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Review Status
             </label>
             <select
               value={filterReviewed}
               onChange={(e) => setFilterReviewed(e.target.value as any)}
               disabled={loading}
-              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="all">All Decisions</option>
               <option value="unreviewed">Unreviewed Only</option>
@@ -308,7 +308,7 @@ export default function AIDecisionsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Max Confidence: {(filterConfidence * 100).toFixed(0)}%
             </label>
             <input
@@ -325,30 +325,30 @@ export default function AIDecisionsPage() {
       </div>
 
       {/* Decisions List */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow">
+      <div className="bg-card rounded-lg shadow">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400 font-medium">Loading AI decisions...</p>
+            <p className="text-muted-foreground font-medium">Loading AI decisions...</p>
           </div>
         ) : decisions.length === 0 ? (
           <div className="text-center py-12">
-            <CpuChipIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-gray-400">No AI decisions found matching filters</p>
+            <CpuChipIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground dark:text-muted-foreground">No AI decisions found matching filters</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {decisions.map((decision) => (
               <div
                 key={decision.id || decision.decisionId}
-                className="p-6 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                className="p-6 hover:bg-background cursor-pointer"
                 onClick={() => setSelectedDecision(decision)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <span className="text-xl">{getTypeIcon(decision.type)}</span>
-                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      <span className="font-semibold text-foreground">
                         {getDecisionTitle(decision)}
                       </span>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getConfidenceBgColor(decision.confidence)} ${getConfidenceColor(decision.confidence)}`}>
@@ -360,10 +360,10 @@ export default function AIDecisionsPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    <p className="text-sm text-muted-foreground mb-2">
                       {getDecisionDescription(decision)}
                     </p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground dark:text-muted-foreground">
                       <span className="capitalize">{decision.type.replace('-', ' ')}</span>
                       <span>•</span>
                       <span>User: {decision.userId?.substring(0, 8)}...</span>
@@ -381,16 +381,16 @@ export default function AIDecisionsPage() {
       {/* Decision Detail Modal */}
       {selectedDecision && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Decision Details</h2>
+                <h2 className="text-xl font-bold text-foreground">Decision Details</h2>
                 <button
                   onClick={() => {
                     setSelectedDecision(null)
                     setReviewNotes('')
                   }}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300"
                 >
                   <XCircleIcon className="h-6 w-6" />
                 </button>
@@ -398,62 +398,62 @@ export default function AIDecisionsPage() {
 
               <div className="space-y-4">
                 <div>
-                  <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Decision</div>
-                  <div className="text-base text-gray-900 dark:text-gray-100">{selectedDecision.decision}</div>
+                  <div className="text-sm font-semibold text-muted-foreground mb-1">Decision</div>
+                  <div className="text-base text-foreground">{selectedDecision.decision}</div>
                 </div>
 
                 <div>
-                  <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Confidence</div>
+                  <div className="text-sm font-semibold text-muted-foreground mb-1">Confidence</div>
                   <div className={`text-lg font-bold ${getConfidenceColor(selectedDecision.confidence)}`}>
                     {(selectedDecision.confidence * 100).toFixed(1)}%
                   </div>
                 </div>
 
                 <div>
-                  <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Rationale</div>
-                  <div className="text-sm text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 p-3 rounded">
+                  <div className="text-sm font-semibold text-muted-foreground mb-1">Rationale</div>
+                  <div className="text-sm text-foreground bg-muted p-3 rounded">
                     {selectedDecision.rationale}
                   </div>
                 </div>
 
                 <div>
-                  <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Policy Reference</div>
-                  <div className="text-sm text-gray-900 dark:text-gray-100">{selectedDecision.policyReference}</div>
+                  <div className="text-sm font-semibold text-muted-foreground mb-1">Policy Reference</div>
+                  <div className="text-sm text-foreground">{selectedDecision.policyReference}</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Model</div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100">{selectedDecision.model}</div>
+                    <div className="text-sm font-semibold text-muted-foreground mb-1">Model</div>
+                    <div className="text-sm text-foreground">{selectedDecision.model}</div>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Model Tier</div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100">{selectedDecision.modelTier}</div>
+                    <div className="text-sm font-semibold text-muted-foreground mb-1">Model Tier</div>
+                    <div className="text-sm text-foreground">{selectedDecision.modelTier}</div>
                   </div>
                 </div>
 
                 <div>
-                  <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Executed By</div>
-                  <div className="text-sm text-gray-900 dark:text-gray-100">{selectedDecision.executedBy}</div>
+                  <div className="text-sm font-semibold text-muted-foreground mb-1">Executed By</div>
+                  <div className="text-sm text-foreground">{selectedDecision.executedBy}</div>
                 </div>
 
                 <div>
-                  <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Timestamp</div>
-                  <div className="text-sm text-gray-900 dark:text-gray-100">
+                  <div className="text-sm font-semibold text-muted-foreground mb-1">Timestamp</div>
+                  <div className="text-sm text-foreground">
                     {new Date(selectedDecision.createdAt || selectedDecision.timestamp || new Date()).toLocaleString()}
                   </div>
                 </div>
 
                 {selectedDecision.reviewedBy && (
                   <>
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                      <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Reviewed By</div>
-                      <div className="text-sm text-gray-900 dark:text-gray-100">{selectedDecision.reviewedBy}</div>
+                    <div className="border-t border-border pt-4">
+                      <div className="text-sm font-semibold text-muted-foreground mb-1">Reviewed By</div>
+                      <div className="text-sm text-foreground">{selectedDecision.reviewedBy}</div>
                     </div>
                     {selectedDecision.reversalReason && (
                       <div>
-                        <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Reversal Reason</div>
-                        <div className="text-sm text-gray-900 dark:text-gray-100 bg-red-50 dark:bg-red-900/20 p-3 rounded">
+                        <div className="text-sm font-semibold text-muted-foreground mb-1">Reversal Reason</div>
+                        <div className="text-sm text-foreground bg-error-light dark:bg-red-900/20 p-3 rounded">
                           {selectedDecision.reversalReason}
                         </div>
                       </div>
@@ -463,8 +463,8 @@ export default function AIDecisionsPage() {
 
                 {!selectedDecision.reviewedBy && (
                   <>
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <div className="border-t border-border pt-4">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         Review Notes {reviewNotes.length > 0 && `(${reviewNotes.length} chars)`}
                       </label>
                       <textarea
@@ -472,7 +472,7 @@ export default function AIDecisionsPage() {
                         onChange={(e) => setReviewNotes(e.target.value)}
                         placeholder="Add notes about your review (required for reversals)..."
                         rows={3}
-                        className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                     </div>
 
@@ -480,7 +480,7 @@ export default function AIDecisionsPage() {
                       <button
                         onClick={() => handleReview(selectedDecision.id || selectedDecision.decisionId || '', 'approve')}
                         disabled={actionLoading}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-success text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
                       >
                         <CheckCircleIcon className="h-5 w-5" />
                         Approve
@@ -488,7 +488,7 @@ export default function AIDecisionsPage() {
                       <button
                         onClick={() => handleReview(selectedDecision.id || selectedDecision.decisionId || '', 'reject')}
                         disabled={actionLoading}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-error text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium"
                       >
                         <XCircleIcon className="h-5 w-5" />
                         Reject

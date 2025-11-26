@@ -26,6 +26,9 @@ interface PatientPermissionsResult {
   canEditAppointments: boolean
   canDeleteAppointments: boolean
   canEditProfile: boolean
+  canEditMedications: boolean
+  canUploadDocuments: boolean
+  canDeleteDocuments: boolean
 }
 
 const DEFAULT_PERMISSIONS: FamilyMemberPermissions = {
@@ -128,6 +131,9 @@ export function usePatientPermissions(patientId: string | undefined): PatientPer
     canScheduleAppointments: isOwner || !!permissions?.scheduleAppointments,
     canEditAppointments: isOwner || !!permissions?.editAppointments,
     canDeleteAppointments: isOwner || !!permissions?.deleteAppointments,
-    canEditProfile: isOwner || !!permissions?.editPatientProfile
+    canEditProfile: isOwner || !!permissions?.editPatientProfile,
+    canEditMedications: isOwner || !!permissions?.editMedications,
+    canUploadDocuments: isOwner || !!permissions?.uploadDocuments,
+    canDeleteDocuments: isOwner || !!permissions?.deleteDocuments
   }
 }

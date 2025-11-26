@@ -49,11 +49,11 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 p-6 max-w-md mx-auto">
+    <div className="bg-card rounded-lg border border-border p-6 max-w-md mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Redeem Perk</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">{perk.title}</p>
+        <h3 className="text-xl font-bold text-foreground mb-2">Redeem Perk</h3>
+        <p className="text-sm text-muted-foreground">{perk.title}</p>
       </div>
 
       {/* Perk Details */}
@@ -75,7 +75,7 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
       {!result && (
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
               Email Address *
             </label>
             <input
@@ -85,17 +85,17 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
-              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={isLoading}
             />
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Redemption details will be sent to this email
             </p>
           </div>
 
           {/* Disclaimer */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-            <p className="text-xs text-yellow-800">
+          <div className="bg-warning-light border border-warning-light rounded-lg p-3 mb-4">
+            <p className="text-xs text-warning-dark">
               By redeeming this perk, you agree to receive emails from {perk.sponsorName || 'the sponsor'}.
               You can unsubscribe at any time.
             </p>
@@ -108,7 +108,7 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
               disabled={isLoading || !email}
               className={`flex-1 inline-flex items-center justify-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                 isLoading || !email
-                  ? 'bg-gray-100 dark:bg-gray-800-dark text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                  ? 'bg-muted-dark text-muted-foreground cursor-not-allowed'
                   : 'bg-accent-dark text-white hover:bg-accent-dark'
               } ${isLoading ? 'cursor-wait' : ''}`}
             >
@@ -120,7 +120,7 @@ export default function RedemptionForm({ perk, onRedeem, onCancel }: RedemptionF
                 type="button"
                 onClick={onCancel}
                 disabled={isLoading}
-                className="px-4 py-2 border border-gray-200 text-gray-900 dark:text-gray-100 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                className="px-4 py-2 border border-border text-foreground rounded-lg font-medium hover:bg-muted transition-colors"
               >
                 Cancel
               </button>

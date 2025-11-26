@@ -94,11 +94,11 @@ function CalendarContent() {
   const getDriverStatusColor = (status: string) => {
     switch (status) {
       case 'accepted':
-        return 'bg-green-500'
+        return 'bg-success-light0'
       case 'pending':
-        return 'bg-yellow-500'
+        return 'bg-warning-light0'
       case 'declined':
-        return 'bg-red-500'
+        return 'bg-error-light0'
       default:
         return 'bg-gray-400'
     }
@@ -133,7 +133,7 @@ function CalendarContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title="Family Calendar"
         subtitle="View all appointments for your family"
@@ -142,44 +142,44 @@ function CalendarContent() {
 
       <main className="container mx-auto px-4 py-8">
         {/* Header with navigation and filters */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
           {/* Month navigation */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <button
                 onClick={goToPreviousMonth}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
               >
-                <ChevronLeftIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <ChevronLeftIcon className="w-5 h-5 text-muted-foreground" />
               </button>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 min-w-[200px] text-center">
+              <h2 className="text-2xl font-bold text-foreground min-w-[200px] text-center">
                 {monthNames[month]} {year}
               </h2>
               <button
                 onClick={goToNextMonth}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
               >
-                <ChevronRightIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <ChevronRightIcon className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
 
             <button
               onClick={goToToday}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
             >
               Today
             </button>
           </div>
 
           {/* Filters */}
-          <div className="flex items-center gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <FunnelIcon className="w-5 h-5 text-gray-400" />
+          <div className="flex items-center gap-4 pt-4 border-t border-border">
+            <FunnelIcon className="w-5 h-5 text-muted-foreground" />
 
             {/* Patient filter */}
             <select
               value={filterPatientId}
               onChange={(e) => setFilterPatientId(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+              className="px-3 py-2 border border-border dark:border-gray-600 rounded-lg bg-background text-foreground text-sm"
             >
               <option value="all">All Patients</option>
               {patients.map(patient => (
@@ -193,27 +193,27 @@ function CalendarContent() {
             <select
               value={filterDriver}
               onChange={(e) => setFilterDriver(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+              className="px-3 py-2 border border-border dark:border-gray-600 rounded-lg bg-background text-foreground text-sm"
             >
               <option value="all">All Appointments</option>
               <option value="me">I'm Driving</option>
               <option value="pending">Driver Pending</option>
             </select>
 
-            <div className="ml-auto text-sm text-gray-600 dark:text-gray-400">
+            <div className="ml-auto text-sm text-muted-foreground">
               {filteredAppointments.length} appointment{filteredAppointments.length !== 1 ? 's' : ''}
             </div>
           </div>
         </div>
 
         {/* Calendar grid */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-card rounded-lg shadow-sm overflow-hidden">
           {/* Day headers */}
-          <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-7 border-b border-border">
             {dayNames.map(day => (
               <div
                 key={day}
-                className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800"
+                className="px-4 py-3 text-center text-sm font-semibold text-foreground bg-background"
               >
                 {day}
               </div>
@@ -225,16 +225,16 @@ function CalendarContent() {
             {calendarDays.map((day, index) => (
               <div
                 key={index}
-                className={`min-h-[120px] border-r border-b border-gray-200 dark:border-gray-700 p-2 ${
-                  day ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800/50'
+                className={`min-h-[120px] border-r border-b border-border p-2 ${
+                  day ? 'bg-card' : 'bg-background/50'
                 }`}
               >
                 {day && (
                   <>
                     <div className={`text-sm font-medium mb-1 ${
                       isToday(day)
-                        ? 'w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center'
-                        : 'text-gray-700 dark:text-gray-300'
+                        ? 'w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center'
+                        : 'text-foreground'
                     }`}>
                       {day}
                     </div>
@@ -245,15 +245,15 @@ function CalendarContent() {
                         <button
                           key={apt.id}
                           onClick={() => router.push(`/appointments/${apt.id}`)}
-                          className="w-full text-left px-2 py-1 rounded text-xs bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors border-l-2 border-purple-500"
+                          className="w-full text-left px-2 py-1 rounded text-xs bg-primary-light hover:bg-primary-light dark:hover:bg-purple-900/30 transition-colors border-l-2 border-purple-500"
                         >
-                          <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                          <div className="font-medium text-foreground truncate">
                             {formatTime(apt.dateTime)} - {apt.patientName}
                           </div>
                           {apt.requiresDriver && apt.assignedDriverName && (
                             <div className="flex items-center gap-1 mt-0.5">
                               <span className={`w-1.5 h-1.5 rounded-full ${getDriverStatusColor(apt.driverStatus)}`}></span>
-                              <span className="text-gray-600 dark:text-gray-400 truncate">
+                              <span className="text-muted-foreground truncate">
                                 {apt.assignedDriverId === user?.uid ? 'You' : apt.assignedDriverName}
                                 {apt.driverStatus === 'pending' && ' (pending)'}
                               </span>
@@ -262,7 +262,7 @@ function CalendarContent() {
                         </button>
                       ))}
                       {appointmentsByDay[day]?.length > 3 && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 px-2">
+                        <div className="text-xs text-muted-foreground dark:text-muted-foreground px-2">
                           +{appointmentsByDay[day].length - 3} more
                         </div>
                       )}
@@ -275,24 +275,24 @@ function CalendarContent() {
         </div>
 
         {/* Legend */}
-        <div className="mt-6 bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Driver Status Legend</h3>
+        <div className="mt-6 bg-card rounded-lg shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-foreground mb-3">Driver Status Legend</h3>
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-green-500"></span>
-              <span className="text-gray-600 dark:text-gray-400">Accepted</span>
+              <span className="w-3 h-3 rounded-full bg-success-light0"></span>
+              <span className="text-muted-foreground">Accepted</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-              <span className="text-gray-600 dark:text-gray-400">Pending</span>
+              <span className="w-3 h-3 rounded-full bg-warning-light0"></span>
+              <span className="text-muted-foreground">Pending</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-red-500"></span>
-              <span className="text-gray-600 dark:text-gray-400">Declined</span>
+              <span className="w-3 h-3 rounded-full bg-error-light0"></span>
+              <span className="text-muted-foreground">Declined</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-gray-400"></span>
-              <span className="text-gray-600 dark:text-gray-400">No driver needed</span>
+              <span className="text-muted-foreground">No driver needed</span>
             </div>
           </div>
         </div>

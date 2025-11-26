@@ -40,14 +40,14 @@ function ProvidersContent() {
   const providerTypes = Array.from(new Set(providers.map(p => p.type)))
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title="Healthcare Providers"
         subtitle="Manage doctors, specialists, pharmacies, and more"
         actions={
           <button
             onClick={() => router.push('/providers/new')}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
           >
             + Add Provider
           </button>
@@ -62,8 +62,8 @@ function ProvidersContent() {
               onClick={() => setFilterType('all')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                 filterType === 'all'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                  ? 'bg-primary text-white'
+                  : 'bg-card text-foreground border-2 border-border hover:border-border'
               }`}
             >
               All ({providers.length})
@@ -74,8 +74,8 @@ function ProvidersContent() {
                 onClick={() => setFilterType(type)}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                   filterType === type
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                    ? 'bg-primary text-white'
+                    : 'bg-card text-foreground border-2 border-border hover:border-border'
                 }`}
               >
                 {type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
@@ -87,18 +87,18 @@ function ProvidersContent() {
 
         {loading ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">Loading providers...</p>
+            <p className="text-muted-foreground dark:text-muted-foreground">Loading providers...</p>
           </div>
         ) : filteredProviders.length === 0 ? (
-          <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
+          <div className="text-center py-12 bg-card rounded-lg border-2 border-border">
+            <p className="text-muted-foreground dark:text-muted-foreground mb-4">
               {filterType === 'all'
                 ? 'No providers added yet'
                 : `No ${filterType.replace('_', ' ')} providers found`}
             </p>
             <button
               onClick={() => router.push('/providers/new')}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
             >
               Add Your First Provider
             </button>

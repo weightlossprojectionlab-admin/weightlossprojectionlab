@@ -28,9 +28,9 @@ export function NutritionReviewModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+        <h2 className="text-xl font-bold text-foreground mb-4">
           Review Product
         </h2>
 
@@ -45,67 +45,67 @@ export function NutritionReviewModal({
 
         {/* Product Info */}
         <div className="mb-4">
-          <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
+          <h3 className="font-semibold text-lg text-foreground">
             {product.product_name || 'Unknown Product'}
           </h3>
           {product.brands && (
-            <p className="text-sm text-gray-600 dark:text-gray-400">{product.brands}</p>
+            <p className="text-sm text-muted-foreground">{product.brands}</p>
           )}
           {product.quantity && (
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{product.quantity}</p>
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">{product.quantity}</p>
           )}
         </div>
 
         {/* Nutritional Information */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">
+        <div className="bg-background rounded-lg p-4 mb-4">
+          <h4 className="font-semibold text-foreground mb-3">
             Nutritional Information (per 100g)
           </h4>
           <div className="space-y-2">
             {nutriments['energy-kcal_100g'] !== undefined && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Calories:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-muted-foreground">Calories:</span>
+                <span className="font-medium text-foreground">
                   {nutriments['energy-kcal_100g']} kcal
                 </span>
               </div>
             )}
             {nutriments.proteins_100g !== undefined && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Protein:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-muted-foreground">Protein:</span>
+                <span className="font-medium text-foreground">
                   {nutriments.proteins_100g}g
                 </span>
               </div>
             )}
             {nutriments.carbohydrates_100g !== undefined && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Carbs:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-muted-foreground">Carbs:</span>
+                <span className="font-medium text-foreground">
                   {nutriments.carbohydrates_100g}g
                 </span>
               </div>
             )}
             {nutriments.fat_100g !== undefined && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Fat:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-muted-foreground">Fat:</span>
+                <span className="font-medium text-foreground">
                   {nutriments.fat_100g}g
                 </span>
               </div>
             )}
             {nutriments.fiber_100g !== undefined && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Fiber:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-muted-foreground">Fiber:</span>
+                <span className="font-medium text-foreground">
                   {nutriments.fiber_100g}g
                 </span>
               </div>
             )}
             {nutriments.sodium_100g !== undefined && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Sodium:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-muted-foreground">Sodium:</span>
+                <span className="font-medium text-foreground">
                   {nutriments.sodium_100g}mg
                 </span>
               </div>
@@ -114,7 +114,7 @@ export function NutritionReviewModal({
 
           {/* Show message if no nutrition data */}
           {Object.keys(nutriments).length === 0 && (
-            <p className="text-sm text-gray-500 dark:text-gray-500 italic">
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground italic">
               No nutritional information available for this product
             </p>
           )}
@@ -122,11 +122,11 @@ export function NutritionReviewModal({
 
         {/* Ingredients */}
         {product.ingredients_text && (
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
-            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          <div className="bg-background rounded-lg p-4 mb-4">
+            <h4 className="font-semibold text-foreground mb-2">
               Ingredients
             </h4>
-            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               {product.ingredients_text}
             </p>
           </div>
@@ -148,7 +148,7 @@ export function NutritionReviewModal({
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium text-gray-900 dark:text-gray-100"
+            className="flex-1 px-4 py-3 bg-muted rounded-lg hover:bg-gray-200 transition-colors font-medium text-foreground"
           >
             Cancel
           </button>

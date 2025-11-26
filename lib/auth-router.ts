@@ -16,11 +16,13 @@
 import { logger } from '@/lib/logger'
 import { User } from 'firebase/auth'
 import { userProfileOperations } from './firebase-operations'
+import { medicalOperations } from './medical-operations'
 
 export type UserDestination =
   | { type: 'auth', reason?: string }
   | { type: 'onboarding', resumeStep?: number, reason?: string }
   | { type: 'dashboard', reason?: string }
+  | { type: 'patients', reason?: string }
   | { type: 'loading' }
   | { type: 'stay', reason?: string } // User can stay where they are
 
@@ -79,17 +81,38 @@ export async function determineUserDestination(
     const isOnboardingCompleted = profile.profile?.onboardingCompleted === true
 
     if (isOnboardingCompleted) {
-      // Fully onboarded → Allow access to protected pages
-      logger.debug('[AuthRouter] Onboarding completed - user can access all pages')
+      // Fully onboarded → Check if family plan user or single user
+      logger.debug('[AuthRouter] Onboarding completed - determining entry point')
 
-      // If user is on /onboarding but already completed, redirect to dashboard
-      if (currentPath === '/onboarding') {
-        return { type: 'dashboard', reason: 'Already completed onboarding' }
+      // Check if user has family members (family plan)
+      let hasFamilyPlan = false
+      try {
+        const patients = await medicalOperations.patients.getPatients()
+        hasFamilyPlan = patients && patients.length >= 2
+        logger.debug('[AuthRouter] Family plan check', { patientCount: patients?.length, hasFamilyPlan })
+      } catch (error) {
+        logger.debug('[AuthRouter] Could not check family members, defaulting to dashboard', error)
       }
 
-      // If on /auth but already logged in and onboarded, go to dashboard
+      // If user is on /onboarding but already completed, redirect based on plan type
+      if (currentPath === '/onboarding') {
+        if (hasFamilyPlan) {
+          return { type: 'patients', reason: 'Family plan - redirect to patients page' }
+        }
+        return { type: 'dashboard', reason: 'Single user - redirect to dashboard' }
+      }
+
+      // If on /auth but already logged in and onboarded, redirect based on plan type
       if (currentPath === '/auth') {
-        return { type: 'dashboard', reason: 'Already authenticated and onboarded' }
+        if (hasFamilyPlan) {
+          return { type: 'patients', reason: 'Family plan - redirect to patients page' }
+        }
+        return { type: 'dashboard', reason: 'Single user - redirect to dashboard' }
+      }
+
+      // If accessing /dashboard with family plan (2+ members), redirect to /patients
+      if (currentPath === '/dashboard' && hasFamilyPlan) {
+        return { type: 'patients', reason: 'Family plan users should use patients page as hub' }
       }
 
       // Otherwise they can stay where they are

@@ -133,12 +133,12 @@ export default function GalleryPage() {
                 }}
                 variant="default"
                 size="md"
-                className="bg-white/20 hover:bg-white/30"
+                className="bg-background/20 hover:bg-background/30"
                 onShareModalOpen={() => setShowShareModal(true)}
               />
               <button
                 onClick={() => router.push('/dashboard')}
-                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-background/20 hover:bg-background/30 rounded-lg transition-colors text-sm font-medium"
               >
                 Back to Dashboard
               </button>
@@ -148,19 +148,19 @@ export default function GalleryPage() {
           {/* Stats Cards - First Person Achievements */}
           {!loading && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <div className="bg-background/10 backdrop-blur-sm rounded-lg p-4">
                 <div className="text-2xl font-bold">{stats.totalPhotos}</div>
                 <div className="text-sm text-purple-100">Wins Documented 🎯</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <div className="bg-background/10 backdrop-blur-sm rounded-lg p-4">
                 <div className="text-2xl font-bold">{stats.avgCalories}</div>
                 <div className="text-sm text-purple-100">My Average 📊</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <div className="bg-background/10 backdrop-blur-sm rounded-lg p-4">
                 <div className="text-2xl font-bold">{stats.mealTypeCounts.breakfast || 0}</div>
                 <div className="text-sm text-purple-100">Mornings On Track 🌅</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+              <div className="bg-background/10 backdrop-blur-sm rounded-lg p-4">
                 <div className="text-2xl font-bold">{stats.mealTypeCounts.dinner || 0}</div>
                 <div className="text-sm text-purple-100">Evenings Crushed 🌙</div>
               </div>
@@ -171,7 +171,7 @@ export default function GalleryPage() {
 
       {/* Controls */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-4 mb-6">
+        <div className="bg-card rounded-lg shadow-lg p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Search */}
             <div className="relative">
@@ -180,10 +180,10 @@ export default function GalleryPage() {
                 placeholder="Search meals..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
               />
               <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -196,7 +196,7 @@ export default function GalleryPage() {
             <select
               value={mealTypeFilter}
               onChange={(e) => setMealTypeFilter(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className="px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
             >
               <option value="all">All Meals</option>
               <option value="breakfast">🌅 Breakfast</option>
@@ -209,7 +209,7 @@ export default function GalleryPage() {
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(Number(e.target.value))}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className="px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
             >
               <option value={7}>Last 7 Days</option>
               <option value={14}>Last 2 Weeks</option>
@@ -226,7 +226,7 @@ export default function GalleryPage() {
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                   viewMode === 'grid'
                     ? 'bg-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-muted text-foreground hover:bg-gray-200'
                 }`}
               >
                 Grid View
@@ -236,7 +236,7 @@ export default function GalleryPage() {
                 className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                   viewMode === 'grouped'
                     ? 'bg-primary text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-muted text-foreground hover:bg-gray-200'
                 }`}
               >
                 By Date
@@ -246,8 +246,8 @@ export default function GalleryPage() {
 
           {/* Active Filters Display */}
           {(searchTerm || mealTypeFilter !== 'all') && (
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Active filters:</span>
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+              <span className="text-sm text-muted-foreground">Active filters:</span>
               {searchTerm && (
                 <span className="inline-flex items-center px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                   Search: "{searchTerm}"
@@ -280,13 +280,13 @@ export default function GalleryPage() {
             <div className="flex items-start gap-3">
               <div className="text-3xl">🔥</div>
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                <h3 className="font-semibold text-foreground mb-1">
                   {filteredPhotos.length >= 7
                     ? `I've logged ${filteredPhotos.length} meals - that's ${filteredPhotos.length} wins! Time to show my progress. 🚀`
                     : `Every meal I track is proof of my dedication. Keep going! 💪`
                   }
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   Hover over any meal to share on Instagram, TikTok, Facebook, Pinterest, or Twitter. My journey might inspire someone! ✨
                 </p>
               </div>

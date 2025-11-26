@@ -26,8 +26,8 @@ export default function CoachingProgress({
   const readinessSignals = status.readinessSignals || [];
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-6">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">Your Progress</h3>
+    <div className="bg-card border border-border rounded-lg p-6">
+      <h3 className="text-lg font-bold text-foreground mb-6">Your Progress</h3>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -68,20 +68,20 @@ export default function CoachingProgress({
       {/* Readiness Progress Bar */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Readiness Level</span>
-          <span className="text-sm text-gray-600 dark:text-gray-400">{eligibilityScore}/100</span>
+          <span className="text-sm font-medium text-foreground">Readiness Level</span>
+          <span className="text-sm text-muted-foreground">{eligibilityScore}/100</span>
         </div>
-        <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden">
+        <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
               eligibilityScore >= 75 ? 'bg-success' :
               eligibilityScore >= 50 ? 'bg-accent-dark' :
-              'bg-yellow-500'
+              'bg-warning-light0'
             }`}
             style={{ width: `${Math.min(eligibilityScore, 100)}%` }}
           />
         </div>
-        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           {eligibilityScore >= 75
             ? 'Great! You\'re ready for advanced coaching'
             : eligibilityScore >= 50
@@ -93,17 +93,17 @@ export default function CoachingProgress({
       {/* Active Signals */}
       {readinessSignals.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Active Signals</h4>
+          <h4 className="text-sm font-semibold text-foreground mb-3">Active Signals</h4>
           <div className="space-y-2">
             {readinessSignals.slice(0, 5).map((signal, index) => (
               <div key={index} className="flex items-center space-x-2">
                 <div className="w-2 h-2 rounded-full bg-success" />
-                <span className="text-sm text-gray-900 dark:text-gray-100">{signal}</span>
+                <span className="text-sm text-foreground">{signal}</span>
               </div>
             ))}
           </div>
           {readinessSignals.length > 5 && (
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               +{readinessSignals.length - 5} more signals
             </p>
           )}

@@ -74,7 +74,7 @@ export default function HealthConditionModal({
     return (
       <div key={question.id} className="space-y-2">
         <div className="flex items-start justify-between">
-          <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <label className="text-sm font-medium text-foreground">
             {question.question}
             {question.required && <span className="text-error ml-1">*</span>}
           </label>
@@ -88,9 +88,9 @@ export default function HealthConditionModal({
             >
               <InformationCircleIcon className="w-4 h-4" />
               {showTooltip === question.id && (
-                <div className="absolute z-50 right-0 top-6 w-64 bg-white dark:bg-gray-800 border-2 border-primary rounded-lg p-3 shadow-lg">
+                <div className="absolute z-50 right-0 top-6 w-64 bg-background border-2 border-primary rounded-lg p-3 shadow-lg">
                   <p className="text-xs font-semibold text-primary mb-1">Why WLPL asks this:</p>
-                  <p className="text-xs text-gray-700 dark:text-gray-300">{question.tooltip}</p>
+                  <p className="text-xs text-foreground">{question.tooltip}</p>
                 </div>
               )}
             </button>
@@ -121,8 +121,8 @@ export default function HealthConditionModal({
                 onClick={() => handleMultiselectChange(question.id, option.value)}
                 className={`px-3 py-2 rounded-lg border-2 text-left text-sm transition-all ${
                   responses[question.id]?.includes(option.value)
-                    ? 'border-primary bg-purple-100 dark:bg-purple-900/20 text-primary font-medium'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                    ? 'border-primary bg-primary-light dark:bg-purple-900/20 text-primary font-medium'
+                    : 'border-border hover:border-primary/50'
                 }`}
               >
                 {option.label}
@@ -153,7 +153,7 @@ export default function HealthConditionModal({
               className={`form-input flex-1 ${hasError ? 'border-error' : ''}`}
             />
             {question.unit && (
-              <span className="text-sm text-gray-600 dark:text-gray-400">{question.unit}</span>
+              <span className="text-sm text-muted-foreground">{question.unit}</span>
             )}
           </div>
         )}
@@ -186,25 +186,25 @@ export default function HealthConditionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-semibold text-primary bg-purple-100 dark:bg-purple-900/20 px-2 py-1 rounded">
+              <span className="text-xs font-semibold text-primary bg-primary-light dark:bg-purple-900/20 px-2 py-1 rounded">
                 Guided by WLPL
               </span>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <h3 className="text-xl font-bold text-foreground">
               {questionnaire.conditionName}
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {questionnaire.description}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+            className="text-muted-foreground hover:text-foreground"
             aria-label="Close modal"
           >
             <XMarkIcon className="w-6 h-6" />
@@ -214,7 +214,7 @@ export default function HealthConditionModal({
         {/* Body - Scrollable Questions */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* "You're Safe" message */}
-          <div className="bg-purple-100 dark:bg-purple-900/20 border-2 border-primary rounded-lg p-4">
+          <div className="bg-primary-light dark:bg-purple-900/20 border-2 border-primary rounded-lg p-4">
             <h4 className="font-bold text-primary-dark dark:text-primary-light mb-1">You're Safe</h4>
             <p className="text-sm text-primary-dark dark:text-primary-light">
               WLPL uses this information to protect you from unsafe meal suggestions. Your responses help create personalized dietary guidelines.
@@ -226,7 +226,7 @@ export default function HealthConditionModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between gap-3 p-6 border-t border-border">
           <button
             onClick={onClose}
             className="btn btn-outline"

@@ -52,11 +52,11 @@ export function CategoryConfirmModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+      <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6">
+        <h2 className="text-xl font-bold text-foreground mb-2">
           Confirm Product Category
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Where should <span className="font-semibold">{productName}</span> be stored?
         </p>
 
@@ -74,16 +74,16 @@ export function CategoryConfirmModal({
                 className={`p-3 rounded-lg border-2 transition-all relative ${
                   isSelected
                     ? 'border-primary bg-primary/10 scale-105'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:scale-102'
+                    : 'border-border hover:border-primary/50 hover:scale-102'
                 }`}
               >
                 {isSuggested && !isSelected && (
-                  <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
+                  <div className="absolute -top-2 -right-2 bg-secondary-light0 text-white text-xs px-2 py-0.5 rounded-full font-medium">
                     Auto
                   </div>
                 )}
                 <div className="text-2xl mb-1">{meta.icon}</div>
-                <div className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                <div className="text-xs font-medium text-foreground">
                   {meta.displayName}
                 </div>
               </button>
@@ -92,8 +92,8 @@ export function CategoryConfirmModal({
         </div>
 
         {/* Info Box */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
-          <p className="text-xs text-blue-800 dark:text-blue-200">
+        <div className="bg-secondary-light border border-secondary-light rounded-lg p-3 mb-4">
+          <p className="text-xs text-secondary-dark">
             💡 Category determines storage location and expiration tracking.
             {getCategoryMetadata(selectedCategory).isPerishable &&
               ' This category requires expiration dates.'}
@@ -104,7 +104,7 @@ export function CategoryConfirmModal({
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium text-gray-900 dark:text-gray-100"
+            className="flex-1 px-4 py-3 bg-muted rounded-lg hover:bg-gray-200 transition-colors font-medium text-foreground"
           >
             Cancel
           </button>

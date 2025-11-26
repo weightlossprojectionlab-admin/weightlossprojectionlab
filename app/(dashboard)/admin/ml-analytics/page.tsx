@@ -207,22 +207,22 @@ export default function MLAnalyticsPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">ML Analytics</h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+        <h1 className="text-3xl font-bold text-foreground">ML Analytics</h1>
+        <p className="mt-2 text-muted-foreground">
           Analyze user shopping patterns to discover product associations and generate recipe suggestions
         </p>
       </div>
 
       {/* Product Association Analysis Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-background rounded-lg shadow-md border border-border">
+        <div className="px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <BeakerIcon className="h-6 w-6 text-primary" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            <h2 className="text-xl font-semibold text-foreground">
               Product Association Analysis
             </h2>
           </div>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             Market basket analysis to find products frequently bought together
           </p>
         </div>
@@ -230,10 +230,10 @@ export default function MLAnalyticsPage() {
         <div className="p-6 space-y-6">
           {/* Status Section */}
           <div>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Current Status</h3>
+            <h3 className="text-sm font-medium text-foreground mb-3">Current Status</h3>
 
             {loading ? (
-              <div className="flex items-center gap-2 text-gray-500">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <ArrowPathIcon className="h-5 w-5 animate-spin" />
                 <span>Loading status...</span>
               </div>
@@ -241,15 +241,15 @@ export default function MLAnalyticsPage() {
               <div className="space-y-3">
                 {/* Running Status */}
                 {status.running && (
-                  <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <ArrowPathIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-spin" />
+                  <div className="flex items-center gap-3 p-4 bg-secondary-light border border-secondary-light rounded-lg">
+                    <ArrowPathIcon className="h-5 w-5 text-secondary animate-spin" />
                     <div className="flex-1">
-                      <p className="font-medium text-blue-900 dark:text-blue-100">Analysis Running</p>
+                      <p className="font-medium text-secondary-dark">Analysis Running</p>
                       <p className="text-sm text-blue-700 dark:text-blue-300">
                         {status.progress || 'Processing...'}
                       </p>
                       {status.startedAt && (
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        <p className="text-xs text-secondary mt-1">
                           Started: {formatDate(status.startedAt)} by {status.startedBy}
                         </p>
                       )}
@@ -259,12 +259,12 @@ export default function MLAnalyticsPage() {
 
                 {/* Completed Status */}
                 {!status.running && status.status === 'completed' && (
-                  <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <SparklesIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="flex items-center gap-3 p-4 bg-success-light dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <SparklesIcon className="h-5 w-5 text-success dark:text-green-400" />
                     <div className="flex-1">
                       <p className="font-medium text-green-900 dark:text-green-100">Analysis Complete</p>
                       {status.completedAt && (
-                        <p className="text-sm text-green-700 dark:text-green-300">
+                        <p className="text-sm text-success-dark dark:text-green-300">
                           Completed: {formatDate(status.completedAt)}
                         </p>
                       )}
@@ -274,12 +274,12 @@ export default function MLAnalyticsPage() {
 
                 {/* Failed Status */}
                 {!status.running && status.status === 'failed' && (
-                  <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="flex items-center gap-3 p-4 bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                     <div className="flex-1">
                       <p className="font-medium text-red-900 dark:text-red-100">Analysis Failed</p>
-                      <p className="text-sm text-red-700 dark:text-red-300">{status.error || 'Unknown error'}</p>
+                      <p className="text-sm text-error-dark dark:text-red-300">{status.error || 'Unknown error'}</p>
                       {status.failedAt && (
-                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        <p className="text-xs text-error mt-1">
                           Failed: {formatDate(status.failedAt)}
                         </p>
                       )}
@@ -289,11 +289,11 @@ export default function MLAnalyticsPage() {
 
                 {/* Idle Status */}
                 {!status.running && !status.status && (
-                  <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
-                    <ChartBarIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <div className="flex items-center gap-3 p-4 bg-background dark:bg-gray-700 border border-border dark:border-gray-600 rounded-lg">
+                    <ChartBarIcon className="h-5 w-5 text-muted-foreground" />
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">Ready to Analyze</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="font-medium text-foreground">Ready to Analyze</p>
+                      <p className="text-sm text-muted-foreground">
                         No analysis has been run yet
                       </p>
                     </div>
@@ -305,32 +305,32 @@ export default function MLAnalyticsPage() {
 
           {/* Metadata Section */}
           <div>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Analysis Metadata</h3>
+            <h3 className="text-sm font-medium text-foreground mb-3">Analysis Metadata</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Last Analysis</p>
-                <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <div className="p-4 bg-background dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-muted-foreground">Last Analysis</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">
                   {metadata.lastAnalysisRun ? formatDate(metadata.lastAnalysisRun) : 'Never'}
                 </p>
                 {metadata.lastAnalysisBy && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">by {metadata.lastAnalysisBy}</p>
+                  <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">by {metadata.lastAnalysisBy}</p>
                 )}
               </div>
 
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Product Associations</p>
-                <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <div className="p-4 bg-background dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-muted-foreground">Product Associations</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">
                   {metadata.totalProductAssociations?.toLocaleString() || 0}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">products with associations</p>
+                <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">products with associations</p>
               </div>
 
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
-                <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <div className="p-4 bg-background dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-muted-foreground">Status</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">
                   {status.running ? 'Running' : 'Idle'}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                   {status.running ? 'In progress' : 'Ready to run'}
                 </p>
               </div>
@@ -338,10 +338,10 @@ export default function MLAnalyticsPage() {
           </div>
 
           {/* Action Button */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center justify-between pt-4 border-t border-border">
+            <div className="text-sm text-muted-foreground">
               <p>Click to run market basket analysis on all user shopping data.</p>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+              <p className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground">
                 This process analyzes products bought together to generate smart recipe suggestions.
               </p>
             </div>
@@ -368,15 +368,15 @@ export default function MLAnalyticsPage() {
       </div>
 
       {/* ML Recipe Generation Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-background rounded-lg shadow-md border border-border">
+        <div className="px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <CubeIcon className="h-6 w-6 text-green-600" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            <CubeIcon className="h-6 w-6 text-success" />
+            <h2 className="text-xl font-semibold text-foreground">
               ML Recipe Generation
             </h2>
           </div>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             Auto-generate recipes from discovered product associations
           </p>
         </div>
@@ -384,10 +384,10 @@ export default function MLAnalyticsPage() {
         <div className="p-6 space-y-6">
           {/* Status Section */}
           <div>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Current Status</h3>
+            <h3 className="text-sm font-medium text-foreground mb-3">Current Status</h3>
 
             {recipeLoading ? (
-              <div className="flex items-center gap-2 text-gray-500">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <ArrowPathIcon className="h-5 w-5 animate-spin" />
                 <span>Loading status...</span>
               </div>
@@ -395,15 +395,15 @@ export default function MLAnalyticsPage() {
               <div className="space-y-3">
                 {/* Running Status */}
                 {recipeStatus.running && (
-                  <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <ArrowPathIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-spin" />
+                  <div className="flex items-center gap-3 p-4 bg-secondary-light border border-secondary-light rounded-lg">
+                    <ArrowPathIcon className="h-5 w-5 text-secondary animate-spin" />
                     <div className="flex-1">
-                      <p className="font-medium text-blue-900 dark:text-blue-100">Generating Recipes</p>
+                      <p className="font-medium text-secondary-dark">Generating Recipes</p>
                       <p className="text-sm text-blue-700 dark:text-blue-300">
                         {recipeStatus.progress || 'Processing...'}
                       </p>
                       {recipeStatus.startedAt && (
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        <p className="text-xs text-secondary mt-1">
                           Started: {formatDate(recipeStatus.startedAt)} by {recipeStatus.startedBy}
                         </p>
                       )}
@@ -413,17 +413,17 @@ export default function MLAnalyticsPage() {
 
                 {/* Completed Status */}
                 {!recipeStatus.running && recipeStatus.status === 'completed' && (
-                  <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <SparklesIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="flex items-center gap-3 p-4 bg-success-light dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <SparklesIcon className="h-5 w-5 text-success dark:text-green-400" />
                     <div className="flex-1">
                       <p className="font-medium text-green-900 dark:text-green-100">
                         Generation Complete
                       </p>
-                      <p className="text-sm text-green-700 dark:text-green-300">
+                      <p className="text-sm text-success-dark dark:text-green-300">
                         Generated {recipeStatus.recipesGenerated || 0} recipes, skipped {recipeStatus.recipesSkipped || 0}
                       </p>
                       {recipeStatus.completedAt && (
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                        <p className="text-xs text-success dark:text-green-400 mt-1">
                           Completed: {formatDate(recipeStatus.completedAt)}
                         </p>
                       )}
@@ -433,12 +433,12 @@ export default function MLAnalyticsPage() {
 
                 {/* Failed Status */}
                 {!recipeStatus.running && recipeStatus.status === 'failed' && (
-                  <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="flex items-center gap-3 p-4 bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                     <div className="flex-1">
                       <p className="font-medium text-red-900 dark:text-red-100">Generation Failed</p>
-                      <p className="text-sm text-red-700 dark:text-red-300">{recipeStatus.error || 'Unknown error'}</p>
+                      <p className="text-sm text-error-dark dark:text-red-300">{recipeStatus.error || 'Unknown error'}</p>
                       {recipeStatus.failedAt && (
-                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        <p className="text-xs text-error mt-1">
                           Failed: {formatDate(recipeStatus.failedAt)}
                         </p>
                       )}
@@ -448,11 +448,11 @@ export default function MLAnalyticsPage() {
 
                 {/* Idle Status */}
                 {!recipeStatus.running && !recipeStatus.status && (
-                  <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
-                    <CubeIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <div className="flex items-center gap-3 p-4 bg-background dark:bg-gray-700 border border-border dark:border-gray-600 rounded-lg">
+                    <CubeIcon className="h-5 w-5 text-muted-foreground" />
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">Ready to Generate</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="font-medium text-foreground">Ready to Generate</p>
+                      <p className="text-sm text-muted-foreground">
                         No recipes have been generated yet
                       </p>
                     </div>
@@ -464,35 +464,35 @@ export default function MLAnalyticsPage() {
 
           {/* Metadata Section */}
           <div>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Recipe Metadata</h3>
+            <h3 className="text-sm font-medium text-foreground mb-3">Recipe Metadata</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Last Generation</p>
-                <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <div className="p-4 bg-background dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-muted-foreground">Last Generation</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">
                   {metadata.lastRecipeGeneration ? formatDate(metadata.lastRecipeGeneration) : 'Never'}
                 </p>
                 {metadata.lastRecipeGenerationBy && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
                     by {metadata.lastRecipeGenerationBy}
                   </p>
                 )}
               </div>
 
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">ML-Generated Recipes</p>
-                <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <div className="p-4 bg-background dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-muted-foreground">ML-Generated Recipes</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">
                   {metadata.totalMLRecipes?.toLocaleString() || 0}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">total in database</p>
+                <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">total in database</p>
               </div>
             </div>
           </div>
 
           {/* Action Button */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center justify-between pt-4 border-t border-border">
+            <div className="text-sm text-muted-foreground">
               <p>Generate recipes from product associations discovered in your data.</p>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+              <p className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground">
                 Recipes will be created as drafts and can be reviewed in the Recipes tab.
               </p>
             </div>
@@ -500,7 +500,7 @@ export default function MLAnalyticsPage() {
             <button
               onClick={handleTriggerRecipeGeneration}
               disabled={recipeStatus.running || recipeTriggering || !metadata.totalProductAssociations}
-              className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-success hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:cursor-not-allowed"
             >
               {recipeTriggering || recipeStatus.running ? (
                 <>
@@ -519,11 +519,11 @@ export default function MLAnalyticsPage() {
       </div>
 
       {/* How It Works */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">
+      <div className="bg-secondary-light border border-secondary-light rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-secondary-dark mb-3">
           How Product Association Analysis Works
         </h3>
-        <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+        <div className="space-y-2 text-sm text-secondary-dark">
           <p>
             <strong>1. Data Collection:</strong> Analyzes all barcode scans from user shopping lists to understand what products are bought together.
           </p>
@@ -543,11 +543,11 @@ export default function MLAnalyticsPage() {
       </div>
 
       {/* Future Features */}
-      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+      <div className="bg-background border border-border rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-foreground mb-3">
           Coming Soon
         </h3>
-        <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+        <ul className="space-y-2 text-sm text-foreground">
           <li className="flex items-center gap-2">
             <div className="w-2 h-2 bg-primary rounded-full"></div>
             Collaborative filtering for personalized recommendations

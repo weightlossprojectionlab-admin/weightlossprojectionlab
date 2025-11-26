@@ -144,16 +144,16 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-background rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-background border-b border-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center">
             <SparklesIcon className="w-6 h-6 text-primary-600 mr-2" />
-            <h2 className="text-xl font-semibold text-gray-900">AI Recipe Generator</h2>
+            <h2 className="text-xl font-semibold text-foreground">AI Recipe Generator</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
+            className="text-muted-foreground hover:text-muted-foreground"
             disabled={generating}
           >
             <XMarkIcon className="w-6 h-6" />
@@ -165,13 +165,13 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
           {generatedRecipes.length === 0 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Meal Type
                 </label>
                 <select
                   value={params.mealType}
                   onChange={(e) => setParams({ ...params, mealType: e.target.value as MealType })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-border rounded-md"
                   disabled={generating}
                 >
                   <option value="breakfast">Breakfast</option>
@@ -182,7 +182,7 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Target Calories: {params.calories}
                 </label>
                 <input
@@ -198,7 +198,7 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Target Protein (g): {params.protein}
                 </label>
                 <input
@@ -214,7 +214,7 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Number of Recipes: {params.count}
                 </label>
                 <input
@@ -241,7 +241,7 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
 
               {generating && (
                 <div className="text-center">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Generating recipe {progress.current} of {progress.total}...
                   </p>
                   <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
@@ -259,24 +259,24 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
           {generatedRecipes.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Generated {generatedRecipes.length} recipe(s). Review and save as drafts.
                 </p>
                 <button
                   onClick={handleSaveAll}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                  className="px-4 py-2 bg-success text-white rounded-md hover:bg-green-700 font-medium"
                 >
                   Save All as Drafts
                 </button>
               </div>
 
               {generatedRecipes.map((recipe, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                <div key={index} className="border border-border rounded-lg p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{recipe.name}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{recipe.description}</p>
-                      <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                      <h3 className="font-semibold text-foreground">{recipe.name}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">{recipe.description}</p>
+                      <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
                         <span>{recipe.calories} cal</span>
                         <span>{recipe.macros.protein}g protein</span>
                         <span>{recipe.prepTime} min</span>
@@ -297,9 +297,9 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
                   </div>
 
                   {recipe.recipeSteps && recipe.recipeSteps.length > 0 && (
-                    <div className="mt-3 pl-4 border-l-2 border-gray-200">
-                      <p className="text-xs font-medium text-gray-700 mb-1">Steps:</p>
-                      <ol className="text-xs text-gray-600 space-y-1">
+                    <div className="mt-3 pl-4 border-l-2 border-border">
+                      <p className="text-xs font-medium text-foreground mb-1">Steps:</p>
+                      <ol className="text-xs text-muted-foreground space-y-1">
                         {recipe.recipeSteps.map((step, i) => (
                           <li key={i}>
                             {i + 1}. {step}

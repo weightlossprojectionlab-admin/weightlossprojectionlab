@@ -293,10 +293,31 @@
   }
 
   /* Prevent horizontal overflow on narrow devices */
-  * {
-    max-width: 100%;
+  /* Only apply word-break to long text content, not headings or UI elements */
+  p, li {
     overflow-wrap: break-word;
     word-wrap: break-word;
+  }
+
+  /* Prevent word-break on SVG, charts, and UI components */
+  svg, svg *, .recharts-wrapper, .recharts-wrapper *,
+  button, button *, input, select, textarea, label,
+  h1, h2, h3, h4, h5, h6, span, div {
+    overflow-wrap: normal !important;
+    word-wrap: normal !important;
+    word-break: normal !important;
+    white-space: normal !important;
+  }
+
+  /* Specific fix for Recharts legend and labels */
+  .recharts-legend-item-text,
+  .recharts-cartesian-axis-tick-value,
+  .recharts-label,
+  svg text {
+    overflow-wrap: normal !important;
+    word-wrap: normal !important;
+    word-break: normal !important;
+    white-space: nowrap !important;
   }
 
   /* Ensure media elements are responsive */

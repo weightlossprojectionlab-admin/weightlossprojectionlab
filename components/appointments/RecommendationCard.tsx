@@ -24,9 +24,9 @@ export function RecommendationCard({
       case 'urgent':
         return {
           border: 'border-red-500',
-          bg: 'bg-red-50 dark:bg-red-900/10',
-          text: 'text-red-700 dark:text-red-300',
-          badge: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+          bg: 'bg-error-light dark:bg-red-900/10',
+          text: 'text-error-dark dark:text-red-300',
+          badge: 'bg-red-100 dark:bg-red-900/30 text-error-dark dark:text-red-300'
         }
       case 'high':
         return {
@@ -38,14 +38,14 @@ export function RecommendationCard({
       case 'medium':
         return {
           border: 'border-yellow-500',
-          bg: 'bg-yellow-50 dark:bg-yellow-900/10',
+          bg: 'bg-warning-light dark:bg-yellow-900/10',
           text: 'text-yellow-700 dark:text-yellow-300',
           badge: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
         }
       default:
         return {
           border: 'border-blue-500',
-          bg: 'bg-blue-50 dark:bg-blue-900/10',
+          bg: 'bg-secondary-light dark:bg-blue-900/10',
           text: 'text-blue-700 dark:text-blue-300',
           badge: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
         }
@@ -87,7 +87,7 @@ export function RecommendationCard({
       {/* Dismiss button */}
       <button
         onClick={() => onDismiss(recommendation.id)}
-        className="absolute top-3 right-3 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300 transition-colors"
         title="Dismiss this recommendation"
       >
         <XMarkIcon className="w-5 h-5" />
@@ -110,7 +110,7 @@ export function RecommendationCard({
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors.badge}`}>
               {recommendation.severity.toUpperCase()}
             </span>
-            <span className="text-xs text-gray-600 dark:text-gray-400">
+            <span className="text-xs text-muted-foreground">
               {getUrgencyLabel(recommendation.urgency)}
             </span>
           </div>
@@ -118,13 +118,13 @@ export function RecommendationCard({
       </div>
 
       {/* Reason */}
-      <p className="text-sm text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">
+      <p className="text-sm text-foreground mb-4 leading-relaxed">
         {recommendation.reason}
       </p>
 
       {/* Trigger Metrics */}
       {recommendation.triggerMetrics && (
-        <div className="mb-4 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+        <div className="mb-4 text-xs text-muted-foreground space-y-1">
           {recommendation.triggerMetrics.weightLossStalled && (
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
@@ -145,7 +145,7 @@ export function RecommendationCard({
           )}
           {recommendation.triggerMetrics.vitalAlert && (
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+              <span className="w-1.5 h-1.5 bg-error-light0 rounded-full animate-pulse"></span>
               <span>{recommendation.triggerMetrics.vitalAlert}</span>
             </div>
           )}

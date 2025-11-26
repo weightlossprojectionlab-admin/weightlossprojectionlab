@@ -49,6 +49,20 @@ service firebase.storage {
       allow delete: if isAuthenticated(); // Admin check should be in app logic
     }
 
+    // Patient documents (insurance cards, medical records, etc.)
+    match /documents/{patientId}/{documentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.resource.size < 20 * 1024 * 1024; // Max 20MB
+      allow delete: if isAuthenticated();
+    }
+
+    // Medication images (scanned medication bottles)
+    match /medications/{userId}/{imageId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) && isValidImage() && isValidImageSize();
+      allow delete: if isOwner(userId);
+    }
+
     // Default deny
     match /{allPaths=**} {
       allow read, write: if false;

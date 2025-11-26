@@ -146,10 +146,10 @@ export function useProviders({
           )
         )
 
-        toast.success('Provider linked to patient')
+        toast.success('Provider linked to family member')
         return updatedProvider
       } catch (err: any) {
-        const errorMsg = err.message || 'Failed to link provider to patient'
+        const errorMsg = err.message || 'Failed to link provider to family member'
         toast.error(errorMsg)
         throw err
       }

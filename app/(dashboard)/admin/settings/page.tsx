@@ -152,9 +152,9 @@ export default function AdminSettingsPage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
+        <div className="bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
           <h2 className="text-xl font-bold text-red-900 dark:text-red-200 mb-2">Access Denied</h2>
-          <p className="text-red-700 dark:text-red-300">
+          <p className="text-error-dark dark:text-red-300">
             You do not have permission to access admin settings.
           </p>
         </div>
@@ -166,18 +166,18 @@ export default function AdminSettingsPage() {
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Admin Settings</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
+        <h1 className="text-3xl font-bold text-foreground">Admin Settings</h1>
+        <p className="text-muted-foreground mt-1">
           Manage admin users, view audit logs, and configure system settings
         </p>
       </div>
 
       {/* Admin Users Section */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-6">
+      <div className="bg-card rounded-lg shadow p-6 mb-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <UserGroupIcon className="h-6 w-6 text-primary" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Admin Users</h2>
+            <h2 className="text-xl font-semibold text-foreground">Admin Users</h2>
           </div>
           {isSuperAdmin && (
             <button
@@ -197,20 +197,20 @@ export default function AdminSettingsPage() {
         ) : (
           <div className="space-y-3">
             {adminUsers.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-4">No admin users found</p>
+              <p className="text-muted-foreground dark:text-muted-foreground text-center py-4">No admin users found</p>
             ) : (
               adminUsers.map((admin) => (
                 <div
                   key={admin.uid}
-                  className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-background"
                 >
                   <div className="flex items-center gap-4">
                     <ShieldCheckIcon className="h-8 w-8 text-primary" />
                     <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
+                      <div className="font-medium text-foreground">
                         {admin.displayName || admin.email}
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{admin.email}</div>
+                      <div className="text-sm text-muted-foreground dark:text-muted-foreground">{admin.email}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -221,7 +221,7 @@ export default function AdminSettingsPage() {
                       <button
                         onClick={() => handleRevokeRole(admin.email)}
                         disabled={actionLoading}
-                        className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-sm font-medium"
+                        className="text-error hover:text-error-dark dark:hover:text-red-300 text-sm font-medium"
                       >
                         Revoke
                       </button>
@@ -234,7 +234,7 @@ export default function AdminSettingsPage() {
         )}
 
         {isSuperAdmin && (
-          <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
+          <div className="mt-4 p-4 bg-accent-light dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
             <p className="text-sm text-indigo-900 dark:text-indigo-200">
               <strong>Super Admins:</strong> perriceconsulting@gmail.com, weigthlossprojectionlab@gmail.com
               <br />
@@ -247,10 +247,10 @@ export default function AdminSettingsPage() {
       </div>
 
       {/* Audit Logs Section */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
+      <div className="bg-card rounded-lg shadow p-6">
         <div className="flex items-center gap-3 mb-6">
           <ClockIcon className="h-6 w-6 text-primary" />
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Recent Admin Activity</h2>
+          <h2 className="text-xl font-semibold text-foreground">Recent Admin Activity</h2>
         </div>
 
         {loading ? (
@@ -260,30 +260,30 @@ export default function AdminSettingsPage() {
         ) : (
           <div className="space-y-2">
             {auditLogs.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-4">No audit logs found</p>
+              <p className="text-muted-foreground dark:text-muted-foreground text-center py-4">No audit logs found</p>
             ) : (
               auditLogs.map((log) => (
                 <div
                   key={log.logId}
-                  className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
+                  className="p-3 border border-border rounded-lg text-sm"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{log.adminEmail}</span>
-                        <span className="text-gray-500 dark:text-gray-400">•</span>
+                        <span className="font-medium text-foreground">{log.adminEmail}</span>
+                        <span className="text-muted-foreground dark:text-muted-foreground">•</span>
                         <span className="text-primary font-medium">{log.action.replace(/_/g, ' ')}</span>
                       </div>
-                      <div className="text-gray-600 dark:text-gray-400 mt-1">
+                      <div className="text-muted-foreground mt-1">
                         {log.targetType}: {log.targetId.slice(0, 12)}...
                       </div>
                       {log.reason && (
-                        <div className="text-gray-500 dark:text-gray-500 text-xs mt-1">
+                        <div className="text-muted-foreground dark:text-muted-foreground text-xs mt-1">
                           Reason: {log.reason}
                         </div>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                       {new Date(log.timestamp).toLocaleString()}
                     </div>
                   </div>
@@ -297,12 +297,12 @@ export default function AdminSettingsPage() {
       {/* Grant Role Modal */}
       {showGrantRoleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Grant Admin Role</h2>
+              <h2 className="text-lg font-semibold text-foreground">Grant Admin Role</h2>
               <button
                 onClick={() => setShowGrantRoleModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -310,7 +310,7 @@ export default function AdminSettingsPage() {
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
                   User Email
                 </label>
                 <input
@@ -319,19 +319,19 @@ export default function AdminSettingsPage() {
                   value={grantRoleEmail}
                   onChange={(e) => setGrantRoleEmail(e.target.value)}
                   placeholder="user@example.com"
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="role" className="block text-sm font-medium text-foreground mb-2">
                   Role
                 </label>
                 <select
                   id="role"
                   value={grantRoleType}
                   onChange={(e) => setGrantRoleType(e.target.value as any)}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="admin">Admin - Full access</option>
                   <option value="moderator">Moderator - Content moderation</option>
@@ -339,8 +339,8 @@ export default function AdminSettingsPage() {
                 </select>
               </div>
 
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              <div className="bg-warning-light border border-warning-light rounded-lg p-3">
+                <p className="text-sm text-warning-dark">
                   <strong>Warning:</strong> Only grant admin roles to trusted team members.
                   All admin actions are logged for security.
                 </p>
@@ -357,7 +357,7 @@ export default function AdminSettingsPage() {
                 <button
                   onClick={() => setShowGrantRoleModal(false)}
                   disabled={actionLoading}
-                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-foreground rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
                 >
                   Cancel
                 </button>

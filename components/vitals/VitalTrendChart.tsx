@@ -8,7 +8,7 @@
 import { useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { VitalSign, VitalType } from '@/types/medical'
-import { isBloodPressureValue } from '@/types/medical'
+import { isBloodPressureValue, isPulseOximeterValue } from '@/types/medical'
 
 interface VitalTrendChartProps {
   vitals: VitalSign[]
@@ -33,6 +33,13 @@ export function VitalTrendChart({ vitals, type, height = 300 }: VitalTrendChartP
             diastolic: vital.value.diastolic,
             fullDate: date.toLocaleString()
           }
+        } else if (type === 'pulse_oximeter' && isPulseOximeterValue(vital.value)) {
+          return {
+            date: dateStr,
+            spo2: vital.value.spo2,
+            pulseRate: vital.value.pulseRate,
+            fullDate: date.toLocaleString()
+          }
         } else if (typeof vital.value === 'number') {
           return {
             date: dateStr,
@@ -51,45 +58,42 @@ export function VitalTrendChart({ vitals, type, height = 300 }: VitalTrendChartP
       case 'blood_pressure':
         return {
           lines: [
-            { dataKey: 'systolic', stroke: '#ef4444', name: 'Systolic' },
-            { dataKey: 'diastolic', stroke: '#3b82f6', name: 'Diastolic' }
+            { dataKey: 'systolic', stroke: 'hsl(var(--error))', name: 'Systolic' },
+            { dataKey: 'diastolic', stroke: 'hsl(var(--secondary))', name: 'Diastolic' }
           ],
           unit: 'mmHg',
           yDomain: [40, 200]
         }
       case 'blood_sugar':
         return {
-          lines: [{ dataKey: 'value', stroke: '#8b5cf6', name: 'Glucose' }],
+          lines: [{ dataKey: 'value', stroke: 'hsl(var(--primary))', name: 'Glucose' }],
           unit: 'mg/dL',
           yDomain: [50, 300]
         }
-      case 'heart_rate':
+      case 'pulse_oximeter':
         return {
-          lines: [{ dataKey: 'value', stroke: '#ec4899', name: 'Heart Rate' }],
-          unit: 'bpm',
-          yDomain: [40, 200]
-        }
-      case 'blood_oxygen':
-        return {
-          lines: [{ dataKey: 'value', stroke: '#10b981', name: 'O₂ Saturation' }],
-          unit: '%',
-          yDomain: [85, 100]
+          lines: [
+            { dataKey: 'spo2', stroke: 'hsl(var(--success))', name: 'SpO₂ (%)' },
+            { dataKey: 'pulseRate', stroke: 'hsl(var(--accent))', name: 'Pulse (bpm)' }
+          ],
+          unit: 'SpO₂% / bpm',
+          yDomain: [0, 120]
         }
       case 'temperature':
         return {
-          lines: [{ dataKey: 'value', stroke: '#f59e0b', name: 'Temperature' }],
+          lines: [{ dataKey: 'value', stroke: 'hsl(var(--warning))', name: 'Temperature' }],
           unit: '°F',
           yDomain: [95, 105]
         }
       case 'weight':
         return {
-          lines: [{ dataKey: 'value', stroke: '#6366f1', name: 'Weight' }],
+          lines: [{ dataKey: 'value', stroke: 'hsl(var(--accent))', name: 'Weight' }],
           unit: 'lbs',
           yDomain: undefined // Auto-scale
         }
       default:
         return {
-          lines: [{ dataKey: 'value', stroke: '#8b5cf6', name: 'Value' }],
+          lines: [{ dataKey: 'value', stroke: 'hsl(var(--primary))', name: 'Value' }],
           unit: '',
           yDomain: undefined
         }
@@ -100,36 +104,35 @@ export function VitalTrendChart({ vitals, type, height = 300 }: VitalTrendChartP
 
   if (chartData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 bg-gray-50 dark:bg-gray-900 rounded-lg">
-        <p className="text-gray-500 dark:text-gray-400">No data to display</p>
+      <div className="flex items-center justify-center h-64 bg-background rounded-lg">
+        <p className="text-muted-foreground dark:text-muted-foreground">No data to display</p>
       </div>
     )
   }
 
   return (
-    <div className="w-full">
-      <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+    <div className="w-full" style={{ minWidth: 0 }}>
+      <ResponsiveContainer width="100%" height={height} minWidth={300}>
+        <LineChart data={chartData} margin={{ top: 5, right: 30, bottom: 5, left: 10 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.2} />
           <XAxis
             dataKey="date"
-            stroke="#9ca3af"
+            stroke="hsl(var(--muted-foreground))"
             style={{ fontSize: '12px' }}
           />
           <YAxis
-            stroke="#9ca3af"
+            stroke="hsl(var(--muted-foreground))"
             style={{ fontSize: '12px' }}
             domain={config.yDomain}
-            label={{ value: config.unit, angle: -90, position: 'insideLeft', style: { fill: '#9ca3af' } }}
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#1f2937',
+              backgroundColor: 'hsl(var(--card))',
               border: 'none',
               borderRadius: '8px',
-              color: '#f3f4f6'
+              color: 'hsl(var(--card-foreground))'
             }}
-            labelStyle={{ color: '#f3f4f6' }}
+            labelStyle={{ color: 'hsl(var(--card-foreground))' }}
           />
           <Legend />
           {config.lines.map((line, index) => (

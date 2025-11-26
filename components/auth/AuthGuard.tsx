@@ -48,10 +48,10 @@ export default function AuthGuard({ children, fallback }: AuthGuardProps) {
   // Show loading spinner while Firebase Auth initializes
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">{loadingMessage}</p>
+          <p className="text-muted-foreground">{loadingMessage}</p>
         </div>
       </div>
     )
@@ -60,9 +60,9 @@ export default function AuthGuard({ children, fallback }: AuthGuardProps) {
   // If no user after loading completes, show fallback or redirect message
   if (!user) {
     return fallback || (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400">Redirecting to login...</p>
+          <p className="text-muted-foreground">Redirecting to login...</p>
         </div>
       </div>
     )

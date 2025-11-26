@@ -18,7 +18,7 @@ import { CameraIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
 const ProviderScanner = dynamic(() => import('@/components/providers/ProviderScanner').then(mod => ({ default: mod.ProviderScanner })), {
-  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>,
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>,
   ssr: false
 })
 
@@ -91,7 +91,7 @@ function NewProviderContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title="Add Provider"
         subtitle="Add a new healthcare provider"
@@ -99,9 +99,9 @@ function NewProviderContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-8">
+        <div className="bg-card rounded-lg shadow-sm p-8">
           {/* Scan Document Button */}
-          <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="mb-6 pb-6 border-b border-border">
             <button
               type="button"
               onClick={() => setShowScanner(true)}
@@ -118,14 +118,14 @@ function NewProviderContent() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Provider Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Provider Type *
               </label>
               <select
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as ProviderType })}
                 required
-                className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
               >
                 <option value="physician">Physician</option>
                 <option value="specialist">Specialist</option>
@@ -143,7 +143,7 @@ function NewProviderContent() {
 
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Provider Name *
               </label>
               <input
@@ -151,42 +151,42 @@ function NewProviderContent() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
                 placeholder="Dr. Jane Smith"
               />
             </div>
 
             {/* Specialty */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Specialty
               </label>
               <input
                 type="text"
                 value={formData.specialty}
                 onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
                 placeholder="Cardiology"
               />
             </div>
 
             {/* Organization */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Organization/Practice
               </label>
               <input
                 type="text"
                 value={formData.organization}
                 onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
                 placeholder="General Hospital"
               />
             </div>
 
             {/* Address */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Street Address *
               </label>
               <input
@@ -194,7 +194,7 @@ function NewProviderContent() {
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 required
-                className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
                 placeholder="123 Medical Plaza"
               />
             </div>
@@ -202,7 +202,7 @@ function NewProviderContent() {
             {/* City, State, ZIP */}
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 sm:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   City *
                 </label>
                 <input
@@ -210,11 +210,11 @@ function NewProviderContent() {
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   State *
                 </label>
                 <input
@@ -223,12 +223,12 @@ function NewProviderContent() {
                   onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
                   required
                   maxLength={2}
-                  className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
                   placeholder="CA"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   ZIP Code *
                 </label>
                 <input
@@ -236,7 +236,7 @@ function NewProviderContent() {
                   value={formData.zipCode}
                   onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
                   placeholder="90210"
                 />
               </div>
@@ -244,7 +244,7 @@ function NewProviderContent() {
 
             {/* Phone */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Phone Number *
               </label>
               <input
@@ -252,35 +252,35 @@ function NewProviderContent() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
-                className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
                 placeholder="+1 (555) 123-4567"
               />
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Email (Optional)
               </label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
                 placeholder="contact@provider.com"
               />
             </div>
 
             {/* Website */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Website (Optional)
               </label>
               <input
                 type="url"
                 value={formData.website}
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
                 placeholder="https://www.provider.com"
               />
             </div>
@@ -292,9 +292,9 @@ function NewProviderContent() {
                 id="isPrimary"
                 checked={formData.isPrimary}
                 onChange={(e) => setFormData({ ...formData, isPrimary: e.target.checked })}
-                className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                className="w-4 h-4 text-primary rounded focus:ring-purple-500"
               />
-              <label htmlFor="isPrimary" className="text-sm text-gray-700 dark:text-gray-300">
+              <label htmlFor="isPrimary" className="text-sm text-foreground">
                 Set as primary provider
               </label>
             </div>
@@ -304,14 +304,14 @@ function NewProviderContent() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {loading ? 'Adding...' : 'Add Provider'}
               </button>
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="px-4 py-3 text-muted-foreground hover:bg-muted rounded-lg transition-colors"
               >
                 Cancel
               </button>

@@ -139,7 +139,7 @@ function WeightHistoryContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title="Weight History"
         subtitle="Track your weight progress over time"
@@ -148,15 +148,15 @@ function WeightHistoryContent() {
           <div className="relative">
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium"
             >
               Export
             </button>
             {showExportMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+              <div className="absolute right-0 mt-2 w-48 bg-background rounded-lg shadow-lg border border-border z-10">
                 <button
                   onClick={handleExportCSV}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                  className="w-full text-left px-4 py-2 hover:bg-background text-sm text-foreground"
                 >
                   Export as CSV
                 </button>
@@ -170,28 +170,28 @@ function WeightHistoryContent() {
         {/* Summary Stats */}
         {weightLogs.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Entries</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalEntries}</p>
+            <div className="bg-card rounded-lg shadow-sm p-4 border border-border">
+              <p className="text-xs text-muted-foreground mb-1">Total Entries</p>
+              <p className="text-2xl font-bold text-foreground">{stats.totalEntries}</p>
             </div>
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Start Weight</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="bg-card rounded-lg shadow-sm p-4 border border-border">
+              <p className="text-xs text-muted-foreground mb-1">Start Weight</p>
+              <p className="text-2xl font-bold text-foreground">
                 {stats.startWeight} {stats.unit}
               </p>
             </div>
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Current Weight</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="bg-card rounded-lg shadow-sm p-4 border border-border">
+              <p className="text-xs text-muted-foreground mb-1">Current Weight</p>
+              <p className="text-2xl font-bold text-foreground">
                 {stats.currentWeight} {stats.unit}
               </p>
             </div>
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Change</p>
+            <div className="bg-card rounded-lg shadow-sm p-4 border border-border">
+              <p className="text-xs text-muted-foreground mb-1">Total Change</p>
               <p className={`text-2xl font-bold ${
-                stats.totalChange < 0 ? 'text-green-600 dark:text-green-400' :
-                stats.totalChange > 0 ? 'text-red-600 dark:text-red-400' :
-                'text-gray-900 dark:text-gray-100'
+                stats.totalChange < 0 ? 'text-success dark:text-green-400' :
+                stats.totalChange > 0 ? 'text-error' :
+                'text-foreground'
               }`}>
                 {stats.totalChange > 0 ? '+' : ''}{Math.round(stats.totalChange * 10) / 10} {stats.unit}
               </p>
@@ -200,9 +200,9 @@ function WeightHistoryContent() {
         )}
 
         {/* Time Range Filter */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4 mb-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-card rounded-lg shadow-sm p-4 mb-6 border border-border">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Show:</span>
+            <span className="text-sm font-medium text-foreground">Show:</span>
             <div className="flex gap-2">
               {(['7d', '30d', '90d', 'all'] as TimeRange[]).map((range) => (
                 <button
@@ -210,8 +210,8 @@ function WeightHistoryContent() {
                   onClick={() => setTimeRange(range)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     timeRange === range
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      ? 'bg-primary text-white'
+                      : 'bg-muted text-foreground hover:bg-gray-200'
                   }`}
                 >
                   {range === '7d' ? 'Last 7 Days' :
@@ -225,12 +225,12 @@ function WeightHistoryContent() {
         </div>
 
         {/* Weight History Table */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-card rounded-lg shadow-sm p-6 border border-border">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Weight Entries</h2>
+            <h2 className="text-lg font-semibold text-foreground">Weight Entries</h2>
             <Link
               href="/log-weight"
-              className="px-4 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors text-sm font-medium"
+              className="px-4 py-2 bg-primary-light text-primary-dark rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
             >
               + Add Entry
             </Link>
@@ -244,15 +244,15 @@ function WeightHistoryContent() {
 
         {/* Best Practices Tip */}
         {weightLogs.length === 0 && !loading && (
-          <div className="mt-6 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-6">
+          <div className="mt-6 bg-primary-light border border-primary-light rounded-lg p-6">
             <div className="flex items-start gap-3">
               <span className="text-2xl">💡</span>
               <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-gray-100 mb-2">Start Tracking Your Weight</p>
-                <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                <p className="font-medium text-foreground mb-2">Start Tracking Your Weight</p>
+                <p className="text-sm text-foreground mb-3">
                   Regular weight tracking helps you stay accountable and identify trends in your progress.
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                   <li>Weigh yourself at the same time each day</li>
                   <li>Use the same scale for consistency</li>
                   <li>Weigh yourself before eating or drinking</li>
@@ -260,7 +260,7 @@ function WeightHistoryContent() {
                 </ul>
                 <Link
                   href="/log-weight"
-                  className="inline-block mt-4 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
+                  className="inline-block mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium text-sm"
                 >
                   Log Your First Weight
                 </Link>

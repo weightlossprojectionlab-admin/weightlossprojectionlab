@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { User } from 'firebase/auth'
-import { signIn, signUp, signInWithGoogle, checkSignInMethods } from '@/lib/auth'
+import { signIn, signUp, signInWithGoogle, signInWithGoogleRedirect, checkSignInMethods } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import {
   isBiometricSupported,
@@ -22,7 +22,9 @@ import { determineUserDestination } from '@/lib/auth-router'
 
 export default function AuthPage() {
   const { user: authUser, loading: authLoading } = useAuth()
-  const [isSignUp, setIsSignUp] = useState(false)
+  const searchParams = useSearchParams()
+  const isInvitationFlow = searchParams.get('invitation') === 'true'
+  const [isSignUp, setIsSignUp] = useState(isInvitationFlow) // Default to signup for invitations
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -49,12 +51,31 @@ export default function AuthPage() {
       if (authUser) {
         logger.debug('✅ User already authenticated on /auth page, checking destination...')
 
+        // Check if this is a redirect result from Google Sign-in and handle invitation flow
+        const wasInvitationFlow = localStorage.getItem('isInvitationFlow') === 'true'
+        if (wasInvitationFlow) {
+          localStorage.removeItem('isInvitationFlow')
+          const pendingCode = localStorage.getItem('pendingInvitationCode')
+
+          logger.debug('🔗 Detected invitation flow after OAuth redirect', { pendingCode })
+
+          if (pendingCode) {
+            router.push(`/accept-invitation?code=${pendingCode}`)
+          } else {
+            router.push('/accept-invitation')
+          }
+          return
+        }
+
         try {
           const destination = await determineUserDestination(authUser, '/auth')
 
           if (destination.type === 'dashboard') {
             logger.debug('➡️ Redirecting to dashboard:', { reason: destination.reason })
             router.push('/dashboard')
+          } else if (destination.type === 'patients') {
+            logger.debug('➡️ Redirecting to patients:', { reason: destination.reason })
+            router.push('/patients')
           } else if (destination.type === 'onboarding') {
             logger.debug('➡️ Redirecting to onboarding:', { reason: destination.reason })
             router.push('/onboarding')
@@ -123,6 +144,17 @@ export default function AuthPage() {
         }
       } else {
         user = await signIn(email, password)
+      }
+
+      // For invitation flow, skip biometric setup and go directly to accept invitation
+      if (isInvitationFlow && isSignUp) {
+        const pendingCode = localStorage.getItem('pendingInvitationCode')
+        if (pendingCode) {
+          router.push(`/accept-invitation?code=${pendingCode}`)
+        } else {
+          router.push('/accept-invitation')
+        }
+        return
       }
 
       // For signup, show optional biometric setup
@@ -285,7 +317,33 @@ export default function AuthPage() {
     setError('')
 
     try {
+      // Store invitation code before redirect (if in invitation flow)
+      if (isInvitationFlow) {
+        const code = searchParams.get('code')
+        if (code) {
+          localStorage.setItem('pendingInvitationCode', code)
+        }
+        localStorage.setItem('isInvitationFlow', 'true')
+      }
+
+      // Use redirect method for better cross-origin compatibility
+      await signInWithGoogleRedirect()
+      // Redirect method will reload the page, so we don't need to handle user here
+      return
+
+      // Fallback to popup (not reached when using redirect)
       const user = await signInWithGoogle()
+
+      // For invitation flow, redirect to accept invitation page
+      if (isInvitationFlow) {
+        const pendingCode = localStorage.getItem('pendingInvitationCode')
+        if (pendingCode) {
+          router.push(`/accept-invitation?code=${pendingCode}`)
+        } else {
+          router.push('/accept-invitation')
+        }
+        return
+      }
 
       // Use centralized router to determine destination
       // Profile creation is handled automatically by determineUserDestination
@@ -318,7 +376,7 @@ export default function AuthPage() {
       <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-purple-100 px-4 py-8">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </main>
     )
@@ -329,14 +387,18 @@ export default function AuthPage() {
       <div className="w-full max-w-md space-y-8">
         {/* Header */}
         <div className="text-center">
-          <Link href="/" className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <Link href="/" className="text-2xl font-bold text-foreground">
             WLPL
           </Link>
           <h2 className="mt-4">
-            {isSignUp ? 'Create your account' : 'Sign in to your account'}
+            {isInvitationFlow
+              ? 'Create account to accept invitation'
+              : (isSignUp ? 'Create your account' : 'Sign in to your account')}
           </h2>
-          <p className="mt-2 text-body-sm text-gray-600 dark:text-gray-400">
-            Track your weight loss journey with AI-powered insights
+          <p className="mt-2 text-body-sm text-muted-foreground">
+            {isInvitationFlow
+              ? 'Sign up to view and accept your family care invitation'
+              : 'Track your weight loss journey with AI-powered insights'}
           </p>
         </div>
 
@@ -349,7 +411,7 @@ export default function AuthPage() {
 
         {/* Biometric Setup Modal */}
         {showBiometricSetup && signupSuccess && (
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg hover:shadow-md transition-shadow p-6">
+          <div className="bg-card rounded-lg shadow-lg hover:shadow-md transition-shadow p-6">
             <div className="text-center space-y-4">
               <div className="mx-auto w-16 h-16 bg-success-light rounded-full flex items-center justify-center">
                 <span className="text-2xl">✅</span>
@@ -357,7 +419,7 @@ export default function AuthPage() {
 
               <div>
                 <h2>Account Created Successfully!</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                <p className="text-sm text-muted-foreground mt-2">
                   Welcome to WLPL! Your account is ready to use.
                 </p>
               </div>
@@ -382,7 +444,7 @@ export default function AuthPage() {
                   >
                     {biometricLoading ? (
                       <span className="flex items-center justify-center space-x-2">
-                        <div className="animate-spin w-5 h-5 border-2 border-white dark:border-gray-700 border-t-transparent rounded-full" />
+                        <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                         <span>Setting up...</span>
                       </span>
                     ) : (
@@ -523,10 +585,10 @@ export default function AuthPage() {
             {/* OAuth Options */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-gray-700" />
+                <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-white dark:bg-gray-900 px-2 text-gray-600 dark:text-gray-400">Or continue with</span>
+                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
 
@@ -576,7 +638,7 @@ export default function AuthPage() {
         )}
 
         {/* Accessibility Note */}
-        <div className="text-center text-xs text-gray-600 dark:text-gray-400">
+        <div className="text-center text-xs text-muted-foreground">
           <p>Fully accessible • Touch-optimized • Privacy-focused</p>
         </div>
       </div>

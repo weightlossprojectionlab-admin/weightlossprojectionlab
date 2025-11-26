@@ -63,7 +63,7 @@ function PatientFamilyContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title={`Family Access - ${patient?.name || 'Patient'}`}
         subtitle="Manage who can access this patient's records"
@@ -73,14 +73,14 @@ function PatientFamilyContent() {
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         {loading ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">Loading family members...</p>
+            <p className="text-muted-foreground dark:text-muted-foreground">Loading family members...</p>
           </div>
         ) : familyMembers.length === 0 ? (
-          <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
+          <div className="text-center py-12 bg-card rounded-lg border-2 border-border">
+            <p className="text-muted-foreground dark:text-muted-foreground mb-4">
               No family members have access to this patient yet
             </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground">
               Invite family members from the Family page to share access
             </p>
           </div>
@@ -101,14 +101,14 @@ function PatientFamilyContent() {
       {/* Edit Permissions Modal */}
       {editingMember && editPermissions && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  <h2 className="text-2xl font-bold text-foreground">
                     Edit Permissions
                   </h2>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-muted-foreground">
                     {editingMember.name} - {patient?.name}
                   </p>
                 </div>
@@ -117,7 +117,7 @@ function PatientFamilyContent() {
                     setEditingMember(null)
                     setEditPermissions(null)
                   }}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300"
                 >
                   ✕
                 </button>
@@ -128,10 +128,10 @@ function PatientFamilyContent() {
                 onChange={setEditPermissions}
               />
 
-              <div className="flex items-center gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3 mt-6 pt-6 border-t border-border">
                 <button
                   onClick={handleSavePermissions}
-                  className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                  className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
                 >
                   Save Permissions
                 </button>
@@ -140,7 +140,7 @@ function PatientFamilyContent() {
                     setEditingMember(null)
                     setEditPermissions(null)
                   }}
-                  className="px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  className="px-4 py-3 text-muted-foreground hover:bg-muted rounded-lg transition-colors"
                 >
                   Cancel
                 </button>

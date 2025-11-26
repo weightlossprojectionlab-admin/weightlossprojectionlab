@@ -104,14 +104,14 @@ export function RecipeWithProductMatching({ recipe, onClose }: RecipeWithProduct
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-400">Finding products at local stores...</p>
+                <p className="text-muted-foreground">Finding products at local stores...</p>
               </div>
             </div>
           )}
 
           {/* Error State */}
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
               <p className="text-red-800 dark:text-red-200">{error}</p>
             </div>
           )}
@@ -124,7 +124,7 @@ export function RecipeWithProductMatching({ recipe, onClose }: RecipeWithProduct
                 <button
                   onClick={handleAddAllToCart}
                   disabled={addingToCart || result.matches.filter(m => m.matches.length > 0).length === 0}
-                  className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2 px-4 bg-success hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   <ShoppingCartIcon className="h-5 w-5" />
                   <span>
@@ -135,7 +135,7 @@ export function RecipeWithProductMatching({ recipe, onClose }: RecipeWithProduct
                 </button>
                 <button
                   onClick={() => setShowProductMatches(false)}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-foreground rounded-lg font-medium transition-colors"
                 >
                   Hide
                 </button>

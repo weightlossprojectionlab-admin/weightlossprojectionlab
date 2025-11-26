@@ -130,22 +130,22 @@ export function RecipeSuggestions({
   const getUrgencyColor = (urgency: RecipeMatch['urgency']) => {
     switch (urgency) {
       case 'critical':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
+        return 'bg-red-100 dark:bg-red-900/30 text-error-dark border-red-200 dark:border-red-800'
       case 'high':
         return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800'
       case 'medium':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 border-warning-light'
     }
   }
 
   if (recipeMatches.length === 0) {
     return (
-      <div className={`bg-white dark:bg-gray-900 rounded-lg shadow p-6 text-center ${className}`}>
+      <div className={`bg-card rounded-lg shadow p-6 text-center ${className}`}>
         <div className="text-4xl mb-3">🍽️</div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-lg font-semibold text-foreground dark:text-white mb-2">
           No Recipe Suggestions
         </h3>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-muted-foreground">
           You don't have any items expiring soon, or no recipes match your expiring ingredients.
         </p>
       </div>
@@ -156,7 +156,7 @@ export function RecipeSuggestions({
     <div className={className}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+        <h2 className="text-xl font-bold text-foreground dark:text-white">
           Recipe Suggestions
         </h2>
 
@@ -167,7 +167,7 @@ export function RecipeSuggestions({
             const value = e.target.value as 'all' | 'critical' | 'high' | 'medium'
             setUrgencyFilter(value)
           }}
-          className="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-primary focus:border-transparent"
+          className="px-3 py-1 bg-background border border-border dark:border-gray-600 rounded-lg text-sm text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
         >
           <option value="all">All ({recipeMatches.length})</option>
           <option value="critical">
@@ -188,10 +188,10 @@ export function RecipeSuggestions({
           <Link
             key={match.recipe.id}
             href={`/recipes/${match.recipe.id}`}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden group"
+            className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden group"
           >
             {/* Recipe Image */}
-            <div className="relative h-48 bg-gray-200 dark:bg-gray-800">
+            <div className="relative h-48 bg-gray-200">
               {match.recipe.imageUrl ? (
                 <img
                   src={match.recipe.imageUrl}
@@ -214,12 +214,12 @@ export function RecipeSuggestions({
 
             {/* Recipe Info */}
             <div className="p-4">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
+              <h3 className="font-semibold text-foreground dark:text-white mb-2 line-clamp-2">
                 {match.recipe.name}
               </h3>
 
               {/* Recipe Meta */}
-              <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400 mb-3">
+              <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
                 {match.recipe.prepTime && (
                   <div className="flex items-center gap-1">
                     <ClockIcon className="h-4 w-4" />
@@ -236,20 +236,20 @@ export function RecipeSuggestions({
 
               {/* Matching Items */}
               <div>
-                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                <div className="text-xs font-semibold text-foreground mb-1">
                   Uses {match.matchingItems.length} expiring item{match.matchingItems.length !== 1 ? 's' : ''}:
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {match.matchingItems.slice(0, 3).map((item) => (
                     <span
                       key={item.id}
-                      className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-xs rounded"
+                      className="px-2 py-0.5 bg-muted text-xs rounded"
                     >
                       {item.productName}
                     </span>
                   ))}
                   {match.matchingItems.length > 3 && (
-                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-xs rounded">
+                    <span className="px-2 py-0.5 bg-muted text-xs rounded">
                       +{match.matchingItems.length - 3} more
                     </span>
                   )}

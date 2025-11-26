@@ -14,18 +14,18 @@ export function WeightTrendChart({ data, targetWeight, loading }: WeightTrendCha
   const { resolvedTheme } = useTheme()
   if (loading) {
     return (
-      <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse flex items-center justify-center">
-        <p className="text-gray-600 dark:text-gray-400">Loading chart...</p>
+      <div className="w-full h-64 bg-muted rounded-lg animate-pulse flex items-center justify-center">
+        <p className="text-muted-foreground">Loading chart...</p>
       </div>
     )
   }
 
   if (data.length === 0) {
     return (
-      <div className="w-full h-64 bg-gray-50 dark:bg-gray-950 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
+      <div className="w-full h-64 bg-background rounded-lg border-2 border-dashed border-border flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">No weight data available</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Log your weight to see your progress!</p>
+          <p className="text-foreground font-medium mb-1">No weight data available</p>
+          <p className="text-sm text-muted-foreground">Log your weight to see your progress!</p>
         </div>
       </div>
     )
@@ -50,11 +50,11 @@ export function WeightTrendChart({ data, targetWeight, loading }: WeightTrendCha
 
   // Theme-aware colors
   const isDark = resolvedTheme === 'dark'
-  const gridColor = isDark ? '#374151' : '#e5e7eb'
-  const axisColor = isDark ? '#9ca3af' : '#6b7280'
-  const tooltipBg = isDark ? '#1f2937' : '#ffffff'
-  const tooltipBorder = isDark ? '#374151' : '#e5e7eb'
-  const tooltipText = isDark ? '#f9fafb' : '#111827'
+  const gridColor = 'hsl(var(--border))'
+  const axisColor = 'hsl(var(--muted-foreground))'
+  const tooltipBg = 'hsl(var(--card))'
+  const tooltipBorder = 'hsl(var(--border))'
+  const tooltipText = 'hsl(var(--card-foreground))'
 
   return (
     <div className="w-full">
@@ -86,12 +86,12 @@ export function WeightTrendChart({ data, targetWeight, loading }: WeightTrendCha
           {targetWeight && (
             <ReferenceLine
               y={targetWeight}
-              stroke="#8b5cf6"
+              stroke="hsl(var(--primary))"
               strokeDasharray="5 5"
               label={{
                 value: `Goal: ${targetWeight} lbs`,
                 position: 'right',
-                fill: '#8b5cf6',
+                fill: 'hsl(var(--primary))',
                 fontSize: 12
               }}
             />
@@ -101,9 +101,9 @@ export function WeightTrendChart({ data, targetWeight, loading }: WeightTrendCha
           <Line
             type="monotone"
             dataKey="weight"
-            stroke="#8b5cf6"
+            stroke="hsl(var(--primary))"
             strokeWidth={3}
-            dot={{ fill: '#8b5cf6', r: 4 }}
+            dot={{ fill: 'hsl(var(--primary))', r: 4 }}
             activeDot={{ r: 6 }}
           />
         </LineChart>
@@ -112,13 +112,13 @@ export function WeightTrendChart({ data, targetWeight, loading }: WeightTrendCha
       {/* Legend */}
       <div className="flex items-center justify-center gap-6 mt-4 text-sm">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-1 bg-[#8b5cf6] rounded" />
-          <span className="text-gray-900 dark:text-gray-100">Weight Trend</span>
+          <div className="w-4 h-1 bg-primary rounded" />
+          <span className="text-foreground">Weight Trend</span>
         </div>
         {targetWeight && (
           <div className="flex items-center gap-2">
-            <div className="w-4 h-1 bg-[#8b5cf6] border-t-2 border-dashed" />
-            <span className="text-gray-900 dark:text-gray-100">Goal Weight</span>
+            <div className="w-4 h-1 bg-primary border-t-2 border-dashed" />
+            <span className="text-foreground">Goal Weight</span>
           </div>
         )}
       </div>

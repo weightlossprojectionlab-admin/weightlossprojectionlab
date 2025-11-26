@@ -63,8 +63,8 @@ export function SmartSuggestions({
     <div className={`bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 rounded-lg p-4 ${className}`}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
-        <LightBulbIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-        <h3 className="font-semibold text-gray-900 dark:text-white">
+        <LightBulbIcon className="h-5 w-5 text-secondary" />
+        <h3 className="font-semibold text-foreground dark:text-white">
           Smart Suggestions
         </h3>
       </div>
@@ -75,8 +75,8 @@ export function SmartSuggestions({
           onClick={() => setActiveTab('dueToBuy')}
           className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             activeTab === 'dueToBuy'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+              ? 'bg-secondary text-white'
+              : 'bg-background dark:bg-gray-700 text-foreground hover:bg-muted dark:hover:bg-gray-600'
           }`}
         >
           <div className="flex items-center justify-center gap-1">
@@ -88,8 +88,8 @@ export function SmartSuggestions({
           onClick={() => setActiveTab('frequent')}
           className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             activeTab === 'frequent'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+              ? 'bg-secondary text-white'
+              : 'bg-background dark:bg-gray-700 text-foreground hover:bg-muted dark:hover:bg-gray-600'
           }`}
         >
           <div className="flex items-center justify-center gap-1">
@@ -103,19 +103,19 @@ export function SmartSuggestions({
       <div className="space-y-2">
         {activeTab === 'dueToBuy' && dueToBuy.length > 0 && (
           <>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+            <p className="text-xs text-muted-foreground mb-2">
               Based on your purchase history
             </p>
             {dueToBuy.map((item) => (
               <div
                 key={item.item.id}
-                className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                className="flex items-center justify-between p-3 bg-background dark:bg-gray-700 rounded-lg border border-border dark:border-gray-600"
               >
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="font-medium text-foreground dark:text-white">
                     {item.item.productName}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     Usually bought every {item.expectedDays} days
                     {' · '}
                     {item.daysSinceLastPurchase} days since last purchase
@@ -124,7 +124,7 @@ export function SmartSuggestions({
                 <button
                   onClick={() => handleAddItem(item.item.productName)}
                   disabled={adding === item.item.productName}
-                  className="ml-3 p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50"
+                  className="ml-3 p-2 text-secondary hover:bg-secondary-light dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50"
                   aria-label={`Add ${item.item.productName} to shopping list`}
                 >
                   <PlusIcon className="h-5 w-5" />
@@ -136,19 +136,19 @@ export function SmartSuggestions({
 
         {activeTab === 'frequent' && frequentPairs.length > 0 && (
           <>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+            <p className="text-xs text-muted-foreground mb-2">
               Often bought with items on your list
             </p>
             {frequentPairs.map((pair, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                className="flex items-center justify-between p-3 bg-background dark:bg-gray-700 rounded-lg border border-border dark:border-gray-600"
               >
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="font-medium text-foreground dark:text-white">
                     {pair.productName}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                  <div className="text-xs text-muted-foreground">
                     Bought together {pair.coOccurrences} times
                     {' · '}
                     {Math.round(pair.confidence * 100)}% confidence
@@ -157,7 +157,7 @@ export function SmartSuggestions({
                 <button
                   onClick={() => handleAddItem(pair.productName)}
                   disabled={adding === pair.productName}
-                  className="ml-3 p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50"
+                  className="ml-3 p-2 text-secondary hover:bg-secondary-light dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50"
                   aria-label={`Add ${pair.productName} to shopping list`}
                 >
                   <PlusIcon className="h-5 w-5" />
@@ -168,13 +168,13 @@ export function SmartSuggestions({
         )}
 
         {activeTab === 'dueToBuy' && dueToBuy.length === 0 && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground text-center py-4">
             No suggestions yet. Purchase more items to see patterns!
           </p>
         )}
 
         {activeTab === 'frequent' && frequentPairs.length === 0 && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground text-center py-4">
             Add items to your list to see suggestions
           </p>
         )}

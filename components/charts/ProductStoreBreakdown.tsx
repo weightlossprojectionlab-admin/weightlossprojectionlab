@@ -15,15 +15,15 @@ export function ProductStoreBreakdown({ data }: ProductStoreBreakdownProps) {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-        <XAxis dataKey="store" stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
-        <YAxis stroke="#9ca3af" tick={{ fill: '#9ca3af' }} />
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+        <XAxis dataKey="store" stroke="hsl(var(--muted-foreground))" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+        <YAxis stroke="hsl(var(--muted-foreground))" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
         <Tooltip
-          contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '0.5rem' }}
-          labelStyle={{ color: '#f3f4f6' }}
-          itemStyle={{ color: '#f3f4f6' }}
+          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+          labelStyle={{ color: 'hsl(var(--card-foreground))' }}
+          itemStyle={{ color: 'hsl(var(--card-foreground))' }}
         />
-        <Bar dataKey="scans" fill="#10b981" name="Scans" />
+        <Bar dataKey="scans" fill="hsl(var(--success))" name="Scans" />
       </BarChart>
     </ResponsiveContainer>
   )

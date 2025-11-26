@@ -20,6 +20,7 @@ interface UseInvitationsReturn {
   acceptInvitation: (invitationId: string) => Promise<FamilyMember>
   declineInvitation: (invitationId: string) => Promise<void>
   revokeInvitation: (invitationId: string) => Promise<void>
+  resendInvitation: (invitationId: string) => Promise<void>
 }
 
 export function useInvitations(autoFetch = true): UseInvitationsReturn {
@@ -78,6 +79,9 @@ export function useInvitations(autoFetch = true): UseInvitationsReturn {
         )
 
         const familyMember = await medicalOperations.family.acceptInvitation(invitationId)
+
+        // Refresh all invitations to show updated status in sent invitations
+        await fetchInvitations()
 
         toast.success('Invitation accepted!')
         return familyMember
@@ -140,6 +144,30 @@ export function useInvitations(autoFetch = true): UseInvitationsReturn {
     [fetchInvitations]
   )
 
+  const resendInvitation = useCallback(
+    async (invitationId: string): Promise<void> => {
+      try {
+        await medicalOperations.family.resendInvitation(invitationId)
+
+        // Update emailSentAt timestamp in local state
+        setSentInvitations(prev =>
+          prev.map(inv =>
+            inv.id === invitationId
+              ? { ...inv, emailSentAt: new Date().toISOString() }
+              : inv
+          )
+        )
+
+        toast.success('Invitation email resent')
+      } catch (err: any) {
+        const errorMsg = err.message || 'Failed to resend invitation'
+        toast.error(errorMsg)
+        throw err
+      }
+    },
+    []
+  )
+
   return {
     sentInvitations,
     receivedInvitations,
@@ -149,6 +177,7 @@ export function useInvitations(autoFetch = true): UseInvitationsReturn {
     sendInvitation,
     acceptInvitation,
     declineInvitation,
-    revokeInvitation
+    revokeInvitation,
+    resendInvitation
   }
 }

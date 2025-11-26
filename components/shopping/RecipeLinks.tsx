@@ -35,7 +35,7 @@ export function RecipeLinks({
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground dark:text-muted-foreground">
         <span className="animate-pulse">🍳</span>
         <span>Loading recipes...</span>
       </div>
@@ -45,7 +45,7 @@ export function RecipeLinks({
   // Error state
   if (error) {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400">
+      <div className="flex items-center gap-1.5 text-xs text-error">
         <span>⚠️</span>
         <span>Failed to load recipes</span>
       </div>
@@ -65,7 +65,7 @@ export function RecipeLinks({
           e.stopPropagation()
           setExpanded(!expanded)
         }}
-        className="flex items-center gap-1 text-xs px-2 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+        className="flex items-center gap-1 text-xs px-2 py-1 bg-primary-light text-primary-dark rounded-full hover:bg-primary-light dark:hover:bg-purple-900/30 transition-colors"
       >
         <span>🍳</span>
         <span className="font-medium">{recipeIds.length} recipe{recipeIds.length > 1 ? 's' : ''}</span>
@@ -86,7 +86,7 @@ export function RecipeLinks({
                 onRecipeClick(primaryRecipeId, primaryRecipe)
               }
             }}
-            className="text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 hover:underline font-medium transition-colors"
+            className="text-primary-dark hover:text-purple-900 dark:hover:text-purple-100 hover:underline font-medium transition-colors"
           >
             {primaryRecipe}
           </button>
@@ -96,7 +96,7 @@ export function RecipeLinks({
                 e.stopPropagation()
                 setExpanded(!expanded)
               }}
-              className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full hover:bg-purple-200 dark:hover:bg-purple-900/40 font-medium transition-colors"
+              className="px-1.5 py-0.5 bg-primary-light text-primary-dark rounded-full hover:bg-purple-200 dark:hover:bg-purple-900/40 font-medium transition-colors"
             >
               +{additionalCount} more
             </button>
@@ -111,7 +111,7 @@ export function RecipeLinks({
             e.stopPropagation()
             setExpanded(!expanded)
           }}
-          className="flex items-center gap-1.5 text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 transition-colors"
+          className="flex items-center gap-1.5 text-primary-dark hover:text-purple-900 dark:hover:text-purple-100 transition-colors"
         >
           <span>🍳</span>
           <span className="font-medium">Used in {recipeIds.length} recipe{recipeIds.length > 1 ? 's' : ''}</span>
@@ -132,7 +132,7 @@ export function RecipeLinks({
                     onRecipeClick(recipeId, recipeName)
                   }
                 }}
-                className="block text-purple-600 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-100 hover:underline transition-colors"
+                className="block text-primary dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-100 hover:underline transition-colors"
               >
                 • {recipeName}
               </button>

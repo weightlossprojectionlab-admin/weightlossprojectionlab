@@ -43,9 +43,9 @@ export default function TrustSafetyAdminPage() {
   if (!isAdmin || !permissions.canViewCases) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
+        <div className="bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
           <h2 className="text-xl font-bold text-red-900 dark:text-red-200 mb-2">Access Denied</h2>
-          <p className="text-red-700 dark:text-red-300">You do not have permission to access the Trust & Safety dashboard.</p>
+          <p className="text-error-dark dark:text-red-300">You do not have permission to access the Trust & Safety dashboard.</p>
         </div>
       </div>
     );
@@ -56,7 +56,7 @@ export default function TrustSafetyAdminPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-dark mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading cases...</p>
+          <p className="text-muted-foreground">Loading cases...</p>
         </div>
       </div>
     );
@@ -65,9 +65,9 @@ export default function TrustSafetyAdminPage() {
   if (error) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <div className="bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <h2 className="text-red-900 dark:text-red-200 font-semibold mb-2">Error Loading Cases</h2>
-          <p className="text-red-700 dark:text-red-300">{error}</p>
+          <p className="text-error-dark dark:text-red-300">{error}</p>
         </div>
       </div>
     );
@@ -78,7 +78,7 @@ export default function TrustSafetyAdminPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Trust & Safety Dashboard</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Manage disputes and moderation cases</p>
+        <p className="text-muted-foreground mt-1">Manage disputes and moderation cases</p>
       </div>
 
       {/* Layout */}
@@ -103,38 +103,38 @@ export default function TrustSafetyAdminPage() {
             {/* Case Details */}
             <div className="lg:col-span-2 space-y-6">
               {/* Case Info */}
-              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+              <div className="bg-card border border-border rounded-lg p-6">
                 <h2 className="text-xl font-bold mb-4">Case #{selectedCase.id.slice(0, 8)}</h2>
 
                 <div className="space-y-4">
                   <div>
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Reason</div>
-                    <div className="text-base text-gray-900 dark:text-gray-100 capitalize">
+                    <div className="text-sm font-semibold text-muted-foreground mb-1">Reason</div>
+                    <div className="text-base text-foreground capitalize">
                       {selectedCase.reason.replace(/_/g, ' ')}
                     </div>
                   </div>
 
                   <div>
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Filed By</div>
-                    <div className="text-base text-gray-900 dark:text-gray-100">{selectedCase.reporterId}</div>
+                    <div className="text-sm font-semibold text-muted-foreground mb-1">Filed By</div>
+                    <div className="text-base text-foreground">{selectedCase.reporterId}</div>
                   </div>
 
                   <div>
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Against</div>
-                    <div className="text-base text-gray-900 dark:text-gray-100">{selectedCase.targetId}</div>
+                    <div className="text-sm font-semibold text-muted-foreground mb-1">Against</div>
+                    <div className="text-base text-foreground">{selectedCase.targetId}</div>
                   </div>
 
                   <div>
-                    <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Filed On</div>
-                    <div className="text-base text-gray-900 dark:text-gray-100">
+                    <div className="text-sm font-semibold text-muted-foreground mb-1">Filed On</div>
+                    <div className="text-base text-foreground">
                       {toDate(selectedCase.createdAt).toLocaleString()}
                     </div>
                   </div>
 
                   {selectedCase.description && (
                     <div>
-                      <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Description</div>
-                      <div className="text-base text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 p-3 rounded">
+                      <div className="text-sm font-semibold text-muted-foreground mb-1">Description</div>
+                      <div className="text-base text-muted-foreground bg-muted p-3 rounded">
                         {selectedCase.description}
                       </div>
                     </div>
@@ -143,14 +143,14 @@ export default function TrustSafetyAdminPage() {
                   {/* Evidence */}
                   {selectedCase.evidence && selectedCase.evidence.length > 0 && (
                     <div>
-                      <div className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Evidence</div>
+                      <div className="text-sm font-semibold text-muted-foreground mb-2">Evidence</div>
                       <div className="space-y-2">
                         {selectedCase.evidence.map((ev, index) => (
-                          <div key={index} className="bg-gray-100 dark:bg-gray-800 p-3 rounded">
-                            <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase mb-1">
+                          <div key={index} className="bg-muted p-3 rounded">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">
                               {ev.type}
                             </div>
-                            <div className="text-sm text-gray-900 dark:text-gray-100">
+                            <div className="text-sm text-foreground">
                               {JSON.stringify(ev.data, null, 2)}
                             </div>
                           </div>

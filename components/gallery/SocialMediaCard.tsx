@@ -129,7 +129,7 @@ export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false }
             onError={() => setImageError(true)}
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
             <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
@@ -156,11 +156,11 @@ export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false }
       </div>
 
       {/* Info Panel Section - Bottom 35% */}
-      <div className="h-[35%] bg-white dark:bg-gray-900 p-6 flex flex-col justify-center">
+      <div className="h-[35%] bg-card p-6 flex flex-col justify-center">
         {/* Meal Type & Emoji - Prominent */}
         <div className="flex items-center gap-3 mb-4">
           <span className="text-4xl">{emoji}</span>
-          <span className="font-bold text-gray-900 dark:text-gray-100 text-xl">
+          <span className="font-bold text-foreground text-xl">
             {mealTypeDisplay}
           </span>
         </div>
@@ -170,14 +170,14 @@ export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false }
           <div className="text-7xl font-bold text-primary leading-none">
             {photo.calories}
           </div>
-          <div className="text-base text-gray-600 dark:text-gray-400 mt-1">
+          <div className="text-base text-muted-foreground mt-1">
             calories
           </div>
         </div>
 
         {/* Macros (if available) - Supporting Info */}
         {photo.macros && (
-          <div className="flex gap-3 mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+          <div className="flex gap-3 mb-3 text-sm font-semibold text-foreground">
             <span>P: {photo.macros.protein}g</span>
             <span>•</span>
             <span>C: {photo.macros.carbs}g</span>
@@ -187,7 +187,7 @@ export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false }
         )}
 
         {/* Food Items (truncated) - Detail */}
-        <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
+        <div className="text-xs text-muted-foreground line-clamp-1">
           {photo.foodItems.slice(0, 2).join(', ')}
           {photo.foodItems.length > 2 && '...'}
         </div>
@@ -215,7 +215,7 @@ export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false }
       {/* Achievement Badge (top left) */}
       {!showShareOverlay && (
         <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="bg-white/95 dark:bg-gray-900/95 px-3 py-1.5 rounded-full shadow-lg">
+          <div className="bg-background/95/95 px-3 py-1.5 rounded-full shadow-lg">
             <span className="text-xs font-semibold text-primary">My {mealTypeDisplay} 💪</span>
           </div>
         </div>

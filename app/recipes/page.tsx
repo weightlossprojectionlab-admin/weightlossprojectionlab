@@ -78,7 +78,7 @@ export default function RecipeIndexPage() {
         {/* Header with Admin Mode Toggle */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-4 mb-4">
-            <h1 className="text-5xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-5xl font-bold text-foreground">
               Healthy Recipe Collection
             </h1>
             {isAdmin && (
@@ -88,12 +88,12 @@ export default function RecipeIndexPage() {
               />
             )}
           </div>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Browse 28 delicious, macro-friendly recipes. Track them automatically with our AI-powered app.
           </p>
           {isAdminMode && (
             <div className="mt-4 space-y-3">
-              <div className="bg-purple-100 dark:bg-purple-900/20 border border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-200 px-4 py-2 rounded-lg inline-block">
+              <div className="bg-primary-light dark:bg-purple-900/20 border border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-200 px-4 py-2 rounded-lg inline-block">
                 <p className="text-sm font-medium">
                   🔓 Admin Mode Active - Click "Edit Media" on any recipe to upload images/videos
                 </p>
@@ -101,7 +101,7 @@ export default function RecipeIndexPage() {
               <div>
                 <button
                   onClick={() => setShowImportModal(true)}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-lg"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-success text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-lg"
                 >
                   <PlusCircleIcon className="h-5 w-5" />
                   Import Recipe from URL
@@ -112,7 +112,7 @@ export default function RecipeIndexPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 mb-8">
+        <div className="bg-card rounded-lg shadow-lg p-6 mb-8">
           {/* Search */}
           <div className="mb-6">
             <input
@@ -120,13 +120,13 @@ export default function RecipeIndexPage() {
               placeholder="Search recipes, ingredients..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-3 border border-border bg-background text-foreground placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           {/* Meal Type Filter */}
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Meal Type</h3>
+            <h3 className="text-sm font-semibold text-muted-foreground mb-2">Meal Type</h3>
             <div className="flex flex-wrap gap-2">
               {(['all', 'breakfast', 'lunch', 'dinner', 'snack'] as const).map(type => (
                 <button
@@ -135,7 +135,7 @@ export default function RecipeIndexPage() {
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     selectedMealType === type
                       ? 'bg-primary text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      : 'bg-muted text-foreground hover:bg-gray-200'
                   }`}
                 >
                   {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -146,7 +146,7 @@ export default function RecipeIndexPage() {
 
           {/* Dietary Tags Filter */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Dietary Preferences</h3>
+            <h3 className="text-sm font-semibold text-muted-foreground mb-2">Dietary Preferences</h3>
             <div className="flex flex-wrap gap-2">
               {(['vegan', 'vegetarian', 'keto', 'paleo', 'gluten-free', 'dairy-free', 'high-protein', 'low-carb'] as DietaryTag[]).map(tag => (
                 <button
@@ -155,7 +155,7 @@ export default function RecipeIndexPage() {
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     selectedDietaryTags.includes(tag)
                       ? 'bg-primary text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      : 'bg-muted text-foreground hover:bg-gray-200'
                   }`}
                 >
                   {tag}
@@ -169,13 +169,13 @@ export default function RecipeIndexPage() {
         {recipesLoading && (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <span className="ml-3 text-gray-600 dark:text-gray-400">Loading recipes...</span>
+            <span className="ml-3 text-muted-foreground">Loading recipes...</span>
           </div>
         )}
 
         {/* Results Count */}
         {!recipesLoading && (
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-muted-foreground mb-6">
             {filteredRecipes.length} recipe{filteredRecipes.length !== 1 ? 's' : ''} found
           </p>
         )}
@@ -186,7 +186,7 @@ export default function RecipeIndexPage() {
             {filteredRecipes.map(recipe => (
               <div
                 key={recipe.id}
-                className="bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                className="bg-card rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
               >
                 {/* Recipe Image Carousel */}
                 <div className="relative">
@@ -206,16 +206,16 @@ export default function RecipeIndexPage() {
                 {/* Recipe Content */}
                 <div className="p-6">
                   <Link href={`/recipes/${recipe.id}`}>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 hover:text-primary cursor-pointer">
+                    <h3 className="text-xl font-bold text-foreground mb-2 hover:text-primary cursor-pointer">
                       {recipe.name}
                     </h3>
                   </Link>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                     {recipe.description}
                   </p>
 
                   {/* Quick Stats */}
-                  <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-4">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-4">
                     <span>{recipe.calories} cal</span>
                     <span>{recipe.macros.protein}g protein</span>
                     <span>{recipe.prepTime} min</span>
@@ -227,13 +227,13 @@ export default function RecipeIndexPage() {
                       {recipe.dietaryTags.slice(0, 3).map(tag => (
                         <span
                           key={tag}
-                          className="text-xs bg-purple-100 dark:bg-purple-900/20 text-primary px-2 py-1 rounded"
+                          className="text-xs bg-primary-light dark:bg-purple-900/20 text-primary px-2 py-1 rounded"
                         >
                           {tag}
                         </span>
                       ))}
                       {recipe.dietaryTags.length > 3 && (
-                        <span className="text-xs text-gray-600 dark:text-gray-400 px-2 py-1">
+                        <span className="text-xs text-muted-foreground px-2 py-1">
                           +{recipe.dietaryTags.length - 3} more
                         </span>
                       )}
@@ -244,7 +244,7 @@ export default function RecipeIndexPage() {
                   {isAdminMode && (
                     <button
                       onClick={() => setSelectedRecipeForEdit(recipe)}
-                      className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 flex items-center justify-center gap-2"
+                      className="w-full bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-hover flex items-center justify-center gap-2"
                     >
                       <PencilSquareIcon className="h-5 w-5" />
                       Edit Media
@@ -265,8 +265,8 @@ export default function RecipeIndexPage() {
             ))}
           </div>
         ) : !recipesLoading ? (
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-12 text-center">
-            <p className="text-gray-600 dark:text-gray-400 text-lg">No recipes found. Try adjusting your filters.</p>
+          <div className="bg-card rounded-lg shadow-lg p-12 text-center">
+            <p className="text-muted-foreground text-lg">No recipes found. Try adjusting your filters.</p>
           </div>
         ) : null}
 
@@ -278,7 +278,7 @@ export default function RecipeIndexPage() {
           </p>
           <Link
             href="/auth"
-            className="inline-block btn bg-white dark:bg-gray-800 text-primary dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 px-8 py-4 text-lg font-bold rounded-lg shadow-lg"
+            className="inline-block btn bg-background text-primary dark:text-white hover:bg-muted px-8 py-4 text-lg font-bold rounded-lg shadow-lg"
           >
             Start Your Journey
           </Link>

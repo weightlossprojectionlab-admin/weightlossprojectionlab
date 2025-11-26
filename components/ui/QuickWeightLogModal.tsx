@@ -1,21 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { weightLogOperations } from '@/lib/firebase-operations'
+import { medicalOperations } from '@/lib/medical-operations'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
+import type { PatientProfile } from '@/types/medical'
 
 interface QuickWeightLogModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess?: () => void
+  patientId?: string | null  // Optional patient ID for patient-specific logging
 }
 
-export function QuickWeightLogModal({ isOpen, onClose, onSuccess }: QuickWeightLogModalProps) {
+export function QuickWeightLogModal({ isOpen, onClose, onSuccess, patientId }: QuickWeightLogModalProps) {
   const { user } = useAuth()
   const { profile } = useUserProfile()
+  const [patient, setPatient] = useState<PatientProfile | null>(null)
 
   const [weight, setWeight] = useState('')
   const [unit, setUnit] = useState<'lbs' | 'kg'>(profile?.preferences?.units === 'metric' ? 'kg' : 'lbs')
@@ -25,6 +29,20 @@ export function QuickWeightLogModal({ isOpen, onClose, onSuccess }: QuickWeightL
     return today.toISOString().split('T')[0]
   })
   const [loading, setLoading] = useState(false)
+
+  // Fetch patient details if patientId is provided
+  useEffect(() => {
+    if (patientId) {
+      medicalOperations.patients.getPatient(patientId)
+        .then(setPatient)
+        .catch((error) => {
+          logger.error('Failed to fetch patient for weight modal', error)
+          setPatient(null)
+        })
+    } else {
+      setPatient(null)
+    }
+  }, [patientId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,14 +85,25 @@ export function QuickWeightLogModal({ isOpen, onClose, onSuccess }: QuickWeightL
       const [year, month, day] = logDate.split('-').map(Number)
       const logDateTime = new Date(year, month - 1, day, 12, 0, 0, 0) // Local noon
 
-      await weightLogOperations.createWeightLog({
-        weight: parseFloat(weight),
-        unit,
-        dataSource: 'manual',
-        loggedAt: logDateTime.toISOString()
-      })
+      // Use patient-specific API if patientId is provided, otherwise use user's weight log
+      if (patientId) {
+        await medicalOperations.weightLogs.logWeight(patientId, {
+          weight: parseFloat(weight),
+          unit,
+          loggedAt: logDateTime.toISOString(),
+          source: 'manual',
+          tags: []
+        })
+      } else {
+        await weightLogOperations.createWeightLog({
+          weight: parseFloat(weight),
+          unit,
+          dataSource: 'manual',
+          loggedAt: logDateTime.toISOString()
+        })
+      }
 
-      logger.info('Weight logged successfully via quick modal', { weight: parseFloat(weight), unit, date: logDate })
+      logger.info('Weight logged successfully via quick modal', { weight: parseFloat(weight), unit, date: logDate, patientId })
       toast.success(`⚖️ Weight logged: ${weight} ${unit}`)
 
       // Reset form
@@ -96,12 +125,19 @@ export function QuickWeightLogModal({ isOpen, onClose, onSuccess }: QuickWeightL
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6">
+      <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Quick Weight Log</h2>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Quick Weight Log</h2>
+            {patient && (
+              <p className="text-sm text-muted-foreground mt-1">
+                for <span className="font-medium text-foreground">{patient.name}</span>
+              </p>
+            )}
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-gray-200"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -112,7 +148,7 @@ export function QuickWeightLogModal({ isOpen, onClose, onSuccess }: QuickWeightL
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Date Input */}
           <div>
-            <label htmlFor="quick-logDate" className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+            <label htmlFor="quick-logDate" className="block text-sm font-medium text-foreground mb-2">
               Date
             </label>
             <input
@@ -121,17 +157,17 @@ export function QuickWeightLogModal({ isOpen, onClose, onSuccess }: QuickWeightL
               value={logDate}
               onChange={(e) => setLogDate(e.target.value)}
               max={new Date().toISOString().split('T')[0]}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-background text-foreground"
               required
             />
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
               When was this weight measured?
             </p>
           </div>
 
           {/* Weight Input */}
           <div>
-            <label htmlFor="quick-weight" className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+            <label htmlFor="quick-weight" className="block text-sm font-medium text-foreground mb-2">
               Weight
             </label>
             <div className="flex gap-3">
@@ -143,20 +179,20 @@ export function QuickWeightLogModal({ isOpen, onClose, onSuccess }: QuickWeightL
                 step="0.1"
                 min="0"
                 placeholder={`Enter weight in ${unit}`}
-                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                className="flex-1 px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-background text-foreground"
                 required
                 autoFocus
               />
 
               {/* Unit Toggle */}
-              <div className="flex rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden">
+              <div className="flex rounded-lg border border-border overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setUnit('lbs')}
                   className={`px-4 py-3 text-sm font-medium transition-colors ${
                     unit === 'lbs'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      ? 'bg-primary text-white'
+                      : 'bg-background text-foreground hover:bg-background'
                   }`}
                 >
                   lbs
@@ -164,10 +200,10 @@ export function QuickWeightLogModal({ isOpen, onClose, onSuccess }: QuickWeightL
                 <button
                   type="button"
                   onClick={() => setUnit('kg')}
-                  className={`px-4 py-3 text-sm font-medium transition-colors border-l border-gray-300 dark:border-gray-700 ${
+                  className={`px-4 py-3 text-sm font-medium transition-colors border-l border-border ${
                     unit === 'kg'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      ? 'bg-primary text-white'
+                      : 'bg-background text-foreground hover:bg-background'
                   }`}
                 >
                   kg
@@ -182,14 +218,14 @@ export function QuickWeightLogModal({ isOpen, onClose, onSuccess }: QuickWeightL
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-background transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !weight || parseFloat(weight) <= 0}
-              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {loading ? 'Logging...' : 'Log Weight'}
             </button>

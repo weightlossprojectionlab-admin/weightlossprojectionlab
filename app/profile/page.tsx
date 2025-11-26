@@ -23,11 +23,22 @@ import { HealthConnectModal } from '@/components/health/HealthConnectModal'
 import { detectPlatform, getHealthAppForPlatform } from '@/lib/health-sync-utils'
 import { useTheme } from '@/hooks/useTheme'
 import { logger } from '@/lib/logger'
+import { useSubscription } from '@/hooks/useSubscription'
+import { usePatientLimit } from '@/hooks/usePatientLimit'
+import { PlanBadge } from '@/components/subscription/PlanBadge'
+import { UpgradeModal } from '@/components/subscription/UpgradeModal'
+import { usePatients } from '@/hooks/usePatients'
 
 function ProfileContent() {
   const { user } = useAuth()
   const router = useRouter()
   const { confirm, ConfirmDialog } = useConfirm()
+
+  // Subscription state
+  const { subscription, loading: subscriptionLoading } = useSubscription()
+  const { patients } = usePatients()
+  const { current, max, percentage } = usePatientLimit(patients.length)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const { isEnabled: stepTrackingEnabled, enableTracking, disableTracking, isTracking } = useStepTracking()
   const { theme, setTheme } = useTheme()
   const [biometricSupported, setBiometricSupported] = useState(false)
@@ -232,9 +243,9 @@ function ProfileContent() {
   return (
     <>
       <ConfirmDialog />
-      <main className="min-h-screen bg-white dark:bg-gray-900">
+      <main className="min-h-screen bg-card">
         {/* Header */}
-        <header className="bg-white dark:bg-gray-900 shadow-sm">
+        <header className="bg-card shadow-sm">
         <div className="mx-auto max-w-md px-4 py-4">
           <div className="flex items-center space-x-4">
             <Link
@@ -244,7 +255,7 @@ function ProfileContent() {
             >
               ← Back
             </Link>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Profile & Settings</h1>
+            <h1 className="text-xl font-semibold text-foreground">Profile & Settings</h1>
           </div>
         </div>
       </header>
@@ -276,11 +287,11 @@ function ProfileContent() {
 
         {/* Safety Information - MOST IMPORTANT */}
         {profileData && (
-          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm border-2 border-error dark:border-red-800">
+          <div className="bg-card rounded-lg p-6 shadow-sm border-2 border-error dark:border-red-800">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">⚠️ Dietary Information</h2>
-                <p className="text-sm text-error dark:text-red-400">Please confirm (select "None" if you have no restrictions)</p>
+                <h2 className="text-lg font-medium text-foreground">⚠️ Dietary Information</h2>
+                <p className="text-sm text-error">Please confirm (select "None" if you have no restrictions)</p>
               </div>
               {!editMode && (
                 <button
@@ -298,7 +309,7 @@ function ProfileContent() {
                 <div>
                   <label className="text-label block mb-2">
                     Dietary Preferences
-                    <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">(Select all that apply, or "None")</span>
+                    <span className="text-xs text-muted-foreground ml-2">(Select all that apply, or "None")</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -309,8 +320,8 @@ function ProfileContent() {
                       }))}
                       className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                         profileData?.preferences?.dietaryPreferences?.length === 0
-                          ? 'border-success dark:border-green-600 bg-success-light dark:bg-green-900/20 font-bold'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-success/50'
+                          ? 'border-success dark:border-success bg-success-light dark:bg-green-900/20 font-bold'
+                          : 'border-border hover:border-success/50'
                       }`}
                     >
                       ✓ None
@@ -331,8 +342,8 @@ function ProfileContent() {
                         }}
                         className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                           profileData?.preferences?.dietaryPreferences?.includes(pref)
-                            ? 'border-primary bg-purple-100 dark:bg-purple-900/20'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                            ? 'border-primary bg-primary-light dark:bg-purple-900/20'
+                            : 'border-border hover:border-primary/50'
                         }`}
                       >
                         {pref}
@@ -345,7 +356,7 @@ function ProfileContent() {
                 <div>
                   <label className="text-label block mb-2">
                     Food Allergies
-                    <span className="text-xs text-gray-600 dark:text-gray-400 ml-2">(Select all that apply, or "None")</span>
+                    <span className="text-xs text-muted-foreground ml-2">(Select all that apply, or "None")</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -356,8 +367,8 @@ function ProfileContent() {
                       }))}
                       className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                         profileData?.profile?.foodAllergies?.length === 0
-                          ? 'border-success dark:border-green-600 bg-success-light dark:bg-green-900/20 font-bold'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-success/50'
+                          ? 'border-success dark:border-success bg-success-light dark:bg-green-900/20 font-bold'
+                          : 'border-border hover:border-success/50'
                       }`}
                     >
                       ✓ None
@@ -378,8 +389,8 @@ function ProfileContent() {
                         }}
                         className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                           profileData?.profile?.foodAllergies?.includes(allergy)
-                            ? 'border-error dark:border-red-600 bg-error-light dark:bg-red-900/20'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-error/50'
+                            ? 'border-error dark:border-error bg-error-light dark:bg-red-900/20'
+                            : 'border-border hover:border-error/50'
                         }`}
                       >
                         {allergy}
@@ -400,8 +411,8 @@ function ProfileContent() {
                       }))}
                       className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                         profileData?.profile?.healthConditions?.length === 0
-                          ? 'border-success dark:border-green-600 bg-success-light dark:bg-green-900/20 font-bold'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-success/50'
+                          ? 'border-success dark:border-success bg-success-light dark:bg-green-900/20 font-bold'
+                          : 'border-border hover:border-success/50'
                       }`}
                     >
                       ✓ None
@@ -422,8 +433,8 @@ function ProfileContent() {
                         }}
                         className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
                           profileData?.profile?.healthConditions?.includes(condition)
-                            ? 'border-warning dark:border-yellow-600 bg-warning-light dark:bg-yellow-900/20'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-warning/50'
+                            ? 'border-warning dark:border-yellow-600 bg-warning-light'
+                            : 'border-border hover:border-warning/50'
                         }`}
                       >
                         {condition}
@@ -433,7 +444,7 @@ function ProfileContent() {
                 </div>
 
                 {/* Save/Cancel Buttons */}
-                <div className="flex space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex space-x-3 pt-4 border-t border-border">
                   <button
                     onClick={handleSaveProfile}
                     disabled={saving}
@@ -454,7 +465,7 @@ function ProfileContent() {
             ) : (
               <div className="space-y-3 text-sm">
                 <div>
-                  <label className="text-gray-600 dark:text-gray-400 text-xs">Dietary Preferences</label>
+                  <label className="text-muted-foreground text-xs">Dietary Preferences</label>
                   <p className="font-medium">
                     {profileData?.preferences?.dietaryPreferences?.length > 0
                       ? profileData.preferences.dietaryPreferences.join(', ')
@@ -462,7 +473,7 @@ function ProfileContent() {
                   </p>
                 </div>
                 <div>
-                  <label className="text-gray-600 dark:text-gray-400 text-xs">Food Allergies</label>
+                  <label className="text-muted-foreground text-xs">Food Allergies</label>
                   <p className="font-medium">
                     {profileData?.profile?.foodAllergies?.length > 0
                       ? profileData.profile.foodAllergies.join(', ')
@@ -470,7 +481,7 @@ function ProfileContent() {
                   </p>
                 </div>
                 <div>
-                  <label className="text-gray-600 dark:text-gray-400 text-xs">Health Conditions</label>
+                  <label className="text-muted-foreground text-xs">Health Conditions</label>
                   <p className="font-medium">
                     {profileData?.profile?.healthConditions?.length > 0
                       ? profileData.profile.healthConditions.join(', ')
@@ -483,15 +494,15 @@ function ProfileContent() {
         )}
 
         {/* Account Information */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Account Information</h2>
+        <div className="bg-card rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-medium text-foreground mb-4">Account Information</h2>
           <div className="space-y-3">
             <div>
-              <label className="text-sm text-gray-600 dark:text-gray-400">Email</label>
+              <label className="text-sm text-muted-foreground">Email</label>
               <p className="font-medium">{user?.email}</p>
             </div>
             <div>
-              <label className="text-sm text-gray-600 dark:text-gray-400">Account Created</label>
+              <label className="text-sm text-muted-foreground">Account Created</label>
               <p className="font-medium">
                 {user?.metadata?.creationTime ?
                   new Date(user.metadata.creationTime).toLocaleDateString() :
@@ -502,20 +513,96 @@ function ProfileContent() {
           </div>
         </div>
 
+        {/* Subscription Section */}
+        {subscription && !subscriptionLoading && (
+          <div className="bg-card rounded-lg p-6 shadow-sm">
+            <h2 className="text-lg font-medium text-foreground mb-4">Subscription</h2>
+
+            <div className="space-y-4">
+              {/* Current Plan */}
+              <div>
+                <label className="text-sm text-muted-foreground">Current Plan</label>
+                <div className="mt-2">
+                  <PlanBadge
+                    plan={subscription.plan}
+                    addons={subscription.addons}
+                    status={subscription.status}
+                    size="lg"
+                  />
+                </div>
+              </div>
+
+              {/* Usage Stats */}
+              <div>
+                <label className="text-sm text-muted-foreground">Family Members</label>
+                <div className="mt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-bold text-foreground">
+                      {current} of {max}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {percentage}% used
+                    </span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        percentage >= 100 ? 'bg-error' :
+                        percentage >= 80 ? 'bg-warning-dark' :
+                        'bg-success'
+                      }`}
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="text-sm text-muted-foreground">Status</label>
+                <p className={`font-medium capitalize ${
+                  subscription.status === 'active' ? 'text-success' :
+                  subscription.status === 'trialing' ? 'text-warning-dark' :
+                  'text-error'
+                }`}>
+                  {subscription.status}
+                </p>
+              </div>
+
+              {/* Trial Info */}
+              {subscription.trialEndsAt && subscription.status === 'trialing' && (
+                <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 rounded-lg p-3">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    <strong>Trial ends:</strong> {new Date(subscription.trialEndsAt).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+
+              {/* Manage Button */}
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+              >
+                Manage Subscription
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Biometric Authentication Settings */}
         {mounted && (
-          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+          <div className="bg-card rounded-lg p-6 shadow-sm">
+            <h2 className="text-lg font-medium text-foreground mb-4">
               Biometric Authentication
             </h2>
 
             {!biometricSupported ? (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <div className="bg-warning-light border border-warning-light rounded-lg p-4">
                 <div className="flex items-center space-x-3">
                   <span className="text-2xl">⚠️</span>
                   <div>
-                    <p className="font-medium text-yellow-900 dark:text-yellow-100">Not Available</p>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-200">
+                    <p className="font-medium text-warning-dark">Not Available</p>
+                    <p className="text-sm text-yellow-700">
                       Biometric authentication is not supported on this device or browser.
                     </p>
                   </div>
@@ -532,15 +619,15 @@ function ProfileContent() {
                       <p className="font-medium">
                         Touch ID / Face ID
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-muted-foreground">
                         {biometricEnabled ? 'Enabled' : 'Disabled'}
                       </p>
                     </div>
                   </div>
-                  <div className={`w-3 h-3 rounded-full ${biometricEnabled ? 'bg-success' : 'bg-gray-100'}`} />
+                  <div className={`w-3 h-3 rounded-full ${biometricEnabled ? 'bg-success' : 'bg-muted'}`} />
                 </div>
 
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   {biometricEnabled ?
                     'You can sign in using your fingerprint or face recognition.' :
                     'Use your fingerprint or face recognition for quick and secure sign-in.'
@@ -565,7 +652,7 @@ function ProfileContent() {
                     >
                       {loading ? (
                         <span className="flex items-center justify-center space-x-2">
-                          <div className="animate-spin w-5 h-5 border-2 border-white dark:border-gray-700 border-t-transparent rounded-full" />
+                          <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                           <span>Setting up...</span>
                         </span>
                       ) : (
@@ -592,20 +679,20 @@ function ProfileContent() {
         )}
 
         {/* Privacy & Data Settings */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Privacy & Data</h2>
+        <div className="bg-card rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-medium text-foreground mb-4">Privacy & Data</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Data Export</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Download your personal data</p>
+                <p className="text-sm text-muted-foreground">Download your personal data</p>
               </div>
               <button className="btn btn-secondary">
                 📥 Export
               </button>
             </div>
 
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <div className="border-t border-border pt-4">
               <div className="bg-error-light dark:bg-red-900/20 border-2 border-error dark:border-red-800 rounded-lg p-4 mb-3">
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">⚠️</span>
@@ -621,11 +708,11 @@ function ProfileContent() {
               <button
                 onClick={handleResetAllData}
                 disabled={resetLoading}
-                className="btn btn-secondary w-full text-error dark:text-red-400 border-error dark:border-red-600 hover:bg-error-light dark:hover:bg-red-900/20 font-medium"
+                className="btn btn-secondary w-full text-error border-error dark:border-error hover:bg-error-light dark:hover:bg-red-900/20 font-medium"
               >
                 {resetLoading ? (
                   <span className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin w-5 h-5 border-2 border-error dark:border-red-600 border-t-transparent rounded-full" />
+                    <div className="animate-spin w-5 h-5 border-2 border-error dark:border-error border-t-transparent rounded-full" />
                     <span>Resetting...</span>
                   </span>
                 ) : (
@@ -637,8 +724,8 @@ function ProfileContent() {
         </div>
 
         {/* App Settings */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">App Settings</h2>
+        <div className="bg-card rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-medium text-foreground mb-4">App Settings</h2>
           <div className="space-y-4">
             {/* Automatic Step Tracking */}
             <div className="flex items-center justify-between">
@@ -652,7 +739,7 @@ function ProfileContent() {
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   {stepTrackingEnabled ? 'Counting steps in background' : 'Count steps automatically using device sensors'}
                 </p>
               </div>
@@ -663,15 +750,15 @@ function ProfileContent() {
                   checked={stepTrackingEnabled}
                   onChange={handleToggleStepTracking}
                 />
-                <div className="w-11 h-6 bg-gray-100 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-900 after:border-gray-200 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
             {/* Theme Preference */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <div className="border-t border-border pt-4">
               <div className="mb-3">
-                <p className="font-medium text-gray-900 dark:text-gray-100">Theme</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Choose your preferred color scheme</p>
+                <p className="font-medium text-foreground">Theme</p>
+                <p className="text-sm text-muted-foreground">Choose your preferred color scheme</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <button
@@ -679,39 +766,39 @@ function ProfileContent() {
                   className={`
                     flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all
                     ${theme === 'light'
-                      ? 'border-primary bg-purple-50 dark:bg-purple-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                      ? 'border-primary bg-primary-light'
+                      : 'border-border hover:border-primary/50'
                     }
                   `}
                 >
                   <span className="text-2xl mb-2">☀️</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Light</span>
+                  <span className="text-sm font-medium text-foreground">Light</span>
                 </button>
                 <button
                   onClick={() => setTheme('dark')}
                   className={`
                     flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all
                     ${theme === 'dark'
-                      ? 'border-primary bg-purple-50 dark:bg-purple-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                      ? 'border-primary bg-primary-light'
+                      : 'border-border hover:border-primary/50'
                     }
                   `}
                 >
                   <span className="text-2xl mb-2">🌙</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Dark</span>
+                  <span className="text-sm font-medium text-foreground">Dark</span>
                 </button>
                 <button
                   onClick={() => setTheme('system')}
                   className={`
                     flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all
                     ${theme === 'system'
-                      ? 'border-primary bg-purple-50 dark:bg-purple-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                      ? 'border-primary bg-primary-light'
+                      : 'border-border hover:border-primary/50'
                     }
                   `}
                 >
                   <span className="text-2xl mb-2">🔄</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">System</span>
+                  <span className="text-sm font-medium text-foreground">System</span>
                 </button>
               </div>
             </div>
@@ -719,18 +806,18 @@ function ProfileContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Notifications</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Daily reminders and achievements</p>
+                <p className="text-sm text-muted-foreground">Daily reminders and achievements</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" defaultChecked />
-                <div className="w-11 h-6 bg-gray-100 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-900 after:border-gray-200 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Weight Units</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Pounds or kilograms</p>
+                <p className="text-sm text-muted-foreground">Pounds or kilograms</p>
               </div>
               <select className="form-input text-sm">
                 <option value="lbs">Pounds (lbs)</option>
@@ -741,25 +828,25 @@ function ProfileContent() {
         </div>
 
         {/* Health Sync */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm">
+        <div className="bg-card rounded-lg shadow-sm">
           <HealthSyncCard onSetupClick={() => setShowHealthModal(true)} />
         </div>
 
         {/* Sign Out */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
+        <div className="bg-card rounded-lg p-6 shadow-sm">
           <button
             onClick={handleSignOut}
             disabled={signOutLoading}
-            className={`btn btn-secondary w-full text-error dark:text-red-400 border-error dark:border-red-600 hover:bg-error-light dark:hover:bg-red-900/20 inline-flex items-center justify-center space-x-2 ${signOutLoading ? 'cursor-wait' : ''}`}
+            className={`btn btn-secondary w-full text-error border-error dark:border-error hover:bg-error-light dark:hover:bg-red-900/20 inline-flex items-center justify-center space-x-2 ${signOutLoading ? 'cursor-wait' : ''}`}
             aria-label="Sign out of account"
           >
-            {signOutLoading && <Spinner size="sm" className="text-error dark:text-red-400" />}
+            {signOutLoading && <Spinner size="sm" className="text-error" />}
             <span>{signOutLoading ? 'Signing Out...' : '🚪 Sign Out'}</span>
           </button>
         </div>
 
         {/* App Info */}
-        <div className="text-center text-sm text-gray-500 space-y-1">
+        <div className="text-center text-sm text-muted-foreground space-y-1">
           <p>WLPL - Weight Loss Progress Lab</p>
           <p>Version 1.0.0</p>
           <p>Privacy-focused • Secure • Accessible</p>
@@ -772,6 +859,14 @@ function ProfileContent() {
         onClose={() => setShowHealthModal(false)}
         healthApp={healthApp}
         onEnableSync={handleEnableHealthSync}
+      />
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentPlan={subscription?.plan}
+        suggestedUpgrade="addon"
       />
     </main>
     </>

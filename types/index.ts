@@ -34,8 +34,96 @@ export interface User {
   profile?: UserProfile
   goals?: UserGoals
   preferences: UserPreferences
+  subscription?: UserSubscription  // Subscription plan and features
   createdAt: Date
   lastActiveAt: Date
+}
+
+// UNIFIED PRD - User Modes (from onboarding)
+export type UserMode = 'single' | 'household' | 'caregiver'
+
+export type PrimaryRole =
+  | 'myself'
+  | 'family'
+  | 'caregiver'
+
+export type FeaturePreference =
+  | 'weight_loss'
+  | 'meal_planning'
+  | 'medical_tracking'
+  | 'caregiving'
+  | 'shopping_automation'
+  | 'recipes'
+  | 'fitness'
+  | 'vitals'
+  | 'medications'
+
+export type HouseholdType =
+  | 'alone'
+  | 'partner'
+  | 'family'
+  | 'roommates'
+  | 'dependents'
+
+export type KitchenMode =
+  | 'self'
+  | 'others'
+  | 'shared'
+  | 'i_shop'
+  | 'i_dont_shop'
+  | 'delivery'
+  | 'meal_kits'
+
+export type MealLoggingOption =
+  | 'photo'
+  | 'manual'
+  | 'both'
+  | 'with_reminders'
+
+// For backward compatibility and single-select scenarios
+export type MealLoggingMode = MealLoggingOption | MealLoggingOption[]
+
+export type AutomationLevel = 'yes' | 'no'
+
+// Onboarding V2 Data (UNIFIED PRD)
+export interface OnboardingAnswers {
+  userMode: UserMode
+  primaryRole: PrimaryRole
+  featurePreferences: FeaturePreference[]
+  householdType?: HouseholdType // Optional - legacy field, no longer collected
+  kitchenMode: KitchenMode
+  mealLoggingMode: MealLoggingMode
+  automationLevel: AutomationLevel
+  addFamilyNow: boolean
+  completedAt: Date
+}
+
+// Person-Centric Onboarding (for family members, care recipients, pets)
+export type PersonRole = 'self' | 'family_member' | 'care_recipient' | 'caregiver' | 'pet'
+export type AutomationLevelExtended = 'light' | 'normal' | 'high'
+
+export interface PersonOnboardingAnswers {
+  personId: string // userId or patientId
+  role: PersonRole
+  goals: string[] // ['weight_loss', 'meal_planning', ...]
+  conditions: string[] // ['diabetes', 'hypertension', ...]
+  medicationsKnown: boolean
+  trackingPreferences: {
+    meals: boolean
+    weight: boolean
+    vitals: string[] // ['blood_pressure', 'blood_sugar', ...]
+    meds: boolean
+  }
+  carePreferences: {
+    automationLevel: AutomationLevelExtended
+    notify: string[] // caregiver userIds
+  }
+  environment: {
+    livesWithUser: boolean
+    managesShopping: boolean
+  }
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface UserPreferences {
@@ -59,6 +147,41 @@ export interface UserPreferences {
     snackWindows?: string[] // Optional snack times e.g., ["10:00", "15:00", "21:00"]
   }
   weightCheckInFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+  primaryPatientId?: string // Default patient to show in dashboard (handles non-self accounts)
+
+  // UNIFIED PRD - Onboarding V2
+  onboardingAnswers?: OnboardingAnswers
+  userMode?: UserMode  // Cached for quick access
+
+  // Family Account Management
+  isAccountOwner?: boolean // True if this user is the Account Owner (super admin) of their family
+  accountOwnerSince?: string // ISO 8601 - when they became Account Owner
+}
+
+// Subscription & Feature Gating
+export interface UserSubscription {
+  // Base plan tier
+  plan: 'free' | 'single' | 'family'
+
+  // Feature add-ons (can be purchased separately)
+  addons: {
+    familyFeatures: boolean  // Advanced tracking, sharing, analytics, AI coaching
+    // Future addons can be added here
+  }
+
+  // Subscription status
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'expired'
+  currentPeriodStart: Date
+  currentPeriodEnd: Date | null  // null means no expiration (grandfathered users)
+  trialEndsAt?: Date
+
+  // Limits based on plan
+  maxPatients: number  // 1 for single, 10 for family, 999 for admin
+
+  // Payment integration (future use with Stripe)
+  stripeSubscriptionId?: string
+  stripePriceId?: string
+  addonSubscriptionIds?: Record<string, string>  // Map of addon name to Stripe subscription ID
 }
 
 // Biometric Authentication
@@ -261,45 +384,6 @@ export interface StepLog {
 }
 
 // Health Vitals Tracking (HIPAA-sensitive data)
-export interface BloodSugarLog {
-  id: string
-  userId: string
-  glucoseLevel: number // mg/dL
-  measurementType: 'fasting' | 'before-meal' | 'after-meal' | 'bedtime' | 'random'
-  mealContext?: string // Optional: which meal it was related to
-  loggedAt: Date
-  dataSource: 'manual' | 'bluetooth-meter' // Data provenance
-  deviceId?: string // Bluetooth device ID if synced
-  notes?: string
-}
-
-export interface BloodPressureLog {
-  id: string
-  userId: string
-  systolic: number // mmHg
-  diastolic: number // mmHg
-  heartRate?: number // bpm (optional)
-  measurementContext: 'morning' | 'afternoon' | 'evening' | 'post-exercise' | 'other'
-  loggedAt: Date
-  dataSource: 'manual' | 'bluetooth-monitor' // Data provenance
-  deviceId?: string // Bluetooth device ID if synced
-  notes?: string
-}
-
-export interface ExerciseLog {
-  id: string
-  userId: string
-  activityType: 'walking' | 'swimming' | 'cycling' | 'yoga' | 'strength' | 'chair-exercises' | 'stretching' | 'water-aerobics' | 'other'
-  duration: number // minutes
-  intensity: 'low' | 'moderate' | 'high'
-  caloriesBurned?: number // Optional estimate
-  heartRateAvg?: number // Average heart rate during activity (bpm)
-  loggedAt: Date
-  dataSource: 'manual' | 'bluetooth-tracker' // Data provenance
-  deviceId?: string // Fitness tracker device ID if synced
-  notes?: string
-}
-
 // Health Vitals Summary (for admin analytics dashboard)
 export interface HealthVitalsSummary {
   latestBloodSugar?: {

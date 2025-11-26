@@ -10,8 +10,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { vitalSignFormSchema } from '@/lib/validations/medical'
-import { authorizePatientAccess } from '@/lib/rbac-middleware'
-import type { VitalSign, AuthorizationResult } from '@/types/medical'
+import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
+import type { VitalSign } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
 
 // GET /api/patients/[patientId]/vitals - List vital signs with optional filtering
@@ -23,13 +24,26 @@ export async function GET(
     const { patientId } = await params
     const { searchParams } = new URL(request.url)
 
-    // Check authorization - requires viewVitals permission for family members
-    const authResult = await authorizePatientAccess(request, patientId, 'viewVitals')
+    // Check authorization and get owner userId
+    const authResult = await assertPatientAccess(request, patientId, 'viewVitals')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }
 
-    const { userId, role } = authResult as AuthorizationResult
+    const { userId, ownerUserId, role } = authResult as AssertPatientAccessResult
+
+    // Check rate limit (per-user)
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /patients/[id]/vitals GET] Rate limit exceeded', { userId, patientId })
+      return NextResponse.json(
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
+      )
+    }
 
     // Parse query parameters
     const type = searchParams.get('type')
@@ -39,6 +53,7 @@ export async function GET(
 
     logger.debug('[API /patients/[id]/vitals GET] Fetching vitals', {
       userId,
+      ownerUserId,
       patientId,
       role,
       type,
@@ -46,33 +61,6 @@ export async function GET(
       startDate,
       endDate
     })
-
-    // Get patient owner's userId (for database query)
-    let ownerUserId = userId
-    if (role === 'family') {
-      // Find the patient's owner
-      const patientSnapshot = await adminDb
-        .collectionGroup('patients')
-        .where('__name__', '==', patientId)
-        .limit(1)
-        .get()
-
-      if (patientSnapshot.empty) {
-        return NextResponse.json({ success: false, error: 'Patient not found' }, { status: 404 })
-      }
-
-      // Extract owner userId from the path
-      const patientDocRef = patientSnapshot.docs[0].ref
-      ownerUserId = patientDocRef.parent.parent!.id
-    }
-
-    // Ensure ownerUserId is defined
-    if (!ownerUserId) {
-      return NextResponse.json(
-        { success: false, error: 'Unable to determine patient owner' },
-        { status: 400 }
-      )
-    }
 
     // Get patient reference
     const patientRef = adminDb
@@ -114,6 +102,7 @@ export async function GET(
 
     logger.info('[API /patients/[id]/vitals GET] Vitals fetched successfully', {
       userId,
+      ownerUserId,
       patientId,
       count: vitals.length
     })
@@ -140,52 +129,30 @@ export async function POST(
   try {
     const { patientId } = await params
 
-    // Check authorization - requires logVitals permission for family members
-    const authResult = await authorizePatientAccess(request, patientId, 'logVitals')
+    // Check authorization and get owner userId
+    const authResult = await assertPatientAccess(request, patientId, 'logVitals')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }
 
-    const { userId, role } = authResult as AuthorizationResult
+    const { userId, ownerUserId, role } = authResult as AssertPatientAccessResult
 
-    // Ensure userId is defined
-    if (!userId) {
+    // Check rate limit (per-user)
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /patients/[id]/vitals POST] Rate limit exceeded', { userId, patientId })
       return NextResponse.json(
-        { success: false, error: 'User ID not found in authorization result' },
-        { status: 401 }
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
       )
     }
 
     // Parse and validate request body
     const body = await request.json()
-    logger.debug('[API /patients/[id]/vitals POST] Request body', { body, userId, role })
-
-    // Get patient owner's userId (for database query)
-    let ownerUserId = userId
-    if (role === 'family') {
-      // Find the patient's owner
-      const patientSnapshot = await adminDb
-        .collectionGroup('patients')
-        .where('__name__', '==', patientId)
-        .limit(1)
-        .get()
-
-      if (patientSnapshot.empty) {
-        return NextResponse.json({ success: false, error: 'Patient not found' }, { status: 404 })
-      }
-
-      // Extract owner userId from the path
-      const patientDocRef = patientSnapshot.docs[0].ref
-      ownerUserId = patientDocRef.parent.parent!.id
-    }
-
-    // Ensure ownerUserId is defined
-    if (!ownerUserId) {
-      return NextResponse.json(
-        { success: false, error: 'Unable to determine patient owner' },
-        { status: 400 }
-      )
-    }
+    logger.debug('[API /patients/[id]/vitals POST] Request body', { body, userId, ownerUserId, role })
 
     // Get patient reference
     const patientRef = adminDb
@@ -230,6 +197,7 @@ export async function POST(
 
     logger.info('[API /patients/[id]/vitals POST] Vital sign logged successfully', {
       userId,
+      ownerUserId,
       patientId,
       vitalId,
       type: newVital.type

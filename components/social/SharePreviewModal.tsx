@@ -86,9 +86,9 @@ export function SharePreviewModal({
   const platforms = [
     { id: 'instagram', name: 'Instagram', icon: '📸', color: 'bg-gradient-to-br from-purple-500 to-pink-500' },
     { id: 'tiktok', name: 'TikTok', icon: '🎵', color: 'bg-black' },
-    { id: 'facebook', name: 'Facebook', icon: '📘', color: 'bg-blue-600' },
+    { id: 'facebook', name: 'Facebook', icon: '📘', color: 'bg-secondary' },
     { id: 'twitter', name: 'X', icon: '𝕏', color: 'bg-black' },
-    { id: 'pinterest', name: 'Pinterest', icon: '📍', color: 'bg-red-600' }
+    { id: 'pinterest', name: 'Pinterest', icon: '📍', color: 'bg-error' }
   ] as const
 
   return (
@@ -97,18 +97,18 @@ export function SharePreviewModal({
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-card rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Share Preview</h3>
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h3 className="text-xl font-bold text-foreground">Share Preview</h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            className="p-2 hover:bg-muted rounded-full transition-colors"
             aria-label="Close"
           >
-            <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -117,9 +117,9 @@ export function SharePreviewModal({
         {/* Image Preview */}
         <div className="p-6">
           <div className="mb-4">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Preview (9:16 format)</p>
+            <p className="text-sm font-medium text-foreground mb-3">Preview (9:16 format)</p>
             {imageUrl && (
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex justify-center">
+              <div className="bg-muted rounded-lg overflow-hidden flex justify-center">
                 <img
                   src={imageUrl}
                   alt="Share preview"
@@ -132,27 +132,27 @@ export function SharePreviewModal({
           {/* Caption */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Caption</p>
+              <p className="text-sm font-medium text-foreground">Caption</p>
               <button
                 onClick={handleCopyCaption}
                 className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
                   copied
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    ? 'bg-success-light0 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-foreground hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
                 {copied ? '✓ Copied' : 'Copy Caption'}
               </button>
             </div>
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{caption}</p>
+            <div className="p-3 bg-background rounded-lg border border-border">
+              <p className="text-sm text-foreground whitespace-pre-wrap">{caption}</p>
             </div>
           </div>
 
           {/* Platform Selection */}
           {onShare && (
             <div className="mb-6">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Quick Share</p>
+              <p className="text-sm font-medium text-foreground mb-3">Quick Share</p>
               <div className="grid grid-cols-5 gap-2">
                 {platforms.map((platform) => (
                   <button
@@ -182,14 +182,14 @@ export function SharePreviewModal({
             </button>
             <button
               onClick={onClose}
-              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+              className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-foreground rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
             >
               Cancel
             </button>
           </div>
 
           {/* Helper Text */}
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
+          <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-4 text-center">
             For Instagram & TikTok: Download the image, copy the caption, and paste when posting
           </p>
         </div>

@@ -275,16 +275,16 @@ export function SequentialShoppingFlow({
     <>
       {/* Main Modal */}
       <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-card rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
           {/* Progress Header */}
-          <div className="sticky top-0 bg-white dark:bg-gray-900 border-b dark:border-gray-700 p-4 z-10">
+          <div className="sticky top-0 bg-card border-b p-4 z-10">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="font-bold text-gray-900 dark:text-gray-100 truncate flex-1 mr-2">
+              <h2 className="font-bold text-foreground truncate flex-1 mr-2">
                 {item.productName}
               </h2>
               <button
                 onClick={onCancel}
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                className="text-muted-foreground hover:text-foreground dark:hover:text-gray-300"
               >
                 ✕
               </button>
@@ -303,7 +303,7 @@ export function SequentialShoppingFlow({
                     />
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                   Step {currentStepIndex + 1} of {steps.length}
                 </p>
               </>
@@ -347,10 +347,10 @@ export function SequentialShoppingFlow({
             {currentStep === 'ITEM_NOT_FOUND' && (
               <div className="text-center">
                 <div className="text-6xl mb-4">😕</div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                <h3 className="text-xl font-bold text-foreground mb-2">
                   {item.productName} not found
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                <p className="text-muted-foreground mb-6">
                   Can't find the exact item? Try scanning a substitution or ask your family for help.
                 </p>
 
@@ -365,7 +365,7 @@ export function SequentialShoppingFlow({
 
                   <button
                     onClick={() => setShowFamilyChat(true)}
-                    className="w-full py-3 px-4 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-3 px-4 bg-purple-500 hover:bg-primary text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                   >
                     <span>💬</span>
                     <span>Ask Family for Help</span>
@@ -373,7 +373,7 @@ export function SequentialShoppingFlow({
 
                   <button
                     onClick={handleSkipItem}
-                    className="w-full py-3 px-4 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg font-medium transition-colors"
+                    className="w-full py-3 px-4 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-foreground rounded-lg font-medium transition-colors"
                   >
                     Skip This Item
                   </button>
@@ -419,10 +419,10 @@ export function SequentialShoppingFlow({
             {currentStep === 'COMPLETE' && (
               <div className="text-center py-8">
                 <div className="text-6xl mb-4">✅</div>
-                <h3 className="text-xl font-bold text-green-600 dark:text-green-400 mb-2">
+                <h3 className="text-xl font-bold text-success dark:text-green-400 mb-2">
                   Purchase Complete!
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-muted-foreground">
                   {item.productName} added to inventory
                 </p>
               </div>
@@ -435,7 +435,7 @@ export function SequentialShoppingFlow({
       {currentStep !== 'COMPLETE' && (
         <button
           onClick={() => setShowFamilyChat(true)}
-          className="fixed bottom-20 right-4 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-xl z-[60] flex items-center justify-center transition-colors"
+          className="fixed bottom-20 right-4 w-14 h-14 bg-primary hover:bg-primary-hover text-white rounded-full shadow-xl z-[60] flex items-center justify-center transition-colors"
           title="Ask Family"
         >
           <span className="text-2xl">💬</span>
@@ -445,24 +445,24 @@ export function SequentialShoppingFlow({
       {/* Family Chat Drawer (Coming Soon) */}
       {showFamilyChat && (
         <div className="fixed inset-0 z-[70] bg-black/50 flex items-end justify-center">
-          <div className="bg-white dark:bg-gray-900 rounded-t-xl shadow-xl w-full max-w-md p-6 animate-slide-up">
+          <div className="bg-card rounded-t-xl shadow-xl w-full max-w-md p-6 animate-slide-up">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              <h3 className="text-lg font-bold text-foreground">
                 Ask Family
               </h3>
               <button
                 onClick={() => setShowFamilyChat(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-muted-foreground hover:text-foreground"
               >
                 ✕
               </button>
             </div>
             <div className="text-center py-8">
               <div className="text-5xl mb-4">👨‍👩‍👧‍👦</div>
-              <p className="text-gray-600 dark:text-gray-400 mb-2">
+              <p className="text-muted-foreground mb-2">
                 Family collaboration coming soon!
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500">
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                 Chat with family members about shopping items in real-time.
               </p>
             </div>

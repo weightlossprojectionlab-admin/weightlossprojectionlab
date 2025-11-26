@@ -51,7 +51,7 @@ export const NotificationPrompt = memo(function NotificationPrompt({ userId }: N
           <button
             onClick={requestPermission}
             disabled={loading}
-            className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 font-semibold px-6 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-background text-secondary font-semibold px-6 py-2 rounded-lg hover:bg-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? 'Enabling...' : 'Enable Notifications'}
           </button>
@@ -94,7 +94,7 @@ export const NotificationSettings = memo(function NotificationSettings({ userId 
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
+    <div className="bg-card rounded-lg p-6">
       <h3 className="font-bold text-lg mb-4">Notification Preferences</h3>
 
       <div className="space-y-4">
@@ -102,7 +102,7 @@ export const NotificationSettings = memo(function NotificationSettings({ userId 
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">Enable Notifications</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Receive all notifications</p>
+            <p className="text-sm text-muted-foreground">Receive all notifications</p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input
@@ -112,7 +112,7 @@ export const NotificationSettings = memo(function NotificationSettings({ userId 
               onChange={(e) => updateSettings({ enabled: e.target.checked })}
               disabled={loading}
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-900 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
           </label>
         </div>
 
@@ -122,7 +122,7 @@ export const NotificationSettings = memo(function NotificationSettings({ userId 
             <div className="flex items-center justify-between border-t pt-4">
               <div>
                 <p className="font-medium">Meal Reminders</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Reminders to log meals</p>
+                <p className="text-sm text-muted-foreground">Reminders to log meals</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -132,14 +132,14 @@ export const NotificationSettings = memo(function NotificationSettings({ userId 
                   onChange={(e) => updateSettings({ mealReminders: e.target.checked })}
                   disabled={loading}
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-900 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Encouragement</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Motivational messages</p>
+                <p className="text-sm text-muted-foreground">Motivational messages</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -149,14 +149,14 @@ export const NotificationSettings = memo(function NotificationSettings({ userId 
                   onChange={(e) => updateSettings({ encouragement: e.target.checked })}
                   disabled={loading}
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-900 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Milestones</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Level ups and achievements</p>
+                <p className="text-sm text-muted-foreground">Level ups and achievements</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -166,14 +166,14 @@ export const NotificationSettings = memo(function NotificationSettings({ userId 
                   onChange={(e) => updateSettings({ milestones: e.target.checked })}
                   disabled={loading}
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-900 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Weekly Summary</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Progress recap every week</p>
+                <p className="text-sm text-muted-foreground">Progress recap every week</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -183,7 +183,7 @@ export const NotificationSettings = memo(function NotificationSettings({ userId 
                   onChange={(e) => updateSettings({ weeklySummary: e.target.checked })}
                   disabled={loading}
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:bg-gray-900 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
           </>
@@ -194,7 +194,7 @@ export const NotificationSettings = memo(function NotificationSettings({ userId 
           <button
             onClick={revokePermission}
             disabled={loading}
-            className="text-red-600 hover:text-red-700 text-sm font-medium disabled:opacity-60"
+            className="text-error hover:text-error-dark text-sm font-medium disabled:opacity-60"
           >
             Disable All Notifications
           </button>

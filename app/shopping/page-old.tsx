@@ -277,7 +277,7 @@ function ShoppingListContent() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen bg-background">
         <PageHeader
           title="Shopping List"
           subtitle={`${summary.neededItems} item${summary.neededItems !== 1 ? 's' : ''} to buy`}
@@ -286,13 +286,13 @@ function ShoppingListContent() {
         <main className="container mx-auto px-4 py-6 max-w-4xl">
           {/* Summary Cards */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
+            <div className="bg-card rounded-lg shadow p-4">
               <div className="text-2xl font-bold text-primary">{summary.neededItems}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Items Needed</div>
+              <div className="text-sm text-muted-foreground">Items Needed</div>
             </div>
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-              <div className="text-2xl font-bold text-orange-500">{summary.highPriorityItems}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">High Priority</div>
+            <div className="bg-card rounded-lg shadow p-4">
+              <div className="text-2xl font-bold text-warning">{summary.highPriorityItems}</div>
+              <div className="text-sm text-muted-foreground">High Priority</div>
             </div>
           </div>
 
@@ -311,7 +311,7 @@ function ShoppingListContent() {
             <button
               type="button"
               onClick={() => router.push('/inventory')}
-              className="px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              className="px-4 py-3 border-2 border-border rounded-lg font-semibold hover:bg-background transition-colors"
             >
               📦 Inventory
             </button>
@@ -319,23 +319,23 @@ function ShoppingListContent() {
 
           {/* Debug Mode Toggle & Orphaned Items Warning */}
           {orphanedItems.length > 0 && (
-            <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="mb-6 bg-warning-light border border-warning-light rounded-lg p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-yellow-600 dark:text-yellow-400">⚠️</span>
-                    <h3 className="font-semibold text-yellow-900 dark:text-yellow-100">
+                    <span className="text-warning">⚠️</span>
+                    <h3 className="font-semibold text-warning-dark">
                       {orphanedItems.length} Orphaned Item{orphanedItems.length !== 1 ? 's' : ''} Found
                     </h3>
                   </div>
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  <p className="text-sm text-warning-dark">
                     These items were marked as "Used Up" but aren't on your shopping list due to a previous error.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowDebugMode(!showDebugMode)}
-                  className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
+                  className="px-4 py-2 bg-warning hover:bg-warning-dark text-white rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
                 >
                   {showDebugMode ? '✓ Debug On' : '🔧 Fix Them'}
                 </button>
@@ -345,20 +345,20 @@ function ShoppingListContent() {
 
           {/* Debug Mode Info */}
           {showDebugMode && (
-            <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="mb-6 bg-secondary-light border border-secondary-light rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                  <h3 className="font-semibold text-secondary-dark mb-1">
                     🔧 Debug Mode Active
                   </h3>
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <p className="text-sm text-secondary-dark">
                     Showing all {allItems.length} items (including orphaned). Click "Fix" on any orphaned item to add it to your shopping list.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowDebugMode(false)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
+                  className="px-4 py-2 bg-secondary hover:bg-secondary-hover text-white rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
                 >
                   Exit Debug
                 </button>
@@ -372,12 +372,12 @@ function ShoppingListContent() {
               <Spinner />
             </div>
           ) : !showDebugMode && neededItems.length === 0 ? (
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
+            <div className="bg-card rounded-lg shadow p-8 text-center">
               <div className="text-6xl mb-4">✓</div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              <h3 className="text-xl font-semibold text-foreground mb-2">
                 All Set!
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-muted-foreground">
                 Your shopping list is empty. Scan items you run out of to add them here.
               </p>
             </div>
@@ -386,7 +386,7 @@ function ShoppingListContent() {
               {/* Orphaned Items (Debug Mode Only) */}
               {showDebugMode && orphanedItems.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-red-600 dark:text-red-400 mb-3 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-error mb-3 flex items-center gap-2">
                     <span>🔧</span>
                     ORPHANED ITEMS (Need Fixing)
                   </h3>
@@ -408,7 +408,7 @@ function ShoppingListContent() {
               {/* High Priority Items */}
               {displayItems.filter(item => item.priority === 'high' && item.needed).length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-orange-600 dark:text-orange-400 mb-3 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-warning dark:text-orange-400 mb-3 flex items-center gap-2">
                     <span>⚠️</span>
                     HIGH PRIORITY
                   </h3>
@@ -432,7 +432,7 @@ function ShoppingListContent() {
               {displayItems.filter(item => item.priority !== 'high' && item.needed).length > 0 && (
                 <div>
                   {displayItems.filter(item => item.priority === 'high' && item.needed).length > 0 && (
-                    <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-3">
+                    <h3 className="text-sm font-semibold text-muted-foreground mb-3">
                       OTHER ITEMS
                     </h3>
                   )}
@@ -481,16 +481,16 @@ function ShoppingListContent() {
         {/* Impulse Purchase Confirmation Modal */}
         {showImpulseConfirm && scannedProduct && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6">
               <div className="text-center mb-6">
                 <div className="text-5xl mb-4">🛒</div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                <h2 className="text-xl font-bold text-foreground mb-2">
                   Not on Your List
                 </h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                <p className="text-muted-foreground mb-4">
                   <span className="font-semibold">{scannedProduct.product.product_name}</span> isn't on your shopping list.
                 </p>
-                <p className="text-gray-700 dark:text-gray-300">
+                <p className="text-foreground">
                   Buy it anyway and add to your inventory?
                 </p>
               </div>
@@ -499,7 +499,7 @@ function ShoppingListContent() {
                 <button
                   type="button"
                   onClick={handleImpulsePurchaseCancel}
-                  className="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="flex-1 px-4 py-3 border-2 border-border text-foreground rounded-lg font-semibold hover:bg-background transition-colors"
                 >
                   Cancel
                 </button>
@@ -539,7 +539,7 @@ function ShoppingItemCard({
   const isOrphaned = !item.inStock && !item.needed && item.quantity === 0
 
   return (
-    <div className={`bg-white dark:bg-gray-900 rounded-lg shadow p-4 flex items-center gap-4 ${isOrphaned ? 'border-2 border-red-200 dark:border-red-800' : ''}`}>
+    <div className={`bg-card rounded-lg shadow p-4 flex items-center gap-4 ${isOrphaned ? 'border-2 border-red-200 dark:border-red-800' : ''}`}>
       {/* Product Image */}
       {item.imageUrl ? (
         <img
@@ -548,32 +548,32 @@ function ShoppingItemCard({
           className="w-16 h-16 object-cover rounded-lg"
         />
       ) : (
-        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-3xl">
+        <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-3xl">
           {categoryMeta.icon}
         </div>
       )}
 
       {/* Product Info */}
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+        <h3 className="font-semibold text-foreground truncate">
           {item.productName}
         </h3>
         {item.brand && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+          <p className="text-sm text-muted-foreground truncate">
             {item.brand}
           </p>
         )}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded">
+          <span className="text-xs px-2 py-1 bg-muted rounded">
             {categoryMeta.displayName}
           </span>
           {(item.quantity > 0 || item.unit) && (
-            <span className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded">
+            <span className="text-xs px-2 py-1 bg-secondary-light text-blue-700 dark:text-blue-300 rounded">
               {item.displayQuantity || formatQuantityDisplay(item.quantity, item.unit)}
             </span>
           )}
           {item.lastPurchased && (
-            <span className="text-xs text-gray-500 dark:text-gray-500">
+            <span className="text-xs text-muted-foreground dark:text-muted-foreground">
               Last: {new Date(item.lastPurchased).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
@@ -581,19 +581,19 @@ function ShoppingItemCard({
 
         {/* Debug Info */}
         {showDebugInfo && (
-          <div className="mt-2 text-xs font-mono text-gray-600 dark:text-gray-400 space-y-1">
+          <div className="mt-2 text-xs font-mono text-muted-foreground space-y-1">
             <div className="flex gap-3">
-              <span className={item.inStock ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+              <span className={item.inStock ? 'text-success dark:text-green-400' : 'text-error'}>
                 InStock: {item.inStock ? '✓' : '✗'}
               </span>
-              <span className={item.needed ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+              <span className={item.needed ? 'text-success dark:text-green-400' : 'text-error'}>
                 Needed: {item.needed ? '✓' : '✗'}
               </span>
               <span>Priority: {item.priority}</span>
               <span>Qty: {item.displayQuantity || formatQuantityDisplay(item.quantity, item.unit)}</span>
             </div>
             {isOrphaned && (
-              <div className="text-red-600 dark:text-red-400 font-semibold">
+              <div className="text-error font-semibold">
                 ⚠️ ORPHANED - Not in inventory, not on list
               </div>
             )}
@@ -606,20 +606,20 @@ function ShoppingItemCard({
         <button
           type="button"
           onClick={() => onToggle(item.id, item.needed)}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          className="p-2 hover:bg-muted rounded-lg transition-colors"
           title="Remove from list"
         >
-          <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-success dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </button>
         <button
           type="button"
           onClick={() => onDelete(item.id)}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          className="p-2 hover:bg-muted rounded-lg transition-colors"
           title="Delete item"
         >
-          <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </button>
@@ -628,7 +628,7 @@ function ShoppingItemCard({
           <button
             type="button"
             onClick={() => onFixOrphaned(item.id, item.productName)}
-            className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+            className="px-3 py-1 text-xs bg-error hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
             title="Add to shopping list"
           >
             🔧 Fix

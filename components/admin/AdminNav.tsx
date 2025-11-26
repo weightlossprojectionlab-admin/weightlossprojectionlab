@@ -98,11 +98,11 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
   ]
 
   return (
-    <nav className="w-64 bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen p-4 border-r border-gray-200 dark:border-gray-800">
+    <nav className="w-64 bg-card text-foreground dark:text-white min-h-screen p-4 border-r border-border">
       {/* Logo/Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold">WLPL Admin</h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Administration Panel</p>
+        <p className="text-sm text-muted-foreground mt-1">Administration Panel</p>
       </div>
 
       {/* Navigation Items */}
@@ -119,8 +119,8 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
                   flex items-center justify-between px-4 py-3 rounded-lg transition-colors
                   ${
                     isActive
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-primary text-white'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:text-white'
                   }
                 `}
               >
@@ -129,7 +129,7 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
                   <span className="font-medium">{item.name}</span>
                 </div>
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  <span className="bg-error-light0 text-white text-xs font-bold px-2 py-1 rounded-full">
                     {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 )}
@@ -140,10 +140,10 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
       </ul>
 
       {/* Back to App Link */}
-      <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-600">
+      <div className="mt-8 pt-8 border-t border-border dark:border-gray-600">
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground dark:hover:text-white transition-colors"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

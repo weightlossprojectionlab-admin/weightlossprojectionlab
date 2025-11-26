@@ -77,7 +77,9 @@ class ApiClient {
         if (!user) return null
       }
 
-      const token = await user.getIdToken()
+      // Force refresh if we're near expiry or have no cached token
+      const forceRefresh = !this.cachedToken || this.tokenExpiry <= Date.now()
+      const token = await user.getIdToken(forceRefresh)
 
       // Cache token for 55 minutes (tokens are valid for 60 minutes)
       this.cachedToken = token
@@ -159,6 +161,15 @@ class ApiClient {
 
       // Handle error responses
       if (!response.ok || !data.success) {
+        const errorInfo = {
+          status: response.status,
+          statusText: response.statusText,
+          error: data.error,
+          message: data.message,
+          details: data.details,
+          endpoint
+        }
+        console.error('[ApiClient] API Error Response:', JSON.stringify(errorInfo, null, 2))
         throw this.createApiError(
           data.error || data.message || 'Request failed',
           response.status,
@@ -184,7 +195,15 @@ class ApiClient {
 
       return data.data as T
     } catch (error) {
-      // Log error
+      // Log error with more details
+      console.error('[ApiClient] Request failed:', {
+        endpoint,
+        method: options.method || 'GET',
+        error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined
+      })
+
       ErrorHandler.handle(error, {
         operation: 'api_request',
         component: 'api-client',

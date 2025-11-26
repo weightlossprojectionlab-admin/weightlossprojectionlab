@@ -92,37 +92,37 @@ export function ExpirationPicker({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6">
+      <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          <h2 className="text-xl font-bold text-foreground">
             When does this expire?
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            className="p-2 hover:bg-muted rounded-full transition-colors"
             aria-label="Close"
           >
-            <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         {/* Product Name */}
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           <span className="font-semibold">{productName}</span>
         </p>
 
         {/* Quantity and Unit Inputs */}
-        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+        <div className="mb-6 p-4 bg-background rounded-lg">
+          <h3 className="text-sm font-semibold text-foreground mb-3">
             How much did you get?
           </h3>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs text-muted-foreground mb-1">
                 Quantity
               </label>
               <input
@@ -131,17 +131,17 @@ export function ExpirationPicker({
                 step="0.1"
                 value={quantity}
                 onChange={(e) => setQuantity(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-primary"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-primary focus:border-primary"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-xs text-muted-foreground mb-1">
                 Unit
               </label>
               <select
                 value={unit}
                 onChange={(e) => setUnit(e.target.value as QuantityUnit)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-primary"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-primary focus:border-primary"
               >
                 {availableUnits.map((u) => (
                   <option key={u} value={u}>
@@ -174,7 +174,7 @@ export function ExpirationPicker({
 
         {/* Quick Options */}
         <div className="mb-4">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+          <h3 className="text-sm font-semibold text-foreground mb-3">
             Quick Options
           </h3>
           <div className="grid grid-cols-2 gap-2">
@@ -183,12 +183,12 @@ export function ExpirationPicker({
                 type="button"
                 key={option.days}
                 onClick={() => handleQuickSelect(option.days)}
-                className="p-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-primary dark:hover:border-primary hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-center"
+                className="p-3 border-2 border-border rounded-lg hover:border-primary dark:hover:border-primary hover:bg-background transition-colors text-center"
               >
-                <div className="font-semibold text-gray-900 dark:text-gray-100">
+                <div className="font-semibold text-foreground">
                   {option.label}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                <div className="text-xs text-muted-foreground mt-1">
                   {(() => {
                     const date = new Date()
                     date.setDate(date.getDate() + option.days)
@@ -205,13 +205,13 @@ export function ExpirationPicker({
           <button
             type="button"
             onClick={() => setShowCustomInput(true)}
-            className="w-full p-3 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
+            className="w-full p-3 border border-border text-foreground rounded-lg hover:bg-background transition-colors text-sm font-medium"
           >
             📅 Pick Custom Date
           </button>
         ) : (
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium text-foreground">
               Custom Expiration Date
             </label>
             <div className="flex gap-2">
@@ -220,7 +220,7 @@ export function ExpirationPicker({
                 value={customDate}
                 onChange={(e) => setCustomDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-primary"
+                className="flex-1 px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-primary"
               />
               <button
                 type="button"
@@ -238,7 +238,7 @@ export function ExpirationPicker({
         <button
           type="button"
           onClick={handleSkip}
-          className="w-full mt-4 px-4 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors text-sm font-medium"
+          className="w-full mt-4 px-4 py-3 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium"
         >
           Skip - No expiration date
         </button>

@@ -49,6 +49,16 @@ export default function DashboardRouter({ children }: DashboardRouterProps) {
             router.push('/onboarding')
             break
 
+          case 'dashboard':
+            logger.debug('➡️ Redirecting to /dashboard:', { reason: destination.reason })
+            router.push('/dashboard')
+            break
+
+          case 'patients':
+            logger.debug('➡️ Redirecting to /patients:', { reason: destination.reason })
+            router.push('/patients')
+            break
+
           case 'stay':
             logger.debug('✅ User can access protected page:', { reason: destination.reason })
             setChecking(false)
@@ -73,10 +83,10 @@ export default function DashboardRouter({ children }: DashboardRouterProps) {
   // Show loading spinner while checking access
   if (authLoading || checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading your profile...</p>
+          <p className="text-muted-foreground">Loading your profile...</p>
         </div>
       </div>
     )

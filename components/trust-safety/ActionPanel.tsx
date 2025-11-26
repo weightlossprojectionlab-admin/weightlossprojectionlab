@@ -69,8 +69,8 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-6">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Moderation Actions</h3>
+    <div className="bg-card border border-border rounded-lg p-6">
+      <h3 className="text-lg font-bold text-foreground mb-4">Moderation Actions</h3>
 
       {!showConfirm ? (
         <div className="space-y-3">
@@ -126,7 +126,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
             className="w-full flex items-center justify-between px-4 py-3 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="flex items-center space-x-3">
-              <ArrowUpCircleIcon className="h-6 w-6 text-orange-600" />
+              <ArrowUpCircleIcon className="h-6 w-6 text-warning" />
               <div className="text-left">
                 <div className="font-semibold text-orange-900">Escalate Case</div>
                 <div className="text-xs text-orange-700">Requires senior admin review</div>
@@ -154,18 +154,18 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
       ) : (
         <div className="space-y-4">
           {/* Confirmation */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="bg-warning-light border border-warning-light rounded-lg p-4">
             <h4 className="font-semibold text-yellow-900 mb-2">
               Confirm Action: {selectedAction?.replace(/_/g, ' ').toUpperCase()}
             </h4>
-            <p className="text-sm text-yellow-800">
+            <p className="text-sm text-warning-dark">
               This action will be recorded in the case history and cannot be undone.
             </p>
           </div>
 
           {/* Notes */}
           <div>
-            <label htmlFor="notes" className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+            <label htmlFor="notes" className="block text-sm font-medium text-foreground mb-2">
               Admin Notes (Required)
             </label>
             <textarea
@@ -175,7 +175,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Provide reasoning for this decision..."
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               disabled={isLoading}
             />
           </div>
@@ -187,7 +187,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
               disabled={isLoading || !notes.trim()}
               className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                 isLoading || !notes.trim()
-                  ? 'bg-gray-100-dark text-gray-600 cursor-not-allowed'
+                  ? 'bg-gray-100-dark text-muted-foreground cursor-not-allowed'
                   : 'bg-primary text-white hover:bg-primary-hover'
               }`}
             >
@@ -196,7 +196,7 @@ export default function ActionPanel({ case: disputeCase, onAction, disabled = fa
             <button
               onClick={handleCancel}
               disabled={isLoading}
-              className="px-4 py-2 border border-gray-200 text-gray-900 dark:text-gray-100 rounded-lg font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
+              className="px-4 py-2 border border-border text-foreground rounded-lg font-medium hover:bg-muted transition-colors disabled:opacity-50"
             >
               Cancel
             </button>

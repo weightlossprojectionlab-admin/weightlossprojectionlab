@@ -4,13 +4,20 @@ import { useMemo } from 'react'
 import type { UserProfileData } from './useUserProfile'
 
 interface MealLog {
+  // Support both old and new meal log formats
   totalCalories?: number
+  calories?: number
   macros?: {
     protein?: number
     carbs?: number
     fat?: number
     fiber?: number
   }
+  // Top-level macros (patient meal logs)
+  protein?: number
+  carbs?: number
+  fat?: number
+  fiber?: number
 }
 
 interface WeightLog {
@@ -22,23 +29,35 @@ interface StepLog {
   steps: number
 }
 
+interface ProfileWithGoals {
+  goals?: {
+    dailyCalorieGoal?: number
+    targetWeight?: number
+    startWeight?: number
+    dailyStepGoal?: number
+  }
+  profile?: {
+    currentWeight?: number
+  }
+}
+
 export function useDashboardStats(
   todayMeals: MealLog[],
   weightData: WeightLog[],
   stepsData: StepLog[],
-  userProfile: UserProfileData | null
+  profileWithGoals: ProfileWithGoals | null
 ) {
   // Calculate nutrition summary from today's meals
   const nutritionSummary = useMemo(() => {
-    const todayCalories = todayMeals.reduce((sum, meal) => sum + (meal.totalCalories || 0), 0)
+    const todayCalories = todayMeals.reduce((sum, meal) => sum + (meal.totalCalories || meal.calories || 0), 0)
     const macros = todayMeals.reduce((acc, meal) => ({
-      protein: acc.protein + (meal.macros?.protein || 0),
-      carbs: acc.carbs + (meal.macros?.carbs || 0),
-      fat: acc.fat + (meal.macros?.fat || 0),
-      fiber: acc.fiber + (meal.macros?.fiber || 0)
+      protein: acc.protein + (meal.macros?.protein || meal.protein || 0),
+      carbs: acc.carbs + (meal.macros?.carbs || meal.carbs || 0),
+      fat: acc.fat + (meal.macros?.fat || meal.fat || 0),
+      fiber: acc.fiber + (meal.macros?.fiber || meal.fiber || 0)
     }), { protein: 0, carbs: 0, fat: 0, fiber: 0 })
 
-    const goalCalories = userProfile?.goals?.dailyCalorieGoal || 2000
+    const goalCalories = profileWithGoals?.goals?.dailyCalorieGoal || 2000
 
     return {
       todayCalories,
@@ -46,20 +65,19 @@ export function useDashboardStats(
       macros,
       mealsLogged: todayMeals.length
     }
-  }, [todayMeals, userProfile?.goals?.dailyCalorieGoal])
+  }, [todayMeals, profileWithGoals?.goals?.dailyCalorieGoal])
 
   // Calculate weight trend
   // Weight data priority: weight-logs (primary) > profile.currentWeight (fallback)
-  // See types/index.ts for full weight data architecture explanation
   const weightTrend = useMemo(() => {
     // Get fallback weight from profile (static snapshot from onboarding)
-    const profileCurrentWeight = userProfile?.profile?.currentWeight || 0
+    const profileCurrentWeight = profileWithGoals?.profile?.currentWeight || 0
 
     if (weightData.length === 0) {
       // No weight logs yet - use profile weight if available
       if (profileCurrentWeight > 0) {
-        const goalWeight = userProfile?.goals?.targetWeight || profileCurrentWeight
-        const startWeight = userProfile?.goals?.startWeight || profileCurrentWeight
+        const goalWeight = profileWithGoals?.goals?.targetWeight || profileCurrentWeight
+        const startWeight = profileWithGoals?.goals?.startWeight || profileCurrentWeight
         const totalToLose = startWeight - goalWeight
         const lostSoFar = startWeight - profileCurrentWeight
         const goalProgress = totalToLose > 0 ? Math.min(100, Math.max(0, (lostSoFar / totalToLose) * 100)) : 0
@@ -88,25 +106,25 @@ export function useDashboardStats(
     const trend = change < 0 ? 'down' : change > 0 ? 'up' : 'neutral'
 
     // Calculate goal progress
-    const goalWeight = userProfile?.goals?.targetWeight || current
-    const startWeight = userProfile?.goals?.startWeight || current
+    const goalWeight = profileWithGoals?.goals?.targetWeight || current
+    const startWeight = profileWithGoals?.goals?.startWeight || current
     const totalToLose = startWeight - goalWeight
     const lostSoFar = startWeight - current
     const goalProgress = totalToLose > 0 ? Math.min(100, Math.max(0, (lostSoFar / totalToLose) * 100)) : 0
 
     return { current, change, trend, goalProgress }
-  }, [weightData, userProfile?.profile?.currentWeight, userProfile?.goals?.targetWeight, userProfile?.goals?.startWeight])
+  }, [weightData, profileWithGoals?.profile?.currentWeight, profileWithGoals?.goals?.targetWeight, profileWithGoals?.goals?.startWeight])
 
   // Calculate activity summary
   const activitySummary = useMemo(() => {
     const todaySteps = stepsData.reduce((sum, log) => sum + (log.steps || 0), 0)
-    const goalSteps = userProfile?.goals?.dailySteps || 10000
+    const goalSteps = profileWithGoals?.goals?.dailyStepGoal || 10000
 
     // For weekly average, we'd need to fetch more data - for now use today's data
     const weeklyAverage = todaySteps
 
     return { todaySteps, goalSteps, weeklyAverage }
-  }, [stepsData, userProfile?.goals?.dailySteps])
+  }, [stepsData, profileWithGoals?.goals?.dailyStepGoal])
 
   // Calculate progress percentages
   const calorieProgress = (nutritionSummary.todayCalories / nutritionSummary.goalCalories) * 100

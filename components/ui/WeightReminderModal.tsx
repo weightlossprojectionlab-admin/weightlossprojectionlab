@@ -8,6 +8,7 @@ interface WeightReminderModalProps {
   lastWeightLog: WeightLog | null
   frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly'
   lastMealLogDate?: Date | null
+  patientName?: string // Name of the patient/family member
   onLogWeight: () => void
   onDismiss: () => void
 }
@@ -52,6 +53,7 @@ export function WeightReminderModal({
   lastWeightLog,
   frequency,
   lastMealLogDate,
+  patientName,
   onLogWeight,
   onDismiss
 }: WeightReminderModalProps) {
@@ -93,7 +95,7 @@ export function WeightReminderModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+      <div className="bg-card rounded-xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className={`flex items-center gap-3 mb-4 pb-4 border-b-2 ${colors.border}`}>
           <span className="text-4xl">⚖️</span>
@@ -101,6 +103,11 @@ export function WeightReminderModal({
             <h2 className={`text-xl font-bold ${colors.text}`}>
               {reminderStatus.isOverdue ? 'Weight Check-in Overdue' : 'Time for Your Weigh-in'}
             </h2>
+            {patientName && (
+              <p className="text-sm text-muted-foreground mt-1">
+                for <span className="font-semibold text-foreground">{patientName}</span>
+              </p>
+            )}
             <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${colors.badge}`}>
               {frequency.replace('-', ' ')} check-in
             </div>
@@ -109,11 +116,11 @@ export function WeightReminderModal({
 
         {/* Message */}
         <div className={`rounded-lg p-4 mb-6 ${colors.bg} ${colors.border} border`}>
-          <p className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed">
+          <p className="text-sm text-foreground leading-relaxed">
             {message}
           </p>
           {reminderStatus.nextDueDate && !reminderStatus.isOverdue && (
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Next check-in: {reminderStatus.nextDueDate.toLocaleDateString()}
             </p>
           )}
@@ -123,7 +130,7 @@ export function WeightReminderModal({
         <div className="space-y-2">
           <button
             onClick={handleLogWeight}
-            className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold flex items-center justify-center gap-2"
+            className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-semibold flex items-center justify-center gap-2"
           >
             <span>⚖️</span>
             Log Weight Now
@@ -132,13 +139,13 @@ export function WeightReminderModal({
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={handleRemindLater}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
+              className="px-4 py-2 border border-border rounded-lg text-foreground hover:bg-background transition-colors text-sm font-medium"
             >
               Remind Later
             </button>
             <button
               onClick={handleDismissToday}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
+              className="px-4 py-2 border border-border rounded-lg text-muted-foreground hover:bg-background transition-colors text-sm"
             >
               Don't Show Today
             </button>
@@ -146,7 +153,7 @@ export function WeightReminderModal({
         </div>
 
         {/* Helper Text */}
-        <p className="text-xs text-center text-gray-500 dark:text-gray-500 mt-4">
+        <p className="text-xs text-center text-muted-foreground dark:text-muted-foreground mt-4">
           You can change your check-in frequency in Settings
         </p>
       </div>

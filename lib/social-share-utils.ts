@@ -200,13 +200,13 @@ export const SHARE_PLATFORMS = [
     id: 'facebook',
     name: 'Facebook',
     icon: 'f',
-    color: 'bg-blue-600 hover:bg-blue-700'
+    color: 'bg-secondary hover:bg-secondary-hover'
   },
   {
     id: 'whatsapp',
     name: 'WhatsApp',
     icon: '💬',
-    color: 'bg-green-500 hover:bg-green-600'
+    color: 'bg-success-light0 hover:bg-success'
   },
   {
     id: 'linkedin',
@@ -218,7 +218,7 @@ export const SHARE_PLATFORMS = [
     id: 'telegram',
     name: 'Telegram',
     icon: '✈️',
-    color: 'bg-blue-500 hover:bg-blue-600'
+    color: 'bg-secondary-light0 hover:bg-secondary'
   },
   {
     id: 'reddit',

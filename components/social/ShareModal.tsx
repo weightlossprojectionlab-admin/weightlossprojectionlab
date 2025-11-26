@@ -76,32 +76,32 @@ export function ShareModal({ isOpen, onClose, shareOptions }: ShareModalProps) {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full p-6"
+        className="bg-card rounded-lg shadow-xl max-w-md w-full p-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Share</h3>
+          <h3 className="text-xl font-bold text-foreground">Share</h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            className="p-2 hover:bg-muted rounded-full transition-colors"
             aria-label="Close"
           >
-            <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         {/* Preview */}
-        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">{content.title}</h4>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{content.text}</p>
+        <div className="mb-6 p-4 bg-background rounded-lg">
+          <h4 className="font-semibold text-foreground mb-2">{content.title}</h4>
+          <p className="text-sm text-muted-foreground">{content.text}</p>
         </div>
 
         {/* Platform Grid */}
         <div className="mb-6">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Share on</p>
+          <p className="text-sm font-medium text-foreground mb-3">Share on</p>
           <div className="grid grid-cols-4 gap-3">
             {SHARE_PLATFORMS.map((platform) => (
               <button
@@ -118,14 +118,14 @@ export function ShareModal({ isOpen, onClose, shareOptions }: ShareModalProps) {
         </div>
 
         {/* Copy Link */}
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Or copy link</p>
+        <div className="pt-4 border-t border-border">
+          <p className="text-sm font-medium text-foreground mb-2">Or copy link</p>
           <div className="flex gap-2">
             <input
               type="text"
               value={content.url || window.location.href}
               readOnly
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex-1 px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <button
               onClick={handleCopyLink}
@@ -150,7 +150,7 @@ export function ShareModal({ isOpen, onClose, shareOptions }: ShareModalProps) {
         </div>
 
         {/* Footer Note */}
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
+        <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-4 text-center">
           Sharing helps friends discover Weight Loss Project Lab! 🚀
         </p>
       </div>

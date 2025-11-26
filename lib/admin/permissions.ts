@@ -162,10 +162,10 @@ export function getRoleBadgeColor(role: AdminRole | null): string {
     case 'admin':
       return 'bg-purple-500 text-white'
     case 'moderator':
-      return 'bg-blue-500 text-white'
+      return 'bg-secondary-light0 text-white'
     case 'support':
-      return 'bg-green-500 text-white'
+      return 'bg-success-light0 text-white'
     default:
-      return 'bg-gray-500 text-white'
+      return 'bg-background0 text-white'
   }
 }

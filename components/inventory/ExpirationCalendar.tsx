@@ -188,11 +188,11 @@ export function ExpirationCalendar({
   const getDotColor = (status: CalendarDay['status']) => {
     switch (status) {
       case 'expired':
-        return 'bg-red-500'
+        return 'bg-error-light0'
       case 'expiring-soon':
         return 'bg-orange-500'
       case 'expiring-later':
-        return 'bg-yellow-500'
+        return 'bg-warning-light0'
       default:
         return 'bg-gray-300'
     }
@@ -201,14 +201,14 @@ export function ExpirationCalendar({
   return (
     <div className={className}>
       {/* Calendar Header */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-4">
+      <div className="bg-card rounded-lg shadow p-4 mb-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold text-foreground dark:text-white">
             Expiration Calendar
           </h2>
           <button
             onClick={goToToday}
-            className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="px-3 py-1 text-sm bg-muted hover:bg-gray-200 rounded-lg transition-colors"
           >
             Today
           </button>
@@ -218,22 +218,22 @@ export function ExpirationCalendar({
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={previousMonth}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
             aria-label="Previous month"
           >
-            <ChevronLeftIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <ChevronLeftIcon className="h-5 w-5 text-muted-foreground" />
           </button>
 
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-foreground dark:text-white">
             {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </h3>
 
           <button
             onClick={nextMonth}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
             aria-label="Next month"
           >
-            <ChevronRightIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <ChevronRightIcon className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
 
@@ -242,7 +242,7 @@ export function ExpirationCalendar({
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <div
               key={day}
-              className="text-center text-xs font-semibold text-gray-600 dark:text-gray-400 py-2"
+              className="text-center text-xs font-semibold text-muted-foreground py-2"
             >
               {day}
             </div>
@@ -261,9 +261,9 @@ export function ExpirationCalendar({
                 disabled={day.expiringItems.length === 0}
                 className={`
                   aspect-square p-1 rounded-lg border-2 transition-all
-                  ${day.isCurrentMonth ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'}
+                  ${day.isCurrentMonth ? 'text-foreground dark:text-white' : 'text-muted-foreground dark:text-muted-foreground'}
                   ${isToday ? 'border-primary ring-2 ring-primary/20' : 'border-transparent'}
-                  ${day.expiringItems.length > 0 ? getStatusColor(day.status) + ' cursor-pointer hover:shadow-md' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}
+                  ${day.expiringItems.length > 0 ? getStatusColor(day.status) + ' cursor-pointer hover:shadow-md' : 'hover:bg-background'}
                   ${!day.isCurrentMonth && day.expiringItems.length === 0 ? 'opacity-50' : ''}
                   disabled:cursor-default
                 `}
@@ -292,19 +292,19 @@ export function ExpirationCalendar({
         </div>
 
         {/* Legend */}
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="mt-4 pt-4 border-t border-border">
           <div className="flex flex-wrap gap-3 text-xs">
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
-              <span className="text-gray-600 dark:text-gray-400">Expired</span>
+              <div className="w-2 h-2 rounded-full bg-error-light0" />
+              <span className="text-muted-foreground">Expired</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full bg-orange-500" />
-              <span className="text-gray-600 dark:text-gray-400">Expiring Soon (3 days)</span>
+              <span className="text-muted-foreground">Expiring Soon (3 days)</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-yellow-500" />
-              <span className="text-gray-600 dark:text-gray-400">Expiring Later (7 days)</span>
+              <div className="w-2 h-2 rounded-full bg-warning-light0" />
+              <span className="text-muted-foreground">Expiring Later (7 days)</span>
             </div>
           </div>
         </div>
@@ -317,29 +317,29 @@ export function ExpirationCalendar({
           onClick={() => setSelectedDay(null)}
         >
           <div
-            className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto"
+            className="bg-card rounded-lg shadow-xl max-w-md w-full max-h-[80vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4">
+            <div className="sticky top-0 bg-card border-b border-border p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                  <h3 className="text-lg font-bold text-foreground dark:text-white">
                     {selectedDay.date.toLocaleDateString('en-US', {
                       weekday: 'long',
                       month: 'long',
                       day: 'numeric'
                     })}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-muted-foreground">
                     {selectedDay.expiringItems.length} item{selectedDay.expiringItems.length !== 1 ? 's' : ''} expiring
                   </p>
                 </div>
                 <button
                   onClick={() => setSelectedDay(null)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
                 >
-                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -358,7 +358,7 @@ export function ExpirationCalendar({
                       onItemClick?.(item)
                       setSelectedDay(null)
                     }}
-                    className="w-full bg-gray-50 dark:bg-gray-800 rounded-lg p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
+                    className="w-full bg-background rounded-lg p-3 hover:bg-muted transition-colors text-left"
                   >
                     <div className="flex items-start gap-3">
                       {/* Product Image */}
@@ -376,11 +376,11 @@ export function ExpirationCalendar({
 
                       {/* Item Info */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                        <h4 className="font-medium text-foreground dark:text-white truncate">
                           {item.productName}
                         </h4>
                         {item.brand && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          <p className="text-sm text-muted-foreground truncate">
                             {item.brand}
                           </p>
                         )}
@@ -389,7 +389,7 @@ export function ExpirationCalendar({
                             {categoryMeta.displayName}
                           </span>
                           {item.quantity > 0 && (
-                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                            <span className="text-xs text-muted-foreground">
                               Qty: {item.quantity} {item.unit || 'units'}
                             </span>
                           )}
@@ -400,7 +400,7 @@ export function ExpirationCalendar({
                       <div className="flex-shrink-0">
                         <ClockIcon className={`h-5 w-5 ${
                           selectedDay.status === 'expired' ? 'text-red-500' :
-                          selectedDay.status === 'expiring-soon' ? 'text-orange-500' :
+                          selectedDay.status === 'expiring-soon' ? 'text-warning' :
                           'text-yellow-500'
                         }`} />
                       </div>

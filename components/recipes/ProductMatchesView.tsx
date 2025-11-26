@@ -72,13 +72,13 @@ export function ProductMatchesView({
   return (
     <div className="space-y-4">
       {/* Availability Score */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-4 border border-secondary-light">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Recipe Availability</h3>
+          <h3 className="font-semibold text-foreground">Recipe Availability</h3>
           <span className={`text-2xl font-bold ${
-            availabilityScore >= 80 ? 'text-green-600 dark:text-green-400' :
-            availabilityScore >= 50 ? 'text-yellow-600 dark:text-yellow-400' :
-            'text-red-600 dark:text-red-400'
+            availabilityScore >= 80 ? 'text-success dark:text-green-400' :
+            availabilityScore >= 50 ? 'text-warning' :
+            'text-error'
           }`}>
             {availabilityScore}%
           </span>
@@ -86,27 +86,27 @@ export function ProductMatchesView({
         <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
           <div
             className={`h-2 rounded-full ${
-              availabilityScore >= 80 ? 'bg-green-500' :
-              availabilityScore >= 50 ? 'bg-yellow-500' :
-              'bg-red-500'
+              availabilityScore >= 80 ? 'bg-success-light0' :
+              availabilityScore >= 50 ? 'bg-warning-light0' :
+              'bg-error-light0'
             }`}
             style={{ width: `${availabilityScore}%` }}
           />
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           {ingredientMatches.filter(m => m.matches.length > 0).length} of {ingredientMatches.length} ingredients found in local stores
         </p>
 
         {/* Price Estimate */}
         {estimatedPriceRange && (
-          <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
+          <div className="mt-3 pt-3 border-t border-secondary-light">
             <div className="flex items-center gap-2 text-sm">
-              <CurrencyDollarIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <span className="text-gray-700 dark:text-gray-300">Estimated cost:</span>
-              <span className="font-semibold text-gray-900 dark:text-gray-100">
+              <CurrencyDollarIcon className="h-4 w-4 text-success dark:text-green-400" />
+              <span className="text-foreground">Estimated cost:</span>
+              <span className="font-semibold text-foreground">
                 ${(estimatedPriceRange.minCents / 100).toFixed(2)} - ${(estimatedPriceRange.maxCents / 100).toFixed(2)}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 ({estimatedPriceRange.ingredientsWithPrice}/{ingredientMatches.length} items)
               </span>
             </div>
@@ -116,7 +116,7 @@ export function ProductMatchesView({
 
       {/* Ingredient Matches */}
       <div className="space-y-3">
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <h3 className="font-semibold text-foreground flex items-center gap-2">
           <ShoppingCartIcon className="h-5 w-5" />
           Where to Buy Ingredients
         </h3>
@@ -129,23 +129,23 @@ export function ProductMatchesView({
           return (
             <div
               key={idx}
-              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+              className="bg-card border border-border rounded-lg overflow-hidden"
             >
               {/* Ingredient Header */}
               <button
                 onClick={() => toggleIngredient(ingredientMatch.ingredient)}
-                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className="w-full p-4 flex items-center justify-between hover:bg-background transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1">
                   <div className={`w-2 h-2 rounded-full ${
-                    hasMatches ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                    hasMatches ? 'bg-success-light0' : 'bg-gray-300 dark:bg-gray-600'
                   }`} />
                   <div className="text-left">
-                    <div className="font-medium text-gray-900 dark:text-gray-100">
+                    <div className="font-medium text-foreground">
                       {ingredientMatch.ingredient}
                     </div>
                     {hasMatches ? (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      <div className="text-xs text-muted-foreground dark:text-muted-foreground mt-0.5">
                         {ingredientMatch.matches.length} product{ingredientMatch.matches.length !== 1 ? 's' : ''} found
                         {topMatch.regional.avgPriceCents > 0 && (
                           <span className="ml-2">
@@ -154,12 +154,12 @@ export function ProductMatchesView({
                         )}
                       </div>
                     ) : (
-                      <div className="text-xs text-gray-400">No products found</div>
+                      <div className="text-xs text-muted-foreground">No products found</div>
                     )}
                   </div>
                 </div>
                 <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  className={`w-5 h-5 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -170,12 +170,12 @@ export function ProductMatchesView({
 
               {/* Expanded Product Matches */}
               {isExpanded && hasMatches && (
-                <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <div className="border-t border-border bg-background/50">
                   <div className="p-4 space-y-3">
                     {ingredientMatch.matches.map((product, productIdx) => (
                       <div
                         key={productIdx}
-                        className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+                        className="bg-card rounded-lg p-3 border border-border"
                       >
                         <div className="flex items-start gap-3">
                           {/* Product Image */}
@@ -191,10 +191,10 @@ export function ProductMatchesView({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1">
-                                <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                                <h4 className="font-medium text-foreground text-sm">
                                   {product.productName}
                                 </h4>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                                   {product.brand}
                                 </p>
                               </div>
@@ -206,22 +206,22 @@ export function ProductMatchesView({
                             {/* Price & Stores */}
                             <div className="mt-2 space-y-1">
                               {product.regional.avgPriceCents > 0 && (
-                                <div className="text-xs flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                                <div className="text-xs flex items-center gap-1 text-muted-foreground">
                                   <CurrencyDollarIcon className="h-3 w-3" />
                                   ${(product.regional.avgPriceCents / 100).toFixed(2)}
                                   {product.regional.priceMin > 0 && product.regional.priceMax > 0 && (
-                                    <span className="text-gray-500">
+                                    <span className="text-muted-foreground">
                                       (${(product.regional.priceMin / 100).toFixed(2)} - ${(product.regional.priceMax / 100).toFixed(2)})
                                     </span>
                                   )}
                                 </div>
                               )}
                               {product.regional.stores.length > 0 && (
-                                <div className="text-xs flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                                <div className="text-xs flex items-center gap-1 text-muted-foreground">
                                   <MapPinIcon className="h-3 w-3" />
                                   {product.regional.stores.slice(0, 2).join(', ')}
                                   {product.regional.stores.length > 2 && (
-                                    <span className="text-gray-500">
+                                    <span className="text-muted-foreground">
                                       +{product.regional.stores.length - 2} more
                                     </span>
                                   )}
@@ -242,10 +242,10 @@ export function ProductMatchesView({
 
                         {/* Match Score (for debugging) */}
                         {productIdx === 0 && (
-                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                          <div className="mt-2 pt-2 border-t border-border">
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-gray-500">Best match</span>
-                              <span className="text-gray-400">
+                              <span className="text-muted-foreground">Best match</span>
+                              <span className="text-muted-foreground">
                                 {product.stats.totalScans} scans • {product.matchScore.toFixed(0)} match score
                               </span>
                             </div>
@@ -263,8 +263,8 @@ export function ProductMatchesView({
 
       {/* No Matches Info */}
       {ingredientMatches.filter(m => m.matches.length === 0).length > 0 && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+        <div className="bg-warning-light border border-warning-light rounded-lg p-4">
+          <p className="text-sm text-warning-dark">
             <strong>Can't find some ingredients?</strong> We're continuously adding products as users scan them at stores.
             You can manually add these items to your shopping list.
           </p>

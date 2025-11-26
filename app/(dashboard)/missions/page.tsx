@@ -18,7 +18,7 @@ export default function MissionsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-dark mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading missions...</p>
+          <p className="text-muted-foreground">Loading missions...</p>
         </div>
       </div>
     );
@@ -81,18 +81,18 @@ export default function MissionsPage() {
       {completedMissions.length > 0 && (
         <div className="mt-8">
           <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 rounded-lg p-4">
+          <div className="bg-card border border-border rounded-lg p-4">
             <div className="space-y-2">
               {completedMissions.slice(0, 5).map((item, index) => (
                 <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.title}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                    <p className="text-sm font-medium text-foreground">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">
                       {item.completedAt ? new Date(item.completedAt).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-purple-600">+{item.xpReward || 0} XP</p>
+                    <p className="text-sm font-bold text-primary">+{item.xpReward || 0} XP</p>
                   </div>
                 </div>
               ))}

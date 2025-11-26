@@ -14,18 +14,18 @@ export function MacroDistributionChart({ data, loading }: MacroDistributionChart
   const { resolvedTheme } = useTheme()
   if (loading) {
     return (
-      <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse flex items-center justify-center">
-        <p className="text-gray-600 dark:text-gray-400">Loading chart...</p>
+      <div className="w-full h-64 bg-muted rounded-lg animate-pulse flex items-center justify-center">
+        <p className="text-muted-foreground">Loading chart...</p>
       </div>
     )
   }
 
   if (data.length === 0) {
     return (
-      <div className="w-full h-64 bg-gray-50 dark:bg-gray-950 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
+      <div className="w-full h-64 bg-background rounded-lg border-2 border-dashed border-border flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">No macro data available</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Log meals to track your macronutrients!</p>
+          <p className="text-foreground font-medium mb-1">No macro data available</p>
+          <p className="text-sm text-muted-foreground">Log meals to track your macronutrients!</p>
         </div>
       </div>
     )
@@ -56,17 +56,17 @@ export function MacroDistributionChart({ data, loading }: MacroDistributionChart
 
   // Theme-aware colors
   const isDark = resolvedTheme === 'dark'
-  const gridColor = isDark ? '#374151' : '#e5e7eb'
-  const axisColor = isDark ? '#9ca3af' : '#6b7280'
-  const tooltipBg = isDark ? '#1f2937' : '#ffffff'
-  const tooltipBorder = isDark ? '#374151' : '#e5e7eb'
-  const tooltipText = isDark ? '#f9fafb' : '#111827'
+  const gridColor = 'hsl(var(--border))'
+  const axisColor = 'hsl(var(--muted-foreground))'
+  const tooltipBg = 'hsl(var(--card))'
+  const tooltipBorder = 'hsl(var(--border))'
+  const tooltipText = 'hsl(var(--card-foreground))'
 
   return (
     <div className="w-full space-y-8">
       {/* Pie Chart - Aggregate Macro Split */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        <h3 className="text-lg font-semibold text-foreground mb-4">
           Overall Macro Split
         </h3>
         <MacroPieChart
@@ -79,23 +79,23 @@ export function MacroDistributionChart({ data, loading }: MacroDistributionChart
 
       {/* Area Chart - Daily Trend */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        <h3 className="text-lg font-semibold text-foreground mb-4">
           Daily Macro Trend
         </h3>
         <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <defs>
                 <linearGradient id="colorProtein" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
+                  <stop offset="5%" stopColor="hsl(var(--error))" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="hsl(var(--error))" stopOpacity={0.1} />
                 </linearGradient>
                 <linearGradient id="colorCarbs" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
+                  <stop offset="5%" stopColor="hsl(var(--warning))" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="hsl(var(--warning))" stopOpacity={0.1} />
                 </linearGradient>
                 <linearGradient id="colorFat" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                  <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0.1} />
                 </linearGradient>
               </defs>
 
@@ -129,7 +129,7 @@ export function MacroDistributionChart({ data, loading }: MacroDistributionChart
                 type="monotone"
                 dataKey="protein"
                 stackId="1"
-                stroke="#ef4444"
+                stroke="hsl(var(--error))"
                 fill="url(#colorProtein)"
                 name="Protein"
               />
@@ -137,7 +137,7 @@ export function MacroDistributionChart({ data, loading }: MacroDistributionChart
                 type="monotone"
                 dataKey="carbs"
                 stackId="1"
-                stroke="#f59e0b"
+                stroke="hsl(var(--warning))"
                 fill="url(#colorCarbs)"
                 name="Carbs"
               />
@@ -145,7 +145,7 @@ export function MacroDistributionChart({ data, loading }: MacroDistributionChart
                 type="monotone"
                 dataKey="fat"
                 stackId="1"
-                stroke="#10b981"
+                stroke="hsl(var(--success))"
                 fill="url(#colorFat)"
                 name="Fat"
               />

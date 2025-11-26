@@ -95,6 +95,62 @@ service cloud.firestore {
           allow update: if isOwner(userId);
           allow delete: if isOwner(userId);
         }
+
+        // Weight logs subcollection (hyphenated naming)
+        match /weight-logs/{logId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+                          request.resource.data.patientId == patientId &&
+                          request.resource.data.userId == userId;
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
+
+        // Meal logs subcollection (hyphenated naming)
+        match /meal-logs/{logId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+                          request.resource.data.patientId == patientId &&
+                          request.resource.data.userId == userId;
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
+
+        // Step logs subcollection (hyphenated naming)
+        match /step-logs/{logId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+                          request.resource.data.patientId == patientId &&
+                          request.resource.data.userId == userId;
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
+
+        // Medications subcollection
+        match /medications/{medicationId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+                          request.resource.data.patientId == patientId &&
+                          request.resource.data.userId == userId;
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
+
+        // Deleted medications archive (audit trail - read-only for users)
+        match /deletedMedications/{medicationId} {
+          allow read: if isOwner(userId);
+          allow write: if false; // Only backend can write to this collection
+        }
+
+        // Documents subcollection (insurance cards, medical records, etc.)
+        match /documents/{documentId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+                          request.resource.data.patientId == patientId &&
+                          request.resource.data.userId == userId;
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
       }
 
       // ============================================

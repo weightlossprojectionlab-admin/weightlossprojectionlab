@@ -13,10 +13,10 @@ interface RecipeImageCarouselProps {
 }
 
 const MEAL_TYPE_COLORS: Record<MealType, { bg: string; text: string; emoji: string }> = {
-  breakfast: { bg: 'bg-orange-100', text: 'text-orange-600', emoji: '🍳' },
-  lunch: { bg: 'bg-green-100', text: 'text-green-600', emoji: '🥗' },
-  dinner: { bg: 'bg-blue-100', text: 'text-blue-600', emoji: '🍽️' },
-  snack: { bg: 'bg-purple-100', text: 'text-purple-600', emoji: '🍎' },
+  breakfast: { bg: 'bg-orange-100', text: 'text-warning', emoji: '🍳' },
+  lunch: { bg: 'bg-green-100', text: 'text-success', emoji: '🥗' },
+  dinner: { bg: 'bg-blue-100', text: 'text-secondary', emoji: '🍽️' },
+  snack: { bg: 'bg-primary-light', text: 'text-primary', emoji: '🍎' },
 }
 
 export function RecipeImageCarousel({
@@ -76,7 +76,7 @@ export function RecipeImageCarousel({
 
       {/* Thumbnail Navigation - Only show if multiple images */}
       {hasMultipleImages && (
-        <div className="flex gap-2 p-2 bg-gray-50 dark:bg-gray-950 rounded-b-lg overflow-x-auto">
+        <div className="flex gap-2 p-2 bg-background rounded-b-lg overflow-x-auto">
           {displayImages.map((image, index) => (
             <button
               key={index}
@@ -86,7 +86,7 @@ export function RecipeImageCarousel({
                 border-2 transition-all
                 ${activeIndex === index
                   ? 'border-primary scale-105 shadow-md'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                  : 'border-border dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
                 }
               `}
               aria-label={`View image ${index + 1}`}

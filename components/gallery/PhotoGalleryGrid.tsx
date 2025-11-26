@@ -22,7 +22,7 @@ export function PhotoGalleryGrid({ photos, onPhotoClick, loading, enableSocialSh
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className="bg-gray-200 dark:bg-gray-800 rounded-xl animate-pulse"
+            className="bg-gray-200 rounded-xl animate-pulse"
             style={{ aspectRatio: '9/16' }}
           />
         ))}
@@ -34,14 +34,14 @@ export function PhotoGalleryGrid({ photos, onPhotoClick, loading, enableSocialSh
     return (
       <div className="text-center py-16 px-4 max-w-2xl mx-auto">
         <div className="text-6xl mb-6">🌟</div>
-        <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+        <h3 className="text-2xl font-bold text-foreground mb-3">
           Ready to Start Documenting My Journey?
         </h3>
-        <div className="space-y-3 mb-8 text-left bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-          <p className="text-gray-700 dark:text-gray-300 font-medium mb-4">
+        <div className="space-y-3 mb-8 text-left bg-background rounded-lg p-6">
+          <p className="text-foreground font-medium mb-4">
             Every meal I log becomes share-ready content that shows:
           </p>
-          <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="space-y-2 text-sm text-muted-foreground">
             <div className="flex items-start gap-2">
               <span className="text-lg">✨</span>
               <span>What I'm eating to reach my goals</span>
@@ -69,7 +69,7 @@ export function PhotoGalleryGrid({ photos, onPhotoClick, loading, enableSocialSh
           </svg>
           Start My Journey
         </a>
-        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-4 text-sm text-muted-foreground dark:text-muted-foreground">
           My first meal could inspire someone today 🚀
         </p>
       </div>
@@ -121,7 +121,7 @@ export function GroupedPhotoGallery({ photosByDate, onPhotoClick, enableSocialSh
           <div key={dateKey}>
             {/* Date Header */}
             <div className="flex items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              <h3 className="text-lg font-semibold text-foreground">
                 {date.toLocaleDateString('en-US', {
                   weekday: 'long',
                   month: 'long',
@@ -129,7 +129,7 @@ export function GroupedPhotoGallery({ photosByDate, onPhotoClick, enableSocialSh
                   year: 'numeric'
                 })}
               </h3>
-              <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">
+              <span className="ml-3 text-sm text-muted-foreground dark:text-muted-foreground">
                 {photos.length} meal{photos.length !== 1 ? 's' : ''}
               </span>
             </div>

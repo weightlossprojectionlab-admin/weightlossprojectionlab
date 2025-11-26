@@ -10,26 +10,26 @@ const glob = require('glob');
  */
 const DARK_MODE_RULES = {
   // Text colors
-  'text-gray-900': 'text-gray-900 dark:text-gray-100',
-  'text-gray-800': 'text-gray-800 dark:text-gray-200',
-  'text-gray-700': 'text-gray-700 dark:text-gray-300',
-  'text-gray-600': 'text-gray-600 dark:text-gray-400',
-  'text-gray-500': 'text-gray-500 dark:text-gray-500', // middle gray, no change
+  'text-foreground': 'text-foreground',
+  'text-foreground': 'text-foreground dark:text-gray-200',
+  'text-foreground': 'text-foreground',
+  'text-muted-foreground': 'text-muted-foreground',
+  'text-muted-foreground': 'text-muted-foreground dark:text-muted-foreground', // middle gray, no change
   'text-black': 'text-black dark:text-white',
 
   // Background colors
-  'bg-white': 'bg-white dark:bg-gray-900',
-  'bg-gray-50': 'bg-gray-50 dark:bg-gray-950',
-  'bg-gray-100': 'bg-gray-100 dark:bg-gray-800',
+  'bg-background': 'bg-card',
+  'bg-background': 'bg-background',
+  'bg-muted': 'bg-muted',
   'bg-gray-200': 'bg-gray-200 dark:bg-gray-700',
   'bg-gray-300': 'bg-gray-300 dark:bg-gray-600',
-  'bg-purple-100': 'bg-purple-100 dark:bg-purple-900/20',
+  'bg-primary-light': 'bg-primary-light dark:bg-purple-900/20',
   'bg-indigo-100': 'bg-indigo-100 dark:bg-indigo-900/20',
 
   // Border colors
-  'border-gray-200': 'border-gray-200 dark:border-gray-700',
-  'border-gray-300': 'border-gray-300 dark:border-gray-600',
-  'border-white': 'border-white dark:border-gray-700',
+  'border-border': 'border-border',
+  'border-border': 'border-border dark:border-gray-600',
+  'border-white': 'border-white',
 };
 
 /**

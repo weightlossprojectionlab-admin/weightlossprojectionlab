@@ -332,18 +332,18 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-card rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 p-6 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-card border-b border-border p-6 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Upload Media</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{recipe.name}</p>
+            <h2 className="text-2xl font-bold text-foreground">Upload Media</h2>
+            <p className="text-sm text-muted-foreground mt-1">{recipe.name}</p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-gray-200"
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
@@ -352,10 +352,10 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
         <div className="p-6 space-y-6">
           {/* Image Upload - 4 Slots in Grid */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+            <label className="block text-sm font-semibold text-foreground mb-3">
               Recipe Images (Up to 4 Photos)
             </label>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground mb-4">
               First image will be the primary/hero image shown in the carousel
             </p>
 
@@ -363,8 +363,8 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
             <div
               className={`mb-4 relative transition-all duration-200 ${
                 isDragging
-                  ? 'border-4 border-solid border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                  : 'border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500'
+                  ? 'border-4 border-solid border-purple-500 bg-primary-light'
+                  : 'border-2 border-dashed border-border dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500'
               }`}
               onDragOver={handleDragOver}
               onDragEnter={handleDragEnter}
@@ -376,16 +376,16 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
                 className="cursor-pointer px-6 py-8 rounded-lg text-center"
               >
                 <div className={`flex flex-col items-center gap-3 ${isDragging ? 'scale-105' : ''} transition-transform`}>
-                  <PhotoIcon className={`h-12 w-12 ${isDragging ? 'text-purple-600 animate-bounce' : 'text-gray-400 dark:text-gray-500'}`} />
+                  <PhotoIcon className={`h-12 w-12 ${isDragging ? 'text-primary animate-bounce' : 'text-muted-foreground dark:text-muted-foreground'}`} />
                   <div>
-                    <p className={`text-lg font-semibold ${isDragging ? 'text-purple-600' : 'text-gray-700 dark:text-gray-300'}`}>
+                    <p className={`text-lg font-semibold ${isDragging ? 'text-primary' : 'text-foreground'}`}>
                       {isDragging ? 'Drop images here!' : 'Drag & drop images here'}
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground mt-1">
                       or click to select up to 4 images
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground dark:text-muted-foreground">
                     <span>PNG, JPG up to 5MB each</span>
                   </div>
                 </div>
@@ -403,10 +403,10 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
             {/* Divider */}
             <div className="relative mb-4">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                <div className="w-full border-t border-border dark:border-gray-600"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">or upload individually</span>
+                <span className="px-2 bg-card text-muted-foreground dark:text-muted-foreground">or upload individually</span>
               </div>
             </div>
 
@@ -414,7 +414,7 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
               {imageSlots.map((slot, index) => (
                 <div
                   key={index}
-                  className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 relative"
+                  className="border-2 border-dashed border-border dark:border-gray-600 rounded-lg p-4 relative"
                 >
                   {/* Primary Badge */}
                   {index === 0 && (
@@ -437,13 +437,13 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
                       <div className="mt-3 flex gap-2">
                         <button
                           onClick={() => imageInputRefs[index].current?.click()}
-                          className="flex-1 bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 text-sm"
+                          className="flex-1 bg-secondary text-white px-3 py-1.5 rounded-lg hover:bg-secondary-hover text-sm"
                         >
                           Change
                         </button>
                         <button
                           onClick={() => handleDeleteImage(index)}
-                          className="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700"
+                          className="bg-error text-white px-3 py-1.5 rounded-lg hover:bg-red-700"
                         >
                           <TrashIcon className="h-4 w-4" />
                         </button>
@@ -454,11 +454,11 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
                       onClick={() => imageInputRefs[index].current?.click()}
                       className="cursor-pointer text-center py-8"
                     >
-                      <PhotoIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-600 dark:text-gray-400 font-medium text-sm mb-1">
+                      <PhotoIcon className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-muted-foreground font-medium text-sm mb-1">
                         Image {index + 1}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         Click to upload
                       </p>
                     </div>
@@ -477,10 +477,10 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
 
           {/* Video Upload */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+            <label className="block text-sm font-semibold text-foreground mb-3">
               Recipe Video (5-7 Seconds)
             </label>
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6">
+            <div className="border-2 border-dashed border-border dark:border-gray-600 rounded-lg p-6">
               {videoPreview ? (
                 <div className="relative">
                   <div className="relative h-64 rounded-lg overflow-hidden bg-black">
@@ -493,13 +493,13 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
                   <div className="mt-4 flex gap-2">
                     <button
                       onClick={() => videoInputRef.current?.click()}
-                      className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                      className="flex-1 bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary-hover"
                     >
                       Change Video
                     </button>
                     <button
                       onClick={handleDeleteVideo}
-                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                      className="bg-error text-white px-4 py-2 rounded-lg hover:bg-red-700"
                     >
                       <TrashIcon className="h-5 w-5" />
                     </button>
@@ -510,11 +510,11 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
                   onClick={() => videoInputRef.current?.click()}
                   className="cursor-pointer text-center py-8"
                 >
-                  <VideoCameraIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">
+                  <VideoCameraIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground font-medium mb-1">
                     Click to upload video
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     MP4, 5-7 seconds, max 20MB
                   </p>
                 </div>
@@ -531,16 +531,16 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
 
           {/* Upload Progress */}
           {uploading && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="bg-secondary-light border border-secondary-light rounded-lg p-4">
               <div className="flex items-center gap-3 mb-2">
-                <CloudArrowUpIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-bounce" />
-                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                <CloudArrowUpIcon className="h-5 w-5 text-secondary animate-bounce" />
+                <span className="text-sm font-medium text-secondary-dark">
                   Uploading... {uploadProgress}%
                 </span>
               </div>
               <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
                 <div
-                  className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all"
+                  className="bg-secondary dark:bg-secondary-light0 h-2 rounded-full transition-all"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
@@ -548,11 +548,11 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
           )}
 
           {/* Info Box */}
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <h4 className="text-sm font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+          <div className="bg-warning-light border border-warning-light rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-warning-dark mb-2">
               Best Practices for Social Media
             </h4>
-            <ul className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
+            <ul className="text-sm text-warning-dark space-y-1">
               <li>• Upload up to 4 images showing different angles and stages of the recipe</li>
               <li>• First image is the hero - make it the most appetizing!</li>
               <li>• Use high-quality food photography (1920x1080 or 4:5 ratio)</li>
@@ -562,18 +562,18 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex gap-3 pt-4 border-t border-border">
             <button
               onClick={onClose}
               disabled={uploading}
-              className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+              className="flex-1 bg-gray-200 dark:bg-gray-700 text-foreground px-6 py-3 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleUpload}
               disabled={uploading || (!imageSlots.some(s => s.file) && !videoFile)}
-              className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-hover disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <CloudArrowUpIcon className="h-5 w-5" />
               {uploading ? 'Uploading...' : 'Upload Media'}

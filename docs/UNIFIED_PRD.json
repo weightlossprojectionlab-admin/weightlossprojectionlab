@@ -1,0 +1,112 @@
+{
+  "onboarding": {
+    "version": "1.0",
+    "purpose": "Determine user mode (single/household/caregiver), personalize UI, and drive feature discovery.",
+    "screens": [
+      {
+        "id": "role_selection",
+        "question": "Who will you primarily be managing?",
+        "options": ["myself", "family", "caregiver"],
+        "optionDescriptions": {
+          "myself": "Just tracking my own health and wellness",
+          "family": "Managing health for family members (spouse, children, parents, etc.)",
+          "caregiver": "I'm a professional caregiver managing patients"
+        },
+        "sets": "userMode"
+      },
+      {
+        "id": "goals",
+        "question": "What are your goals?",
+        "subtitle": "Select all that apply",
+        "multiSelect": true,
+        "options": ["weight_loss", "meal_planning", "medical_tracking", "caregiving", "shopping_automation", "recipes", "fitness", "vitals", "medications"],
+        "optionsByRole": {
+          "myself": ["weight_loss", "meal_planning", "shopping_automation", "recipes", "fitness"],
+          "family": ["weight_loss", "meal_planning", "medical_tracking", "shopping_automation", "recipes", "fitness", "vitals", "medications"],
+          "caregiver": ["medical_tracking", "meal_planning", "vitals", "medications", "recipes"]
+        },
+        "optionDescriptions": {
+          "weight_loss": "Track weight, calories, and progress toward weight goals",
+          "meal_planning": "Plan and log meals with AI-powered analysis",
+          "medical_tracking": "Track appointments, medications, and health records",
+          "caregiving": "Manage health and wellness for family members",
+          "shopping_automation": "Smart shopping lists and inventory tracking",
+          "recipes": "Discover healthy recipes tailored to your preferences",
+          "fitness": "Track steps, exercise, and fitness challenges",
+          "vitals": "Monitor blood pressure, glucose, and other vitals",
+          "medications": "Track medication schedules and refills"
+        },
+        "sets": "featurePreferences"
+      },
+      {
+        "id": "food_management",
+        "question": "How do you usually manage food?",
+        "options": ["self", "others", "shared", "i_shop", "i_dont_shop", "delivery", "meal_kits"],
+        "optionDescriptions": {
+          "self": "I cook and shop for myself",
+          "others": "Someone else cooks for me (e.g., family member, caregiver)",
+          "shared": "We share cooking and shopping duties",
+          "i_shop": "I do the grocery shopping",
+          "i_dont_shop": "Someone else does the shopping",
+          "delivery": "I use delivery services (Instacart, DoorDash, etc.)",
+          "meal_kits": "I use meal kit services (HelloFresh, Blue Apron, etc.)"
+        },
+        "sets": "kitchenMode"
+      },
+      {
+        "id": "logging_preference",
+        "question": "How do you want to log meals?",
+        "subtitle": "Select all that apply",
+        "multiSelect": true,
+        "options": ["photo", "manual", "both", "with_reminders"],
+        "optionDescriptions": {
+          "photo": "Take photos of meals for AI-powered analysis",
+          "manual": "Manually enter food items and portions",
+          "both": "Use both photo and manual logging",
+          "with_reminders": "Get reminders to log meals at meal times"
+        },
+        "sets": "mealLoggingMode"
+      },
+      {
+        "id": "automation",
+        "question": "Do you want the app to ask for updates if you forget?",
+        "options": ["yes", "no"],
+        "optionDescriptions": {
+          "yes": "Send me notifications if I haven't logged meals, weight, etc.",
+          "no": "I'll log things on my own schedule"
+        },
+        "sets": "automationLevel"
+      },
+      {
+        "id": "family_setup",
+        "question": "Would you like to add anyone now?",
+        "subtitle": "You can always add family members later",
+        "options": ["yes", "no"],
+        "optionDescriptions": {
+          "yes": "I'm ready to add family members now",
+          "no": "I'll add them later"
+        },
+        "visibleIf": "userMode != 'myself'"
+      }
+    ],
+    "userModes": {
+      "single": {
+        "tabs": ["home", "log", "kitchen", "profile"]
+      },
+      "household": {
+        "tabs": ["home", "log", "kitchen", "care_circle"]
+      },
+      "caregiver": {
+        "tabs": ["care_circle", "log", "home", "kitchen"]
+      }
+    }
+  },
+  "monetization": {
+    "eventDriven": true,
+    "triggers": {
+      "premium": ["ai_meal_scan", "recipes_limit", "inventory", "shopping", "ai_chat_limit"],
+      "family": ["add_second_member", "medications", "appointments", "vitals"],
+      "familyPlus": ["add_five_members", "storage_limit", "ai_chat_unlimited", "medical_reports"]
+    }
+  }
+}

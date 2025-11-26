@@ -21,17 +21,17 @@ import { getCategoryMetadata } from '@/lib/product-categories'
 
 // Dynamic imports for Recharts components to reduce bundle size
 const WasteByCategoryPieChart = dynamic(() => import('@/components/charts/WasteByCategoryPieChart').then(m => ({ default: m.WasteByCategoryPieChart })), {
-  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  loading: () => <div className="h-[300px] bg-muted rounded-lg animate-pulse" />,
   ssr: false
 })
 
 const ExpirationTrendChart = dynamic(() => import('@/components/charts/ExpirationTrendChart').then(m => ({ default: m.ExpirationTrendChart })), {
-  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  loading: () => <div className="h-[300px] bg-muted rounded-lg animate-pulse" />,
   ssr: false
 })
 
 const WasteCostBarChart = dynamic(() => import('@/components/charts/WasteCostBarChart').then(m => ({ default: m.WasteCostBarChart })), {
-  loading: () => <div className="h-[300px] bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
+  loading: () => <div className="h-[300px] bg-muted rounded-lg animate-pulse" />,
   ssr: false
 })
 
@@ -193,16 +193,16 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Total Wasted */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
+        <div className="bg-card rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
-              <TrashIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+              <TrashIcon className="h-6 w-6 text-error" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold text-foreground dark:text-white">
                 {metrics.totalWasted}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 Items Wasted
               </div>
             </div>
@@ -210,16 +210,16 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
         </div>
 
         {/* Total Cost */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
+        <div className="bg-card rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-              <CurrencyDollarIcon className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              <CurrencyDollarIcon className="h-6 w-6 text-warning dark:text-orange-400" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold text-foreground dark:text-white">
                 ${metrics.totalCost.toFixed(2)}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 Estimated Waste Cost
               </div>
             </div>
@@ -227,16 +227,16 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
         </div>
 
         {/* Expiration Rate */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
+        <div className="bg-card rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-              <ChartBarIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              <ChartBarIcon className="h-6 w-6 text-warning" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold text-foreground dark:text-white">
                 {metrics.expirationRate.toFixed(1)}%
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 Expiration Rate (30d)
               </div>
             </div>
@@ -244,16 +244,16 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
         </div>
 
         {/* Avg Days to Expiry */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
+        <div className="bg-card rounded-lg shadow p-4">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <ClockIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <ClockIcon className="h-6 w-6 text-secondary" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-2xl font-bold text-foreground dark:text-white">
                 {metrics.averageDaysToExpiry}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 Avg Days to Expiry
               </div>
             </div>
@@ -263,30 +263,30 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Waste by Category - Pie Chart */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card rounded-lg shadow p-4">
+          <h3 className="text-lg font-semibold text-foreground dark:text-white mb-4">
             Waste by Category
           </h3>
           {chartData.categoryData.length > 0 ? (
             <WasteByCategoryPieChart data={chartData.categoryData} />
           ) : (
-            <div className="h-[300px] flex items-center justify-center text-gray-500 dark:text-gray-400">
+            <div className="h-[300px] flex items-center justify-center text-muted-foreground dark:text-muted-foreground">
               No waste data available
             </div>
           )}
         </div>
 
         {/* Expiration Trend - Line Chart */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card rounded-lg shadow p-4">
+          <h3 className="text-lg font-semibold text-foreground dark:text-white mb-4">
             7-Day Expiration Trend
           </h3>
           <ExpirationTrendChart data={chartData.trendData} />
         </div>
 
         {/* Top Wasted Items */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card rounded-lg shadow p-4">
+          <h3 className="text-lg font-semibold text-foreground dark:text-white mb-4">
             Top Wasted Items
           </h3>
           {metrics.topWastedItems.length > 0 ? (
@@ -296,21 +296,21 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
                 return (
                   <div
                     key={index}
-                    className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                    className="flex items-center gap-3 p-3 bg-background rounded-lg"
                   >
                     <div className="flex-shrink-0 w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center text-xl">
                       {categoryMeta.icon}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-white truncate">
+                      <div className="font-medium text-foreground dark:text-white truncate">
                         {item.name}
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                      <div className="text-sm text-muted-foreground">
                         {categoryMeta.displayName}
                       </div>
                     </div>
                     <div className="flex-shrink-0">
-                      <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                      <div className="text-lg font-bold text-error">
                         {item.count}×
                       </div>
                     </div>
@@ -319,21 +319,21 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
               })}
             </div>
           ) : (
-            <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400 py-8">
+            <div className="h-full flex items-center justify-center text-muted-foreground dark:text-muted-foreground py-8">
               No waste data available
             </div>
           )}
         </div>
 
         {/* Waste by Category - Bar Chart */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card rounded-lg shadow p-4">
+          <h3 className="text-lg font-semibold text-foreground dark:text-white mb-4">
             Waste Cost by Category
           </h3>
           {metrics.wasteByCategory.length > 0 ? (
             <WasteCostBarChart data={metrics.wasteByCategory} />
           ) : (
-            <div className="h-[300px] flex items-center justify-center text-gray-500 dark:text-gray-400">
+            <div className="h-[300px] flex items-center justify-center text-muted-foreground dark:text-muted-foreground">
               No waste data available
             </div>
           )}
@@ -341,11 +341,11 @@ export function AnalyticsDashboard({ items, className = '' }: AnalyticsDashboard
       </div>
 
       {/* Tips Section */}
-      <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-        <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+      <div className="mt-6 bg-secondary-light rounded-lg p-4 border border-secondary-light">
+        <h3 className="text-lg font-semibold text-secondary-dark mb-2">
           💡 Reduce Food Waste Tips
         </h3>
-        <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+        <ul className="text-sm text-secondary-dark space-y-1">
           <li>• Plan meals ahead to use expiring items first</li>
           <li>• Store perishables properly to extend shelf life</li>
           <li>• Freeze items before they expire</li>

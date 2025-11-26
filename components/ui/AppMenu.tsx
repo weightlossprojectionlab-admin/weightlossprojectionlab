@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useMenu } from '@/contexts/MenuContext'
 import { useLazyAuth } from '@/hooks/useLazyAuth'
+import { useSubscription } from '@/hooks/useSubscription'
+import { PlanBadge } from '@/components/subscription/PlanBadge'
 import { signOut } from '@/lib/auth'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import {
@@ -45,6 +47,7 @@ interface MenuSection {
 export function AppMenu() {
   const { isOpen, closeMenu } = useMenu()
   const { user } = useLazyAuth()
+  const { subscription } = useSubscription()
   const pathname = usePathname()
   const router = useRouter()
 
@@ -59,17 +62,12 @@ export function AppMenu() {
     {
       title: 'Health',
       items: [
-        { name: 'Health Vitals', href: '/health-vitals', icon: HeartIcon },
-        { name: 'Medical Info', href: '/medical', icon: BeakerIcon },
-        { name: 'Family Members', href: '/patients', icon: UserGroupIcon },
-        { name: 'Medications', href: '/medications', icon: BeakerIcon },
+        { name: 'Family Health', href: '/patients', icon: UserGroupIcon },
       ],
     },
     {
       title: 'Tracking',
       items: [
-        { name: 'Log Meal', href: '/log-meal', icon: CameraIcon },
-        { name: 'Log Steps', href: '/log-steps', icon: ChartBarIcon },
         { name: 'Progress', href: '/progress', icon: ChartBarIcon },
         { name: 'Gallery', href: '/gallery', icon: PhotoIcon },
       ],
@@ -122,48 +120,62 @@ export function AppMenu() {
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-80 max-w-full bg-white dark:bg-gray-900 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-80 max-w-full bg-card shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-3">
-            {user?.photoURL ? (
-              <img
-                src={user.photoURL}
-                alt="Profile"
-                className="w-10 h-10 rounded-full"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
-                {user?.email?.[0].toUpperCase() || 'U'}
+        <div className="border-b border-border">
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              {user?.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Profile"
+                  className="w-10 h-10 rounded-full"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                  {user?.email?.[0].toUpperCase() || 'U'}
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground dark:text-white truncate">
+                  {user?.displayName || user?.email?.split('@')[0] || 'User'}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {user?.email}
+                </p>
               </div>
-            )}
-            <div className="min-w-0">
-              <p className="font-semibold text-gray-900 dark:text-white truncate">
-                {user?.displayName || user?.email?.split('@')[0] || 'User'}
-              </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                {user?.email}
-              </p>
             </div>
+            <button
+              type="button"
+              onClick={closeMenu}
+              className="p-2 rounded-lg text-muted-foreground hover:bg-muted transition-colors"
+              aria-label="Close menu"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={closeMenu}
-            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            aria-label="Close menu"
-          >
-            <XMarkIcon className="h-6 w-6" />
-          </button>
+
+          {/* Subscription Badge */}
+          {subscription && (
+            <div className="px-4 pb-3">
+              <PlanBadge
+                plan={subscription.plan}
+                addons={subscription.addons}
+                status={subscription.status}
+                size="sm"
+              />
+            </div>
+          )}
         </div>
 
         {/* Menu Content */}
         <div className="overflow-y-auto h-[calc(100%-130px)] p-4">
           {menuSections.map((section) => (
             <div key={section.title} className="mb-6">
-              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-2">
+              <h3 className="text-xs font-semibold text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-2 px-2">
                 {section.title}
               </h3>
               <nav className="space-y-1">
@@ -178,7 +190,7 @@ export function AppMenu() {
                       className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                         isActive
                           ? 'bg-primary text-white'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                          : 'text-foreground hover:bg-muted'
                       }`}
                       onClick={closeMenu}
                     >
@@ -193,11 +205,11 @@ export function AppMenu() {
         </div>
 
         {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-card">
           <button
             type="button"
             onClick={handleSignOut}
-            className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+            className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg bg-muted text-foreground hover:bg-gray-200 transition-colors font-medium"
           >
             <ArrowRightOnRectangleIcon className="h-5 w-5" />
             <span>Sign Out</span>

@@ -52,10 +52,10 @@ function ProviderDetailContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen bg-background">
         <PageHeader title="Loading..." backHref="/providers" />
         <div className="container mx-auto px-4 py-8">
-          <div className="animate-pulse bg-white dark:bg-gray-900 rounded-lg p-8 h-64" />
+          <div className="animate-pulse bg-card rounded-lg p-8 h-64" />
         </div>
       </div>
     )
@@ -63,11 +63,11 @@ function ProviderDetailContent() {
 
   if (!provider) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen bg-background">
         <PageHeader title="Provider Not Found" backHref="/providers" />
         <div className="container mx-auto px-4 py-8">
-          <div className="bg-white dark:bg-gray-900 rounded-lg p-8 text-center">
-            <p className="text-gray-500 dark:text-gray-400">
+          <div className="bg-card rounded-lg p-8 text-center">
+            <p className="text-muted-foreground dark:text-muted-foreground">
               The provider you're looking for doesn't exist.
             </p>
           </div>
@@ -77,7 +77,7 @@ function ProviderDetailContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       <PageHeader
         title={provider.name}
         subtitle={provider.specialty || provider.type}
@@ -89,14 +89,14 @@ function ProviderDetailContent() {
         <div className="flex gap-3 mb-6">
           <button
             onClick={() => router.push(`/providers/${providerId}/edit`)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
           >
             <PencilIcon className="w-5 h-5" />
             Edit
           </button>
           <button
             onClick={handleDelete}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-error text-white rounded-lg hover:bg-red-700 transition-colors"
           >
             <TrashIcon className="w-5 h-5" />
             Delete
@@ -104,14 +104,14 @@ function ProviderDetailContent() {
         </div>
 
         {/* Provider Info Card */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-8 space-y-6">
+        <div className="bg-card rounded-lg shadow-sm p-8 space-y-6">
           {/* Basic Info */}
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            <h2 className="text-2xl font-bold text-foreground mb-2">
               {provider.name}
             </h2>
             <div className="flex gap-2">
-              <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
+              <span className="px-3 py-1 bg-primary-light text-primary-dark rounded-full text-sm font-medium">
                 {provider.type}
               </span>
               {provider.isPrimary && (
@@ -125,35 +125,35 @@ function ProviderDetailContent() {
           {/* Specialty */}
           {provider.specialty && (
             <div>
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <h3 className="text-sm font-medium text-muted-foreground dark:text-muted-foreground mb-1">
                 Specialty
               </h3>
-              <p className="text-gray-900 dark:text-gray-100">{provider.specialty}</p>
+              <p className="text-foreground">{provider.specialty}</p>
             </div>
           )}
 
           {/* Organization */}
           {provider.organization && (
             <div>
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <h3 className="text-sm font-medium text-muted-foreground dark:text-muted-foreground mb-1">
                 Organization
               </h3>
-              <p className="text-gray-900 dark:text-gray-100">{provider.organization}</p>
+              <p className="text-foreground">{provider.organization}</p>
             </div>
           )}
 
           {/* Contact Info */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-semibold text-foreground">
               Contact Information
             </h3>
 
             {/* Address */}
             <div className="flex items-start gap-3">
-              <MapPinIcon className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
+              <MapPinIcon className="w-5 h-5 text-muted-foreground mt-1 flex-shrink-0" />
               <div>
-                <p className="text-gray-900 dark:text-gray-100">{provider.address}</p>
-                <p className="text-gray-900 dark:text-gray-100">
+                <p className="text-foreground">{provider.address}</p>
+                <p className="text-foreground">
                   {provider.city}, {provider.state} {provider.zipCode}
                 </p>
               </div>
@@ -161,10 +161,10 @@ function ProviderDetailContent() {
 
             {/* Phone */}
             <div className="flex items-center gap-3">
-              <PhoneIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <PhoneIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <a
                 href={`tel:${provider.phone}`}
-                className="text-purple-600 dark:text-purple-400 hover:underline"
+                className="text-primary dark:text-purple-400 hover:underline"
               >
                 {provider.phone}
               </a>
@@ -173,8 +173,8 @@ function ProviderDetailContent() {
             {/* Fax */}
             {provider.fax && (
               <div className="flex items-center gap-3">
-                <PhoneIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <span className="text-gray-900 dark:text-gray-100">
+                <PhoneIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                <span className="text-foreground">
                   Fax: {provider.fax}
                 </span>
               </div>
@@ -183,10 +183,10 @@ function ProviderDetailContent() {
             {/* Email */}
             {provider.email && (
               <div className="flex items-center gap-3">
-                <EnvelopeIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <EnvelopeIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                 <a
                   href={`mailto:${provider.email}`}
-                  className="text-purple-600 dark:text-purple-400 hover:underline"
+                  className="text-primary dark:text-purple-400 hover:underline"
                 >
                   {provider.email}
                 </a>
@@ -196,12 +196,12 @@ function ProviderDetailContent() {
             {/* Website */}
             {provider.website && (
               <div className="flex items-center gap-3">
-                <GlobeAltIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <GlobeAltIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                 <a
                   href={provider.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-purple-600 dark:text-purple-400 hover:underline"
+                  className="text-primary dark:text-purple-400 hover:underline"
                 >
                   {provider.website}
                 </a>
@@ -211,26 +211,26 @@ function ProviderDetailContent() {
 
           {/* Additional Info */}
           {(provider.npi || provider.notes) && (
-            <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <div className="space-y-4 pt-6 border-t border-border">
+              <h3 className="text-lg font-semibold text-foreground">
                 Additional Information
               </h3>
 
               {provider.npi && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  <h4 className="text-sm font-medium text-muted-foreground dark:text-muted-foreground mb-1">
                     NPI Number
                   </h4>
-                  <p className="text-gray-900 dark:text-gray-100 font-mono">{provider.npi}</p>
+                  <p className="text-foreground font-mono">{provider.npi}</p>
                 </div>
               )}
 
               {provider.notes && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  <h4 className="text-sm font-medium text-muted-foreground dark:text-muted-foreground mb-1">
                     Notes
                   </h4>
-                  <p className="text-gray-900 dark:text-gray-100">{provider.notes}</p>
+                  <p className="text-foreground">{provider.notes}</p>
                 </div>
               )}
             </div>

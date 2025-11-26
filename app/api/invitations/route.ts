@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { familyInvitationFormSchema } from '@/lib/validations/medical'
 import { generateInviteCode } from '@/lib/invite-code-generator'
+import { sendFamilyInvitationEmail } from '@/lib/email-service'
 import type { FamilyInvitation } from '@/types/medical'
 
 /**
@@ -97,7 +98,22 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request body
     const body = await request.json()
-    const validatedData = familyInvitationFormSchema.parse(body)
+    console.log('[Invitations API] Request body:', body)
+
+    let validatedData
+    try {
+      validatedData = familyInvitationFormSchema.parse(body)
+    } catch (validationError: any) {
+      console.error('[Invitations API] Validation error:', validationError)
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid invitation data',
+          details: validationError.errors || validationError.message
+        },
+        { status: 400 }
+      )
+    }
 
     // Get user profile for name
     const userDoc = await adminDb.collection('users').doc(userId).get()
@@ -105,17 +121,49 @@ export async function POST(request: NextRequest) {
     const userName = userData?.displayName || userData?.name || 'A family member'
 
     // Verify user owns the patients being shared
+    // Check both root-level and user-nested locations for backwards compatibility
     for (const patientId of validatedData.patientsShared) {
-      const patientDoc = await adminDb
-        .collection('users')
-        .doc(userId)
+      // Try root level first
+      let patientDoc = await adminDb
         .collection('patients')
         .doc(patientId)
         .get()
 
+      // If not found at root, try nested under user
+      if (!patientDoc.exists) {
+        patientDoc = await adminDb
+          .collection('users')
+          .doc(userId)
+          .collection('patients')
+          .doc(patientId)
+          .get()
+      }
+
+      console.log('[Invitations API] Patient check:', {
+        patientId,
+        exists: patientDoc.exists,
+        patientUserId: patientDoc.data()?.userId,
+        currentUserId: userId,
+        matches: patientDoc.data()?.userId === userId || patientDoc.exists // If nested, it's owned by this user
+      })
+
       if (!patientDoc.exists) {
         return NextResponse.json(
-          { success: false, error: `Patient ${patientId} not found or access denied` },
+          { success: false, error: `Patient ${patientId} not found in database` },
+          { status: 404 }
+        )
+      }
+
+      // For root-level patients, check userId matches
+      // For nested patients, they're already owned by this user (by virtue of the path)
+      const isRootLevel = patientDoc.ref.path.startsWith('patients/')
+      if (isRootLevel && patientDoc.data()?.userId !== userId) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `You don't have permission to share patient ${patientId}`,
+            details: `Patient belongs to user ${patientDoc.data()?.userId}, but you are ${userId}`
+          },
           { status: 403 }
         )
       }
@@ -130,8 +178,16 @@ export async function POST(request: NextRequest) {
       .get()
 
     if (!existingSnapshot.empty) {
+      const existingInvitation = {
+        id: existingSnapshot.docs[0].id,
+        ...existingSnapshot.docs[0].data()
+      }
       return NextResponse.json(
-        { success: false, error: 'You already have a pending invitation to this email address' },
+        {
+          success: false,
+          error: 'You already have a pending invitation to this email address',
+          details: { existingInvitation }
+        },
         { status: 400 }
       )
     }
@@ -173,10 +229,10 @@ export async function POST(request: NextRequest) {
       invitedByUserId: userId,
       invitedByName: userName,
       recipientEmail: validatedData.recipientEmail,
-      recipientPhone: validatedData.recipientPhone,
+      ...(validatedData.recipientPhone && { recipientPhone: validatedData.recipientPhone }),
       patientsShared: validatedData.patientsShared,
       permissions: validatedData.permissions as any, // Will be filled with defaults from schema
-      message: validatedData.message,
+      ...(validatedData.message && { message: validatedData.message }),
       createdAt: now,
       expiresAt,
       status: 'pending',
@@ -190,6 +246,44 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Invitation created: ${invitationRef.id} from ${userId} to ${validatedData.recipientEmail}`)
+
+    // Get patient names for the email
+    const patientNames: string[] = []
+    for (const patientId of validatedData.patientsShared) {
+      // Try root level first
+      let patientDoc = await adminDb.collection('patients').doc(patientId).get()
+
+      // If not found at root, try nested under user
+      if (!patientDoc.exists) {
+        patientDoc = await adminDb
+          .collection('users')
+          .doc(userId)
+          .collection('patients')
+          .doc(patientId)
+          .get()
+      }
+
+      if (patientDoc.exists) {
+        const patientData = patientDoc.data()
+        patientNames.push(patientData?.name || 'Unknown Patient')
+      }
+    }
+
+    // Send invitation email
+    try {
+      await sendFamilyInvitationEmail({
+        recipientEmail: validatedData.recipientEmail,
+        inviterName: userName,
+        inviteCode,
+        patientNames,
+        message: validatedData.message,
+        expiresAt
+      })
+      console.log(`Invitation email sent to ${validatedData.recipientEmail}`)
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError)
+      // Don't fail the whole request if email fails - invitation is still created
+    }
 
     return NextResponse.json({
       success: true,
