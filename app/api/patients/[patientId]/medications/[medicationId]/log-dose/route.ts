@@ -19,7 +19,7 @@ export async function POST(
     const { patientId, medicationId } = await params
 
     // Check patient access with RBAC
-    const authResult = await assertPatientAccess(request, patientId, 'manageMedications')
+    const authResult = await assertPatientAccess(request, patientId, 'editMedications')
     if (authResult instanceof Response) return authResult
 
     const { userId, ownerUserId } = authResult
