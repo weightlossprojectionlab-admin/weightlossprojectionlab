@@ -249,9 +249,9 @@ export async function POST(request: NextRequest) {
 
     // Step 10: Return updated family member
     const updatedFamilyMember = {
-      id: familyMemberDoc.id,
       ...familyMemberData,
-      ...updateData
+      ...updateData,
+      id: familyMemberDoc.id
     }
 
     return NextResponse.json({
