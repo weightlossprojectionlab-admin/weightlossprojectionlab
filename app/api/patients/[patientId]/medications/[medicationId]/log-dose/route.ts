@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/firebase'
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
-import { applyRBACMiddleware } from '@/lib/rbac-middleware'
+import { assertPatientAccess } from '@/lib/rbac-middleware'
 import { logger } from '@/lib/logger'
 
 /**
@@ -13,28 +13,22 @@ import { logger } from '@/lib/logger'
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { patientId: string; medicationId: string } }
+  { params }: { params: Promise<{ patientId: string; medicationId: string }> }
 ) {
   try {
-    const { patientId, medicationId } = params
+    const { patientId, medicationId } = await params
 
-    // Apply RBAC middleware
-    const rbacContext = await applyRBACMiddleware(request, {
-      requiredRole: 'viewer',
-      resourceType: 'patient',
-      resourceId: patientId,
-      allowFamilyAccess: true
-    })
+    // Check patient access with RBAC
+    const authResult = await assertPatientAccess(request, patientId, 'manageMedications')
+    if (authResult instanceof Response) return authResult
 
-    if (!rbacContext.allowed) {
-      return NextResponse.json({ error: rbacContext.reason }, { status: 403 })
-    }
+    const { userId, ownerUserId } = authResult
 
     const body = await request.json()
     const { takenAt, notes } = body
 
     // Get the medication document
-    const medicationRef = doc(db, `users/${rbacContext.ownerUserId}/patients/${patientId}/medications/${medicationId}`)
+    const medicationRef = doc(db, `users/${ownerUserId}/patients/${patientId}/medications/${medicationId}`)
     const medicationSnap = await getDoc(medicationRef)
 
     if (!medicationSnap.exists()) {
@@ -54,10 +48,10 @@ export async function POST(
     }
 
     // Log the dose in adherenceLogs subcollection
-    const adherenceLogsRef = collection(db, `users/${rbacContext.ownerUserId}/patients/${patientId}/medications/${medicationId}/adherenceLogs`)
+    const adherenceLogsRef = collection(db, `users/${ownerUserId}/patients/${patientId}/medications/${medicationId}/adherenceLogs`)
     await addDoc(adherenceLogsRef, {
       takenAt: Timestamp.fromDate(now),
-      loggedBy: rbacContext.userId,
+      loggedBy: userId,
       loggedAt: serverTimestamp(),
       notes: notes || null
     })
@@ -65,7 +59,7 @@ export async function POST(
     // Calculate adherence rate (simplified: percentage of expected doses taken in last 30 days)
     // This is a simple implementation - can be enhanced later
     const adherenceRate = await calculateAdherenceRate(
-      rbacContext.ownerUserId,
+      ownerUserId,
       patientId,
       medicationId,
       medication.frequency
