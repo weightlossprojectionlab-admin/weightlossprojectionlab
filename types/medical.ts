@@ -434,6 +434,7 @@ export interface AppointmentRecommendation {
 // ==================== FAMILY COLLABORATION ====================
 
 export interface FamilyMemberPermissions {
+  viewPatientProfile: boolean
   viewMedicalRecords: boolean
   editMedications: boolean
   scheduleAppointments: boolean
@@ -447,6 +448,7 @@ export interface FamilyMemberPermissions {
   inviteOthers: boolean
   viewSensitiveInfo: boolean // SSN, full insurance Member ID
   editPatientProfile: boolean
+  deletePatient: boolean
 }
 
 export interface FamilyMemberNotificationPreferences {

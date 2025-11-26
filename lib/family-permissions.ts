@@ -10,6 +10,7 @@ import type { FamilyMemberPermissions } from '@/types/medical'
 
 export const PERMISSION_PRESETS: Record<string, FamilyMemberPermissions> = {
   FULL_ACCESS: {
+    viewPatientProfile: true,
     viewMedicalRecords: true,
     editMedications: true,
     scheduleAppointments: true,
@@ -22,9 +23,11 @@ export const PERMISSION_PRESETS: Record<string, FamilyMemberPermissions> = {
     chatAccess: true,
     inviteOthers: true,
     viewSensitiveInfo: true,
-    editPatientProfile: true
+    editPatientProfile: true,
+    deletePatient: true
   },
   VIEW_ONLY: {
+    viewPatientProfile: true,
     viewMedicalRecords: true,
     editMedications: false,
     scheduleAppointments: false,
@@ -37,9 +40,11 @@ export const PERMISSION_PRESETS: Record<string, FamilyMemberPermissions> = {
     chatAccess: true,
     inviteOthers: false,
     viewSensitiveInfo: false,
-    editPatientProfile: false
+    editPatientProfile: false,
+    deletePatient: false
   },
   LIMITED_EDIT: {
+    viewPatientProfile: true,
     viewMedicalRecords: true,
     editMedications: false,
     scheduleAppointments: true,
@@ -52,9 +57,11 @@ export const PERMISSION_PRESETS: Record<string, FamilyMemberPermissions> = {
     chatAccess: true,
     inviteOthers: false,
     viewSensitiveInfo: false,
-    editPatientProfile: false
+    editPatientProfile: false,
+    deletePatient: false
   },
   CAREGIVER: {
+    viewPatientProfile: true,
     viewMedicalRecords: true,
     editMedications: true,
     scheduleAppointments: true,
@@ -67,13 +74,15 @@ export const PERMISSION_PRESETS: Record<string, FamilyMemberPermissions> = {
     chatAccess: true,
     inviteOthers: false,
     viewSensitiveInfo: false, // No sensitive info access
-    editPatientProfile: true
+    editPatientProfile: true,
+    deletePatient: false
   }
 }
 
 // ==================== PERMISSION LABELS ====================
 
 export const PERMISSION_LABELS: Record<keyof FamilyMemberPermissions, string> = {
+  viewPatientProfile: 'View Patient Profile',
   viewMedicalRecords: 'View Medical Records',
   editMedications: 'Edit Medications',
   scheduleAppointments: 'Schedule Appointments',
@@ -86,12 +95,14 @@ export const PERMISSION_LABELS: Record<keyof FamilyMemberPermissions, string> = 
   chatAccess: 'Chat Access',
   inviteOthers: 'Invite Other Family Members',
   viewSensitiveInfo: 'View Sensitive Info (SSN, Insurance)',
-  editPatientProfile: 'Edit Patient Profile'
+  editPatientProfile: 'Edit Patient Profile',
+  deletePatient: 'Delete Patient Records'
 }
 
 // ==================== PERMISSION DESCRIPTIONS ====================
 
 export const PERMISSION_DESCRIPTIONS: Record<keyof FamilyMemberPermissions, string> = {
+  viewPatientProfile: 'Can view basic patient information and demographics',
   viewMedicalRecords: 'Can view all medical records, including medications, appointments, and documents',
   editMedications: 'Can add, edit, and remove medications',
   scheduleAppointments: 'Can schedule new appointments',
@@ -104,7 +115,8 @@ export const PERMISSION_DESCRIPTIONS: Record<keyof FamilyMemberPermissions, stri
   chatAccess: 'Can participate in family chat about patient care',
   inviteOthers: 'Can invite additional family members to access this patient',
   viewSensitiveInfo: 'Can view SSN, full insurance member IDs, and other sensitive information',
-  editPatientProfile: 'Can edit patient name, date of birth, and other profile information'
+  editPatientProfile: 'Can edit patient name, date of birth, and other profile information',
+  deletePatient: 'Can permanently delete patient profiles and all associated data (owner-only privilege)'
 }
 
 // ==================== UTILITY FUNCTIONS ====================
@@ -258,6 +270,7 @@ export function isValidPermissions(permissions: any): permissions is FamilyMembe
   if (!permissions || typeof permissions !== 'object') return false
 
   const requiredKeys: (keyof FamilyMemberPermissions)[] = [
+    'viewPatientProfile',
     'viewMedicalRecords',
     'editMedications',
     'scheduleAppointments',
@@ -270,7 +283,8 @@ export function isValidPermissions(permissions: any): permissions is FamilyMembe
     'chatAccess',
     'inviteOthers',
     'viewSensitiveInfo',
-    'editPatientProfile'
+    'editPatientProfile',
+    'deletePatient'
   ]
 
   return requiredKeys.every(

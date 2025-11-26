@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
 import { removeUndefinedValues } from '@/lib/firestore-helpers'
 import { logger } from '@/lib/logger'
-import { authorizePatientAccess } from '@/lib/rbac-middleware'
+import { assertPatientAccess } from '@/lib/rbac-middleware'
 import type { PatientMedication } from '@/types/medical'
 
 /**
@@ -17,28 +17,19 @@ export async function PATCH(
     const { patientId, medicationId } = await params
 
     // Verify auth
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Check patient access with RBAC
+    const authResult = await assertPatientAccess(request, patientId, 'editMedications')
+    if (authResult instanceof Response) return authResult
 
-    const idToken = authHeader.split('Bearer ')[1]
-    const decodedToken = await verifyIdToken(idToken)
-    const userId = decodedToken.uid
-
-    // Check patient access
-    const auth = await authorizePatientAccess(userId, patientId)
-    if (!auth.authorized || !auth.permissions?.editMedications) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-    }
+    const { userId, ownerUserId } = authResult
 
     // Parse update data
     const updates = await request.json()
 
-    // Update medication in user's patient subcollection
+    // Update medication in owner's patient subcollection
     const medicationRef = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('medications')
