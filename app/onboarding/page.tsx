@@ -48,7 +48,7 @@ export default function OnboardingV2Page() {
   const [pendingApproval, setPendingApproval] = useState(false)
   const [acceptedInvitation, setAcceptedInvitation] = useState<any>(null)
 
-  const screens = prdConfig.onboarding.screens as OnboardingScreen[]
+  const screens = prdConfig.onboarding.screens as unknown as OnboardingScreen[]
 
   // Determine user mode from primary role
   function determineUserMode(role: PrimaryRole): UserMode {
