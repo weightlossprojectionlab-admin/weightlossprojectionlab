@@ -73,7 +73,7 @@ function PatientDetailContent() {
   const [medications, setMedications] = useState<PatientMedication[]>([])
   const [loadingMedications, setLoadingMedications] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
-  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications'>(tabParam || 'vitals')
+  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'weight' | 'meals' | 'steps' | 'medications'>(tabParam || 'vitals')
 
   const { vitals, loading: vitalsLoading, logVital, refetch } = useVitals({
     patientId,
