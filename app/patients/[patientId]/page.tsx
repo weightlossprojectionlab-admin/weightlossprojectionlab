@@ -526,15 +526,15 @@ function PatientDetailContent() {
                   <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
                     <div>
                       <span className="text-muted-foreground">P: </span>
-                      <span className="font-medium">{Math.round(nutritionSummary.macros.protein)}g</span>
+                      <span className="font-medium">{Math.round(nutritionSummary.macros.protein ?? 0)}g</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">C: </span>
-                      <span className="font-medium">{Math.round(nutritionSummary.macros.carbs)}g</span>
+                      <span className="font-medium">{Math.round(nutritionSummary.macros.carbs ?? 0)}g</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">F: </span>
-                      <span className="font-medium">{Math.round(nutritionSummary.macros.fat)}g</span>
+                      <span className="font-medium">{Math.round(nutritionSummary.macros.fat ?? 0)}g</span>
                     </div>
                   </div>
                 </>
