@@ -612,9 +612,9 @@ function PatientDetailContent() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Avg calories</span>
+                    <span className="text-muted-foreground">Today's calories</span>
                     <span className="font-medium text-foreground">
-                      {nutritionSummary.weeklyAvgCalories || 0}
+                      {nutritionSummary.todayCalories || 0}
                     </span>
                   </div>
                 </div>
