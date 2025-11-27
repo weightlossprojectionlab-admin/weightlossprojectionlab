@@ -162,7 +162,7 @@ function PatientsContent() {
               {filter === 'all' ? `No ${terminology} Yet` : `No ${filter}s Found`}
             </p>
             <p className="text-muted-foreground mb-6">
-              Start tracking health records by adding your first {getTrackingTerminology(userProfile, { singular: true, lowercase: true })}
+              Start tracking health records by adding your first {getTrackingTerminology(userProfile as any, { singular: true, lowercase: true })}
             </p>
             <Link
               href="/patients/new"
