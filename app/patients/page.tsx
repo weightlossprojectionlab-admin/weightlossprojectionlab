@@ -43,10 +43,10 @@ function PatientsContent() {
   const { profile: userProfile } = useUserProfile()
 
   // Get dynamic terminology based on user role
-  const pageTitle = getTrackingPageTitle(userProfile)
-  const pageSubtitle = getTrackingPageSubtitle(userProfile)
-  const addButtonText = getAddButtonText(userProfile)
-  const terminology = getTrackingTerminology(userProfile)
+  const pageTitle = getTrackingPageTitle(userProfile as any)
+  const pageSubtitle = getTrackingPageSubtitle(userProfile as any)
+  const addButtonText = getAddButtonText(userProfile as any)
+  const terminology = getTrackingTerminology(userProfile as any)
 
   const filteredPatients = patients.filter(p => {
     if (filter === 'all') return true
