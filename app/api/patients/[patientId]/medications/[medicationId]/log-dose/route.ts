@@ -155,7 +155,7 @@ async function calculateAdherenceRate(
 
     return Math.round(adherenceRate * 10) / 10 // Round to 1 decimal place
   } catch (error) {
-    logger.error('[LogDose] Error calculating adherence rate', error)
+    logger.error('[LogDose] Error calculating adherence rate', error as Error)
     return null
   }
 }
