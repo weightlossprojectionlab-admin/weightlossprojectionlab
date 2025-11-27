@@ -194,10 +194,13 @@ export async function POST(request: NextRequest) {
     const patientId = uuidv4()
     const now = new Date().toISOString()
 
+    // Extract weight data before creating patient profile
+    const { currentWeight, weightUnit, ...profileData } = patientData as any
+
     const newPatient: PatientProfile = {
       id: patientId,
       userId,
-      ...patientData,
+      ...profileData,
       createdAt: now,
       lastModified: now
     }
@@ -211,11 +214,11 @@ export async function POST(request: NextRequest) {
     await patientRef.set(newPatient)
 
     // Create initial weight log if currentWeight provided
-    if (newPatient.currentWeight) {
+    if (currentWeight) {
       const weightLogRef = patientRef.collection('weight-logs').doc()
       await weightLogRef.set({
-        weight: newPatient.currentWeight,
-        unit: newPatient.weightUnit || 'lbs',
+        weight: currentWeight,
+        unit: weightUnit || 'lbs',
         loggedAt: now,
         source: 'initial',
         tags: ['baseline'],
@@ -224,8 +227,8 @@ export async function POST(request: NextRequest) {
 
       logger.info('[API /patients POST] Initial weight log created', {
         patientId,
-        weight: newPatient.currentWeight,
-        unit: newPatient.weightUnit
+        weight: currentWeight,
+        unit: weightUnit
       })
     }
 

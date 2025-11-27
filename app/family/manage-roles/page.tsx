@@ -12,6 +12,7 @@
 
 import { useState } from 'react'
 import { useFamilyRoles, getCurrentUserRole } from '@/hooks/useFamilyRoles'
+import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/ui/PageHeader'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { AccountOwnerBadge, RoleBadge } from '@/components/family/AccountOwnerBadge'
@@ -41,6 +42,7 @@ export default function ManageRolesPage() {
 }
 
 function ManageRolesContent() {
+  const { user } = useAuth()
   const {
     familyMembers,
     loading,
@@ -205,7 +207,7 @@ function ManageRolesContent() {
                   isExpanded={expandedMemberId === member.id}
                   onToggleExpand={() => toggleExpandMember(member.id)}
                   onRoleChange={handleRoleChange}
-                  canEdit={canUserEditMember(member, currentUserRole)}
+                  canEdit={canUserEditMember(member, currentUserRole ?? undefined)}
                   isCurrentUser={member.userId === user?.uid}
                 />
               ))}
@@ -231,7 +233,7 @@ function ManageRolesContent() {
                   isExpanded={expandedMemberId === member.id}
                   onToggleExpand={() => toggleExpandMember(member.id)}
                   onRoleChange={handleRoleChange}
-                  canEdit={canUserEditMember(member, currentUserRole)}
+                  canEdit={canUserEditMember(member, currentUserRole ?? undefined)}
                   isCurrentUser={member.userId === user?.uid}
                 />
               ))}
@@ -257,7 +259,7 @@ function ManageRolesContent() {
                   isExpanded={expandedMemberId === member.id}
                   onToggleExpand={() => toggleExpandMember(member.id)}
                   onRoleChange={handleRoleChange}
-                  canEdit={canUserEditMember(member, currentUserRole)}
+                  canEdit={canUserEditMember(member, currentUserRole ?? undefined)}
                   isCurrentUser={member.userId === user?.uid}
                 />
               ))}
@@ -284,9 +286,9 @@ function ManageRolesContent() {
         <TransferOwnershipModal
           isOpen={showTransferModal}
           onClose={() => setShowTransferModal(false)}
-          onConfirm={handleTransferOwnership}
+          onTransfer={handleTransferOwnership}
           currentOwner={accountOwner}
-          eligibleMembers={eligibleForTransfer}
+          familyMembers={eligibleForTransfer}
         />
       )}
     </div>
@@ -359,15 +361,15 @@ function FamilyMemberCard({
           {/* Role Badge or Selector */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {role === 'account_owner' ? (
-              <AccountOwnerBadge size="md" />
+              <AccountOwnerBadge role="account_owner" />
             ) : canEdit && currentUserRole ? (
               <RoleSelector
-                currentRole={role}
+                value={role}
                 currentUserRole={currentUserRole}
                 onChange={newRole => onRoleChange(member.id, newRole)}
               />
             ) : (
-              <RoleBadge role={role} size="md" />
+              <RoleBadge role={role} />
             )}
 
             {/* Expand Button */}

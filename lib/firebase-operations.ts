@@ -243,7 +243,7 @@ export const mealLogOperations = {
 
   // Update meal log
   async updateMealLog(mealLogId: string, data: {
-    title?: string
+    description?: string
     mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack'
     notes?: string
     aiAnalysis?: AIAnalysis

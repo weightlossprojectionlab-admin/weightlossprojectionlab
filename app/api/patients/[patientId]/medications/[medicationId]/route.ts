@@ -78,31 +78,15 @@ export async function DELETE(
   try {
     const { patientId, medicationId } = await params
 
-    // Verify auth
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Verify auth and check patient access with RBAC
+    const authResult = await assertPatientAccess(request, patientId, 'editMedications')
+    if (authResult instanceof Response) return authResult
 
-    const idToken = authHeader.split('Bearer ')[1]
-    const decodedToken = await verifyIdToken(idToken)
-    const userId = decodedToken.uid
-
-    // Check patient access
-    const auth = await authorizePatientAccess(request, patientId)
-    if (auth instanceof Response) {
-      return auth
-    }
-
-    // Check if user is owner OR has editMedications permission
-    const canEdit = auth.role === 'owner' || auth.permissions?.editMedications
-    if (!canEdit) {
-      return NextResponse.json({ error: 'Access denied - editMedications permission required' }, { status: 403 })
-    }
+    const { userId, ownerUserId } = authResult
 
     const medicationRef = adminDb
       .collection('users')
-      .doc(auth.ownerUserId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('medications')
@@ -115,7 +99,7 @@ export async function DELETE(
     // Archive the medication to deletedMedications subcollection for audit trail
     await adminDb
       .collection('users')
-      .doc(auth.ownerUserId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('deletedMedications')
@@ -124,7 +108,6 @@ export async function DELETE(
         ...medicationData,
         deletedAt: new Date().toISOString(),
         deletedBy: userId,
-        deletedByEmail: decodedToken.email || 'unknown',
         originalId: medicationId
       })
 
@@ -135,7 +118,6 @@ export async function DELETE(
       patientId,
       medicationId,
       deletedBy: userId,
-      deletedByEmail: decodedToken.email,
       medicationName: medicationData?.name
     })
 

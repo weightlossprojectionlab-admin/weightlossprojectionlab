@@ -19,15 +19,13 @@ export const isMobileDevice = (): boolean => {
 }
 
 interface MealShareData {
-  title?: string
+  description?: string
   mealType: string
   photoUrl?: string
-  totalCalories: number
-  macros?: {
-    protein: number
-    carbs: number
-    fat: number
-  }
+  calories: number
+  protein?: number
+  carbs?: number
+  fat?: number
   loggedAt: string
   foodItems?: any[]
 }
@@ -107,14 +105,14 @@ export const generateMealShareCard = async (meal: MealShareData): Promise<Blob> 
   // Title or meal type
   textY += 70
   ctx.font = 'bold 48px system-ui, -apple-system, sans-serif'
-  const displayTitle = meal.title || meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1)
+  const displayTitle = meal.description || meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1)
   ctx.fillText(displayTitle, width / 2, textY)
 
   // Calories (large)
   textY += 100
   ctx.fillStyle = '#4F46E5'
   ctx.font = 'bold 80px system-ui, -apple-system, sans-serif'
-  ctx.fillText(`${meal.totalCalories}`, width / 2, textY)
+  ctx.fillText(`${meal.calories}`, width / 2, textY)
 
   textY += 45
   ctx.fillStyle = '#6B7280'
@@ -122,12 +120,12 @@ export const generateMealShareCard = async (meal: MealShareData): Promise<Blob> 
   ctx.fillText('calories', width / 2, textY)
 
   // Macros
-  if (meal.macros) {
+  if (meal.protein !== undefined && meal.carbs !== undefined && meal.fat !== undefined) {
     textY += 80
     ctx.font = 'bold 36px system-ui, -apple-system, sans-serif'
     ctx.fillStyle = '#1F2937'
 
-    const macrosText = `P: ${meal.macros.protein}g  •  C: ${meal.macros.carbs}g  •  F: ${meal.macros.fat}g`
+    const macrosText = `P: ${meal.protein}g  •  C: ${meal.carbs}g  •  F: ${meal.fat}g`
     ctx.fillText(macrosText, width / 2, textY)
   }
 
@@ -190,7 +188,7 @@ const roundRect = (
  * Generate caption text for social media (platform-specific)
  */
 export const generateShareCaption = (meal: MealShareData, platform?: string): string => {
-  const mealName = meal.title || `${meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1)}`
+  const mealName = meal.description || `${meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1)}`
   const date = new Date(meal.loggedAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric'
@@ -204,9 +202,9 @@ export const generateShareCaption = (meal: MealShareData, platform?: string): st
     case 'instagram-post':
       // Instagram: First-person, emoji-heavy, engaging
       caption = `💪 Staying on track with this ${mealName.toLowerCase()}!\n\n`
-      caption += `📊 ${meal.totalCalories} cal`
-      if (meal.macros) {
-        caption += ` | P:${meal.macros.protein}g C:${meal.macros.carbs}g F:${meal.macros.fat}g`
+      caption += `📊 ${meal.calories} cal`
+      if (meal.protein !== undefined && meal.carbs !== undefined && meal.fat !== undefined) {
+        caption += ` | P:${meal.protein}g C:${meal.carbs}g F:${meal.fat}g`
       }
       caption += `\n`
       if (meal.foodItems && meal.foodItems.length > 0) {
@@ -223,9 +221,9 @@ export const generateShareCaption = (meal: MealShareData, platform?: string): st
     case 'tiktok':
       // TikTok: First-person, trendy, energetic
       caption = `POV: I'm actually sticking to my goals 💪\n\n`
-      caption += `${mealName} - ${meal.totalCalories} cals ⚡\n`
-      if (meal.macros) {
-        caption += `P${meal.macros.protein} C${meal.macros.carbs} F${meal.macros.fat}\n\n`
+      caption += `${mealName} - ${meal.calories} cals ⚡\n`
+      if (meal.protein !== undefined && meal.carbs !== undefined && meal.fat !== undefined) {
+        caption += `P${meal.protein} C${meal.carbs} F${meal.fat}\n\n`
       }
       caption += `Still showing up. Still tracking. 🔥\n\n`
       caption += `#MyJourney #FitnessGoals #WhatIEat #Accountability #CalorieDeficit #MacroTracking #StillGoing #FitTok #WIEIAD #ConsistencyIsKey`
@@ -235,9 +233,9 @@ export const generateShareCaption = (meal: MealShareData, platform?: string): st
       // Facebook: First-person, longer form, accountability
       caption = `Keeping myself accountable! 💪\n\n`
       caption = `Here's my ${meal.mealType} today:\n`
-      caption += `• ${meal.totalCalories} calories\n`
-      if (meal.macros) {
-        caption += `• ${meal.macros.protein}g protein, ${meal.macros.carbs}g carbs, ${meal.macros.fat}g fat\n`
+      caption += `• ${meal.calories} calories\n`
+      if (meal.protein !== undefined && meal.carbs !== undefined && meal.fat !== undefined) {
+        caption += `• ${meal.protein}g protein, ${meal.carbs}g carbs, ${meal.fat}g fat\n`
       }
       if (meal.foodItems && meal.foodItems.length > 0) {
         const foodNames = meal.foodItems
@@ -253,10 +251,10 @@ export const generateShareCaption = (meal: MealShareData, platform?: string): st
 
     case 'pinterest':
       // Pinterest: First-person but SEO-friendly
-      caption = `My ${mealName} - ${meal.totalCalories} Calories\n\n`
+      caption = `My ${mealName} - ${meal.calories} Calories\n\n`
       caption += `What I eat to stay on track: `
-      if (meal.macros) {
-        caption += `${meal.macros.protein}g protein, ${meal.macros.carbs}g carbs, ${meal.macros.fat}g fat. `
+      if (meal.protein !== undefined && meal.carbs !== undefined && meal.fat !== undefined) {
+        caption += `${meal.protein}g protein, ${meal.carbs}g carbs, ${meal.fat}g fat. `
       }
       if (meal.foodItems && meal.foodItems.length > 0) {
         const foodNames = meal.foodItems
@@ -271,9 +269,9 @@ export const generateShareCaption = (meal: MealShareData, platform?: string): st
 
     case 'twitter':
       // Twitter: First-person, concise, under 280 chars
-      caption = `My ${meal.mealType} today: ${mealName} 🍽️\n${meal.totalCalories} cal`
-      if (meal.macros) {
-        caption += ` | P${meal.macros.protein} C${meal.macros.carbs} F${meal.macros.fat}`
+      caption = `My ${meal.mealType} today: ${mealName} 🍽️\n${meal.calories} cal`
+      if (meal.protein !== undefined && meal.carbs !== undefined && meal.fat !== undefined) {
+        caption += ` | P${meal.protein} C${meal.carbs} F${meal.fat}`
       }
       caption += `\n\nStaying consistent! 💪\n\n#MyJourney #Tracking #Consistency`
       break
@@ -281,9 +279,9 @@ export const generateShareCaption = (meal: MealShareData, platform?: string): st
     default:
       // Default: First-person, balanced, works everywhere
       caption = `💪 Making progress with my ${meal.mealType}!\n\n`
-      caption += `📊 ${meal.totalCalories} calories`
-      if (meal.macros) {
-        caption += ` | P:${meal.macros.protein}g C:${meal.macros.carbs}g F:${meal.macros.fat}g`
+      caption += `📊 ${meal.calories} calories`
+      if (meal.protein !== undefined && meal.carbs !== undefined && meal.fat !== undefined) {
+        caption += ` | P:${meal.protein}g C:${meal.carbs}g F:${meal.fat}g`
       }
       caption += `\n`
       if (meal.foodItems && meal.foodItems.length > 0) {

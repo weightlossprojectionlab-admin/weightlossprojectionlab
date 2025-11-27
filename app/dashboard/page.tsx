@@ -154,8 +154,8 @@ function DashboardContent() {
   const mealContext = useMemo(() => {
     return getNextMealContext(
       todayMeals
-        .filter(m => m && m.mealType && typeof m.totalCalories === 'number')
-        .map(m => ({ mealType: m.mealType, totalCalories: m.totalCalories })),
+        .filter(m => m && m.mealType && typeof m.calories === 'number')
+        .map(m => ({ mealType: m.mealType, totalCalories: m.calories })),
       nutritionSummary.goalCalories || 2000,
       {
         dietaryPreferences: userProfile?.preferences?.dietaryPreferences || [],

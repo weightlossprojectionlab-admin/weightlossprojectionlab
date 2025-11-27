@@ -116,14 +116,14 @@ function LogMealContent() {
   const [showMealTypeSuggestion, setShowMealTypeSuggestion] = useState(false)
   const [editingMealId, setEditingMealId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<{
-    title: string
+    description: string
     mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
     notes: string
-  }>({ title: '', mealType: 'breakfast', notes: '' })
+  }>({ description: '', mealType: 'breakfast', notes: '' })
   const [filterMealType, setFilterMealType] = useState<'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([])
-  const [duplicateMeal, setDuplicateMeal] = useState<{ id: string; title: string; mealType: string } | null>(null)
+  const [duplicateMeal, setDuplicateMeal] = useState<{ id: string; description: string; mealType: string } | null>(null)
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [loadingTemplates, setLoadingTemplates] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
@@ -202,7 +202,7 @@ function LogMealContent() {
       if (existingMeal) {
         setDuplicateMeal({
           id: existingMeal.id,
-          title: existingMeal.aiAnalysis?.title || 'Untitled meal',
+          description: existingMeal.description || 'Untitled meal',
           mealType: selectedMealType.charAt(0).toUpperCase() + selectedMealType.slice(1)
         })
         setShowDuplicateModal(true)
@@ -210,20 +210,15 @@ function LogMealContent() {
     }
   }, [loadingHistory, mealHistory, selectedMealType])
 
-  // Client-side filtering for search query (includes title, keywords, food items, and notes)
+  // Client-side filtering for search query (includes description, food items, and notes)
   const filteredMeals = searchQuery
     ? mealHistory.filter(meal => {
         const query = searchQuery.toLowerCase()
         return (
-          // Search in title
-          meal.title?.toLowerCase().includes(query) ||
-          // Search in search keywords
-          meal.searchKeywords?.some(keyword => keyword.includes(query)) ||
-          // Search in food items
-          meal.aiAnalysis?.foodItems?.some((item: any) => {
-            const itemName = typeof item === 'string' ? item : item.name
-            return itemName?.toLowerCase().includes(query)
-          }) ||
+          // Search in description
+          meal.description?.toLowerCase().includes(query) ||
+          // Search in food items (from foodItems array)
+          meal.foodItems?.some((item: string) => item.toLowerCase().includes(query)) ||
           // Search in notes
           meal.notes?.toLowerCase().includes(query)
         )
@@ -238,10 +233,10 @@ function LogMealContent() {
   })
 
   const todaysSummary = todaysMeals.reduce((acc, meal) => ({
-    calories: acc.calories + (meal.totalCalories || 0),
-    protein: acc.protein + (meal.macros?.protein || 0),
-    carbs: acc.carbs + (meal.macros?.carbs || 0),
-    fat: acc.fat + (meal.macros?.fat || 0),
+    calories: acc.calories + (meal.calories || 0),
+    protein: acc.protein + (meal.protein || 0),
+    carbs: acc.carbs + (meal.carbs || 0),
+    fat: acc.fat + (meal.fat || 0),
     mealCount: acc.mealCount + 1
   }), { calories: 0, protein: 0, carbs: 0, fat: 0, mealCount: 0 })
 
@@ -331,7 +326,7 @@ function LogMealContent() {
             foodItems: session.scaledIngredients.map((ing: string) => ({
               name: ing,
               portion: '',
-              calories: 0,
+              calories: session.scaledCalories,
               protein: 0,
               carbs: 0,
               fat: 0,
@@ -1082,11 +1077,11 @@ function LogMealContent() {
         logger.debug('✅ Meal logged for patient:', { patientId: patientIdParam, patientName: patientProfile.name })
         toast.success(`Meal logged for ${patientProfile.name}!`)
       } else {
-        // Otherwise use regular user meal logs
+        // Otherwise use regular user meal logs (note: additionalPhotos not supported in MealLog type)
         const response = await mealLogOperations.createMealLog({
           mealType: selectedMealType,
           photoUrl: photoUrl || undefined,
-          additionalPhotos: additionalPhotoUrls.length > 0 ? additionalPhotoUrls : undefined,
+          // additionalPhotos field removed - MealLog type only supports single photoUrl
           aiAnalysis: aiAnalysis || undefined,
           loggedAt: new Date().toISOString()
         })
@@ -1123,7 +1118,7 @@ function LogMealContent() {
   const startEditingMeal = (meal: any) => {
     setEditingMealId(meal.id)
     setEditForm({
-      title: meal.title || '',
+      description: meal.description || '',
       mealType: meal.mealType,
       notes: meal.notes || ''
     })
@@ -1131,20 +1126,20 @@ function LogMealContent() {
 
   const cancelEditing = () => {
     setEditingMealId(null)
-    setEditForm({ title: '', mealType: 'breakfast', notes: '' })
+    setEditForm({ description: '', mealType: 'breakfast', notes: '' })
   }
 
   const saveEditedMeal = async (mealId: string) => {
     setUpdatingMealId(mealId)
     try {
       await mealLogOperations.updateMealLog(mealId, {
-        title: editForm.title || undefined,
+        description: editForm.description || undefined,
         mealType: editForm.mealType,
         notes: editForm.notes || undefined
       })
       toast.success('Meal updated successfully!')
       setEditingMealId(null)
-      setEditForm({ title: '', mealType: 'breakfast', notes: '' })
+      setEditForm({ description: '', mealType: 'breakfast', notes: '' })
       // No need to refresh - real-time listener will update automatically
     } catch (error) {
       logger.error('Failed to update meal:', error as Error)
@@ -1189,13 +1184,15 @@ function LogMealContent() {
 
     try {
       const result = await shareMeal({
-        title: meal.title,
+        description: meal.description,
         mealType: meal.mealType,
         photoUrl: meal.photoUrl,
-        totalCalories: meal.totalCalories,
-        macros: meal.macros,
+        calories: meal.calories,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fat: meal.fat,
         loggedAt: meal.loggedAt,
-        foodItems: meal.aiAnalysis?.foodItems
+        foodItems: meal.foodItems
       })
 
       // Mobile: Image was downloaded, show success
@@ -1222,13 +1219,15 @@ function LogMealContent() {
 
     try {
       await shareToPlatform(platform, {
-        title: shareModalData.meal.title,
+        description: shareModalData.meal.description,
         mealType: shareModalData.meal.mealType,
         photoUrl: shareModalData.meal.photoUrl,
-        totalCalories: shareModalData.meal.totalCalories,
-        macros: shareModalData.meal.macros,
+        calories: shareModalData.meal.calories,
+        protein: shareModalData.meal.protein,
+        carbs: shareModalData.meal.carbs,
+        fat: shareModalData.meal.fat,
         loggedAt: shareModalData.meal.loggedAt,
-        foodItems: shareModalData.meal.aiAnalysis?.foodItems
+        foodItems: shareModalData.meal.foodItems
       }, shareModalData.imageBlob)
 
       const platformInfo = getPlatformInfo(platform)
@@ -2390,19 +2389,15 @@ function LogMealContent() {
                               alt={`${meal.mealType} photo`}
                               className="w-16 h-16 object-cover rounded-lg cursor-pointer transition-all group-hover/photo:ring-2 group-hover/photo:ring-indigo-400 group-hover/photo:scale-105"
                             />
-                            {meal.additionalPhotos && meal.additionalPhotos.length > 0 && (
-                              <div className="absolute bottom-0 right-0 bg-accent text-white text-xs px-1.5 py-0.5 rounded-tl-lg rounded-br-lg font-medium">
-                                +{meal.additionalPhotos.length}
-                              </div>
-                            )}
+                            {/* additionalPhotos removed - MealLog type only supports single photoUrl */}
                             <div className="absolute inset-0 bg-black/0 group-hover/photo:bg-black/20 rounded-lg transition-all flex items-center justify-center">
                               <span className="text-white opacity-0 group-hover/photo:opacity-100 transition-opacity text-xl">🔍</span>
                             </div>
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          {meal.title && (
-                            <div className="font-semibold text-foreground mb-1">{meal.title}</div>
+                          {meal.description && (
+                            <div className="font-semibold text-foreground mb-1">{meal.description}</div>
                           )}
                           <div className="flex items-center space-x-2 mb-1">
                             <span className="text-xl">{mealTypeEmoji}</span>
@@ -2410,12 +2405,12 @@ function LogMealContent() {
                             <span className="text-xs text-muted-foreground">• {dateStr} at {timeStr}</span>
                           </div>
                           <div className="flex items-center space-x-4 text-sm">
-                            <span className="font-semibold text-primary">{meal.totalCalories || 0} cal</span>
-                            {meal.macros && (
+                            <span className="font-semibold text-primary">{meal.calories || 0} cal</span>
+                            {(meal.protein || meal.carbs || meal.fat) && (
                               <>
-                                <span className="text-muted-foreground">P: {meal.macros.protein || 0}g</span>
-                                <span className="text-muted-foreground">C: {meal.macros.carbs || 0}g</span>
-                                <span className="text-muted-foreground">F: {meal.macros.fat || 0}g</span>
+                                <span className="text-muted-foreground">P: {meal.protein || 0}g</span>
+                                <span className="text-muted-foreground">C: {meal.carbs || 0}g</span>
+                                <span className="text-muted-foreground">F: {meal.fat || 0}g</span>
                               </>
                             )}
                           </div>
@@ -2484,11 +2479,11 @@ function LogMealContent() {
                     {isEditing && (
                       <div className="mt-4 pt-4 border-t border-border space-y-3">
                         <div>
-                          <label className="block text-xs font-medium text-foreground mb-1">Title (Optional)</label>
+                          <label className="block text-xs font-medium text-foreground mb-1">Description (Optional)</label>
                           <input
                             type="text"
-                            value={editForm.title}
-                            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                            value={editForm.description}
+                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                             placeholder="e.g., Chicken Rice Bowl"
                             className="w-full px-3 py-2 border border-border rounded text-sm"
                           />
@@ -2545,52 +2540,22 @@ function LogMealContent() {
 
                     {isExpanded && !isEditing && (
                       <div className="mt-4 pt-4 border-t border-border space-y-3">
-                        {/* Additional Photos Gallery */}
-                        {meal.additionalPhotos && meal.additionalPhotos.length > 0 && (
-                          <div>
-                            <h4 className="text-xs font-medium text-foreground mb-2">Additional Photos</h4>
-                            <div className="grid grid-cols-4 gap-2">
-                              {meal.additionalPhotos.map((photoUrl: string, idx: number) => (
-                                <div
-                                  key={idx}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setSelectedPhotoUrl(photoUrl)
-                                  }}
-                                  className="relative group/additional cursor-pointer"
-                                >
-                                  <img
-                                    src={photoUrl}
-                                    alt={`Additional photo ${idx + 1}`}
-                                    className="w-full h-20 object-cover rounded-lg border border-border group-hover/additional:ring-2 group-hover/additional:ring-indigo-400 transition-all"
-                                  />
-                                  <div className="absolute inset-0 bg-black/0 group-hover/additional:bg-black/20 rounded-lg transition-all flex items-center justify-center">
-                                    <span className="text-white opacity-0 group-hover/additional:opacity-100 transition-opacity text-lg">🔍</span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        {/* additionalPhotos section removed - MealLog type only supports single photoUrl */}
 
-                        {meal.aiAnalysis && meal.aiAnalysis.foodItems && meal.aiAnalysis.foodItems.length > 0 && (
+                        {meal.foodItems && meal.foodItems.length > 0 && (
                           <div>
-                            <h4 className="text-xs font-medium text-foreground mb-1">Detected Foods</h4>
+                            <h4 className="text-xs font-medium text-foreground mb-1">Foods</h4>
                             <ul className="text-xs text-muted-foreground space-y-1">
-                              {meal.aiAnalysis.foodItems.map((item: any, idx: number) => (
-                                <li key={idx}>• {typeof item === 'string' ? item : item.name}</li>
+                              {meal.foodItems.map((item: string, idx: number) => (
+                                <li key={idx}>• {item}</li>
                               ))}
                             </ul>
                           </div>
                         )}
-                        {meal.aiAnalysis && meal.aiAnalysis.suggestions && meal.aiAnalysis.suggestions.length > 0 && (
+                        {meal.notes && (
                           <div>
-                            <h4 className="text-xs font-medium text-foreground mb-1">AI Suggestions</h4>
-                            <ul className="text-xs text-success space-y-1">
-                              {meal.aiAnalysis.suggestions.map((suggestion: string, idx: number) => (
-                                <li key={idx}>💡 {suggestion}</li>
-                              ))}
-                            </ul>
+                            <h4 className="text-xs font-medium text-foreground mb-1">Notes</h4>
+                            <p className="text-xs text-muted-foreground">{meal.notes}</p>
                           </div>
                         )}
                       </div>
@@ -2801,7 +2766,7 @@ function LogMealContent() {
               {duplicateMeal.mealType} Already Logged
             </h3>
             <p className="text-muted-foreground mb-4">
-              You've already logged <span className="font-semibold">{duplicateMeal.title}</span> as your {duplicateMeal.mealType.toLowerCase()} today.
+              You've already logged <span className="font-semibold">{duplicateMeal.description}</span> as your {duplicateMeal.mealType.toLowerCase()} today.
             </p>
             <p className="text-sm text-muted-foreground dark:text-muted-foreground mb-6">
               You can only log one {duplicateMeal.mealType.toLowerCase()} per day. Choose an option below:
