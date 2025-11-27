@@ -281,12 +281,12 @@ function PatientDetailContent() {
 
   const handleLogVital = async (data: any) => {
     try {
-      logger.debug('[PatientDetail] Before logVital, vitals count:', vitals.length)
+      logger.debug('[PatientDetail] Before logVital', { vitalsCount: vitals.length })
       const newVital = await logVital(data)
-      logger.debug('[PatientDetail] After logVital, vitals count:', vitals.length, 'new vital:', newVital)
+      logger.debug('[PatientDetail] After logVital', { vitalsCount: vitals.length, newVital })
       toast.success('Vital sign logged successfully')
       await refetch()
-      logger.debug('[PatientDetail] After refetch, vitals count:', vitals.length)
+      logger.debug('[PatientDetail] After refetch', { vitalsCount: vitals.length })
     } catch (error: any) {
       // Error toast already shown in logVital
       logger.error('[PatientDetail] Error in handleLogVital', error)
