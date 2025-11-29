@@ -13,11 +13,13 @@
 import { useState } from 'react'
 import { useFamilyRoles, getCurrentUserRole } from '@/hooks/useFamilyRoles'
 import { useAuth } from '@/hooks/useAuth'
+import { usePatients } from '@/hooks/usePatients'
 import { PageHeader } from '@/components/ui/PageHeader'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { AccountOwnerBadge, RoleBadge } from '@/components/family/AccountOwnerBadge'
 import { RoleSelector } from '@/components/family/RoleSelector'
 import { TransferOwnershipModal } from '@/components/family/TransferOwnershipModal'
+import { EditMemberModal, type MemberUpdateData } from '@/components/family/EditMemberModal'
 import {
   ROLE_DESCRIPTIONS,
   ROLE_CAPABILITIES,
@@ -30,7 +32,8 @@ import {
   EyeIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  PencilSquareIcon
 } from '@heroicons/react/24/outline'
 
 export default function ManageRolesPage() {
@@ -49,13 +52,19 @@ function ManageRolesContent() {
     error,
     assignRole,
     transferOwnership,
+    updateMember,
+    removeMember,
     getFamilyHierarchy,
     canUserEditMember,
     refetch
   } = useFamilyRoles()
+  const { patients } = usePatients()
 
   const [showTransferModal, setShowTransferModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null)
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null)
+  const [migrating, setMigrating] = useState(false)
 
   const currentUserRole = getCurrentUserRole(familyMembers, user?.uid || '')
   const hierarchicalMembers = getFamilyHierarchy()
@@ -91,6 +100,47 @@ function ManageRolesContent() {
 
   const toggleExpandMember = (memberId: string) => {
     setExpandedMemberId(expandedMemberId === memberId ? null : memberId)
+  }
+
+  const handleEditMember = (member: FamilyMember) => {
+    setEditingMember(member)
+    setShowEditModal(true)
+  }
+
+  const handleSaveMember = async (updates: MemberUpdateData) => {
+    await updateMember(updates.memberId, {
+      role: updates.role,
+      patientsAccess: updates.patientsAccess,
+      patientPermissions: updates.patientPermissions
+    })
+    await refetch()
+  }
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (confirm(`Are you sure you want to remove ${memberName} from your family account? This will revoke their access to all patient records.`)) {
+      await removeMember(memberId)
+      await refetch()
+    }
+  }
+
+  const handleMigration = async () => {
+    if (!confirm('This will backfill patient-level records for all family members. This is a one-time fix for the patient visibility issue. Continue?')) {
+      return
+    }
+
+    setMigrating(true)
+    try {
+      const { medicalOperations } = await import('@/lib/medical-operations')
+      const result = await medicalOperations.family.migratePatientRecords()
+
+      alert(`Migration completed!\n\nRecords created: ${result.recordsCreated}\nRecords skipped: ${result.recordsSkipped}\nFamily members processed: ${result.totalFamilyMembers}\n\n${result.errors.length > 0 ? `Errors: ${result.errors.join(', ')}` : 'No errors'}`)
+
+      await refetch()
+    } catch (error: any) {
+      alert(`Migration failed: ${error.message}`)
+    } finally {
+      setMigrating(false)
+    }
   }
 
   if (loading) {
@@ -144,13 +194,22 @@ function ManageRolesContent() {
         backHref="/family"
         actions={
           isAccountOwner && (
-            <button
-              onClick={() => setShowTransferModal(true)}
-              className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-medium flex items-center gap-2"
-            >
-              <span className="text-lg">👑</span>
-              Transfer Ownership
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleMigration}
+                disabled={migrating}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {migrating ? '⏳ Migrating...' : '🔧 Fix Patient Access'}
+              </button>
+              <button
+                onClick={() => setShowTransferModal(true)}
+                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-medium flex items-center gap-2"
+              >
+                <span className="text-lg">👑</span>
+                Transfer Ownership
+              </button>
+            </div>
           )
         }
       />
@@ -207,6 +266,8 @@ function ManageRolesContent() {
                   isExpanded={expandedMemberId === member.id}
                   onToggleExpand={() => toggleExpandMember(member.id)}
                   onRoleChange={handleRoleChange}
+                  onEdit={handleEditMember}
+                  onRemove={handleRemoveMember}
                   canEdit={canUserEditMember(member, currentUserRole ?? undefined)}
                   isCurrentUser={member.userId === user?.uid}
                 />
@@ -233,6 +294,8 @@ function ManageRolesContent() {
                   isExpanded={expandedMemberId === member.id}
                   onToggleExpand={() => toggleExpandMember(member.id)}
                   onRoleChange={handleRoleChange}
+                  onEdit={handleEditMember}
+                  onRemove={handleRemoveMember}
                   canEdit={canUserEditMember(member, currentUserRole ?? undefined)}
                   isCurrentUser={member.userId === user?.uid}
                 />
@@ -259,6 +322,8 @@ function ManageRolesContent() {
                   isExpanded={expandedMemberId === member.id}
                   onToggleExpand={() => toggleExpandMember(member.id)}
                   onRoleChange={handleRoleChange}
+                  onEdit={handleEditMember}
+                  onRemove={handleRemoveMember}
                   canEdit={canUserEditMember(member, currentUserRole ?? undefined)}
                   isCurrentUser={member.userId === user?.uid}
                 />
@@ -291,6 +356,19 @@ function ManageRolesContent() {
           familyMembers={eligibleForTransfer}
         />
       )}
+
+      {/* Edit Member Modal */}
+      <EditMemberModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setEditingMember(null)
+        }}
+        member={editingMember}
+        currentUserRole={currentUserRole || 'caregiver'}
+        patients={patients}
+        onSave={handleSaveMember}
+      />
     </div>
   )
 }
@@ -301,6 +379,8 @@ interface FamilyMemberCardProps {
   isExpanded: boolean
   onToggleExpand: () => void
   onRoleChange: (memberId: string, newRole: FamilyRole) => Promise<void>
+  onEdit?: (member: FamilyMember) => void
+  onRemove?: (memberId: string, memberName: string) => void
   canEdit: boolean
   isCurrentUser: boolean
 }
@@ -311,6 +391,8 @@ function FamilyMemberCard({
   isExpanded,
   onToggleExpand,
   onRoleChange,
+  onEdit,
+  onRemove,
   canEdit,
   isCurrentUser
 }: FamilyMemberCardProps) {
@@ -370,6 +452,17 @@ function FamilyMemberCard({
               />
             ) : (
               <RoleBadge role={role} />
+            )}
+
+            {/* Edit Button */}
+            {!isCurrentUser && canEdit && role !== 'account_owner' && onEdit && (
+              <button
+                onClick={() => onEdit(member)}
+                className="p-2 hover:bg-primary/10 rounded-lg transition-colors group"
+                title="Edit member"
+              >
+                <PencilSquareIcon className="w-5 h-5 text-primary group-hover:text-primary-hover" />
+              </button>
             )}
 
             {/* Expand Button */}
@@ -493,6 +586,21 @@ function FamilyMemberCard({
               <p className="text-sm text-muted-foreground">
                 Has access to {member.patientsAccess.length} patient(s)
               </p>
+            </div>
+          )}
+
+          {/* Remove Access Button */}
+          {!isCurrentUser && canEdit && role !== 'account_owner' && onRemove && (
+            <div className="mt-6 pt-4 border-t-2 border-border">
+              <button
+                className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                onClick={() => onRemove(member.id, member.name)}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Remove Access
+              </button>
             </div>
           )}
         </div>

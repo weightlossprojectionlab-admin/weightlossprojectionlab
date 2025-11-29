@@ -12,12 +12,13 @@
  */
 
 import { useState, Suspense, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useShopping } from '@/hooks/useShopping'
+import { useMemberShoppingList } from '@/hooks/useMemberShoppingList'
 import { simplifyProduct } from '@/lib/openfoodfacts-api'
 import { lookupBarcodeWithCache } from '@/lib/cached-product-lookup'
 import { getCategoryMetadata, detectCategory, formatQuantityDisplay } from '@/lib/product-categories'
@@ -36,6 +37,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
 import { addManualShoppingItem } from '@/lib/shopping-operations'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 // Dynamic imports
 const BarcodeScanner = dynamic(
@@ -45,6 +47,103 @@ const BarcodeScanner = dynamic(
 
 function ShoppingListContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const memberId = searchParams.get('memberId') // Patient/member ID from URL
+  const userId = auth.currentUser?.uid || ''
+
+  // Use member-specific hook when viewing from patient page
+  const memberShoppingData = useMemberShoppingList({
+    householdId: userId, // Current user is the household
+    memberId: memberId || userId,
+    autoFetch: !!memberId // Only fetch if memberId is present
+  })
+
+  // Use household hook for general shopping view
+  const householdShoppingData = useShopping()
+
+  // Choose which data source based on memberId presence
+  const shoppingData = memberId ? {
+    neededItems: memberShoppingData.memberItems.filter(item => item.needed).map(item => ({
+      id: item.id,
+      userId,
+      productName: item.productName,
+      brand: item.brand,
+      imageUrl: item.imageUrl,
+      category: item.category,
+      quantity: item.quantity,
+      unit: item.unit,
+      displayQuantity: item.displayQuantity,
+      priority: item.priority,
+      needed: item.needed,
+      inStock: memberShoppingData.isInHouseholdStock(item.productKey),
+      location: 'pantry' as const,
+      isPerishable: false,
+      purchaseHistory: [],
+      createdAt: item.addedAt,
+      updatedAt: item.updatedAt,
+      isManual: !item.barcode,
+      barcode: item.barcode,
+      productKey: item.productKey,
+      recipeIds: item.recipeIds,
+      reason: item.reason
+    } as any)),
+    items: memberShoppingData.memberItems.map(item => ({
+      id: item.id,
+      userId,
+      productName: item.productName,
+      brand: item.brand,
+      imageUrl: item.imageUrl,
+      category: item.category,
+      quantity: item.quantity,
+      unit: item.unit,
+      displayQuantity: item.displayQuantity,
+      priority: item.priority,
+      needed: item.needed,
+      inStock: memberShoppingData.isInHouseholdStock(item.productKey),
+      location: 'pantry' as const,
+      isPerishable: false,
+      purchaseHistory: [],
+      createdAt: item.addedAt,
+      updatedAt: item.updatedAt,
+      isManual: !item.barcode,
+      barcode: item.barcode,
+      productKey: item.productKey,
+      recipeIds: item.recipeIds
+    } as any)),
+    stores: [],
+    loading: memberShoppingData.loading,
+    purchaseItem: async (itemId: string, options: any) => {
+      const memberItem = memberShoppingData.memberItems.find(i => i.id === itemId)
+      if (memberItem) {
+        const householdItem = memberShoppingData.findInHouseholdInventory(memberItem.productKey)
+        if (householdItem) {
+          await memberShoppingData.purchaseItem(itemId, householdItem.id, options)
+        }
+      }
+    },
+    toggleNeeded: async (itemId: string) => {
+      await memberShoppingData.updateItem(itemId, { needed: true })
+    },
+    removeItem: async (itemId: string) => {
+      const memberItem = memberShoppingData.memberItems.find(i => i.id === itemId)
+      if (memberItem) {
+        await memberShoppingData.removeItem(itemId, memberItem.productKey)
+      }
+    },
+    addItem: householdShoppingData.addItem, // Fall back to household for adding
+    updateItem: async (itemId: string, updates: any) => {
+      await memberShoppingData.updateItem(itemId, updates)
+    },
+    getSummary: () => ({
+      neededItems: memberShoppingData.summary?.neededItems || 0,
+      highPriorityItems: memberShoppingData.summary?.highPriorityItems || 0,
+      totalItems: memberShoppingData.summary?.totalItems || 0
+    }),
+    smartSort: householdShoppingData.smartSort,
+    addStore: householdShoppingData.addStore,
+    refresh: memberShoppingData.refresh
+  } : householdShoppingData
+
   const {
     neededItems,
     items: allItems,
@@ -59,12 +158,14 @@ function ShoppingListContent() {
     smartSort,
     addStore,
     refresh
-  } = useShopping()
+  } = shoppingData
 
   const [showScanner, setShowScanner] = useState(false)
   const [showExpirationPicker, setShowExpirationPicker] = useState(false)
   const [showDebugMode, setShowDebugMode] = useState(false)
   const [showImpulseConfirm, setShowImpulseConfirm] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null)
   const [scannedProduct, setScannedProduct] = useState<{
     product: OpenFoodFactsProduct
     itemId?: string
@@ -291,14 +392,23 @@ function ShoppingListContent() {
   }
 
   /**
-   * Delete item
+   * Delete item - show confirmation modal
    */
-  const handleDeleteItem = async (itemId: string) => {
-    if (!confirm('Remove this item from your shopping list?')) return
+  const handleDeleteItem = (itemId: string, itemName: string) => {
+    setItemToDelete({ id: itemId, name: itemName })
+    setShowDeleteConfirm(true)
+  }
+
+  /**
+   * Confirm delete item
+   */
+  const confirmDeleteItem = async () => {
+    if (!itemToDelete) return
 
     try {
-      await removeItem(itemId)
+      await removeItem(itemToDelete.id)
       toast.success('Item removed')
+      setItemToDelete(null)
     } catch (error) {
       toast.error('Failed to remove item')
     }
@@ -362,9 +472,31 @@ function ShoppingListContent() {
         <PageHeader
           title="Shopping List"
           subtitle={`${summary.neededItems} item${summary.neededItems !== 1 ? 's' : ''} to buy`}
+          backHref={memberId ? `/patients/${memberId}` : undefined}
         />
 
         <main className="container mx-auto px-4 py-6 max-w-4xl">
+          {/* Member Context Banner */}
+          {memberId && (
+            <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                    Viewing shopping list for this family member
+                  </h3>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    Items shown are specific to this person's needs. The household shares one inventory.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Summary Cards */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-card rounded-lg shadow p-4">
@@ -402,6 +534,7 @@ function ShoppingListContent() {
           <PurchaseConfirmation
             pendingItems={neededItems.filter(item => !item.inStock)}
             onConfirm={refresh}
+            memberId={memberId || undefined}
           />
 
           {/* Debug Mode Toggle & Orphaned Items Warning */}
@@ -483,7 +616,7 @@ function ShoppingListContent() {
                         key={item.id}
                         item={item}
                         onToggle={handleToggleNeeded}
-                        onDelete={handleDeleteItem}
+                        onDelete={(id) => handleDeleteItem(id, item.productName)}
                         onClick={handleItemClick}
                         showDebugInfo={true}
                         onFixOrphaned={handleFixOrphanedItem}
@@ -508,7 +641,7 @@ function ShoppingListContent() {
                           key={item.id}
                           item={item}
                           onToggle={handleToggleNeeded}
-                          onDelete={handleDeleteItem}
+                          onDelete={(id) => handleDeleteItem(id, item.productName)}
                           onClick={handleItemClick}
                           showDebugInfo={showDebugMode}
                         />
@@ -533,7 +666,7 @@ function ShoppingListContent() {
                           key={item.id}
                           item={item}
                           onToggle={handleToggleNeeded}
-                          onDelete={handleDeleteItem}
+                          onDelete={(id) => handleDeleteItem(id, item.productName)}
                           onClick={handleItemClick}
                           showDebugInfo={showDebugMode}
                         />
@@ -617,6 +750,21 @@ function ShoppingListContent() {
             }}
           />
         )}
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          onClose={() => {
+            setShowDeleteConfirm(false)
+            setItemToDelete(null)
+          }}
+          onConfirm={confirmDeleteItem}
+          title="Remove Item"
+          message={`Remove "${itemToDelete?.name}" from your shopping list?`}
+          confirmText="Remove"
+          cancelText="Cancel"
+          variant="danger"
+        />
       </div>
     </AuthGuard>
   )

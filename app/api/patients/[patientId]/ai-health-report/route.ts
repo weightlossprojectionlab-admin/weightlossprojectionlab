@@ -221,21 +221,34 @@ function analyzeVitals(vitals: any[]) {
   }
 
   const recentVitals = vitals.slice(0, 5).map((v: any) => {
-    // Parse timestamp - handle both Firestore timestamp and ISO string
+    // Parse recordedAt - handle both Firestore timestamp and ISO string
     let dateStr = 'N/A'
     try {
-      if (v.timestamp) {
-        if (typeof v.timestamp === 'string') {
-          dateStr = new Date(v.timestamp).toLocaleDateString()
-        } else if (v.timestamp.toDate) {
+      if (v.recordedAt) {
+        if (typeof v.recordedAt === 'string') {
+          dateStr = new Date(v.recordedAt).toLocaleDateString('en-US', {
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric'
+          })
+        } else if (v.recordedAt.toDate) {
           // Firestore Timestamp
-          dateStr = v.timestamp.toDate().toLocaleDateString()
-        } else if (v.timestamp.seconds) {
+          dateStr = v.recordedAt.toDate().toLocaleDateString('en-US', {
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric'
+          })
+        } else if (v.recordedAt.seconds) {
           // Firestore Timestamp as object
-          dateStr = new Date(v.timestamp.seconds * 1000).toLocaleDateString()
+          dateStr = new Date(v.recordedAt.seconds * 1000).toLocaleDateString('en-US', {
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric'
+          })
         }
       }
     } catch (e) {
+      logger.error('[analyzeVitals] Error parsing recordedAt', e as Error, { vitalId: v.id })
       dateStr = 'N/A'
     }
 

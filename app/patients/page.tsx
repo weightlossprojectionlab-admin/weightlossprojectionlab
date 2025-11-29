@@ -38,13 +38,28 @@ function PatientsContent() {
   const [filter, setFilter] = useState<'all' | 'human' | 'pet'>('all')
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
+  // Debug logging
+  console.log('[PatientsPage] Patients loaded:', {
+    count: patients.length,
+    loading,
+    error,
+    patients: patients.map(p => ({ id: p.id, name: p.name, _source: (p as any)._source }))
+  })
+
   const { subscription, isAdmin } = useSubscription()
   const { current, max, canAdd, percentage } = usePatientLimit(patients.length)
   const { profile: userProfile } = useUserProfile()
 
+  // Determine if this is account selection mode (caregiver with 2+ patients)
+  const isAccountSelectionMode = patients.length >= 2
+
   // Get dynamic terminology based on user role
-  const pageTitle = getTrackingPageTitle(userProfile as any)
-  const pageSubtitle = getTrackingPageSubtitle(userProfile as any)
+  const pageTitle = isAccountSelectionMode
+    ? 'Select Account to Manage'
+    : getTrackingPageTitle(userProfile as any)
+  const pageSubtitle = isAccountSelectionMode
+    ? 'Choose which account you want to view and manage'
+    : getTrackingPageSubtitle(userProfile as any)
   const addButtonText = getAddButtonText(userProfile as any)
   const terminology = getTrackingTerminology(userProfile as any)
 
@@ -178,7 +193,11 @@ function PatientsContent() {
         {!loading && !error && filteredPatients.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPatients.map(patient => (
-              <PatientCard key={patient.id} patient={patient} />
+              <PatientCard
+                key={patient.id}
+                patient={patient}
+                mode={isAccountSelectionMode ? 'select' : 'view'}
+              />
             ))}
           </div>
         )}

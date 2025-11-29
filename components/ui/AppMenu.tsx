@@ -25,7 +25,8 @@ import {
   ArrowRightOnRectangleIcon,
   UserCircleIcon,
   HeartIcon,
-  BeakerIcon
+  BeakerIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -63,6 +64,7 @@ export function AppMenu() {
       title: 'Health',
       items: [
         { name: 'Family Health', href: '/patients', icon: UserGroupIcon },
+        { name: 'Family Dashboard', href: '/family/dashboard', icon: ShieldCheckIcon },
       ],
     },
     {

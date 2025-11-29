@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, adminAuth } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
 import { removeUndefinedValues } from '@/lib/firestore-helpers'
+import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import type { PatientDocument } from '@/types/medical'
 
 export async function GET(
@@ -8,33 +9,32 @@ export async function GET(
   { params }: { params: Promise<{ patientId: string }> }
 ) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
-
     const { patientId } = await params
 
-    // Verify patient belongs to user
+    // Check authorization and get owner userId
+    const authResult = await assertPatientAccess(request, patientId, 'viewMedicalRecords')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
+    }
+
+    const { ownerUserId } = authResult as AssertPatientAccessResult
+
+    // Verify patient belongs to owner
     const patientDoc = await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .get()
 
     if (!patientDoc.exists) {
-      return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Family member not found' }, { status: 404 })
     }
 
     // Fetch documents for this patient
     const documentsSnapshot = await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('documents')
@@ -61,27 +61,26 @@ export async function POST(
   { params }: { params: Promise<{ patientId: string }> }
 ) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
-
     const { patientId } = await params
 
-    // Verify patient belongs to user
+    // Check authorization and get owner userId
+    const authResult = await assertPatientAccess(request, patientId, 'uploadDocuments')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
+    }
+
+    const { userId, ownerUserId } = authResult as AssertPatientAccessResult
+
+    // Verify patient belongs to owner
     const patientDoc = await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .get()
 
     if (!patientDoc.exists) {
-      return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Family member not found' }, { status: 404 })
     }
 
     const body = await request.json()
@@ -89,7 +88,7 @@ export async function POST(
     // Build document object - removeUndefinedValues will filter out undefined fields
     const documentData = {
       patientId,
-      userId,
+      userId: ownerUserId,
       name: body.name,
       fileName: body.fileName || body.name,
       category: body.category,
@@ -111,7 +110,7 @@ export async function POST(
 
     const docRef = await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('documents')

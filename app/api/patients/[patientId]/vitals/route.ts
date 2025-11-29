@@ -189,7 +189,12 @@ export async function POST(
       ...vitalData,
       recordedAt: vitalData.recordedAt || now,
       takenBy: userId,
-      method: vitalData.method || 'manual'
+      method: vitalData.method || 'manual',
+      // Audit trail
+      createdAt: now,
+      lastModifiedBy: userId,
+      lastModifiedAt: now,
+      modificationHistory: []
     }
 
     const vitalRef = patientRef.collection('vitals').doc(vitalId)

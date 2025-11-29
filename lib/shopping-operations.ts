@@ -37,6 +37,7 @@ import type {
 import { detectCategory, calculateDefaultExpiration, suggestStorageLocation, suggestDefaultUnit, formatQuantityDisplay } from './product-categories'
 import type { OpenFoodFactsProduct } from './openfoodfacts-api'
 import { FirebaseTimestamp, toDate } from '@/types/common'
+import { generateProductKey, findHouseholdItemByProductKey, addOrUpdateHouseholdItem } from './household-shopping-operations'
 
 const SHOPPING_ITEMS_COLLECTION = 'shopping_items'
 const STORE_VISITS_COLLECTION = 'store_visits'
@@ -102,6 +103,7 @@ function convertTimestamps<T extends FirestoreData>(data: T): T {
 
 /**
  * Create or update a shopping item from barcode scan
+ * Supports both individual and household (family plan) modes
  */
 export async function addOrUpdateShoppingItem(
   userId: string,
@@ -114,9 +116,37 @@ export async function addOrUpdateShoppingItem(
     location?: StorageLocation
     needed?: boolean
     store?: string
+    householdId?: string // NEW: If provided, uses household sharing mode
+    memberId?: string // NEW: The actual user adding the item (for family plans)
   } = {}
 ): Promise<ShoppingItem> {
   try {
+    const category = detectCategory(product)
+    const productKey = generateProductKey(product.code, product.product_name || 'Unknown Product', product.brands || '')
+
+    // HOUSEHOLD MODE: If householdId is provided, use household deduplication
+    if (options.householdId) {
+      const actualMemberId = options.memberId || userId
+
+      return await addOrUpdateHouseholdItem(
+        options.householdId,
+        actualMemberId,
+        {
+          productKey,
+          barcode: product.code,
+          productName: product.product_name || 'Unknown Product',
+          brand: product.brands || '',
+          imageUrl: product.image_front_url || product.image_url || '',
+          category,
+          quantity: options.quantity ?? 1,
+          unit: options.unit ?? suggestDefaultUnit(category),
+          inStock: options.inStock ?? true,
+          needed: options.needed ?? false
+        }
+      )
+    }
+
+    // INDIVIDUAL MODE: Original behavior for non-family users
     // Check if item already exists
     const existingItem = await getShoppingItemByBarcode(userId, product.code)
 
@@ -136,7 +166,6 @@ export async function addOrUpdateShoppingItem(
     }
 
     // Create new item
-    const category = detectCategory(product)
     const isPerishable = ['produce', 'meat', 'seafood', 'dairy', 'bakery', 'deli', 'eggs', 'herbs'].includes(category)
     const quantity = options.quantity ?? 1
     const unit = options.unit ?? suggestDefaultUnit(category)
@@ -144,6 +173,7 @@ export async function addOrUpdateShoppingItem(
 
     const newItem: Omit<ShoppingItem, 'id'> = {
       userId,
+      productKey, // NEW: Add product key for deduplication
       barcode: product.code,
       productName: product.product_name || 'Unknown Product',
       brand: product.brands || '',

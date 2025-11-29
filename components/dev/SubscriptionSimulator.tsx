@@ -59,12 +59,8 @@ export function SubscriptionSimulator() {
 
         // Show toast notification with plan details
         if (typeof window !== 'undefined' && (window as any).toast) {
-          const planLabel = presetName
-          const maxPatients = preset.maxPatients
-          const hasFamilyFeatures = preset.addons.familyFeatures
-
           (window as any).toast.success(
-            `Simulating ${planLabel} (${maxPatients} patient${maxPatients > 1 ? 's' : ''}${hasFamilyFeatures ? ', Family Features' : ''})`,
+            `Simulating ${presetName} (${preset.maxPatients} patient${preset.maxPatients > 1 ? 's' : ''}${preset.addons?.familyFeatures ? ', Family Features' : ''})`,
             { duration: 3000 }
           )
         }

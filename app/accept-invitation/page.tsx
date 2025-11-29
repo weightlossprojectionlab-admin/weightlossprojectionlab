@@ -8,7 +8,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { medicalOperations } from '@/lib/medical-operations'
@@ -18,7 +18,11 @@ import type { FamilyInvitation } from '@/types/medical'
 import toast from 'react-hot-toast'
 
 export default function AcceptInvitationPage() {
-  return <AcceptInvitationContent />
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <AcceptInvitationContent />
+    </Suspense>
+  )
 }
 
 function AcceptInvitationContent() {

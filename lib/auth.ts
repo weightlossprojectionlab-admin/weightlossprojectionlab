@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
   onAuthStateChanged,
@@ -82,6 +83,20 @@ export const checkSignInMethods = async (email: string) => {
     return methods
   } catch (error) {
     logger.error('Error checking sign-in methods', error as Error)
+    throw error
+  }
+}
+
+export const checkRedirectResult = async () => {
+  try {
+    const result = await getRedirectResult(auth)
+    if (result) {
+      logger.debug('Redirect result:', { userId: result.user.uid, email: result.user.email })
+      return result.user
+    }
+    return null
+  } catch (error) {
+    logger.error('Error checking redirect result', error as Error)
     throw error
   }
 }

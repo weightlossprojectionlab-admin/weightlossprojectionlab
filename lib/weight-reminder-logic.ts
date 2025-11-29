@@ -1,4 +1,4 @@
-import { WeightLog } from '@/types'
+import { WeightLog } from '@/types/medical'
 
 interface WeightReminderResult {
   shouldShow: boolean

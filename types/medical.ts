@@ -192,6 +192,20 @@ export interface PulseOximeterValue {
 
 export type VitalValue = number | BloodPressureValue | PulseOximeterValue
 
+/**
+ * VitalModification - Audit trail entry for vital sign changes
+ */
+export interface VitalModification {
+  modifiedBy: string // userId of person who made the change
+  modifiedAt: string // ISO 8601
+  changes: {
+    field: string // Which field was changed
+    oldValue: any // Previous value
+    newValue: any // New value
+  }[]
+  reason?: string // Optional reason for modification
+}
+
 export interface VitalSign {
   id: string
   patientId: string
@@ -204,6 +218,12 @@ export interface VitalSign {
   method: 'manual' | 'device' | 'imported'
   deviceId?: string // For future smart device integration
   tags?: string[] // 'fasting', 'post-meal', 'morning', 'evening', 'before_medication', 'after_medication'
+
+  // Audit trail
+  createdAt?: string // ISO 8601 - When first created
+  lastModifiedBy?: string // userId of last person to modify
+  lastModifiedAt?: string // ISO 8601 - When last modified
+  modificationHistory?: VitalModification[] // History of all modifications
 }
 
 // ==================== PROVIDERS ====================
@@ -567,6 +587,40 @@ export interface AppointmentForm {
   location?: Partial<AppointmentLocation>
   escort?: string
   notes?: string
+}
+
+// ==================== CAREGIVER ACTION ITEMS ====================
+
+export type ActionItemPriority = 'urgent' | 'this_week' | 'this_month' | 'ongoing'
+export type ActionItemCategory = 'medication' | 'appointment' | 'shopping' | 'monitoring' | 'nutrition' | 'general'
+
+export interface CaregiverActionItem {
+  id: string
+  patientId: string
+  userId: string // Caregiver who needs to complete this
+
+  // Task details
+  task: string
+  category: ActionItemCategory
+  priority: ActionItemPriority
+  details?: string[] // Sub-tasks or additional information
+
+  // Completion tracking
+  completed: boolean
+  completedAt?: string // ISO 8601
+  completedBy?: string // userId
+
+  // Source tracking
+  sourceReportId?: string // ID of the health report that generated this
+  generatedAt: string // ISO 8601 - when the report was generated
+
+  // Reminders
+  dueDate?: string // ISO 8601
+  reminderSent?: boolean
+
+  // Metadata
+  createdAt: string // ISO 8601
+  lastModified: string // ISO 8601
 }
 
 // ==================== API RESPONSE TYPES ====================

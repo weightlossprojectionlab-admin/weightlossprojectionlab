@@ -67,7 +67,7 @@ import { db } from '@/lib/firebase'
 import { collection, query, where, orderBy, limit, onSnapshot, Timestamp } from 'firebase/firestore'
 import toast from 'react-hot-toast'
 import { ScannedMedication } from '@/lib/medication-lookup'
-import type { WeightLog } from '@/types'
+import type { WeightLog } from '@/types/medical'
 
 export default function ProgressPage() {
   return (
@@ -237,9 +237,12 @@ function ProgressContent() {
           const weightLog = {
             id: doc.id,
             userId: user.uid,
+            patientId: data.patientId || user.uid,
             weight: data.weight,
             unit: data.unit,
             loggedAt: data.loggedAt.toDate(),
+            loggedBy: data.loggedBy || user.uid,
+            source: data.source || data.dataSource || 'manual',
             notes: data.notes,
             dataSource: data.dataSource || 'manual'
           }

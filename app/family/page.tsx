@@ -162,6 +162,26 @@ function FamilyContent() {
       />
 
       <main className="container mx-auto px-4 py-8">
+        {/* Family Dashboard Link - Prominent */}
+        <div className="mb-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold mb-1">Family Dashboard</h3>
+              <p className="text-sm text-purple-100">
+                View all family members, manage roles, and track patient access in one place
+              </p>
+            </div>
+            <Link
+              href="/family/dashboard"
+              className="px-6 py-3 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium flex items-center gap-2 whitespace-nowrap"
+            >
+              <span>Go to Dashboard</span>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        </div>
         {/* Tabs */}
         <div className="flex items-center gap-4 mb-6 border-b border-border">
           <button

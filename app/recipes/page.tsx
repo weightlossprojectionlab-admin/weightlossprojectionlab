@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { MealType, DietaryTag, MealSuggestion } from '@/lib/meal-suggestions'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
@@ -8,12 +9,24 @@ import { useRecipes } from '@/hooks/useRecipes'
 import { AdminModeToggle } from '@/components/admin/AdminModeToggle'
 import { RecipeMediaUpload } from '@/components/admin/RecipeMediaUpload'
 import { RecipeImageCarousel } from '@/components/RecipeImageCarousel'
-import { PencilSquareIcon, VideoCameraIcon, PlusCircleIcon } from '@heroicons/react/24/outline'
+import { PencilSquareIcon, VideoCameraIcon, PlusCircleIcon, ShieldCheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { RecipeImportModal } from '@/components/admin/RecipeImportModal'
+import { getMemberRecipeSuggestions, type MemberRecipeSuggestion } from '@/lib/member-recipe-engine'
+import { medicalOperations } from '@/lib/medical-operations'
+import { useShopping } from '@/hooks/useShopping'
+import { auth } from '@/lib/firebase'
+import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger'
+import type { PatientProfile, PatientMedication, VitalSign } from '@/types/medical'
 
 export default function RecipeIndexPage() {
+  const searchParams = useSearchParams()
+  const memberId = searchParams.get('memberId') // Support ?memberId= for personalization
+
   const { isAdmin } = useAdminAuth()
   const { recipes, loading: recipesLoading } = useRecipes()
+  const { items: inventoryItems } = useShopping() // Household inventory
+
   const [isAdminMode, setIsAdminMode] = useState(false)
   const [selectedRecipeForEdit, setSelectedRecipeForEdit] = useState<MealSuggestion | null>(null)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -21,8 +34,85 @@ export default function RecipeIndexPage() {
   const [selectedDietaryTags, setSelectedDietaryTags] = useState<DietaryTag[]>([])
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Member-specific state
+  const [memberProfile, setMemberProfile] = useState<PatientProfile | null>(null)
+  const [memberMedications, setMemberMedications] = useState<PatientMedication[]>([])
+  const [memberVitals, setMemberVitals] = useState<VitalSign[]>([])
+  const [memberRecipes, setMemberRecipes] = useState<MemberRecipeSuggestion[]>([])
+  const [loadingMemberData, setLoadingMemberData] = useState(false)
+
+  // Fetch member medical data and generate personalized recipes
+  useEffect(() => {
+    if (!memberId) {
+      setMemberProfile(null)
+      setMemberRecipes([])
+      return
+    }
+
+    const fetchMemberData = async () => {
+      setLoadingMemberData(true)
+      try {
+        const user = auth.currentUser
+        if (!user) {
+          logger.warn('[Recipes] No authenticated user for member data')
+          return
+        }
+
+        // Fetch patient profile
+        const profile = await medicalOperations.patients.getPatient(memberId)
+        if (!profile) {
+          toast.error('Member profile not found')
+          return
+        }
+        setMemberProfile(profile)
+
+        // Fetch medications
+        const meds = await medicalOperations.medications.getMedications(memberId)
+        setMemberMedications(meds || [])
+
+        // Fetch recent vitals (last 30 days)
+        const vitals = await medicalOperations.vitals.getVitals(memberId)
+        setMemberVitals(vitals || [])
+
+        // Generate personalized recipe suggestions using member recipe engine
+        if (recipes.length > 0 && inventoryItems.length >= 0) {
+          const suggestions = await getMemberRecipeSuggestions({
+            patient: profile,
+            medications: meds || [],
+            recentVitals: vitals || [],
+            householdInventory: inventoryItems,
+            mealType: selectedMealType === 'all' ? 'breakfast' : selectedMealType,
+            maxResults: 100, // Get all, we'll filter in UI
+            availableRecipes: recipes,
+            prioritizeExpiring: true,
+            minAvailability: 0
+          })
+
+          setMemberRecipes(suggestions)
+          logger.info('[Recipes] Generated member recipes', {
+            memberId,
+            count: suggestions.length,
+            // conditions: profile.healthConditions?.length || 0 // healthConditions not in PatientProfile
+          })
+        }
+      } catch (error) {
+        logger.error('[Recipes] Error fetching member data', error as Error, { memberId })
+        toast.error('Failed to load personalized recipes')
+      } finally {
+        setLoadingMemberData(false)
+      }
+    }
+
+    fetchMemberData()
+  }, [memberId, recipes, inventoryItems, selectedMealType])
+
+  // Determine which recipes to display (member-specific or all)
+  const displayRecipes: (MealSuggestion & { safetyResult?: any; inventoryAvailability?: any; medicalBadges?: string[] })[] = memberId && memberRecipes.length > 0
+    ? memberRecipes
+    : recipes
+
   // Filter recipes
-  const filteredRecipes = recipes.filter(recipe => {
+  const filteredRecipes = displayRecipes.filter(recipe => {
     // Filter by meal type
     if (selectedMealType !== 'all' && recipe.mealType !== selectedMealType) {
       return false
@@ -65,14 +155,57 @@ export default function RecipeIndexPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-100 dark:from-gray-900 dark:to-purple-900/20">
       {/* Marketing Banner */}
-      <div className="bg-gradient-to-r from-primary to-accent text-white py-3 px-4 text-center">
-        <p className="text-sm font-medium">
-          ✨ Track these recipes with AI-powered meal analysis.{' '}
-          <Link href="/auth" className="text-white underline font-bold hover:opacity-80">
-            Start Free →
-          </Link>
-        </p>
-      </div>
+      {!memberId && (
+        <div className="bg-gradient-to-r from-primary to-accent text-white py-3 px-4 text-center">
+          <p className="text-sm font-medium">
+            ✨ Track these recipes with AI-powered meal analysis.{' '}
+            <Link href="/auth" className="text-white underline font-bold hover:opacity-80">
+              Start Free →
+            </Link>
+          </p>
+        </div>
+      )}
+
+      {/* Member Context Banner (DRY - same pattern as shopping page) */}
+      {memberId && memberProfile && (
+        <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white py-4 px-4 border-b-2 border-green-700">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <ShieldCheckIcon className="h-6 w-6" />
+              <div>
+                <p className="font-bold text-lg">
+                  Personalized Recipes for {memberProfile.name}
+                </p>
+                <p className="text-sm opacity-90">
+                  {inventoryItems.filter(i => i.inStock).length} items in household inventory • Personalized for {memberProfile.name}
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/recipes"
+              className="text-white hover:underline text-sm font-medium"
+            >
+              View All Recipes →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Missing Health Data Warning */}
+      {/* Health conditions warning removed - healthConditions not in PatientProfile */}
+      {false && memberId && memberProfile && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b-2 border-yellow-300 dark:border-yellow-700 py-3 px-4">
+          <div className="max-w-7xl mx-auto flex items-center gap-3">
+            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-700 dark:text-yellow-400 flex-shrink-0" />
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              <strong>Tip:</strong> Add health conditions to {memberProfile?.name}'s profile for personalized, medically-safe recipe suggestions.
+              <Link href={`/patients/${memberId}`} className="ml-2 underline font-semibold hover:opacity-80">
+                Complete Health Profile →
+              </Link>
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 py-12">
         {/* Header with Admin Mode Toggle */}
@@ -236,6 +369,75 @@ export default function RecipeIndexPage() {
                         <span className="text-xs text-muted-foreground px-2 py-1">
                           +{recipe.dietaryTags.length - 3} more
                         </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Medical Safety & Inventory Badges (Member-specific) */}
+                  {memberId && 'safetyResult' in recipe && recipe.safetyResult && (
+                    <div className="space-y-2 mb-4">
+                      {/* Medical Safety Badges */}
+                      {recipe.safetyResult.badges && recipe.safetyResult.badges.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {recipe.safetyResult.badges.map((badge: any, idx: number) => (
+                            <span
+                              key={idx}
+                              className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                badge.type === 'safe'
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                  : badge.type === 'warning'
+                                  ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                                  : badge.type === 'danger'
+                                  ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                  : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                              }`}
+                              title={badge.tooltip}
+                            >
+                              {badge.label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Inventory Availability */}
+                      {'inventoryAvailability' in recipe && recipe.inventoryAvailability && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                            <div
+                              className={`h-1.5 rounded-full ${
+                                recipe.inventoryAvailability.percentage >= 80
+                                  ? 'bg-green-500'
+                                  : recipe.inventoryAvailability.percentage >= 50
+                                  ? 'bg-yellow-500'
+                                  : 'bg-gray-400'
+                              }`}
+                              style={{ width: `${recipe.inventoryAvailability.percentage}%` }}
+                            />
+                          </div>
+                          <span className="text-muted-foreground font-medium">
+                            {recipe.inventoryAvailability.percentage}% in stock
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Expiring Ingredients Alert */}
+                      {'inventoryAvailability' in recipe && recipe.inventoryAvailability?.expiringIngredients && recipe.inventoryAvailability.expiringIngredients.length > 0 && (
+                        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded px-2 py-1">
+                          <p className="text-xs text-orange-700 dark:text-orange-300 font-medium">
+                            🔥 Uses {recipe.inventoryAvailability.expiringIngredients.length} expiring item{recipe.inventoryAvailability.expiringIngredients.length > 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Safety Warnings */}
+                      {recipe.safetyResult.warnings && recipe.safetyResult.warnings.length > 0 && (
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded px-2 py-1.5">
+                          {recipe.safetyResult.warnings.slice(0, 2).map((warning: string, idx: number) => (
+                            <p key={idx} className="text-xs text-yellow-800 dark:text-yellow-200">
+                              ⚠️ {warning}
+                            </p>
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}

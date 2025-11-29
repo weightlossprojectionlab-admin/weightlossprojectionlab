@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { User } from 'firebase/auth'
-import { signIn, signUp, signInWithGoogle, signInWithGoogleRedirect, checkSignInMethods } from '@/lib/auth'
+import { signIn, signUp, signInWithGoogle, signInWithGoogleRedirect, checkSignInMethods, checkRedirectResult } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 import {
   isBiometricSupported,
@@ -21,6 +21,14 @@ import { useAuth } from '@/hooks/useAuth'
 import { determineUserDestination } from '@/lib/auth-router'
 
 export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <AuthContent />
+    </Suspense>
+  )
+}
+
+function AuthContent() {
   const { user: authUser, loading: authLoading } = useAuth()
   const searchParams = useSearchParams()
   const isInvitationFlow = searchParams.get('invitation') === 'true'
@@ -43,11 +51,13 @@ export default function AuthPage() {
   // Check if user is already authenticated and redirect if needed
   useEffect(() => {
     const checkAuthStatus = async () => {
+      console.log('[Auth Page] checkAuthStatus called', { authLoading, authUser: !!authUser })
       if (authLoading) {
         logger.debug('⏳ Auth page: Waiting for auth to load...')
         return
       }
 
+      console.log('[Auth Page] Auth loaded, setting checkingAuth to false')
       if (authUser) {
         logger.debug('✅ User already authenticated on /auth page, checking destination...')
 
@@ -120,13 +130,16 @@ export default function AuthPage() {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('[Auth Page] handleEmailAuth called', { email, isSignUp })
     setLoading(true)
     setError('')
 
     try {
       let user
       if (isSignUp) {
+        console.log('[Auth Page] Signing up...')
         user = await signUp(email, password)
+        console.log('[Auth Page] Sign up successful', { userId: user?.uid })
 
         // Create user profile in Firestore
         if (user) {
@@ -143,7 +156,9 @@ export default function AuthPage() {
           }
         }
       } else {
+        console.log('[Auth Page] Signing in...')
         user = await signIn(email, password)
+        console.log('[Auth Page] Sign in successful', { userId: user?.uid, email: user?.email })
       }
 
       // For invitation flow, skip biometric setup and go directly to accept invitation
@@ -165,14 +180,11 @@ export default function AuthPage() {
         return // Don't redirect yet, show biometric setup option
       }
 
-      // For signup, redirect to onboarding; for login, redirect to dashboard
-      if (isSignUp) {
-        router.push('/onboarding')
-      } else {
-        router.push('/dashboard')
-      }
+      // Let the useEffect handle the redirect based on determineUserDestination
+      // No manual router.push needed - auth state change will trigger redirect
 
     } catch (error: any) {
+      console.log('[Auth Page] Auth error caught', { error: error.message, code: error.code })
       logger.error('Auth error:', error as Error)
 
       // Check if it's an invalid credential error
@@ -211,6 +223,7 @@ export default function AuthPage() {
         setError(error.message || 'Authentication failed. Please try again.')
       }
     } finally {
+      console.log('[Auth Page] handleEmailAuth finally block')
       setLoading(false)
     }
   }
@@ -313,6 +326,7 @@ export default function AuthPage() {
   }
 
   const handleGoogleSignIn = async () => {
+    console.log('[Auth Page] Google sign-in clicked')
     setLoading(true)
     setError('')
 
@@ -326,13 +340,10 @@ export default function AuthPage() {
         localStorage.setItem('isInvitationFlow', 'true')
       }
 
-      // Use redirect method for better cross-origin compatibility
-      await signInWithGoogleRedirect()
-      // Redirect method will reload the page, so we don't need to handle user here
-      return
-
-      // Fallback to popup (not reached when using redirect)
+      console.log('[Auth Page] Calling signInWithGoogle popup...')
+      // Use popup method - redirect is causing issues
       const user = await signInWithGoogle()
+      console.log('[Auth Page] Google sign-in successful!', { userId: user?.uid, email: user?.email })
 
       // For invitation flow, redirect to accept invitation page
       if (isInvitationFlow) {
@@ -357,6 +368,7 @@ export default function AuthPage() {
       }
 
     } catch (error: any) {
+      console.log('[Auth Page] Google sign-in error', { error: error.message, code: error.code })
       logger.error('Google sign in error:', error as Error)
       if (error.code === 'auth/popup-closed-by-user') {
         setError('Sign-in was cancelled. Please try again.')
@@ -366,6 +378,7 @@ export default function AuthPage() {
         setError(error.message || 'Google sign-in failed. Please try again.')
       }
     } finally {
+      console.log('[Auth Page] Google sign-in finally block')
       setLoading(false)
     }
   }

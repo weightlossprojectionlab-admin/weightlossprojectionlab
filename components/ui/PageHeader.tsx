@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ReactNode } from 'react'
 import { MenuButton } from './MenuButton'
+import { SwitchAccountButton } from './SwitchAccountButton'
 
 interface PageHeaderProps {
   title: string
@@ -55,6 +56,7 @@ export function PageHeader({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {actions}
+          <SwitchAccountButton />
           {showMenu && <MenuButton />}
         </div>
       </div>
@@ -78,11 +80,10 @@ export function SimplePageHeader({ title, subtitle, showMenu = true }: { title: 
           <h1 className="page-title">{title}</h1>
           {subtitle && <div className="text-caption mt-1">{subtitle}</div>}
         </div>
-        {showMenu && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <MenuButton />
-          </div>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <SwitchAccountButton />
+          {showMenu && <MenuButton />}
+        </div>
       </div>
     </header>
   )
@@ -143,6 +144,7 @@ export function TabbedPageHeader({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {actions}
+          <SwitchAccountButton />
           {showMenu && <MenuButton />}
         </div>
       </div>

@@ -32,14 +32,14 @@ export function usePatientLimit(currentPatientCount: number) {
       return
     }
 
-    const info = getPatientLimitInfo(user, currentPatientCount)
+    const info = getPatientLimitInfo(user as any, currentPatientCount)
     setLimitInfo(info)
     setLoading(false)
 
     // Listen for simulation changes in dev mode
     if (process.env.NODE_ENV === 'development') {
       const handleSimulationChange = () => {
-        const updated = getPatientLimitInfo(user, currentPatientCount)
+        const updated = getPatientLimitInfo(user as any, currentPatientCount)
         setLimitInfo(updated)
       }
 

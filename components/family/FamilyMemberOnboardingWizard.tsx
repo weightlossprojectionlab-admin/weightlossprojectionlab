@@ -45,7 +45,7 @@ const VITAL_TYPES = [
 ]
 
 const RELATIONSHIPS = [
-  'Parent', 'Child', 'Spouse', 'Partner', 'Sibling', 'Grandparent',
+  'Self', 'Spouse', 'Partner', 'Parent', 'Child', 'Sibling', 'Grandparent',
   'Grandchild', 'Other Family', 'Care Recipient', 'Pet'
 ]
 
@@ -69,6 +69,10 @@ interface FamilyMemberData {
 
   // Step 3: Conditions
   conditions: string[]
+
+  // Optional: Goals and Vitals tracking (currently unused)
+  goals?: string[]
+  trackVitals?: string[]
 }
 
 export default function FamilyMemberOnboardingWizard() {
@@ -142,9 +146,9 @@ export default function FamilyMemberOnboardingWizard() {
   function toggleGoal(goalId: string) {
     setData(prev => ({
       ...prev,
-      goals: prev.goals.includes(goalId)
-        ? prev.goals.filter(g => g !== goalId)
-        : [...prev.goals, goalId]
+      goals: prev.goals?.includes(goalId)
+        ? prev.goals.filter((g: string) => g !== goalId)
+        : [...(prev.goals || []), goalId]
     }))
   }
 
@@ -160,9 +164,9 @@ export default function FamilyMemberOnboardingWizard() {
   function toggleVital(vitalId: string) {
     setData(prev => ({
       ...prev,
-      trackVitals: prev.trackVitals.includes(vitalId)
-        ? prev.trackVitals.filter(v => v !== vitalId)
-        : [...prev.trackVitals, vitalId]
+      trackVitals: prev.trackVitals?.includes(vitalId)
+        ? prev.trackVitals.filter((v: string) => v !== vitalId)
+        : [...(prev.trackVitals || []), vitalId]
     }))
   }
 
@@ -233,6 +237,14 @@ export default function FamilyMemberOnboardingWizard() {
 
       if (data.weightGoal) {
         patientData.weightGoal = data.weightGoal
+      }
+
+      // Initialize goals object with starting weight
+      if (data.currentWeight || data.targetWeight) {
+        patientData.goals = {
+          ...(data.currentWeight && { startWeight: parseFloat(data.currentWeight) }),
+          ...(data.targetWeight && { targetWeight: parseFloat(data.targetWeight) })
+        }
       }
 
       // Mark vitals as complete if we have height and weight

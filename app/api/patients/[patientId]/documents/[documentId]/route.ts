@@ -1,38 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, adminAuth } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
+import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ patientId: string; documentId: string }> }
 ) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
-
     const { patientId, documentId } = await params
 
-    // Verify patient belongs to user
+    // Check authorization and get owner userId
+    const authResult = await assertPatientAccess(request, patientId, 'deleteDocuments')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
+    }
+
+    const { ownerUserId } = authResult as AssertPatientAccessResult
+
+    // Verify patient belongs to owner
     const patientDoc = await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .get()
 
     if (!patientDoc.exists) {
-      return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Family member not found' }, { status: 404 })
     }
 
     // Delete the document
     await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('documents')

@@ -36,14 +36,14 @@ export function scaleRecipe(
 
   // Scale macros (round to 1 decimal)
   const scaledMacros = {
-    protein: Math.round(recipe.macros.protein * multiplier * 10) / 10,
-    carbs: Math.round(recipe.macros.carbs * multiplier * 10) / 10,
-    fat: Math.round(recipe.macros.fat * multiplier * 10) / 10,
-    fiber: Math.round(recipe.macros.fiber * multiplier * 10) / 10
+    protein: Math.round((recipe.macros?.protein ?? 0) * multiplier * 10) / 10,
+    carbs: Math.round((recipe.macros?.carbs ?? 0) * multiplier * 10) / 10,
+    fat: Math.round((recipe.macros?.fat ?? 0) * multiplier * 10) / 10,
+    fiber: Math.round((recipe.macros?.fiber ?? 0) * multiplier * 10) / 10
   }
 
   // Scale calories (round to nearest integer)
-  const scaledCalories = Math.round(recipe.calories * multiplier)
+  const scaledCalories = Math.round((recipe.calories ?? 0) * multiplier)
 
   return {
     ...recipe,

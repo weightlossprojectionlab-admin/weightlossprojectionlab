@@ -9,7 +9,7 @@
  * Tesseract.js Documentation: https://tesseract.projectnaptha.com/
  */
 
-import { createWorker, Worker, LoggerMessage } from 'tesseract.js'
+import { createWorker, Worker, LoggerMessage, PSM } from 'tesseract.js'
 import { logger } from '@/lib/logger'
 import { ScannedMedication } from './medication-lookup'
 import { auth } from './firebase'
@@ -74,7 +74,7 @@ export async function extractTextFromImage(
 
     // Set better parameters for prescription label reading
     await worker.setParameters({
-      tessedit_pageseg_mode: '3', // Fully automatic page segmentation (better for labels)
+      tessedit_pageseg_mode: PSM.AUTO, // Fully automatic page segmentation (better for labels)
       tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,:-()/#% ',
       preserve_interword_spaces: '1',
     })
@@ -284,11 +284,8 @@ export function parseMedicationFromText(text: string): ExtractedMedicationText |
     }
 
     if (!prescribingDoctor) {
-      logger.error('[OCR Parser] No prescriber found after all attempts', {
-        fullText: text.substring(0, 800),
-        allLines: lines.slice(0, 20),
-        totalLines: lines.length
-      })
+      const error = new Error(`No prescriber found after all attempts. totalLines: ${lines.length}, fullText preview: ${text.substring(0, 200)}`)
+      logger.error('[OCR Parser] No prescriber found after all attempts', error)
 
       // Log each line individually for debugging
       console.log('====== FULL OCR TEXT FOR DEBUGGING ======')
@@ -575,6 +572,7 @@ export function convertToScannedMedication(
   if (extracted.warnings && extracted.warnings.length > 0) medication.warnings = extracted.warnings
   if (extracted.pharmacy) medication.pharmacyName = extracted.pharmacy
   if (extracted.pharmacyPhone) medication.pharmacyPhone = extracted.pharmacyPhone
+  if (extracted.prescribingDoctor) medication.prescribingDoctor = extracted.prescribingDoctor
 
   return medication
 }

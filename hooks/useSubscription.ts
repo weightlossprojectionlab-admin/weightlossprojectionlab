@@ -26,15 +26,15 @@ export function useSubscription() {
     }
 
     // Get effective subscription (with admin override and dev simulation)
-    const effectiveSubscription = getUserSubscription(user)
+    const effectiveSubscription = getUserSubscription(user as any)
     setSubscription(effectiveSubscription)
-    setIsAdminUser(isAdmin(user))
+    setIsAdminUser(isAdmin(user as any))
     setLoading(false)
 
     // Listen for simulation changes (works in dev mode and for admin users)
     const handleSimulationChange = () => {
       console.log('[useSubscription] Received subscription-simulation-changed event')
-      const updated = getUserSubscription(user)
+      const updated = getUserSubscription(user as any)
       console.log('[useSubscription] Updated subscription:', updated)
       setSubscription(updated)
     }

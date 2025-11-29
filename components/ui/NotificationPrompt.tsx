@@ -1,8 +1,10 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { useNotifications } from '@/hooks/useNotifications'
 import { logger } from '@/lib/logger'
+import { auth } from '@/lib/firebase'
+import toast from 'react-hot-toast'
 
 export interface NotificationPromptProps {
   userId: string | undefined
@@ -89,13 +91,63 @@ export const NotificationSettings = memo(function NotificationSettings({ userId 
     revokePermission
   } = useNotifications(userId)
 
+  const [sendingTest, setSendingTest] = useState(false)
+
   if (!isSupported || !isSubscribed || !settings) {
     return null
+  }
+
+  const sendTestNotification = async () => {
+    setSendingTest(true)
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        toast.error('Please sign in to send test notification')
+        return
+      }
+
+      const idToken = await user.getIdToken()
+
+      const response = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast.success('Test notification sent! Check your notifications.')
+      } else {
+        toast.error(data.error || 'Failed to send test notification')
+      }
+    } catch (error) {
+      logger.error('Error sending test notification:', error as Error)
+      toast.error('Failed to send test notification')
+    } finally {
+      setSendingTest(false)
+    }
   }
 
   return (
     <div className="bg-card rounded-lg p-6">
       <h3 className="font-bold text-lg mb-4">Notification Preferences</h3>
+
+      {/* Test Notification Button */}
+      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <p className="text-sm text-blue-900 dark:text-blue-100 mb-3">
+          Test your notification setup to make sure everything is working correctly.
+        </p>
+        <button
+          onClick={sendTestNotification}
+          disabled={sendingTest}
+          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {sendingTest ? 'Sending...' : '🔔 Send Test Notification'}
+        </button>
+      </div>
 
       <div className="space-y-4">
         {/* Master toggle */}

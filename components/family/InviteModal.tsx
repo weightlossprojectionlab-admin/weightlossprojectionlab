@@ -118,7 +118,6 @@ export function InviteModal({
         ...(recipientPhone && { recipientPhone }),
         patientsShared: selectedPatients,
         permissions: customPermissions,
-        familyRole: selectedRole,
         ...(message && { message })
       })
 
@@ -156,7 +155,6 @@ export function InviteModal({
         ...(recipientPhone && { recipientPhone }),
         patientsShared: selectedPatients,
         permissions: customPermissions,
-        familyRole: selectedRole,
         ...(message && { message })
       })
 

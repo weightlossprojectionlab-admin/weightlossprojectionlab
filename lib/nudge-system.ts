@@ -6,7 +6,7 @@
  */
 
 import { logger } from '@/lib/logger'
-import { collection, query, where, getDocs, doc, setDoc, updateDoc, orderBy, limit } from 'firebase/firestore'
+import { collection, query, where, getDocs, getDoc, doc, setDoc, updateDoc, orderBy, limit } from 'firebase/firestore'
 import { db } from './firebase'
 
 // ============================================================================
@@ -136,17 +136,15 @@ export async function deleteNotificationToken(userId: string): Promise<void> {
  */
 export async function getNotificationSettings(userId: string): Promise<NotificationSettings> {
   try {
-    const userDoc = await getDocs(query(
-      collection(db, 'users'),
-      where('userId', '==', userId),
-      limit(1)
-    ))
+    // Query by document ID directly instead of using where clause
+    const userDocRef = doc(db, 'users', userId)
+    const userDoc = await getDoc(userDocRef)
 
-    if (userDoc.empty) {
+    if (!userDoc.exists()) {
       return DEFAULT_NOTIFICATION_SETTINGS
     }
 
-    const userData = userDoc.docs[0].data()
+    const userData = userDoc.data()
     return userData.notificationSettings || DEFAULT_NOTIFICATION_SETTINGS
   } catch (error) {
     logger.error('[Nudge] Error getting notification settings', error as Error)
@@ -162,19 +160,8 @@ export async function updateNotificationSettings(
   settings: Partial<NotificationSettings>
 ): Promise<void> {
   try {
-    const userQuery = query(
-      collection(db, 'users'),
-      where('userId', '==', userId),
-      limit(1)
-    )
-
-    const userSnap = await getDocs(userQuery)
-    if (userSnap.empty) {
-      logger.warn('[Nudge] User not found', { userId })
-      return
-    }
-
-    const userDocRef = userSnap.docs[0].ref
+    // Update by document ID directly
+    const userDocRef = doc(db, 'users', userId)
     await updateDoc(userDocRef, {
       notificationSettings: settings
     })

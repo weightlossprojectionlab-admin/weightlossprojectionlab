@@ -29,6 +29,12 @@ interface UseFamilyRolesReturn {
   refetch: () => Promise<void>
   assignRole: (memberId: string, newRole: FamilyRole) => Promise<FamilyMember>
   transferOwnership: (newOwnerId: string) => Promise<void>
+  updateMember: (memberId: string, updates: {
+    role?: FamilyRole
+    patientsAccess?: string[]
+    patientPermissions?: { [patientId: string]: any }
+  }) => Promise<FamilyMember>
+  removeMember: (memberId: string) => Promise<void>
   getFamilyHierarchy: () => FamilyMember[]
   canUserAssignRole: (targetRole: FamilyRole, currentUserRole?: FamilyRole) => boolean
   canUserEditMember: (targetMember: FamilyMember, currentUserRole?: FamilyRole) => boolean
@@ -238,6 +244,62 @@ export function useFamilyRoles({
     [familyMembers]
   )
 
+  /**
+   * Update member with role, patient access, and permissions
+   */
+  const updateMember = useCallback(
+    async (memberId: string, updates: {
+      role?: FamilyRole
+      patientsAccess?: string[]
+      patientPermissions?: { [patientId: string]: any }
+    }): Promise<FamilyMember> => {
+      try {
+        const updatedMember = await medicalOperations.family.updateMember(
+          memberId,
+          updates
+        )
+
+        // Update local state
+        setFamilyMembers(prev =>
+          prev.map(member =>
+            member.id === memberId ? updatedMember : member
+          )
+        )
+
+        toast.success('Family member updated successfully')
+        return updatedMember
+      } catch (err: any) {
+        await fetchFamilyHierarchy()
+        const errorMsg = err.message || 'Failed to update family member'
+        toast.error(errorMsg)
+        throw err
+      }
+    },
+    [fetchFamilyHierarchy]
+  )
+
+  /**
+   * Remove member from family account
+   */
+  const removeMember = useCallback(
+    async (memberId: string): Promise<void> => {
+      try {
+        await medicalOperations.family.removeMember(memberId)
+
+        // Update local state
+        setFamilyMembers(prev => prev.filter(member => member.id !== memberId))
+
+        toast.success('Family member removed successfully')
+      } catch (err: any) {
+        await fetchFamilyHierarchy()
+        const errorMsg = err.message || 'Failed to remove family member'
+        toast.error(errorMsg)
+        throw err
+      }
+    },
+    [fetchFamilyHierarchy]
+  )
+
   return {
     familyMembers,
     loading,
@@ -245,6 +307,8 @@ export function useFamilyRoles({
     refetch: fetchFamilyHierarchy,
     assignRole,
     transferOwnership,
+    updateMember,
+    removeMember,
     getFamilyHierarchy,
     canUserAssignRole,
     canUserEditMember

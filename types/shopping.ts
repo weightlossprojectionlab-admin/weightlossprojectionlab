@@ -75,7 +75,8 @@ export interface PurchaseHistoryEntry {
 
 export interface ShoppingItem {
   id: string
-  userId: string
+  userId: string // Legacy: kept for backwards compatibility, now represents household owner
+  householdId?: string // NEW: Account owner's userId for family plans
 
   // Product Info (from OpenFoodFacts or manual entry)
   barcode?: string // Optional: undefined for manual entries from recipes
@@ -83,6 +84,17 @@ export interface ShoppingItem {
   brand: string
   imageUrl: string
   category: ProductCategory
+  productKey?: string // NEW: Normalized key for deduplication (barcode or normalized name)
+
+  // Nutrition Data (from product_database or OpenFoodFacts)
+  nutrition?: {
+    calories: number
+    protein: number // grams
+    carbs: number // grams
+    fat: number // grams
+    fiber: number // grams
+    servingSize: string
+  }
 
   // Manual Entry Support (for recipe ingredients)
   isManual: boolean // True if added from recipe without barcode
@@ -110,6 +122,12 @@ export interface ShoppingItem {
   storeId?: string // Reference to Store document
   source?: ItemSource // How this item was added
   missingFromInventory?: boolean // True if checked against inventory and not found
+
+  // Multi-User Tracking (Family Plans)
+  addedBy?: string[] // NEW: Array of userIds who requested this item
+  requestedBy?: string[] // NEW: Array of userIds who currently need this item
+  lastModifiedBy?: string // NEW: userId of last person to update this item
+  purchasedBy?: string // NEW: userId of person who purchased this item
 
   // History & Learning
   purchaseHistory: PurchaseHistoryEntry[]
@@ -320,4 +338,71 @@ export interface ProductScanEvent {
   priceCents?: number // Price if provided
   purchased: boolean // Did they buy it
   context: 'shopping' | 'meal-log' | 'inventory' // Why they scanned
+}
+
+/**
+ * MemberShoppingListItem - Individual family member's shopping needs
+ * Stored in: users/{accountOwnerId}/member_shopping_lists/{memberId}/items/{itemId}
+ *
+ * This allows each family member to maintain their own list while sharing
+ * a common household inventory.
+ */
+export interface MemberShoppingListItem {
+  id: string
+  memberId: string // Family member's userId
+  householdId: string // Account owner's userId (links to household)
+
+  // Product Identification (for deduplication)
+  productKey: string // Barcode or normalized product name
+  barcode?: string // Optional barcode if scanned
+  productName: string
+  brand: string
+  imageUrl?: string
+  category: ProductCategory
+
+  // Shopping Details
+  quantity: number
+  unit?: QuantityUnit
+  displayQuantity?: string
+  priority: 'low' | 'medium' | 'high'
+  needed: boolean // Still needed or already satisfied
+
+  // Recipe/Context
+  reason?: string // "for dinner on Friday", "recipe: Chicken Tikka"
+  recipeIds?: string[] // Recipes that require this ingredient
+  source?: ItemSource // How this was added
+
+  // Purchase Tracking
+  purchasedBy?: string // userId of person who purchased
+  purchasedAt?: Date
+  householdItemId?: string // Link to shared household inventory item
+
+  // Metadata
+  addedAt: Date
+  updatedAt: Date
+  notes?: string
+}
+
+/**
+ * MemberShoppingListSummary - Summary stats for a member's shopping list
+ */
+export interface MemberShoppingListSummary {
+  memberId: string
+  totalItems: number
+  neededItems: number
+  purchasedItems: number
+  highPriorityItems: number
+  lastUpdated: Date
+}
+
+/**
+ * HouseholdShoppingSummary - Aggregated shopping stats across all family members
+ */
+export interface HouseholdShoppingSummary {
+  householdId: string
+  totalMembers: number
+  totalUniqueItems: number // Deduplicated count
+  totalItemsNeeded: number // Sum across all members
+  itemsByMember: Record<string, number> // memberId -> item count
+  lastUpdated: Date
 }

@@ -20,7 +20,7 @@ service cloud.firestore {
     function isSuperAdmin() {
       return isAuthenticated() &&
              (request.auth.token.email == 'perriceconsulting@gmail.com' ||
-              request.auth.token.email == 'weightlossprojectlab@gmail.com');
+              request.auth.token.email == 'weightlossprojectionlab@gmail.com');
     }
 
     // SECURITY: Check admin status from Firebase Custom Claims (fast, no Firestore read)
@@ -246,6 +246,62 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId);
         // No updates or deletes
+      }
+
+      // ============================================
+      // SHOPPING - STORES & PRICE HISTORY
+      // ============================================
+
+      // User's favorite stores
+      match /stores/{storeId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                        request.resource.data.userId == userId;
+        allow update: if isOwner(userId) &&
+                        resource.data.userId == userId;
+        allow delete: if isOwner(userId);
+      }
+
+      // Price history tracking
+      match /price_history/{priceId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                        request.resource.data.userId == userId;
+        // Price history is append-only (no updates or deletes)
+      }
+
+      // ============================================
+      // MEMBER SHOPPING LISTS (FAMILY PLANS)
+      // ============================================
+
+      // Member shopping lists - Per-member shopping needs within household
+      match /member_shopping_lists/{memberId} {
+        // Helper to check if requester can access this member's list
+        function canAccessMemberList() {
+          return isOwner(userId) || // Account owner can access all
+                 request.auth.uid == memberId; // Member can access their own list
+        }
+
+        // Read: Account owner or the member themselves
+        allow read: if canAccessMemberList();
+
+        // Items subcollection
+        match /items/{itemId} {
+          // Read: Account owner or the member themselves
+          allow read: if canAccessMemberList();
+
+          // Create: Account owner or the member themselves
+          allow create: if canAccessMemberList() &&
+                          request.resource.data.memberId == memberId &&
+                          request.resource.data.householdId == userId;
+
+          // Update: Account owner or the member themselves
+          allow update: if canAccessMemberList() &&
+                          resource.data.memberId == memberId;
+
+          // Delete: Account owner or the member themselves
+          allow delete: if canAccessMemberList();
+        }
       }
     }
 
@@ -598,13 +654,38 @@ service cloud.firestore {
     // SHOPPING & INVENTORY
     // ============================================
 
-    // Shopping items and kitchen inventory
+    // Helper function to check if user is in the household (account owner or family member)
+    function isHouseholdMember(householdId) {
+      return isAuthenticated() && (
+        // User is the account owner
+        request.auth.uid == householdId ||
+        // User is a family member with access
+        exists(/databases/$(database)/documents/users/$(householdId)/familyMembers/$(request.auth.uid))
+      );
+    }
+
+    // Shopping items and kitchen inventory (household shared)
     match /shopping_items/{itemId} {
+      // Read: Owner or family members can read
       allow read: if isAuthenticated() &&
-                     (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+                     (resource == null ||
+                      resource.data.userId == request.auth.uid ||
+                      (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)));
+
+      // Create: Owner or family members can create
+      allow create: if isAuthenticated() &&
+                      (request.resource.data.userId == request.auth.uid ||
+                       (request.resource.data.householdId != null && isHouseholdMember(request.resource.data.householdId)));
+
+      // Update: Owner or family members can update
+      allow update: if isAuthenticated() &&
+                      (resource.data.userId == request.auth.uid ||
+                       (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)));
+
+      // Delete: Owner or family members can delete
+      allow delete: if isAuthenticated() &&
+                      (resource.data.userId == request.auth.uid ||
+                       (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)));
     }
 
     // Store visits for location tracking

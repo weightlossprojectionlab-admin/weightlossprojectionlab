@@ -58,31 +58,53 @@ export async function GET(request: NextRequest) {
       const familyMember = familyMemberDoc.data()
       const patientsAccess = familyMember.patientsAccess || []
 
+      // Extract owner userId from family member document path
+      // Path format: users/{ownerUserId}/familyMembers/{memberId}
+      const ownerUserId = familyMemberDoc.ref.parent.parent?.id
+
+      if (!ownerUserId) {
+        logger.warn('[API /patients GET] Unable to extract owner from family member path', {
+          familyMemberId: familyMemberDoc.id,
+          path: familyMemberDoc.ref.path
+        })
+        continue
+      }
+
       logger.debug('[API /patients GET] Found family member record', {
         familyMemberId: familyMemberDoc.id,
+        ownerUserId,
         patientsAccessCount: patientsAccess.length
       })
 
-      // Fetch each patient in patientsAccess
+      // Fetch each patient in patientsAccess from the owner's patients collection
       for (const patientId of patientsAccess) {
         try {
-          // Find patient using collectionGroup
-          const patientSnapshot = await adminDb
-            .collectionGroup('patients')
+          const patientDoc = await adminDb
+            .collection('users')
+            .doc(ownerUserId)
+            .collection('patients')
+            .doc(patientId)
             .get()
 
-          const patientDoc = patientSnapshot.docs.find(doc => doc.id === patientId)
-
-          if (patientDoc) {
+          if (patientDoc.exists) {
             caregiverPatients.push({
               id: patientDoc.id,
               ...patientDoc.data(),
               _source: 'caregiver', // Mark as caregiver access
               _permissions: familyMember.permissions // Include permissions
             } as any)
+          } else {
+            logger.warn('[API /patients GET] Patient not found in owner collection', {
+              ownerUserId,
+              patientId
+            })
           }
         } catch (err) {
-          logger.warn('[API /patients GET] Failed to fetch caregiver patient', { patientId, error: err })
+          logger.warn('[API /patients GET] Failed to fetch caregiver patient', {
+            ownerUserId,
+            patientId,
+            error: err
+          })
         }
       }
     }
@@ -91,7 +113,7 @@ export async function GET(request: NextRequest) {
 
     // 3. Combine both lists and filter deleted patients
     const allPatients = [...ownedPatients, ...caregiverPatients]
-      .filter((patient: any) => patient.name !== '[DELETED USER]') as PatientProfile[]
+      .filter((patient: any) => patient.name !== '[DELETED USER]')
 
     logger.info('[API /patients GET] All patients fetched successfully', {
       userId,
@@ -100,6 +122,7 @@ export async function GET(request: NextRequest) {
       caregiver: caregiverPatients.length
     })
 
+    // Return with _source field preserved (TypeScript will strip it if we cast to PatientProfile)
     return NextResponse.json({
       success: true,
       data: allPatients

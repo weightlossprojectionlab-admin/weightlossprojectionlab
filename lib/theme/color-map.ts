@@ -17,16 +17,11 @@ export const COLOR_MIGRATION_MAP = {
     'bg-background': 'bg-background',
     'dark:bg-gray-900': '', // Remove, bg-background handles dark mode
     'dark:bg-gray-950': '', // Remove, bg-background handles dark mode
-    'bg-background': 'bg-background',
 
     // Card backgrounds
     'bg-card': 'bg-card',
     'bg-muted': 'bg-muted',
     'dark:bg-gray-800': '', // Remove when using bg-card
-
-    // Muted/subtle backgrounds
-    'bg-background': 'bg-muted',
-    'bg-muted': 'bg-muted',
   },
 
   /**
@@ -37,16 +32,10 @@ export const COLOR_MIGRATION_MAP = {
     // Primary text
     'text-foreground': 'text-foreground',
     'dark:text-gray-100': '', // Remove, text-foreground handles dark mode
-    'text-foreground': 'text-foreground',
 
     // Secondary/muted text
     'text-muted-foreground': 'text-muted-foreground',
     'dark:text-muted-foreground': '', // Remove, text-muted-foreground handles dark mode
-    'text-muted-foreground': 'text-muted-foreground',
-    'text-foreground': 'text-foreground',
-
-    // Very subtle text
-    'text-muted-foreground': 'text-muted-foreground',
   },
 
   /**
@@ -57,8 +46,6 @@ export const COLOR_MIGRATION_MAP = {
     'border-border': 'border-border',
     'dark:border-gray-800': '', // Remove, border-border handles dark mode
     'dark:border-gray-700': '', // Remove, border-border handles dark mode
-    'border-border': 'border-border',
-    'border-border': 'border-border',
   },
 
   /**
@@ -147,23 +134,29 @@ export const COLOR_MIGRATION_MAP = {
  * Common anti-patterns to avoid
  */
 export const ANTI_PATTERNS = [
-  // ❌ Don't use specific gray shades
-  'bg-background',
-  'bg-muted',
+  // ❌ Don't use specific gray shades directly
+  'bg-gray-50',
+  'bg-gray-100',
+  'bg-gray-200',
   'bg-gray-800',
   'bg-gray-900',
-  'text-muted-foreground',
-  'text-muted-foreground',
-  'border-border',
+  'text-gray-500',
+  'text-gray-600',
+  'border-gray-200',
+  'border-gray-700',
 
-  // ❌ Don't use color names directly
-  'bg-primary',
-  'bg-secondary-light0',
-  'bg-success',
+  // ❌ Don't use hardcoded color names
+  'bg-purple-600',
+  'bg-blue-500',
+  'bg-green-500',
+  'text-purple-600',
+  'text-blue-600',
 
   // ❌ Don't duplicate dark mode classes
   'dark:bg-gray-900',
   'dark:text-gray-100',
+  'dark:bg-gray-800',
+  'dark:border-gray-700',
 ] as const
 
 /**

@@ -18,7 +18,7 @@ export default function DocumentUpload({ patientId, onSuccess, onCancel }: Docum
   const [uploading, setUploading] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [documentName, setDocumentName] = useState('')
-  const [category, setCategory] = useState<DocumentCategory>('insurance_card')
+  const [category, setCategory] = useState<DocumentCategory>('insurance')
   const [notes, setNotes] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 

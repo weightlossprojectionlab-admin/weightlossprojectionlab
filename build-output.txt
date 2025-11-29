@@ -3,13 +3,190 @@
 > next build
 
    ▲ Next.js 15.5.6
-   - Environments: .env.local, .env
+   - Environments: .env.local, .env.production, .env
    - Experiments (use with caution):
      ✓ optimizeCss
      · optimizePackageImports
 
    Creating an optimized production build ...
- ✓ Compiled successfully in 4.9min
+ ✓ Compiled successfully in 68s
    Skipping linting
    Checking validity of types ...
-Next.js build worker exited with code: 3221225794 and signal: null
+   Collecting page data ...
+ ⚠ Using edge runtime on a page currently disables static generation for that page
+   Generating static pages (0/134) ...
+   Generating static pages (33/134) 
+   Generating static pages (66/134) 
+   Generating static pages (100/134) 
+ ✓ Generating static pages (134/134)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                                           Size  First Load JS
+┌ ○ /                                                                169 B         107 kB
+├ ○ /_not-found                                                       1 kB         104 kB
+├ ○ /accept-invitation                                             4.53 kB         252 kB
+├ ○ /admin                                                         5.29 kB         241 kB
+├ ○ /admin/ai-decisions                                            6.92 kB         239 kB
+├ ○ /admin/analytics                                               11.3 kB         249 kB
+├ ○ /admin/api-usage                                               5.84 kB         238 kB
+├ ○ /admin/barcodes                                                 6.4 kB         247 kB
+├ ƒ /admin/barcodes/[barcode]/edit                                  5.7 kB         246 kB
+├ ○ /admin/coaching                                                4.68 kB         237 kB
+├ ○ /admin/ml-analytics                                            6.47 kB         243 kB
+├ ○ /admin/perks                                                   6.49 kB         238 kB
+├ ○ /admin/products                                                5.48 kB         241 kB
+├ ƒ /admin/products/[barcode]                                      6.93 kB         242 kB
+├ ○ /admin/recipes                                                 6.36 kB         249 kB
+├ ○ /admin/recipes/create                                           7.8 kB         248 kB
+├ ○ /admin/settings                                                5.58 kB         237 kB
+├ ○ /admin/trust-safety                                            6.04 kB         241 kB
+├ ○ /admin/users                                                   4.86 kB         240 kB
+├ ƒ /api/admin/ai-decisions                                          381 B         103 kB
+├ ƒ /api/admin/ai-decisions/[id]/review                              381 B         103 kB
+├ ƒ /api/admin/ai-decisions/stats                                    381 B         103 kB
+├ ƒ /api/admin/analytics                                             381 B         103 kB
+├ ƒ /api/admin/api-usage                                             381 B         103 kB
+├ ƒ /api/admin/grant-role                                            381 B         103 kB
+├ ƒ /api/admin/ml/analyze-associations                               381 B         103 kB
+├ ƒ /api/admin/ml/generate-recipes                                   381 B         103 kB
+├ ƒ /api/admin/perks                                                 381 B         103 kB
+├ ƒ /api/admin/products                                              381 B         103 kB
+├ ƒ /api/admin/products/[barcode]                                    381 B         103 kB
+├ ƒ /api/admin/products/[barcode]/fetch-nutrition                    381 B         103 kB
+├ ƒ /api/admin/products/fetch-nutrition-bulk                         381 B         103 kB
+├ ƒ /api/admin/recipes                                               381 B         103 kB
+├ ƒ /api/admin/recipes/[id]                                          381 B         103 kB
+├ ƒ /api/admin/recipes/[id]/media                                    381 B         103 kB
+├ ƒ /api/admin/recipes/[id]/moderate                                 381 B         103 kB
+├ ƒ /api/admin/settings/admin-users                                  381 B         103 kB
+├ ƒ /api/admin/settings/audit-logs                                   381 B         103 kB
+├ ƒ /api/admin/users                                                 381 B         103 kB
+├ ƒ /api/admin/users/[uid]/ai-health-profile                         381 B         103 kB
+├ ƒ /api/admin/users/[uid]/analytics                                 381 B         103 kB
+├ ƒ /api/admin/users/[uid]/health-vitals                             381 B         103 kB
+├ ƒ /api/admin/users/export                                          381 B         103 kB
+├ ƒ /api/ai/analyze-meal                                             381 B         103 kB
+├ ƒ /api/ai/analyze-weight                                           381 B         103 kB
+├ ƒ /api/ai/chat                                                     381 B         103 kB
+├ ƒ /api/ai/health-profile/generate                                  381 B         103 kB
+├ ƒ /api/ai/meal-safety                                              381 B         103 kB
+├ ƒ /api/ai/orchestrate                                              381 B         103 kB
+├ ƒ /api/appointments                                                381 B         103 kB
+├ ƒ /api/appointments/[appointmentId]                                381 B         103 kB
+├ ƒ /api/appointments/recommendations                                381 B         103 kB
+├ ƒ /api/appointments/recommendations/[recommendationId]             381 B         103 kB
+├ ƒ /api/caregiver/action-items                                      381 B         103 kB
+├ ƒ /api/caregiver/action-items/[itemId]/complete                    381 B         103 kB
+├ ƒ /api/debug-profile                                               381 B         103 kB
+├ ƒ /api/family/hierarchy                                            381 B         103 kB
+├ ƒ /api/family/members/[memberId]                                   381 B         103 kB
+├ ƒ /api/family/migrate-patient-records                              381 B         103 kB
+├ ƒ /api/family/roles/assign                                         381 B         103 kB
+├ ƒ /api/family/roles/transfer-ownership                             381 B         103 kB
+├ ƒ /api/fetch-url                                                   381 B         103 kB
+├ ƒ /api/fix-onboarding                                              381 B         103 kB
+├ ƒ /api/fix-start-weight                                            381 B         103 kB
+├ ƒ /api/inactive/campaigns                                          381 B         103 kB
+├ ƒ /api/inactive/detect                                             381 B         103 kB
+├ ƒ /api/invitations                                                 381 B         103 kB
+├ ƒ /api/invitations/[invitationId]/accept                           381 B         103 kB
+├ ƒ /api/invitations/[invitationId]/decline                          381 B         103 kB
+├ ƒ /api/invitations/[invitationId]/resend                           381 B         103 kB
+├ ƒ /api/invitations/[invitationId]/revoke                           381 B         103 kB
+├ ƒ /api/invitations/verify                                          381 B         103 kB
+├ ƒ /api/meal-logs                                                   381 B         103 kB
+├ ƒ /api/meal-logs/[id]                                              381 B         103 kB
+├ ƒ /api/meal-templates                                              381 B         103 kB
+├ ƒ /api/meal-templates/[id]                                         381 B         103 kB
+├ ƒ /api/notifications/test                                          381 B         103 kB
+├ ƒ /api/ocr/medication                                              381 B         103 kB
+├ ƒ /api/patients                                                    381 B         103 kB
+├ ƒ /api/patients/[patientId]                                        381 B         103 kB
+├ ƒ /api/patients/[patientId]/ai-health-report                       381 B         103 kB
+├ ƒ /api/patients/[patientId]/documents                              381 B         103 kB
+├ ƒ /api/patients/[patientId]/documents/[documentId]                 381 B         103 kB
+├ ƒ /api/patients/[patientId]/family                                 381 B         103 kB
+├ ƒ /api/patients/[patientId]/family/[memberId]                      381 B         103 kB
+├ ƒ /api/patients/[patientId]/fix-start-weight                       381 B         103 kB
+├ ƒ /api/patients/[patientId]/meal-logs                              381 B         103 kB
+├ ƒ /api/patients/[patientId]/meal-logs/[logId]                      381 B         103 kB
+├ ƒ /api/patients/[patientId]/medications                            381 B         103 kB
+├ ƒ /api/patients/[patientId]/medications/[medicationId]             381 B         103 kB
+├ ƒ /api/patients/[patientId]/medications/[medicationId]/log-dose    381 B         103 kB
+├ ƒ /api/patients/[patientId]/step-logs                              381 B         103 kB
+├ ƒ /api/patients/[patientId]/vitals                                 381 B         103 kB
+├ ƒ /api/patients/[patientId]/vitals/[vitalId]                       381 B         103 kB
+├ ƒ /api/patients/[patientId]/weight-logs                            381 B         103 kB
+├ ƒ /api/products/lookup                                             381 B         103 kB
+├ ƒ /api/products/match                                              381 B         103 kB
+├ ƒ /api/projection                                                  381 B         103 kB
+├ ƒ /api/providers                                                   381 B         103 kB
+├ ƒ /api/providers/[providerId]                                      381 B         103 kB
+├ ƒ /api/providers/[providerId]/patients                             381 B         103 kB
+├ ƒ /api/providers/[providerId]/patients/[patientId]                 381 B         103 kB
+├ ƒ /api/proxy-image                                                 381 B         103 kB
+├ ƒ /api/readiness/analyze                                           381 B         103 kB
+├ ƒ /api/recipes/generate-from-inventory                             381 B         103 kB
+├ ƒ /api/recipes/generate-steps                                      381 B         103 kB
+├ ƒ /api/recipes/import                                              381 B         103 kB
+├ ƒ /api/shopping/confirm-purchases                                  381 B         103 kB
+├ ƒ /api/step-logs                                                   381 B         103 kB
+├ ƒ /api/user-profile                                                381 B         103 kB
+├ ƒ /api/user-profile/biometric                                      381 B         103 kB
+├ ƒ /api/user-profile/reset                                          381 B         103 kB
+├ ƒ /api/weight-logs                                                 381 B         103 kB
+├ ƒ /api/weight-logs/[id]                                            381 B         103 kB
+├ ○ /appointments                                                  3.42 kB         259 kB
+├ ƒ /appointments/[appointmentId]                                  4.77 kB         261 kB
+├ ○ /appointments/new                                              5.55 kB         261 kB
+├ ○ /auth                                                          8.07 kB         251 kB
+├ ○ /calendar                                                      4.62 kB         260 kB
+├ ○ /coaching                                                      6.25 kB         243 kB
+├ ƒ /cooking/[sessionId]                                            6.6 kB         277 kB
+├ ○ /dashboard                                                     18.2 kB         319 kB
+├ ○ /discover                                                      8.26 kB         249 kB
+├ ○ /family                                                        3.87 kB         266 kB
+├ ○ /family/dashboard                                              3.46 kB         269 kB
+├ ○ /family/manage-roles                                              8 kB         270 kB
+├ ○ /fix-profile                                                   2.34 kB         239 kB
+├ ○ /gallery                                                       10.5 kB         260 kB
+├ ○ /groups                                                         5.3 kB         237 kB
+├ ○ /inventory                                                     4.94 kB         274 kB
+├ ○ /log-meal                                                      41.5 kB         323 kB
+├ ○ /log-steps                                                     3.52 kB         261 kB
+├ ○ /log-weight                                                     4.1 kB         257 kB
+├ ○ /meal-gallery                                                    381 B         103 kB
+├ ○ /medical                                                       4.08 kB         255 kB
+├ ○ /medications                                                   5.14 kB         393 kB
+├ ○ /missions                                                      5.38 kB         258 kB
+├ ○ /onboarding                                                     6.9 kB         254 kB
+├ ○ /onboarding-archive                                            33.4 kB         417 kB
+├ ○ /patients                                                      8.17 kB         267 kB
+├ ƒ /patients/[patientId]                                           196 kB         618 kB
+├ ƒ /patients/[patientId]/family                                    5.5 kB         263 kB
+├ ○ /patients/new                                                  12.5 kB         267 kB
+├ ○ /perks                                                         3.39 kB         235 kB
+├ ○ /profile                                                       12.6 kB         282 kB
+├ ○ /progress                                                        12 kB         270 kB
+├ ○ /providers                                                     2.32 kB         261 kB
+├ ƒ /providers/[id]                                                2.16 kB         261 kB
+├ ○ /providers/new                                                 5.55 kB         261 kB
+├ ○ /recipes                                                       13.6 kB         283 kB
+├ ● /recipes/[id]                                                    169 B         107 kB
+├   ├ /recipes/bf001
+├   ├ /recipes/bf002
+├   ├ /recipes/bf003
+├   └ [+24 more paths]
+├ ○ /shopping                                                      14.3 kB         288 kB
+└ ○ /weight-history                                                   7 kB         260 kB
++ First Load JS shared by all                                       103 kB
+  ├ chunks/1255-f4edd6fa084107ef.js                                45.9 kB
+  ├ chunks/4bd1b696-100b9d70ed4e49c1.js                            54.2 kB
+  └ other shared chunks (total)                                    2.75 kB
+
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

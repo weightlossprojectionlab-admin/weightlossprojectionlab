@@ -18,7 +18,7 @@ interface AdminAuthState {
 // Super admin emails with full access (cannot be revoked)
 const SUPER_ADMIN_EMAILS = [
   'perriceconsulting@gmail.com',
-  'weigthlossprojectionlab@gmail.com', // Note: keeping original spelling from user
+  'weightlossprojectionlab@gmail.com',
 ]
 
 export const isSuperAdminEmail = (email: string | null | undefined): boolean => {

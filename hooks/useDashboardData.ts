@@ -5,8 +5,6 @@ import { useUserProfile } from './useUserProfile'
 import { useMealLogsRealtime } from './useMealLogs'
 import { stepLogOperations } from '@/lib/firebase-operations'
 import { logger } from '@/lib/logger'
-import { db } from '@/lib/firebase'
-import { collection, query, where, orderBy, limit, onSnapshot, Timestamp } from 'firebase/firestore'
 import { useAuth } from './useAuth'
 
 /**
@@ -22,7 +20,7 @@ export interface DashboardLoadingPhase {
   fullyLoaded: boolean
 }
 
-export function useDashboardData(patientId?: string | null) {
+export function useDashboardData(patientId?: string | null, patientOwnerId?: string | null) {
   const { user } = useAuth()
 
   // Calculate date range once
@@ -50,6 +48,7 @@ export function useDashboardData(patientId?: string | null) {
   // Fetch TODAY's meals ONLY (critical data) - PHASE 1
   const { mealLogs: todayMeals, loading: loadingTodayMeals } = useMealLogsRealtime({
     patientId,
+    patientOwnerId,
     startDate: dateRange.today.toISOString(),
     endDate: dateRange.tomorrow.toISOString(),
     limitCount: 10
@@ -60,6 +59,7 @@ export function useDashboardData(patientId?: string | null) {
   const { mealLogs: allMeals, loading: loadingAllMeals } = useMealLogsRealtime(
     fetchHistorical && patientId ? {
       patientId,
+      patientOwnerId,
       startDate: dateRange.sevenDaysAgo.toISOString(),
       endDate: dateRange.tomorrow.toISOString(),
       limitCount: 30
@@ -92,88 +92,57 @@ export function useDashboardData(patientId?: string | null) {
       return
     }
 
-    let unsubscribeWeight: (() => void) | null = null
-
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       try {
         setDataLoading(true)
         setDataError(null)
 
-        // Real-time weight logs subscription from patient subcollection
-        const weightLogsRef = collection(db, 'users', user.uid, 'patients', patientId, 'weight-logs')
-        const weightQuery = query(
-          weightLogsRef,
-          where('loggedAt', '>=', Timestamp.fromDate(dateRange.sevenDaysAgo)),
-          orderBy('loggedAt', 'desc'),
-          limit(10)
-        )
+        // Fetch weight logs via API
+        const token = await user.getIdToken()
+        const startDate = dateRange.sevenDaysAgo.toISOString()
 
-        unsubscribeWeight = onSnapshot(
-          weightQuery,
-          (snapshot) => {
-            const logs = snapshot.docs.map(doc => {
-              const data = doc.data()
-              return {
-                id: doc.id,
-                patientId: patientId,
-                userId: user.uid,
-                weight: data.weight,
-                unit: data.unit,
-                loggedAt: data.loggedAt?.toDate ? data.loggedAt.toDate().toISOString() : new Date(data.loggedAt).toISOString(),
-                notes: data.notes,
-                source: data.source || 'manual'
-              }
-            })
-            setWeightData(logs)
-            setDataLoading(false)
-          },
-          (error) => {
-            logger.error('Error in weight logs snapshot (dashboard)', error as Error)
-            setDataError(error as Error)
-            setWeightData([])
-            setDataLoading(false)
+        const weightResponse = await fetch(
+          `/api/patients/${patientId}/weight-logs?limit=10&startDate=${startDate}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
         )
 
-        // Fetch steps data from patient subcollection
-        const stepsLogsRef = collection(db, 'users', user.uid, 'patients', patientId, 'step-logs')
-        const startDate = dateRange.sevenDaysAgo.toISOString().split('T')[0]
-        const endDate = dateRange.tomorrow.toISOString().split('T')[0]
+        if (weightResponse.ok) {
+          const weightData = await weightResponse.json()
+          setWeightData(weightData.data || [])
+        } else {
+          logger.error('Error fetching weight logs (dashboard)', new Error(`Status: ${weightResponse.status}`))
+          setWeightData([])
+        }
 
-        const stepsQuery = query(
-          stepsLogsRef,
-          where('date', '>=', startDate),
-          where('date', '<=', endDate),
-          orderBy('date', 'desc')
-        )
+        // Fetch steps data via API
+        const stepsStartDate = dateRange.sevenDaysAgo.toISOString().split('T')[0]
+        const stepsEndDate = dateRange.tomorrow.toISOString().split('T')[0]
 
-        onSnapshot(
-          stepsQuery,
-          (snapshot) => {
-            const logs = snapshot.docs.map(doc => {
-              const data = doc.data()
-              return {
-                id: doc.id,
-                patientId: patientId,
-                userId: user.uid,
-                steps: data.steps,
-                date: data.date,
-                distance: data.distance,
-                loggedAt: data.loggedAt?.toDate ? data.loggedAt.toDate().toISOString() : new Date(data.loggedAt).toISOString(),
-                source: data.source || 'manual'
-              }
-            })
-            setStepsData(logs)
-            setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
-          },
-          (error) => {
-            logger.error('Error fetching step logs', error as Error)
-            setStepsData([])
-            setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
+        const stepsResponse = await fetch(
+          `/api/patients/${patientId}/step-logs?startDate=${stepsStartDate}&endDate=${stepsEndDate}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
         )
+
+        if (stepsResponse.ok) {
+          const stepsData = await stepsResponse.json()
+          setStepsData(stepsData.data || [])
+        } else {
+          logger.error('Error fetching step logs', new Error(`Status: ${stepsResponse.status}`))
+          setStepsData([])
+        }
+
+        setLoadingPhase(prev => ({ ...prev, phase2Ready: true }))
+        setDataLoading(false)
       } catch (error) {
-        logger.error('Error setting up dashboard data listeners', error as Error)
+        logger.error('Error fetching dashboard data', error as Error)
         setDataError(error as Error)
         setWeightData([])
         setStepsData([])
@@ -185,11 +154,8 @@ export function useDashboardData(patientId?: string | null) {
     // Cleanup function
     return () => {
       clearTimeout(timer)
-      if (unsubscribeWeight) {
-        unsubscribeWeight()
-      }
     }
-  }, [loadingPhase.phase1Ready, user, patientId, dateRange.sevenDaysAgo, dateRange.tomorrow])
+  }, [loadingPhase.phase1Ready, user, patientId, patientOwnerId, dateRange.sevenDaysAgo, dateRange.tomorrow])
 
   // PHASE 3: Fetch historical meals after Phase 2 completes (500ms delay)
   useEffect(() => {

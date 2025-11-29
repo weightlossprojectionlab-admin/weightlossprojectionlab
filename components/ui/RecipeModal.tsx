@@ -644,19 +644,27 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
               {/* Quick Info - Scaled */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-3 bg-muted rounded-lg">
-                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">{scaledRecipe.scaledCalories}</p>
+                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">
+                    {scaledRecipe.scaledCalories || 0}
+                  </p>
                   <p className="text-xs text-muted-foreground">calories (total)</p>
                 </div>
                 <div className="text-center p-3 bg-muted rounded-lg">
-                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">{scaledRecipe.scaledMacros.protein}g</p>
+                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">
+                    {scaledRecipe.scaledMacros?.protein || 0}g
+                  </p>
                   <p className="text-xs text-muted-foreground">protein (total)</p>
                 </div>
                 <div className="text-center p-3 bg-muted rounded-lg">
-                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">{adjustedPrepTime} min</p>
+                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">
+                    {adjustedPrepTime || 0} min
+                  </p>
                   <p className="text-xs text-muted-foreground">prep time</p>
                 </div>
                 <div className="text-center p-3 bg-muted rounded-lg">
-                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">{Math.round(scaledRecipe.scaledCalories / servingSize)}</p>
+                  <p className="text-2xl font-bold text-primary dark:text-muted-foreground">
+                    {scaledRecipe.scaledCalories && servingSize ? Math.round(scaledRecipe.scaledCalories / servingSize) : 0}
+                  </p>
                   <p className="text-xs text-muted-foreground">cal per serving</p>
                 </div>
               </div>
@@ -667,15 +675,15 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Carbs:</span>
-                    <span className="font-medium">{scaledRecipe.scaledMacros.carbs}g</span>
+                    <span className="font-medium">{scaledRecipe.scaledMacros?.carbs || 0}g</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Fat:</span>
-                    <span className="font-medium">{scaledRecipe.scaledMacros.fat}g</span>
+                    <span className="font-medium">{scaledRecipe.scaledMacros?.fat || 0}g</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Fiber:</span>
-                    <span className="font-medium">{scaledRecipe.scaledMacros.fiber}g</span>
+                    <span className="font-medium">{scaledRecipe.scaledMacros?.fiber || 0}g</span>
                   </div>
                 </div>
               </div>
@@ -695,7 +703,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
               )}
 
               {/* Allergens */}
-              {suggestion.allergens.length > 0 && (
+              {suggestion.allergens?.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-foreground mb-2">Allergen Warning</h3>
                   <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">

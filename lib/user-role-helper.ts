@@ -4,14 +4,14 @@
  * or a family caregiver, which affects terminology throughout the app
  */
 
-import { UserProfile } from '@/types'
+import { User } from '@/types'
 
 /**
  * Determine if user is a professional caregiver
  * Professional caregivers see "Patients" terminology
  * Family caregivers see "Family Members" terminology
  */
-export function isProfessionalCaregiver(userProfile: UserProfile | null): boolean {
+export function isProfessionalCaregiver(userProfile: User | null): boolean {
   if (!userProfile) return false
 
   const professionalRoles = [
@@ -24,9 +24,14 @@ export function isProfessionalCaregiver(userProfile: UserProfile | null): boolea
   ]
 
   // Check if user has a professional role set in their profile
-  const userRole = userProfile.profile?.caregiverType || userProfile.profile?.role
+  // Note: UserProfile doesn't have nested profile property, check onboardingAnswers instead
+  const primaryRole = userProfile.preferences?.onboardingAnswers?.primaryRole
 
-  return professionalRoles.includes(userRole?.toLowerCase() || '')
+  // Professional caregivers have 'caregiver' as primaryRole and userMode 'caregiver'
+  const userMode = userProfile.preferences?.userMode
+  const isProfessional = userMode === 'caregiver' && primaryRole === 'caregiver'
+
+  return isProfessional
 }
 
 /**
@@ -34,7 +39,7 @@ export function isProfessionalCaregiver(userProfile: UserProfile | null): boolea
  * Returns "Patients" for professional caregivers, "Family Members" for family
  */
 export function getTrackingTerminology(
-  userProfile: UserProfile | null,
+  userProfile: User | null,
   options: {
     singular?: boolean
     lowercase?: boolean
@@ -57,14 +62,14 @@ export function getTrackingTerminology(
 /**
  * Get page title based on user role
  */
-export function getTrackingPageTitle(userProfile: UserProfile | null): string {
+export function getTrackingPageTitle(userProfile: User | null): string {
   return getTrackingTerminology(userProfile, { singular: false })
 }
 
 /**
  * Get page subtitle based on user role
  */
-export function getTrackingPageSubtitle(userProfile: UserProfile | null): string {
+export function getTrackingPageSubtitle(userProfile: User | null): string {
   const isProfessional = isProfessionalCaregiver(userProfile)
 
   if (isProfessional) {
@@ -77,7 +82,7 @@ export function getTrackingPageSubtitle(userProfile: UserProfile | null): string
 /**
  * Get "Add" button text based on user role
  */
-export function getAddButtonText(userProfile: UserProfile | null): string {
+export function getAddButtonText(userProfile: User | null): string {
   const isProfessional = isProfessionalCaregiver(userProfile)
 
   if (isProfessional) {

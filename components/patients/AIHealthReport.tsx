@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { PatientProfile, PatientMedication, VitalSign, PatientDocument } from '@/types/medical'
-import { SparklesIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import { SparklesIcon, ArrowPathIcon, PrinterIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import { auth } from '@/lib/firebase'
@@ -33,6 +33,7 @@ export function AIHealthReport({
   const [report, setReport] = useState<string | null>(null)
   const [lastGenerated, setLastGenerated] = useState<Date | null>(null)
   const [lightboxImage, setLightboxImage] = useState<{ url: string; alt: string } | null>(null)
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
 
   const generateReport = async () => {
     try {
@@ -70,23 +71,217 @@ export function AIHealthReport({
           statusText: response.statusText,
           errorData
         })
-        logger.error('[AI Health Report] API Error', { status: response.status, errorData })
-        throw new Error(errorData.details || errorData.error || `API Error: ${response.status} ${response.statusText}`)
+        const error = new Error(errorData.details || errorData.error || `API Error: ${response.status} ${response.statusText}`)
+        logger.error('[AI Health Report] API Error', error)
+        throw error
       }
 
       const data = await response.json()
       setReport(data.report)
       setLastGenerated(new Date())
+      setCheckedItems(new Set()) // Reset checkboxes when new report is generated
       toast.success('Health report generated!')
 
     } catch (error: any) {
       console.error('[AI Health Report] Full Error:', error)
-      logger.error('[AI Health Report] Error generating report', { message: error.message, stack: error.stack })
+      const err = error instanceof Error ? error : new Error(String(error))
+      logger.error('[AI Health Report] Error generating report', err)
       toast.error(error.message || 'Failed to generate health report')
     } finally {
       setGenerating(false)
     }
   }
+
+  const handlePrint = useCallback(() => {
+    // Create a print-friendly window
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      toast.error('Please allow pop-ups to print the report')
+      return
+    }
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Health Summary Report - ${patient.name}</title>
+          <style>
+            @page {
+              margin: 0.75in;
+              size: letter;
+            }
+            body {
+              font-family: 'Georgia', 'Times New Roman', serif;
+              font-size: 11pt;
+              line-height: 1.6;
+              color: #000;
+              max-width: 100%;
+            }
+            h1 {
+              font-size: 18pt;
+              font-weight: bold;
+              margin-top: 0;
+              margin-bottom: 12pt;
+              border-bottom: 2pt solid #333;
+              padding-bottom: 8pt;
+            }
+            h2 {
+              font-size: 14pt;
+              font-weight: bold;
+              margin-top: 16pt;
+              margin-bottom: 8pt;
+              border-bottom: 1pt solid #666;
+              padding-bottom: 4pt;
+            }
+            h3 {
+              font-size: 12pt;
+              font-weight: bold;
+              margin-top: 12pt;
+              margin-bottom: 6pt;
+            }
+            p {
+              margin: 8pt 0;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 12pt 0;
+              font-size: 10pt;
+            }
+            th {
+              background-color: #f0f0f0;
+              font-weight: bold;
+              text-align: left;
+              padding: 6pt 8pt;
+              border: 1pt solid #ccc;
+            }
+            td {
+              padding: 6pt 8pt;
+              border: 1pt solid #ccc;
+            }
+            tr:nth-child(even) {
+              background-color: #f9f9f9;
+            }
+            ul, ol {
+              margin: 8pt 0;
+              padding-left: 24pt;
+            }
+            li {
+              margin: 4pt 0;
+            }
+            hr {
+              border: none;
+              border-top: 1pt solid #ccc;
+              margin: 16pt 0;
+            }
+            strong {
+              font-weight: bold;
+            }
+            .checkbox-item {
+              margin: 4pt 0;
+              display: flex;
+              align-items: start;
+            }
+            .checkbox {
+              width: 12pt;
+              height: 12pt;
+              border: 1pt solid #333;
+              margin-right: 8pt;
+              flex-shrink: 0;
+              margin-top: 2pt;
+            }
+            img {
+              max-width: 100%;
+              height: auto;
+              margin: 12pt 0;
+              border: 1pt solid #ccc;
+            }
+            @media print {
+              body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${report ? convertMarkdownToHtml(report) : ''}
+        </body>
+      </html>
+    `
+
+    printWindow.document.write(printContent)
+    printWindow.document.close()
+
+    // Wait for images to load before printing
+    printWindow.onload = () => {
+      printWindow.print()
+    }
+  }, [report, patient.name])
+
+  // Simple markdown to HTML converter for printing
+  const convertMarkdownToHtml = (markdown: string): string => {
+    let html = markdown
+
+    // Convert headers
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>')
+
+    // Convert bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+
+    // Convert checkboxes
+    html = html.replace(/- \[ \] (.+)/g, '<div class="checkbox-item"><div class="checkbox"></div><span>$1</span></div>')
+    html = html.replace(/- \[x\] (.+)/g, '<div class="checkbox-item"><div class="checkbox">✓</div><span>$1</span></div>')
+
+    // Convert unordered lists (but not checkboxes)
+    html = html.replace(/^- (?!\[)(.+)$/gm, '<li>$1</li>')
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+
+    // Convert numbered lists
+    html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, (match) => {
+      if (!match.includes('<ul>')) {
+        return '<ol>' + match + '</ol>'
+      }
+      return match
+    })
+
+    // Convert horizontal rules
+    html = html.replace(/^---$/gm, '<hr>')
+
+    // Convert tables (basic)
+    html = html.replace(/\|(.+)\|/g, (match, content) => {
+      const cells = content.split('|').map((cell: string) => cell.trim())
+      const isHeader = html.indexOf(match) === html.indexOf('|')
+      const tag = isHeader ? 'th' : 'td'
+      return '<tr>' + cells.map((cell: string) => `<${tag}>${cell}</${tag}>`).join('') + '</tr>'
+    })
+    html = html.replace(/(<tr>.*<\/tr>\n?)+/g, '<table>$&</table>')
+
+    // Remove table separator rows
+    html = html.replace(/<tr><td>-+<\/td>.*?<\/tr>/g, '')
+
+    // Convert images
+    html = html.replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, '<img src="$2" alt="$1">')
+
+    // Convert paragraphs
+    html = html.replace(/^(?!<[h|u|o|t|d|hr|img])(.+)$/gm, '<p>$1</p>')
+
+    return html
+  }
+
+  const handleCopy = useCallback(() => {
+    if (!report) return
+    navigator.clipboard.writeText(report).then(() => {
+      toast.success('Report copied to clipboard!')
+    }).catch((err) => {
+      logger.error('[AI Health Report] Error copying to clipboard', err)
+      toast.error('Failed to copy report')
+    })
+  }, [report])
 
   return (
     <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-700 p-6">
@@ -102,23 +297,45 @@ export function AIHealthReport({
             </p>
           </div>
         </div>
-        <button
-          onClick={generateReport}
-          disabled={generating}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {generating ? (
+        <div className="flex items-center gap-2">
+          {report && (
             <>
-              <ArrowPathIcon className="w-5 h-5 animate-spin" />
-              <span>Generating...</span>
-            </>
-          ) : (
-            <>
-              <SparklesIcon className="w-5 h-5" />
-              <span>{report ? 'Regenerate' : 'Generate Report'}</span>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-foreground rounded-lg transition-colors text-sm font-medium"
+                title="Copy to clipboard"
+              >
+                <ClipboardDocumentIcon className="w-4 h-4" />
+                <span>Copy</span>
+              </button>
+              <button
+                onClick={handlePrint}
+                className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-foreground rounded-lg transition-colors text-sm font-medium"
+                title="Print report"
+              >
+                <PrinterIcon className="w-4 h-4" />
+                <span>Print</span>
+              </button>
             </>
           )}
-        </button>
+          <button
+            onClick={generateReport}
+            disabled={generating}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {generating ? (
+              <>
+                <ArrowPathIcon className="w-5 h-5 animate-spin" />
+                <span>Generating...</span>
+              </>
+            ) : (
+              <>
+                <SparklesIcon className="w-5 h-5" />
+                <span>{report ? 'Regenerate' : 'Generate Report'}</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {!report && !generating && (
@@ -201,31 +418,75 @@ export function AIHealthReport({
               ol: ({ node, ...props }) => (
                 <ol className="my-3 ml-6 list-decimal text-foreground space-y-1" {...props} />
               ),
-              li: ({ node, ...props }) => (
-                <li className="text-foreground" {...props} />
-              ),
+              li: ({ node, children, ...props }) => {
+                // Check if this is a checkbox list item (task list)
+                const childrenArray = Array.isArray(children) ? children : [children]
+                const firstChild = childrenArray[0]
+
+                // Check for markdown task list syntax: "[ ]" or "[x]"
+                if (typeof firstChild === 'string') {
+                  const checkboxMatch = firstChild.match(/^\[([ x])\]\s*(.*)/)
+                  if (checkboxMatch) {
+                    const isChecked = checkboxMatch[1] === 'x'
+                    const text = checkboxMatch[2]
+                    const itemKey = text.substring(0, 50) // Use first 50 chars as key
+
+                    const localChecked = checkedItems.has(itemKey) || isChecked
+
+                    return (
+                      <li className="flex items-start gap-2 text-foreground" {...props}>
+                        <input
+                          type="checkbox"
+                          checked={localChecked}
+                          onChange={() => {
+                            setCheckedItems(prev => {
+                              const next = new Set(prev)
+                              if (next.has(itemKey)) {
+                                next.delete(itemKey)
+                              } else {
+                                next.add(itemKey)
+                              }
+                              return next
+                            })
+                          }}
+                          className="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 cursor-pointer"
+                        />
+                        <span className={localChecked ? 'line-through text-muted-foreground' : ''}>
+                          {text}
+                          {childrenArray.slice(1)}
+                        </span>
+                      </li>
+                    )
+                  }
+                }
+
+                return <li className="text-foreground" {...props}>{children}</li>
+              },
               hr: ({ node, ...props }) => (
                 <hr className="my-6 border-gray-300 dark:border-gray-600" {...props} />
               ),
               strong: ({ node, ...props }) => (
                 <strong className="font-semibold text-foreground" {...props} />
               ),
-              img: ({ node, src, alt, ...props }) => (
-                <div className="my-4 relative group">
-                  <img
-                    src={src}
-                    alt={alt || 'Image'}
-                    className="max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setLightboxImage({ url: src || '', alt: alt || 'Image' })}
-                    {...props}
-                  />
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-full p-2">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-                    </svg>
-                  </div>
-                </div>
-              ),
+              img: ({ node, src, alt, ...props }) => {
+                const imageUrl = typeof src === 'string' ? src : ''
+                return (
+                  <span className="inline-block my-4 relative group">
+                    <img
+                      src={imageUrl}
+                      alt={alt || 'Image'}
+                      className="max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setLightboxImage({ url: imageUrl, alt: alt || 'Image' })}
+                      {...props}
+                    />
+                    <span className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-full p-2 inline-block">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                      </svg>
+                    </span>
+                  </span>
+                )
+              },
             }}
           >
             {report}

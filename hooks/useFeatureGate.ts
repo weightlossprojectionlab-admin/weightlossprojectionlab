@@ -28,7 +28,7 @@ export function useFeatureGate(feature: string) {
       return
     }
 
-    const hasAccess = canAccessFeature(user, feature)
+    const hasAccess = canAccessFeature(user as any, feature)
     setHasFeature(hasAccess)
     setLoading(false)
 
@@ -40,7 +40,7 @@ export function useFeatureGate(feature: string) {
     // Listen for simulation changes in dev mode
     if (process.env.NODE_ENV === 'development') {
       const handleSimulationChange = () => {
-        const updated = canAccessFeature(user, feature)
+        const updated = canAccessFeature(user as any, feature)
         setHasFeature(updated)
 
         if (!updated) {

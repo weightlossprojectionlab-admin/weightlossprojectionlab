@@ -8,11 +8,12 @@
  * Users can select multiple items and confirm them in batch.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { ShoppingItem } from '@/types/shopping'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
+import { medicalOperations } from '@/lib/medical-operations'
 import {
   CheckCircleIcon,
   ShoppingCartIcon,
@@ -22,12 +23,31 @@ import {
 interface PurchaseConfirmationProps {
   pendingItems: ShoppingItem[]
   onConfirm: () => void // Callback to refresh the shopping list
+  memberId?: string // Optional member/patient ID for recipe link
 }
 
-export function PurchaseConfirmation({ pendingItems, onConfirm }: PurchaseConfirmationProps) {
+export function PurchaseConfirmation({ pendingItems, onConfirm, memberId }: PurchaseConfirmationProps) {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
   const [store, setStore] = useState('')
+  const [defaultMemberId, setDefaultMemberId] = useState<string | null>(null)
+
+  // Fetch user's first family member if no memberId is provided
+  useEffect(() => {
+    if (!memberId) {
+      const fetchFirstMember = async () => {
+        try {
+          const members = await medicalOperations.patients.getPatients()
+          if (members && members.length > 0) {
+            setDefaultMemberId(members[0].id)
+          }
+        } catch (error) {
+          logger.error('[PurchaseConfirmation] Error fetching family members', error as Error)
+        }
+      }
+      fetchFirstMember()
+    }
+  }, [memberId])
 
   // If no pending items, don't show anything
   if (pendingItems.length === 0) {
@@ -88,7 +108,36 @@ export function PurchaseConfirmation({ pendingItems, onConfirm }: PurchaseConfir
 
       const result = await response.json()
 
-      toast.success(`✓ Confirmed ${result.summary.successful} item(s)!`)
+      // Log detailed results for debugging
+      if (result.results) {
+        const failedItems = result.results.filter((r: any) => !r.success)
+        if (failedItems.length > 0) {
+          console.error('[PurchaseConfirmation] Failed items:', failedItems)
+        }
+      }
+
+      // Show success message with link to recipes
+      if (result.summary.successful > 0) {
+        // Use memberId if provided, otherwise use the first family member, otherwise use general recipes
+        const targetId = memberId || defaultMemberId
+        const recipeUrl = targetId ? `/patients/${targetId}?tab=recipes` : '/recipes'
+
+        toast.success(
+          (t) => (
+            <div className="flex flex-col gap-2">
+              <span className="font-semibold">✓ Added {result.summary.successful} item(s) to inventory!</span>
+              <a
+                href={recipeUrl}
+                className="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded font-medium inline-block text-center"
+                onClick={() => toast.dismiss(t.id)}
+              >
+                🍳 See What You Can Cook Now →
+              </a>
+            </div>
+          ),
+          { duration: 8000 }
+        )
+      }
 
       if (result.summary.failed > 0) {
         toast.error(`⚠️ ${result.summary.failed} item(s) failed to confirm`)

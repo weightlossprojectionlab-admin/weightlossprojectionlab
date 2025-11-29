@@ -9,12 +9,17 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    console.log('[useAuth] Setting up auth listener...')
     const unsubscribe = onAuthStateChange((user) => {
+      console.log('[useAuth] Auth state changed!', { userId: user?.uid, email: user?.email })
       setUser(user)
       setLoading(false)
     })
 
-    return () => unsubscribe()
+    return () => {
+      console.log('[useAuth] Cleaning up auth listener')
+      unsubscribe()
+    }
   }, [])
 
   return { user, loading }

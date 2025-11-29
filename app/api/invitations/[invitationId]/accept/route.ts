@@ -123,6 +123,33 @@ export async function POST(
       .collection('familyMembers')
       .add(familyMember)
 
+    // Create family member records for each patient in patientsShared
+    const batch = adminDb.batch()
+
+    for (const patientId of invitation.patientsShared) {
+      const patientFamilyMemberRef = adminDb
+        .collection('users')
+        .doc(invitation.invitedByUserId)
+        .collection('patients')
+        .doc(patientId)
+        .collection('familyMembers')
+        .doc(memberRef.id) // Use same ID as account-level family member
+
+      batch.set(patientFamilyMemberRef, {
+        userId,
+        email: userEmail,
+        name: userName,
+        relationship: 'family',
+        permissions: invitation.permissions,
+        status: 'accepted',
+        addedAt: acceptedAt,
+        addedBy: invitation.invitedByUserId,
+        lastModified: acceptedAt
+      })
+    }
+
+    await batch.commit()
+
     // Update invitation status
     await invitationRef.update({
       status: 'accepted',

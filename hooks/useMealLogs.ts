@@ -1,29 +1,24 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { auth, db } from '@/lib/firebase'
-import { collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore'
+import { useState, useEffect, useCallback } from 'react'
+import { auth } from '@/lib/firebase'
 import { onAuthStateChanged, type User } from 'firebase/auth'
 import { logger } from '@/lib/logger'
+import { medicalOperations } from '@/lib/medical-operations'
 import type { MealLog } from '@/types/medical'
 
 // Re-export MealLog as MealLogData for backward compatibility
 export type MealLogData = MealLog
 
 /**
- * True real-time hook for fetching meal logs with Firestore onSnapshot
- *
- * REAL-TIME UPDATES:
- * - Uses onSnapshot for instant updates when meals are added/edited/deleted
- * - No manual refresh required
- * - Automatic cleanup on unmount
- * - Supports filtering by meal type and date range
+ * Hook for fetching meal logs using API
  *
  * @param params - Optional parameters for filtering
  * @returns Meal logs, loading state, error state, and refresh function
  */
 export function useMealLogsRealtime(params?: {
   patientId?: string | null
+  patientOwnerId?: string | null
   limitCount?: number
   startDate?: string
   endDate?: string
@@ -43,90 +38,63 @@ export function useMealLogsRealtime(params?: {
     return () => unsubscribeAuth()
   }, [])
 
-  // Set up real-time listener for meal logs
-  useEffect(() => {
-    if (!currentUser) {
+  // Fetch meal logs using API
+  const fetchMealLogs = useCallback(async () => {
+    if (!currentUser || !params?.patientId) {
       setMealLogs([])
       setLoading(false)
       return
     }
 
-    // Clear meals immediately when switching patients
-    logger.debug(`🔄 Setting up meal logs listener for patient: ${params?.patientId || 'none'}`)
-    setMealLogs([])
-    setLoading(true)
-    setError(null)
+    try {
+      logger.debug(`🔄 Fetching meal logs for patient: ${params.patientId}`)
+      setLoading(true)
+      setError(null)
 
-    // If patientId is provided, query from patient subcollection
-    if (params?.patientId) {
+      // Build query params
+      const queryParams = new URLSearchParams()
+      if (params.limitCount) queryParams.set('limit', params.limitCount.toString())
+      if (params.mealType) queryParams.set('mealType', params.mealType)
+      if (params.startDate) queryParams.set('startDate', params.startDate)
+      if (params.endDate) queryParams.set('endDate', params.endDate)
 
-      const mealLogsRef = collection(db, 'users', currentUser.uid, 'patients', params.patientId, 'meal-logs')
-      logger.debug(`📍 Querying meals from: users/${currentUser.uid}/patients/${params.patientId}/meal-logs`)
-
-      // Build query with filters (WHERE clauses must come before ORDER BY)
-      let q = query(mealLogsRef)
-
-      // Add WHERE filters first
-      if (params?.mealType) {
-        q = query(q, where('mealType', '==', params.mealType))
-      }
-      if (params?.startDate) {
-        q = query(q, where('loggedAt', '>=', params.startDate))
-      }
-      if (params?.endDate) {
-        q = query(q, where('loggedAt', '<=', params.endDate))
-      }
-
-      // Then add ORDER BY
-      q = query(q, orderBy('loggedAt', 'desc'))
-
-      // Finally add LIMIT
-      q = query(q, limit(params?.limitCount || 10))
-
-      // Subscribe to real-time updates
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const logs = snapshot.docs.map((doc) => {
-            const data = doc.data()
-            return {
-              id: doc.id,
-              ...data,
-              // Convert Firestore Timestamp to ISO string
-              loggedAt: data.loggedAt?.toDate?.()?.toISOString() || data.loggedAt,
-            } as MealLogData
-          })
-
-          setMealLogs(logs)
-          setLoading(false)
-          setError(null)
-
-          logger.debug(`📊 Real-time update: ${logs.length} meal logs loaded for patient ${params.patientId}`)
-        },
-        (err) => {
-          logger.error('❌ Error in meal logs real-time listener:', err)
-          setError(err as Error)
-          setLoading(false)
+      const token = await currentUser.getIdToken()
+      const response = await fetch(
+        `/api/patients/${params.patientId}/meal-logs?${queryParams}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       )
 
-      // Cleanup subscription on unmount or when dependencies change
-      return () => {
-        logger.debug('🔌 Unsubscribing from meal logs listener')
-        unsubscribe()
+      if (!response.ok) {
+        throw new Error('Failed to fetch meal logs')
       }
-    } else {
-      // No patientId - set empty data
-      setMealLogs([])
+
+      const data = await response.json()
+      const logs = data.data || []
+
+      setMealLogs(logs)
+      setLoading(false)
+
+      logger.debug(`📊 ${logs.length} meal logs loaded for patient ${params.patientId}`)
+    } catch (err) {
+      logger.error('❌ Error fetching meal logs:', err as Error)
+      setError(err as Error)
       setLoading(false)
     }
   }, [currentUser, params?.patientId, params?.limitCount, params?.startDate, params?.endDate, params?.mealType])
 
-  // Manual refresh function (forces re-subscription)
-  const refresh = () => {
+  useEffect(() => {
+    fetchMealLogs()
+  }, [fetchMealLogs])
+
+  // Manual refresh function
+  const refresh = useCallback(() => {
     logger.debug('🔄 Manual refresh requested')
-    setLoading(true)
-  }
+    fetchMealLogs()
+  }, [fetchMealLogs])
 
   return {
     mealLogs,

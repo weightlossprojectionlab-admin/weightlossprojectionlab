@@ -15,6 +15,7 @@ import type {
   Provider,
   Appointment,
   FamilyMember,
+  FamilyRole,
   FamilyInvitation,
   WeightLog,
   MealLog,
@@ -504,14 +505,95 @@ export const familyOperations = {
     try {
       logger.debug('[MedicalOps] Fetching family hierarchy')
 
-      const members = await makeAuthenticatedRequest<FamilyMember[]>('/family-members', {
+      const response = await makeAuthenticatedRequest<{
+        accountOwner: any
+        familyMembers: FamilyMember[]
+        roleHierarchy: any[]
+        summary: any
+      }>('/family/hierarchy', {
         method: 'GET'
       })
 
-      logger.debug('[MedicalOps] Family hierarchy fetched', { count: members?.length || 0 })
-      return members || []
+      logger.debug('[MedicalOps] Family hierarchy fetched', { count: response?.familyMembers?.length || 0 })
+      return response?.familyMembers || []
     } catch (error) {
       logger.error('[MedicalOps] Error fetching family hierarchy', error as Error)
+      throw error
+    }
+  },
+
+  /**
+   * Update family member (role, patient access, permissions)
+   */
+  async updateMember(memberId: string, updates: {
+    role?: FamilyRole
+    patientsAccess?: string[]
+    patientPermissions?: { [patientId: string]: any }
+  }): Promise<FamilyMember> {
+    try {
+      logger.info('[MedicalOps] Updating family member', { memberId, updates })
+
+      const member = await makeAuthenticatedRequest<FamilyMember>(`/family/members/${memberId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      })
+
+      logger.info('[MedicalOps] Family member updated successfully', { memberId })
+      return member
+    } catch (error) {
+      logger.error('[MedicalOps] Error updating family member', error as Error, { memberId })
+      throw error
+    }
+  },
+
+  /**
+   * Remove family member from account
+   */
+  async removeMember(memberId: string): Promise<void> {
+    try {
+      logger.info('[MedicalOps] Removing family member', { memberId })
+
+      await makeAuthenticatedRequest<void>(`/family/members/${memberId}`, {
+        method: 'DELETE'
+      })
+
+      logger.info('[MedicalOps] Family member removed successfully', { memberId })
+    } catch (error) {
+      logger.error('[MedicalOps] Error removing family member', error as Error, { memberId })
+      throw error
+    }
+  },
+
+  /**
+   * Migrate patient-level family member records (backfill for existing members)
+   */
+  async migratePatientRecords(): Promise<{
+    totalFamilyMembers: number
+    recordsCreated: number
+    recordsSkipped: number
+    errors: string[]
+    details: any[]
+  }> {
+    try {
+      logger.info('[MedicalOps] Running family member migration')
+
+      const result = await makeAuthenticatedRequest<{
+        totalFamilyMembers: number
+        recordsCreated: number
+        recordsSkipped: number
+        errors: string[]
+        details: any[]
+      }>('/family/migrate-patient-records', {
+        method: 'POST'
+      })
+
+      logger.info('[MedicalOps] Migration completed', {
+        recordsCreated: result.recordsCreated,
+        recordsSkipped: result.recordsSkipped
+      })
+      return result
+    } catch (error) {
+      logger.error('[MedicalOps] Error running migration', error as Error)
       throw error
     }
   }

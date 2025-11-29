@@ -126,13 +126,8 @@ export async function getAllStores(userId: string, limitCount = 10): Promise<Sto
       convertTimestamps({ id: doc.id, ...doc.data() }) as Store
     )
   } catch (error) {
-    const errorCode = (error as any)?.code
-    const errorMessage = (error as any)?.message
-
     logger.error('[StoreOps] Error querying stores with orderBy', error as Error, {
-      userId,
-      errorCode,
-      errorMessage
+      userId
     })
 
     // If ordering fails (likely no index or no stores yet), try without ordering
@@ -147,9 +142,7 @@ export async function getAllStores(userId: string, limitCount = 10): Promise<Sto
       )
     } catch (fallbackError) {
       logger.error('[StoreOps] Fallback query without orderBy also failed', fallbackError as Error, {
-        userId,
-        errorCode: (fallbackError as any)?.code,
-        errorMessage: (fallbackError as any)?.message
+        userId
       })
 
       // Return empty array - stores are optional feature

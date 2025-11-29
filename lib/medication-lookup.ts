@@ -23,6 +23,7 @@ export interface MedicationInfo {
 export interface ScannedMedication extends MedicationInfo {
   frequency?: string // COMPLETE dosage instructions (e.g., "Take 1 tablet by mouth every day")
   prescribedFor?: string // Condition name
+  prescribingDoctor?: string // Prescribing doctor name
   patientName?: string // Who this medication is for (e.g., "Mom", "Dad", "Me")
   rxNumber?: string // Prescription number
   quantity?: string // Quantity dispensed (e.g., "30 tablets", "60 capsules")
@@ -33,6 +34,8 @@ export interface ScannedMedication extends MedicationInfo {
   pharmacyName?: string // Pharmacy name
   pharmacyPhone?: string // Pharmacy phone number
   patientAddress?: string // Patient address (useful for family member tracking)
+  imageUrl?: string // URL to medication bottle image
+  photoUrl?: string // Alternative field name for image URL (for compatibility)
   scannedAt: string // ISO timestamp
 }
 

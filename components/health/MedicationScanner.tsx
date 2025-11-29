@@ -182,13 +182,13 @@ export default function MedicationScanner({
               rxNumber: mergedMedicationData.rxNumber || extracted.rxNumber,
               ndc: mergedMedicationData.ndc || extracted.ndc,
               expirationDate: mergedMedicationData.expirationDate || extracted.expirationDate,
-              pharmacyName: mergedMedicationData.pharmacyName || extracted.pharmacyName,
+              pharmacy: mergedMedicationData.pharmacy || extracted.pharmacy,
               pharmacyPhone: mergedMedicationData.pharmacyPhone || extracted.pharmacyPhone,
               patientName: mergedMedicationData.patientName || extracted.patientName,
               fillDate: mergedMedicationData.fillDate || extracted.fillDate,
               quantity: mergedMedicationData.quantity || extracted.quantity,
               refills: mergedMedicationData.refills || extracted.refills,
-              prescriber: mergedMedicationData.prescriber || extracted.prescriber,
+              prescribingDoctor: mergedMedicationData.prescribingDoctor || extracted.prescribingDoctor,
               suggestedConditions: mergedMedicationData.suggestedConditions || extracted.suggestedConditions
             }
           }

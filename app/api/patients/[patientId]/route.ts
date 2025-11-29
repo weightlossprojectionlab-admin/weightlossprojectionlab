@@ -76,9 +76,13 @@ export async function GET(
     })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id] GET] Error fetching patient', error)
+    logger.error('[API /patients/[id] GET] Error fetching patient', error, {
+      patientId: await params.then(p => p.patientId),
+      errorMessage: error.message,
+      errorStack: error.stack
+    })
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch patient' },
+      { success: false, error: error.message || 'Failed to fetch patient', details: error.stack },
       { status: 500 }
     )
   }

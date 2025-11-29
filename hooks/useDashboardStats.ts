@@ -51,10 +51,10 @@ export function useDashboardStats(
   const nutritionSummary = useMemo(() => {
     const todayCalories = todayMeals.reduce((sum, meal) => sum + (meal.totalCalories || meal.calories || 0), 0)
     const macros = todayMeals.reduce((acc, meal) => ({
-      protein: acc.protein + (meal.macros?.protein || meal.protein || 0),
-      carbs: acc.carbs + (meal.macros?.carbs || meal.carbs || 0),
-      fat: acc.fat + (meal.macros?.fat || meal.fat || 0),
-      fiber: acc.fiber + (meal.macros?.fiber || meal.fiber || 0)
+      protein: (acc.protein ?? 0) + (meal.macros?.protein || meal.protein || 0),
+      carbs: (acc.carbs ?? 0) + (meal.macros?.carbs || meal.carbs || 0),
+      fat: (acc.fat ?? 0) + (meal.macros?.fat || meal.fat || 0),
+      fiber: (acc.fiber ?? 0) + (meal.macros?.fiber || meal.fiber || 0)
     }), { protein: 0, carbs: 0, fat: 0, fiber: 0 })
 
     const goalCalories = profileWithGoals?.goals?.dailyCalorieGoal || 2000

@@ -127,6 +127,12 @@ export const SUBCOLLECTIONS = {
     /** Shopping list items per user */
     SHOPPING_LIST: 'shopping_list',
 
+    /** Member shopping lists (per-member lists within household) */
+    MEMBER_SHOPPING_LISTS: 'member_shopping_lists',
+
+    /** Caregiver action items and tasks */
+    CAREGIVER_ACTION_ITEMS: 'caregiver_action_items',
+
     // === Gamification ===
 
     /** Daily XP tracking per user */

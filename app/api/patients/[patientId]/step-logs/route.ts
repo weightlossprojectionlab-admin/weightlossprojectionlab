@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, adminAuth } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
 import { StepLog } from '@/types/medical'
+import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 
 /**
  * GET /api/patients/[patientId]/step-logs
@@ -11,16 +12,6 @@ export async function GET(
   { params }: { params: Promise<{ patientId: string }> }
 ) {
   try {
-    // Extract and verify auth token
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
-
     const { patientId } = await params
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '30')
@@ -28,22 +19,18 @@ export async function GET(
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
-    // Verify patient belongs to user
-    const patientDoc = await adminDb
-      .collection('users')
-      .doc(userId)
-      .collection('patients')
-      .doc(patientId)
-      .get()
-
-    if (!patientDoc.exists) {
-      return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+    // Check authorization and get owner userId
+    const authResult = await assertPatientAccess(request, patientId, 'viewVitals')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
     }
 
-    // Build query
+    const { userId, ownerUserId } = authResult as AssertPatientAccessResult
+
+    // Build query using owner's collection
     let query = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('step-logs')
@@ -89,30 +76,16 @@ export async function POST(
   { params }: { params: Promise<{ patientId: string }> }
 ) {
   try {
-    // Extract and verify auth token
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
-
     const { patientId } = await params
     const body = await request.json()
 
-    // Verify patient belongs to user
-    const patientDoc = await adminDb
-      .collection('users')
-      .doc(userId)
-      .collection('patients')
-      .doc(patientId)
-      .get()
-
-    if (!patientDoc.exists) {
-      return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+    // Check authorization and get owner userId
+    const authResult = await assertPatientAccess(request, patientId, 'logVitals')
+    if (authResult instanceof Response) {
+      return authResult // Return error response
     }
+
+    const { userId, ownerUserId } = authResult as AssertPatientAccessResult
 
     // Validate required fields
     if (!body.steps || !body.date) {
@@ -125,7 +98,7 @@ export async function POST(
     // Check for existing log on the same date with same source
     const existingLogsSnapshot = await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('step-logs')
@@ -184,7 +157,7 @@ export async function POST(
 
     const docRef = await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('step-logs')

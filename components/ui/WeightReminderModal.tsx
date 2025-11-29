@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { WeightLog } from '@/types'
+import { WeightLog } from '@/types/medical'
 import { shouldShowWeightReminder, getWeightReminderMessage, getWeightReminderColor } from '@/lib/weight-reminder-logic'
 
 interface WeightReminderModalProps {

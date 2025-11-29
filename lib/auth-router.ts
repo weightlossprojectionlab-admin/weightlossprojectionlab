@@ -91,7 +91,7 @@ export async function determineUserDestination(
         hasFamilyPlan = patients && patients.length >= 2
         logger.debug('[AuthRouter] Family plan check', { patientCount: patients?.length, hasFamilyPlan })
       } catch (error) {
-        logger.debug('[AuthRouter] Could not check family members, defaulting to dashboard', error)
+        logger.debug('[AuthRouter] Could not check family members, defaulting to dashboard', { error })
       }
 
       // If user is on /onboarding but already completed, redirect based on plan type

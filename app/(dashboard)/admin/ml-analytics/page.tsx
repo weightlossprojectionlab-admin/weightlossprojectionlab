@@ -5,6 +5,7 @@ import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import { ArrowPathIcon, BeakerIcon, ChartBarIcon, SparklesIcon, CubeIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 interface AnalysisStatus {
   running: boolean
@@ -40,6 +41,9 @@ export default function MLAnalyticsPage() {
   const [recipeStatus, setRecipeStatus] = useState<AnalysisStatus>({ running: false })
   const [recipeLoading, setRecipeLoading] = useState(true)
   const [recipeTriggering, setRecipeTriggering] = useState(false)
+
+  // Modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   const getAuthToken = async () => {
     const user = auth.currentUser
@@ -90,13 +94,10 @@ export default function MLAnalyticsPage() {
       return
     }
 
-    const confirmed = confirm(
-      'This will analyze all user shopping data to find product associations. ' +
-      'The process may take several minutes depending on data volume. Continue?'
-    )
+    setShowConfirmModal(true)
+  }
 
-    if (!confirmed) return
-
+  const handleConfirmAnalysis = async () => {
     setTriggering(true)
 
     try {
@@ -566,6 +567,18 @@ export default function MLAnalyticsPage() {
           </li>
         </ul>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmAnalysis}
+        title="Start Market Basket Analysis"
+        message="This will analyze all user shopping data to find product associations. The process may take several minutes depending on data volume. Continue?"
+        confirmText="OK"
+        cancelText="Cancel"
+        variant="info"
+      />
     </div>
   )
 }

@@ -136,42 +136,52 @@ export async function GET(request: NextRequest) {
         .get()
 
       if (familyMemberSnapshot.empty) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Not found',
-            message: 'You are not part of any family account'
-          },
-          { status: 404 }
-        )
-      }
+        // If user is not an account owner and not a family member,
+        // treat them as a potential account owner with no family yet
+        logger.info('[API /family/hierarchy GET] User has no family setup, treating as account owner', { userId })
+        ownerUserId = userId
+        accountOwnerInfo = {
+          userId,
+          name: userData?.name || 'Unknown',
+          email: userData?.email || 'Unknown',
+          accountOwnerSince: userData?.preferences?.accountOwnerSince || new Date().toISOString()
+        }
 
-      const familyMemberDoc = familyMemberSnapshot.docs[0]
-      ownerUserId = familyMemberDoc.ref.parent.parent?.id || ''
+        // Mark user as account owner if not already set
+        if (!isUserAccountOwner) {
+          await adminDb.collection('users').doc(userId).update({
+            'preferences.isAccountOwner': true,
+            'preferences.accountOwnerSince': accountOwnerInfo.accountOwnerSince
+          })
+        }
+      } else {
+        const familyMemberDoc = familyMemberSnapshot.docs[0]
+        ownerUserId = familyMemberDoc.ref.parent.parent?.id || ''
 
-      if (!ownerUserId) {
-        logger.error('[API /family/hierarchy GET] Unable to extract owner from path: ' + familyMemberDoc.ref.path)
-        return NextResponse.json(
-          { success: false, error: 'Invalid family member document structure' },
-          { status: 500 }
-        )
-      }
+        if (!ownerUserId) {
+          logger.error('[API /family/hierarchy GET] Unable to extract owner from path: ' + familyMemberDoc.ref.path)
+          return NextResponse.json(
+            { success: false, error: 'Invalid family member document structure' },
+            { status: 500 }
+          )
+        }
 
-      // Get Account Owner info
-      const ownerDoc = await adminDb.collection('users').doc(ownerUserId).get()
-      if (!ownerDoc.exists) {
-        return NextResponse.json(
-          { success: false, error: 'Account owner not found' },
-          { status: 404 }
-        )
-      }
+        // Get Account Owner info
+        const ownerDoc = await adminDb.collection('users').doc(ownerUserId).get()
+        if (!ownerDoc.exists) {
+          return NextResponse.json(
+            { success: false, error: 'Account owner not found' },
+            { status: 404 }
+          )
+        }
 
-      const ownerData = ownerDoc.data()
-      accountOwnerInfo = {
-        userId: ownerUserId,
-        name: ownerData?.name || 'Unknown',
-        email: ownerData?.email || 'Unknown',
-        accountOwnerSince: ownerData?.preferences?.accountOwnerSince
+        const ownerData = ownerDoc.data()
+        accountOwnerInfo = {
+          userId: ownerUserId,
+          name: ownerData?.name || 'Unknown',
+          email: ownerData?.email || 'Unknown',
+          accountOwnerSince: ownerData?.preferences?.accountOwnerSince
+        }
       }
     }
 

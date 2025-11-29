@@ -32,6 +32,7 @@ interface PatientPermissionsResult {
 }
 
 const DEFAULT_PERMISSIONS: FamilyMemberPermissions = {
+  viewPatientProfile: false,
   viewMedicalRecords: false,
   editMedications: false,
   scheduleAppointments: false,
@@ -44,7 +45,8 @@ const DEFAULT_PERMISSIONS: FamilyMemberPermissions = {
   chatAccess: false,
   inviteOthers: false,
   viewSensitiveInfo: false,
-  editPatientProfile: false
+  editPatientProfile: false,
+  deletePatient: false
 }
 
 export function usePatientPermissions(patientId: string | undefined): PatientPermissionsResult {

@@ -1,37 +1,20 @@
-app/appointments/new/page.tsx(89,17): error TS2304: Cannot find name 'user'.
-app/log-meal/page.tsx(2777,25): error TS2339: Property 'info' does not exist on type '{ (message: Message, opts?: Partial<Pick<Toast, "id" | "duration" | "icon" | "ariaProps" | "className" | "style" | "position" | "iconTheme" | "toasterId" | "removeDelay">> | undefined): string; ... 8 more ...; promise<T>(promise: Promise<...> | (() => Promise<...>), msgs: { ...; }, opts?: DefaultToastOptions | undef...'.
-app/medications/page.tsx(39,25): error TS7006: Parameter 'med' implicitly has an 'any' type.
-app/medications/page.tsx(49,25): error TS7006: Parameter 'med' implicitly has an 'any' type.
-app/medications/page.tsx(137,54): error TS7006: Parameter '_' implicitly has an 'any' type.
-app/medications/page.tsx(137,57): error TS7006: Parameter 'i' implicitly has an 'any' type.
-app/medications/page.tsx(331,63): error TS7006: Parameter 'm' implicitly has an 'any' type.
-app/progress/page.tsx(218,66): error TS2304: Cannot find name 'WeightLog'.
-app/progress/page.tsx(460,28): error TS7006: Parameter 'condition' implicitly has an 'any' type.
-app/progress/page.tsx(460,39): error TS7006: Parameter 'idx' implicitly has an 'any' type.
-app/progress/page.tsx(526,30): error TS7006: Parameter 'med' implicitly has an 'any' type.
-app/progress/page.tsx(526,35): error TS7006: Parameter 'idx' implicitly has an 'any' type.
-components/appointments/RecommendationModal.tsx(79,17): error TS2304: Cannot find name 'user'.
-components/charts/MacroPieChart.tsx(73,41): error TS18046: 'percent' is of type 'unknown'.
-components/gallery/SocialMediaCard.tsx(77,75): error TS2345: Argument of type 'Error' is not assignable to parameter of type 'LogContext'.
-  Index signature for type 'string' is missing in type 'Error'.
-components/health/MedicationScanner.tsx(92,24): error TS2339: Property 'patientName' does not exist on type 'MedicationInfo'.
-components/health/MedicationScanner.tsx(93,37): error TS2339: Property 'patientName' does not exist on type 'MedicationInfo'.
-components/health/MedicationScanner.tsx(216,24): error TS2345: Argument of type 'MedicationInfo[]' is not assignable to parameter of type 'SetStateAction<ScannedMedication[]>'.
-  Type 'MedicationInfo[]' is not assignable to type 'ScannedMedication[]'.
-    Property 'scannedAt' is missing in type 'MedicationInfo' but required in type 'ScannedMedication'.
-hooks/useFamilyMembers.ts(85,11): error TS2559: Type 'FamilyMemberPermissions' has no properties in common with type 'Partial<FamilyMember>'.
-hooks/useInvitations.ts(56,77): error TS2345: Argument of type 'FamilyInvitationForm' is not assignable to parameter of type 'Omit<FamilyInvitation, "createdAt" | "status" | "id" | "expiresAt" | "inviteCode">'.
-  Type 'FamilyInvitationForm' is missing the following properties from type 'Omit<FamilyInvitation, "createdAt" | "status" | "id" | "expiresAt" | "inviteCode">': invitedByUserId, invitedByName
-hooks/usePatients.ts(62,73): error TS2345: Argument of type 'Omit<PatientProfile, "createdAt" | "userId" | "id" | "lastModified">' is not assignable to parameter of type 'Omit<PatientProfile, "createdAt" | "id" | "lastModified">'.
-  Property 'userId' is missing in type 'Omit<PatientProfile, "createdAt" | "userId" | "id" | "lastModified">' but required in type 'Omit<PatientProfile, "createdAt" | "id" | "lastModified">'.
-lib/appointment-recommendations.ts(176,45): error TS2367: This comparison appears to be unintentional because the types 'VitalType' and '"blood-pressure"' have no overlap.
-lib/appointment-recommendations.ts(178,48): error TS2339: Property 'split' does not exist on type 'VitalValue'.
-  Property 'split' does not exist on type 'number'.
-lib/appointment-recommendations.ts(186,50): error TS2367: This comparison appears to be unintentional because the types 'VitalType' and '"glucose"' have no overlap.
-lib/appointment-recommendations.ts(196,45): error TS2367: This comparison appears to be unintentional because the types 'VitalType' and '"heart-rate"' have no overlap.
-lib/appointment-recommendations.ts(252,44): error TS2367: This comparison appears to be unintentional because the types 'AppointmentType' and '"nutritionist"' have no overlap.
-lib/appointment-recommendations.ts(255,73): error TS2367: This comparison appears to be unintentional because the types 'AppointmentType' and '"primary-care"' have no overlap.
-lib/appointment-recommendations.ts(258,69): error TS2367: This comparison appears to be unintentional because the types 'AppointmentType' and '"mental-health"' have no overlap.
-lib/barcode-scanner.ts(61,7): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
-lib/social-media-cards.ts(401,65): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Error'.
-lib/social-media-cards.ts(419,68): error TS2353: Object literal may only specify known properties, and 'url' does not exist in type 'Error'.
+app/patients/[patientId]/page.tsx(65,52): error TS2304: Cannot find name 'VitalSign'.
+app/patients/[patientId]/page.tsx(292,15): error TS2304: Cannot find name 'updateVital'.
+app/patients/[patientId]/page.tsx(315,35): error TS2304: Cannot find name 'VitalSign'.
+app/patients/[patientId]/page.tsx(328,13): error TS2552: Cannot find name 'deleteVital'. Did you mean 'deletingVital'?
+app/recipes/page.tsx(201,63): error TS18047: 'memberProfile' is possibly 'null'.
+components/dev/SubscriptionSimulator.tsx(64,83): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+components/dev/SubscriptionSimulator.tsx(67,92): error TS2448: Block-scoped variable 'familyFeaturesEnabled' used before its declaration.
+components/dev/SubscriptionSimulator.tsx(67,92): error TS2454: Variable 'familyFeaturesEnabled' is used before being assigned.
+components/family/InviteModal.tsx(121,9): error TS2353: Object literal may only specify known properties, and 'familyRole' does not exist in type 'FamilyInvitationForm'.
+components/family/InviteModal.tsx(159,9): error TS2353: Object literal may only specify known properties, and 'familyRole' does not exist in type 'FamilyInvitationForm'.
+components/patients/PatientCard.tsx(59,59): error TS2345: Argument of type 'import("C:/Users/percy/wlpl/weightlossprojectlab/types/medical").WeightLog | null' is not assignable to parameter of type 'import("C:/Users/percy/wlpl/weightlossprojectlab/types/index").WeightLog | null'.
+  Property 'dataSource' is missing in type 'import("C:/Users/percy/wlpl/weightlossprojectlab/types/medical").WeightLog' but required in type 'import("C:/Users/percy/wlpl/weightlossprojectlab/types/index").WeightLog'.
+lib/medical-recipe-engine.ts(91,30): error TS2339: Property 'healthConditions' does not exist on type 'PatientProfile'.
+lib/medical-recipe-engine.ts(94,22): error TS7006: Parameter 'condition' implicitly has an 'any' type.
+lib/member-recipe-engine.ts(110,33): error TS2339: Property 'healthConditions' does not exist on type 'PatientProfile'.
+lib/member-recipe-engine.ts(124,19): error TS2552: Cannot find name 'analyzeRecipeSafety'. Did you mean 'analyzedRecipes'?
+lib/member-recipe-engine.ts(150,46): error TS7006: Parameter 'b' implicitly has an 'any' type.
+lib/user-role-helper.ts(28,35): error TS2339: Property 'preferences' does not exist on type 'UserProfile'.
+lib/user-role-helper.ts(31,32): error TS2339: Property 'preferences' does not exist on type 'UserProfile'.

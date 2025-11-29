@@ -28,6 +28,7 @@ import { usePatientLimit } from '@/hooks/usePatientLimit'
 import { PlanBadge } from '@/components/subscription/PlanBadge'
 import { UpgradeModal } from '@/components/subscription/UpgradeModal'
 import { usePatients } from '@/hooks/usePatients'
+import { NotificationSettings } from '@/components/ui/NotificationPrompt'
 
 function ProfileContent() {
   const { user } = useAuth()
@@ -52,6 +53,7 @@ function ProfileContent() {
   const [signOutLoading, setSignOutLoading] = useState(false)
   const [showHealthModal, setShowHealthModal] = useState(false)
   const [healthApp, setHealthApp] = useState<'apple-health' | 'google-fit' | 'none'>('none')
+  const [sendingTestNotif, setSendingTestNotif] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -154,6 +156,59 @@ function ProfileContent() {
       toast.error('Failed to sign out. Please try again.')
     } finally {
       setSignOutLoading(false)
+    }
+  }
+
+  const handleSendTestNotification = async () => {
+    setSendingTestNotif(true)
+    try {
+      // Check if browser supports notifications
+      if (!('Notification' in window)) {
+        toast.error('Your browser does not support notifications')
+        return
+      }
+
+      // Check current permission
+      let permission = Notification.permission
+
+      // Request permission if not granted
+      if (permission === 'default') {
+        permission = await Notification.requestPermission()
+      }
+
+      if (permission === 'denied') {
+        toast.error('Notification permission denied. Please enable notifications in your browser settings.')
+        return
+      }
+
+      if (permission === 'granted') {
+        // Send a browser notification directly
+        const notification = new Notification('🎉 Test Notification', {
+          body: 'Your notifications are working! You\'ll receive helpful reminders to stay on track.',
+          icon: '/icon-192x192.png',
+          badge: '/icon-192x192.png',
+          tag: 'test-notification',
+          requireInteraction: false,
+          silent: false
+        })
+
+        // Auto-close after 5 seconds
+        setTimeout(() => notification.close(), 5000)
+
+        // Handle click
+        notification.onclick = () => {
+          window.focus()
+          notification.close()
+        }
+
+        toast.success('Test notification sent! You should see it now.')
+        logger.info('[Test Notification] Browser notification sent successfully')
+      }
+    } catch (error) {
+      logger.error('Error sending test notification:', error as Error)
+      toast.error('Failed to send test notification: ' + (error as Error).message)
+    } finally {
+      setSendingTestNotif(false)
     }
   }
 
@@ -802,18 +857,30 @@ function ProfileContent() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Notifications</p>
-                <p className="text-sm text-muted-foreground">Daily reminders and achievements</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
+        {/* Test Notification */}
+        <div className="bg-card rounded-lg p-6 shadow-sm">
+          <h3 className="text-lg font-bold mb-4">🔔 Test Notifications</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Send a test notification to verify your notification setup is working correctly.
+          </p>
+          <button
+            onClick={handleSendTestNotification}
+            disabled={sendingTestNotif}
+            className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {sendingTestNotif ? 'Sending Test...' : '📬 Send Test Notification'}
+          </button>
+        </div>
 
+        {/* Notification Settings */}
+        <NotificationSettings userId={user?.uid} />
+
+        <div className="bg-card rounded-lg p-6 shadow-sm">
+          <h3 className="text-lg font-bold mb-4">Other Preferences</h3>
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Weight Units</p>

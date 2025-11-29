@@ -44,7 +44,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid purchaseDate format' }, { status: 400 })
     }
 
-    logger.info(`Confirming purchase of ${itemIds.length} items for user ${userId}`)
+    logger.info('Confirming purchase request', {
+      userId,
+      itemCount: itemIds.length,
+      itemIds: itemIds.slice(0, 5) // Log first 5 items
+    })
 
     // Process each item
     const batch = adminDb.batch()
@@ -73,11 +77,9 @@ export async function POST(request: NextRequest) {
 
     for (const itemId of itemIds) {
       try {
-        // Get the item
+        // Get the item from root shopping_items collection
         const itemRef = adminDb
-          .collection('users')
-          .doc(userId)
-          .collection('shopping_list')
+          .collection('shopping_items')
           .doc(itemId)
 
         const itemDoc = await itemRef.get()
@@ -93,17 +95,36 @@ export async function POST(request: NextRequest) {
 
         const itemData = itemDoc.data()
 
+        // Security: Verify the item belongs to this user
+        if (itemData?.userId !== userId && itemData?.householdId !== userId) {
+          logger.error('Purchase confirmation authorization failed', new Error('Unauthorized access'), {
+            itemId,
+            requestUserId: userId,
+            itemUserId: itemData?.userId,
+            itemHouseholdId: itemData?.householdId
+          })
+          results.push({
+            itemId,
+            success: false,
+            error: 'Unauthorized - item does not belong to user'
+          })
+          continue
+        }
+
         // Calculate expiration date based on category
         const categoryKey = itemData?.category || 'other'
         const daysToExpire = expirationDays[categoryKey] || 30
         const expiresAt = new Date(confirmedAt.getTime() + daysToExpire * 24 * 60 * 60 * 1000)
 
-        // Create purchase history entry
-        const purchaseEntry = {
+        // Create purchase history entry (only include defined fields)
+        const purchaseEntry: any = {
           date: Timestamp.fromDate(confirmedAt),
-          expiresAt: Timestamp.fromDate(expiresAt),
-          store: store || undefined,
-          price: undefined // Could extract from itemData if needed
+          expiresAt: Timestamp.fromDate(expiresAt)
+        }
+
+        // Only add optional fields if they have values
+        if (store) {
+          purchaseEntry.store = store
         }
 
         // Update the item
@@ -131,15 +152,32 @@ export async function POST(request: NextRequest) {
     }
 
     // Commit all updates
-    await batch.commit()
+    try {
+      await batch.commit()
+    } catch (commitError) {
+      logger.error('Failed to commit batch update', commitError as Error, {
+        userId,
+        itemCount: itemIds.length
+      })
+
+      // Mark all pending items as failed
+      for (const result of results) {
+        if (result.success) {
+          result.success = false
+          result.error = 'Batch commit failed'
+        }
+      }
+    }
 
     const successCount = results.filter(r => r.success).length
     const failedCount = results.filter(r => !r.success).length
 
-    logger.info(`Purchase confirmation completed: ${successCount} success, ${failedCount} failed`, {
+    logger.info('Purchase confirmation completed', {
       userId,
       store,
-      totalAmount
+      totalAmount,
+      successCount,
+      failedCount
     })
 
     return NextResponse.json({

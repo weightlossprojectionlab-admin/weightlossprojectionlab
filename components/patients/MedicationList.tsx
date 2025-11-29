@@ -5,17 +5,16 @@ import { medicalOperations } from '@/lib/medical-operations'
 import { PatientMedication } from '@/types/medical'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
-import { db, auth } from '@/lib/firebase'
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import MedicationDetailModal from '@/components/health/MedicationDetailModal'
 
 interface MedicationListProps {
   patientId: string
+  patientOwnerId?: string
   onMedicationsLoad?: (count: number) => void
 }
 
-export function MedicationList({ patientId, onMedicationsLoad }: MedicationListProps) {
+export function MedicationList({ patientId, patientOwnerId, onMedicationsLoad }: MedicationListProps) {
   const [medications, setMedications] = useState<PatientMedication[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingMedicationId, setDeletingMedicationId] = useState<string | null>(null)
@@ -23,48 +22,30 @@ export function MedicationList({ patientId, onMedicationsLoad }: MedicationListP
   const [loggingDoseId, setLoggingDoseId] = useState<string | null>(null)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
 
-  // Set up real-time listener for medications
-  useEffect(() => {
-    const user = auth.currentUser
-    if (!user || !patientId) {
+  // Fetch medications using API
+  const fetchMedications = async () => {
+    if (!patientId) {
       setLoading(false)
       return
     }
 
-    setLoading(true)
+    try {
+      setLoading(true)
+      const meds = await medicalOperations.medications.getMedications(patientId)
+      setMedications(meds)
+      onMedicationsLoad?.(meds.length)
+      logger.debug('[MedicationList] Medications loaded', { count: meds.length })
+    } catch (error) {
+      logger.error('[MedicationList] Error fetching medications', error as Error)
+      toast.error('Failed to load medications')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-    // Subscribe to real-time updates
-    const medicationsRef = collection(db, `users/${user.uid}/patients/${patientId}/medications`)
-    const q = query(medicationsRef, orderBy('addedAt', 'desc'))
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const meds: PatientMedication[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          addedAt: doc.data().addedAt?.toDate?.()?.toISOString() || doc.data().addedAt,
-          lastModified: doc.data().lastModified?.toDate?.()?.toISOString() || doc.data().lastModified,
-          fillDate: doc.data().fillDate?.toDate?.()?.toISOString() || doc.data().fillDate,
-          expirationDate: doc.data().expirationDate?.toDate?.()?.toISOString() || doc.data().expirationDate,
-          scannedAt: doc.data().scannedAt?.toDate?.()?.toISOString() || doc.data().scannedAt
-        })) as PatientMedication[]
-
-        setMedications(meds)
-        onMedicationsLoad?.(meds.length)
-        setLoading(false)
-        logger.debug('[MedicationList] Medications updated via real-time listener', { count: meds.length })
-      },
-      (error) => {
-        logger.error('[MedicationList] Error in real-time listener', error)
-        toast.error('Failed to load medications')
-        setLoading(false)
-      }
-    )
-
-    // Cleanup subscription on unmount
-    return () => unsubscribe()
-  }, [patientId, onMedicationsLoad])
+  useEffect(() => {
+    fetchMedications()
+  }, [patientId])
 
   const handleDeleteClick = (medication: PatientMedication) => {
     setMedicationToDelete(medication)
@@ -77,6 +58,7 @@ export function MedicationList({ patientId, onMedicationsLoad }: MedicationListP
       setDeletingMedicationId(medicationToDelete.id)
       await medicalOperations.medications.deleteMedication(patientId, medicationToDelete.id)
       toast.success('Medication deleted')
+      await fetchMedications() // Refresh the list
     } catch (error: any) {
       logger.error('[MedicationList] Error deleting medication', error)
       toast.error('Failed to delete medication')
@@ -93,6 +75,7 @@ export function MedicationList({ patientId, onMedicationsLoad }: MedicationListP
         takenAt: new Date().toISOString()
       })
       toast.success(`${medication.name} marked as taken`)
+      await fetchMedications() // Refresh the list
     } catch (error: any) {
       logger.error('[MedicationList] Error logging dose', error)
       toast.error('Failed to log medication dose')

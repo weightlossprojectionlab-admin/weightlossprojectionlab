@@ -15,24 +15,54 @@ interface VitalLogFormProps {
     type: VitalType
     value: VitalValue
     unit: string
+    recordedAt?: Date
     notes?: string
     tags?: string[]
   }) => Promise<void>
   onCancel?: () => void
   defaultType?: VitalType
   onTypeChange?: (type: VitalType) => void
+  initialData?: {
+    type: VitalType
+    value: VitalValue
+    recordedAt?: Date
+    notes?: string
+  }
+  isEditing?: boolean
 }
 
-export function VitalLogForm({ patientId, onSubmit, onCancel, defaultType, onTypeChange }: VitalLogFormProps) {
-  const [type, setType] = useState<VitalType>(defaultType || 'blood_pressure')
+export function VitalLogForm({ patientId, onSubmit, onCancel, defaultType, onTypeChange, initialData, isEditing }: VitalLogFormProps) {
+  const [type, setType] = useState<VitalType>(initialData?.type || defaultType || 'blood_pressure')
   const [value, setValue] = useState<string>('')
   const [systolic, setSystolic] = useState<string>('')
   const [diastolic, setDiastolic] = useState<string>('')
   const [spo2, setSpo2] = useState<string>('')
   const [pulseRate, setPulseRate] = useState<string>('')
   const [perfusionIndex, setPerfusionIndex] = useState<string>('')
-  const [notes, setNotes] = useState<string>('')
+  const [recordedAt, setRecordedAt] = useState<string>(
+    initialData?.recordedAt
+      ? new Date(initialData.recordedAt).toISOString().slice(0, 16)
+      : new Date().toISOString().slice(0, 16)
+  )
+  const [notes, setNotes] = useState<string>(initialData?.notes || '')
   const [loading, setLoading] = useState(false)
+
+  // Initialize form with existing data when editing
+  useEffect(() => {
+    if (initialData) {
+      const val = initialData.value
+      if (initialData.type === 'blood_pressure' && typeof val === 'object' && 'systolic' in val) {
+        setSystolic(val.systolic.toString())
+        setDiastolic(val.diastolic.toString())
+      } else if (initialData.type === 'pulse_oximeter' && typeof val === 'object' && 'spo2' in val) {
+        setSpo2(val.spo2.toString())
+        setPulseRate(val.pulseRate.toString())
+        if (val.perfusionIndex) setPerfusionIndex(val.perfusionIndex.toString())
+      } else if (typeof val === 'number') {
+        setValue(val.toString())
+      }
+    }
+  }, [initialData])
 
   // Update type when defaultType changes
   useEffect(() => {
@@ -90,6 +120,7 @@ export function VitalLogForm({ patientId, onSubmit, onCancel, defaultType, onTyp
         type,
         value: vitalValue,
         unit: getUnitForType(type),
+        recordedAt: new Date(recordedAt),
         notes: notes || undefined
       })
 
@@ -125,6 +156,7 @@ export function VitalLogForm({ patientId, onSubmit, onCancel, defaultType, onTyp
           }}
           className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
           required
+          disabled={isEditing} // Can't change type when editing
         >
           <option value="blood_pressure">Blood Pressure</option>
           <option value="blood_sugar">Blood Sugar</option>
@@ -132,6 +164,24 @@ export function VitalLogForm({ patientId, onSubmit, onCancel, defaultType, onTyp
           <option value="temperature">Temperature</option>
           <option value="weight">Weight</option>
         </select>
+      </div>
+
+      {/* Date/Time Picker */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-2">
+          Date & Time {!isEditing && <span className="text-muted-foreground">(leave as now or backdate)</span>}
+        </label>
+        <input
+          type="datetime-local"
+          value={recordedAt}
+          onChange={(e) => setRecordedAt(e.target.value)}
+          max={new Date().toISOString().slice(0, 16)}
+          className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
+          required
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          {isEditing ? 'Update the date/time if needed' : 'Default is current time. Change to backdate entry.'}
+        </p>
       </div>
 
       {/* Value Input */}
@@ -262,7 +312,7 @@ export function VitalLogForm({ patientId, onSubmit, onCancel, defaultType, onTyp
           disabled={loading}
           className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
         >
-          {loading ? 'Logging...' : 'Log Vital Sign'}
+          {loading ? (isEditing ? 'Updating...' : 'Logging...') : (isEditing ? 'Update Vital' : 'Log Vital Sign')}
         </button>
         {onCancel && (
           <button

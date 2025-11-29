@@ -8,16 +8,15 @@
 import { useState, useEffect } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { auth } from '@/lib/firebase'
 import { medicalOperations } from '@/lib/medical-operations'
-import { db, auth } from '@/lib/firebase'
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore'
 import { useVitals } from '@/hooks/useVitals'
 import { usePatientPermissions } from '@/hooks/usePatientPermissions'
 import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { useInvitations } from '@/hooks/useInvitations'
 import { useUserProfile } from '@/hooks/useUserProfile'
-import { PatientProfile, VitalType, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication } from '@/types/medical'
+import { PatientProfile, VitalType, VitalSign, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication } from '@/types/medical'
 import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
 import { FamilyMemberCard } from '@/components/family/FamilyMemberCard'
@@ -32,7 +31,9 @@ import { AIHealthReport } from '@/components/patients/AIHealthReport'
 import DocumentUpload from '@/components/patients/DocumentUpload'
 import DocumentDetailModal from '@/components/documents/DocumentDetailModal'
 import MedicationDetailModal from '@/components/health/MedicationDetailModal'
+import { RecipeView } from '@/components/patients/RecipeView'
 import { PageHeader } from '@/components/ui/PageHeader'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { ChartBarIcon, ShieldCheckIcon, ChevronDownIcon, ChevronUpIcon, ScaleIcon, CameraIcon, FireIcon, StarIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -60,6 +61,8 @@ function PatientDetailContent() {
   const [patient, setPatient] = useState<PatientProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedVitalType, setSelectedVitalType] = useState<VitalType>('blood_pressure')
+  const [editingVital, setEditingVital] = useState<VitalSign | null>(null)
+  const [deletingVital, setDeletingVital] = useState<{ id: string; type: string } | null>(null)
   const [showFamilyAccess, setShowFamilyAccess] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null)
@@ -73,9 +76,10 @@ function PatientDetailContent() {
   const [medications, setMedications] = useState<PatientMedication[]>([])
   const [loadingMedications, setLoadingMedications] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
-  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'weight' | 'meals' | 'steps' | 'medications'>(tabParam || 'vitals')
+  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'weight' | 'meals' | 'steps' | 'medications' | 'recipes'>(tabParam || 'vitals')
+  const [fixingStartWeight, setFixingStartWeight] = useState(false)
 
-  const { vitals, loading: vitalsLoading, logVital, refetch } = useVitals({
+  const { vitals, loading: vitalsLoading, logVital, updateVital, deleteVital, refetch } = useVitals({
     patientId,
     autoFetch: true
   })
@@ -129,13 +133,13 @@ function PatientDetailContent() {
     weightData,
     stepsData,
     loading: healthDataLoading
-  } = useDashboardData(patientId)
+  } = useDashboardData(patientId, patient?.userId)
 
   // Calculate statistics from raw data using patient's goals
   const patientProfileForStats = patient ? {
     goals: patient.goals,
     profile: {
-      currentWeight: patient.targetWeight // Fallback if no weight logs
+      currentWeight: patient.goals?.startWeight // Fallback if no weight logs
     }
   } : null
 
@@ -168,6 +172,46 @@ function PatientDetailContent() {
     } catch (error: any) {
       logger.error('[PatientDetail] Error setting primary family member', error)
       toast.error(error.message || 'Failed to set primary family member')
+    }
+  }
+
+  // Handler to fix missing start weight
+  const handleFixStartWeight = async () => {
+    if (!patient) return
+
+    setFixingStartWeight(true)
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        throw new Error('Not authenticated')
+      }
+
+      const token = await user.getIdToken()
+      const response = await fetch(`/api/patients/${patientId}/fix-start-weight`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fix start weight')
+      }
+
+      // Refresh patient data to show updated weight
+      const updatedPatient = await medicalOperations.patients.getPatient(patientId)
+      setPatient(updatedPatient)
+
+      toast.success(result.message || 'Starting weight updated successfully!')
+      logger.info('[PatientDetail] Start weight fixed', result)
+    } catch (error: any) {
+      logger.error('[PatientDetail] Error fixing start weight', error)
+      toast.error(error.message || 'Failed to fix starting weight')
+    } finally {
+      setFixingStartWeight(false)
     }
   }
 
@@ -206,52 +250,30 @@ function PatientDetailContent() {
     fetchDocuments()
   }, [patientId])
 
-  // Set up real-time listener for medications
-  useEffect(() => {
-    const user = auth.currentUser
-    if (!user || !patientId) {
+  // Fetch medications using API
+  const fetchMedications = async () => {
+    if (!patientId) {
       setLoadingMedications(false)
       return
     }
 
-    setLoadingMedications(true)
+    try {
+      setLoadingMedications(true)
+      const response = await medicalOperations.medications.getMedications(patientId)
+      setMedications(response)
+      logger.debug('[PatientDetail] Medications loaded', {
+        count: response.length,
+        patientId
+      })
+    } catch (error: any) {
+      logger.error('[PatientDetail] Error fetching medications', error)
+    } finally {
+      setLoadingMedications(false)
+    }
+  }
 
-    const medicationsRef = collection(db, `users/${user.uid}/patients/${patientId}/medications`)
-    const q = query(medicationsRef, orderBy('addedAt', 'desc'))
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const meds: PatientMedication[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          addedAt: doc.data().addedAt?.toDate?.()?.toISOString() || doc.data().addedAt,
-          lastModified: doc.data().lastModified?.toDate?.()?.toISOString() || doc.data().lastModified,
-          fillDate: doc.data().fillDate?.toDate?.()?.toISOString() || doc.data().fillDate,
-          expirationDate: doc.data().expirationDate?.toDate?.()?.toISOString() || doc.data().expirationDate,
-          scannedAt: doc.data().scannedAt?.toDate?.()?.toISOString() || doc.data().scannedAt
-        })) as PatientMedication[]
-
-        logger.debug('[PatientDetail] Medications loaded', {
-          count: meds.length,
-          medicationsWithImages: meds.filter(m => m.imageUrl || m.photoUrl).length,
-          firstMedication: meds[0] ? {
-            name: meds[0].name,
-            hasImageUrl: !!meds[0].imageUrl,
-            hasPhotoUrl: !!meds[0].photoUrl
-          } : null
-        })
-
-        setMedications(meds)
-        setLoadingMedications(false)
-      },
-      (error) => {
-        logger.error('[PatientDetail] Error in medications listener', error)
-        setLoadingMedications(false)
-      }
-    )
-
-    return () => unsubscribe()
+  useEffect(() => {
+    fetchMedications()
   }, [patientId])
 
   const handleEdit = (member: FamilyMember) => {
@@ -282,14 +304,52 @@ function PatientDetailContent() {
   const handleLogVital = async (data: any) => {
     try {
       logger.debug('[PatientDetail] Before logVital', { vitalsCount: vitals.length })
-      const newVital = await logVital(data)
-      logger.debug('[PatientDetail] After logVital', { vitalsCount: vitals.length, newVital })
-      toast.success('Vital sign logged successfully')
+
+      if (editingVital) {
+        // Update existing vital
+        await updateVital(editingVital.id, {
+          value: data.value,
+          recordedAt: data.recordedAt,
+          notes: data.notes
+        })
+        toast.success('Vital sign updated successfully')
+        setEditingVital(null)
+      } else {
+        // Create new vital
+        const newVital = await logVital(data)
+        logger.debug('[PatientDetail] After logVital', { vitalsCount: vitals.length, newVital })
+        toast.success('Vital sign logged successfully')
+      }
+
       await refetch()
       logger.debug('[PatientDetail] After refetch', { vitalsCount: vitals.length })
+      setShowVitalsModal(false)
     } catch (error: any) {
       // Error toast already shown in logVital
       logger.error('[PatientDetail] Error in handleLogVital', error)
+    }
+  }
+
+  const handleEditVital = (vital: VitalSign) => {
+    setEditingVital(vital)
+    setShowVitalsModal(true)
+  }
+
+  const handleDeleteVitalClick = (vitalId: string, vitalType: string) => {
+    setDeletingVital({ id: vitalId, type: vitalType })
+  }
+
+  const confirmDeleteVital = async () => {
+    if (!deletingVital) return
+
+    try {
+      await deleteVital(deletingVital.id)
+      toast.success('Vital sign deleted successfully')
+      await refetch()
+      setDeletingVital(null)
+    } catch (error: any) {
+      toast.error('Failed to delete vital sign')
+      logger.error('[PatientDetail] Error deleting vital', error)
     }
   }
 
@@ -421,6 +481,27 @@ function PatientDetailContent() {
                     <span>🚶</span>
                     <span>Log Steps</span>
                   </button>
+                  <Link
+                    href={`/shopping?memberId=${patientId}`}
+                    className="w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground"
+                  >
+                    <span>🛒</span>
+                    <span>Shopping List</span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setActiveTab('recipes')
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 ${
+                      activeTab === 'recipes'
+                        ? 'bg-primary text-white'
+                        : 'bg-muted hover:bg-muted/80 text-foreground'
+                    }`}
+                  >
+                    <span>🍽️</span>
+                    <span>Your Recipes</span>
+                  </button>
                   {canUploadDocuments && (
                     <button
                       onClick={() => setShowDocumentUpload(!showDocumentUpload)}
@@ -452,9 +533,85 @@ function PatientDetailContent() {
 
           {/* Main Content Area */}
           <div className="flex-1 min-w-0">
-        {/* Health Overview Cards */}
+            {/* Mobile Tab Navigation - Only visible on small screens */}
+            <div className="lg:hidden mb-6 overflow-x-auto pb-2 -mx-4 px-4">
+              <div className="flex gap-2 min-w-max">
+                <button
+                  onClick={() => setActiveTab('info')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'info'
+                      ? 'bg-primary text-white'
+                      : 'bg-card border border-border text-foreground'
+                  }`}
+                >
+                  ℹ️ Info
+                </button>
+                <button
+                  onClick={() => setActiveTab('vitals')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'vitals'
+                      ? 'bg-primary text-white'
+                      : 'bg-card border border-border text-foreground'
+                  }`}
+                >
+                  🩺 Vitals
+                </button>
+                <button
+                  onClick={() => setActiveTab('weight')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'weight'
+                      ? 'bg-primary text-white'
+                      : 'bg-card border border-border text-foreground'
+                  }`}
+                >
+                  ⚖️ Weight
+                </button>
+                <button
+                  onClick={() => setActiveTab('meals')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'meals'
+                      ? 'bg-primary text-white'
+                      : 'bg-card border border-border text-foreground'
+                  }`}
+                >
+                  📸 Meals
+                </button>
+                <button
+                  onClick={() => setActiveTab('steps')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'steps'
+                      ? 'bg-primary text-white'
+                      : 'bg-card border border-border text-foreground'
+                  }`}
+                >
+                  🚶 Steps
+                </button>
+                <button
+                  onClick={() => setActiveTab('medications')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'medications'
+                      ? 'bg-primary text-white'
+                      : 'bg-card border border-border text-foreground'
+                  }`}
+                >
+                  💊 Meds
+                </button>
+                <button
+                  onClick={() => setActiveTab('recipes')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'recipes'
+                      ? 'bg-primary text-white'
+                      : 'bg-card border border-border text-foreground'
+                  }`}
+                >
+                  🍽️ Recipes
+                </button>
+              </div>
+            </div>
+
+        {/* Health Overview Cards - Desktop only, always visible */}
         {canViewVitals && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Weight Progress Card */}
             <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-primary">
               <div className="flex items-center gap-2 mb-2">
@@ -492,7 +649,19 @@ function PatientDetailContent() {
                   </p>
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">No data yet</p>
+                <>
+                  <p className="text-sm text-muted-foreground mb-2">No data yet</p>
+                  {/* Show fix button if patient has no startWeight but is owner */}
+                  {isOwner && !patient?.goals?.startWeight && (
+                    <button
+                      onClick={handleFixStartWeight}
+                      disabled={fixingStartWeight}
+                      className="w-full text-xs px-2 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded transition-colors disabled:opacity-50"
+                    >
+                      {fixingStartWeight ? 'Retrieving...' : '🔧 Retrieve Starting Weight'}
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
@@ -641,6 +810,17 @@ function PatientDetailContent() {
                     onSubmit={handleLogVital}
                     defaultType={selectedVitalType}
                     onTypeChange={setSelectedVitalType}
+                    initialData={editingVital ? {
+                      type: editingVital.type,
+                      value: editingVital.value,
+                      recordedAt: new Date(editingVital.recordedAt),
+                      notes: editingVital.notes
+                    } : undefined}
+                    isEditing={!!editingVital}
+                    onCancel={() => {
+                      setEditingVital(null)
+                      setShowVitalsModal(false)
+                    }}
                   />
                 </div>
               )}
@@ -752,13 +932,13 @@ function PatientDetailContent() {
                   <MedicationForm
                     patientId={patientId}
                     onSuccess={() => {
-                      // Real-time listener will automatically update the list
-                      toast.success('Medication will appear automatically')
+                      fetchMedications()
+                      toast.success('Medication added successfully')
                     }}
                   />
                   <div className="mt-6 pt-6 border-t border-border">
                     <h3 className="font-semibold text-foreground mb-4">Current Medications</h3>
-                    <MedicationList patientId={patientId} />
+                    <MedicationList patientId={patientId} patientOwnerId={patient?.userId} />
                   </div>
                 </>
               ) : (
@@ -775,6 +955,10 @@ function PatientDetailContent() {
           )}
 
           {/* Patient Info Tab */}
+          {activeTab === 'recipes' && (
+            <RecipeView patientId={patientId} patientName={patient.name} />
+          )}
+
           {activeTab === 'info' && (
           <div className="overflow-y-auto max-h-[calc(100vh-200px)] space-y-6">
             {/* AI Health Report */}
@@ -988,11 +1172,11 @@ function PatientDetailContent() {
           </div>
           )}
         </div>
-          </div>
           {/* End Main Content Area */}
+          </div>
 
           {/* Right Sidebar - Recent Data */}
-        <aside className="hidden lg:block w-80 flex-shrink-0">
+          <aside className="hidden lg:block w-80 flex-shrink-0">
           <div className="sticky top-4 space-y-4">
             {/* Recent Meals */}
             <div className="bg-card rounded-lg shadow-sm border border-border p-4">
@@ -1089,14 +1273,34 @@ function PatientDetailContent() {
                         : vital.value
 
                       return (
-                        <div key={vital.id} className="text-sm p-2 bg-muted rounded">
+                        <div key={vital.id} className="text-sm p-2 bg-muted rounded group">
                           <div className="flex items-center justify-between">
                             <span className="font-medium capitalize">
                               {vital.type.replace('_', ' ')}
                             </span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(vital.recordedAt).toLocaleDateString()}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(vital.recordedAt).toLocaleDateString()}
+                              </span>
+                              {(canLogVitals || isOwner) && (
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={() => handleEditVital(vital)}
+                                    className="text-blue-600 hover:text-blue-700 text-xs"
+                                    title="Edit"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteVitalClick(vital.id, vital.type)}
+                                    className="text-red-600 hover:text-red-700 text-xs"
+                                    title="Delete"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <p className="text-xs text-foreground mt-1">
                             {displayValue} {vital.unit}
@@ -1479,6 +1683,18 @@ function PatientDetailContent() {
           onClose={() => setSelectedMedication(null)}
         />
       )}
+
+      {/* Delete Vital Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deletingVital}
+        onClose={() => setDeletingVital(null)}
+        onConfirm={confirmDeleteVital}
+        title="Delete Vital Sign"
+        message={`Delete this ${deletingVital?.type.replace('_', ' ')} reading? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   )
 }

@@ -104,16 +104,13 @@ export async function checkPatientAccess(
     } as FamilyMember
 
     // Extract owner userId from familyMember document path
-    // Path format: users/{ownerUserId}/patients/{patientId}/familyMembers/{memberId}
-    const ownerUserId = familyMemberDoc.ref.parent.parent?.parent.parent?.id
+    // Path format: users/{ownerUserId}/familyMembers/{memberId}
+    const ownerUserId = familyMemberDoc.ref.parent.parent?.id
 
     // Guard: Ensure ownerUserId was extracted successfully
     if (!ownerUserId) {
-      logger.error('[RBAC] Unable to extract owner userId from family member path', {
-        userId,
-        patientId,
-        path: familyMemberDoc.ref.path
-      })
+      const error = new Error(`Unable to extract owner userId from family member path. userId: ${userId}, patientId: ${patientId}, path: ${familyMemberDoc.ref.path}`)
+      logger.error('[RBAC] Unable to extract owner userId from family member path', error)
       return { authorized: false }
     }
 
@@ -254,7 +251,8 @@ export async function getPatientOwner(
 ): Promise<string | null> {
   // Guard: Validate inputs
   if (!userId || !patientId || !role) {
-    logger.error('[RBAC] Invalid parameters for getPatientOwner', { userId, patientId, role })
+    const error = new Error(`Invalid parameters for getPatientOwner. userId: ${userId}, patientId: ${patientId}, role: ${role}`)
+    logger.error('[RBAC] Invalid parameters for getPatientOwner', error)
     return null
   }
 
@@ -263,57 +261,67 @@ export async function getPatientOwner(
     return userId
   }
 
-  // Family member - find the patient's owner via collectionGroup query
+  // Family member - find the patient's owner via family member record
   try {
-    logger.debug('[RBAC] Searching for patient in collectionGroup', { patientId, userId })
+    logger.debug('[RBAC] Searching for family member record', { patientId, userId })
 
-    // Note: collectionGroup with where('__name__', '==', patientId) requires a full document path,
-    // not just a document ID. Instead, we need to fetch all patients and filter by ID.
-    // For better performance with large datasets, consider indexing patientId as a field.
-    const patientSnapshot = await adminDb
-      .collectionGroup('patients')
+    // Query for family member record where this user has access to the patient
+    // Path: users/{ownerUserId}/familyMembers/{memberId}
+    const familyMembersSnapshot = await adminDb
+      .collectionGroup('familyMembers')
+      .where('userId', '==', userId)
+      .where('status', '==', 'accepted')
+      .where('patientsAccess', 'array-contains', patientId)
+      .limit(1)
       .get()
-
-    // Filter by document ID
-    const matchingDocs = patientSnapshot.docs.filter(doc => doc.id === patientId)
 
     logger.debug('[RBAC] CollectionGroup query result', {
       patientId,
       userId,
-      found: matchingDocs.length > 0,
-      count: matchingDocs.length
+      found: !familyMembersSnapshot.empty
     })
 
-    // Guard: Patient not found
-    if (matchingDocs.length === 0) {
-      logger.warn('[RBAC] Patient not found in collectionGroup query', {
+    // Guard: Family member record not found
+    if (familyMembersSnapshot.empty) {
+      logger.warn('[RBAC] Family member record not found - checking query criteria', {
         patientId,
         userId,
-        message: 'The patient document does not exist in any user\'s patients collection. This could mean the patient was deleted or the invitation references a non-existent patient.'
+        queryFilters: {
+          userId,
+          status: 'accepted',
+          patientsAccessContains: patientId
+        },
+        message: 'No family member record found for this user with access to this patient. The user may not have accepted the invitation or does not have access to this patient.'
       })
       return null
     }
 
-    // Extract owner userId from document path
-    const patientDocRef = matchingDocs[0].ref
-    const ownerUserId = patientDocRef.parent.parent?.id
-
-    logger.debug('[RBAC] Extracted owner from path', {
+    logger.info('[RBAC] Family member record found', {
       patientId,
-      path: patientDocRef.path,
+      userId,
+      familyMemberDocId: familyMembersSnapshot.docs[0].id,
+      familyMemberPath: familyMembersSnapshot.docs[0].ref.path
+    })
+
+    // Extract owner userId from family member document path
+    // Path format: users/{ownerUserId}/familyMembers/{memberId}
+    const familyMemberDocRef = familyMembersSnapshot.docs[0].ref
+    const ownerUserId = familyMemberDocRef.parent.parent?.id
+
+    logger.debug('[RBAC] Extracted owner from family member path', {
+      patientId,
+      path: familyMemberDocRef.path,
       ownerUserId
     })
 
     // Guard: Invalid path structure
     if (!ownerUserId) {
-      logger.error('[RBAC] Unable to extract owner from patient path', {
-        patientId,
-        path: patientDocRef.path
-      })
+      const error = new Error(`Unable to extract owner from family member path. patientId: ${patientId}, userId: ${userId}, path: ${familyMemberDocRef.path}`)
+      logger.error('[RBAC] Unable to extract owner from family member path', error)
       return null
     }
 
-    logger.debug('[RBAC] Found patient owner', { patientId, ownerUserId, familyMemberId: userId })
+    logger.debug('[RBAC] Found patient owner from family member record', { patientId, ownerUserId, familyMemberId: userId })
     return ownerUserId
 
   } catch (error) {
@@ -365,7 +373,8 @@ export async function assertPatientAccess(
 
   // Guard: userId must exist (TypeScript + runtime check)
   if (!userId) {
-    logger.error('[RBAC] No userId in authorization result', { patientId })
+    const error = new Error(`No userId in authorization result. patientId: ${patientId}`)
+    logger.error('[RBAC] No userId in authorization result', error)
     return new Response(
       JSON.stringify({ success: false, error: 'User ID not found in authorization result' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }
@@ -374,7 +383,8 @@ export async function assertPatientAccess(
 
   // Guard: role must exist (TypeScript + runtime check)
   if (!role) {
-    logger.error('[RBAC] No role in authorization result', { userId, patientId })
+    const error = new Error(`No role in authorization result. userId: ${userId}, patientId: ${patientId}`)
+    logger.error('[RBAC] No role in authorization result', error)
     return new Response(
       JSON.stringify({ success: false, error: 'User role not found in authorization result' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }
@@ -386,7 +396,8 @@ export async function assertPatientAccess(
 
   // Guard: ownerUserId must exist
   if (!ownerUserId) {
-    logger.error('[RBAC] Unable to determine patient owner', { userId, patientId, role })
+    const error = new Error(`Unable to determine patient owner. userId: ${userId}, patientId: ${patientId}, role: ${role}`)
+    logger.error('[RBAC] Unable to determine patient owner', error)
     return new Response(
       JSON.stringify({
         success: false,
