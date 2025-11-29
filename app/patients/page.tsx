@@ -38,20 +38,23 @@ function PatientsContent() {
   const [filter, setFilter] = useState<'all' | 'human' | 'pet'>('all')
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
+  // Ensure patients is always an array
+  const safePatients = patients || []
+
   // Debug logging
   console.log('[PatientsPage] Patients loaded:', {
-    count: patients.length,
+    count: safePatients.length,
     loading,
     error,
-    patients: patients.map(p => ({ id: p.id, name: p.name, _source: (p as any)._source }))
+    patients: safePatients.map(p => ({ id: p.id, name: p.name, _source: (p as any)._source }))
   })
 
   const { subscription, isAdmin } = useSubscription()
-  const { current, max, canAdd, percentage } = usePatientLimit(patients.length)
+  const { current, max, canAdd, percentage } = usePatientLimit(safePatients.length)
   const { profile: userProfile } = useUserProfile()
 
   // Determine if this is account selection mode (caregiver with 2+ patients)
-  const isAccountSelectionMode = patients.length >= 2
+  const isAccountSelectionMode = safePatients.length >= 2
 
   // Get dynamic terminology based on user role
   const pageTitle = isAccountSelectionMode
@@ -63,7 +66,7 @@ function PatientsContent() {
   const addButtonText = getAddButtonText(userProfile as any)
   const terminology = getTrackingTerminology(userProfile as any)
 
-  const filteredPatients = patients.filter(p => {
+  const filteredPatients = safePatients.filter(p => {
     if (filter === 'all') return true
     return p.type === filter
   })
@@ -130,7 +133,7 @@ function PatientsContent() {
                 : 'bg-card text-foreground hover:bg-muted'
             }`}
           >
-            All ({patients.length})
+            All ({safePatients.length})
           </button>
           <button
             onClick={() => setFilter('human')}
@@ -140,7 +143,7 @@ function PatientsContent() {
                 : 'bg-card text-foreground hover:bg-muted'
             }`}
           >
-            Humans ({patients.filter(p => p.type === 'human').length})
+            Humans ({safePatients.filter(p => p.type === 'human').length})
           </button>
           <button
             onClick={() => setFilter('pet')}
@@ -150,7 +153,7 @@ function PatientsContent() {
                 : 'bg-card text-foreground hover:bg-muted'
             }`}
           >
-            Pets ({patients.filter(p => p.type === 'pet').length})
+            Pets ({safePatients.filter(p => p.type === 'pet').length})
           </button>
         </div>
 
