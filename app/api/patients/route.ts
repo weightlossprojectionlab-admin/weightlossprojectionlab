@@ -172,42 +172,62 @@ export async function POST(request: NextRequest) {
 
     const patientData = validationResult.data
 
-    // Check patient limit based on subscription
+    // Check seat limit based on subscription (UNIFIED MODEL)
     // Get user document to check subscription
     const userDoc = await adminDb.collection('users').doc(userId).get()
     const userData = userDoc.data()
     const subscription = userData?.subscription
 
-    // Count existing patients (exclude deleted patients)
+    // Count existing patients that count as seats (exclude deleted patients and non-billable)
     const patientsSnapshot = await adminDb
       .collection('users')
       .doc(userId)
       .collection('patients')
       .get()
 
-    const currentPatientCount = patientsSnapshot.docs
-      .filter(doc => doc.data().name !== '[DELETED USER]')
+    const currentSeats = patientsSnapshot.docs
+      .filter(doc => {
+        const data = doc.data()
+        return data.name !== '[DELETED USER]' && data.countsAsSeat !== false
+      })
       .length
 
-    // Check if user can add more patients
-    const maxPatients = subscription?.maxPatients || 1 // Default to 1 if no subscription
+    // Get seat limit from subscription (use new fields, fallback to legacy)
+    const maxSeats = subscription?.maxSeats || subscription?.maxPatients || 1 // Default to 1 if no subscription
+    const plan = subscription?.plan || 'free'
 
-    if (currentPatientCount >= maxPatients) {
-      logger.warn('[API /patients POST] Patient limit reached', {
+    if (currentSeats >= maxSeats) {
+      logger.warn('[API /patients POST] Seat limit reached', {
         userId,
-        current: currentPatientCount,
-        max: maxPatients,
-        plan: subscription?.plan || 'none'
+        currentSeats,
+        maxSeats,
+        plan
       })
+
+      // Determine suggested upgrade based on current plan
+      let suggestedPlan = 'family_basic'
+      let message = 'You have reached your seat limit. Upgrade to add more family members.'
+
+      if (plan === 'free' || plan === 'single') {
+        suggestedPlan = 'family_basic'
+        message = `You have ${currentSeats}/${maxSeats} seats. Upgrade to Family Basic (5 seats) for $19.99/month.`
+      } else if (plan === 'family_basic') {
+        suggestedPlan = 'family_plus'
+        message = `You have ${currentSeats}/${maxSeats} seats. Upgrade to Family Plus (10 seats) for $29.99/month.`
+      } else if (plan === 'family_plus') {
+        suggestedPlan = 'family_premium'
+        message = `You have ${currentSeats}/${maxSeats} seats. Upgrade to Family Premium (unlimited) for $39.99/month.`
+      }
 
       return NextResponse.json(
         {
           success: false,
-          error: 'PATIENT_LIMIT_REACHED',
-          message: 'You have reached your patient limit. Upgrade to Family Plan to add more family members.',
-          current: currentPatientCount,
-          max: maxPatients,
-          suggestedUpgrade: 'family'
+          error: 'SEAT_LIMIT_REACHED',
+          message,
+          currentSeats,
+          maxSeats,
+          plan,
+          suggestedPlan
         },
         { status: 403 }
       )
@@ -220,10 +240,33 @@ export async function POST(request: NextRequest) {
     // Extract weight data before creating patient profile
     const { currentWeight, weightUnit, ...profileData } = patientData as any
 
+    // Determine if this patient should be a caregiver (based on age)
+    const caregiverStatus = profileData.type === 'human' && profileData.dateOfBirth
+      ? (() => {
+          const { checkCaregiverEligibility } = require('@/lib/caregiver-eligibility')
+          const eligibility = checkCaregiverEligibility(profileData.dateOfBirth, false)
+          return {
+            enabled: eligibility.eligible,
+            eligibleByAge: !eligibility.requiresTrust,
+            trustedByOwner: false,
+            permissionLevel: 'none' as const,
+            canManagePatients: [],
+            canEditSettings: false,
+            canInviteOthers: false
+          }
+        })()
+      : undefined
+
     const newPatient: PatientProfile = {
       id: patientId,
       userId,
       ...profileData,
+      // Unified Family Member + Caregiver Model
+      accountStatus: 'owner', // First patient is always the account owner
+      countsAsSeat: true, // Family members always count as seats
+      addedBy: userId,
+      addedAt: now,
+      caregiverStatus,
       createdAt: now,
       lastModified: now
     }

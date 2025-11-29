@@ -19,6 +19,7 @@ export interface FacePhotoCaptureProps {
     firstName: string
     lastName: string
     dateOfBirth?: string
+    gender?: string
     frontPhoto: string
     leftPhoto: string
     rightPhoto: string
@@ -37,7 +38,8 @@ export function FacePhotoCapture({ onComplete, onClose, isOpen }: FacePhotoCaptu
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    dateOfBirth: ''
+    dateOfBirth: '',
+    gender: ''
   })
 
   const frontInputRef = useRef<HTMLInputElement>(null)
@@ -84,6 +86,7 @@ export function FacePhotoCapture({ onComplete, onClose, isOpen }: FacePhotoCaptu
       firstName: formData.firstName,
       lastName: formData.lastName,
       dateOfBirth: formData.dateOfBirth,
+      gender: formData.gender,
       frontPhoto: photos.front,
       leftPhoto: photos.left,
       rightPhoto: photos.right
@@ -309,6 +312,23 @@ export function FacePhotoCapture({ onComplete, onClose, isOpen }: FacePhotoCaptu
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Gender (Optional)
+                  </label>
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
+                  >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                    <option value="prefer_not_to_say">Prefer not to say</option>
+                  </select>
                 </div>
               </div>
 

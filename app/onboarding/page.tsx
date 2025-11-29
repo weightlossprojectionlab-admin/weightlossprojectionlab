@@ -272,6 +272,7 @@ function OnboardingContent() {
       // Add optional fields if present
       if (user!.photoURL) userData.photoURL = user!.photoURL
       if (data.dateOfBirth) userData.dateOfBirth = data.dateOfBirth
+      if (data.gender) userData.gender = data.gender
 
       await setDoc(doc(db, 'users', user!.uid), userData, { merge: true })
 

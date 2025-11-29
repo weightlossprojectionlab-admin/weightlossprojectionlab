@@ -144,7 +144,10 @@ export function useOfflineShopping(userId: string) {
       }
 
       // Product found but not on shopping list
-      toast.warn(`${cachedProduct.productName} is not on your shopping list`)
+      toast(`${cachedProduct.productName} is not on your shopping list`, {
+        icon: '⚠️',
+        duration: 3000
+      })
       return { success: false, product: cachedProduct, isOffline: true }
     }
 
@@ -152,7 +155,8 @@ export function useOfflineShopping(userId: string) {
     if (isOnline) {
       toast.error('Product not found')
     } else {
-      toast.warn(`Product ${barcode} not cached. Will look up when online.`, {
+      toast(`Product ${barcode} not cached. Will look up when online.`, {
+        icon: '⚠️',
         duration: 5000
       })
     }

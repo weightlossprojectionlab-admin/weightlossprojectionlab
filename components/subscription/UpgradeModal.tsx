@@ -2,85 +2,112 @@
  * UpgradeModal Component
  *
  * Shows subscription upgrade options with plan comparison
+ * Now with 5-tier pricing and monthly/yearly toggle
  */
 
 'use client'
 
-import { UserSubscription } from '@/types'
+import { useState } from 'react'
+import { SubscriptionPlan, BillingInterval, SUBSCRIPTION_PRICING, SEAT_LIMITS, EXTERNAL_CAREGIVER_LIMITS } from '@/types'
 
 interface UpgradeModalProps {
   isOpen: boolean
   onClose: () => void
-  currentPlan?: UserSubscription['plan']
-  suggestedUpgrade?: 'plan' | 'addon' | 'both'
+  currentPlan?: SubscriptionPlan
+  currentBillingInterval?: BillingInterval
+  suggestedPlan?: SubscriptionPlan
 }
 
-export function UpgradeModal({ isOpen, onClose, currentPlan = 'free', suggestedUpgrade = 'plan' }: UpgradeModalProps) {
+export function UpgradeModal({
+  isOpen,
+  onClose,
+  currentPlan = 'free',
+  currentBillingInterval = 'monthly',
+  suggestedPlan
+}: UpgradeModalProps) {
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>(currentBillingInterval)
+
   if (!isOpen) return null
 
-  const isDevelopment = process.env.NODE_ENV === 'development'
+  const formatPrice = (cents: number): string => {
+    return `$${(cents / 100).toFixed(2)}`
+  }
+
+  const calculateYearlySavings = (monthly: number, yearly: number): number => {
+    const monthlyCost = monthly * 12
+    const savings = monthlyCost - yearly
+    return Math.round((savings / monthlyCost) * 100)
+  }
 
   const plans = [
     {
-      id: 'single',
+      id: 'single' as SubscriptionPlan,
       name: 'Single User',
       icon: '👤',
-      price: '$9.99',
-      period: '/month',
+      monthlyPrice: SUBSCRIPTION_PRICING.single.monthly,
+      yearlyPrice: SUBSCRIPTION_PRICING.single.yearly,
+      seats: SEAT_LIMITS.single,
+      externalCaregivers: EXTERNAL_CAREGIVER_LIMITS.single,
       features: [
-        '1 patient profile (yourself)',
+        '1 family member seat',
+        '2 external caregivers',
         'Basic health tracking',
         'Meal logging & recipes',
-        'Weight & step tracking',
-        'Basic AI coaching'
+        'Weight & step tracking'
       ],
-      highlighted: false
+      highlighted: suggestedPlan === 'single'
     },
     {
-      id: 'single-plus',
-      name: 'Single + Features',
-      icon: '✨',
-      price: '$14.99',
-      period: '/month',
+      id: 'family_basic' as SubscriptionPlan,
+      name: 'Family Basic',
+      icon: '👨‍👩‍👧',
+      monthlyPrice: SUBSCRIPTION_PRICING.family_basic.monthly,
+      yearlyPrice: SUBSCRIPTION_PRICING.family_basic.yearly,
+      seats: SEAT_LIMITS.family_basic,
+      externalCaregivers: EXTERNAL_CAREGIVER_LIMITS.family_basic,
       features: [
-        'Everything in Single User',
-        'Advanced analytics & insights',
-        'Family data sharing',
-        'Enhanced AI coaching',
-        'Health reports & exports',
-        'Priority support'
-      ],
-      highlighted: suggestedUpgrade === 'addon'
-    },
-    {
-      id: 'family',
-      name: 'Family Plan',
-      icon: '👨‍👩‍👧‍👦',
-      price: '$19.99',
-      period: '/month',
-      features: [
-        'Up to 10 family members',
+        '5 family member seats',
+        '5 external caregivers',
         'Track humans & pets',
-        'All Basic features',
         'Family health dashboard',
         'Shared meal planning'
       ],
-      highlighted: suggestedUpgrade === 'plan'
+      highlighted: suggestedPlan === 'family_basic'
     },
     {
-      id: 'family-plus',
-      name: 'Family + Features',
-      icon: '🌟',
-      price: '$24.99',
-      period: '/month',
+      id: 'family_plus' as SubscriptionPlan,
+      name: 'Family Plus',
+      icon: '👨‍👩‍👧‍👦',
+      monthlyPrice: SUBSCRIPTION_PRICING.family_plus.monthly,
+      yearlyPrice: SUBSCRIPTION_PRICING.family_plus.yearly,
+      seats: SEAT_LIMITS.family_plus,
+      externalCaregivers: EXTERNAL_CAREGIVER_LIMITS.family_plus,
       features: [
-        'Everything in Family Plan',
-        'All premium features',
-        'Advanced analytics for all',
-        'Priority support',
-        'Early access to new features'
+        '10 family member seats',
+        '10 external caregivers',
+        'Advanced analytics & insights',
+        'Enhanced AI coaching',
+        'Priority support'
       ],
-      highlighted: suggestedUpgrade === 'both',
+      highlighted: suggestedPlan === 'family_plus',
+      badge: 'Most Popular'
+    },
+    {
+      id: 'family_premium' as SubscriptionPlan,
+      name: 'Family Premium',
+      icon: '🌟',
+      monthlyPrice: SUBSCRIPTION_PRICING.family_premium.monthly,
+      yearlyPrice: SUBSCRIPTION_PRICING.family_premium.yearly,
+      seats: SEAT_LIMITS.family_premium,
+      externalCaregivers: EXTERNAL_CAREGIVER_LIMITS.family_premium,
+      features: [
+        'Unlimited family members',
+        'Unlimited external caregivers',
+        'All premium features',
+        'White-glove support',
+        'Early access to features'
+      ],
+      highlighted: suggestedPlan === 'family_premium',
       badge: 'Best Value'
     }
   ]
@@ -89,21 +116,50 @@ export function UpgradeModal({ isOpen, onClose, currentPlan = 'free', suggestedU
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-card rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Upgrade Your Plan</h2>
-            <p className="text-muted-foreground text-sm mt-1">
-              Choose the plan that's right for you
-            </p>
+        <div className="sticky top-0 bg-card border-b border-border px-6 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">Upgrade Your Plan</h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                Choose the plan that's right for you
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+
+          {/* Billing Toggle */}
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={() => setBillingInterval('monthly')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                billingInterval === 'monthly'
+                  ? 'bg-primary text-white'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingInterval('yearly')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors relative ${
+                billingInterval === 'yearly'
+                  ? 'bg-primary text-white'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              Yearly
+              <span className="absolute -top-2 -right-2 bg-success text-white text-xs px-2 py-0.5 rounded-full">
+                Save 17%
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Plans Grid */}
@@ -130,8 +186,23 @@ export function UpgradeModal({ isOpen, onClose, currentPlan = 'free', suggestedU
                   <div className="text-4xl mb-2">{plan.icon}</div>
                   <h3 className="font-bold text-lg text-foreground">{plan.name}</h3>
                   <div className="mt-2">
-                    <span className="text-3xl font-bold text-foreground">{plan.price}</span>
-                    <span className="text-muted-foreground text-sm">{plan.period}</span>
+                    <div className="text-3xl font-bold text-foreground">
+                      {billingInterval === 'monthly'
+                        ? formatPrice(plan.monthlyPrice)
+                        : formatPrice(Math.round(plan.yearlyPrice / 12))}
+                    </div>
+                    <div className="text-muted-foreground text-sm">
+                      {billingInterval === 'monthly' ? '/month' : '/month, billed yearly'}
+                    </div>
+                    {billingInterval === 'yearly' && (
+                      <div className="text-xs text-success mt-1">
+                        {formatPrice(plan.yearlyPrice)}/year total
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    {plan.seats === 999 ? 'Unlimited' : plan.seats} {plan.seats === 1 ? 'seat' : 'seats'} • {' '}
+                    {plan.externalCaregivers === 999 ? 'Unlimited' : plan.externalCaregivers} caregivers
                   </div>
                 </div>
 
@@ -172,21 +243,14 @@ export function UpgradeModal({ isOpen, onClose, currentPlan = 'free', suggestedU
 
           {/* Note */}
           <div className="mt-6 space-y-3">
-            {isDevelopment && (
-              <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 rounded-lg p-4">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-2">
-                  🔧 Development Mode
-                </p>
-                <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                  To test plan changes, use the <strong>Dev Tools</strong> simulator in the bottom-right corner.
-                  This modal is a placeholder for the real payment flow.
-                </p>
-              </div>
-            )}
-            <div className="bg-muted rounded-lg p-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                💡 All plans include a 14-day free trial. Cancel anytime.
-              </p>
+            <div className="bg-muted rounded-lg p-4">
+              <h4 className="text-sm font-medium text-foreground mb-2">What's included:</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• <strong>Family Member Seats:</strong> Patient profiles that count toward billing</li>
+                <li>• <strong>External Caregivers:</strong> Professional access (free, not billable)</li>
+                <li>• 14-day free trial on all plans</li>
+                <li>• Cancel anytime, no long-term commitment</li>
+              </ul>
             </div>
           </div>
         </div>
