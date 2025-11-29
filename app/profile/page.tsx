@@ -933,7 +933,6 @@ function ProfileContent() {
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         currentPlan={subscription?.plan}
-        suggestedUpgrade="addon"
       />
     </main>
     </>

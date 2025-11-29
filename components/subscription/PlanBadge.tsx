@@ -6,10 +6,10 @@
 
 'use client'
 
-import { UserSubscription } from '@/types'
+import { UserSubscription, SubscriptionPlan } from '@/types'
 
 interface PlanBadgeProps {
-  plan: 'free' | 'single' | 'family'
+  plan: SubscriptionPlan
   addons?: UserSubscription['addons']
   status?: UserSubscription['status']
   size?: 'sm' | 'md' | 'lg'
@@ -22,7 +22,9 @@ export function PlanBadge({ plan, addons, status, size = 'md' }: PlanBadgeProps)
         return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
       case 'single':
         return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-600'
-      case 'family':
+      case 'family_basic':
+      case 'family_plus':
+      case 'family_premium':
         return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-600'
       default:
         return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
@@ -48,7 +50,9 @@ export function PlanBadge({ plan, addons, status, size = 'md' }: PlanBadgeProps)
         return '🆓'
       case 'single':
         return '👤'
-      case 'family':
+      case 'family_basic':
+      case 'family_plus':
+      case 'family_premium':
         return '👨‍👩‍👧‍👦'
       default:
         return ''
@@ -61,8 +65,12 @@ export function PlanBadge({ plan, addons, status, size = 'md' }: PlanBadgeProps)
         return status === 'trialing' ? 'Free Trial' : 'Free'
       case 'single':
         return 'Single User'
-      case 'family':
-        return 'Family Plan'
+      case 'family_basic':
+        return 'Family Basic'
+      case 'family_plus':
+        return 'Family Plus'
+      case 'family_premium':
+        return 'Family Premium'
       default:
         return 'Unknown'
     }

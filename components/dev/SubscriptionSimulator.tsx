@@ -60,7 +60,7 @@ export function SubscriptionSimulator() {
         // Show toast notification with plan details
         if (typeof window !== 'undefined' && (window as any).toast) {
           (window as any).toast.success(
-            `Simulating ${presetName} (${preset.maxPatients} patient${preset.maxPatients > 1 ? 's' : ''}${preset.addons?.familyFeatures ? ', Family Features' : ''})`,
+            `Simulating ${presetName}${preset.addons?.familyFeatures ? ' (Family Features)' : ''}`,
             { duration: 3000 }
           )
         }
@@ -151,9 +151,9 @@ export function SubscriptionSimulator() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Family Features:</span>
                   <span className={`text-sm font-medium ${
-                    subscription.addons.familyFeatures ? 'text-success' : 'text-muted-foreground'
+                    subscription.addons?.familyFeatures ? 'text-success' : 'text-muted-foreground'
                   }`}>
-                    {subscription.addons.familyFeatures ? '✓ Enabled' : '✗ Disabled'}
+                    {subscription.addons?.familyFeatures ? '✓ Enabled' : '✗ Disabled'}
                   </span>
                 </div>
               </div>

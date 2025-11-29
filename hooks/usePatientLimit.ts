@@ -12,7 +12,12 @@ import { getPatientLimitInfo, canAddPatient } from '@/lib/feature-gates'
 
 export function usePatientLimit(currentPatientCount: number) {
   const { user } = useAuth()
-  const [limitInfo, setLimitInfo] = useState({
+  const [limitInfo, setLimitInfo] = useState<{
+    current: number
+    max: number | undefined
+    canAdd: boolean
+    percentage: number
+  }>({
     current: 0,
     max: 0,
     canAdd: false,

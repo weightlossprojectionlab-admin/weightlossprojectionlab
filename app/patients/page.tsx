@@ -214,7 +214,6 @@ function PatientsContent() {
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         currentPlan={subscription?.plan}
-        suggestedUpgrade="plan"
       />
     </div>
   )

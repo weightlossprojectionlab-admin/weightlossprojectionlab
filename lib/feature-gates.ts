@@ -5,29 +5,34 @@
  * Supports admin bypass and development mode simulation for testing.
  */
 
-import { User, UserSubscription } from '@/types'
+import { User, UserSubscription, SubscriptionPlan } from '@/types'
 
 // Admin users with full access to all features
 export const ADMIN_EMAILS = ['admin:weightlossprojectionlab@gmail.com']
 
 // Full access subscription for admins
 export const FULL_ACCESS_SUBSCRIPTION: UserSubscription = {
-  plan: 'family',
+  plan: 'family_premium',
+  billingInterval: 'yearly',
   addons: { familyFeatures: true },
   status: 'active',
+  maxSeats: 999,
+  currentSeats: 0,
+  maxExternalCaregivers: 999,
+  currentExternalCaregivers: 0,
   maxPatients: 999,
   currentPeriodStart: new Date(),
   currentPeriodEnd: null  // No expiration
 }
 
 // Features gated by base plan (require specific plan tier)
-export const PLAN_FEATURES: Record<string, ('free' | 'single' | 'family')[]> = {
-  'multiple-patients': ['family'],
-  'patient-management': ['family']
+export const PLAN_FEATURES: Record<string, SubscriptionPlan[]> = {
+  'multiple-patients': ['family_basic', 'family_plus', 'family_premium'],
+  'patient-management': ['family_basic', 'family_plus', 'family_premium']
 }
 
 // Features gated by add-on (require specific addon enabled)
-export const ADDON_FEATURES: Record<string, keyof UserSubscription['addons']> = {
+export const ADDON_FEATURES: Record<string, keyof NonNullable<UserSubscription['addons']>> = {
   'advanced-analytics': 'familyFeatures',
   'family-sharing': 'familyFeatures',
   'enhanced-ai-coaching': 'familyFeatures',
@@ -148,7 +153,7 @@ export function canAccessFeature(user: User | null, feature: string): boolean {
   // Check addon-gated features
   if (ADDON_FEATURES[feature]) {
     const requiredAddon = ADDON_FEATURES[feature]
-    return subscription.addons[requiredAddon] === true
+    return subscription.addons?.[requiredAddon] === true
   }
 
   // Feature not recognized - default to denied
@@ -169,7 +174,8 @@ export function canAddPatient(user: User | null, currentPatientCount: number): b
     return false
   }
 
-  return currentPatientCount < subscription.maxPatients
+  const maxPatients = subscription.maxPatients ?? subscription.maxSeats ?? 1
+  return currentPatientCount < maxPatients
 }
 
 /**
@@ -201,13 +207,13 @@ export function getRequiredUpgrade(feature: string): {
 /**
  * Check if user has a specific addon
  */
-export function hasAddon(user: User | null, addonName: keyof UserSubscription['addons']): boolean {
+export function hasAddon(user: User | null, addonName: keyof NonNullable<UserSubscription['addons']>): boolean {
   if (!user) return false
 
   const subscription = getUserSubscription(user)
   if (!subscription) return false
 
-  return subscription.addons[addonName] === true
+  return subscription.addons?.[addonName] === true
 }
 
 /**
@@ -225,11 +231,12 @@ export function getPatientLimitInfo(user: User | null, currentPatientCount: numb
     }
   }
 
+  const maxPatients = subscription.maxPatients ?? subscription.maxSeats ?? 1
   return {
     current: currentPatientCount,
-    max: subscription.maxPatients,
-    canAdd: currentPatientCount < subscription.maxPatients,
-    percentage: Math.round((currentPatientCount / subscription.maxPatients) * 100)
+    max: maxPatients,
+    canAdd: currentPatientCount < maxPatients,
+    percentage: Math.round((currentPatientCount / maxPatients) * 100)
   }
 }
 
@@ -248,8 +255,13 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
   return {
     'Free Trial': {
       plan: 'free',
+      billingInterval: 'monthly',
       addons: { familyFeatures: false },
       status: 'trialing',
+      maxSeats: 1,
+      currentSeats: 0,
+      maxExternalCaregivers: 0,
+      currentExternalCaregivers: 0,
       maxPatients: 1,
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
@@ -257,35 +269,55 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
     },
     'Single User': {
       plan: 'single',
+      billingInterval: 'monthly',
       addons: { familyFeatures: false },
       status: 'active',
+      maxSeats: 1,
+      currentSeats: 0,
+      maxExternalCaregivers: 2,
+      currentExternalCaregivers: 0,
       maxPatients: 1,
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     },
-    'Single + Family Features': {
-      plan: 'single',
-      addons: { familyFeatures: true },
-      status: 'active',
-      maxPatients: 1,
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    },
-    'Family Plan': {
-      plan: 'family',
+    'Family Basic': {
+      plan: 'family_basic',
+      billingInterval: 'monthly',
       addons: { familyFeatures: false },
       status: 'active',
+      maxSeats: 5,
+      currentSeats: 0,
+      maxExternalCaregivers: 5,
+      currentExternalCaregivers: 0,
+      maxPatients: 5,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    },
+    'Family Plus': {
+      plan: 'family_plus',
+      billingInterval: 'monthly',
+      addons: { familyFeatures: true },
+      status: 'active',
+      maxSeats: 10,
+      currentSeats: 0,
+      maxExternalCaregivers: 10,
+      currentExternalCaregivers: 0,
       maxPatients: 10,
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     },
-    'Family + Features': {
-      plan: 'family',
+    'Family Premium': {
+      plan: 'family_premium',
+      billingInterval: 'yearly',
       addons: { familyFeatures: true },
       status: 'active',
-      maxPatients: 10,
+      maxSeats: 999,
+      currentSeats: 0,
+      maxExternalCaregivers: 999,
+      currentExternalCaregivers: 0,
+      maxPatients: 999,
       currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
     },
     'Admin (Full Access)': FULL_ACCESS_SUBSCRIPTION
   }

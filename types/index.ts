@@ -159,29 +159,75 @@ export interface UserPreferences {
 }
 
 // Subscription & Feature Gating
+// Subscription Plan Tiers
+export type SubscriptionPlan =
+  | 'free'             // Free trial: 1 seat, 14 days, basic features
+  | 'single'           // Single User: 1 seat, core features
+  | 'family_basic'     // Family Basic: 5 seats, family features
+  | 'family_plus'      // Family Plus: 10 seats, premium features (POPULAR)
+  | 'family_premium'   // Family Premium: Unlimited seats, all features
+
+// Billing Interval
+export type BillingInterval = 'monthly' | 'yearly'
+
+// Subscription Pricing (in USD cents)
+export const SUBSCRIPTION_PRICING = {
+  free: { monthly: 0, yearly: 0 },
+  single: { monthly: 999, yearly: 9900 },           // $9.99/mo or $99/yr (17% off)
+  family_basic: { monthly: 1999, yearly: 19900 },   // $19.99/mo or $199/yr (17% off)
+  family_plus: { monthly: 2999, yearly: 29900 },    // $29.99/mo or $299/yr (17% off) ⭐
+  family_premium: { monthly: 3999, yearly: 39900 }, // $39.99/mo or $399/yr (17% off)
+} as const
+
+// Seat Limits per Plan
+export const SEAT_LIMITS = {
+  free: 1,
+  single: 1,
+  family_basic: 5,
+  family_plus: 10,
+  family_premium: 999, // Unlimited (using 999 as max)
+} as const
+
+// External Caregiver Limits per Plan
+export const EXTERNAL_CAREGIVER_LIMITS = {
+  free: 0,
+  single: 2,
+  family_basic: 5,
+  family_plus: 10,
+  family_premium: 999, // Unlimited
+} as const
+
 export interface UserSubscription {
   // Base plan tier
-  plan: 'free' | 'single' | 'family'
+  plan: SubscriptionPlan
 
-  // Feature add-ons (can be purchased separately)
-  addons: {
-    familyFeatures: boolean  // Advanced tracking, sharing, analytics, AI coaching
-    // Future addons can be added here
-  }
-
-  // Subscription status
-  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'expired'
+  // Billing
+  billingInterval: BillingInterval
   currentPeriodStart: Date
   currentPeriodEnd: Date | null  // null means no expiration (grandfathered users)
+
+  // Status
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'expired'
   trialEndsAt?: Date
 
-  // Limits based on plan
-  maxPatients: number  // 1 for single, 10 for family, 999 for admin
+  // Seat Management
+  maxSeats: number // Family members (billable)
+  currentSeats: number // Current family member count
+  maxExternalCaregivers: number // Non-billable professional caregivers
+  currentExternalCaregivers: number // Current external caregiver count
 
-  // Payment integration (future use with Stripe)
+  // Feature add-ons (deprecated - now included in tiers)
+  addons?: {
+    familyFeatures?: boolean  // Legacy field
+  }
+
+  // Payment integration (Stripe)
+  stripeCustomerId?: string
   stripeSubscriptionId?: string
   stripePriceId?: string
-  addonSubscriptionIds?: Record<string, string>  // Map of addon name to Stripe subscription ID
+
+  // Legacy field (for backward compatibility)
+  maxPatients?: number  // Deprecated: use maxSeats instead
 }
 
 // Biometric Authentication

@@ -48,6 +48,28 @@ export interface PatientProfile {
   gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say'
   emergencyContacts?: EmergencyContact[]
 
+  // Unified Family Member + Caregiver Model
+  accountUserId?: string // Firestore Auth UID if they have an account
+  accountStatus?: 'owner' | 'member' | 'pending_invite' | 'no_account'
+  invitedAt?: string
+  acceptedAt?: string
+
+  // Caregiver Permissions (if age-appropriate)
+  caregiverStatus?: {
+    enabled: boolean // Can this person be a caregiver?
+    eligibleByAge: boolean // Age >= 13
+    trustedByOwner: boolean // Owner override for minors
+    permissionLevel: 'none' | 'view_only' | 'limited' | 'full'
+    canManagePatients: string[] // Patient IDs they can manage
+    canEditSettings: boolean
+    canInviteOthers: boolean
+  }
+
+  // Billing (always true for family members)
+  countsAsSeat?: boolean
+  addedBy?: string // Account owner who added them
+  addedAt?: string
+
   // Health vitals (for both humans and pets)
   height?: number // in inches (imperial) or cm (metric)
   heightUnit?: 'imperial' | 'metric'
@@ -522,6 +544,7 @@ export interface FamilyInvitation {
   patientsShared: string[] // patientIds
   permissions: FamilyMemberPermissions
   familyRole?: FamilyRole // Role to assign (default: caregiver)
+  invitationType?: 'family_member' | 'external_caregiver' // NEW: distinguish invitation types
   message?: string // Personal message from inviter
   createdAt: string // ISO 8601
   expiresAt: string // ISO 8601 (default 7 days)
@@ -530,6 +553,63 @@ export interface FamilyInvitation {
   acceptedAt?: string // ISO 8601
   emailSentAt?: string // ISO 8601
   reminderSentAt?: string // ISO 8601
+}
+
+// ==================== EXTERNAL CAREGIVERS ====================
+
+/**
+ * External Caregiver - Professional caregiver (non-family)
+ * - Access-only, not billable
+ * - Does NOT get a patient profile
+ * - Examples: nurses, doctors, home health aides, therapists
+ */
+
+export type ExternalCaregiverRole = 'nurse' | 'doctor' | 'aide' | 'therapist' | 'other'
+
+export type ExternalCaregiverAccessLevel = 'view_only' | 'limited' | 'full'
+
+export interface ExternalCaregiverPermissions {
+  viewMedicalRecords: boolean
+  editMedicalRecords: boolean
+  viewMedications: boolean
+  manageMedications: boolean
+  viewDocuments: boolean
+  uploadDocuments: boolean
+  receiveAlerts: boolean
+  logVitals: boolean
+  viewAppointments: boolean
+  manageAppointments: boolean
+}
+
+export interface ExternalCaregiver {
+  id: string
+  userId: string // Must have Firestore Auth account
+  email: string
+  name: string
+  photo?: string
+
+  // Professional Info
+  role: ExternalCaregiverRole
+  organization?: string
+  credentials?: string
+
+  // Access Control
+  accessLevel: ExternalCaregiverAccessLevel
+  patientsAccess: string[] // Which patients they can manage
+  accessGrantedBy: string // Account owner userId
+  accessGrantedAt: string // ISO 8601
+  accessExpiresAt?: string // Optional expiration
+
+  // Permissions
+  permissions: ExternalCaregiverPermissions
+
+  // Metadata
+  status: 'active' | 'expired' | 'revoked'
+  lastActive?: string // ISO 8601
+
+  // Not a Patient Profile (always false)
+  countsAsSeat: false
+  isExternal: true
 }
 
 // ==================== FORM TYPES ====================

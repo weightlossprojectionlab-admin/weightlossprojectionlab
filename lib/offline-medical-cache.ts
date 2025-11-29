@@ -127,12 +127,17 @@ export async function cacheMedications(
 
   // Delete old entries
   if (oldMeds.result) {
-    let cursor = oldMeds.result
+    let cursor: IDBCursorWithValue | null = oldMeds.result
     while (cursor) {
       cursor.delete()
       cursor = await new Promise<IDBCursorWithValue | null>((resolve) => {
+        if (!cursor) {
+          resolve(null)
+          return
+        }
         cursor.continue()
-        const req = cursor.source.index('patientId').openCursor(IDBKeyRange.only(patientId))
+        const store = cursor.source as IDBObjectStore
+        const req = store.index('patientId').openCursor(IDBKeyRange.only(patientId))
         req.onsuccess = () => resolve(req.result)
       })
     }
