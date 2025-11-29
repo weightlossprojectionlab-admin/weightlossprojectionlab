@@ -9,13 +9,16 @@ import { logger } from '@/lib/logger'
 import type { AIAnalysis } from '@/types'
 
 const DB_NAME = 'wlpl-offline-queue'
-const DB_VERSION = 2
+const DB_VERSION = 3 // Incremented for patient-scoped queues
 const MEAL_STORE_NAME = 'meal-queue'
 const WEIGHT_STORE_NAME = 'weight-queue'
 
 export interface QueuedMeal {
   id: string // UUID
   type: 'meal'
+  patientId: string // ADDED: Which patient this meal belongs to
+  ownerUserId: string // ADDED: Patient's owner (for sync target)
+  loggedBy: string // ADDED: Who logged it (caregiver userId)
   mealData: {
     mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
     photoDataUrl?: string // Base64 data URL
@@ -32,6 +35,9 @@ export interface QueuedMeal {
 export interface QueuedWeight {
   id: string // UUID
   type: 'weight'
+  patientId: string // ADDED: Which patient this weight belongs to
+  ownerUserId: string // ADDED: Patient's owner (for sync target)
+  loggedBy: string // ADDED: Who logged it (caregiver userId)
   weightData: {
     weight: number
     date: string // ISO string
@@ -68,6 +74,8 @@ function openDB(): Promise<IDBDatabase> {
         const mealStore = db.createObjectStore(MEAL_STORE_NAME, { keyPath: 'id' })
         mealStore.createIndex('synced', 'synced', { unique: false })
         mealStore.createIndex('queuedAt', 'queuedAt', { unique: false })
+        mealStore.createIndex('patientId', 'patientId', { unique: false }) // ADDED
+        mealStore.createIndex('loggedBy', 'loggedBy', { unique: false }) // ADDED
       }
 
       // Create weight queue object store if it doesn't exist
@@ -75,6 +83,8 @@ function openDB(): Promise<IDBDatabase> {
         const weightStore = db.createObjectStore(WEIGHT_STORE_NAME, { keyPath: 'id' })
         weightStore.createIndex('synced', 'synced', { unique: false })
         weightStore.createIndex('queuedAt', 'queuedAt', { unique: false })
+        weightStore.createIndex('patientId', 'patientId', { unique: false }) // ADDED
+        weightStore.createIndex('loggedBy', 'loggedBy', { unique: false }) // ADDED
       }
     }
   })
@@ -82,13 +92,22 @@ function openDB(): Promise<IDBDatabase> {
 
 /**
  * Queue a meal for offline sync
+ * UPDATED: Now requires patient context for caregiver support
  */
-export async function queueMeal(mealData: QueuedMeal['mealData']): Promise<string> {
+export async function queueMeal(
+  mealData: QueuedMeal['mealData'],
+  patientId: string,
+  ownerUserId: string,
+  loggedBy: string
+): Promise<string> {
   const db = await openDB()
 
   const queuedMeal: QueuedMeal = {
     id: crypto.randomUUID(),
     type: 'meal',
+    patientId, // ADDED
+    ownerUserId, // ADDED
+    loggedBy, // ADDED
     mealData,
     queuedAt: Date.now(),
     synced: false,
@@ -114,13 +133,22 @@ export async function queueMeal(mealData: QueuedMeal['mealData']): Promise<strin
 
 /**
  * Queue a weight entry for offline sync
+ * UPDATED: Now requires patient context for caregiver support
  */
-export async function queueWeight(weightData: QueuedWeight['weightData']): Promise<string> {
+export async function queueWeight(
+  weightData: QueuedWeight['weightData'],
+  patientId: string,
+  ownerUserId: string,
+  loggedBy: string
+): Promise<string> {
   const db = await openDB()
 
   const queuedWeight: QueuedWeight = {
     id: crypto.randomUUID(),
     type: 'weight',
+    patientId, // ADDED
+    ownerUserId, // ADDED
+    loggedBy, // ADDED
     weightData,
     queuedAt: Date.now(),
     synced: false,

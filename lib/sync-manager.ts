@@ -175,9 +175,10 @@ export async function syncQueue(): Promise<SyncResult> {
 
 /**
  * Sync a single meal to Firebase
+ * UPDATED: Uses patient-scoped data for caregiver support
  */
 async function syncMeal(queuedMeal: QueuedMeal): Promise<void> {
-  const { mealData } = queuedMeal
+  const { mealData, patientId, ownerUserId, loggedBy } = queuedMeal
 
   // Calculate retry delay with exponential backoff
   const retryDelay = Math.min(
@@ -192,25 +193,52 @@ async function syncMeal(queuedMeal: QueuedMeal): Promise<void> {
   }
 
   try {
-    // Note: photoDataUrl is NOT uploaded for queued meals to save bandwidth
-    // Users can take photos when back online
-    const response = await mealLogOperations.createMealLog({
-      mealType: mealData.mealType,
-      photoUrl: undefined, // Skip photo upload for queued meals
-      aiAnalysis: mealData.aiAnalysis,
-      loggedAt: mealData.loggedAt,
-      notes: mealData.notes
+    // UPDATED: Use patient-scoped API endpoint
+    // API will verify caregiver has permission via RBAC
+    const response = await fetch(`/api/patients/${patientId}/meal-logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${await getAuthToken()}` // Get caregiver's auth token
+      },
+      body: JSON.stringify({
+        mealType: mealData.mealType,
+        photoUrl: undefined, // Skip photo upload for queued meals (save bandwidth)
+        aiAnalysis: mealData.aiAnalysis,
+        loggedAt: mealData.loggedAt,
+        notes: mealData.notes,
+        loggedBy // Track who logged it
+      })
     })
 
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to create meal log')
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to create meal log')
     }
 
-    logger.debug('[SyncManager] Meal synced successfully', { mealLogId: response.data?.id })
+    const result = await response.json()
+    logger.debug('[SyncManager] Meal synced successfully', {
+      mealLogId: result.data?.id,
+      patientId,
+      loggedBy
+    })
   } catch (error) {
-    logger.error('[SyncManager] Error syncing meal', error as Error)
+    logger.error('[SyncManager] Error syncing meal', error as Error, { patientId, loggedBy })
     throw error
   }
+}
+
+/**
+ * Get authentication token for API calls
+ */
+async function getAuthToken(): Promise<string> {
+  // Get Firebase auth token (caregiver's token)
+  const { auth } = await import('@/lib/firebase')
+  const token = await auth.currentUser?.getIdToken()
+  if (!token) {
+    throw new Error('No authentication token available')
+  }
+  return token
 }
 
 /**
