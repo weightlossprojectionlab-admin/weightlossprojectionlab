@@ -967,13 +967,31 @@ function LogMealContent() {
         logger.debug('📡 Offline detected, queuing meal for later sync...')
         setUploadProgress('Queuing for offline sync...')
 
+        const user = auth.currentUser
+        if (!user) {
+          toast.error('Please sign in to log meals')
+          setSaving(false)
+          return
+        }
+
+        // For self-logging: patientId, ownerUserId, and loggedBy are all the same user
+        const userId = user.uid
+        const patientId = patientIdParam || userId // Use patientId param or self
+        const ownerUserId = userId // User owns their own data
+        const loggedBy = userId // User is logging for themselves
+
         // Queue meal with photo data URL (no upload needed when offline)
-        await queueMeal({
-          mealType: selectedMealType,
-          photoDataUrl: capturedImage || undefined,
-          aiAnalysis: aiAnalysis || undefined,
-          loggedAt: new Date().toISOString()
-        })
+        await queueMeal(
+          {
+            mealType: selectedMealType,
+            photoDataUrl: capturedImage || undefined,
+            aiAnalysis: aiAnalysis || undefined,
+            loggedAt: new Date().toISOString()
+          },
+          patientId,
+          ownerUserId,
+          loggedBy
+        )
 
         // Register background sync
         await registerBackgroundSync()
