@@ -782,12 +782,29 @@ function LogMealContent() {
       if (!navigator.onLine) {
         logger.debug('📡 Offline detected, queuing manual entry...')
 
-        await queueMeal({
-          mealType: selectedMealType,
-          aiAnalysis: manualAnalysis,
-          loggedAt: new Date().toISOString(),
-          notes: manualEntryForm.notes || undefined
-        })
+        const user = auth.currentUser
+        if (!user) {
+          toast.error('Please sign in to log meals')
+          return
+        }
+
+        // For self-logging: patientId, ownerUserId, and loggedBy are all the same user
+        const userId = user.uid
+        const patientId = patientIdParam || userId // Use patientId param or self
+        const ownerUserId = userId // User owns their own data
+        const loggedBy = userId // User is logging for themselves
+
+        await queueMeal(
+          {
+            mealType: selectedMealType,
+            aiAnalysis: manualAnalysis,
+            loggedAt: new Date().toISOString(),
+            notes: manualEntryForm.notes || undefined
+          },
+          patientId,
+          ownerUserId,
+          loggedBy
+        )
 
         await registerBackgroundSync()
         toast.success('Meal queued! Will sync when back online.')

@@ -1,8 +1,12 @@
 // Service Worker for offline support
-const CACHE_NAME = 'wlpl-v3';
+const CACHE_NAME = 'wlpl-v4';
 const PHOTO_CACHE_NAME = 'wlpl-photos-v1';
+const MEDICAL_CACHE_NAME = 'wlpl-medical-v1';
+const SHOPPING_CACHE_NAME = 'wlpl-shopping-v1';
 const OFFLINE_URL = '/offline.html';
 const MAX_PHOTO_CACHE_SIZE = 50; // Max number of photos to cache
+const MAX_MEDICAL_IMG_CACHE = 100; // Max medication images
+const MAX_SHOPPING_CACHE = 50; // Max shopping list items
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
@@ -29,11 +33,12 @@ self.addEventListener('install', (event) => {
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activating...');
+  const validCaches = [CACHE_NAME, PHOTO_CACHE_NAME, MEDICAL_CACHE_NAME, SHOPPING_CACHE_NAME];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName !== PHOTO_CACHE_NAME) {
+          if (!validCaches.includes(cacheName)) {
             console.log('[Service Worker] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
@@ -95,6 +100,131 @@ self.addEventListener('fetch', (event) => {
               statusText: 'Service Unavailable'
             });
           });
+      })
+    );
+    return;
+  }
+
+  // ============================================================================
+  // MEDICAL DATA CACHING (for offline doctor visits)
+  // ============================================================================
+
+  // Cache medication images (cache-first for offline access)
+  if (
+    event.request.url.includes('firebasestorage') &&
+    event.request.url.includes('/medications/')
+  ) {
+    event.respondWith(
+      caches.open(MEDICAL_CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            console.log('[SW] Medication image served from cache');
+            return cachedResponse;
+          }
+
+          // Fetch from network and cache
+          return fetch(event.request).then((response) => {
+            if (response.status === 200) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          }).catch(() => {
+            return new Response('Medication image unavailable offline', {
+              status: 503,
+              statusText: 'Service Unavailable'
+            });
+          });
+        });
+      })
+    );
+    return;
+  }
+
+  // Cache patient document images (cache-first for offline access)
+  if (
+    event.request.url.includes('firebasestorage') &&
+    (event.request.url.includes('/documents/') || event.request.url.includes('/patients/'))
+  ) {
+    event.respondWith(
+      caches.open(MEDICAL_CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            console.log('[SW] Document image served from cache');
+            return cachedResponse;
+          }
+
+          return fetch(event.request).then((response) => {
+            if (response.status === 200) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          }).catch(() => {
+            return new Response('Document unavailable offline', {
+              status: 503,
+              statusText: 'Service Unavailable'
+            });
+          });
+        });
+      })
+    );
+    return;
+  }
+
+  // ============================================================================
+  // SHOPPING DATA CACHING (for offline in-store use)
+  // ============================================================================
+
+  // Cache shopping list API responses
+  if (event.request.url.includes('/api/shopping')) {
+    event.respondWith(
+      caches.open(SHOPPING_CACHE_NAME).then((cache) => {
+        return fetch(event.request).then((response) => {
+          // Network-first, cache on success
+          if (response.status === 200) {
+            cache.put(event.request, response.clone());
+          }
+          return response;
+        }).catch(() => {
+          // Network failed, try cache
+          return cache.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) {
+              console.log('[SW] Shopping list served from cache');
+              return cachedResponse;
+            }
+            return new Response(JSON.stringify({ error: 'Offline - using IndexedDB cache' }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          });
+        });
+      })
+    );
+    return;
+  }
+
+  // Cache product lookup API responses (barcode scanning)
+  if (event.request.url.includes('/api/products/lookup')) {
+    event.respondWith(
+      caches.open(SHOPPING_CACHE_NAME).then((cache) => {
+        return fetch(event.request).then((response) => {
+          // Cache successful product lookups
+          if (response.status === 200) {
+            cache.put(event.request, response.clone());
+          }
+          return response;
+        }).catch(() => {
+          // Network failed, try cache
+          return cache.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) {
+              console.log('[SW] Product lookup served from cache');
+              return cachedResponse;
+            }
+            return new Response(JSON.stringify({ error: 'Offline - product not cached' }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          });
+        });
       })
     );
     return;
