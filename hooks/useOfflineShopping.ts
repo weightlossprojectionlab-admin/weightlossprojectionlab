@@ -115,7 +115,9 @@ export function useOfflineShopping(userId: string) {
           return { success: true, product, matchedItem, isOffline: false }
         }
       } catch (error) {
-        logger.warn('[OfflineShopping] Online lookup failed, falling back to cache', error as Error)
+        logger.debug('[OfflineShopping] Online lookup failed, falling back to cache', {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
         // Fall through to offline mode
       }
     }
