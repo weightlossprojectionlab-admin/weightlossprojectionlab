@@ -746,6 +746,88 @@ service cloud.firestore {
     }
 
     // ============================================
+    // HOUSEHOLDS (MULTI-LOCATION RESIDENCE MANAGEMENT)
+    // ============================================
+
+    // Helper: Check if user has access to household
+    function canAccessHousehold(householdData) {
+      return isAuthenticated() &&
+             (householdData.primaryCaregiverId == request.auth.uid ||
+              (householdData.additionalCaregiverIds != null &&
+               householdData.additionalCaregiverIds.hasAny([request.auth.uid])));
+    }
+
+    // Households collection
+    match /households/{householdId} {
+      // Read: Primary or additional caregiver can read
+      allow read: if isAuthenticated() &&
+                     canAccessHousehold(resource.data);
+
+      // Create: Any authenticated user can create households
+      allow create: if isAuthenticated() &&
+                      request.resource.data.primaryCaregiverId == request.auth.uid &&
+                      request.resource.data.createdBy == request.auth.uid;
+
+      // Update: Only primary caregiver (not additional caregivers)
+      allow update: if isAuthenticated() &&
+                      resource.data.primaryCaregiverId == request.auth.uid;
+
+      // Delete: Only primary caregiver
+      allow delete: if isAuthenticated() &&
+                      resource.data.primaryCaregiverId == request.auth.uid;
+    }
+
+    // ============================================
+    // HEALTHCARE PROVIDERS
+    // ============================================
+
+    // Healthcare providers collection (top-level)
+    match /healthcareProviders/{providerId} {
+      // Read: Provider belongs to user's patient
+      allow read: if isAuthenticated() &&
+                     resource.data.userId == request.auth.uid;
+
+      // Create: Any authenticated user can create providers for their patients
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid;
+
+      // Update: Owner can update
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
+
+      // Delete: Owner can delete
+      allow delete: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
+    }
+
+    // Provider communications log
+    match /providerCommunications/{commId} {
+      allow read: if isAuthenticated() &&
+                     resource.data.userId == request.auth.uid;
+
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid;
+
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
+    }
+
+    // Health reports collection (top-level for cross-patient access)
+    match /healthReports/{reportId} {
+      allow read: if isAuthenticated() &&
+                     resource.data.userId == request.auth.uid;
+
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid;
+
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
+
+      allow delete: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid;
+    }
+
+    // ============================================
     // DEFAULT DENY
     // ============================================
 

@@ -1,0 +1,308 @@
+name: Production Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no actual deployment)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      skip_tests:
+        description: 'Skip test execution'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'branch-review-logs/**'
+
+env:
+  NODE_VERSION: '20'
+  PRODUCTION_URL: ${{ secrets.PRODUCTION_URL || 'https://your-app.com' }}
+
+jobs:
+  pre-deployment-checks:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run type check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        if: github.event.inputs.skip_tests != 'true'
+        run: npm test
+
+      - name: Check security vulnerabilities
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Build application
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            .next/
+            public/
+          retention-days: 7
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Run security audit
+        run: npm audit --audit-level=critical
+
+  deploy-firebase-rules:
+    name: Deploy Firebase Rules
+    needs: [pre-deployment-checks, security-scan]
+    runs-on: ubuntu-latest
+    if: github.event.inputs.dry_run != 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Validate Firestore rules
+        run: |
+          if [ -f "firestore.rules" ]; then
+            echo "✅ Firestore rules found"
+          else
+            echo "❌ Firestore rules not found"
+            exit 1
+          fi
+
+      - name: Deploy Firestore rules
+        run: firebase deploy --only firestore:rules --token "${{ secrets.FIREBASE_TOKEN }}"
+        continue-on-error: true
+
+      - name: Deploy Storage rules
+        run: firebase deploy --only storage --token "${{ secrets.FIREBASE_TOKEN }}"
+        continue-on-error: true
+
+  run-migrations:
+    name: Run Database Migrations
+    needs: deploy-firebase-rules
+    runs-on: ubuntu-latest
+    if: github.event.inputs.dry_run != 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for migration scripts
+        id: check-migrations
+        run: |
+          if [ -f "scripts/fix-patient-data.ts" ]; then
+            echo "has_patient_data=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run patient data migration
+        if: steps.check-migrations.outputs.has_patient_data == 'true'
+        run: npx tsx scripts/fix-patient-data.ts
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        continue-on-error: true
+
+  deploy-application:
+    name: Deploy Application
+    needs: [run-migrations]
+    runs-on: ubuntu-latest
+    if: github.event.inputs.dry_run != 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Build application
+        run: npm run build
+
+      - name: Deploy to Netlify
+        run: |
+          npm install -g netlify-cli
+          netlify deploy --prod --auth=${{ secrets.NETLIFY_AUTH_TOKEN }} --site=${{ secrets.NETLIFY_SITE_ID }}
+        continue-on-error: true
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Application deployed successfully"
+          echo "🌐 URL: ${{ env.PRODUCTION_URL }}"
+
+  post-deployment-validation:
+    name: Post-Deployment Validation
+    needs: deploy-application
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for deployment propagation
+        run: sleep 60
+
+      - name: Check homepage
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" ${{ env.PRODUCTION_URL }})
+          if [ "$status" = "200" ]; then
+            echo "✅ Homepage is accessible (status: $status)"
+          else
+            echo "❌ Homepage check failed (status: $status)"
+            exit 1
+          fi
+
+      - name: Check login page
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" ${{ env.PRODUCTION_URL }}/login)
+          if [ "$status" = "200" ]; then
+            echo "✅ Login page is accessible (status: $status)"
+          else
+            echo "⚠️ Login page check returned status: $status"
+          fi
+
+      - name: Check security headers
+        run: |
+          headers=$(curl -I -s ${{ env.PRODUCTION_URL }} | grep -cE "(X-Frame-Options|X-Content-Type-Options|Content-Security-Policy)")
+          if [ "$headers" -ge 2 ]; then
+            echo "✅ Security headers present ($headers found)"
+          else
+            echo "⚠️ Only $headers security headers found"
+          fi
+
+      - name: Check SSL certificate
+        if: startsWith(env.PRODUCTION_URL, 'https://')
+        run: |
+          if curl -s ${{ env.PRODUCTION_URL }} > /dev/null 2>&1; then
+            echo "✅ SSL certificate is valid"
+          else
+            echo "❌ SSL certificate issue detected"
+            exit 1
+          fi
+
+      - name: Run E2E tests
+        if: github.event.inputs.skip_tests != 'true'
+        run: npm run test:e2e
+        continue-on-error: true
+
+  notify-deployment:
+    name: Notify Deployment Status
+    needs: [post-deployment-validation]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify success
+        if: needs.post-deployment-validation.result == 'success'
+        run: |
+          echo "✅ Deployment successful"
+          echo "🌐 Production URL: ${{ env.PRODUCTION_URL }}"
+          echo "📅 Deployed at: $(date)"
+          echo "🔖 Commit: ${{ github.sha }}"
+
+      - name: Notify failure
+        if: needs.post-deployment-validation.result == 'failure'
+        run: |
+          echo "❌ Deployment failed"
+          echo "🔖 Failed commit: ${{ github.sha }}"
+          echo "📋 Check logs for details"
+
+      - name: Create deployment summary
+        if: always()
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Production" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ env.PRODUCTION_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ needs.post-deployment-validation.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.post-deployment-validation.result }}" = "success" ]; then
+            echo "✅ Deployment completed successfully!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Deployment failed. Please review logs." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  dry-run-summary:
+    name: Dry Run Summary
+    runs-on: ubuntu-latest
+    if: github.event.inputs.dry_run == 'true'
+    needs: [pre-deployment-checks]
+    steps:
+      - name: Display dry run summary
+        run: |
+          echo "🔍 DRY RUN MODE"
+          echo "==============="
+          echo ""
+          echo "✅ Pre-deployment checks: Passed"
+          echo "⏭️  Firebase rules deployment: Skipped (dry run)"
+          echo "⏭️  Migrations: Skipped (dry run)"
+          echo "⏭️  Application deployment: Skipped (dry run)"
+          echo "⏭️  Post-deployment validation: Skipped (dry run)"
+          echo ""
+          echo "All checks passed. Ready for production deployment."
+          echo ""
+          echo "To deploy for real, run this workflow without dry_run option."

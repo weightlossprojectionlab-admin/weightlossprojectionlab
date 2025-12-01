@@ -1,0 +1,167 @@
+{
+  "alerts": [
+    {
+      "name": "application_down",
+      "condition": "http_status != 200",
+      "severity": "critical",
+      "threshold": 1,
+      "notification_channels": ["email", "slack"],
+      "description": "Application is not responding with HTTP 200"
+    },
+    {
+      "name": "high_response_time",
+      "condition": "response_time_ms > 5000",
+      "severity": "warning",
+      "threshold": 3,
+      "notification_channels": ["slack"],
+      "description": "Response time exceeds 5 seconds"
+    },
+    {
+      "name": "elevated_response_time",
+      "condition": "response_time_ms > 2000",
+      "severity": "info",
+      "threshold": 5,
+      "notification_channels": ["slack"],
+      "description": "Response time elevated above 2 seconds"
+    },
+    {
+      "name": "high_error_rate",
+      "condition": "error_rate > 0.05",
+      "severity": "high",
+      "threshold": 10,
+      "notification_channels": ["email", "slack"],
+      "description": "Error rate exceeds 5%"
+    },
+    {
+      "name": "failed_authentication",
+      "condition": "auth_failures > 100/hour",
+      "severity": "medium",
+      "threshold": 100,
+      "notification_channels": ["slack"],
+      "description": "More than 100 authentication failures per hour"
+    },
+    {
+      "name": "rate_limit_exceeded",
+      "condition": "rate_limit_hits > 1000/hour",
+      "severity": "low",
+      "threshold": 1000,
+      "notification_channels": ["slack"],
+      "description": "Rate limit exceeded more than 1000 times per hour"
+    },
+    {
+      "name": "debug_endpoint_access",
+      "condition": "debug_access_count > 0",
+      "severity": "critical",
+      "threshold": 1,
+      "notification_channels": ["email", "slack"],
+      "description": "Debug endpoint accessed in production"
+    },
+    {
+      "name": "csrf_violations",
+      "condition": "csrf_failures > 50/hour",
+      "severity": "high",
+      "threshold": 50,
+      "notification_channels": ["email", "slack"],
+      "description": "High number of CSRF validation failures"
+    },
+    {
+      "name": "ssrf_attempts",
+      "condition": "ssrf_blocks > 10/hour",
+      "severity": "high",
+      "threshold": 10,
+      "notification_channels": ["email", "slack"],
+      "description": "SSRF attempts detected and blocked"
+    },
+    {
+      "name": "security_header_missing",
+      "condition": "security_headers_missing > 0",
+      "severity": "medium",
+      "threshold": 1,
+      "notification_channels": ["slack"],
+      "description": "Required security headers missing"
+    }
+  ],
+  "notification_channels": {
+    "email": {
+      "enabled": true,
+      "recipients": [
+        "ops@example.com",
+        "devops@example.com"
+      ],
+      "smtp": {
+        "host": "smtp.gmail.com",
+        "port": 587,
+        "secure": false,
+        "auth": {
+          "user": "your-email@example.com",
+          "pass": "${SMTP_PASSWORD}"
+        }
+      },
+      "from": "monitoring@example.com",
+      "subject_prefix": "[PRODUCTION ALERT]"
+    },
+    "slack": {
+      "enabled": true,
+      "webhook_url": "${SLACK_WEBHOOK_URL}",
+      "channel": "#production-alerts",
+      "username": "Production Monitor",
+      "icon_emoji": ":warning:",
+      "mention_on_critical": "@here"
+    },
+    "pagerduty": {
+      "enabled": false,
+      "integration_key": "${PAGERDUTY_KEY}",
+      "severity_mapping": {
+        "critical": "critical",
+        "high": "error",
+        "medium": "warning",
+        "low": "info"
+      }
+    }
+  },
+  "alert_rules": {
+    "cooldown_period": 300,
+    "max_alerts_per_hour": 20,
+    "aggregation_window": 60,
+    "escalation": {
+      "critical": {
+        "initial_delay": 0,
+        "retry_interval": 300,
+        "max_retries": 3
+      },
+      "high": {
+        "initial_delay": 60,
+        "retry_interval": 600,
+        "max_retries": 2
+      },
+      "medium": {
+        "initial_delay": 300,
+        "retry_interval": 1800,
+        "max_retries": 1
+      }
+    }
+  },
+  "monitoring_config": {
+    "check_interval": 60,
+    "timeout": 30,
+    "retry_failed_checks": 3,
+    "retry_delay": 10,
+    "health_check_endpoints": [
+      "/",
+      "/api/health"
+    ],
+    "performance_thresholds": {
+      "response_time_warning_ms": 2000,
+      "response_time_critical_ms": 5000,
+      "error_rate_warning": 0.01,
+      "error_rate_critical": 0.05
+    }
+  },
+  "logging": {
+    "level": "info",
+    "retention_days": 90,
+    "rotate_size_mb": 100,
+    "include_request_details": true,
+    "sanitize_sensitive_data": true
+  }
+}

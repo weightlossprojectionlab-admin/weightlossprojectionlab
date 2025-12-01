@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { InviteModal } from '@/components/family/InviteModal'
 import { TransferOwnershipModal } from '@/components/family/TransferOwnershipModal'
+import { HouseholdManager } from '@/components/households/HouseholdManager'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { ROLE_LABELS } from '@/lib/family-roles'
 import type { FamilyMember, FamilyInvitation } from '@/types/medical'
@@ -36,7 +37,7 @@ function FamilyDashboardContent() {
   const { sentInvitations, receivedInvitations, loading: invitationsLoading, acceptInvitation, declineInvitation, revokeInvitation, resendInvitation } = useInvitations()
   const { patients, loading: patientsLoading } = usePatients()
 
-  const [activeTab, setActiveTab] = useState<'members' | 'invitations' | 'access'>('members')
+  const [activeTab, setActiveTab] = useState<'members' | 'invitations' | 'access' | 'households'>('members')
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showTransferModal, setShowTransferModal] = useState(false)
 
@@ -157,6 +158,16 @@ function FamilyDashboardContent() {
             }`}
           >
             Patient Access Matrix
+          </button>
+          <button
+            onClick={() => setActiveTab('households')}
+            className={`px-4 py-3 font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === 'households'
+                ? 'border-primary text-primary dark:text-purple-400'
+                : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-200'
+            }`}
+          >
+            Households
           </button>
         </div>
 
@@ -369,6 +380,13 @@ function FamilyDashboardContent() {
                     </table>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Households Tab */}
+            {activeTab === 'households' && (
+              <div>
+                <HouseholdManager />
               </div>
             )}
           </>
