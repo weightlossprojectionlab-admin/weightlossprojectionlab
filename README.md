@@ -125,7 +125,68 @@ weightlossprojectlab/
 4. **Open Browser**
    Navigate to `http://localhost:3000`
 
-### 🔐 Security Best Practices
+### 🔐 Security
+
+#### Comprehensive Security Controls
+
+This application implements defense-in-depth security architecture across multiple layers:
+
+**🛡️ Security Features** (Sprint 1 & 2 - All CRITICAL + HIGH issues resolved):
+
+| Control | Status | Description |
+|---------|--------|-------------|
+| **SSRF Protection** | ✅ Complete | Domain whitelist + IP blocklist for external requests |
+| **Rate Limiting** | ✅ Complete | Distributed rate limiting with Upstash Redis |
+| **CSRF Protection** | ⚠️ Partial | Client-side tokens (server middleware pending) |
+| **CORS Hardening** | ⚠️ Partial | Origin whitelist enforcement |
+| **Security Headers** | ⚠️ Partial | Basic headers (CSP pending) |
+| **Authentication** | ✅ Complete | Firebase Auth with Custom Claims RBAC |
+| **Storage Security** | ✅ Complete | User-scoped document paths |
+| **Error Sanitization** | ⚠️ Partial | Production-safe error responses (foundation ready) |
+| **Debug Guards** | ✅ Complete | Production kill switches for debug endpoints |
+| **Recipe DB Protection** | ✅ Complete | Authentication + pagination enforcement |
+
+**Legend**: ✅ Complete | ⚠️ Partial (foundation ready, integration pending) | ❌ Not Started
+
+#### Security Documentation
+
+Comprehensive security documentation for developers and operators:
+
+- **[Security Runbook](docs/SECURITY_RUNBOOK.md)** - Incident response procedures and emergency protocols
+- **[Developer Security Guidelines](docs/DEVELOPER_SECURITY_GUIDELINES.md)** - Secure coding practices and patterns
+- **[Security Architecture](docs/SECURITY_ARCHITECTURE.md)** - Technical security design and threat model
+- **[Sprint 1 & 2 Completion Report](docs/SPRINT_1_2_COMPLETION_REPORT.md)** - Detailed security fixes implemented
+
+#### Security Testing
+
+Run automated security tests:
+
+```bash
+# All security tests (75 tests)
+npm test -- __tests__/security/
+
+# Specific attack vector tests
+npm test -- __tests__/api/fetch-url.test.ts  # SSRF protection (20 tests)
+npm test -- __tests__/api/debug-endpoints.test.ts  # Production guards (14 tests)
+npm test -- __tests__/lib/rate-limit.test.ts  # Rate limiting (14 tests)
+
+# Dependency security audit
+npm audit --audit-level=high
+```
+
+#### Reporting Security Issues
+
+**🚨 Found a security vulnerability? Please report responsibly.**
+
+- **Email**: security@wlpl.com (or primary contact email)
+- **PGP Key**: [Optional: Add PGP key for encrypted reports]
+- **Response Time**: We aim to respond within 24 hours
+
+**⚠️ DO NOT open public GitHub issues for security vulnerabilities.**
+
+We appreciate responsible disclosure and will acknowledge your contribution (with your permission) after the issue is resolved.
+
+#### Security Best Practices for Developers
 
 **API Key Management:**
 - ✅ `.env.local` is already in `.gitignore` - your keys are safe
@@ -136,8 +197,24 @@ weightlossprojectlab/
 **Key Rotation (if compromised):**
 1. **Gemini API**: Revoke at https://makersuite.google.com/app/apikey
 2. **Firebase**: Generate new keys in Firebase Console > Project Settings > Service Accounts
-3. **Update `.env.local`** with new keys
-4. **Restart dev server**: `npm run dev`
+3. **Upstash Redis**: Rotate tokens in Upstash Console
+4. **Update `.env.local`** with new keys
+5. **Restart dev server**: `npm run dev`
+
+**Required Security Environment Variables:**
+```bash
+# Super Admin Management
+SUPER_ADMIN_EMAILS=admin1@example.com,admin2@example.com
+
+# CORS Configuration
+ALLOWED_ORIGINS=https://app.wlpl.com,https://admin.wlpl.com
+
+# Rate Limiting
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-token-here
+```
+
+See **[Developer Security Guidelines](docs/DEVELOPER_SECURITY_GUIDELINES.md)** for complete secure coding practices.
 
 ### Available Scripts
 - `npm run dev` - Start development server with Turbopack
