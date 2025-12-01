@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
+import { errorResponse } from '@/lib/api-response'
 
 export async function GET(request: NextRequest) {
   if (process.env.NODE_ENV === 'production') {

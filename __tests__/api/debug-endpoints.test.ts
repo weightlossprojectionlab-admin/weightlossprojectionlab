@@ -44,6 +44,9 @@ import { GET as fetchUrlHandler } from '@/app/api/fetch-url/route'
 import { GET as debugProfileHandler } from '@/app/api/debug-profile/route'
 import { POST as fixOnboardingHandler } from '@/app/api/fix-onboarding/route'
 import { POST as fixStartWeightHandler } from '@/app/api/fix-start-weight/route'
+import { POST as fixPatientStartWeightHandler } from '@/app/api/patients/[patientId]/fix-start-weight/route'
+import { DELETE as resetUserProfileHandler } from '@/app/api/user-profile/reset/route'
+import { POST as testNotificationHandler } from '@/app/api/notifications/test/route'
 
 describe('Debug Endpoints - Production Kill Switches', () => {
   const originalNodeEnv = process.env.NODE_ENV
@@ -116,6 +119,55 @@ describe('Debug Endpoints - Production Kill Switches', () => {
     })
   })
 
+  describe('POST /api/patients/[patientId]/fix-start-weight', () => {
+    it('should return 403 in production', async () => {
+      const request = new NextRequest('http://localhost:3000/api/patients/test-patient-id/fix-start-weight', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer fake-token'
+        }
+      })
+      const params = Promise.resolve({ patientId: 'test-patient-id' })
+      const response = await fixPatientStartWeightHandler(request, { params })
+      const data = await response.json()
+
+      expect(response.status).toBe(403)
+      expect(data.error).toBe('Not available in production')
+    })
+  })
+
+  describe('DELETE /api/user-profile/reset', () => {
+    it('should return 403 in production', async () => {
+      const request = new NextRequest('http://localhost:3000/api/user-profile/reset', {
+        method: 'DELETE',
+        headers: {
+          authorization: 'Bearer fake-token'
+        }
+      })
+      const response = await resetUserProfileHandler(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(403)
+      expect(data.error).toBe('Not available in production')
+    })
+  })
+
+  describe('POST /api/notifications/test', () => {
+    it('should return 403 in production', async () => {
+      const request = new NextRequest('http://localhost:3000/api/notifications/test', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer fake-token'
+        }
+      })
+      const response = await testNotificationHandler(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(403)
+      expect(data.error).toBe('Not available in production')
+    })
+  })
+
   describe('Non-production behavior verification', () => {
     beforeEach(() => {
       // Set to development for these tests
@@ -155,6 +207,37 @@ describe('Debug Endpoints - Production Kill Switches', () => {
       const response = await fixStartWeightHandler(request)
 
       // Should not return 403, but will return 401 for missing auth
+      expect(response.status).not.toBe(403)
+    })
+
+    it('should allow /api/patients/[patientId]/fix-start-weight in development', async () => {
+      const request = new NextRequest('http://localhost:3000/api/patients/test-patient-id/fix-start-weight', {
+        method: 'POST'
+      })
+      const params = Promise.resolve({ patientId: 'test-patient-id' })
+      const response = await fixPatientStartWeightHandler(request, { params })
+
+      // Should not return 403, but will return 401 for missing auth
+      expect(response.status).not.toBe(403)
+    })
+
+    it('should allow /api/user-profile/reset in development', async () => {
+      const request = new NextRequest('http://localhost:3000/api/user-profile/reset', {
+        method: 'DELETE'
+      })
+      const response = await resetUserProfileHandler(request)
+
+      // Should not return 403, but will return 401 for missing auth
+      expect(response.status).not.toBe(403)
+    })
+
+    it('should allow /api/notifications/test in development', async () => {
+      const request = new NextRequest('http://localhost:3000/api/notifications/test', {
+        method: 'POST'
+      })
+      const response = await testNotificationHandler(request)
+
+      // Should not return 403, but will return 401 or other error for missing auth
       expect(response.status).not.toBe(403)
     })
   })

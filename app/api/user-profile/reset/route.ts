@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 // Set max duration to 25 seconds (just under Netlify's 26s limit)
 export const maxDuration = 25
@@ -19,6 +20,13 @@ export const maxDuration = 25
  * Requires explicit confirmation from the user.
  */
 export async function DELETE(request: NextRequest) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Not available in production' },
+      { status: 403 }
+    );
+  }
+
   try {
     // Get authorization header
     const authHeader = request.headers.get('authorization')

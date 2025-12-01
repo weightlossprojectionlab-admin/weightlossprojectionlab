@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * One-time API endpoint to fix missing startWeight for a patient
@@ -9,6 +10,13 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ patientId: string }> }
 ) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Not available in production' },
+      { status: 403 }
+    );
+  }
+
   try {
     const { patientId } = await params
 
