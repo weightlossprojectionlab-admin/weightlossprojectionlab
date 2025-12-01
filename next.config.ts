@@ -51,6 +51,7 @@ const nextConfig: NextConfig = {
       {
         source: '/:path*',
         headers: [
+          // Existing headers
           {
             key: 'Cross-Origin-Opener-Policy',
             value: 'same-origin-allow-popups',
@@ -58,6 +59,40 @@ const nextConfig: NextConfig = {
           {
             key: 'Cross-Origin-Embedder-Policy',
             value: 'unsafe-none',
+          },
+          // NEW SECURITY HEADERS
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: process.env.NODE_ENV === 'production'
+              ? [
+                  "default-src 'self'",
+                  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com",
+                  "style-src 'self' 'unsafe-inline'",
+                  "img-src 'self' data: blob: https://firebasestorage.googleapis.com",
+                  "font-src 'self' data:",
+                  "connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://api.stripe.com https://generativelanguage.googleapis.com",
+                  "frame-src https://js.stripe.com",
+                  "frame-ancestors 'none'",
+                  "base-uri 'self'",
+                  "form-action 'self'",
+                ].join('; ')
+              : "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src *;", // Permissive in dev
           },
         ],
       },
