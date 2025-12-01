@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth } from '@/lib/firebase-admin'
 import { completeActionItem } from '@/lib/caregiver-action-items'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * POST /api/caregiver/action-items/[itemId]/complete
@@ -48,14 +49,9 @@ export async function POST(
     })
 
   } catch (error: any) {
-    logger.error('[POST /api/caregiver/action-items/[itemId]/complete] Error completing action item', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to complete action item',
-        details: error.message
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/caregiver/action-items/[itemId]/complete',
+      operation: 'create'
+    })
   }
 }

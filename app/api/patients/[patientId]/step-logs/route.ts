@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { StepLog } from '@/types/medical'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/patients/[patientId]/step-logs
@@ -59,11 +60,10 @@ export async function GET(
 
     return NextResponse.json({ data: stepLogs })
   } catch (error) {
-    console.error('Error fetching step logs:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch step logs' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/step-logs',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -170,10 +170,9 @@ export async function POST(
       },
     })
   } catch (error) {
-    console.error('Error creating step log:', error)
-    return NextResponse.json(
-      { error: 'Failed to create step log' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/step-logs',
+      operation: 'create'
+    })
   }
 }

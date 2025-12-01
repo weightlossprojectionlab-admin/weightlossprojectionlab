@@ -34,6 +34,8 @@ import MedicationDetailModal from '@/components/health/MedicationDetailModal'
 import { RecipeView } from '@/components/patients/RecipeView'
 import { PageHeader } from '@/components/ui/PageHeader'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import { AppointmentForm } from '@/components/appointments/AppointmentForm'
+import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { ChartBarIcon, ShieldCheckIcon, ChevronDownIcon, ChevronUpIcon, ScaleIcon, CameraIcon, FireIcon, StarIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -76,7 +78,8 @@ function PatientDetailContent() {
   const [medications, setMedications] = useState<PatientMedication[]>([])
   const [loadingMedications, setLoadingMedications] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
-  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'weight' | 'meals' | 'steps' | 'medications' | 'recipes'>(tabParam || 'vitals')
+  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'weight' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments'>(tabParam || 'vitals')
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false)
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
 
   const { vitals, loading: vitalsLoading, logVital, updateVital, deleteVital, refetch } = useVitals({
@@ -481,6 +484,20 @@ function PatientDetailContent() {
                     <span>🚶</span>
                     <span>Log Steps</span>
                   </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('appointments')
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 ${
+                      activeTab === 'appointments'
+                        ? 'bg-primary text-white'
+                        : 'bg-muted hover:bg-muted/80 text-foreground'
+                    }`}
+                  >
+                    <span>📅</span>
+                    <span>Appointments</span>
+                  </button>
                   <Link
                     href={`/shopping?memberId=${patientId}`}
                     className="w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground"
@@ -595,6 +612,16 @@ function PatientDetailContent() {
                   }`}
                 >
                   💊 Meds
+                </button>
+                <button
+                  onClick={() => setActiveTab('appointments')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'appointments'
+                      ? 'bg-primary text-white'
+                      : 'bg-card border border-border text-foreground'
+                  }`}
+                >
+                  📅 Appointments
                 </button>
                 <button
                   onClick={() => setActiveTab('recipes')}
@@ -951,6 +978,44 @@ function PatientDetailContent() {
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Appointments Tab */}
+          {activeTab === 'appointments' && (
+            <div className="space-y-6">
+              {/* Appointment Form - Collapsible */}
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-foreground">
+                    Schedule New Appointment
+                  </h2>
+                  <button
+                    onClick={() => setShowAppointmentForm(!showAppointmentForm)}
+                    className="text-sm text-primary hover:text-primary-dark font-medium"
+                  >
+                    {showAppointmentForm ? 'Hide Form' : 'Show Form'}
+                  </button>
+                </div>
+                {showAppointmentForm && (
+                  <AppointmentForm
+                    preSelectedPatientId={patientId}
+                    onSuccess={() => {
+                      setShowAppointmentForm(false)
+                      toast.success('Appointment scheduled!')
+                    }}
+                    onCancel={() => setShowAppointmentForm(false)}
+                  />
+                )}
+              </div>
+
+              {/* Appointment List */}
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-bold text-foreground mb-4">
+                  {patient.name}'s Appointments
+                </h2>
+                <AppointmentList patientId={patientId} />
+              </div>
             </div>
           )}
 

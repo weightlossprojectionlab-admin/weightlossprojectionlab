@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * API Route: Fetch URL
@@ -63,11 +64,10 @@ export async function GET(request: NextRequest) {
         'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
       }
     })
-  } catch (error: any) {
-    logger.error('Error fetching URL', error instanceof Error ? error : new Error(String(error)))
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch URL' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/fetch-url',
+      operation: 'fetch'
+    })
   }
 }

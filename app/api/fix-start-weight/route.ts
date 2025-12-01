@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
+import { errorResponse } from '@/lib/api-response'
 import { Timestamp } from 'firebase-admin/firestore'
 
 /**
@@ -65,10 +66,9 @@ export async function POST(request: NextRequest) {
       firstWeightLogDate: firstWeightLog.loggedAt.toDate().toISOString()
     })
   } catch (error) {
-    console.error('Error fixing start weight:', error)
-    return NextResponse.json(
-      { error: 'Failed to fix start weight', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/fix-start-weight',
+      operation: 'create'
+    })
   }
 }

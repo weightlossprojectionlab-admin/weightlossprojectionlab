@@ -25,6 +25,7 @@ import {
   ROLE_HIERARCHY
 } from '@/lib/family-roles'
 import type { FamilyMember, FamilyRole } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 
 interface FamilyMemberWithCapabilities extends FamilyMember {
   roleLabel: string
@@ -78,93 +79,11 @@ export async function GET(request: NextRequest) {
     try {
       decodedToken = await adminAuth.verifyIdToken(token)
     } catch (error) {
-      logger.error('[API /family/hierarchy GET] Token verification failed', error as Error)
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized', message: 'Invalid authentication token' },
-        { status: 401 }
-      )
-    }
-
-    const userId = decodedToken.uid
-
-    // Step 2: Rate limiting
-    const rateLimitResult = await medicalApiRateLimit.limit(userId)
-    if (!rateLimitResult.success) {
-      logger.warn('[API /family/hierarchy GET] Rate limit exceeded', { userId })
-      return NextResponse.json(
-        createRateLimitResponse(rateLimitResult),
-        {
-          status: 429,
-          headers: getRateLimitHeaders(rateLimitResult)
-        }
-      )
-    }
-
-    logger.debug('[API /family/hierarchy GET] Fetching family hierarchy', { userId })
-
-    // Step 3: Determine user's role and find their family
-    const userDoc = await adminDb.collection('users').doc(userId).get()
-    if (!userDoc.exists) {
-      return NextResponse.json(
-        { success: false, error: 'User profile not found' },
-        { status: 404 }
-      )
-    }
-
-    const userData = userDoc.data()
-    const isUserAccountOwner = userData?.preferences?.isAccountOwner === true
-
-    let ownerUserId: string
-    let accountOwnerInfo: HierarchyResponse['accountOwner']
-
-    if (isUserAccountOwner) {
-      // User is the Account Owner
-      ownerUserId = userId
-      accountOwnerInfo = {
-        userId,
-        name: userData?.name || 'Unknown',
-        email: userData?.email || 'Unknown',
-        accountOwnerSince: userData?.preferences?.accountOwnerSince
-      }
-    } else {
-      // User is a family member - find their Account Owner
-      const familyMemberSnapshot = await adminDb
-        .collectionGroup('familyMembers')
-        .where('userId', '==', userId)
-        .where('status', '==', 'accepted')
-        .limit(1)
-        .get()
-
-      if (familyMemberSnapshot.empty) {
-        // If user is not an account owner and not a family member,
-        // treat them as a potential account owner with no family yet
-        logger.info('[API /family/hierarchy GET] User has no family setup, treating as account owner', { userId })
-        ownerUserId = userId
-        accountOwnerInfo = {
-          userId,
-          name: userData?.name || 'Unknown',
-          email: userData?.email || 'Unknown',
-          accountOwnerSince: userData?.preferences?.accountOwnerSince || new Date().toISOString()
-        }
-
-        // Mark user as account owner if not already set
-        if (!isUserAccountOwner) {
-          await adminDb.collection('users').doc(userId).update({
-            'preferences.isAccountOwner': true,
-            'preferences.accountOwnerSince': accountOwnerInfo.accountOwnerSince
-          })
-        }
-      } else {
-        const familyMemberDoc = familyMemberSnapshot.docs[0]
-        ownerUserId = familyMemberDoc.ref.parent.parent?.id || ''
-
-        if (!ownerUserId) {
-          logger.error('[API /family/hierarchy GET] Unable to extract owner from path: ' + familyMemberDoc.ref.path)
-          return NextResponse.json(
-            { success: false, error: 'Invalid family member document structure' },
-            { status: 500 }
-          )
-        }
+    return errorResponse(error, {
+      route: '/api/family/hierarchy',
+      operation: 'fetch'
+    })
+  }
 
         // Get Account Owner info
         const ownerDoc = await adminDb.collection('users').doc(ownerUserId).get()
@@ -308,10 +227,9 @@ export async function GET(request: NextRequest) {
       data: response
     })
   } catch (error: any) {
-    logger.error('[API /family/hierarchy GET] Error fetching family hierarchy', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch family hierarchy' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/family/hierarchy',
+      operation: 'fetch'
+    })
   }
 }

@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { removeUndefinedValues } from '@/lib/firestore-helpers'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import type { PatientDocument } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 
 export async function GET(
   request: NextRequest,
@@ -48,11 +49,10 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: documents })
   } catch (error) {
-    console.error('Error fetching patient documents:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch documents' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/documents',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -124,15 +124,9 @@ export async function POST(
       }
     })
   } catch (error: any) {
-    console.error('Error uploading document:', error)
-    console.error('Error details:', {
-      message: error?.message,
-      stack: error?.stack,
-      code: error?.code
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/documents',
+      operation: 'create'
     })
-    return NextResponse.json(
-      { success: false, error: 'Failed to upload document', details: error?.message },
-      { status: 500 }
-    )
   }
 }

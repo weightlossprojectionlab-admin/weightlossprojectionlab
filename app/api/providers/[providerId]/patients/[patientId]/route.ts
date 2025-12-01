@@ -10,6 +10,7 @@ import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/logger'
 import type { Provider } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 
 export async function DELETE(
   request: NextRequest,
@@ -98,10 +99,9 @@ export async function DELETE(
       message: 'Provider unlinked from patient successfully'
     })
   } catch (error: any) {
-    logger.error('[API /providers/[id]/patients/[id] DELETE] Error unlinking provider', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to unlink provider from patient' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/providers/[providerId]/patients/[patientId]',
+      operation: 'delete'
+    })
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * POST /api/products/match
@@ -174,10 +175,9 @@ export async function POST(request: NextRequest) {
       userRegion
     })
   } catch (error) {
-    logger.error('Error matching products', error as Error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to match products' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/products/match',
+      operation: 'create'
+    })
   }
 }

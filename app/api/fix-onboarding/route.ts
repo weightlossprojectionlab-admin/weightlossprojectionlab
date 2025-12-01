@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * Emergency fix endpoint to restore onboardingCompleted flag
@@ -30,10 +31,9 @@ export async function POST(request: NextRequest) {
       message: 'Onboarding completion flag restored'
     })
   } catch (error) {
-    logger.error('[Fix] Failed to restore onboardingCompleted', error as Error)
-    return NextResponse.json({
-      error: 'Failed to restore flag',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return errorResponse(error, {
+      route: '/api/fix-onboarding',
+      operation: 'create'
+    })
   }
 }

@@ -4,6 +4,7 @@ import { removeUndefinedValues } from '@/lib/firestore-helpers'
 import { logger } from '@/lib/logger'
 import { authorizePatientAccess, assertPatientAccess } from '@/lib/rbac-middleware'
 import type { PatientMedication } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/patients/[patientId]/medications
@@ -54,11 +55,10 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: medications })
   } catch (error: any) {
-    logger.error('[Medications API] Error fetching medications', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch medications', details: error.message },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/medications',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -166,10 +166,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: medication }, { status: 201 })
   } catch (error: any) {
-    logger.error('[Medications API] Error adding medication', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to add medication', details: error.message },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/medications',
+      operation: 'create'
+    })
   }
 }

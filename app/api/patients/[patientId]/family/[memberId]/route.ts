@@ -12,6 +12,7 @@ import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } fro
 import { logger } from '@/lib/logger'
 import { familyMemberPermissionsSchema } from '@/lib/validations/medical'
 import type { FamilyMember } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 
 export async function PUT(
   request: NextRequest,
@@ -108,19 +109,10 @@ export async function PUT(
       message: 'Permissions updated successfully'
     })
   } catch (error: any) {
-    logger.error('[API /patients/[id]/family/[memberId] PUT] Error updating permissions', error)
-
-    if (error.name === 'ZodError') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid permissions data', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update permissions' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/family/[memberId]',
+      operation: 'update'
+    })
   }
 }
 
@@ -218,10 +210,9 @@ export async function DELETE(
       message: 'Family member access removed'
     })
   } catch (error: any) {
-    logger.error('[API /patients/[id]/family/[memberId] DELETE] Error removing family member access', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to remove family member' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/family/[memberId]',
+      operation: 'delete'
+    })
   }
 }

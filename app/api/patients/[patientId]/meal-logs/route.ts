@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { MealLog } from '@/types/medical'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/patients/[patientId]/meal-logs
@@ -63,11 +64,10 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: mealLogs })
   } catch (error) {
-    console.error('Error fetching meal logs:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch meal logs' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/meal-logs',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -140,10 +140,9 @@ export async function POST(
       },
     })
   } catch (error) {
-    console.error('Error creating meal log:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to create meal log' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/meal-logs',
+      operation: 'create'
+    })
   }
 }

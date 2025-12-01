@@ -10,6 +10,7 @@ import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/logger'
 import type { FamilyMember } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 
 export async function GET(
   request: NextRequest,
@@ -83,10 +84,9 @@ export async function GET(
       data: familyMembers
     })
   } catch (error: any) {
-    logger.error('[API /patients/[id]/family GET] Error fetching family members', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch family members' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/family',
+      operation: 'fetch'
+    })
   }
 }

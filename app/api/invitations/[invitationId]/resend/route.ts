@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { sendFamilyInvitationEmail } from '@/lib/email-service'
 import type { FamilyInvitation } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 
 export async function POST(
   request: NextRequest,
@@ -121,17 +122,15 @@ export async function POST(
         message: `Invitation email resent to ${invitation.recipientEmail}`
       })
     } catch (emailError: any) {
-      console.error('Failed to resend invitation email:', emailError)
-      return NextResponse.json(
-        { success: false, error: 'Failed to send email. Please try again.' },
-        { status: 500 }
-      )
-    }
+    return errorResponse(emailError: any, {
+      route: '/api/invitations/[invitationId]/resend',
+      operation: 'create'
+    })
+  }
   } catch (error: any) {
-    console.error('Error resending invitation:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to resend invitation' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/invitations/[invitationId]/resend',
+      operation: 'create'
+    })
   }
 }

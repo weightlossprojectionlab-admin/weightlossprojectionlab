@@ -13,6 +13,7 @@ import { vitalSignFormSchema } from '@/lib/validations/medical'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { VitalSign } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 import { v4 as uuidv4 } from 'uuid'
 
 // GET /api/patients/[patientId]/vitals - List vital signs with optional filtering
@@ -113,11 +114,10 @@ export async function GET(
     })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals GET] Error fetching vitals', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch vitals' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/vitals',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -214,10 +214,9 @@ export async function POST(
     }, { status: 201 })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals POST] Error logging vital sign', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to log vital sign' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/vitals',
+      operation: 'create'
+    })
   }
 }

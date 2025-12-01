@@ -12,6 +12,7 @@ import { assertPatientAccess, verifyAuthToken, type AssertPatientAccessResult } 
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/logger'
 import type { Appointment, PatientProfile, Provider } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 import { v4 as uuidv4 } from 'uuid'
 
 export async function GET(request: NextRequest) {
@@ -81,11 +82,10 @@ export async function GET(request: NextRequest) {
       data: appointments
     })
   } catch (error: any) {
-    console.error('Error fetching appointments:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch appointments' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/appointments',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -201,18 +201,9 @@ export async function POST(request: NextRequest) {
       message: 'Appointment created successfully'
     })
   } catch (error: any) {
-    console.error('Error creating appointment:', error)
-
-    if (error.name === 'ZodError') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid appointment data', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create appointment' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/appointments',
+      operation: 'create'
+    })
   }
 }

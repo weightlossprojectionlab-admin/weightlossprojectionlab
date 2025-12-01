@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb as db } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import type { HealthVitalsSummary } from '@/types'
+import { errorResponse } from '@/lib/api-response'
 
 interface RouteParams {
   params: Promise<{
@@ -63,33 +64,10 @@ export async function GET(
 
       logger.debug('[Health Vitals API] Admin authenticated', { adminUid, targetUid: uid })
     } catch (authError) {
-      logger.error('[Health Vitals API] Auth failed', authError as Error)
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid authentication token' },
-        { status: 401 }
-      )
-    }
-
-    // 2. Fetch user's health vitals from Firestore
-    const summary = await generateHealthVitalsSummary(uid)
-
-    logger.info('[Health Vitals API] Summary generated', { adminUid, targetUid: uid })
-
-    return NextResponse.json({
-      ok: true,
-      summary
+    return errorResponse(authError, {
+      route: '/api/admin/users/[uid]/health-vitals',
+      operation: 'fetch'
     })
-
-  } catch (error) {
-    logger.error('[Health Vitals API] Failed to fetch vitals', error as Error)
-
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch health vitals',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
   }
 }
 

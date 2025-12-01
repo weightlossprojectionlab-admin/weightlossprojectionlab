@@ -151,6 +151,74 @@ service cloud.firestore {
           allow update: if isOwner(userId);
           allow delete: if isOwner(userId);
         }
+
+        // Helper function to check if user is a family member with access
+        function isFamilyMemberWithAccess() {
+          return exists(/databases/$(database)/documents/users/$(userId)/familyMembers/$(request.auth.uid));
+        }
+
+        // Helper function to check if family member has specific permission
+        function hasFamilyPermission(permission) {
+          return isFamilyMemberWithAccess() &&
+                 get(/databases/$(database)/documents/users/$(userId)/familyMembers/$(request.auth.uid)).data.permissions[permission] == true;
+        }
+
+        // Healthcare providers for this patient
+        match /healthcareProviders/{providerId} {
+          // Read: Patient owner OR family member with viewProviders permission
+          allow read: if isOwner(userId) || hasFamilyPermission('viewProviders');
+
+          // Create: Patient owner OR family member with manageProviders permission
+          // Validate: patientId must match, addedBy must be auth.uid
+          allow create: if (isOwner(userId) || hasFamilyPermission('manageProviders')) &&
+                          request.resource.data.patientId == patientId &&
+                          request.resource.data.addedBy == request.auth.uid;
+
+          // Update: Patient owner OR family member with manageProviders permission
+          allow update: if isOwner(userId) || hasFamilyPermission('manageProviders');
+
+          // Delete: Patient owner OR family member with manageProviders permission
+          allow delete: if isOwner(userId) || hasFamilyPermission('manageProviders');
+        }
+
+        // Communications with healthcare providers
+        match /providerCommunications/{communicationId} {
+          // Read: Patient owner OR family member with viewProviders permission
+          allow read: if isOwner(userId) || hasFamilyPermission('viewProviders');
+
+          // Create: Patient owner OR family member with manageProviders permission
+          // Validate: patientId must match, sentBy must be auth.uid
+          allow create: if (isOwner(userId) || hasFamilyPermission('manageProviders')) &&
+                          request.resource.data.patientId == patientId &&
+                          request.resource.data.sentBy == request.auth.uid;
+
+          // Update: Not allowed (communications are immutable after creation)
+          allow update: if false;
+
+          // Delete: Not allowed (keep audit trail)
+          allow delete: if false;
+        }
+
+        // Generated health reports for this patient
+        match /healthReports/{reportId} {
+          // Read: Patient owner OR family member with viewMedicalRecords permission
+          allow read: if isOwner(userId) || hasFamilyPermission('viewMedicalRecords');
+
+          // Create: Patient owner OR family member with viewMedicalRecords permission
+          // Validate: patientId must match, generatedBy must be auth.uid
+          allow create: if (isOwner(userId) || hasFamilyPermission('viewMedicalRecords')) &&
+                          request.resource.data.patientId == patientId &&
+                          request.resource.data.generatedBy == request.auth.uid;
+
+          // Update: Patient owner OR family member with viewMedicalRecords permission (for regeneration)
+          // Validate: patientId cannot be changed, generatedBy must be auth.uid
+          allow update: if (isOwner(userId) || hasFamilyPermission('viewMedicalRecords')) &&
+                          request.resource.data.patientId == resource.data.patientId &&
+                          request.resource.data.generatedBy == request.auth.uid;
+
+          // Delete: Patient owner only (only owner can delete reports)
+          allow delete: if isOwner(userId);
+        }
       }
 
       // ============================================

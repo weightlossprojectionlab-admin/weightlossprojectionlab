@@ -3,6 +3,7 @@ import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { Timestamp } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 export async function POST(
   request: NextRequest,
@@ -153,13 +154,9 @@ export async function POST(
       })
     }
   } catch (error) {
-    logger.error('Error moderating recipe', error as Error)
-    return NextResponse.json(
-      {
-        error: 'Failed to moderate recipe',
-        details: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/admin/recipes/[id]/moderate',
+      operation: 'create'
+    })
   }
 }
