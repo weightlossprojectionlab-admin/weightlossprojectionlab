@@ -6,22 +6,31 @@
  * - moderator: Content moderation (recipes, T&S cases)
  * - support: User support (view profiles, help with issues)
  *
- * Super Admins (hardcoded emails):
- * - perriceconsulting@gmail.com
- * - weigthlossprojectionlab@gmail.com
+ * Super Admins (configured via environment variable):
+ * - Set SUPER_ADMIN_EMAILS in .env.local (comma-separated list)
  * Super admins have full access that cannot be revoked.
  */
 
 export type AdminRole = 'admin' | 'moderator' | 'support'
 
-// Super admin emails with full access (cannot be revoked)
-const SUPER_ADMIN_EMAILS = [
-  'perriceconsulting@gmail.com',
-  'weigthlossprojectionlab@gmail.com',
-]
+// Super admin emails from environment variable (comma-separated)
+export const SUPER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAILS ?? '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean)
+
+// Log warning if no super admin emails are configured
+if (SUPER_ADMIN_EMAILS.length === 0 && typeof window === 'undefined') {
+  console.warn('⚠️  No super admin emails configured. Set SUPER_ADMIN_EMAILS in .env.local')
+}
 
 export const isSuperAdmin = (email: string | null | undefined): boolean => {
   if (!email) return false
+  return SUPER_ADMIN_EMAILS.includes(email.toLowerCase())
+}
+
+// Export a function variant for use in scripts
+export function isSuperAdminEmail(email: string): boolean {
   return SUPER_ADMIN_EMAILS.includes(email.toLowerCase())
 }
 
