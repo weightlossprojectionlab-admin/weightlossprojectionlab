@@ -105,15 +105,40 @@ class ApiClient {
   }
 
   /**
-   * Build request headers with authentication
+   * Get CSRF token from cookie
    */
-  private async buildHeaders(customHeaders?: HeadersInit): Promise<Headers> {
+  private getCsrfToken(): string | null {
+    if (typeof document === 'undefined') return null
+
+    const cookies = document.cookie.split(';')
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=')
+      if (name === 'csrf-token') {
+        return value
+      }
+    }
+    return null
+  }
+
+  /**
+   * Build request headers with authentication and CSRF token
+   */
+  private async buildHeaders(customHeaders?: HeadersInit, method?: string): Promise<Headers> {
     const headers = new Headers(customHeaders)
 
     // Add auth token if available
     const token = await this.getAuthToken()
     if (token) {
       headers.set('Authorization', `Bearer ${token}`)
+    }
+
+    // Add CSRF token for unsafe methods
+    const unsafeMethods = ['POST', 'PUT', 'PATCH', 'DELETE']
+    if (method && unsafeMethods.includes(method.toUpperCase())) {
+      const csrfToken = this.getCsrfToken()
+      if (csrfToken) {
+        headers.set('X-CSRF-Token', csrfToken)
+      }
     }
 
     // Add content type if not set
@@ -135,7 +160,8 @@ class ApiClient {
   ): Promise<T> {
     const mergedOptions = { ...this.defaultOptions, ...clientOptions }
     const url = `${this.baseUrl}${endpoint}`
-    const headers = await this.buildHeaders(options.headers)
+    const method = options.method || 'GET'
+    const headers = await this.buildHeaders(options.headers, method)
 
     try {
       const response = await fetch(url, {
