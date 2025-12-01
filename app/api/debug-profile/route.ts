@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
-import { errorResponse } from '@/lib/api-response'
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,9 +32,9 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/debug-profile',
-      operation: 'fetch'
-    })
+    return NextResponse.json({
+      error: 'Failed to fetch profile',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }

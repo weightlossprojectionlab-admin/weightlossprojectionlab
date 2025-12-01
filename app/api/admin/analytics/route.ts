@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/analytics?range=<range>
@@ -196,9 +195,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/analytics',
-      operation: 'fetch'
-    })
+    logger.error('Error fetching analytics', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch analytics' },
+      { status: 500 }
+    )
   }
 }

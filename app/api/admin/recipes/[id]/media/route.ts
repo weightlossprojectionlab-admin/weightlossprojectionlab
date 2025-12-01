@@ -3,7 +3,6 @@ import { adminDb, adminStorage, verifyIdToken } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { Timestamp } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 export async function POST(
   request: NextRequest,
@@ -185,10 +184,16 @@ export async function POST(
       },
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/recipes/[id]/media',
-      operation: 'create'
-    })
+    logger.error('Media Upload: Failed', error instanceof Error ? error : new Error(String(error)))
+
+    return NextResponse.json(
+      {
+        error: 'Failed to upload media',
+        details: error instanceof Error ? error.message : String(error),
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined,
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -242,9 +247,42 @@ export async function DELETE(
     try {
       await bucket.file(filePath).delete()
     } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/recipes/[id]/media',
-      operation: 'delete'
+      // File might not exist, that's okay
+      logger.debug('File not found in storage', { filePath })
+    }
+
+    // Update Firestore
+    const recipeRef = adminDb.collection('recipes').doc(recipeId)
+    await recipeRef.update({
+      [`${mediaType}Url`]: null,
+      [`${mediaType}StoragePath`]: null,
     })
+
+    // Log admin action
+    await logAdminAction({
+      adminUid,
+      adminEmail: decodedToken.email || 'unknown',
+      action: 'recipe_edit',
+      targetType: 'recipe',
+      targetId: recipeId,
+      metadata: {
+        deletedMediaType: mediaType,
+      },
+      reason: `Deleted recipe ${mediaType}`,
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: `${mediaType} deleted successfully`,
+    })
+  } catch (error) {
+    logger.error('Error deleting recipe media', error instanceof Error ? error : new Error(String(error)))
+    return NextResponse.json(
+      {
+        error: 'Failed to delete media',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    )
   }
 }

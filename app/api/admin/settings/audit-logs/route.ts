@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/settings/audit-logs?limit=<limit>
@@ -57,9 +56,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ logs })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/settings/audit-logs',
-      operation: 'fetch'
-    })
+    logger.error('Error fetching audit logs', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch audit logs' },
+      { status: 500 }
+    )
   }
 }

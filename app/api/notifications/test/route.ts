@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * Send a test notification to the authenticated user
@@ -31,11 +30,12 @@ export async function POST(request: NextRequest) {
       admin = await import('firebase-admin')
       logger.debug('[Test Notification] Firebase Admin imported')
     } catch (error) {
-    return errorResponse(error, {
-      route: '/api/notifications/test',
-      operation: 'create'
-    })
-  }
+      logger.error('[Test Notification] Failed to import Firebase Admin:', error as Error)
+      return NextResponse.json(
+        { error: 'Firebase Admin not initialized', details: (error as Error).message },
+        { status: 500 }
+      )
+    }
 
     // Verify token
     let decodedToken
@@ -43,11 +43,31 @@ export async function POST(request: NextRequest) {
       decodedToken = await adminAuth.verifyIdToken(idToken)
       logger.debug('[Test Notification] Token verified', { userId: decodedToken.uid })
     } catch (error) {
-    return errorResponse(error, {
-      route: '/api/notifications/test',
-      operation: 'create'
-    })
-  }
+      logger.error('[Test Notification] Token verification failed:', error as Error)
+      return NextResponse.json(
+        { error: 'Invalid authentication token', details: (error as Error).message },
+        { status: 401 }
+      )
+    }
+
+    const userId = decodedToken.uid
+
+    // Get user's FCM token
+    let userData
+    try {
+      const userDoc = await adminDb.collection('users').doc(userId).get()
+      userData = userDoc.data()
+      logger.debug('[Test Notification] User data retrieved', {
+        hasToken: !!userData?.notificationToken,
+        userId
+      })
+    } catch (error) {
+      logger.error('[Test Notification] Failed to get user data:', error as Error)
+      return NextResponse.json(
+        { error: 'Failed to retrieve user data', details: (error as Error).message },
+        { status: 500 }
+      )
+    }
 
     if (!userData?.notificationToken) {
       logger.warn('[Test Notification] No notification token found', { userId })
@@ -86,11 +106,16 @@ export async function POST(request: NextRequest) {
         messageId: response
       })
     } catch (error) {
-    return errorResponse(error, {
-      route: '/api/notifications/test',
-      operation: 'create'
-    })
-  }
+      logger.error('[Test Notification] FCM send failed:', error as Error)
+      return NextResponse.json(
+        {
+          error: 'Failed to send notification via FCM',
+          details: (error as Error).message,
+          hint: 'Make sure Firebase Cloud Messaging is properly configured in your Firebase project'
+        },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
@@ -99,9 +124,11 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/notifications/test',
-      operation: 'create'
-    })
+    logger.error('[Test Notification] Unexpected error:', error as Error)
+
+    return NextResponse.json(
+      { error: 'Failed to send test notification', details: (error as Error).message },
+      { status: 500 }
+    )
   }
 }

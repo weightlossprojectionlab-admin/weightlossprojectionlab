@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/recipes/[id]
@@ -41,10 +40,11 @@ export async function GET(
 
     return NextResponse.json({ recipe })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/recipes/[id]',
-      operation: 'fetch'
-    })
+    logger.error('Error fetching recipe', error as Error, { recipeId: params?.id })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch recipe' },
+      { status: 500 }
+    )
   }
 }
 
@@ -104,10 +104,11 @@ export async function PUT(
       message: 'Recipe updated successfully'
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/recipes/[id]',
-      operation: 'update'
-    })
+    logger.error('Error updating recipe', error as Error, { recipeId: params?.id })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to update recipe' },
+      { status: 500 }
+    )
   }
 }
 
@@ -162,9 +163,10 @@ export async function DELETE(
       message: 'Recipe deleted successfully'
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/recipes/[id]',
-      operation: 'delete'
-    })
+    logger.error('Error deleting recipe', error as Error, { recipeId: params?.id })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete recipe' },
+      { status: 500 }
+    )
   }
 }

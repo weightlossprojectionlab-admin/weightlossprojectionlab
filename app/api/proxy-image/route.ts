@@ -3,7 +3,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,9 +42,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/proxy-image',
-      operation: 'fetch'
-    })
+    logger.error('Error proxying Firebase Storage image', error as Error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

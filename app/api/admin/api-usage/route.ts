@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/api-usage
@@ -146,9 +145,10 @@ export async function GET(request: NextRequest) {
       recentLogs: logs.slice(0, 100)
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/api-usage',
-      operation: 'fetch'
-    })
+    logger.error('Error fetching API usage', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch API usage' },
+      { status: 500 }
+    )
   }
 }

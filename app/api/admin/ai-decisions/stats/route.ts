@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/ai-decisions/stats
@@ -71,9 +70,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ stats })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/ai-decisions/stats',
-      operation: 'fetch'
-    })
+    logger.error('Error fetching AI decision stats', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch stats' },
+      { status: 500 }
+    )
   }
 }

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 
 /**
@@ -143,9 +142,59 @@ export async function POST(request: NextRequest) {
           success: true
         })
       } catch (error) {
-    return errorResponse(error, {
-      route: '/api/shopping/confirm-purchases',
-      operation: 'create'
+        logger.error('Error confirming purchase for item', error as Error, { itemId })
+        results.push({
+          itemId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
+    }
+
+    // Commit all updates
+    try {
+      await batch.commit()
+    } catch (commitError) {
+      logger.error('Failed to commit batch update', commitError as Error, {
+        userId,
+        itemCount: itemIds.length
+      })
+
+      // Mark all pending items as failed
+      for (const result of results) {
+        if (result.success) {
+          result.success = false
+          result.error = 'Batch commit failed'
+        }
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length
+    const failedCount = results.filter(r => !r.success).length
+
+    logger.info('Purchase confirmation completed', {
+      userId,
+      store,
+      totalAmount,
+      successCount,
+      failedCount
     })
+
+    return NextResponse.json({
+      success: true,
+      message: `Confirmed purchase of ${successCount} item(s)`,
+      summary: {
+        total: itemIds.length,
+        successful: successCount,
+        failed: failedCount
+      },
+      results
+    })
+  } catch (error) {
+    logger.error('Error confirming purchases', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to confirm purchases' },
+      { status: 500 }
+    )
   }
 }

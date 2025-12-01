@@ -3,7 +3,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { adminAuth } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { classifyMedicationConditions, normalizeConditionName } from '@/lib/medication-classifier'
-import { errorResponse } from '@/lib/api-response'
 
 export const maxDuration = 60 // Allow up to 60 seconds for OCR processing
 
@@ -60,11 +59,47 @@ export async function POST(request: NextRequest) {
       userId = decodedToken.uid
       logger.debug('[OCR API] Authenticated user', { uid: userId })
     } catch (authError) {
-    return errorResponse(authError, {
-      route: '/api/ocr/medication',
-      operation: 'create'
-    })
-  }
+      logger.error('[OCR API] Auth failed', authError as Error)
+      return NextResponse.json(
+        { error: 'Unauthorized: Invalid authentication token' },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const { imageData } = body
+
+    if (!imageData) {
+      return NextResponse.json(
+        { error: 'Image data is required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate image data is a string
+    if (typeof imageData !== 'string') {
+      return NextResponse.json(
+        { error: 'Image data must be a base64 string' },
+        { status: 400 }
+      )
+    }
+
+    // Validate image data format
+    if (!imageData.startsWith('data:image/')) {
+      return NextResponse.json(
+        { error: 'Invalid image format. Please provide a valid base64 image.' },
+        { status: 400 }
+      )
+    }
+
+    // Check if Gemini API key is configured
+    if (!process.env.GEMINI_API_KEY) {
+      logger.error('[OCR API] GEMINI_API_KEY not configured')
+      return NextResponse.json(
+        { error: 'OCR service not configured' },
+        { status: 500 }
+      )
+    }
 
     logger.info('[OCR API] Processing medication image with Gemini Vision', { userId })
 
@@ -228,11 +263,28 @@ IMPORTANT: Make your best effort to find the prescribing doctor name - this is c
         })
       }
     } catch (classificationError) {
-    return errorResponse(classificationError, {
-      route: '/api/ocr/medication',
-      operation: 'create'
+      logger.error('[OCR API] Classification failed, continuing without suggestions', classificationError as Error)
+      // Continue without classification - don't fail the entire request
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...extracted,
+        suggestedConditions
+      }
     })
-  }
+
+  } catch (error) {
+    logger.error('[OCR API] Medication extraction failed', error as Error)
+
+    // Handle JSON parse errors specifically
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: 'Failed to parse medication information. Please try again with a clearer photo.' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(
       {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebase-admin'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * DELETE /api/patients/[patientId]/meal-logs/[logId]
@@ -50,9 +49,10 @@ export async function DELETE(
       message: 'Meal log deleted successfully',
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/patients/[patientId]/meal-logs/[logId]',
-      operation: 'delete'
-    })
+    console.error('Error deleting meal log:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete meal log' },
+      { status: 500 }
+    )
   }
 }

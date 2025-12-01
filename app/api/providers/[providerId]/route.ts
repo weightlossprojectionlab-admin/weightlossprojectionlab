@@ -10,7 +10,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { providerFormSchema } from '@/lib/validations/medical'
 import type { Provider } from '@/types/medical'
-import { errorResponse } from '@/lib/api-response'
 
 export async function GET(
   request: NextRequest,
@@ -57,10 +56,11 @@ export async function GET(
       data: provider
     })
   } catch (error: any) {
-    return errorResponse(error, {
-      route: '/api/providers/[providerId]',
-      operation: 'fetch'
-    })
+    console.error('Error fetching provider:', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to fetch provider' },
+      { status: 500 }
+    )
   }
 }
 
@@ -119,10 +119,19 @@ export async function PUT(
       message: 'Provider updated successfully'
     })
   } catch (error: any) {
-    return errorResponse(error, {
-      route: '/api/providers/[providerId]',
-      operation: 'update'
-    })
+    console.error('Error updating provider:', error)
+
+    if (error.name === 'ZodError') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid provider data', details: error.errors },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to update provider' },
+      { status: 500 }
+    )
   }
 }
 
@@ -170,9 +179,10 @@ export async function DELETE(
       message: 'Provider deleted successfully'
     })
   } catch (error: any) {
-    return errorResponse(error, {
-      route: '/api/providers/[providerId]',
-      operation: 'delete'
-    })
+    console.error('Error deleting provider:', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to delete provider' },
+      { status: 500 }
+    )
   }
 }

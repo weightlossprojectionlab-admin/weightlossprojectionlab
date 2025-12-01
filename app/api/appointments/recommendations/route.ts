@@ -7,7 +7,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyIdToken } from '@/lib/firebase-admin'
-import { errorResponse } from '@/lib/api-response'
 import {
   generateRecommendations,
   getActiveRecommendations
@@ -44,10 +43,12 @@ export async function GET(request: NextRequest) {
       count: recommendations.length
     })
   } catch (error: any) {
-    return errorResponse(error, {
-      route: '/api/appointments/recommendations',
-      operation: 'fetch'
-    })
+    console.error('[API /appointments/recommendations GET] Error:', error)
+    console.error('[API /appointments/recommendations GET] Error stack:', error.stack)
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch recommendations' },
+      { status: 500 }
+    )
   }
 }
 
@@ -83,9 +84,11 @@ export async function POST(request: NextRequest) {
       message: `Generated ${recommendations.length} recommendation${recommendations.length !== 1 ? 's' : ''}`
     })
   } catch (error: any) {
-    return errorResponse(error, {
-      route: '/api/appointments/recommendations',
-      operation: 'create'
-    })
+    console.error('[API /appointments/recommendations POST] Error:', error)
+    console.error('[API /appointments/recommendations POST] Error stack:', error.stack)
+    return NextResponse.json(
+      { error: error.message || 'Failed to generate recommendations' },
+      { status: 500 }
+    )
   }
 }

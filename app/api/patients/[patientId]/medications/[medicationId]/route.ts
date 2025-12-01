@@ -4,7 +4,6 @@ import { removeUndefinedValues } from '@/lib/firestore-helpers'
 import { logger } from '@/lib/logger'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
 import type { PatientMedication } from '@/types/medical'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * PATCH /api/patients/[patientId]/medications/[medicationId]
@@ -60,10 +59,11 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, data: medication })
   } catch (error: any) {
-    return errorResponse(error, {
-      route: '/api/patients/[patientId]/medications/[medicationId]',
-      operation: 'patch'
-    })
+    logger.error('[Medications API] Error updating medication', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to update medication', details: error.message },
+      { status: 500 }
+    )
   }
 }
 
@@ -123,9 +123,10 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    return errorResponse(error, {
-      route: '/api/patients/[patientId]/medications/[medicationId]',
-      operation: 'delete'
-    })
+    logger.error('[Medications API] Error deleting medication', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete medication', details: error.message },
+      { status: 500 }
+    )
   }
 }

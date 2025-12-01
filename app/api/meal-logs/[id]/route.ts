@@ -4,7 +4,6 @@ import { adminStorage } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
 import { generateSearchKeywords } from '@/lib/meal-title-utils'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 // PUT - Update a specific meal log
 export async function PUT(
@@ -130,10 +129,14 @@ export async function PUT(
     })
 
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/meal-logs/[id]',
-      operation: 'update'
-    })
+    logger.error('Error updating meal log', error instanceof Error ? error : new Error(String(error)))
+    return NextResponse.json(
+      {
+        error: 'Failed to update meal log',
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -199,9 +202,27 @@ export async function DELETE(
           logger.info('Deleted photo from Storage', { storagePath })
         }
       } catch (storageError) {
-    return errorResponse(storageError, {
-      route: '/api/meal-logs/[id]',
-      operation: 'delete'
+        logger.warn('Failed to delete photo from Storage', { error: storageError })
+        // Continue with document deletion even if photo deletion fails
+      }
+    }
+
+    // Delete the meal log document
+    await mealLogRef.delete()
+
+    return NextResponse.json({
+      success: true,
+      message: 'Meal log deleted successfully'
     })
+
+  } catch (error) {
+    logger.error('Error deleting meal log', error instanceof Error ? error : new Error(String(error)))
+    return NextResponse.json(
+      {
+        error: 'Failed to delete meal log',
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    )
   }
 }

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/users/export?uid=<uid>
@@ -103,9 +102,10 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/users/export',
-      operation: 'fetch'
-    })
+    logger.error('Error exporting user data', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to export user data' },
+      { status: 500 }
+    )
   }
 }

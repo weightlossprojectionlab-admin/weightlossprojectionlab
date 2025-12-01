@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 interface ScanEvent {
   id: string
@@ -171,10 +170,13 @@ export async function GET(
       }
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/products/[barcode]',
-      operation: 'fetch'
+    logger.error('Error fetching product details', error as Error, {
+      barcode: params?.barcode
     })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch product details' },
+      { status: 500 }
+    )
   }
 }
 
@@ -304,9 +306,12 @@ export async function PUT(
       barcode
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/products/[barcode]',
-      operation: 'update'
+    logger.error('Error updating product', error as Error, {
+      barcode: params?.barcode
     })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to update product' },
+      { status: 500 }
+    )
   }
 }

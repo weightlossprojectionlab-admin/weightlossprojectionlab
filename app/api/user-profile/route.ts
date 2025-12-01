@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { UpdateUserProfileRequestSchema } from '@/lib/validations/user-profile'
-import { errorResponse } from '@/lib/api-response'
 import { z } from 'zod'
 
 interface UserProfile {
@@ -98,10 +97,15 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    return errorResponse(error, {
-      route: '/api/user-profile',
-      operation: 'fetch'
-    })
+    logger.error('Error fetching user profile', error instanceof Error ? error : new Error(String(error)))
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch user profile',
+        details: error?.message || 'Unknown error',
+        code: error?.code || 'UNKNOWN_ERROR'
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -213,10 +217,15 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error: any) {
-    return errorResponse(error, {
-      route: '/api/user-profile',
-      operation: 'create'
-    })
+    logger.error('Error creating user profile', error instanceof Error ? error : new Error(String(error)))
+    return NextResponse.json(
+      {
+        error: 'Failed to create user profile',
+        details: error?.message || 'Unknown error',
+        code: error?.code || 'UNKNOWN_ERROR'
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -342,9 +351,65 @@ export async function PUT(request: NextRequest) {
       await adminDb.collection('users').doc(userId).update(flattenedUpdate)
       console.log('[PUT Profile] update() succeeded')
     } catch (updateError: any) {
-    return errorResponse(updateError: any, {
-      route: '/api/user-profile',
-      operation: 'update'
+      // If update fails (doc doesn't exist or parent objects missing), use set with merge
+      console.log('[UserProfile API] update() failed, falling back to set() with merge:', updateError.message)
+      await adminDb.collection('users').doc(userId).set(updateData, { merge: true })
+      console.log('[PUT Profile] set() with merge succeeded')
+    }
+
+    // Get updated profile
+    const updatedDoc = await adminDb.collection('users').doc(userId).get()
+    const updatedData = updatedDoc.data()
+
+    const updatedProfile = {
+      id: userId,
+      ...updatedData,
+      createdAt: updatedData?.createdAt?.toDate?.()?.toISOString() || null,
+      lastActiveAt: updatedData?.lastActiveAt?.toDate?.()?.toISOString() || null,
+      goals: {
+        ...updatedData?.goals,
+        targetDate: updatedData?.goals?.targetDate?.toDate?.()?.toISOString() || null
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: updatedProfile,
+      message: 'User profile updated successfully'
     })
+
+  } catch (error: any) {
+    // Log full error details before serialization
+    console.error('[UserProfile API] Error updating profile:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+      name: error?.name,
+      isZodError: error instanceof z.ZodError
+    })
+
+    // Handle Zod validation errors
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.issues.map((e: z.ZodIssue) => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        },
+        { status: 400 }
+      )
+    }
+
+    logger.error('Error updating user profile', error instanceof Error ? error : new Error(String(error)))
+    return NextResponse.json(
+      {
+        error: 'Failed to update user profile',
+        details: error?.message || 'Unknown error',
+        code: error?.code || 'UNKNOWN_ERROR'
+      },
+      { status: 500 }
+    )
   }
 }

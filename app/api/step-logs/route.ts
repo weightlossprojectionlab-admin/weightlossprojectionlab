@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 interface StepLog {
   steps: number
@@ -71,10 +70,11 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/step-logs',
-      operation: 'fetch'
-    })
+    logger.error('Error fetching step logs', error instanceof Error ? error : new Error(String(error)))
+    return NextResponse.json(
+      { error: 'Failed to fetch step logs' },
+      { status: 500 }
+    )
   }
 }
 
@@ -206,9 +206,10 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/step-logs',
-      operation: 'create'
-    })
+    logger.error('Error creating step log', error instanceof Error ? error : new Error(String(error)))
+    return NextResponse.json(
+      { error: 'Failed to create step log' },
+      { status: 500 }
+    )
   }
 }

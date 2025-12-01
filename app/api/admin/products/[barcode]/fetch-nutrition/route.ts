@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { lookupBarcodeServer } from '@/lib/openfoodfacts-server'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * POST /api/admin/products/[barcode]/fetch-nutrition
@@ -154,9 +153,12 @@ export async function POST(
       }
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/products/[barcode]/fetch-nutrition',
-      operation: 'create'
+    logger.error('Error fetching nutrition data', error as Error, {
+      barcode: params?.barcode
     })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch nutrition data' },
+      { status: 500 }
+    )
   }
 }

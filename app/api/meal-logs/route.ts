@@ -4,7 +4,6 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { generateSearchKeywords } from '@/lib/meal-title-utils'
 import { logger } from '@/lib/logger'
 import { ErrorHandler } from '@/lib/utils/error-handler'
-import { errorResponse } from '@/lib/api-response'
 import {
   CreateMealLogRequestSchema,
   GetMealLogsQuerySchema,
@@ -74,10 +73,17 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/meal-logs',
-      operation: 'fetch'
+    ErrorHandler.handle(error, {
+      operation: 'fetch_meal_logs',
+      component: 'api/meal-logs',
+      userId: 'unknown'
     })
+
+    const userMessage = ErrorHandler.getUserMessage(error)
+    return NextResponse.json(
+      { error: userMessage },
+      { status: 500 }
+    )
   }
 }
 
@@ -229,9 +235,19 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/meal-logs',
-      operation: 'create'
+    ErrorHandler.handle(error, {
+      operation: 'create_meal_log',
+      component: 'api/meal-logs',
+      userId: 'unknown'
     })
+
+    const userMessage = ErrorHandler.getUserMessage(error)
+    return NextResponse.json(
+      {
+        error: userMessage,
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      { status: 500 }
+    )
   }
 }

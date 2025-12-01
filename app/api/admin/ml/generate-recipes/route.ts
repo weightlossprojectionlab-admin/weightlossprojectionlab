@@ -3,7 +3,6 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
 import { generateRecipesFromAssociations, saveGeneratedRecipes } from '@/lib/ml-recipe-generator'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * POST /api/admin/ml/generate-recipes
@@ -131,10 +130,11 @@ export async function POST(request: NextRequest) {
       limit
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/ml/generate-recipes',
-      operation: 'create'
-    })
+    logger.error('Error triggering recipe generation', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to start recipe generation' },
+      { status: 500 }
+    )
   }
 }
 
@@ -178,9 +178,10 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/ml/generate-recipes',
-      operation: 'fetch'
-    })
+    logger.error('Error fetching recipe generation status', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch status' },
+      { status: 500 }
+    )
   }
 }

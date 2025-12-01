@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateRecipeSteps } from '@/lib/ai-recipe-generator'
 import { MealSuggestion } from '@/lib/meal-suggestions'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 export const runtime = 'edge'
 
@@ -29,9 +28,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/recipes/generate-steps',
-      operation: 'create'
-    })
+    logger.error('Error generating recipe steps', error as Error)
+    return NextResponse.json(
+      { error: 'Failed to generate recipe steps' },
+      { status: 500 }
+    )
   }
 }
