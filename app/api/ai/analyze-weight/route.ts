@@ -10,6 +10,7 @@ import { logger } from '@/lib/logger'
 import { adminAuth } from '@/lib/firebase-admin'
 import { aiRateLimit, dailyRateLimit, getRateLimitHeaders } from '@/lib/utils/rate-limit'
 import { ErrorHandler } from '@/lib/utils/error-handler'
+import { errorResponse } from '@/lib/api-response'
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -34,60 +35,11 @@ export async function POST(request: NextRequest) {
       userId = decodedToken.uid
       logger.debug('Authenticated user for weight verification', { uid: userId })
     } catch (authError) {
-      ErrorHandler.handle(authError, {
-        operation: 'ai_analyze_weight_auth',
-        component: 'api/ai/analyze-weight'
-      })
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Invalid authentication token' },
-        { status: 401 }
-      )
-    }
-
-    // Check rate limits (both per-minute and daily)
-    const [minuteLimit, dayLimit] = await Promise.all([
-      aiRateLimit?.limit(userId),
-      dailyRateLimit?.limit(userId)
-    ])
-
-    if (minuteLimit && !minuteLimit.success) {
-      return NextResponse.json(
-        { success: false, error: 'Rate limit: 10 requests per minute. Please try again in a moment.' },
-        {
-          status: 429,
-          headers: getRateLimitHeaders(minuteLimit)
-        }
-      )
-    }
-
-    if (dayLimit && !dayLimit.success) {
-      return NextResponse.json(
-        { success: false, error: 'Daily limit reached (500 requests). Please try again tomorrow.' },
-        {
-          status: 429,
-          headers: getRateLimitHeaders(dayLimit)
-        }
-      )
-    }
-
-    const body = await request.json()
-    const { imageBase64, expectedUnit } = body
-
-    if (!imageBase64) {
-      return NextResponse.json(
-        { success: false, error: 'No image provided' },
-        { status: 400 }
-      )
-    }
-
-    // Verify API key is configured
-    if (!process.env.GEMINI_API_KEY) {
-      logger.warn('GEMINI_API_KEY not configured for weight verification')
-      return NextResponse.json(
-        { success: false, error: 'AI service not configured' },
-        { status: 500 }
-      )
-    }
+    return errorResponse(authError, {
+      route: '/api/ai/analyze-weight',
+      operation: 'create'
+    })
+  }
 
     // Use Gemini Pro Vision model
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
@@ -145,18 +97,11 @@ Analyze the image now:`
       const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text
       analysis = JSON.parse(jsonStr.trim())
     } catch (parseError) {
-      ErrorHandler.handle(parseError, {
-        operation: 'ai_weight_parse_response',
-        userId,
-        component: 'api/ai/analyze-weight',
-        severity: 'warning',
-        metadata: { rawText: text }
-      })
-      return NextResponse.json(
-        { success: false, error: 'Failed to parse scale reading' },
-        { status: 500 }
-      )
-    }
+    return errorResponse(parseError, {
+      route: '/api/ai/analyze-weight',
+      operation: 'create'
+    })
+  }
 
     // Validate the response structure
     if (!analysis || typeof analysis.weight === 'undefined') {
@@ -217,20 +162,10 @@ Analyze the image now:`
     })
 
   } catch (error) {
-    ErrorHandler.handle(error, {
-      operation: 'ai_analyze_weight',
-      component: 'api/ai/analyze-weight',
-      userId: 'unknown'
+    return errorResponse(error, {
+      route: '/api/ai/analyze-weight',
+      operation: 'create'
     })
-
-    const userMessage = ErrorHandler.getUserMessage(error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: userMessage
-      },
-      { status: 500 }
-    )
   }
 }
 

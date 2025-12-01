@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { appointmentFormSchema } from '@/lib/validations/medical'
 import type { Appointment } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 
 export async function GET(
   request: NextRequest,
@@ -56,11 +57,10 @@ export async function GET(
       data: appointment
     })
   } catch (error: any) {
-    console.error('Error fetching appointment:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch appointment' },
-      { status: 500 }
-    )
+    return errorResponse(error: any, {
+      route: '/api/appointments/[appointmentId]',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -125,19 +125,10 @@ export async function PUT(
       message: 'Appointment updated successfully'
     })
   } catch (error: any) {
-    console.error('Error updating appointment:', error)
-
-    if (error.name === 'ZodError') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid appointment data', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update appointment' },
-      { status: 500 }
-    )
+    return errorResponse(error: any, {
+      route: '/api/appointments/[appointmentId]',
+      operation: 'update'
+    })
   }
 }
 
@@ -185,10 +176,9 @@ export async function DELETE(
       message: 'Appointment deleted successfully'
     })
   } catch (error: any) {
-    console.error('Error deleting appointment:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to delete appointment' },
-      { status: 500 }
-    )
+    return errorResponse(error: any, {
+      route: '/api/appointments/[appointmentId]',
+      operation: 'delete'
+    })
   }
 }

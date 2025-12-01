@@ -3,6 +3,7 @@ import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
 import { ErrorHandler } from '@/lib/utils/error-handler'
+import { errorResponse } from '@/lib/api-response'
 import {
   CreateWeightLogRequestSchema,
   GetWeightLogsQuerySchema,
@@ -68,17 +69,10 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    ErrorHandler.handle(error, {
-      operation: 'fetch_weight_logs',
-      component: 'api/weight-logs',
-      userId: 'unknown'
+    return errorResponse(error, {
+      route: '/api/weight-logs',
+      operation: 'fetch'
     })
-
-    const userMessage = ErrorHandler.getUserMessage(error)
-    return NextResponse.json(
-      { error: userMessage },
-      { status: 500 }
-    )
   }
 }
 
@@ -139,16 +133,9 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    ErrorHandler.handle(error, {
-      operation: 'create_weight_log',
-      component: 'api/weight-logs',
-      userId: 'unknown'
+    return errorResponse(error, {
+      route: '/api/weight-logs',
+      operation: 'create'
     })
-
-    const userMessage = ErrorHandler.getUserMessage(error)
-    return NextResponse.json(
-      { error: userMessage },
-      { status: 500 }
-    )
   }
 }

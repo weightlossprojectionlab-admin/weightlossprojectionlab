@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import type { FamilyInvitation } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 
 export async function POST(
   request: NextRequest,
@@ -74,10 +75,9 @@ export async function POST(
       message: 'Invitation declined'
     })
   } catch (error: any) {
-    console.error('Error declining invitation:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to decline invitation' },
-      { status: 500 }
-    )
+    return errorResponse(error: any, {
+      route: '/api/invitations/[invitationId]/decline',
+      operation: 'create'
+    })
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/products?search=&category=&limit=50&pageToken=
@@ -97,10 +98,9 @@ export async function GET(request: NextRequest) {
       count: products.length
     })
   } catch (error) {
-    logger.error('Error fetching products', error as Error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch products' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/admin/products',
+      operation: 'fetch'
+    })
   }
 }

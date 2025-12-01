@@ -19,6 +19,7 @@ import {
 } from '@/lib/inactive-detection'
 import { initAdmin } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * POST /api/inactive/detect
@@ -47,48 +48,10 @@ export async function POST(request: NextRequest) {
     try {
       decodedToken = await getAuth().verifyIdToken(token)
     } catch (error) {
-      logger.error('Token verification failed', error instanceof Error ? error : new Error(String(error)))
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    // Check if user is admin
-    const adminEmails = [
-      'perriceconsulting@gmail.com',
-      'weigthlossprojectionlab@gmail.com'
-    ]
-
-    if (!adminEmails.includes(decodedToken.email || '')) {
-      return NextResponse.json(
-        { error: 'Forbidden - Admin access required' },
-        { status: 403 }
-      )
-    }
-
-    // Run detection
-    logger.info('Running inactive user detection')
-
-    const result = await runDailyDetection()
-
-    return NextResponse.json({
-      success: true,
-      detected: result.detected,
-      campaigns: result.campaigns,
-      errors: result.errors,
-      timestamp: new Date().toISOString()
+    return errorResponse(error, {
+      route: '/api/inactive/detect',
+      operation: 'create'
     })
-  } catch (error) {
-    logger.error('Error running inactive detection', error instanceof Error ? error : new Error(String(error)))
-
-    return NextResponse.json(
-      {
-        error: 'Failed to run inactive detection',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
   }
 }
 
@@ -119,56 +82,9 @@ export async function GET(request: NextRequest) {
     try {
       decodedToken = await getAuth().verifyIdToken(token)
     } catch (error) {
-      logger.error('Token verification failed', error instanceof Error ? error : new Error(String(error)))
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    // Check if user is admin
-    const adminEmails = [
-      'perriceconsulting@gmail.com',
-      'weigthlossprojectionlab@gmail.com'
-    ]
-
-    if (!adminEmails.includes(decodedToken.email || '')) {
-      return NextResponse.json(
-        { error: 'Forbidden - Admin access required' },
-        { status: 403 }
-      )
-    }
-
-    // Get analytics
-    logger.info('Generating inactivity analytics')
-
-    const analytics = await analyzeInactivity()
-
-    return NextResponse.json({
-      success: true,
-      analytics: {
-        totalUsers: analytics.totalUsers,
-        activeUsers: analytics.activeUsers,
-        inactiveUsers: analytics.inactiveUsers,
-        inactivityRate: analytics.totalUsers > 0
-          ? ((analytics.inactiveUsers / analytics.totalUsers) * 100).toFixed(1)
-          : 0,
-        breakdown: analytics.breakdown,
-        averageInactiveDays: analytics.averageInactiveDays,
-        churnRisk: analytics.churnRisk,
-        campaignsNeeded: analytics.campaignsNeeded,
-        analyzedAt: analytics.analyzedAt.toISOString()
-      }
+    return errorResponse(error, {
+      route: '/api/inactive/detect',
+      operation: 'fetch'
     })
-  } catch (error) {
-    logger.error('Error getting inactivity analytics', error instanceof Error ? error : new Error(String(error)))
-
-    return NextResponse.json(
-      {
-        error: 'Failed to get analytics',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
   }
 }

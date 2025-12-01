@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/recipes?status=&limit=
@@ -55,11 +56,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ recipes, count: recipes.length })
   } catch (error) {
-    logger.error('Error fetching recipes', error as Error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch recipes' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/admin/recipes',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -146,10 +146,9 @@ export async function POST(request: NextRequest) {
       recipe: recipeData
     })
   } catch (error) {
-    logger.error('Error creating recipe', error as Error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create recipe' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/admin/recipes',
+      operation: 'create'
+    })
   }
 }

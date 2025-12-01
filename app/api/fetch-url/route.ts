@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
+import { rateLimit } from '@/lib/rate-limit'
 
 /**
  * API Route: Fetch URL
  *
  * Proxy endpoint to fetch external URLs and bypass CORS restrictions
  * Used by recipe import to fetch recipe pages
+ *
+ * Rate Limited: 10 requests per minute (SEC-006)
  */
 export async function GET(request: NextRequest) {
+  // Apply rate limiting FIRST (SEC-006)
+  const rateLimitResponse = await rateLimit(request, 'fetch-url')
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams
     const url = searchParams.get('url')
@@ -63,11 +73,10 @@ export async function GET(request: NextRequest) {
         'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
       }
     })
-  } catch (error: any) {
-    logger.error('Error fetching URL', error instanceof Error ? error : new Error(String(error)))
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch URL' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/fetch-url',
+      operation: 'fetch'
+    })
   }
 }

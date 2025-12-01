@@ -12,6 +12,7 @@ import {
 import { logger } from '@/lib/logger'
 import { aiRateLimit, dailyRateLimit, getRateLimitHeaders } from '@/lib/utils/rate-limit'
 import { ErrorHandler } from '@/lib/utils/error-handler'
+import { errorResponse } from '@/lib/api-response'
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -166,13 +167,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    ErrorHandler.handle(error, {
-      operation: 'ai_chat_post',
-      userId: 'unknown',
-      component: 'api/ai/chat'
-    })
-
-    // Return helpful error message
+    // Check for specific error types before generic handling
     if (error instanceof Error && error.message.includes('rate limit')) {
       return NextResponse.json(
         { error: 'Rate limit exceeded. Please try again in a moment.' },
@@ -187,11 +182,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userMessage = ErrorHandler.getUserMessage(error)
-    return NextResponse.json(
-      { error: userMessage },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/ai/chat',
+      operation: 'post'
+    })
   }
 }
 
@@ -223,15 +217,9 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    ErrorHandler.handle(error, {
-      operation: 'ai_chat_get_history',
-      component: 'api/ai/chat'
+    return errorResponse(error, {
+      route: '/api/ai/chat',
+      operation: 'get_history'
     })
-
-    const userMessage = ErrorHandler.getUserMessage(error)
-    return NextResponse.json(
-      { error: userMessage },
-      { status: 500 }
-    )
   }
 }

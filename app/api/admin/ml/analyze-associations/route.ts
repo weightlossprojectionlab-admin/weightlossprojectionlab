@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { analyzeProductAssociations } from '@/scripts/analyze-product-associations'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * POST /api/admin/ml/analyze-associations
@@ -105,11 +106,10 @@ export async function POST(request: NextRequest) {
       note: 'This is a background process. Check analysis status for progress.'
     })
   } catch (error) {
-    logger.error('Error triggering product association analysis', error as Error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to start analysis' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/admin/ml/analyze-associations',
+      operation: 'create'
+    })
   }
 }
 
@@ -149,10 +149,9 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    logger.error('Error fetching analysis status', error as Error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch status' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/admin/ml/analyze-associations',
+      operation: 'fetch'
+    })
   }
 }

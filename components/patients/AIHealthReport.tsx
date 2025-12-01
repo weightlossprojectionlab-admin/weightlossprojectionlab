@@ -291,7 +291,7 @@ export function AIHealthReport({
             <SparklesIcon className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-foreground text-lg">AI Health Summary</h3>
+            <h3 className="font-bold text-foreground text-lg">Health Summary</h3>
             <p className="text-xs text-muted-foreground">
               {lastGenerated ? `Generated ${lastGenerated.toLocaleString()}` : 'Comprehensive health analysis'}
             </p>
@@ -342,7 +342,7 @@ export function AIHealthReport({
         <div className="text-center py-8">
           <SparklesIcon className="w-16 h-16 mx-auto text-purple-300 dark:text-purple-600 mb-3" />
           <p className="text-muted-foreground mb-4">
-            Click the button above to generate an AI-powered health summary analyzing:
+            Click the button above to generate a comprehensive health summary analyzing:
           </p>
           <ul className="text-sm text-muted-foreground space-y-1 text-left max-w-md mx-auto">
             <li>✓ Vital signs and health metrics</li>
@@ -365,7 +365,7 @@ export function AIHealthReport({
             <div className="h-4 bg-purple-200 dark:bg-purple-800 rounded w-2/3 mx-auto"></div>
           </div>
           <p className="text-purple-600 dark:text-purple-400 mt-4 text-sm">
-            Analyzing health data with AI...
+            Analyzing health data...
           </p>
         </div>
       )}
@@ -505,7 +505,7 @@ export function AIHealthReport({
       {report && (
         <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
           <p className="text-xs text-amber-800 dark:text-amber-200">
-            <strong>⚠️ Important:</strong> This AI-generated summary is for informational purposes only and should not replace professional medical advice.
+            <strong>⚠️ Important:</strong> This automated summary is for informational purposes only and should not replace professional medical advice.
             Always consult with qualified healthcare providers for medical decisions.
           </p>
         </div>

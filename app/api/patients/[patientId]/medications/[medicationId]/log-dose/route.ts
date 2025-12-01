@@ -3,6 +3,7 @@ import { db } from '@/lib/firebase'
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * POST /api/patients/[patientId]/medications/[medicationId]/log-dose
@@ -102,11 +103,10 @@ export async function POST(
 
     return NextResponse.json(updatedMedication)
   } catch (error: any) {
-    logger.error('[LogDose] Error logging dose', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to log dose' },
-      { status: 500 }
-    )
+    return errorResponse(error: any, {
+      route: '/api/patients/[patientId]/medications/[medicationId]/log-dose',
+      operation: 'create'
+    })
   }
 }
 

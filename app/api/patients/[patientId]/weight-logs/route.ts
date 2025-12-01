@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { WeightLog } from '@/types/medical'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/patients/[patientId]/weight-logs
@@ -58,11 +59,10 @@ export async function GET(
 
     return NextResponse.json({ data: filteredLogs })
   } catch (error) {
-    console.error('Error fetching weight logs:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch weight logs' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/weight-logs',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -147,10 +147,9 @@ export async function POST(
       },
     })
   } catch (error) {
-    console.error('Error creating weight log:', error)
-    return NextResponse.json(
-      { error: 'Failed to create weight log' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/weight-logs',
+      operation: 'create'
+    })
   }
 }

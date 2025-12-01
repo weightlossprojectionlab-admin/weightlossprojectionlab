@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import type { Provider } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 import { z } from 'zod'
 
 const linkPatientSchema = z.object({
@@ -98,18 +99,9 @@ export async function POST(
       message: 'Provider linked to patient successfully'
     })
   } catch (error: any) {
-    console.error('Error linking provider to patient:', error)
-
-    if (error.name === 'ZodError') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid request data', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to link provider to patient' },
-      { status: 500 }
-    )
+    return errorResponse(error: any, {
+      route: '/api/providers/[providerId]/patients',
+      operation: 'create'
+    })
   }
 }

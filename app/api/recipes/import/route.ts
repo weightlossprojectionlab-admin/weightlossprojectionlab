@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { importRecipeFromUrl, calculateRecipeNutrition } from '@/lib/recipe-import'
 import { verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 export const maxDuration = 60 // Recipe imports can take time
 
@@ -47,13 +48,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(recipe)
   } catch (error) {
-    logger.error('Error importing recipe', error as Error)
-    return NextResponse.json(
-      {
-        error: 'Failed to import recipe',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/recipes/import',
+      operation: 'create'
+    })
   }
 }

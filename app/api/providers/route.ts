@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { providerFormSchema } from '@/lib/validations/medical'
 import type { Provider } from '@/types/medical'
+import { errorResponse } from '@/lib/api-response'
 import { v4 as uuidv4 } from 'uuid'
 
 export async function GET(request: NextRequest) {
@@ -50,11 +51,10 @@ export async function GET(request: NextRequest) {
       data: providers
     })
   } catch (error: any) {
-    console.error('Error fetching providers:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch providers' },
-      { status: 500 }
-    )
+    return errorResponse(error: any, {
+      route: '/api/providers',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -131,19 +131,9 @@ export async function POST(request: NextRequest) {
       message: 'Provider created successfully'
     })
   } catch (error: any) {
-    console.error('Error creating provider:', error)
-
-    if (error.name === 'ZodError') {
-      console.error('[API Providers POST] Zod validation errors:', JSON.stringify(error.errors, null, 2))
-      return NextResponse.json(
-        { success: false, error: 'Invalid provider data', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create provider' },
-      { status: 500 }
-    )
+    return errorResponse(error: any, {
+      route: '/api/providers',
+      operation: 'create'
+    })
   }
 }

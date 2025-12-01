@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminDb } from '@/lib/firebase-admin'
+import { errorResponse } from '@/lib/api-response'
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,10 +51,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(invitation)
   } catch (error) {
-    console.error('Error verifying invitation code:', error)
-    return NextResponse.json(
-      { error: 'Failed to verify invitation code' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/invitations/verify',
+      operation: 'fetch'
+    })
   }
 }

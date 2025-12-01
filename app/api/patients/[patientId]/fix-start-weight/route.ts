@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * One-time API endpoint to fix missing startWeight for a patient
@@ -103,13 +104,9 @@ export async function POST(
       source: 'weightLog'
     })
   } catch (error) {
-    console.error('Error fixing patient start weight:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to fix start weight',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/fix-start-weight',
+      operation: 'create'
+    })
   }
 }
