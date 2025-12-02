@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 // Parse allowed origins from environment variable
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
@@ -63,7 +64,9 @@ export async function GET(request: NextRequest) {
     // Return the image with appropriate headers
     return new NextResponse(buffer, { headers })
   } catch (error) {
-    logger.error('Error proxying Firebase Storage image', error as Error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return errorResponse(error, {
+      route: '/api/proxy-image',
+      operation: 'fetch'
+    })
   }
 }

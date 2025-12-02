@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { errorResponse } from '@/lib/api-response'
 
 export async function DELETE(
   request: NextRequest,
@@ -44,10 +45,9 @@ export async function DELETE(
       message: 'Document deleted successfully'
     })
   } catch (error) {
-    console.error('Error deleting document:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to delete document' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/documents/[documentId]',
+      operation: 'delete'
+    })
   }
 }

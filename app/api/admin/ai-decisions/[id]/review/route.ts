@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb as db } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import type { AIHealthProfile } from '@/types'
+import { errorResponse } from '@/lib/api-response'
 
 interface RouteParams {
   params: Promise<{
@@ -56,95 +57,10 @@ export async function POST(
 
       logger.debug('[AI Decision Review] Admin authenticated', { adminUid })
     } catch (authError) {
-      logger.error('[AI Decision Review] Auth failed', authError as Error)
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid authentication token' },
-        { status: 401 }
-      )
-    }
-
-    // 2. Parse request body
-    const body = await request.json()
-    const { action, notes, modifiedData } = body
-
-    if (!action || !['approve', 'reject', 'modify'].includes(action)) {
-      return NextResponse.json(
-        { error: 'Invalid action - must be approve, reject, or modify' },
-        { status: 400 }
-      )
-    }
-
-    // 3. Fetch AI decision document
-    const decisionRef = db.collection('ai-decisions').doc(id)
-    const decisionDoc = await decisionRef.get()
-
-    if (!decisionDoc.exists) {
-      return NextResponse.json(
-        { error: 'AI decision not found' },
-        { status: 404 }
-      )
-    }
-
-    const decision = decisionDoc.data()
-
-    logger.info('[AI Decision Review] Processing review', {
-      decisionId: id,
-      type: decision?.type,
-      action,
-      adminUid
+    return errorResponse(authError, {
+      route: '/api/admin/ai-decisions/[id]/review',
+      operation: 'create'
     })
-
-    // 4. Handle review action based on decision type
-    if (decision?.type === 'health-profile') {
-      await handleHealthProfileReview({
-        decisionId: id,
-        decisionRef,
-        decision,
-        action,
-        notes,
-        modifiedData,
-        adminUid
-      })
-    } else if (decision?.type === 'meal-safety') {
-      await handleMealSafetyReview({
-        decisionId: id,
-        decisionRef,
-        decision,
-        action,
-        notes,
-        adminUid
-      })
-    } else {
-      // Generic review for other decision types
-      await decisionRef.update({
-        reviewStatus: action === 'approve' ? 'approved' : 'rejected',
-        adminNotes: notes || '',
-        reviewedAt: new Date(),
-        reviewedBy: adminUid
-      })
-    }
-
-    logger.info('[AI Decision Review] Review completed', {
-      decisionId: id,
-      action,
-      adminUid
-    })
-
-    return NextResponse.json({
-      ok: true,
-      message: `Decision ${action}d successfully`
-    })
-
-  } catch (error) {
-    logger.error('[AI Decision Review] Review failed', error as Error)
-
-    return NextResponse.json(
-      {
-        error: 'Failed to review AI decision',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
   }
 }
 

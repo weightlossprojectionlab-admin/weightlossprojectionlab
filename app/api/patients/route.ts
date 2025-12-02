@@ -12,6 +12,7 @@ import { logger } from '@/lib/logger'
 import { patientProfileFormSchema } from '@/lib/validations/medical'
 import type { PatientProfile } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
+import { errorResponse } from '@/lib/api-response'
 
 // GET /api/patients - List all patients for the authenticated user
 export async function GET(request: NextRequest) {
@@ -128,12 +129,11 @@ export async function GET(request: NextRequest) {
       data: allPatients
     })
 
-  } catch (error: any) {
-    logger.error('[API /patients GET] Error fetching patients', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch patients' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients',
+      operation: 'list'
+    })
   }
 }
 
@@ -311,11 +311,10 @@ export async function POST(request: NextRequest) {
       data: newPatient
     }, { status: 201 })
 
-  } catch (error: any) {
-    logger.error('[API /patients POST] Error creating patient', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create patient' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients',
+      operation: 'create'
+    })
   }
 }

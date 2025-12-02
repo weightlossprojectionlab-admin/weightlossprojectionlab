@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 // GET - Get all meal templates for the user
 export async function GET(request: NextRequest) {
@@ -39,14 +40,10 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Error fetching meal templates', error instanceof Error ? error : new Error(String(error)))
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch meal templates',
-        details: error instanceof Error ? error.message : String(error)
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/meal-templates',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -111,13 +108,9 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Error creating meal template', error instanceof Error ? error : new Error(String(error)))
-    return NextResponse.json(
-      {
-        error: 'Failed to create meal template',
-        details: error instanceof Error ? error.message : String(error)
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/meal-templates',
+      operation: 'create'
+    })
   }
 }

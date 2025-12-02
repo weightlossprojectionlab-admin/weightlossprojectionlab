@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 // Set max duration to 25 seconds (just under Netlify's 26s limit)
 export const maxDuration = 25
@@ -90,32 +91,9 @@ export async function DELETE(request: NextRequest) {
         deletionResults.push({ collection: collectionName, deleted: deletedCount })
 
       } catch (error) {
-        logger.error('Error deleting collection', error instanceof Error ? error : new Error(String(error)), { collectionName })
-        deletionResults.push({
-          collection: collectionName,
-          deleted: 0,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        })
-      }
-    }
-
-    logger.info('All data reset completed', { userId })
-
-    return NextResponse.json({
-      success: true,
-      message: 'All user data has been reset. You can now start onboarding again.',
-      deletionResults,
-      timestamp: new Date().toISOString()
+    return errorResponse(error, {
+      route: '/api/user-profile/reset',
+      operation: 'delete'
     })
-
-  } catch (error) {
-    logger.error('Error resetting user data', error instanceof Error ? error : new Error(String(error)))
-    return NextResponse.json(
-      {
-        error: 'Failed to reset user data',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
   }
 }

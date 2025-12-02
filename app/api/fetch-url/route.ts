@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { errorResponse, validationError } from '@/lib/api-response'
 import { validateFetchURL } from '@/lib/url-validation'
+import { rateLimit } from '@/lib/rate-limit'
 
 /**
  * API Route: Fetch URL
@@ -10,8 +11,10 @@ import { validateFetchURL } from '@/lib/url-validation'
  * Used by recipe import to fetch recipe pages
  *
  * Security: SSRF protection via domain whitelist and IP blocklist
+ * Rate Limited: 10 requests per minute (SEC-006)
  */
 export async function GET(request: NextRequest) {
+  // Production check
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json(
       { error: 'Not available in production' },
@@ -19,11 +22,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  try {
-    // TODO(SEC-006): Add rate limiting
-    // const rl = await rateLimit(request, 'fetch-url');
-    // if (rl instanceof NextResponse) return rl;
+  // Apply rate limiting FIRST (SEC-006)
+  const rateLimitResponse = await rateLimit(request, 'fetch-url')
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
 
+  try {
     const searchParams = request.nextUrl.searchParams
     const url = searchParams.get('url')
 
@@ -70,6 +75,9 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    return errorResponse(error, { route: '/api/fetch-url' })
+    return errorResponse(error, {
+      route: '/api/fetch-url',
+      operation: 'fetch'
+    })
   }
 }

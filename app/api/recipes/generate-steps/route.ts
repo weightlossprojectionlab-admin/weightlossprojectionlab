@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateRecipeSteps } from '@/lib/ai-recipe-generator'
 import { MealSuggestion } from '@/lib/meal-suggestions'
 import { logger } from '@/lib/logger'
+import { rateLimit } from '@/lib/rate-limit'
+import { errorResponse } from '@/lib/api-response'
 
 export const runtime = 'edge'
 
 export async function POST(request: NextRequest) {
+  // Apply rate limiting FIRST (SEC-006)
+  // Note: Edge runtime doesn't support user identifier, using IP-based limiting
+  const rateLimitResponse = await rateLimit(request, 'ai:gemini')
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
   try {
     const body = await request.json()
     const { recipe, servingSize } = body as {
@@ -28,10 +37,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error) {
-    logger.error('Error generating recipe steps', error as Error)
-    return NextResponse.json(
-      { error: 'Failed to generate recipe steps' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/recipes/generate-steps',
+      operation: 'create'
+    })
   }
 }

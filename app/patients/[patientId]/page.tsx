@@ -517,7 +517,7 @@ function PatientDetailContent() {
                     }`}
                   >
                     <span>🍽️</span>
-                    <span>Your Recipes</span>
+                    <span>Recipes for {patient.name}</span>
                   </button>
                   {canUploadDocuments && (
                     <button

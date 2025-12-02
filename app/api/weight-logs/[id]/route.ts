@@ -3,6 +3,7 @@ import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { Timestamp } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
 import { ErrorHandler } from '@/lib/utils/error-handler'
+import { errorResponse } from '@/lib/api-response'
 import { z } from 'zod'
 
 // Validation schema for updating weight log
@@ -81,17 +82,10 @@ export async function PATCH(
     })
 
   } catch (error) {
-    ErrorHandler.handle(error, {
-      operation: 'update_weight_log',
-      component: 'api/weight-logs/[id]',
-      userId: 'unknown'
+    return errorResponse(error, {
+      route: '/api/weight-logs/[id]',
+      operation: 'patch'
     })
-
-    const userMessage = ErrorHandler.getUserMessage(error)
-    return NextResponse.json(
-      { error: userMessage },
-      { status: 500 }
-    )
   }
 }
 
@@ -143,16 +137,9 @@ export async function DELETE(
     })
 
   } catch (error) {
-    ErrorHandler.handle(error, {
-      operation: 'delete_weight_log',
-      component: 'api/weight-logs/[id]',
-      userId: 'unknown'
+    return errorResponse(error, {
+      route: '/api/weight-logs/[id]',
+      operation: 'delete'
     })
-
-    const userMessage = ErrorHandler.getUserMessage(error)
-    return NextResponse.json(
-      { error: userMessage },
-      { status: 500 }
-    )
   }
 }
