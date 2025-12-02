@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { collection, getDocs } from 'firebase/firestore'
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { MEAL_SUGGESTIONS, MealSuggestion } from '@/lib/meal-suggestions'
 import { logger } from '@/lib/logger'
@@ -102,8 +102,29 @@ export function useRecipes() {
       setLoading(true)
       setError(null)
 
+      // SEC-007: Always enforce pagination limit (max 50 per Firestore rules)
+      // Also filter for published recipes and order consistently
       const recipesRef = collection(db, 'recipes')
-      const snapshot = await getDocs(recipesRef)
+
+      // First, check if we have the 'status' field (post-migration)
+      const checkSnapshot = await getDocs(query(recipesRef, limit(1)))
+      const hasStatusField = checkSnapshot.docs.some((doc) => 'status' in doc.data())
+
+      let snapshot
+      if (hasStatusField) {
+        // POST-MIGRATION: Query with status filter and ordering
+        snapshot = await getDocs(
+          query(
+            recipesRef,
+            where('status', '==', 'published'),
+            orderBy('createdAt', 'desc'),
+            limit(50)
+          )
+        )
+      } else {
+        // PRE-MIGRATION: Just apply limit
+        snapshot = await getDocs(query(recipesRef, limit(50)))
+      }
 
       // Check if we have full recipes (post-migration) or just media (pre-migration)
       const hasFullRecipes = snapshot.docs.some((doc) => {
@@ -115,19 +136,17 @@ export function useRecipes() {
 
       if (hasFullRecipes) {
         // POST-MIGRATION: Use full recipes from Firestore
-        const firestoreRecipes: MealSuggestion[] = snapshot.docs
-          .filter((doc) => doc.data().status === 'published')
-          .map((doc) => {
-            const data = doc.data()
-            return {
-              ...data,
-              firestoreId: doc.id,
-              // Convert Firestore Timestamps to Date objects
-              createdAt: data.createdAt?.toDate?.() || data.createdAt,
-              updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-              mediaUploadedAt: data.mediaUploadedAt?.toDate?.() || data.mediaUploadedAt,
-            } as MealSuggestion
-          })
+        const firestoreRecipes: MealSuggestion[] = snapshot.docs.map((doc) => {
+          const data = doc.data()
+          return {
+            ...data,
+            firestoreId: doc.id,
+            // Convert Firestore Timestamps to Date objects
+            createdAt: data.createdAt?.toDate?.() || data.createdAt,
+            updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+            mediaUploadedAt: data.mediaUploadedAt?.toDate?.() || data.mediaUploadedAt,
+          } as MealSuggestion
+        })
 
         // If no published recipes, fall back to hardcoded
         fetchedRecipes = firestoreRecipes.length > 0 ? firestoreRecipes : MEAL_SUGGESTIONS

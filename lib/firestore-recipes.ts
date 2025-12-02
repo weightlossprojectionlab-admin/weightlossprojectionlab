@@ -108,24 +108,24 @@ export async function getRecipeById(recipeId: string): Promise<MealSuggestion | 
 
 /**
  * Get all published recipes (for public consumption)
+ * SEC-007: Always enforces pagination (default 50, max 50)
  */
 export async function getPublishedRecipes(options?: {
   mealType?: MealType
   limit?: number
 }): Promise<MealSuggestion[]> {
   try {
+    // SEC-007: Enforce limit <= 50 as per Firestore rules
+    const queryLimit = Math.min(options?.limit || 50, 50)
+
     const constraints: QueryConstraint[] = [
       where('status', '==', 'published'),
-      orderBy('popularity', 'desc'),
       orderBy('createdAt', 'desc'),
+      limit(queryLimit),
     ]
 
     if (options?.mealType) {
       constraints.unshift(where('mealType', '==', options.mealType))
-    }
-
-    if (options?.limit) {
-      constraints.push(limit(options.limit))
     }
 
     const recipesQuery = query(collection(db, RECIPES_COLLECTION), ...constraints)
@@ -140,13 +140,18 @@ export async function getPublishedRecipes(options?: {
 
 /**
  * Get draft recipes (admin only)
+ * SEC-007: Enforces pagination limit
  */
-export async function getDraftRecipes(): Promise<MealSuggestion[]> {
+export async function getDraftRecipes(maxLimit: number = 50): Promise<MealSuggestion[]> {
   try {
+    // SEC-007: Enforce limit <= 50 as per Firestore rules
+    const queryLimit = Math.min(maxLimit, 50)
+
     const recipesQuery = query(
       collection(db, RECIPES_COLLECTION),
       where('status', '==', 'draft'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(queryLimit)
     )
     const snapshot = await getDocs(recipesQuery)
 
@@ -230,15 +235,20 @@ export async function bulkSaveRecipes(
 
 /**
  * Search recipes by name or ingredients
+ * SEC-007: Enforces pagination limit
  */
-export async function searchRecipes(searchTerm: string): Promise<MealSuggestion[]> {
+export async function searchRecipes(searchTerm: string, maxLimit: number = 50): Promise<MealSuggestion[]> {
   try {
+    // SEC-007: Enforce limit <= 50 as per Firestore rules
+    const queryLimit = Math.min(maxLimit, 50)
+
     // Firestore doesn't support full-text search natively
     // This is a simple implementation - for production, consider Algolia or similar
     const recipesQuery = query(
       collection(db, RECIPES_COLLECTION),
       where('status', '==', 'published'),
-      orderBy('name')
+      orderBy('name'),
+      limit(queryLimit)
     )
 
     const snapshot = await getDocs(recipesQuery)

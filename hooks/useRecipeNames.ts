@@ -2,11 +2,12 @@
 
 import { useMemo } from 'react'
 import useSWR from 'swr'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { COLLECTIONS } from '@/constants/firestore'
 
 // Batches barcodes/ids into chunks of N to reduce Firestore round trips
+// SEC-007: Max 10 per batch to stay well under Firestore rules limit of 50
 const BATCH_SIZE = 10
 const CACHE_TTL_MS = 30 * 60 * 1000
 
@@ -26,9 +27,11 @@ async function fetchRecipeNames(ids: string[]): Promise<RecipeNameMap> {
 
   for (const c of chunks) {
     // Firestore: where('__name__', 'in', [...]) supports up to 10
+    // SEC-007: Add explicit limit even though 'in' query limits results
     const qRef = query(
       collection(db, COLLECTIONS.RECIPES),
-      where('__name__', 'in', c)
+      where('__name__', 'in', c),
+      limit(BATCH_SIZE)
     )
     const snap = await getDocs(qRef)
     snap.forEach(d => {

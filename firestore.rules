@@ -452,12 +452,15 @@ service cloud.firestore {
 
     // Recipes collection (full recipe library with AI generation)
     match /recipes/{recipeId} {
-      // Read: Public access to published recipes (for landing page)
-      //       Admins can read all recipes (including drafts)
-      // SECURITY NOTE: allow list: if true; is INTENTIONAL for public recipe browsing on landing page
-      //                Consider adding rate limiting via Firebase App Check for production
-      allow list: if true; // Allow anyone to query recipes collection
+      // Individual recipe reads: public for published recipes
       allow get: if resource.data.status == 'published' || isAdmin();
+
+      // List queries: require authentication + pagination
+      // TODO: Enable Firebase App Check in Firebase Console for additional protection
+      // NOTE: Firebase App Check should be enabled to protect against automated abuse
+      //       Setup: Firebase Console > Build > App Check > Register your app
+      allow list: if isAuthenticated()
+                  && request.query.limit <= 50;
 
       // Create: Admin-only, with required recipe fields
       allow create: if isAdmin() &&
