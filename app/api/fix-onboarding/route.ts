@@ -7,6 +7,13 @@ import { logger } from '@/lib/logger'
  * Use this if the flag was accidentally lost during profile updates
  */
 export async function POST(request: NextRequest) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Not available in production' },
+      { status: 403 }
+    );
+  }
+
   try {
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

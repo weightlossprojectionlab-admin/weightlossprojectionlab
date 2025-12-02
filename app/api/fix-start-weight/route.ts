@@ -7,6 +7,13 @@ import { Timestamp } from 'firebase-admin/firestore'
  * This endpoint finds the user's first weight log and updates startWeight to match it
  */
 export async function POST(request: NextRequest) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Not available in production' },
+      { status: 403 }
+    );
+  }
+
   try {
     // Verify authentication
     const authHeader = request.headers.get('authorization')

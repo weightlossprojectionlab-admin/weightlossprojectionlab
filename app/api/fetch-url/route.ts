@@ -1,40 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
+import { errorResponse, validationError } from '@/lib/api-response'
+import { validateFetchURL } from '@/lib/url-validation'
 
 /**
  * API Route: Fetch URL
  *
  * Proxy endpoint to fetch external URLs and bypass CORS restrictions
  * Used by recipe import to fetch recipe pages
+ *
+ * Security: SSRF protection via domain whitelist and IP blocklist
  */
 export async function GET(request: NextRequest) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Not available in production' },
+      { status: 403 }
+    );
+  }
+
   try {
+    // TODO(SEC-006): Add rate limiting
+    // const rl = await rateLimit(request, 'fetch-url');
+    // if (rl instanceof NextResponse) return rl;
+
     const searchParams = request.nextUrl.searchParams
     const url = searchParams.get('url')
 
     if (!url) {
-      return NextResponse.json(
-        { error: 'URL parameter is required' },
-        { status: 400 }
-      )
+      return validationError('URL parameter is required')
     }
 
-    // Validate URL
-    let parsedUrl: URL
+    // Validate URL against SSRF attacks
     try {
-      parsedUrl = new URL(url)
-    } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid URL format' },
-        { status: 400 }
-      )
-    }
-
-    // Only allow HTTP/HTTPS protocols
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-      return NextResponse.json(
-        { error: 'Only HTTP and HTTPS protocols are allowed' },
-        { status: 400 }
+      await validateFetchURL(url)
+    } catch (validationErr) {
+      logger.warn('URL validation failed', {
+        url,
+        error: validationErr instanceof Error ? validationErr.message : String(validationErr),
+      })
+      return validationError(
+        validationErr instanceof Error ? validationErr.message : 'Invalid URL'
       )
     }
 
@@ -63,11 +69,7 @@ export async function GET(request: NextRequest) {
         'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
       }
     })
-  } catch (error: any) {
-    logger.error('Error fetching URL', error instanceof Error ? error : new Error(String(error)))
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch URL' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/fetch-url' })
   }
 }
