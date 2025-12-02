@@ -11,6 +11,7 @@
 import { z } from 'zod'
 import { getAuth } from 'firebase/auth'
 import { ErrorHandler } from './utils/error-handler'
+import { getCSRFToken } from './csrf'
 
 // ============================================
 // TYPES
@@ -105,22 +106,6 @@ class ApiClient {
   }
 
   /**
-   * Get CSRF token from cookie
-   */
-  private getCsrfToken(): string | null {
-    if (typeof document === 'undefined') return null
-
-    const cookies = document.cookie.split(';')
-    for (const cookie of cookies) {
-      const [name, value] = cookie.trim().split('=')
-      if (name === 'csrf-token') {
-        return value
-      }
-    }
-    return null
-  }
-
-  /**
    * Build request headers with authentication and CSRF token
    */
   private async buildHeaders(customHeaders?: HeadersInit, method?: string): Promise<Headers> {
@@ -132,10 +117,10 @@ class ApiClient {
       headers.set('Authorization', `Bearer ${token}`)
     }
 
-    // Add CSRF token for unsafe methods
+    // Add CSRF token for unsafe methods (POST, PUT, PATCH, DELETE)
     const unsafeMethods = ['POST', 'PUT', 'PATCH', 'DELETE']
     if (method && unsafeMethods.includes(method.toUpperCase())) {
-      const csrfToken = this.getCsrfToken()
+      const csrfToken = getCSRFToken()
       if (csrfToken) {
         headers.set('X-CSRF-Token', csrfToken)
       }

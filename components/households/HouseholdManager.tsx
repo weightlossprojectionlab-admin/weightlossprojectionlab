@@ -41,14 +41,15 @@ export function HouseholdManager() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch households')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(`Failed to fetch households: ${response.status} - ${errorData.error || response.statusText}`)
       }
 
       const data = await response.json()
       setHouseholds(data.households || [])
     } catch (error) {
       logger.error('Failed to fetch households', error as Error)
-      toast.error('Failed to load households')
+      toast.error(`Failed to load households: ${(error as Error).message}`)
     } finally {
       setLoading(false)
     }
@@ -216,24 +217,30 @@ export function HouseholdManager() {
                 </div>
 
                 {/* Expandable Members List */}
-                {household.memberIds.length > 0 && (
-                  <div className="border-t border-border">
-                    <button
-                      onClick={() => setExpandedHouseholdId(
-                        expandedHouseholdId === household.id ? null : household.id
-                      )}
-                      className="w-full px-4 py-2 text-sm text-muted-foreground hover:bg-muted/30 transition-colors text-left"
-                    >
-                      {expandedHouseholdId === household.id ? '▼' : '▶'} View Members
-                    </button>
-
-                    {expandedHouseholdId === household.id && (
-                      <div className="px-4 pb-4 pt-2">
-                        <HouseholdMembersList householdId={household.id} />
-                      </div>
+                <div className="border-t border-border">
+                  <button
+                    onClick={() => setExpandedHouseholdId(
+                      expandedHouseholdId === household.id ? null : household.id
                     )}
-                  </div>
-                )}
+                    className="w-full px-4 py-2 text-sm text-muted-foreground hover:bg-muted/30 transition-colors text-left"
+                  >
+                    {expandedHouseholdId === household.id ? '▼' : '▶'} View Members ({household.memberIds.length})
+                  </button>
+
+                  {expandedHouseholdId === household.id && (
+                    <div className="px-4 pb-4 pt-2">
+                      <HouseholdMembersList householdId={household.id} />
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <button
+                          onClick={() => handleEdit(household)}
+                          className="text-sm text-primary hover:text-primary-hover font-medium"
+                        >
+                          + Add/Remove Members
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>

@@ -1,7 +1,7 @@
 /**
  * Household Form Modal
  *
- * Modal form for creating/editing households
+ * Modal form for creating/editing households with member selection
  */
 
 'use client'
@@ -103,7 +103,7 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
       }
 
       const data = await response.json()
-      setAvailablePatients(data.patients || [])
+      setAvailablePatients(data.data || [])
     } catch (error) {
       logger.error('Failed to fetch patients', error as Error)
       toast.error('Failed to load patients')
@@ -328,31 +328,57 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
             </div>
           </div>
 
-          {/* Members */}
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-3">Household Members</h3>
+          {/* Members Section - THIS IS WHERE YOU SELECT FAMILY MEMBERS */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+              <span className="text-lg">👥</span>
+              Select Family Members Who Live Here
+            </h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Check the boxes next to family members who live at this address
+            </p>
             {loadingPatients ? (
-              <div className="text-sm text-muted-foreground">Loading patients...</div>
+              <div className="text-sm text-muted-foreground">Loading family members...</div>
             ) : availablePatients.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No patients available</div>
+              <div className="text-sm text-muted-foreground">
+                No family members found. Please add family members first.
+              </div>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto border border-border rounded-lg p-3">
+              <div className="space-y-2 max-h-64 overflow-y-auto border border-border rounded-lg p-3 bg-background">
                 {availablePatients.map((patient) => (
                   <label
                     key={patient.id}
-                    className="flex items-center gap-3 p-2 hover:bg-muted rounded cursor-pointer"
+                    className="flex items-center gap-3 p-3 hover:bg-primary/5 rounded cursor-pointer border border-transparent hover:border-primary/20 transition-all"
                   >
                     <input
                       type="checkbox"
                       checked={formData.memberIds.includes(patient.id)}
                       onChange={() => handleMemberToggle(patient.id)}
-                      className="w-4 h-4"
+                      className="w-5 h-5 rounded border-gray-300"
                     />
-                    <span className="text-sm text-foreground">{patient.name}</span>
+                    <div className="flex items-center gap-3 flex-1">
+                      {patient.photo ? (
+                        <img
+                          src={patient.photo}
+                          alt={patient.name}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                          <span className="text-sm font-medium text-primary">
+                            {patient.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                      <span className="text-sm font-medium text-foreground">{patient.name}</span>
+                    </div>
                   </label>
                 ))}
               </div>
             )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Selected: {formData.memberIds.length} {formData.memberIds.length === 1 ? 'member' : 'members'}
+            </p>
           </div>
 
           {/* Kitchen Config */}
