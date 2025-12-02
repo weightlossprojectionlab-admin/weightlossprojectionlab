@@ -20,6 +20,13 @@ export const maxDuration = 25
  * Requires explicit confirmation from the user.
  */
 export async function DELETE(request: NextRequest) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Not available in production' },
+      { status: 403 }
+    );
+  }
+
   try {
     // Get authorization header
     const authHeader = request.headers.get('authorization')

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { errorResponse } from '@/lib/api-response'
 import { Timestamp } from 'firebase-admin/firestore'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * One-time API endpoint to fix incorrect startWeight in user profile
