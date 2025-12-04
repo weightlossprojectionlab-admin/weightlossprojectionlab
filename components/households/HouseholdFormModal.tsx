@@ -29,8 +29,7 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
       street: '',
       city: '',
       state: '',
-      zipCode: '',
-      apartmentUnit: ''
+      zipCode: ''
     },
     memberIds: [],
     primaryResidentId: undefined,
@@ -73,8 +72,7 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
         street: '',
         city: '',
         state: '',
-        zipCode: '',
-        apartmentUnit: ''
+        zipCode: ''
       },
       memberIds: [],
       primaryResidentId: undefined,
@@ -166,10 +164,11 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
 
   const handleMemberToggle = (patientId: string) => {
     setFormData(prev => {
-      const isSelected = prev.memberIds.includes(patientId)
+      const currentMemberIds = prev.memberIds || []
+      const isSelected = currentMemberIds.includes(patientId)
       const newMemberIds = isSelected
-        ? prev.memberIds.filter(id => id !== patientId)
-        : [...prev.memberIds, patientId]
+        ? currentMemberIds.filter(id => id !== patientId)
+        : [...currentMemberIds, patientId]
 
       // If removing primary resident, clear it
       const newPrimaryResidentId = isSelected && prev.primaryResidentId === patientId
@@ -258,21 +257,6 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Apartment/Unit (optional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.address.apartmentUnit || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    address: { ...prev.address, apartmentUnit: e.target.value }
-                  }))}
-                  placeholder="Apt 2B"
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                />
-              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -352,7 +336,7 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
                   >
                     <input
                       type="checkbox"
-                      checked={formData.memberIds.includes(patient.id)}
+                      checked={formData.memberIds?.includes(patient.id) || false}
                       onChange={() => handleMemberToggle(patient.id)}
                       className="w-5 h-5 rounded border-gray-300"
                     />
@@ -377,7 +361,7 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-2">
-              Selected: {formData.memberIds.length} {formData.memberIds.length === 1 ? 'member' : 'members'}
+              Selected: {formData.memberIds?.length || 0} {(formData.memberIds?.length || 0) === 1 ? 'member' : 'members'}
             </p>
           </div>
 

@@ -121,8 +121,25 @@ class ApiClient {
     const unsafeMethods = ['POST', 'PUT', 'PATCH', 'DELETE']
     if (method && unsafeMethods.includes(method.toUpperCase())) {
       const csrfToken = getCSRFToken()
+      const cookieValue = typeof document !== 'undefined' ?
+        document.cookie.split(';').find(c => c.trim().startsWith('csrf-token='))?.split('=')[1] :
+        null
+
+      console.log('[ApiClient] CSRF Debug:', {
+        method,
+        hasToken: !!csrfToken,
+        tokenLength: csrfToken?.length,
+        tokenPreview: csrfToken?.substring(0, 20) + '...',
+        cookieValue: cookieValue?.substring(0, 20) + '...',
+        tokensMatch: csrfToken === cookieValue,
+        allCookies: typeof document !== 'undefined' ? document.cookie : 'N/A'
+      })
+
       if (csrfToken) {
         headers.set('X-CSRF-Token', csrfToken)
+        console.log('[ApiClient] Set X-CSRF-Token header:', csrfToken.substring(0, 20) + '...')
+      } else {
+        console.error('[ApiClient] CRITICAL: No CSRF token available for', method, 'request - this will fail!')
       }
     }
 

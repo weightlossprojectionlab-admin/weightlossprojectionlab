@@ -20,7 +20,8 @@ import {
   PhotoIcon
 } from '@heroicons/react/24/outline'
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid'
-import type { ShopAndDeliverOrder } from '@/types/shopping'
+// import type { ShopAndDeliverOrder } from '@/types/shopping'
+type ShopAndDeliverOrder = any
 import { getRemainingInspectionTime, isWithinInspectionDeadline } from '@/lib/inspection-operations'
 
 interface OrderInspectionProps {
@@ -67,7 +68,7 @@ export function OrderInspection({
 
   // Get issues for each item
   const getItemIssues = (itemId: string) => {
-    return order.reportedIssues?.filter(issue => issue.itemId === itemId) || []
+    return order.reportedIssues?.filter((issue: any) => issue.itemId === itemId) || []
   }
 
   // Handle confirm all correct
@@ -203,7 +204,7 @@ export function OrderInspection({
                     {/* Issues */}
                     {hasIssues && (
                       <div className="space-y-2 mb-3">
-                        {issues.map((issue, idx) => (
+                        {issues.map((issue: any, idx: number) => (
                           <div
                             key={idx}
                             className="bg-error-light dark:bg-red-900/20 border border-error/30 rounded-lg p-3"

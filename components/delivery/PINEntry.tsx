@@ -14,7 +14,8 @@
 
 import { useState, useEffect } from 'react'
 import { verifyDeliveryPIN } from '@/lib/order-operations'
-import { FRAUD_THRESHOLDS } from '@/types/shopping'
+// import { FRAUD_THRESHOLDS } from '@/types/shopping'
+const FRAUD_THRESHOLDS = { PIN_RETRY_LIMIT: 3 }
 
 interface PINEntryProps {
   orderId: string

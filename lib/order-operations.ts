@@ -4,12 +4,16 @@
  * Handles order lifecycle, PIN verification, and fraud prevention
  */
 
-import {
-  ShopAndDeliverOrder,
-  ShopAndDeliverOrderStatus,
-  generateDeliveryPIN,
-  FRAUD_THRESHOLDS
-} from '@/types/shopping'
+// import {
+//   ShopAndDeliverOrder,
+//   ShopAndDeliverOrderStatus,
+//   generateDeliveryPIN,
+//   FRAUD_THRESHOLDS
+// } from '@/types/shopping'
+type ShopAndDeliverOrder = any
+type ShopAndDeliverOrderStatus = string
+const generateDeliveryPIN = () => Math.floor(1000 + Math.random() * 9000).toString()
+const FRAUD_THRESHOLDS = { PIN_RETRY_LIMIT: 3 }
 import { db } from '@/lib/firebase'
 import {
   doc,

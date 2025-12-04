@@ -11,7 +11,6 @@ import { getAuth } from 'firebase-admin/auth'
 import { getCampaignMetrics } from '@/lib/inactive-detection'
 import { initAdmin } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/inactive/campaigns
@@ -40,9 +39,53 @@ export async function GET(request: NextRequest) {
     try {
       decodedToken = await getAuth().verifyIdToken(token)
     } catch (error) {
-    return errorResponse(error, {
-      route: '/api/inactive/campaigns',
-      operation: 'fetch'
+      logger.error('Token verification failed', error instanceof Error ? error : new Error(String(error)))
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid token' },
+        { status: 401 }
+      )
+    }
+
+    // Check if user is admin
+    const adminEmails = [
+      'perriceconsulting@gmail.com',
+      'weigthlossprojectionlab@gmail.com'
+    ]
+
+    if (!adminEmails.includes(decodedToken.email || '')) {
+      return NextResponse.json(
+        { error: 'Forbidden - Admin access required' },
+        { status: 403 }
+      )
+    }
+
+    // Get campaign metrics
+    logger.info('Getting campaign performance metrics')
+
+    const metrics = await getCampaignMetrics()
+
+    return NextResponse.json({
+      success: true,
+      metrics: {
+        totalCampaigns: metrics.totalCampaigns,
+        sent: metrics.sent,
+        opened: metrics.opened,
+        clicked: metrics.clicked,
+        conversions: metrics.conversions,
+        openRate: Math.round(metrics.openRate * 10) / 10,
+        clickRate: Math.round(metrics.clickRate * 10) / 10,
+        conversionRate: Math.round(metrics.conversionRate * 10) / 10
+      }
     })
+  } catch (error) {
+    logger.error('Error getting campaign metrics', error instanceof Error ? error : new Error(String(error)))
+
+    return NextResponse.json(
+      {
+        error: 'Failed to get campaign metrics',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
   }
 }

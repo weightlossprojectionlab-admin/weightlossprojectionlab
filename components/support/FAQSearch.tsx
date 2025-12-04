@@ -26,7 +26,7 @@ export default function FAQSearch({
   const [expandedFAQs, setExpandedFAQs] = useState<Set<string>>(new Set())
   const [feedbackGiven, setFeedbackGiven] = useState<Set<string>>(new Set())
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const debounceTimer = useRef<NodeJS.Timeout>()
+  const debounceTimer = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Debounced search
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function FAQSearch({
   const handleFeedback = async (faqId: string, helpful: boolean) => {
     if (feedbackGiven.has(faqId)) return
 
-    const success = await recordFAQFeedback(faqId, helpful, user?.id)
+    const success = await recordFAQFeedback(faqId, helpful, user?.uid)
 
     if (success) {
       setFeedbackGiven(prev => new Set([...prev, faqId]))

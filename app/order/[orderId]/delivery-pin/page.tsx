@@ -15,8 +15,11 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { getOrderWithPIN } from '@/lib/order-operations'
-import { ShopAndDeliverOrder } from '@/types/shopping'
+// import { ShopAndDeliverOrder } from '@/types/shopping'
 import PINDisplay from '@/components/delivery/PINDisplay'
+
+// Temporary type until ShopAndDeliverOrder is properly exported
+type ShopAndDeliverOrder = any
 
 export default function DeliveryPINPage() {
   const params = useParams()

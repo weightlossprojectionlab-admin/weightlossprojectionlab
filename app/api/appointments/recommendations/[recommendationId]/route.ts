@@ -6,7 +6,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyIdToken } from '@/lib/firebase-admin'
-import { errorResponse } from '@/lib/api-response'
 import {
   dismissRecommendation,
   markRecommendationScheduled
@@ -61,9 +60,10 @@ export async function PATCH(
       { status: 400 }
     )
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/appointments/recommendations/[recommendationId]',
-      operation: 'patch'
-    })
+    console.error('[API /appointments/recommendations/[id] PATCH] Error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Failed to update recommendation' },
+      { status: 500 }
+    )
   }
 }

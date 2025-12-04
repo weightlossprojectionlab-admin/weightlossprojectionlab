@@ -13,7 +13,6 @@ import { logger } from '@/lib/logger'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { VitalSign, VitalModification } from '@/types/medical'
-import { errorResponse } from '@/lib/api-response'
 
 // GET /api/patients/[patientId]/vitals/[vitalId] - Fetch a specific vital sign
 export async function GET(
@@ -74,10 +73,11 @@ export async function GET(
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/patients/[patientId]/vitals/[vitalId]',
-      operation: 'fetch'
-    })
+    logger.error('[API /patients/[id]/vitals/[vitalId] GET] Error fetching vital', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to fetch vital sign' },
+      { status: 500 }
+    )
   }
 }
 
@@ -191,10 +191,11 @@ export async function PUT(
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/patients/[patientId]/vitals/[vitalId]',
-      operation: 'update'
-    })
+    logger.error('[API /patients/[id]/vitals/[vitalId] PUT] Error updating vital', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to update vital sign' },
+      { status: 500 }
+    )
   }
 }
 
@@ -261,9 +262,10 @@ export async function DELETE(
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/patients/[patientId]/vitals/[vitalId]',
-      operation: 'delete'
-    })
+    logger.error('[API /patients/[id]/vitals/[vitalId] DELETE] Error deleting vital', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to delete vital sign' },
+      { status: 500 }
+    )
   }
 }

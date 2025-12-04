@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import type { FamilyInvitation } from '@/types/medical'
-import { errorResponse } from '@/lib/api-response'
 
 export async function POST(
   request: NextRequest,
@@ -70,9 +69,10 @@ export async function POST(
       message: 'Invitation revoked'
     })
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/invitations/[invitationId]/revoke',
-      operation: 'create'
-    })
+    console.error('Error revoking invitation:', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to revoke invitation' },
+      { status: 500 }
+    )
   }
 }

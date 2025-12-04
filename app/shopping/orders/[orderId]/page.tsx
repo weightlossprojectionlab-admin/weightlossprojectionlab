@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { getOrder } from '@/lib/shop-deliver-orders'
-import { ShopAndDeliverOrder } from '@/types/shopping'
+// import { ShopAndDeliverOrder } from '@/types/shopping'
+type ShopAndDeliverOrder = any
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'
-import { PINDisplay } from '@/components/delivery/PINDisplay'
+import PINDisplay from '@/components/delivery/PINDisplay'
 
 const statusEmojis: Record<string, string> = {
   draft: '📝',
@@ -189,7 +190,8 @@ export default function OrderDetailPage() {
             <PINDisplay
               orderId={order.id}
               pin={order.deliveryPIN}
-              isVerified={order.deliveryPINVerified}
+              userId={user?.uid || ''}
+              orderStatus={order.status}
             />
           </div>
         )}

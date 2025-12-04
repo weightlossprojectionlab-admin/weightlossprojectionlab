@@ -69,10 +69,10 @@ export async function POST(
     }
 
     if (!patientName || !senderName) {
-      return validationError('Patient name and sender name are required', {
-        patientName: !patientName ? 'Required' : undefined,
-        senderName: !senderName ? 'Required' : undefined
-      })
+      const errors: Record<string, string> = {}
+      if (!patientName) errors.patientName = 'Required'
+      if (!senderName) errors.senderName = 'Required'
+      return validationError('Patient name and sender name are required', errors)
     }
 
     logger.info('[Send Report] Processing email request', {
@@ -97,14 +97,15 @@ export async function POST(
     }
 
     const reportDoc = reportSnapshot.docs[0]
+    const healthReportData = reportDoc.data()
     const healthReport = {
       id: reportDoc.id,
-      ...reportDoc.data()
+      ...healthReportData
     }
 
     // Prepare attachment data
     const attachmentData: Array<{
-      type: 'health_report' | 'medication_list' | 'documents' | 'vitals_chart'
+      type: 'health_report' | 'medication_list' | 'document' | 'vitals_chart'
       id?: string
       name: string
       content?: string
@@ -116,7 +117,7 @@ export async function POST(
         type: 'health_report',
         id: healthReport.id,
         name: `Health Report - ${reportDate}.md`,
-        content: healthReport.report
+        content: (healthReportData as any)?.report || ''
       })
     }
 
@@ -198,7 +199,7 @@ export async function POST(
       }
 
       attachmentData.push({
-        type: 'documents',
+        type: 'document',
         name: `Recent Documents - ${patientName}.md`,
         content: documentContent
       })
@@ -264,8 +265,8 @@ export async function POST(
     }
 
     // Replace variables in subject and body
-    let subject = emailTemplate.subject
-    let emailBody = emailTemplate.body
+    let subject: string = emailTemplate.subject
+    let emailBody: string = emailTemplate.body
 
     Object.entries(variables).forEach(([key, value]) => {
       const placeholder = `{${key}}`
@@ -446,7 +447,7 @@ ${emailBody}
     // Increment email count for the health report
     try {
       const reportRef = adminDb.collection('healthReports').doc(healthReport.id)
-      const currentCount = healthReport.emailedCount || 0
+      const currentCount = (healthReportData as any)?.emailedCount || 0
       await reportRef.update({
         emailedCount: currentCount + 1
       })

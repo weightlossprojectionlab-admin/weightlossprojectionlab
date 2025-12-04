@@ -83,11 +83,13 @@ export function AppointmentList({ patientId, onEdit }: AppointmentListProps) {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <h4 className="font-semibold text-foreground">
-                      {appointment.providerName}
+                      {appointment.providerName || 'Appointment'}
                     </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {appointment.specialty}
-                    </p>
+                    {appointment.specialty && (
+                      <p className="text-sm text-muted-foreground">
+                        {appointment.specialty}
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     {onEdit && (
@@ -169,11 +171,13 @@ export function AppointmentList({ patientId, onEdit }: AppointmentListProps) {
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
                     <h4 className="font-semibold text-foreground text-sm">
-                      {appointment.providerName}
+                      {appointment.providerName || 'Appointment'}
                     </h4>
-                    <p className="text-xs text-muted-foreground">
-                      {appointment.specialty}
-                    </p>
+                    {appointment.specialty && (
+                      <p className="text-xs text-muted-foreground">
+                        {appointment.specialty}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => handleDelete(appointment.id)}

@@ -7,6 +7,8 @@ import { ThemeProvider } from '@/components/ThemeProvider'
 import { MenuProvider } from '@/contexts/MenuContext'
 import { AccountProvider } from '@/contexts/AccountContext'
 import { AppMenu } from '@/components/ui/AppMenu'
+import { CsrfInitializer } from '@/components/CsrfInitializer'
+import { GlobalAlertModal } from '@/components/GlobalAlertModal'
 
 /**
  * Conditionally render providers based on the current route
@@ -36,6 +38,8 @@ export function ConditionalProviders({ children }: { children: React.ReactNode }
       <ServiceWorkerProvider>
         <AccountProvider>
           <MenuProvider>
+            <CsrfInitializer />
+            <GlobalAlertModal />
             <div className="flex min-h-full flex-col">
               {children}
             </div>

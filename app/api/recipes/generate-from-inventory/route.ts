@@ -103,9 +103,7 @@ async function getHouseholdInventoryServer(
 
     return Array.from(itemsMap.values())
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/recipes/generate-from-inventory',
-      operation: 'operation'
-    })
+    logger.error('[getHouseholdInventoryServer] Error fetching inventory', error as Error)
+    throw error
   }
 }

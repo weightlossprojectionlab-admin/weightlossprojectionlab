@@ -198,12 +198,12 @@ export async function rateLimit(
       limiter = emailLimiter
       break
     default:
-      logger.error('Invalid rate limiter type', { limiterType })
+      logger.error('Invalid rate limiter type', new Error(`Invalid limiter type: ${limiterType}`))
       return null
   }
 
   // Get identifier (user ID, IP, etc.)
-  const id = identifier || request.ip || request.headers.get('x-forwarded-for') || 'anonymous'
+  const id = identifier || request.headers.get('x-forwarded-for') || 'anonymous'
 
   try {
     const result = await limiter.limit(id)

@@ -102,7 +102,6 @@ export function HouseholdManager() {
   const formatAddress = (address: Household['address']) => {
     const parts = [
       address.street,
-      address.apartmentUnit,
       address.city,
       address.state,
       address.zipCode
@@ -337,7 +336,7 @@ function HouseholdMembersList({ householdId }: { householdId: string }) {
             <div>
               <p className="text-sm font-medium text-foreground">{patient.name}</p>
               <p className="text-xs text-muted-foreground capitalize">
-                {patient.residenceType?.replace('_', ' ') || 'full-time'}
+                {patient.type || 'member'}
               </p>
             </div>
           </div>

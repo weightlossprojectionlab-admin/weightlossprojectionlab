@@ -80,7 +80,7 @@ export interface PaymentIntentMetadata {
 /**
  * Stripe Payment Intent with our metadata
  */
-export interface StripePaymentIntent extends Stripe.PaymentIntent {
+export interface StripePaymentIntent extends Omit<Stripe.PaymentIntent, 'metadata'> {
   metadata: {
     orderId: string;
     customerId: string;
@@ -89,7 +89,7 @@ export interface StripePaymentIntent extends Stripe.PaymentIntent {
     deliveryFee: string;
     lateAddFees?: string;
     taxEstimate: string;
-    [key: string]: string;
+    [key: string]: string | undefined;
   };
 }
 
@@ -219,7 +219,7 @@ export interface StripeCardholder {
 /**
  * Transfer for Shopper Payments
  */
-export interface StripeTransfer extends Stripe.Transfer {
+export interface StripeTransfer extends Omit<Stripe.Transfer, 'metadata'> {
   metadata: {
     orderId: string;
     shopperId: string;
@@ -227,7 +227,7 @@ export interface StripeTransfer extends Stripe.Transfer {
     percentageFee: string;
     tips?: string;
     bonuses?: string;
-    [key: string]: string;
+    [key: string]: string | undefined;
   };
 }
 

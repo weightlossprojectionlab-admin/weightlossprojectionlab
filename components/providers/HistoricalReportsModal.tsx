@@ -308,7 +308,7 @@ export default function HistoricalReportsModal({
         })
       } catch (error) {
         // Silent fail for analytics
-        logger.warn('[Historical Reports] Failed to track view', error)
+        logger.warn('[Historical Reports] Failed to track view', { error })
       }
     }
 

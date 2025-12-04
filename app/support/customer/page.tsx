@@ -10,7 +10,7 @@ import {
   getSectionDisplayName,
   getRelatedFAQs
 } from '@/lib/faq-operations'
-import { FAQItem } from '@/types/support'
+import { FAQItem, FAQSection } from '@/types/support'
 
 export default function CustomerSupportPage() {
   const [selectedFAQ, setSelectedFAQ] = useState<FAQItem | null>(null)
@@ -197,7 +197,7 @@ function PopularFAQCard({ faq, onClick }: PopularFAQCardProps) {
 }
 
 interface CategoryCardProps {
-  section: string
+  section: FAQSection
   count: number
   onClick: () => void
 }
@@ -230,7 +230,7 @@ function CategoryCard({ section, count, onClick }: CategoryCardProps) {
 }
 
 interface CategorySectionProps {
-  section: string
+  section: FAQSection
   faqs: FAQItem[]
   onSelectFAQ: (faq: FAQItem) => void
 }

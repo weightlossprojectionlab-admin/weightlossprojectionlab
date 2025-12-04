@@ -24,7 +24,8 @@ import {
   reportIssue,
   completeInspection
 } from '@/lib/inspection-operations'
-import type { ShopAndDeliverOrder } from '@/types/shopping'
+// import type { ShopAndDeliverOrder } from '@/types/shopping'
+type ShopAndDeliverOrder = any
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 

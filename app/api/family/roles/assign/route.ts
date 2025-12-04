@@ -21,7 +21,6 @@ import {
   hasAdminPrivileges
 } from '@/lib/family-roles'
 import type { FamilyMember, FamilyRole } from '@/types/medical'
-import { errorResponse } from '@/lib/api-response'
 
 interface AssignRoleRequest {
   familyMemberId: string
@@ -45,11 +44,129 @@ export async function POST(request: NextRequest) {
     try {
       decodedToken = await adminAuth.verifyIdToken(token)
     } catch (error) {
-    return errorResponse(error, {
-      route: '/api/family/roles/assign',
-      operation: 'create'
+      logger.error('[API /family/roles/assign POST] Token verification failed', error as Error)
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized', message: 'Invalid authentication token' },
+        { status: 401 }
+      )
+    }
+
+    const userId = decodedToken.uid
+
+    // Step 2: Rate limiting
+    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    if (!rateLimitResult.success) {
+      logger.warn('[API /family/roles/assign POST] Rate limit exceeded', { userId })
+      return NextResponse.json(
+        createRateLimitResponse(rateLimitResult),
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult)
+        }
+      )
+    }
+
+    // Step 3: Parse request body
+    const body: AssignRoleRequest = await request.json()
+    const { familyMemberId, newRole, confirmed } = body
+
+    if (!familyMemberId || !newRole) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields: familyMemberId, newRole' },
+        { status: 400 }
+      )
+    }
+
+    // Validate role is valid
+    const validRoles: FamilyRole[] = ['account_owner', 'co_admin', 'caregiver', 'viewer']
+    if (!validRoles.includes(newRole)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid role: ${newRole}` },
+        { status: 400 }
+      )
+    }
+
+    logger.debug('[API /family/roles/assign POST] Processing role assignment', {
+      userId,
+      familyMemberId,
+      newRole,
+      confirmed
     })
-  }
+
+    // Step 4: Get requester's role (check if they're Account Owner or Co-Admin)
+    const requesterUserDoc = await adminDb.collection('users').doc(userId).get()
+    if (!requesterUserDoc.exists) {
+      return NextResponse.json(
+        { success: false, error: 'User profile not found' },
+        { status: 404 }
+      )
+    }
+
+    const requesterData = requesterUserDoc.data()
+    const isRequesterAccountOwner = requesterData?.preferences?.isAccountOwner === true
+
+    // If not account owner, check if they're a Co-Admin via family members
+    let requesterRole: FamilyRole | null = null
+    if (isRequesterAccountOwner) {
+      requesterRole = 'account_owner'
+    } else {
+      // Check if requester is a Co-Admin in any family
+      const requesterFamilyMemberSnapshot = await adminDb
+        .collectionGroup('familyMembers')
+        .where('userId', '==', userId)
+        .where('status', '==', 'accepted')
+        .where('familyRole', '==', 'co_admin')
+        .limit(1)
+        .get()
+
+      if (!requesterFamilyMemberSnapshot.empty) {
+        requesterRole = 'co_admin'
+      }
+    }
+
+    // Check if requester has admin privileges
+    if (!hasAdminPrivileges(requesterRole)) {
+      logger.warn('[API /family/roles/assign POST] Insufficient permissions', {
+        userId,
+        requesterRole
+      })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Forbidden',
+          message: 'Only Account Owners and Co-Admins can assign roles'
+        },
+        { status: 403 }
+      )
+    }
+
+    // Step 5: Find the family member to update
+    const familyMemberSnapshot = await adminDb
+      .collectionGroup('familyMembers')
+      .where('__name__', '==', familyMemberId)
+      .limit(1)
+      .get()
+
+    if (familyMemberSnapshot.empty) {
+      return NextResponse.json(
+        { success: false, error: 'Family member not found' },
+        { status: 404 }
+      )
+    }
+
+    const familyMemberDoc = familyMemberSnapshot.docs[0]
+    const familyMemberData = familyMemberDoc.data() as FamilyMember
+    const currentRole = familyMemberData.familyRole || 'caregiver'
+
+    // Get the owner userId from the document path
+    const ownerUserId = familyMemberDoc.ref.parent.parent?.id
+    if (!ownerUserId) {
+      logger.error('[API /family/roles/assign POST] Unable to extract owner from path: ' + familyMemberDoc.ref.path)
+      return NextResponse.json(
+        { success: false, error: 'Invalid family member document structure' },
+        { status: 500 }
+      )
+    }
 
     // Step 6: Validate role assignment
     const validation = validateRoleAssignment(requesterRole!, currentRole, newRole)
@@ -143,9 +260,10 @@ export async function POST(request: NextRequest) {
       message: `Role successfully changed to ${getRoleLabel(newRole)}`
     })
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/family/roles/assign',
-      operation: 'create'
-    })
+    logger.error('[API /family/roles/assign POST] Error assigning role', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to assign role' },
+      { status: 500 }
+    )
   }
 }

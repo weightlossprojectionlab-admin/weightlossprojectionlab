@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import type { BiometricCredential } from '@/types'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 // Helper to get device info from user agent
 function getDeviceInfo(userAgent: string): string {
@@ -95,10 +94,19 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/user-profile/biometric',
-      operation: 'create'
-    })
+    logger.error('Error registering biometric credential', error instanceof Error ? error : new Error(String(error)))
+
+    if (error.code === 'auth/id-token-expired') {
+      return NextResponse.json(
+        { error: 'Authentication token expired' },
+        { status: 401 }
+      )
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to register biometric credential' },
+      { status: 500 }
+    )
   }
 }
 
@@ -139,10 +147,19 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/user-profile/biometric',
-      operation: 'fetch'
-    })
+    logger.error('Error fetching biometric credentials', error instanceof Error ? error : new Error(String(error)))
+
+    if (error.code === 'auth/id-token-expired') {
+      return NextResponse.json(
+        { error: 'Authentication token expired' },
+        { status: 401 }
+      )
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to fetch biometric credentials' },
+      { status: 500 }
+    )
   }
 }
 
@@ -219,10 +236,19 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/user-profile/biometric',
-      operation: 'delete'
-    })
+    logger.error('Error removing biometric credential', error instanceof Error ? error : new Error(String(error)))
+
+    if (error.code === 'auth/id-token-expired') {
+      return NextResponse.json(
+        { error: 'Authentication token expired' },
+        { status: 401 }
+      )
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to remove biometric credential' },
+      { status: 500 }
+    )
   }
 }
 
@@ -299,9 +325,18 @@ export async function PATCH(request: NextRequest) {
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/user-profile/biometric',
-      operation: 'patch'
-    })
+    logger.error('Error updating biometric credential', error instanceof Error ? error : new Error(String(error)))
+
+    if (error.code === 'auth/id-token-expired') {
+      return NextResponse.json(
+        { error: 'Authentication token expired' },
+        { status: 401 }
+      )
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to update biometric credential' },
+      { status: 500 }
+    )
   }
 }

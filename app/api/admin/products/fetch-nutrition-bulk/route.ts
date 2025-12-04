@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { lookupBarcodeServer } from '@/lib/openfoodfacts-server'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * POST /api/admin/products/fetch-nutrition-bulk
@@ -139,9 +138,38 @@ export async function POST(request: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 100))
 
       } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/products/fetch-nutrition-bulk',
-      operation: 'create'
+        logger.error(`Error updating barcode ${barcode}`, error as Error)
+        results.push({
+          barcode,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
+    }
+
+    // Calculate summary
+    const successCount = results.filter(r => r.success).length
+    const failedCount = results.filter(r => !r.success).length
+
+    logger.info(`Bulk nutrition fetch completed: ${successCount} success, ${failedCount} failed`, {
+      admin: adminEmail,
+      totalRequested: barcodes.length
     })
+
+    return NextResponse.json({
+      success: true,
+      summary: {
+        total: barcodes.length,
+        successful: successCount,
+        failed: failedCount
+      },
+      results
+    })
+  } catch (error) {
+    logger.error('Error in bulk nutrition fetch', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch nutrition data' },
+      { status: 500 }
+    )
   }
 }

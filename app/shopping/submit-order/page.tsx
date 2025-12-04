@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { getUserShoppingItems } from '@/lib/shopping-operations'
+import { getAllShoppingItems } from '@/lib/shopping-operations'
 import { createShopAndDeliverOrder } from '@/lib/shop-deliver-orders'
 import { ShoppingItem } from '@/types/shopping'
 import { toast } from 'react-hot-toast'
@@ -33,7 +33,7 @@ export default function SubmitOrderPage() {
     if (!user) return
 
     try {
-      const allItems = await getUserShoppingItems(user.uid)
+      const allItems = await getAllShoppingItems(user.uid)
       const neededItems = allItems.filter(item => item.needed && !item.inStock)
       setItems(neededItems)
     } catch (error) {

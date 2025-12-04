@@ -25,7 +25,7 @@ export async function GET(
     const { patientId, providerId } = await params
 
     // Check authorization and get owner userId
-    const authResult = await assertPatientAccess(request, patientId, 'viewProviders')
+    const authResult = await assertPatientAccess(request, patientId, 'viewMedicalRecords')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }
@@ -113,7 +113,7 @@ export async function PATCH(
     const { patientId, providerId } = await params
 
     // Check authorization and get owner userId
-    const authResult = await assertPatientAccess(request, patientId, 'manageProviders')
+    const authResult = await assertPatientAccess(request, patientId, 'editPatientProfile')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }
@@ -166,7 +166,7 @@ export async function PATCH(
 
     // Prepare update data (exclude immutable fields)
     const updateData: Partial<HealthcareProvider> = {
-      updatedAt: Timestamp.now()
+      updatedAt: new Date()
     }
 
     // Only include fields that are present in the request body
@@ -228,7 +228,7 @@ export async function DELETE(
     const { patientId, providerId } = await params
 
     // Check authorization and get owner userId
-    const authResult = await assertPatientAccess(request, patientId, 'manageProviders')
+    const authResult = await assertPatientAccess(request, patientId, 'editPatientProfile')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }

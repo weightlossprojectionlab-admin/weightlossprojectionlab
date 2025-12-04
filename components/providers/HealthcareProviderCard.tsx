@@ -142,6 +142,7 @@ export function HealthcareProviderCard({
         providerName: provider.name,
         type: 'call',
         sentBy: 'current-user', // TODO: Get from auth context
+        sentAt: new Date(),
         status: 'completed'
       })
 
@@ -198,6 +199,7 @@ export function HealthcareProviderCard({
         providerName: provider.name,
         type: 'email',
         sentBy: 'current-user', // TODO: Get from auth context
+        sentAt: new Date(),
         subject: actionType === 'health_summary'
           ? `Health Summary for ${patientName}`
           : `Medical Records Request for ${patientName}`,

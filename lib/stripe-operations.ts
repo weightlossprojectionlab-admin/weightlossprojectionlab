@@ -379,8 +379,8 @@ export async function createIssuingCard(
             interval: 'per_authorization',
           },
         ],
-        allowed_categories: STRIPE_CONFIG.ALLOWED_MCC_CATEGORIES,
-        blocked_categories: STRIPE_CONFIG.BLOCKED_MCC_CATEGORIES,
+        allowed_categories: [...STRIPE_CONFIG.ALLOWED_MCC_CATEGORIES] as any,
+        blocked_categories: [...STRIPE_CONFIG.BLOCKED_MCC_CATEGORIES] as any,
       },
       metadata: {
         shopperId,

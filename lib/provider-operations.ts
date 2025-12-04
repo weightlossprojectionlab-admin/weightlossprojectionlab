@@ -43,7 +43,7 @@ export const providerOperations = {
         ...doc.data()
       } as HealthcareProvider))
     } catch (error) {
-      logger.error('[Provider Operations] Error fetching providers', error)
+      logger.error('[Provider Operations] Error fetching providers', error as Error)
       throw error
     }
   },
@@ -65,7 +65,7 @@ export const providerOperations = {
         ...snapshot.data()
       } as HealthcareProvider
     } catch (error) {
-      logger.error('[Provider Operations] Error fetching provider', error)
+      logger.error('[Provider Operations] Error fetching provider', error as Error)
       throw error
     }
   },
@@ -92,7 +92,7 @@ export const providerOperations = {
       logger.info('[Provider Operations] Provider created', { providerId: docRef.id })
       return newProvider
     } catch (error) {
-      logger.error('[Provider Operations] Error creating provider', error)
+      logger.error('[Provider Operations] Error creating provider', error as Error)
       throw error
     }
   },
@@ -113,7 +113,7 @@ export const providerOperations = {
 
       logger.info('[Provider Operations] Provider updated', { providerId })
     } catch (error) {
-      logger.error('[Provider Operations] Error updating provider', error)
+      logger.error('[Provider Operations] Error updating provider', error as Error)
       throw error
     }
   },
@@ -128,7 +128,7 @@ export const providerOperations = {
 
       logger.info('[Provider Operations] Provider deleted', { providerId })
     } catch (error) {
-      logger.error('[Provider Operations] Error deleting provider', error)
+      logger.error('[Provider Operations] Error deleting provider', error as Error)
       throw error
     }
   },
@@ -155,7 +155,7 @@ export const providerOperations = {
         ...snapshot.docs[0].data()
       } as HealthcareProvider
     } catch (error) {
-      logger.error('[Provider Operations] Error finding provider by email', error)
+      logger.error('[Provider Operations] Error finding provider by email', error as Error)
       throw error
     }
   },
@@ -176,7 +176,7 @@ export const providerOperations = {
 
       logger.info('[Provider Operations] Last contact updated', { providerId, contactType })
     } catch (error) {
-      logger.error('[Provider Operations] Error updating last contact', error)
+      logger.error('[Provider Operations] Error updating last contact', error as Error)
       throw error
     }
   }
@@ -218,7 +218,7 @@ export const communicationOperations = {
 
       return newCommunication
     } catch (error) {
-      logger.error('[Communication Operations] Error logging communication', error)
+      logger.error('[Communication Operations] Error logging communication', error as Error)
       throw error
     }
   },
@@ -241,7 +241,7 @@ export const communicationOperations = {
         ...doc.data()
       } as ProviderCommunication))
     } catch (error) {
-      logger.error('[Communication Operations] Error fetching communications', error)
+      logger.error('[Communication Operations] Error fetching communications', error as Error)
       throw error
     }
   },
@@ -264,7 +264,7 @@ export const communicationOperations = {
         ...doc.data()
       } as ProviderCommunication))
     } catch (error) {
-      logger.error('[Communication Operations] Error fetching patient communications', error)
+      logger.error('[Communication Operations] Error fetching patient communications', error as Error)
       throw error
     }
   },
@@ -289,7 +289,7 @@ export const communicationOperations = {
         status
       })
     } catch (error) {
-      logger.error('[Communication Operations] Error updating communication status', error)
+      logger.error('[Communication Operations] Error updating communication status', error as Error)
       throw error
     }
   }
@@ -321,7 +321,7 @@ export const healthReportOperations = {
         ...snapshot.docs[0].data()
       } as HealthReport
     } catch (error) {
-      logger.error('[Health Report Operations] Error fetching report', error)
+      logger.error('[Health Report Operations] Error fetching report', error as Error)
       throw error
     }
   },
@@ -349,7 +349,7 @@ export const healthReportOperations = {
         ...doc.data()
       } as HealthReport))
     } catch (error) {
-      logger.error('[Health Report Operations] Error fetching patient reports', error)
+      logger.error('[Health Report Operations] Error fetching patient reports', error as Error)
       throw error
     }
   },
@@ -386,7 +386,7 @@ export const healthReportOperations = {
 
       return newReport
     } catch (error) {
-      logger.error('[Health Report Operations] Error creating report', error)
+      logger.error('[Health Report Operations] Error creating report', error as Error)
       throw error
     }
   },
@@ -413,7 +413,7 @@ export const healthReportOperations = {
 
       logger.info('[Health Report Operations] Report updated', { reportId })
     } catch (error) {
-      logger.error('[Health Report Operations] Error updating report', error)
+      logger.error('[Health Report Operations] Error updating report', error as Error)
       throw error
     }
   },
@@ -434,7 +434,7 @@ export const healthReportOperations = {
         })
       }
     } catch (error) {
-      logger.error('[Health Report Operations] Error incrementing view count', error)
+      logger.error('[Health Report Operations] Error incrementing view count', error as Error)
       // Don't throw - view count is not critical
     }
   },
@@ -454,7 +454,7 @@ export const healthReportOperations = {
         })
       }
     } catch (error) {
-      logger.error('[Health Report Operations] Error incrementing export count', error)
+      logger.error('[Health Report Operations] Error incrementing export count', error as Error)
       // Don't throw - export count is not critical
     }
   },
@@ -474,7 +474,7 @@ export const healthReportOperations = {
         })
       }
     } catch (error) {
-      logger.error('[Health Report Operations] Error incrementing email count', error)
+      logger.error('[Health Report Operations] Error incrementing email count', error as Error)
       // Don't throw - email count is not critical
     }
   },
@@ -489,7 +489,7 @@ export const healthReportOperations = {
 
       logger.info('[Health Report Operations] Report deleted', { reportId })
     } catch (error) {
-      logger.error('[Health Report Operations] Error deleting report', error)
+      logger.error('[Health Report Operations] Error deleting report', error as Error)
       throw error
     }
   },
@@ -502,7 +502,7 @@ export const healthReportOperations = {
       const reports = await healthReportOperations.getPatientReports(patientId)
       return reports.map(report => report.reportDate).sort().reverse()
     } catch (error) {
-      logger.error('[Health Report Operations] Error fetching available dates', error)
+      logger.error('[Health Report Operations] Error fetching available dates', error as Error)
       throw error
     }
   }

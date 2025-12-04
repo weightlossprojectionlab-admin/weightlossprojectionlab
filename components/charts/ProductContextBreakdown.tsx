@@ -32,7 +32,7 @@ export function ProductContextBreakdown({ data }: ProductContextBreakdownProps) 
           cx="50%"
           cy="50%"
           outerRadius={100}
-          label={(entry) => `${entry.context}: ${entry.count}`}
+          label={(entry: any) => `${entry.context}: ${entry.count}`}
         >
           {data.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

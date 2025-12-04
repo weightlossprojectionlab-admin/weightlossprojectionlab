@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/users?q=<query>&limit=<limit>&pageToken=<pageToken>
@@ -48,10 +47,87 @@ export async function GET(request: NextRequest) {
           const userRecord = await adminAuth.getUserByEmail(query)
           users = [userRecord]
         } catch (err: any) {
-    return errorResponse(err: any, {
-      route: '/api/admin/users',
-      operation: 'fetch'
+          if (err.code !== 'auth/user-not-found') {
+            throw err
+          }
+        }
+      } else {
+        // Try UID search
+        try {
+          const userRecord = await adminAuth.getUser(query)
+          users = [userRecord]
+        } catch (err: any) {
+          if (err.code !== 'auth/user-not-found') {
+            throw err
+          }
+        }
+      }
+    } else {
+      // List all users with pagination
+      try {
+        const listUsersResult = await adminAuth.listUsers(limit, pageToken)
+        users = listUsersResult.users
+        nextPageToken = listUsersResult.pageToken
+      } catch (err) {
+        logger.error('Error listing users', err as Error)
+        throw err
+      }
+    }
+
+    // Get user profiles from Firestore
+    const enrichedUsers = await Promise.all(
+      users.map(async (user) => {
+        try {
+          const userDoc = await adminDb.collection('users').doc(user.uid).get()
+          const userData = userDoc.data()
+
+          // Get activity counts
+          const [mealLogs, weightLogs, stepLogs] = await Promise.all([
+            adminDb.collection(`users/${user.uid}/mealLogs`).count().get(),
+            adminDb.collection(`users/${user.uid}/weightLogs`).count().get(),
+            adminDb.collection(`users/${user.uid}/stepLogs`).count().get(),
+          ])
+
+          return {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || userData?.displayName,
+            createdAt: user.metadata.creationTime,
+            lastActiveAt: userData?.lastActiveAt?.toDate?.() || null,
+            role: userData?.role,
+            suspended: user.disabled,
+            mealLogsCount: mealLogs.data().count,
+            weightLogsCount: weightLogs.data().count,
+            stepLogsCount: stepLogs.data().count,
+          }
+        } catch (err) {
+          logger.error('Error enriching user data', err as Error, { uid: user.uid })
+          return {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            createdAt: user.metadata.creationTime,
+            lastActiveAt: null,
+            role: null,
+            suspended: user.disabled,
+            mealLogsCount: 0,
+            weightLogsCount: 0,
+            stepLogsCount: 0,
+          }
+        }
+      })
+    )
+
+    return NextResponse.json({
+      users: enrichedUsers,
+      ...(nextPageToken && { nextPageToken })
     })
+  } catch (error) {
+    logger.error('Error searching users', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to search users' },
+      { status: 500 }
+    )
   }
 }
 
@@ -125,10 +201,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/users',
-      operation: 'patch'
-    })
+    logger.error('Error updating user', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to update user' },
+      { status: 500 }
+    )
   }
 }
 
@@ -190,9 +267,10 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'User deleted' })
   } catch (error) {
-    return errorResponse(error, {
-      route: '/api/admin/users',
-      operation: 'delete'
-    })
+    logger.error('Error deleting user', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to delete user' },
+      { status: 500 }
+    )
   }
 }

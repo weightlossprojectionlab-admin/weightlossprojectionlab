@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth } from '@/lib/firebase-admin'
 import { getOutstandingActionItems } from '@/lib/caregiver-action-items'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/caregiver/action-items
@@ -50,9 +49,14 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/caregiver/action-items',
-      operation: 'fetch'
-    })
+    logger.error('[GET /api/caregiver/action-items] Error fetching action items', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to fetch action items',
+        details: error.message
+      },
+      { status: 500 }
+    )
   }
 }

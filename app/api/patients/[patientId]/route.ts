@@ -14,7 +14,6 @@ import { patientProfileSchema } from '@/lib/validations/medical'
 import { assertPatientAccess, authorizePatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { PatientProfile, AuthorizationResult } from '@/types/medical'
-import { errorResponse } from '@/lib/api-response'
 
 // GET /api/patients/[patientId] - Get a single patient
 export async function GET(
@@ -77,10 +76,15 @@ export async function GET(
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/patients/[patientId]',
-      operation: 'fetch'
+    logger.error('[API /patients/[id] GET] Error fetching patient', error, {
+      patientId: await params.then(p => p.patientId),
+      errorMessage: error.message,
+      errorStack: error.stack
     })
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to fetch patient', details: error.stack },
+      { status: 500 }
+    )
   }
 }
 
@@ -177,10 +181,11 @@ export async function PUT(
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/patients/[patientId]',
-      operation: 'update'
-    })
+    logger.error('[API /patients/[id] PUT] Error updating patient', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to update patient' },
+      { status: 500 }
+    )
   }
 }
 
@@ -244,9 +249,10 @@ export async function DELETE(
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/patients/[patientId]',
-      operation: 'delete'
-    })
+    logger.error('[API /patients/[id] DELETE] Error deleting patient', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to delete patient' },
+      { status: 500 }
+    )
   }
 }

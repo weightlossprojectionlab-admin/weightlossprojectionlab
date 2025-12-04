@@ -24,7 +24,7 @@ export async function GET(
     const { patientId } = await params
 
     // Check authorization and get owner userId
-    const authResult = await assertPatientAccess(request, patientId, 'viewProviders')
+    const authResult = await assertPatientAccess(request, patientId, 'viewMedicalRecords')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }
@@ -92,7 +92,7 @@ export async function POST(
     const { patientId } = await params
 
     // Check authorization and get owner userId
-    const authResult = await assertPatientAccess(request, patientId, 'manageProviders')
+    const authResult = await assertPatientAccess(request, patientId, 'editPatientProfile')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }
@@ -133,7 +133,7 @@ export async function POST(
     }
 
     // Create provider document
-    const now = Timestamp.now()
+    const now = new Date()
     const providerData: Omit<HealthcareProvider, 'id'> = {
       patientId,
       name: body.name,

@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import type { FamilyInvitation, FamilyMember } from '@/types/medical'
-import { errorResponse } from '@/lib/api-response'
 
 export async function POST(
   request: NextRequest,
@@ -190,9 +189,10 @@ export async function POST(
       message: 'Invitation accepted successfully'
     })
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/invitations/[invitationId]/accept',
-      operation: 'create'
-    })
+    console.error('Error accepting invitation:', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to accept invitation' },
+      { status: 500 }
+    )
   }
 }

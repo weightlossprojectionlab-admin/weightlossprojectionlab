@@ -74,11 +74,13 @@ export function AppointmentForm({
 
     try {
       const patient = patients.find(p => p.id === formData.patientId)
-      const provider = providers.find(p => p.id === formData.providerId)
-
-      if (!patient || !provider) {
-        throw new Error('Patient or provider not found')
+      if (!patient) {
+        throw new Error('Patient not found')
       }
+
+      const provider = formData.providerId
+        ? providers.find(p => p.id === formData.providerId)
+        : null
 
       // Find assigned driver if selected
       const assignedDriver = formData.assignedDriverId
@@ -89,9 +91,9 @@ export function AppointmentForm({
         userId: user?.uid || '',
         patientId: formData.patientId,
         patientName: patient.name,
-        providerId: formData.providerId,
-        providerName: provider.name,
-        specialty: provider.specialty,
+        providerId: formData.providerId || '',
+        providerName: provider?.name || '',
+        specialty: provider?.specialty,
         dateTime: new Date(formData.dateTime).toISOString(),
         type: formData.type,
         reason: formData.reason,
@@ -134,7 +136,7 @@ export function AppointmentForm({
 
       onSuccess?.(newAppointment.id)
     } catch (error: any) {
-      toast.error(error.message || 'Failed to schedule appointment')
+      alert(error.message || 'Failed to schedule appointment. Please check all required fields and try again.')
     } finally {
       setLoading(false)
     }
@@ -172,15 +174,14 @@ export function AppointmentForm({
       {/* Provider Selection */}
       <div>
         <label className="block text-sm font-medium text-foreground mb-2">
-          Provider *
+          Provider <span className="text-muted-foreground text-xs">(optional)</span>
         </label>
         <select
           value={formData.providerId}
           onChange={(e) => setFormData({ ...formData, providerId: e.target.value })}
-          required
           className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
         >
-          <option value="">Select a provider</option>
+          <option value="">No provider / Other</option>
           {providers.map(provider => (
             <option key={provider.id} value={provider.id}>
               {provider.name} - {provider.specialty}
@@ -189,7 +190,7 @@ export function AppointmentForm({
         </select>
         {providers.length === 0 && (
           <p className="text-sm text-muted-foreground mt-1">
-            No providers found. <a href="/providers/new" className="text-primary hover:underline">Add a provider first</a>
+            No providers found. <a href="/providers/new" className="text-primary hover:underline">You can add one</a> or leave blank.
           </p>
         )}
       </div>

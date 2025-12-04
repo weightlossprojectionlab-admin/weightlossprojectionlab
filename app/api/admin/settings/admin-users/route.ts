@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/settings/admin-users
@@ -64,9 +63,17 @@ export async function GET(request: NextRequest) {
           })
         }
       } catch (err) {
-    return errorResponse(err, {
-      route: '/api/admin/settings/admin-users',
-      operation: 'fetch'
-    })
+        // Super admin email doesn't have an account yet
+        logger.debug('Super admin not found in auth', { email })
+      }
+    }
+
+    return NextResponse.json({ admins: adminUsers })
+  } catch (error) {
+    logger.error('Error fetching admin users', error as Error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch admin users' },
+      { status: 500 }
+    )
   }
 }

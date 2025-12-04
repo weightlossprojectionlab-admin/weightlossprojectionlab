@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { medicalOperations } from '@/lib/medical-operations'
 import type { Appointment } from '@/types/medical'
 import toast from 'react-hot-toast'
+import { useAuth } from '@/hooks/useAuth'
 
 interface UseAppointmentsOptions {
   patientId?: string
@@ -31,11 +32,47 @@ export function useAppointments({
   providerId,
   autoFetch = true
 }: UseAppointmentsOptions = {}): UseAppointmentsReturn {
+  const { user } = useAuth()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Polling interval for real-time-like updates (DRY - uses CRUD operations)
+  useEffect(() => {
+    if (!autoFetch || !user) {
+      setLoading(false)
+      return
+    }
+
+    // Initial fetch
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await medicalOperations.appointments.getAppointments({
+          patientId,
+          providerId
+        })
+        setAppointments(data)
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch appointments')
+        console.error('Error fetching appointments:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+
+    // Poll every 5 seconds for updates
+    const interval = setInterval(fetchData, 5000)
+
+    // Cleanup
+    return () => clearInterval(interval)
+  }, [autoFetch, user, patientId, providerId])
+
   const fetchAppointments = useCallback(async () => {
+    // Keep for manual refetch if needed
     try {
       setLoading(true)
       setError(null)
@@ -55,20 +92,13 @@ export function useAppointments({
     }
   }, [patientId, providerId])
 
-  useEffect(() => {
-    if (autoFetch) {
-      fetchAppointments()
-    }
-  }, [autoFetch, fetchAppointments])
-
   const createAppointment = useCallback(
     async (data: Omit<Appointment, 'id' | 'createdAt' | 'createdBy' | 'lastModified' | 'modifiedBy' | 'conflictSeverity'>): Promise<Appointment> => {
       try {
         const newAppointment = await medicalOperations.appointments.createAppointment(data)
 
-        // Add to list
+        // Optimistic update for immediate UI feedback
         setAppointments(prev => [newAppointment, ...prev])
-
         toast.success('Appointment scheduled successfully')
         return newAppointment
       } catch (err: any) {
@@ -83,56 +113,41 @@ export function useAppointments({
   const updateAppointment = useCallback(
     async (appointmentId: string, updates: Partial<Appointment>): Promise<Appointment> => {
       try {
-        // Optimistic update
-        setAppointments(prev =>
-          prev.map(appointment =>
-            appointment.id === appointmentId ? { ...appointment, ...updates } : appointment
-          )
-        )
-
         const updatedAppointment = await medicalOperations.appointments.updateAppointment(
           appointmentId,
           updates
         )
 
-        // Update with server response
+        // Optimistic update for immediate UI feedback
         setAppointments(prev =>
-          prev.map(appointment =>
-            appointment.id === appointmentId ? updatedAppointment : appointment
-          )
+          prev.map(apt => apt.id === appointmentId ? updatedAppointment : apt)
         )
-
         toast.success('Appointment updated')
         return updatedAppointment
       } catch (err: any) {
-        // Revert optimistic update
-        await fetchAppointments()
         const errorMsg = err.message || 'Failed to update appointment'
         toast.error(errorMsg)
         throw err
       }
     },
-    [fetchAppointments]
+    []
   )
 
   const deleteAppointment = useCallback(
     async (appointmentId: string): Promise<void> => {
       try {
-        // Optimistic update
-        setAppointments(prev => prev.filter(appointment => appointment.id !== appointmentId))
-
         await medicalOperations.appointments.deleteAppointment(appointmentId)
 
+        // Optimistic update for immediate UI feedback
+        setAppointments(prev => prev.filter(apt => apt.id !== appointmentId))
         toast.success('Appointment deleted')
       } catch (err: any) {
-        // Revert optimistic update
-        await fetchAppointments()
         const errorMsg = err.message || 'Failed to delete appointment'
         toast.error(errorMsg)
         throw err
       }
     },
-    [fetchAppointments]
+    []
   )
 
   return {
