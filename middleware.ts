@@ -1,17 +1,18 @@
 /**
- * Unified CSRF Protection Middleware
+ * CSRF Protection Middleware
  *
- * Combines features from sec-003 and sec-005:
- * - Automatic CSRF token generation for GET requests (sec-003)
- * - Enhanced error messages with codes and IP logging (sec-005)
- * - Development bypass flag (sec-005)
- * - Static asset handling (sec-003)
- * - Logger integration (sec-003)
+ * Validates CSRF tokens for unsafe HTTP methods (POST/PUT/PATCH/DELETE) using
+ * the double-submit cookie pattern.
  *
- * Protects API routes from Cross-Site Request Forgery attacks by:
- * 1. Generating and setting CSRF tokens on GET requests
- * 2. Validating tokens on unsafe methods (POST/PUT/PATCH/DELETE)
- * 3. Using double-submit cookie pattern for validation
+ * Token Generation:
+ * - Client-side generates and sets CSRF tokens via lib/csrf.ts
+ * - Tokens are stored in non-httpOnly cookies so JS can read them
+ * - Middleware only validates tokens, does not generate them
+ *
+ * Token Validation:
+ * - Requires both cookie AND X-CSRF-Token header to be present
+ * - Both values must match exactly
+ * - Protected by SameSite: strict and Secure (in production)
  *
  * Bypasses:
  * - Static assets (/_next/*, *.ico, *.png, etc.)
@@ -72,16 +73,6 @@ function shouldBypassCsrf(pathname: string): boolean {
 }
 
 /**
- * Generate a random CSRF token
- */
-function generateCsrfToken(): string {
-  // Generate a random token using crypto API
-  const array = new Uint8Array(32)
-  crypto.getRandomValues(array)
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
-}
-
-/**
  * Main middleware function
  */
 export function middleware(request: NextRequest) {
@@ -104,39 +95,35 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // For GET requests, ensure CSRF token exists in cookie (from sec-003)
+  // For GET requests, just pass through - client-side will generate token if needed
+  // The client-side csrf.ts module handles token generation and cookie setting
   if (method === 'GET') {
-    const existingToken = request.cookies.get('csrf-token')?.value
-
-    if (!existingToken) {
-      // Generate new token and set cookie
-      const token = generateCsrfToken()
-      const response = NextResponse.next()
-      response.cookies.set('csrf-token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-      })
-
-      logger.info('CSRF token generated', {
-        pathname,
-        method,
-      })
-
-      return response
-    }
-
     return NextResponse.next()
   }
 
   // For unsafe methods, validate CSRF token
   if (UNSAFE_METHODS.includes(method)) {
-    const cookieToken = request.cookies.get('csrf-token')?.value
+    // Support both csrf_token (underscore) and csrf-token (hyphen) for compatibility
+    const cookieToken = request.cookies.get('csrf_token')?.value || request.cookies.get('csrf-token')?.value
     const headerToken = request.headers.get('x-csrf-token')
 
     // Enhanced logging with IP (from sec-005)
     const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+
+    // Debug logging with full details
+    console.log('[CSRF Middleware] Validation attempt:', {
+      pathname,
+      method,
+      hasCookie: !!cookieToken,
+      hasHeader: !!headerToken,
+      cookieLength: cookieToken?.length,
+      headerLength: headerToken?.length,
+      cookieToken: cookieToken,
+      headerToken: headerToken,
+      tokensMatch: cookieToken === headerToken,
+      allCookies: request.cookies.getAll(),
+      allHeaders: Object.fromEntries(request.headers.entries())
+    })
 
     // Check if both tokens exist
     if (!cookieToken || !headerToken) {
@@ -164,6 +151,8 @@ export function middleware(request: NextRequest) {
         pathname,
         method,
         tokensMatch: false,
+        cookieToken: cookieToken?.substring(0, 10) + '...',
+        headerToken: headerToken?.substring(0, 10) + '...',
         ip: clientIp,
       })
 

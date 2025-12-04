@@ -352,8 +352,8 @@ export const appointmentSchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
   patientId: z.string().uuid(),
   patientName: z.string().min(1),
-  providerId: z.string().uuid(),
-  providerName: z.string().min(1),
+  providerId: z.string().uuid().optional(),
+  providerName: z.string().min(1).optional(),
   specialty: z.string().optional(),
 
   // Scheduling
@@ -442,6 +442,7 @@ export const appointmentFormSchema = appointmentSchema.omit({
   endTime: true,
   duration: true,
   specialty: true,
+  providerId: true, // Provider is optional
   // Driver fields all optional in form
   assignedDriverId: true,
   assignedDriverName: true,

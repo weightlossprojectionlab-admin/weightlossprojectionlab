@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { UpdateUserProfileRequestSchema } from '@/lib/validations/user-profile'
-import { errorResponse } from '@/lib/api-response'
+// Error handling is done inline with logger and NextResponse
 import { z } from 'zod'
 
 interface UserProfile {
@@ -98,10 +98,11 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/user-profile',
-      operation: 'fetch'
-    })
+    logger.error('[API /user-profile GET] Error fetching user profile', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to fetch user profile' },
+      { status: 500 }
+    )
   }
 }
 
@@ -213,10 +214,11 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/user-profile',
-      operation: 'create'
-    })
+    logger.error('[API /user-profile POST] Error creating user profile', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to create user profile' },
+      { status: 500 }
+    )
   }
 }
 
@@ -342,9 +344,17 @@ export async function PUT(request: NextRequest) {
       await adminDb.collection('users').doc(userId).update(flattenedUpdate)
       console.log('[PUT Profile] update() succeeded')
     } catch (updateError: any) {
-    return errorResponse(updateError: any, {
-      route: '/api/user-profile',
-      operation: 'update'
-    })
+      logger.error('[API /user-profile PUT] Error updating user profile', updateError)
+      return NextResponse.json(
+        { success: false, error: updateError.message || 'Failed to update user profile' },
+        { status: 500 }
+      )
+    }
+  } catch (error: any) {
+    logger.error('[API /user-profile PUT] Error in PUT handler', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to update user profile' },
+      { status: 500 }
+    )
   }
 }

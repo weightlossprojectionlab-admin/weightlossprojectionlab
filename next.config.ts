@@ -1,6 +1,15 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  // Configure webpack to handle pdfjs-dist properly
+  webpack: (config, { isServer }) => {
+    // Fix pdfjs-dist canvas issues
+    if (!isServer) {
+      config.resolve.alias.canvas = false
+      config.resolve.alias.encoding = false
+    }
+    return config
+  },
   env: {
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -25,14 +34,15 @@ const nextConfig: NextConfig = {
     // Allow builds to complete even with ESLint errors (warnings will still show)
     ignoreDuringBuilds: true,
   },
-  turbopack: {
-    rules: {
-      '*.svg': {
-        loaders: ['@svgr/webpack'],
-        as: '*.js'
-      }
-    }
-  },
+  // Turbopack disabled due to internal error with middleware injection
+  // turbopack: {
+  //   rules: {
+  //     '*.svg': {
+  //       loaders: ['@svgr/webpack'],
+  //       as: '*.js'
+  //     }
+  //   }
+  // },
   images: {
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
@@ -87,12 +97,12 @@ const nextConfig: NextConfig = {
                   "img-src 'self' data: blob: https://firebasestorage.googleapis.com",
                   "font-src 'self' data:",
                   "connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://api.stripe.com https://generativelanguage.googleapis.com",
-                  "frame-src https://js.stripe.com",
+                  "frame-src https://js.stripe.com https://firebasestorage.googleapis.com",
                   "frame-ancestors 'none'",
                   "base-uri 'self'",
                   "form-action 'self'",
                 ].join('; ')
-              : "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src *;", // Permissive in dev
+              : "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src *; frame-src *; img-src * data: blob:;", // Permissive in dev
           },
         ],
       },

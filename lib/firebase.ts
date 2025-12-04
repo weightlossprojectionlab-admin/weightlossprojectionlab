@@ -1,6 +1,6 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
 import { getAuth, type Auth } from 'firebase/auth'
-import { getFirestore, type Firestore } from 'firebase/firestore'
+import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'firebase/firestore'
 import { getStorage, type FirebaseStorage } from 'firebase/storage'
 import { getMessaging, type Messaging, isSupported } from 'firebase/messaging'
 import { logger } from '@/lib/logger'
@@ -35,6 +35,19 @@ try {
   auth = getAuth(app)
   db = getFirestore(app)
   storage = getStorage(app)
+
+  // Enable offline persistence
+  if (typeof window !== 'undefined') {
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        logger.warn('Firestore persistence failed: Multiple tabs open')
+      } else if (err.code === 'unimplemented') {
+        logger.warn('Firestore persistence not supported in this browser')
+      } else {
+        logger.error('Firestore persistence error', err as Error)
+      }
+    })
+  }
 
   logger.info('Firebase services initialized successfully')
 } catch (error) {

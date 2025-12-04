@@ -23,7 +23,7 @@ export async function POST(
     const { patientId, providerId } = await params
 
     // Check authorization and get owner userId
-    const authResult = await assertPatientAccess(request, patientId, 'manageProviders')
+    const authResult = await assertPatientAccess(request, patientId, 'editPatientProfile')
     if (authResult instanceof Response) {
       return authResult // Return error response
     }
@@ -103,7 +103,7 @@ export async function POST(
       type: body.type,
       sentBy: userId,
       sentByName: body.sentByName,
-      sentAt: now,
+      sentAt: now as any,
       // For emails/faxes
       subject: body.subject,
       message: body.message,

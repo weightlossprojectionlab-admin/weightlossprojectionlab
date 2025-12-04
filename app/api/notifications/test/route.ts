@@ -56,6 +56,19 @@ export async function POST(request: NextRequest) {
     })
   }
 
+    const userId = decodedToken.uid
+
+    // Fetch user data from Firestore
+    const userDoc = await adminDb.collection('users').doc(userId).get()
+    if (!userDoc.exists) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    const userData = userDoc.data()
+
     if (!userData?.notificationToken) {
       logger.warn('[Test Notification] No notification token found', { userId })
       return NextResponse.json(

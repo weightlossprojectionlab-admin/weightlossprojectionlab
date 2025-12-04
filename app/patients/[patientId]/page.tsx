@@ -30,6 +30,7 @@ import { MedicationList } from '@/components/patients/MedicationList'
 import { AIHealthReport } from '@/components/patients/AIHealthReport'
 import DocumentUpload from '@/components/patients/DocumentUpload'
 import DocumentDetailModal from '@/components/documents/DocumentDetailModal'
+import PDFViewerModal from '@/components/documents/PDFViewerModal'
 import MedicationDetailModal from '@/components/health/MedicationDetailModal'
 import { RecipeView } from '@/components/patients/RecipeView'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -75,6 +76,8 @@ function PatientDetailContent() {
   const [loadingDocuments, setLoadingDocuments] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<PatientDocument | null>(null)
   const [showDocumentUpload, setShowDocumentUpload] = useState(false)
+  const [pdfViewerUrl, setPdfViewerUrl] = useState<string | null>(null)
+  const [pdfViewerName, setPdfViewerName] = useState<string>('')
   const [medications, setMedications] = useState<PatientMedication[]>([])
   const [loadingMedications, setLoadingMedications] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
@@ -1449,28 +1452,92 @@ function PatientDetailContent() {
               {loadingDocuments ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
               ) : documents && documents.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {documents.slice(0, 5).map((doc) => (
-                    <button
-                      key={doc.id}
-                      onClick={() => setSelectedDocument(doc)}
-                      className="w-full text-left text-sm p-2 bg-muted rounded hover:bg-muted/80 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium truncate">{doc.name}</span>
-                        <span className="text-xs text-muted-foreground capitalize">
-                          {doc.category.replace('_', ' ')}
-                        </span>
+                    <div key={doc.id} className="border border-border rounded-lg overflow-hidden">
+                      {/* Document Header */}
+                      <div className="p-3 bg-muted">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-sm truncate">{doc.name}</span>
+                          <span className="text-xs text-muted-foreground capitalize">
+                            {doc.category.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                          <span className="capitalize">{doc.fileType}</span>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(doc.uploadedAt).toLocaleDateString()}
-                      </p>
-                      {doc.uploadedBy && (
-                        <p className="text-xs text-muted-foreground">
-                          Uploaded by: {getDisplayName(doc.uploadedBy)}
-                        </p>
-                      )}
-                    </button>
+
+                      {/* OCR Status & Extracted Text */}
+                      <div className="p-3 bg-background">
+                        {doc.ocrStatus === 'processing' && (
+                          <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2">
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                            <span>Processing document...</span>
+                          </div>
+                        )}
+
+                        {doc.ocrStatus === 'failed' && (
+                          <div className="text-xs text-red-600 dark:text-red-400 mb-2 p-2 bg-red-50 dark:bg-red-900/20 rounded">
+                            Failed to extract text from document
+                          </div>
+                        )}
+
+                        {doc.extractedText && (
+                          <div className="mb-3">
+                            <div className="text-xs font-medium text-muted-foreground mb-1">Extracted Text:</div>
+                            <pre className="text-xs bg-muted p-2 rounded font-mono whitespace-pre-wrap overflow-hidden max-h-32 text-foreground">
+                              {doc.extractedText.length > 200
+                                ? `${doc.extractedText.substring(0, 200)}...`
+                                : doc.extractedText}
+                            </pre>
+                            {doc.extractedText.length > 200 && (
+                              <button
+                                onClick={() => setSelectedDocument(doc)}
+                                className="text-xs text-primary hover:text-primary-dark mt-1"
+                              >
+                                Show more
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {!doc.extractedText && doc.ocrStatus !== 'processing' && doc.ocrStatus !== 'failed' && (
+                          <p className="text-xs text-muted-foreground mb-3">No extracted text available</p>
+                        )}
+
+                        {/* Document Actions */}
+                        <div className="flex flex-wrap gap-2">
+                          <a
+                            href={doc.originalUrl}
+                            download={doc.fileName || doc.name}
+                            className="flex-1 min-w-[80px] text-xs px-2 py-1.5 bg-primary text-white rounded hover:bg-primary-hover transition-colors text-center"
+                            onClick={(e) => {
+                              // For Firebase Storage URLs, open in new tab instead of download
+                              if (doc.originalUrl.includes('firebasestorage')) {
+                                e.preventDefault()
+                                window.open(doc.originalUrl, '_blank')
+                              }
+                            }}
+                          >
+                            Download
+                          </a>
+                          <button
+                            onClick={() => window.open(doc.originalUrl, '_blank')}
+                            className="flex-1 min-w-[80px] text-xs px-2 py-1.5 bg-muted hover:bg-muted/80 transition-colors rounded text-foreground text-center"
+                          >
+                            View Original
+                          </button>
+                          <button
+                            onClick={() => setSelectedDocument(doc)}
+                            className="flex-1 min-w-[80px] text-xs px-2 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 transition-colors rounded text-center"
+                          >
+                            Details
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                   {documents.length > 5 && (
                     <p className="text-xs text-center text-muted-foreground pt-1">
@@ -1738,6 +1805,20 @@ function PatientDetailContent() {
         <DocumentDetailModal
           document={selectedDocument}
           onClose={() => setSelectedDocument(null)}
+          onDelete={fetchDocuments}
+          canDelete={canDeleteDocuments}
+        />
+      )}
+
+      {/* PDF Viewer Modal */}
+      {pdfViewerUrl && (
+        <PDFViewerModal
+          pdfUrl={pdfViewerUrl}
+          fileName={pdfViewerName}
+          onClose={() => {
+            setPdfViewerUrl(null)
+            setPdfViewerName('')
+          }}
         />
       )}
 

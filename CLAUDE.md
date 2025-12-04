@@ -1,1 +1,2 @@
 - Session: Checking for build errors
+- Session: add additional duty task to assign to caregivers or new entry household Care. which will include laundry, shopping, cleaning bedroom, bathroom, kitchen etc.. we could offer a customized option to add a new duty on the fly.

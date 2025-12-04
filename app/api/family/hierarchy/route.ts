@@ -25,7 +25,7 @@ import {
   ROLE_HIERARCHY
 } from '@/lib/family-roles'
 import type { FamilyMember, FamilyRole } from '@/types/medical'
-import { errorResponse } from '@/lib/api-response'
+// Error handling is done inline with logger and NextResponse
 
 interface FamilyMemberWithCapabilities extends FamilyMember {
   roleLabel: string
@@ -78,30 +78,52 @@ export async function GET(request: NextRequest) {
     let decodedToken
     try {
       decodedToken = await adminAuth.verifyIdToken(token)
-    } catch (error) {
-    return errorResponse(error, {
-      route: '/api/family/hierarchy',
-      operation: 'fetch'
-    })
-  }
+    } catch (authError: any) {
+      logger.error('[API /family/hierarchy] Auth error', authError)
+      return NextResponse.json(
+        { success: false, error: 'Invalid authentication token' },
+        { status: 401 }
+      )
+    }
 
-        // Get Account Owner info
-        const ownerDoc = await adminDb.collection('users').doc(ownerUserId).get()
-        if (!ownerDoc.exists) {
-          return NextResponse.json(
-            { success: false, error: 'Account owner not found' },
-            { status: 404 }
-          )
-        }
+    const userId = decodedToken.uid
 
-        const ownerData = ownerDoc.data()
-        accountOwnerInfo = {
-          userId: ownerUserId,
-          name: ownerData?.name || 'Unknown',
-          email: ownerData?.email || 'Unknown',
-          accountOwnerSince: ownerData?.preferences?.accountOwnerSince
-        }
-      }
+    // Step 2: Determine Account Owner
+    const userDoc = await adminDb.collection('users').doc(userId).get()
+    if (!userDoc.exists) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    const userData = userDoc.data()
+    const isAccountOwner = userData?.preferences?.isAccountOwner === true
+    const ownerUserId = isAccountOwner ? userId : userData?.accountOwnerId
+
+    if (!ownerUserId) {
+      return NextResponse.json(
+        { success: false, error: 'No account owner found for this user' },
+        { status: 404 }
+      )
+    }
+
+    // Step 3: Get Account Owner info
+    let accountOwnerInfo
+    const ownerDoc = await adminDb.collection('users').doc(ownerUserId).get()
+    if (!ownerDoc.exists) {
+      return NextResponse.json(
+        { success: false, error: 'Account owner not found' },
+        { status: 404 }
+      )
+    }
+
+    const ownerData = ownerDoc.data()
+    accountOwnerInfo = {
+      userId: ownerUserId,
+      name: ownerData?.name || 'Unknown',
+      email: ownerData?.email || 'Unknown',
+      accountOwnerSince: ownerData?.preferences?.accountOwnerSince
     }
 
     // Step 4: Fetch all family members
@@ -227,9 +249,10 @@ export async function GET(request: NextRequest) {
       data: response
     })
   } catch (error: any) {
-    return errorResponse(error: any, {
-      route: '/api/family/hierarchy',
-      operation: 'fetch'
-    })
+    logger.error('[API /family/hierarchy GET] Error fetching family hierarchy', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to fetch family hierarchy' },
+      { status: 500 }
+    )
   }
 }

@@ -1,0 +1,13 @@
+
+[1m[37m===[39m Deploying to 'weightlossprojectionlab-8b284'...[22m
+
+[36m[1mi [22m[39m deploying [1mfirestore[22m
+[36m[1mi [22m[39m [1m[36mfirestore:[39m[22m reading indexes from [1mfirestore.indexes.json[22m...
+[36m[1mi  cloud.firestore:[22m[39m checking [1mfirestore.rules[22m for compilation errors...
+[33m[1m! [22m[39m [W] 43:14 - Unused function: isSupport.
+[33m[1m! [22m[39m [W] 45:15 - Invalid variable name: request.
+[32m[1m+  cloud.firestore:[22m[39m rules file [1mfirestore.rules[22m compiled successfully
+[36m[1mi [22m[39m [1m[36mfirestore: [39m[22mdeploying indexes...
+[36m[1mi  firestore:[22m[39m there are 11 indexes defined in your project that are not present in your firestore indexes file. To delete them, run this command with the --force flag.
+
+[1m[31mError:[39m[22m Pass the --force flag to use this command in non-interactive mode

@@ -449,24 +449,6 @@
       ]
     },
     {
-      "collectionGroup": "meals",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "loggedAt",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "__name__",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "shopping_items",
       "queryScope": "COLLECTION",
       "fields": [
@@ -595,16 +577,6 @@
         {
           "fieldPath": "productName",
           "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "scans",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        {
-          "fieldPath": "scannedAt",
-          "order": "DESCENDING"
         }
       ]
     },

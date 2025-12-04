@@ -1,0 +1,84 @@
+TEST DISTRIBUTION ANALYSIS
+================================
+
+Total: 343 Tests across 14 Files
+
+BY CATEGORY:
+┌────────────────────────────┬───────┬─────────┐
+│ Category                   │ Tests │ Percent │
+├────────────────────────────┼───────┼─────────┤
+│ Security Regression        │    71 │   20.7% │
+│ Security Attack Vectors    │    60 │   17.5% │
+│ API Integration            │    80 │   23.3% │
+│ Migrations                 │    48 │   14.0% │
+│ Library/Utils              │    64 │   18.7% │
+│ Middleware                 │    20 │    5.8% │
+│ Stubs (incomplete)         │     0 │    0.0% │
+├────────────────────────────┼───────┼─────────┤
+│ TOTAL                      │   343 │  100.0% │
+└────────────────────────────┴───────┴─────────┘
+
+SECURITY VULNERABILITY COVERAGE:
+┌─────────────────────────────────────┬───────┐
+│ Vulnerability                       │ Tests │
+├─────────────────────────────────────┼───────┤
+│ SEC-006: Rate Limiting              │    54 │ ████████████
+│ SEC-001: SSRF Protection            │    38 │ ████████
+│ SEC-005: CSRF Protection            │    33 │ ███████
+│ SEC-008: Error Sanitization         │    25 │ ██████
+│ SEC-004: CORS Validation            │    14 │ ███
+│ SEC-003: Storage Path               │     9 │ ██
+│ SEC-000/010: Debug Endpoints        │     8 │ ██
+│ SEC-009: Security Headers           │     8 │ ██
+│ SEC-007: Recipe Auth                │     6 │ █
+│ SEC-002: Admin Custom Claims        │     5 │ █
+├─────────────────────────────────────┼───────┤
+│ TOTAL SECURITY TESTS                │   200 │
+└─────────────────────────────────────┴───────┘
+
+TOP 5 MOST TESTED FILES:
+1. security/regression.test.ts          71 tests
+2. security/attack-vectors.test.ts      60 tests
+3. lib/health-calculations.test.ts      50 tests
+4. api/rate-limiting-integration.test.ts 27 tests
+5. migrations/document-path-migration    25 tests
+
+ATTACK SCENARIO COVERAGE:
+- DNS Rebinding Attacks: 8 tests
+- Protocol Smuggling: 5 tests
+- IP Encoding Attacks: 4 tests
+- Cloud Metadata Endpoint: 4 tests
+- URL Parser Confusion: 3 tests
+- Injection Attacks: 4 tests
+- Business Logic Attacks: 5 tests
+- CORS Bypass: 7 tests
+- CSRF Bypass: 7 tests
+- Rate Limit Bypass: 6 tests
+- Authentication Bypass: 7 tests
+- Path Traversal: 4 tests
+
+TEST QUALITY INDICATORS:
+✅ Comprehensive coverage (343 tests)
+✅ Security-focused (58% of tests)
+✅ Attack simulation (60 attack vector tests)
+✅ Regression prevention (71 regression tests)
+✅ Integration testing (80 API tests)
+✅ Migration validation (48 migration tests)
+✅ Proper test structure (mocking, assertions)
+✅ Both positive and negative tests
+✅ Environment-specific testing (dev/prod)
+
+AREAS FOR IMPROVEMENT:
+⚠️ 3 stub files with 0 tests (Cloud Functions)
+⚠️ Cannot verify actual coverage (tests won't run)
+⚠️ No E2E tests identified
+⚠️ No performance/load tests
+
+ESTIMATED COVERAGE BREAKDOWN (if tests pass):
+- Security Controls: Very High (200 tests)
+- API Endpoints: High (80 tests)
+- Data Migrations: High (48 tests)
+- Utility Functions: High (64 tests)
+- Middleware: Medium (20 tests)
+- Cloud Functions: None (0 tests)
+

@@ -41,6 +41,17 @@ export async function POST(request: NextRequest) {
     })
   }
 
+    // Parse request body
+    const body = await request.json()
+    const { imageBase64, expectedUnit } = body
+
+    if (!imageBase64) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required field: imageBase64' },
+        { status: 400 }
+      )
+    }
+
     // Use Gemini Pro Vision model
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 

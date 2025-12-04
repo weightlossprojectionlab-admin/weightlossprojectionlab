@@ -138,45 +138,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify provider exists
-    const providerRef = adminDb
-      .collection('users')
-      .doc(userId)
-      .collection('providers')
-      .doc(validatedData.providerId)
-
-    const providerDoc = await providerRef.get()
-    if (!providerDoc.exists) {
-      return NextResponse.json(
-        { success: false, error: 'Provider not found' },
-        { status: 404 }
-      )
-    }
-
     const patient = { id: patientDoc.id, ...patientDoc.data() } as PatientProfile
-    const provider = { id: providerDoc.id, ...providerDoc.data() } as Provider
+
+    // Verify provider exists (if provided)
+    let provider: Provider | null = null
+    if (validatedData.providerId) {
+      const providerRef = adminDb
+        .collection('users')
+        .doc(ownerUserId)
+        .collection('providers')
+        .doc(validatedData.providerId)
+
+      const providerDoc = await providerRef.get()
+      if (!providerDoc.exists) {
+        return NextResponse.json(
+          { success: false, error: 'Provider not found' },
+          { status: 404 }
+        )
+      }
+      provider = { id: providerDoc.id, ...providerDoc.data() } as Provider
+    }
 
     // Create appointment
     const appointmentId = uuidv4()
     const now = new Date().toISOString()
 
-    const appointment: Appointment = {
+    // Build appointment object, excluding undefined values
+    const appointment: any = {
       id: appointmentId,
       userId,
       patientId: validatedData.patientId,
       patientName: patient.name,
       providerId: validatedData.providerId,
-      providerName: provider.name,
-      specialty: provider.specialty,
       dateTime: validatedData.dateTime,
-      endTime: validatedData.endTime,
-      duration: validatedData.duration,
       type: validatedData.type,
-      reason: validatedData.reason,
-      location: validatedData.location || `${provider.name}, ${provider.address || ''}`.trim(),
       status: validatedData.status || 'scheduled',
-      notes: validatedData.notes,
-      createdFrom: validatedData.createdFrom,
       requiresDriver: validatedData.requiresDriver || false,
       driverStatus: validatedData.requiresDriver ? 'pending' : 'not-needed',
       createdAt: now,
@@ -184,6 +180,22 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
       updatedBy: userId
     }
+
+    // Add optional fields only if they have values
+    if (provider?.name) appointment.providerName = provider.name
+    if (provider?.specialty || validatedData.specialty) {
+      appointment.specialty = provider?.specialty || validatedData.specialty
+    }
+    if (validatedData.endTime) appointment.endTime = validatedData.endTime
+    if (validatedData.duration) appointment.duration = validatedData.duration
+    if (validatedData.reason) appointment.reason = validatedData.reason
+    if (validatedData.location) {
+      appointment.location = validatedData.location
+    } else if (provider) {
+      appointment.location = `${provider.name}, ${provider.address || ''}`.trim()
+    }
+    if (validatedData.notes) appointment.notes = validatedData.notes
+    if (validatedData.createdFrom) appointment.createdFrom = validatedData.createdFrom
 
     const appointmentRef = adminDb
       .collection('users')

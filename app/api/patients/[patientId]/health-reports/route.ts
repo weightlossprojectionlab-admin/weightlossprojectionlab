@@ -150,10 +150,11 @@ export async function POST(
       )
     }
 
+    const patientData = patientDoc.data()
     const patient = {
       id: patientDoc.id,
-      ...patientDoc.data()
-    }
+      ...patientData
+    } as { id: string; name: string; [key: string]: any }
 
     // Fetch all patient data needed for the report
     const [vitalsSnap, mealsSnap, weightSnap, stepsSnap, medicationsSnap, documentsSnap] = await Promise.all([

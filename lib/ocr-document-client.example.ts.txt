@@ -1,0 +1,273 @@
+/**
+ * EXAMPLE: Client-side usage of the Document OCR API
+ *
+ * This file demonstrates how to call the /api/ocr/document endpoint
+ * from client-side React components.
+ *
+ * DO NOT import this file - it's for reference only.
+ */
+
+import { auth } from '@/lib/firebase'
+
+interface DocumentOCRResult {
+  success: boolean
+  text: string
+  confidence: number
+  error?: string
+}
+
+/**
+ * Example 1: Extract text from a File object (e.g., from file upload)
+ */
+export async function extractTextFromFile(file: File): Promise<DocumentOCRResult> {
+  try {
+    // Get current user token for API auth
+    const user = auth.currentUser
+    if (!user) {
+      throw new Error('User not authenticated')
+    }
+
+    const token = await user.getIdToken()
+
+    // Convert file to base64
+    const imageData = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
+    // Call server-side OCR API
+    const response = await fetch('/api/ocr/document', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ imageData })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(errorData.error || 'OCR request failed')
+    }
+
+    const result = await response.json()
+    return result
+
+  } catch (error) {
+    console.error('[Document OCR] Extraction failed:', error)
+    return {
+      success: false,
+      text: '',
+      confidence: 0,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+/**
+ * Example 2: Extract text from a Blob (e.g., from canvas or camera)
+ */
+export async function extractTextFromBlob(imageBlob: Blob): Promise<DocumentOCRResult> {
+  try {
+    const user = auth.currentUser
+    if (!user) {
+      throw new Error('User not authenticated')
+    }
+
+    const token = await user.getIdToken()
+
+    // Convert blob to base64
+    const imageData = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(imageBlob)
+    })
+
+    const response = await fetch('/api/ocr/document', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ imageData })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(errorData.error || 'OCR request failed')
+    }
+
+    return await response.json()
+
+  } catch (error) {
+    console.error('[Document OCR] Extraction failed:', error)
+    return {
+      success: false,
+      text: '',
+      confidence: 0,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+/**
+ * Example 3: React component usage with file upload
+ */
+export function DocumentUploadExample() {
+  const [extractedText, setExtractedText] = React.useState<string>('')
+  const [confidence, setConfidence] = React.useState<number>(0)
+  const [loading, setLoading] = React.useState<boolean>(false)
+  const [error, setError] = React.useState<string | null>(null)
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const result = await extractTextFromFile(file)
+
+      if (result.success) {
+        setExtractedText(result.text)
+        setConfidence(result.confidence)
+      } else {
+        setError(result.error || 'Failed to extract text')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        disabled={loading}
+      />
+
+      {loading && <p>Processing document...</p>}
+
+      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+
+      {extractedText && (
+        <div>
+          <h3>Extracted Text (Confidence: {confidence}%)</h3>
+          <pre style={{ whiteSpace: 'pre-wrap' }}>{extractedText}</pre>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Example 4: Using with mobile camera capture
+ */
+export async function captureAndExtractText(): Promise<DocumentOCRResult> {
+  try {
+    // Request camera access
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' } // Use back camera on mobile
+    })
+
+    // Create video element to display camera feed
+    const video = document.createElement('video')
+    video.srcObject = stream
+    video.play()
+
+    // Wait for user to capture
+    // (In real app, you'd have a capture button)
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
+    // Capture frame to canvas
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
+    ctx?.drawImage(video, 0, 0)
+
+    // Stop camera
+    stream.getTracks().forEach(track => track.stop())
+
+    // Convert canvas to blob
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob)
+        else reject(new Error('Failed to create blob'))
+      }, 'image/jpeg', 0.9)
+    })
+
+    // Extract text
+    return await extractTextFromBlob(blob)
+
+  } catch (error) {
+    console.error('[Camera OCR] Failed:', error)
+    return {
+      success: false,
+      text: '',
+      confidence: 0,
+      error: error instanceof Error ? error.message : 'Camera access failed'
+    }
+  }
+}
+
+/**
+ * Example 5: Batch processing multiple documents
+ */
+export async function extractTextFromMultipleFiles(
+  files: File[]
+): Promise<DocumentOCRResult[]> {
+  const results: DocumentOCRResult[] = []
+
+  for (const file of files) {
+    try {
+      const result = await extractTextFromFile(file)
+      results.push(result)
+
+      // Add delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    } catch (error) {
+      results.push({
+        success: false,
+        text: '',
+        confidence: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  return results
+}
+
+/**
+ * Example 6: Extract and validate text length
+ */
+export async function extractAndValidateText(
+  file: File,
+  minLength: number = 50
+): Promise<DocumentOCRResult & { isValid: boolean }> {
+  const result = await extractTextFromFile(file)
+
+  const isValid = result.success &&
+                  result.text.trim().length >= minLength &&
+                  result.confidence >= 50
+
+  return {
+    ...result,
+    isValid
+  }
+}
