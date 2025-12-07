@@ -58,21 +58,19 @@ const nextConfig: NextConfig = {
     // Type errors should be caught in development and CI
     ignoreBuildErrors: true,
   },
-  // CRITICAL: Use export mode to skip server components entirely
-  // This prevents static page generation phase
-  // output: 'standalone',
+  // Re-enable standalone output for Netlify
+  output: 'standalone',
   // Skip static page generation for pages that depend on runtime data
   generateBuildId: async () => {
     // Use timestamp to force fresh builds
     return `build-${Date.now()}`
   },
-  // CRITICAL: Reduce worker threads to prevent memory exhaustion during page data collection
-  // Without this, Next.js uses 31 workers which causes build hangs on Netlify
-  experimental: {
-    // Limit workers to prevent OOM during static page analysis
-    workerThreads: false,
-    cpus: 1,
-  },
+  // Remove experimental settings that cause build hangs
+  // Let Next.js use default worker configuration
+  // experimental: {
+  //   workerThreads: false,
+  //   cpus: 1,
+  // },
   // Turbopack disabled due to internal error with middleware injection
   // turbopack: {
   //   rules: {
