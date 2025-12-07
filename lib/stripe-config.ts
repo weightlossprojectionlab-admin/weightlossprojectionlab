@@ -7,12 +7,35 @@
 
 import Stripe from 'stripe';
 
-// Validate that Stripe secret key is configured
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error(
-    'STRIPE_SECRET_KEY is not configured. Please add it to your .env.local file.\n' +
-    'Get your key from: https://dashboard.stripe.com/apikeys'
-  );
+// Lazy stripe client initialization to avoid build-time errors
+let stripeInstance: Stripe | null = null;
+
+/**
+ * Get or create Stripe client instance
+ * Validates configuration at runtime, not build time
+ */
+function getStripeClient(): Stripe {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error(
+      'STRIPE_SECRET_KEY is not configured. Please add it to your .env.local file.\n' +
+      'Get your key from: https://dashboard.stripe.com/apikeys'
+    );
+  }
+
+  if (!stripeInstance) {
+    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-11-17.clover',
+      typescript: true,
+      appInfo: {
+        name: 'WeightLoss Shop & Deliver',
+        version: '1.0.0',
+        url: 'https://weightlossprojectlab.com',
+      },
+      maxNetworkRetries: 2,
+    });
+  }
+
+  return stripeInstance;
 }
 
 /**
@@ -24,15 +47,10 @@ if (!process.env.STRIPE_SECRET_KEY) {
  * - Automatic retries with exponential backoff
  * - Request timeout: 80 seconds (default)
  */
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-11-17.clover', // Use latest API version
-  typescript: true, // Enable TypeScript support
-  appInfo: {
-    name: 'WeightLoss Shop & Deliver',
-    version: '1.0.0',
-    url: 'https://weightlossprojectlab.com', // Update with your domain
-  },
-  maxNetworkRetries: 2, // Retry failed requests up to 2 times
+export const stripe = new Proxy({} as Stripe, {
+  get(target, prop) {
+    return (getStripeClient() as any)[prop];
+  }
 });
 
 /**
