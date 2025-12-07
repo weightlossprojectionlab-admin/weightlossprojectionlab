@@ -65,6 +65,13 @@ const nextConfig: NextConfig = {
     // Use timestamp to force fresh builds
     return `build-${Date.now()}`
   },
+  // CRITICAL: Reduce worker threads to prevent memory exhaustion during page data collection
+  // Without this, Next.js uses 31 workers which causes build hangs on Netlify
+  experimental: {
+    // Limit workers to prevent OOM during static page analysis
+    workerThreads: false,
+    cpus: 1,
+  },
   // Turbopack disabled due to internal error with middleware injection
   // turbopack: {
   //   rules: {
