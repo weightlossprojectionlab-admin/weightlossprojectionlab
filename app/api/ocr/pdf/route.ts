@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import { adminDb } from '@/lib/firebase-admin'
-// pdf-parse is a CommonJS module, must use require
-const pdf = require('pdf-parse')
+
+// Route segment config: Force dynamic rendering to skip build-time analysis
+// This prevents Next.js from trying to load pdf-parse (which has native dependencies)
+// during the build process on Netlify
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 /**
  * Server-side PDF text extraction endpoint
@@ -11,6 +15,8 @@ const pdf = require('pdf-parse')
  * Much simpler and more reliable than OCR-based approaches
  */
 export async function POST(request: NextRequest) {
+  // Dynamic import to avoid loading native dependencies at build time
+  const { PDFParse: pdf } = await import('pdf-parse')
   console.log('[PDF OCR] ========== NEW REQUEST ==========')
   try {
     const body = await request.json()

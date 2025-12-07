@@ -1,12 +1,21 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Configure webpack to handle pdfjs-dist properly
+  // Configure webpack to handle pdfjs-dist and pdf-parse properly
   webpack: (config, { isServer }) => {
-    // Fix pdfjs-dist canvas issues
+    // Fix canvas issues for both client and server builds
+    // Client-side: Disable canvas for pdfjs-dist in browser
+    // Server-side: Allow canvas but mark as external to avoid bundling native bindings
     if (!isServer) {
       config.resolve.alias.canvas = false
       config.resolve.alias.encoding = false
+    } else {
+      // Server-side: Mark canvas as external to prevent webpack from bundling it
+      // This allows pdf-parse to use its native dependencies at runtime
+      config.externals = config.externals || []
+      if (Array.isArray(config.externals)) {
+        config.externals.push('canvas', '@napi-rs/canvas')
+      }
     }
 
     return config
