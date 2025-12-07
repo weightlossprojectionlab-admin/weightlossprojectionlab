@@ -111,7 +111,7 @@ const nextConfig: NextConfig = {
                   "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com",
                   "font-src 'self' data:",
                   "connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://api.stripe.com https://generativelanguage.googleapis.com https://accounts.google.com https://oauth2.googleapis.com",
-                  "frame-src https://js.stripe.com https://firebasestorage.googleapis.com https://accounts.google.com",
+                  "frame-src https://js.stripe.com https://firebasestorage.googleapis.com https://accounts.google.com https://weightlossprojectionlab-8b284.firebaseapp.com https://app.netlify.com",
                   "frame-ancestors 'none'",
                   "base-uri 'self'",
                   "form-action 'self'",
