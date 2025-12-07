@@ -4,6 +4,7 @@
  */
 
 'use client'
+// Force dynamic renderingexport const dynamic = 'force-dynamic'
 
 import { useRouter } from 'next/navigation'
 import { useAppointments } from '@/hooks/useAppointments'

@@ -1,4 +1,5 @@
 'use client'
+// Force dynamic renderingexport const dynamic = 'force-dynamic'
 
 /**
  * Kitchen Inventory Page

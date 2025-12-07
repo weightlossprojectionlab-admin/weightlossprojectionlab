@@ -1,4 +1,5 @@
 'use client'
+// Force dynamic renderingexport const dynamic = 'force-dynamic'
 
 /**
  * Shopping List Page
