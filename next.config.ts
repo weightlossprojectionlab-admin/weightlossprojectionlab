@@ -2,32 +2,11 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   // Configure webpack to handle pdfjs-dist properly
-  webpack: (config, { isServer, webpack, dev }) => {
+  webpack: (config, { isServer }) => {
     // Fix pdfjs-dist canvas issues
     if (!isServer) {
       config.resolve.alias.canvas = false
       config.resolve.alias.encoding = false
-    }
-
-    // CRITICAL WORKAROUND: Disable minification entirely to prevent build hangs
-    // This significantly increases bundle size but allows build to complete
-    if (config.optimization) {
-      config.optimization.minimize = false
-      config.optimization.minimizer = []
-      config.optimization.moduleIds = 'named'
-      config.optimization.runtimeChunk = false
-      // Disable code splitting to simplify build
-      config.optimization.splitChunks = false
-    }
-
-    // Reduce webpack parallelism to minimum
-    config.parallelism = 1
-
-    // Increase memory limit for webpack
-    config.performance = {
-      ...config.performance,
-      maxAssetSize: 10000000, // 10MB
-      maxEntrypointSize: 10000000, // 10MB
     }
 
     return config
@@ -47,30 +26,21 @@ const nextConfig: NextConfig = {
       exclude: ['error', 'warn'],
     } : false,
   },
-  // Optimize CSS and packages for better LCP
-  // TEMPORARILY DISABLED: optimizeCss causing build hangs on Windows with large codebases
+  // Force dynamic rendering to skip static page generation
   experimental: {
-    // optimizeCss: true,
-    // optimizePackageImports: ['recharts', 'react-hot-toast', '@heroicons/react'],
+    ppr: false,
+    optimizePackageImports: ['recharts', 'react-hot-toast', '@heroicons/react'],
   },
   typescript: {
     // TEMPORARILY: Skip type checking during build to isolate the hang issue
     // Type errors should be caught in development and CI
     ignoreBuildErrors: true,
   },
-  // Re-enable standalone output for Netlify
-  output: 'standalone',
+  // Removed standalone output - Netlify handles deployment packaging
   // Skip static page generation for pages that depend on runtime data
   generateBuildId: async () => {
     // Use timestamp to force fresh builds
     return `build-${Date.now()}`
-  },
-  // CRITICAL: Skip prerendering entirely to fix Netlify timeout
-  experimental: {
-    // This tells Next.js to skip the "Generating static pages" phase completely
-    isrMemoryCacheSize: 0,
-    // Skip all static optimization
-    staticPageGenerationTimeout: 0,
   },
   // Turbopack disabled due to internal error with middleware injection
   // turbopack: {

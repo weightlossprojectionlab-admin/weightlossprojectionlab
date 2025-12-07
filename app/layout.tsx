@@ -3,6 +3,10 @@ import Script from 'next/script'
 import { ConditionalProviders } from '@/components/ConditionalProviders'
 import './globals.css'
 
+// Force dynamic rendering for all pages to skip static generation
+export const dynamic = 'force-dynamic'
+export const dynamicParams = true
+
 export const metadata: Metadata = {
   title: 'Weight Loss Progress Lab',
   description: 'AI-powered weight loss tracking with biometric authentication and meal analysis',
