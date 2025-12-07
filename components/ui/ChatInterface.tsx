@@ -228,7 +228,7 @@ export function ChatWidget({ userId, onExpand }: ChatWidgetProps) {
           setIsOpen(true)
           onExpand?.()
         }}
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-primary to-primary-dark text-white p-4 rounded-full shadow-lg hover:scale-110 transition-transform z-50"
+        className="hidden fixed bottom-6 right-6 bg-gradient-to-r from-primary to-primary-dark text-white p-4 rounded-full shadow-lg hover:scale-110 transition-transform z-50"
         aria-label="Open AI Coach"
       >
         <div className="flex items-center gap-2">

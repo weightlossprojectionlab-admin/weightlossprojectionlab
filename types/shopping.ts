@@ -406,3 +406,102 @@ export interface HouseholdShoppingSummary {
   itemsByMember: Record<string, number> // memberId -> item count
   lastUpdated: Date
 }
+
+/**
+ * Health-Based Shopping Suggestions
+ */
+
+export type HealthSuggestionReason =
+  | 'high_blood_pressure'      // Low-sodium foods
+  | 'high_blood_glucose'       // Low-glycemic foods
+  | 'high_cholesterol'         // Low-fat, high-fiber foods
+  | 'underweight'              // Calorie-dense foods
+  | 'overweight'               // Low-calorie, high-fiber foods
+  | 'diabetes'                 // Sugar-free, whole grains
+  | 'hypertension'             // Low-sodium items
+  | 'celiac'                   // Gluten-free products
+  | 'heart_disease'            // Omega-3, low saturated fat
+  | 'anemia'                   // Iron-rich foods
+  | 'vegetarian'               // Plant-based proteins
+  | 'vegan'                    // Dairy alternatives
+  | 'keto'                     // Low-carb, high-fat
+  | 'paleo'                    // Unprocessed whole foods
+  | 'child_nutrition'          // Calcium, vitamin D, age-appropriate
+  | 'senior_nutrition'         // Easy-to-digest, low-sodium
+  | 'weight_loss'              // High-protein, low-calorie
+  | 'weight_gain'              // Calorie-dense, protein-rich
+  | 'general_health'           // Balanced nutrition
+
+export interface HealthBasedSuggestion {
+  id: string
+  productName: string
+  category: ProductCategory
+  reason: HealthSuggestionReason
+  reasonText: string // Human-readable explanation
+  priority: 'high' | 'medium' | 'low'
+
+  // Nutritional benefit
+  benefits: string[] // ["Good for blood pressure", "High in potassium"]
+
+  // Health data that triggered this suggestion
+  triggeredBy?: {
+    vitalType?: string // 'blood_pressure', 'blood_glucose', etc.
+    vitalValue?: number
+    condition?: string // 'diabetes', 'hypertension', etc.
+    goal?: string // 'weight_loss', 'maintain', etc.
+  }
+
+  // Product suggestions
+  suggestedProducts?: string[] // Specific product names
+
+  // Warnings (items to avoid)
+  avoidWarning?: {
+    productName: string
+    reason: string // Why to avoid
+  }
+
+  // AI confidence
+  confidence: number // 0-100
+  generatedAt: Date
+}
+
+export interface HealthSuggestionsGroup {
+  category: string // "For Blood Pressure", "For Immune Support", etc.
+  icon: string // Emoji icon for UI
+  suggestions: HealthBasedSuggestion[]
+  priority: 'high' | 'medium' | 'low'
+}
+
+export interface HealthSuggestionsRequest {
+  patientId: string
+  userId: string
+  includeVitals?: boolean
+  includeConditions?: boolean
+  includeDietaryPreferences?: boolean
+  includeGoals?: boolean
+  limit?: number
+}
+
+export interface HealthSuggestionsResponse {
+  suggestions: HealthBasedSuggestion[]
+  groupedSuggestions: HealthSuggestionsGroup[]
+  healthSummary: {
+    latestVitals?: {
+      bloodPressure?: { systolic: number; diastolic: number; isAbnormal: boolean }
+      bloodGlucose?: { value: number; isAbnormal: boolean }
+      weight?: { value: number; unit: string }
+      bmi?: number
+    }
+    conditions: string[]
+    dietaryRestrictions: string[]
+    allergies: string[]
+    goals: string[]
+  }
+  itemsToAvoid: Array<{
+    productName: string
+    reason: string
+    severity: 'critical' | 'warning' | 'info'
+  }>
+  generatedAt: Date
+  cacheKey?: string
+}

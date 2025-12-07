@@ -233,7 +233,9 @@ self.addEventListener('fetch', (event) => {
   // Skip other Firebase/Google API requests (no caching)
   if (
     event.request.url.includes('firebase') ||
-    event.request.url.includes('googleapis.com')
+    event.request.url.includes('googleapis.com') ||
+    event.request.url.includes('accounts.google.com') ||
+    event.request.url.includes('apis.google.com')
   ) {
     return;
   }

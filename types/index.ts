@@ -674,3 +674,6 @@ export interface QueuedRecipe {
 
 // Medical Records System Types
 export * from './medical'
+
+// Caregiver Profile Types
+export * from './caregiver-profile'

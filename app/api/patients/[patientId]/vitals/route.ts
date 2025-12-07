@@ -14,6 +14,7 @@ import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { VitalSign } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
+import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
 
 // GET /api/patients/[patientId]/vitals - List vital signs with optional filtering
 export async function GET(
@@ -207,6 +208,57 @@ export async function POST(
       vitalId,
       type: newVital.type
     })
+
+    // Trigger notification to family members
+    try {
+      // Get patient and user info for notification
+      const patientSnapshot = await patientRef.get()
+      const userDoc = await adminDb.collection('users').doc(userId).get()
+      const userName = userDoc.exists ? userDoc.data()?.name || userDoc.data()?.email : 'Unknown User'
+
+      // Format vital value for display
+      let formattedValue = ''
+      if (newVital.type === 'blood_pressure') {
+        const systolic = (newVital as any).systolic || (newVital.value as any)?.systolic || 'N/A'
+        const diastolic = (newVital as any).diastolic || (newVital.value as any)?.diastolic || 'N/A'
+        formattedValue = `${systolic}/${diastolic} mmHg`
+      } else if (newVital.type === 'blood_sugar') {
+        formattedValue = `${newVital.value} mg/dL`
+      } else if (newVital.type === 'pulse_oximeter') {
+        formattedValue = `${newVital.value}%`
+      } else if (newVital.type === 'temperature') {
+        formattedValue = `${newVital.value}°${(newVital as any).unit === 'celsius' ? 'C' : 'F'}`
+      } else if (newVital.type === 'weight') {
+        formattedValue = `${newVital.value} ${(newVital as any).unit}`
+      } else {
+        formattedValue = `${newVital.value || 'N/A'}`
+      }
+
+      await sendNotificationToFamilyMembers({
+        userId: '', // Will be overridden for each recipient
+        patientId,
+        type: 'vital_logged',
+        priority: 'normal',
+        title: 'Vital Sign Logged',
+        message: `${userName} logged vital sign`,
+        excludeUserId: userId,
+        metadata: {
+          vitalId: vitalRef.id,
+          actionBy: userName,
+          actionByUserId: userId,
+          patientName: patientSnapshot.data()?.name || 'Patient',
+          vitalType: newVital.type,
+          value: formattedValue,
+          unit: newVital.unit || ''
+        }
+      })
+    } catch (notificationError) {
+      // Log error but don't fail the main operation
+      logger.error('[API /patients/[id]/vitals POST] Error sending notification', notificationError as Error, {
+        patientId,
+        vitalId
+      })
+    }
 
     return NextResponse.json({
       success: true,

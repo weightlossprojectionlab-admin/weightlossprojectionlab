@@ -2,11 +2,14 @@ import Link from 'next/link'
 import { ReactNode } from 'react'
 import { MenuButton } from './MenuButton'
 import { SwitchAccountButton } from './SwitchAccountButton'
+import { NotificationBell } from './NotificationBell'
+import { HouseholdSwitcher } from './HouseholdSwitcher'
 
 interface PageHeaderProps {
   title: string
   backHref?: string
   backLabel?: string
+  backButton?: boolean
   actions?: ReactNode
   subtitle?: ReactNode
   className?: string
@@ -29,6 +32,7 @@ export function PageHeader({
   title,
   backHref,
   backLabel = '← Back',
+  backButton,
   actions,
   subtitle,
   className = '',
@@ -38,7 +42,7 @@ export function PageHeader({
     <header className={`page-header ${className}`}>
       <div className="page-header-content">
         <div className="flex items-center gap-4 min-w-0 flex-1">
-          {backHref && (
+          {(backHref || backButton) && backHref && (
             <Link
               href={backHref}
               className="page-back-button flex-shrink-0"
@@ -56,6 +60,8 @@ export function PageHeader({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {actions}
+          <HouseholdSwitcher />
+          <NotificationBell />
           <SwitchAccountButton />
           {showMenu && <MenuButton />}
         </div>
@@ -81,6 +87,8 @@ export function SimplePageHeader({ title, subtitle, showMenu = true }: { title: 
           {subtitle && <div className="text-caption mt-1">{subtitle}</div>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <HouseholdSwitcher />
+          <NotificationBell />
           <SwitchAccountButton />
           {showMenu && <MenuButton />}
         </div>
@@ -144,6 +152,8 @@ export function TabbedPageHeader({
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {actions}
+          <HouseholdSwitcher />
+          <NotificationBell />
           <SwitchAccountButton />
           {showMenu && <MenuButton />}
         </div>

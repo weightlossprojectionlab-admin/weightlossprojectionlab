@@ -101,7 +101,8 @@ export const vitalUnitSchema = z.enum([
   '°F',
   '°C',
   'lbs',
-  'kg'
+  'kg',
+  'SpO₂% / bpm'  // For pulse oximeter readings (combines SpO2 and pulse rate)
 ])
 
 export const bloodPressureValueSchema = z.object({

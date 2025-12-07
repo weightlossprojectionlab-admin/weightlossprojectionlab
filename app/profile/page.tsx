@@ -29,6 +29,7 @@ import { PlanBadge } from '@/components/subscription/PlanBadge'
 import { UpgradeModal } from '@/components/subscription/UpgradeModal'
 import { usePatients } from '@/hooks/usePatients'
 import { NotificationSettings } from '@/components/ui/NotificationPrompt'
+import { NotificationPreferences } from '@/components/settings/NotificationPreferences'
 
 function ProfileContent() {
   const { user } = useAuth()
@@ -875,7 +876,10 @@ function ProfileContent() {
           </button>
         </div>
 
-        {/* Notification Settings */}
+        {/* Notification Preferences */}
+        {user?.uid && <NotificationPreferences userId={user.uid} />}
+
+        {/* Legacy Notification Settings */}
         <NotificationSettings userId={user?.uid} />
 
         <div className="bg-card rounded-lg p-6 shadow-sm">

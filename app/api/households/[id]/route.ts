@@ -130,7 +130,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Parse updates
     const body = await request.json()
-    const allowedUpdates = ['name', 'nickname', 'address', 'kitchenConfig', 'preferences']
+    const allowedUpdates = ['name', 'nickname', 'address', 'kitchenConfig', 'preferences', 'memberIds', 'primaryResidentId']
 
     const updates: any = {
       updatedAt: new Date().toISOString()

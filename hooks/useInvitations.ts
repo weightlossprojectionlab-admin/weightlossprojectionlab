@@ -54,12 +54,32 @@ export function useInvitations(autoFetch = true): UseInvitationsReturn {
   const sendInvitation = useCallback(
     async (data: FamilyInvitationForm): Promise<FamilyInvitation> => {
       try {
-        const newInvitation = await medicalOperations.family.sendInvitation(data as any) // API adds invitedByUserId and invitedByName server-side
+        const result = await medicalOperations.family.sendInvitation(data as any) // API adds invitedByUserId and invitedByName server-side
+
+        // Check if result has the additional metadata from API
+        const newInvitation = (result as any).data || result
+        const emailSent = (result as any).emailSent
+        const inviteCode = (result as any).inviteCode || newInvitation.inviteCode
 
         // Add to sent invitations
         setSentInvitations(prev => [newInvitation, ...prev])
 
-        toast.success(`Invitation sent to ${data.recipientEmail}`)
+        // Show appropriate message based on email delivery status
+        if (emailSent === false) {
+          toast.error(
+            `Email delivery failed. Invitation created.\nShare this code: ${inviteCode}\n\nClick to copy the code.`,
+            {
+              duration: 10000,
+              onClick: () => {
+                navigator.clipboard.writeText(inviteCode)
+                toast.success('Invite code copied to clipboard!')
+              }
+            }
+          )
+        } else {
+          toast.success(`Invitation sent to ${data.recipientEmail}`)
+        }
+
         return newInvitation
       } catch (err: any) {
         const errorMsg = err.message || 'Failed to send invitation'

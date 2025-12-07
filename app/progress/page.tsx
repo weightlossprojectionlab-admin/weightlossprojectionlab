@@ -3,8 +3,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useUserProfile'
+import { medicalOperations } from '@/lib/medical-operations'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { ProgressPageSkeleton } from '@/components/ui/skeleton'
@@ -50,6 +52,11 @@ const RecommendationsSection = dynamic(() => import('@/components/appointments/R
   ssr: false
 })
 
+const DataCompletenessTracker = dynamic(() => import('@/components/health/DataCompletenessTracker').then(mod => ({ default: mod.DataCompletenessTracker })), {
+  loading: () => <div className="bg-card rounded-lg shadow-sm p-6 animate-pulse"><div className="h-32 bg-muted rounded"></div></div>,
+  ssr: false
+})
+
 import {
   getCalorieIntakeLastNDays,
   getMacroDistributionLastNDays,
@@ -78,8 +85,16 @@ export default function ProgressPage() {
 }
 
 function ProgressContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
   const { profile, refetch: refetchProfile } = useUserProfile()
+
+  // Get patientId from URL query parameter (for family member view)
+  const patientIdParam = searchParams.get('patientId')
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(patientIdParam)
+  const [patientProfile, setPatientProfile] = useState<any>(null)
+  const [patients, setPatients] = useState<any[]>([])
 
   const [timeRange, setTimeRange] = useState(30) // Days
   const [loading, setLoading] = useState(true)
@@ -95,6 +110,10 @@ function ProgressContent() {
   const [showMedicationModal, setShowMedicationModal] = useState(false)
   const [selectedCondition, setSelectedCondition] = useState<string | undefined>(undefined)
 
+  // Determine the effective userId to use for data fetching
+  // If viewing a family member/patient, use their userId, otherwise use current user
+  const effectiveUserId = patientProfile?.userId || user?.uid
+
   // Chart data
   const [weightData, setWeightData] = useState<WeightDataPoint[]>([])
   const [calorieData, setCalorieData] = useState<CalorieDataPoint[]>([])
@@ -108,6 +127,51 @@ function ProgressContent() {
     mealsLogged: number
     macroPercentages: { protein: number; carbs: number; fat: number }
   } | null>(null)
+
+  // Load available patients/family members
+  useEffect(() => {
+    const loadPatients = async () => {
+      if (!user) return
+
+      try {
+        const patientList = await medicalOperations.patients.getPatients()
+        setPatients(patientList)
+      } catch (error) {
+        logger.error('Error loading patients', error as Error)
+      }
+    }
+
+    loadPatients()
+  }, [user])
+
+  // Load selected patient profile
+  useEffect(() => {
+    const loadPatientProfile = async () => {
+      if (!selectedPatientId) {
+        setPatientProfile(null)
+        return
+      }
+
+      try {
+        const patientData = await medicalOperations.patients.getPatient(selectedPatientId)
+        setPatientProfile(patientData)
+
+        // Check if patient has completed onboarding (has goals set)
+        if (!patientData.goals || !patientData.goals.dailyCalorieGoal) {
+          logger.warn('[Progress] Family member has not completed onboarding', {
+            patientId: selectedPatientId,
+            patientName: patientData.name
+          })
+        }
+      } catch (error) {
+        logger.error('Error loading patient profile', error as Error)
+        toast.error('Failed to load family member profile')
+        setPatientProfile(null)
+      }
+    }
+
+    loadPatientProfile()
+  }, [selectedPatientId])
 
   // Load step tracking status from localStorage
   useEffect(() => {
@@ -135,25 +199,27 @@ function ProgressContent() {
   }, [])
 
   const loadChartData = useCallback(async () => {
-    if (!user) return
+    if (!effectiveUserId) return
 
     setLoading(true)
 
     try {
-      const calorieGoal = profile?.goals?.dailyCalorieGoal || 2000
+      // Use patientProfile goals if viewing a family member, otherwise use current user's profile
+      const activeProfile = patientProfile || profile
+      const calorieGoal = activeProfile?.goals?.dailyCalorieGoal || 2000
 
       const endDate = new Date()
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - timeRange)
 
-      const stepGoal = profile?.goals?.dailySteps || 10000
+      const stepGoal = activeProfile?.goals?.dailySteps || 10000
 
       // Load calorie, macro, step data, and stats (weight is real-time via useEffect)
       const [calories, macros, steps, stats] = await Promise.all([
-        getCalorieIntakeLastNDays(user.uid, timeRange, calorieGoal),
-        getMacroDistributionLastNDays(user.uid, timeRange),
-        getStepCountLastNDays(user.uid, timeRange, stepGoal),
-        getSummaryStatistics(user.uid, startDate, endDate)
+        getCalorieIntakeLastNDays(effectiveUserId, timeRange, calorieGoal),
+        getMacroDistributionLastNDays(effectiveUserId, timeRange),
+        getStepCountLastNDays(effectiveUserId, timeRange, stepGoal),
+        getSummaryStatistics(effectiveUserId, startDate, endDate)
       ])
 
       setCalorieData(calories)
@@ -175,16 +241,16 @@ function ProgressContent() {
     } finally {
       setLoading(false)
     }
-  }, [user, timeRange, profile?.goals?.dailyCalorieGoal, profile?.goals?.dailySteps])
+  }, [effectiveUserId, timeRange, profile?.goals?.dailyCalorieGoal, profile?.goals?.dailySteps, patientProfile])
 
   // Real-time weight data subscription for chart
   useEffect(() => {
-    if (!user) return
+    if (!effectiveUserId) return
 
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - timeRange)
 
-    const weightLogsRef = collection(db, 'users', user.uid, 'weightLogs')
+    const weightLogsRef = collection(db, 'users', effectiveUserId, 'weightLogs')
     const q = query(
       weightLogsRef,
       where('loggedAt', '>=', Timestamp.fromDate(startDate)),
@@ -213,15 +279,15 @@ function ProgressContent() {
     )
 
     return () => unsubscribe()
-  }, [user, timeRange])
+  }, [effectiveUserId, timeRange])
 
   // Separate subscription for most recent weight log (for reminder modal)
   const [mostRecentWeightLog, setMostRecentWeightLog] = useState<WeightLog | null>(null)
 
   useEffect(() => {
-    if (!user) return
+    if (!effectiveUserId) return
 
-    const weightLogsRef = collection(db, 'users', user.uid, 'weightLogs')
+    const weightLogsRef = collection(db, 'users', effectiveUserId, 'weightLogs')
     const q = query(
       weightLogsRef,
       orderBy('loggedAt', 'desc'),
@@ -236,12 +302,12 @@ function ProgressContent() {
           const data = doc.data()
           const weightLog = {
             id: doc.id,
-            userId: user.uid,
-            patientId: data.patientId || user.uid,
+            userId: effectiveUserId,
+            patientId: data.patientId || effectiveUserId,
             weight: data.weight,
             unit: data.unit,
             loggedAt: data.loggedAt.toDate(),
-            loggedBy: data.loggedBy || user.uid,
+            loggedBy: data.loggedBy || effectiveUserId,
             source: data.source || data.dataSource || 'manual',
             notes: data.notes,
             dataSource: data.dataSource || 'manual'
@@ -266,13 +332,13 @@ function ProgressContent() {
     )
 
     return () => unsubscribe()
-  }, [user])
+  }, [effectiveUserId])
 
   useEffect(() => {
-    if (!user) return
+    if (!effectiveUserId) return
 
     loadChartData()
-  }, [user, loadChartData])
+  }, [effectiveUserId, loadChartData])
 
   // Function to fix start weight in Firestore
   const handleFixStartWeight = async () => {
@@ -346,17 +412,29 @@ function ProgressContent() {
     }
   }
 
-  const targetWeight = profile?.goals?.targetWeight
+  // Use patientProfile if viewing a family member, otherwise use current user's profile
+  const activeProfile = patientProfile || profile
+  const targetWeight = activeProfile?.goals?.targetWeight
+
+  // Check if the active profile has completed onboarding
+  const hasCompletedOnboarding = activeProfile && activeProfile.goals && activeProfile.goals.dailyCalorieGoal && activeProfile.height
+
+  // Determine if we're in single user mode (no family members) or family mode
+  const isSingleUserMode = patients.length < 2
+  const isFamilyMode = patients.length >= 2
+
+  // Show dropdown only if: family mode AND no patientId in URL (no context established)
+  const showPatientSelector = isFamilyMode && !patientIdParam
 
   // Calculate goal progress metrics
   const goalProgress = useMemo(() => {
-    if (!profile?.goals || weightData.length === 0) return null
+    if (!activeProfile?.goals || weightData.length === 0) return null
 
     const currentWeight = weightData[weightData.length - 1].weight
 
     // Use the first weight log as starting weight if startWeight is unrealistic (< 50 lbs)
     // This handles cases where startWeight was incorrectly set during onboarding
-    let startWeight = profile.goals.startWeight
+    let startWeight = activeProfile.goals.startWeight
     if (!startWeight || startWeight < 50) {
       // Use the first weight log entry (oldest) as the starting weight
       startWeight = weightData[0].weight
@@ -365,9 +443,9 @@ function ProgressContent() {
 
     // Debug logging
     console.log('Progress page - Goal data:', {
-      startWeight: profile.goals.startWeight,
-      weeklyWeightLossGoal: profile.goals.weeklyWeightLossGoal,
-      targetWeight: profile.goals.targetWeight,
+      startWeight: activeProfile.goals.startWeight,
+      weeklyWeightLossGoal: activeProfile.goals.weeklyWeightLossGoal,
+      targetWeight: activeProfile.goals.targetWeight,
       currentWeight,
       calculatedStartWeight: startWeight
     })
@@ -375,83 +453,165 @@ function ProgressContent() {
     // Convert WeightDataPoint[] to WeightLog[] format
     const weightLogs = weightData.map(w => ({
       id: '',
-      userId: user?.uid || '',
+      userId: effectiveUserId || '',
       weight: w.weight,
       unit: 'lbs' as const,
       loggedAt: w.timestamp,
       dataSource: 'manual' as const
     }))
 
-    return calculateGoalProgress(currentWeight, startWeight, profile.goals, weightLogs)
-  }, [profile, weightData, user])
+    return calculateGoalProgress(currentWeight, startWeight, activeProfile.goals, weightLogs)
+  }, [activeProfile, weightData, effectiveUserId])
 
   return (
     <div className="min-h-screen bg-background">
       <PageHeader
-        title="Progress & Trends"
-        subtitle="Visualize your weight loss journey with interactive charts"
+        title={patientProfile ? `${patientProfile.name}'s Progress` : isSingleUserMode ? "Your Progress & Trends" : "Progress & Trends"}
+        subtitle={patientProfile ? `Tracking ${patientProfile.name}'s weight loss journey` : "Visualize your weight loss journey with interactive charts"}
         actions={
-          <ShareButton
-            shareOptions={{
-              type: 'progress',
-              data: {
-                weightLoss: Math.abs(summaryStats?.weightChange || 0),
-                daysActive: timeRange
-              }
-            }}
-            variant="default"
-            size="md"
-            onShareModalOpen={() => setShowShareModal(true)}
-          />
+          <div className="flex items-center gap-3">
+            {/* Family Member Selector - Only show in family mode without URL context */}
+            {showPatientSelector && (
+              <select
+                value={selectedPatientId || ''}
+                onChange={(e) => {
+                  const newPatientId = e.target.value || null
+                  setSelectedPatientId(newPatientId)
+                  // Update URL
+                  if (newPatientId) {
+                    router.push(`/progress?patientId=${newPatientId}`)
+                  } else {
+                    router.push('/progress')
+                  }
+                }}
+                className="px-3 py-2 border border-border rounded-lg bg-card text-foreground text-sm"
+              >
+                <option value="">My Progress</option>
+                {patients.map((patient) => (
+                  <option key={patient.id} value={patient.id}>
+                    {patient.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <ShareButton
+              shareOptions={{
+                type: 'progress',
+                data: {
+                  weightLoss: Math.abs(summaryStats?.weightChange || 0),
+                  daysActive: timeRange
+                }
+              }}
+              variant="default"
+              size="md"
+              onShareModalOpen={() => setShowShareModal(true)}
+            />
+          </div>
         }
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Time Range Selector */}
-        <div className="bg-card rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Time Range</h2>
-              <p className="text-sm text-muted-foreground">Select the period to visualize</p>
-            </div>
-            <div className="flex gap-2">
-              {[7, 14, 30, 60, 90].map((days) => (
-                <button
-                  key={days}
-                  onClick={() => setTimeRange(days)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    timeRange === days
-                      ? 'bg-primary text-white'
-                      : 'bg-muted text-foreground hover:bg-gray-200'
-                  }`}
-                >
-                  {days === 7 ? '1 Week' : days === 30 ? '1 Month' : days === 60 ? '2 Months' : days === 90 ? '3 Months' : `${days} Days`}
-                </button>
-              ))}
+        {/* Onboarding Required Message for Family Members */}
+        {selectedPatientId && patientProfile && (!patientProfile.goals || !patientProfile.goals.dailyCalorieGoal) && (
+          <div className="bg-warning-light border-2 border-warning rounded-lg p-6 mb-6">
+            <div className="flex items-start gap-4">
+              <span className="text-4xl">⚠️</span>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-foreground mb-2">
+                  {patientProfile.name} Needs to Complete Onboarding
+                </h3>
+                <p className="text-sm text-foreground mb-4">
+                  {patientProfile.name} hasn't completed their health profile setup yet. They need to set their goals, height, and weight to start tracking progress.
+                </p>
+                <div className="flex gap-3">
+                  <Link
+                    href={`/patients/${selectedPatientId}`}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
+                  >
+                    View {patientProfile.name}'s Profile
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setSelectedPatientId(null)
+                      router.push('/progress')
+                    }}
+                    className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                  >
+                    View My Progress
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* AI Health Alerts & Data Completeness - Show at top */}
+        {hasCompletedOnboarding && (
+          <>
+            {/* Urgent Health Alerts */}
+            <div id="health-alerts" className="mb-6">
+              <RecommendationsSection
+                patientId={selectedPatientId}
+                showOnlyUrgent={true}
+              />
+            </div>
+
+            {/* Data Completeness Tracker */}
+            <DataCompletenessTracker
+              patientId={selectedPatientId}
+              className="mb-6"
+            />
+          </>
+        )}
+
+        {/* Only show content if onboarding is complete OR viewing own profile */}
+        {hasCompletedOnboarding && (
+          <>
+            {/* Time Range Selector */}
+            <div className="bg-card rounded-lg shadow-sm p-4 mb-6">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Time Range</h2>
+                  <p className="text-sm text-muted-foreground">Select the period to visualize</p>
+                </div>
+                <div className="flex gap-2">
+                  {[7, 14, 30, 60, 90].map((days) => (
+                    <button
+                      key={days}
+                      onClick={() => setTimeRange(days)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        timeRange === days
+                          ? 'bg-primary text-white'
+                          : 'bg-muted text-foreground hover:bg-gray-200'
+                      }`}
+                    >
+                      {days === 7 ? '1 Week' : days === 30 ? '1 Month' : days === 60 ? '2 Months' : days === 90 ? '3 Months' : `${days} Days`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
 
         {/* Health Context Section */}
-        {profile && !loading && (
+        {activeProfile && !loading && (
           <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-lg font-bold text-foreground mb-4">Health Profile</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Activity Level */}
-              {profile.profile?.activityLevel && (
+              {activeProfile.profile?.activityLevel && (
                 <div className="border-l-4 border-purple-500 pl-4">
                   <p className="text-xs text-muted-foreground mb-1">Activity Level</p>
                   <p className="font-bold text-foreground capitalize">
-                    {profile.profile.activityLevel.replace('-', ' ')}
+                    {activeProfile.profile.activityLevel.replace('-', ' ')}
                   </p>
                   <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
-                    TDEE: {getActivityMultiplier(profile.profile.activityLevel)}x BMR
+                    TDEE: {getActivityMultiplier(activeProfile.profile.activityLevel)}x BMR
                   </p>
                 </div>
               )}
 
               {/* Health Conditions */}
-              {profile.profile?.healthConditions && profile.profile.healthConditions.length > 0 && (
+              {activeProfile.profile?.healthConditions && activeProfile.profile.healthConditions.length > 0 && (
                 <div className="border-l-4 border-red-500 pl-4">
                   <p className="text-xs text-muted-foreground mb-2">
                     Health Conditions
@@ -459,8 +619,8 @@ function ProgressContent() {
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {(showAllHealthConditions
-                      ? profile.profile.healthConditions
-                      : profile.profile.healthConditions.slice(0, 3)
+                      ? activeProfile.profile.healthConditions
+                      : activeProfile.profile.healthConditions.slice(0, 3)
                     ).map((condition: string, idx: number) => (
                       <button
                         key={idx}
@@ -473,14 +633,14 @@ function ProgressContent() {
                         {condition}
                       </button>
                     ))}
-                    {profile.profile.healthConditions.length > 3 && (
+                    {activeProfile.profile.healthConditions.length > 3 && (
                       <button
                         onClick={() => setShowAllHealthConditions(!showAllHealthConditions)}
                         className="px-3 py-2 bg-muted text-muted-foreground text-xs rounded hover:bg-gray-200 transition-colors min-h-[44px] sm:min-h-0 sm:py-1 flex items-center"
                       >
                         {showAllHealthConditions
                           ? 'Show less'
-                          : `+${profile.profile.healthConditions.length - 3} more`}
+                          : `+${activeProfile.profile.healthConditions.length - 3} more`}
                       </button>
                     )}
                   </div>
@@ -493,12 +653,12 @@ function ProgressContent() {
                   <p className="text-xs text-muted-foreground">
                     Medications
                     {/* DEBUG */}
-                    {profile.profile?.medications && (
-                      <span className="ml-2 text-primary">({profile.profile.medications.length} total)</span>
+                    {activeProfile.profile?.medications && (
+                      <span className="ml-2 text-primary">({activeProfile.profile.medications.length} total)</span>
                     )}
                   </p>
                   <div className="flex items-center gap-2">
-                    {profile.profile?.medications && profile.profile.medications.length > 0 && (
+                    {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 && (
                       <Link
                         href="/medications"
                         className="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs text-secondary hover:text-blue-700 dark:hover:text-blue-300 font-medium underline min-h-[44px] sm:min-h-0 flex items-center active:scale-95 transition-transform"
@@ -508,25 +668,25 @@ function ProgressContent() {
                     )}
                     <button
                       onClick={() => {
-                        console.log('[DEBUG] Profile medications:', profile.profile?.medications)
+                        console.log('[DEBUG] Profile medications:', activeProfile.profile?.medications)
                         setSelectedCondition(undefined)
                         setShowMedicationModal(true)
                       }}
                       className="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs text-primary hover:text-primary-dark dark:text-purple-400 dark:hover:text-purple-300 font-medium underline min-h-[44px] sm:min-h-0 flex items-center active:scale-95 transition-transform"
                     >
-                      {profile.profile?.medications && profile.profile.medications.length > 0 ? '⚙️ Manage' : '➕ Add'}
+                      {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 ? '⚙️ Manage' : '➕ Add'}
                     </button>
                   </div>
                 </div>
-                {profile.profile?.medications && profile.profile.medications.length > 0 ? (
+                {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 ? (
                   <>
                     <p className="font-bold text-foreground">
-                      {profile.profile.medications.length} Active
+                      {activeProfile.profile.medications.length} Active
                     </p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {(showAllMedications
-                        ? profile.profile.medications
-                        : profile.profile.medications.slice(0, 2)
+                        ? activeProfile.profile.medications
+                        : activeProfile.profile.medications.slice(0, 2)
                       ).map((med: ScannedMedication, idx: number) => (
                         <span key={idx} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-secondary-dark text-xs rounded flex items-center gap-1">
                           {med.name}
@@ -537,14 +697,14 @@ function ProgressContent() {
                           )}
                         </span>
                       ))}
-                      {profile.profile.medications.length > 2 && (
+                      {activeProfile.profile.medications.length > 2 && (
                         <button
                           onClick={() => setShowAllMedications(!showAllMedications)}
                           className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded hover:bg-gray-200 transition-colors"
                         >
                           {showAllMedications
                             ? 'Show less'
-                            : `+${profile.profile.medications.length - 2} more`}
+                            : `+${activeProfile.profile.medications.length - 2} more`}
                         </button>
                       )}
                     </div>
@@ -557,33 +717,33 @@ function ProgressContent() {
               </div>
 
               {/* Lifestyle Factors */}
-              {((profile.profile?.lifestyle?.smoking && profile.profile.lifestyle.smoking !== 'never') ||
-                (profile.profile?.lifestyle?.alcoholFrequency && profile.profile.lifestyle.alcoholFrequency !== 'never') ||
-                (profile.profile?.lifestyle?.recreationalDrugs && profile.profile.lifestyle.recreationalDrugs !== 'no')) && (
+              {((activeProfile.profile?.lifestyle?.smoking && activeProfile.profile.lifestyle.smoking !== 'never') ||
+                (activeProfile.profile?.lifestyle?.alcoholFrequency && activeProfile.profile.lifestyle.alcoholFrequency !== 'never') ||
+                (activeProfile.profile?.lifestyle?.recreationalDrugs && activeProfile.profile.lifestyle.recreationalDrugs !== 'no')) && (
                 <div className="border-l-4 border-yellow-500 pl-4">
                   <p className="text-xs text-muted-foreground mb-2">Lifestyle Factors</p>
                   <div className="space-y-1">
-                    {profile.profile.lifestyle.smoking !== 'never' && (
+                    {activeProfile.profile.lifestyle.smoking !== 'never' && (
                       <div className="flex items-center gap-2 text-sm">
                         <span>🚬</span>
                         <span className="text-foreground capitalize">
-                          {profile.profile.lifestyle.smoking.replace('-', ' ')}
+                          {activeProfile.profile.lifestyle.smoking.replace('-', ' ')}
                         </span>
                       </div>
                     )}
-                    {profile.profile.lifestyle.alcoholFrequency !== 'never' && (
+                    {activeProfile.profile.lifestyle.alcoholFrequency !== 'never' && (
                       <div className="flex items-center gap-2 text-sm">
                         <span>🍺</span>
                         <span className="text-foreground capitalize">
-                          {profile.profile.lifestyle.alcoholFrequency} drinker
+                          {activeProfile.profile.lifestyle.alcoholFrequency} drinker
                         </span>
                       </div>
                     )}
-                    {profile.profile.lifestyle.recreationalDrugs !== 'no' && (
+                    {activeProfile.profile.lifestyle.recreationalDrugs !== 'no' && (
                       <div className="flex items-center gap-2 text-sm">
                         <span>⚠️</span>
                         <span className="text-foreground capitalize">
-                          {profile.profile.lifestyle.recreationalDrugs} use
+                          {activeProfile.profile.lifestyle.recreationalDrugs} use
                         </span>
                       </div>
                     )}
@@ -612,11 +772,12 @@ function ProgressContent() {
                 <div>
                   <p className="text-xs text-muted-foreground">Starting Weight</p>
                   <p className="text-xl font-bold text-foreground">
-                    {profile.goals?.startWeight && profile.goals.startWeight >= 50
-                      ? profile.goals.startWeight
+                    {activeProfile.goals?.startWeight && activeProfile.goals.startWeight >= 50
+                      ? activeProfile.goals.startWeight
                       : weightData[0].weight} lbs
                   </p>
-                  {profile.goals?.startWeight && profile.goals.startWeight < 50 && (
+                  {/* Only show fix button for current user, not family members */}
+                  {activeProfile.goals?.startWeight && activeProfile.goals.startWeight < 50 && !selectedPatientId && (
                     <button
                       onClick={handleFixStartWeight}
                       disabled={fixingStartWeight}
@@ -629,20 +790,20 @@ function ProgressContent() {
               )}
 
               {/* Goal Weight */}
-              {profile.goals?.targetWeight && (
+              {activeProfile.goals?.targetWeight && (
                 <div>
                   <p className="text-xs text-muted-foreground">Goal Weight</p>
-                  <p className="text-xl font-bold text-success">{profile.goals.targetWeight} lbs</p>
+                  <p className="text-xl font-bold text-success">{activeProfile.goals.targetWeight} lbs</p>
                 </div>
               )}
 
               {/* BMI (calculated) */}
-              {profile.height && weightData.length > 0 && (
+              {activeProfile.height && weightData.length > 0 && (
                 <div>
                   <p className="text-xs text-muted-foreground">Current BMI</p>
                   <p className="text-xl font-bold text-foreground">
                     {(() => {
-                      const heightInInches = profile.height
+                      const heightInInches = activeProfile.height
                       const currentWeight = weightData[weightData.length - 1].weight
                       const bmi = (currentWeight / (heightInInches * heightInInches)) * 703
                       return bmi.toFixed(1)
@@ -652,18 +813,18 @@ function ProgressContent() {
               )}
 
               {/* BMR */}
-              {profile.goals?.bmr && (
+              {activeProfile.goals?.bmr && (
                 <div>
                   <p className="text-xs text-muted-foreground">BMR</p>
-                  <p className="text-xl font-bold text-foreground">{Math.round(profile.goals.bmr)}</p>
+                  <p className="text-xl font-bold text-foreground">{Math.round(activeProfile.goals.bmr)}</p>
                 </div>
               )}
 
               {/* TDEE */}
-              {profile.goals?.tdee && (
+              {activeProfile.goals?.tdee && (
                 <div>
                   <p className="text-xs text-muted-foreground">TDEE</p>
-                  <p className="text-xl font-bold text-foreground">{Math.round(profile.goals.tdee)}</p>
+                  <p className="text-xl font-bold text-foreground">{Math.round(activeProfile.goals.tdee)}</p>
                 </div>
               )}
             </div>
@@ -897,7 +1058,7 @@ function ProgressContent() {
                   </p>
                   {profile?.goals?.startWeight && weightData.length > 0 && (
                     <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
-                      Total: {(profile.goals.startWeight - weightData[weightData.length - 1].weight).toFixed(1)} lbs
+                      Total: {(activeProfile.goals.startWeight - weightData[weightData.length - 1].weight).toFixed(1)} lbs
                     </p>
                   )}
                 </div>
@@ -914,7 +1075,7 @@ function ProgressContent() {
                   <p className="text-2xl font-bold text-foreground">{summaryStats.avgCalories}</p>
                   {profile?.goals?.dailyCalorieGoal && (
                     <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
-                      Goal: {profile.goals.dailyCalorieGoal} cal
+                      Goal: {activeProfile.goals.dailyCalorieGoal} cal
                     </p>
                   )}
                 </div>
@@ -950,7 +1111,7 @@ function ProgressContent() {
                 </div>
                 {profile?.goals?.macroTargets && (
                   <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
-                    Goal: {profile.goals.macroTargets.protein}% / {profile.goals.macroTargets.carbs}% / {profile.goals.macroTargets.fat}%
+                    Goal: {activeProfile.goals.macroTargets.protein}% / {activeProfile.goals.macroTargets.carbs}% / {activeProfile.goals.macroTargets.fat}%
                   </p>
                 )}
               </div>
@@ -1005,15 +1166,19 @@ function ProgressContent() {
           </div>
         )}
 
-        {/* AI Appointment Recommendations */}
-        {!loading && (
+        {/* AI Health Insights - Full recommendations (non-urgent) */}
+        {!loading && hasCompletedOnboarding && (
           <div id="recommendations">
-            <RecommendationsSection className="mb-6" />
+            <RecommendationsSection
+              className="mb-6"
+              patientId={selectedPatientId}
+              showOnlyUrgent={false}
+            />
           </div>
         )}
 
         {/* Empty State */}
-        {!loading && weightData.length === 0 && calorieData.length === 0 && (
+        {!loading && weightData.length === 0 && calorieData.length === 0 && hasCompletedOnboarding && (
           <div className="bg-card rounded-lg shadow-sm p-12 text-center">
             <div className="text-6xl mb-4">📊</div>
             <p className="text-xl font-bold text-foreground mb-2">No Data Available Yet</p>
@@ -1035,6 +1200,8 @@ function ProgressContent() {
               </a>
             </div>
           </div>
+        )}
+          </>
         )}
       </main>
 
@@ -1064,7 +1231,8 @@ function ProgressContent() {
       />
 
       {/* Weight Reminder Modal (auto-shows on mount if due) - only after weight data loads */}
-      {weightDataLoaded && (
+      {/* Only show for current user's own progress, not for family members */}
+      {weightDataLoaded && !selectedPatientId && (
         <WeightReminderModal
           lastWeightLog={mostRecentWeightLog}
           frequency={profile?.preferences?.weightCheckInFrequency || 'weekly'}
@@ -1084,18 +1252,18 @@ function ProgressContent() {
           setShowWeightModal(false)
           // Weight data updates automatically via real-time subscription
         }}
-        patientId={profile?.preferences?.primaryPatientId}
+        patientId={selectedPatientId || activeProfile?.preferences?.primaryPatientId}
       />
 
       {/* Medication Management Modal */}
-      {profile?.profile && (
+      {activeProfile?.profile && (
         <MedicationManagementModal
           isOpen={showMedicationModal}
           onClose={() => {
             setShowMedicationModal(false)
             setSelectedCondition(undefined)
           }}
-          medications={profile.profile.medications || []}
+          medications={activeProfile.profile.medications || []}
           onSave={handleSaveMedications}
           prescribedFor={selectedCondition}
         />

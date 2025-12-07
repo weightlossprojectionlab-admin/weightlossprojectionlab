@@ -182,7 +182,26 @@ export function InvitationsTab({
                     <code className="text-sm font-mono bg-muted px-2 py-1 rounded">
                       {invitation.inviteCode}
                     </code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(invitation.inviteCode)
+                        alert('Invite code copied to clipboard!')
+                      }}
+                      className="text-xs text-primary hover:underline"
+                      title="Copy invite code"
+                    >
+                      Copy
+                    </button>
                   </div>
+
+                  {/* Email Delivery Warning */}
+                  {!invitation.emailSentAt && (
+                    <div className="mb-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 rounded">
+                      <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                        ⚠️ Email may not have been delivered. Share the invite code manually.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Stats */}
                   <div className="grid grid-cols-2 gap-4 mb-3">

@@ -16,6 +16,7 @@ import {
 } from '@/lib/recipe-share-utils'
 import { TemplateStyle, getAvailableTemplates, getTemplateConfig } from '@/lib/recipe-templates'
 import { scaleRecipe, calculateAdjustedPrepTime, type ScaledRecipe } from '@/lib/recipe-scaler'
+import { getServingSize } from '@/lib/recipe-utils'
 import { getSubstitutionSuggestions, type Substitution } from '@/lib/ingredient-substitutions'
 import { recipeQueueOperations, cookingSessionOperations } from '@/lib/firebase-operations'
 import { createStepTimers } from '@/lib/recipe-timer-parser'
@@ -79,7 +80,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateStyle>('minimalist')
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio>('1:1')
   const [shareStatus, setShareStatus] = useState<string>('')
-  const [servingSize, setServingSize] = useState(suggestion.servingSize)
+  const [servingSize, setServingSize] = useState(getServingSize(suggestion.servingSize))
   const [expandedIngredient, setExpandedIngredient] = useState<number | null>(null)
   const [swappedIngredients, setSwappedIngredients] = useState<Map<number, Substitution>>(new Map())
   const [haveIngredients, setHaveIngredients] = useState<Set<number>>(new Set())
@@ -168,7 +169,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   }
 
   const resetServings = () => {
-    setServingSize(suggestion.servingSize)
+    setServingSize(getServingSize(suggestion.servingSize))
   }
 
   const toggleIngredientSubstitutions = (index: number) => {
@@ -689,7 +690,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
               </div>
 
               {/* Dietary Tags */}
-              {suggestion.dietaryTags.length > 0 && (
+              {suggestion.dietaryTags && suggestion.dietaryTags.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-foreground mb-2">Dietary Info</h3>
                   <div className="flex flex-wrap gap-2">

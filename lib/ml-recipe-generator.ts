@@ -3,11 +3,15 @@
  *
  * Generates recipes from product association data by analyzing
  * what products users frequently buy together.
+ *
+ * ENHANCED: Now integrates cross-user inventory data to prioritize
+ * recipes that most users can actually make.
  */
 
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { RecipeIngredient } from './meal-suggestions'
+import { analyzeTrendingIngredients, findMostViableRecipes } from './cross-user-recipe-analyzer'
 
 interface ProductAssociation {
   barcode: string
@@ -441,11 +445,18 @@ async function buildRecipe(
 
 /**
  * Generate recipes from product associations
+ * ENHANCED: Now uses cross-user inventory data to prioritize trending ingredients
  */
 export async function generateRecipesFromAssociations(
   limit: number = RECIPES_PER_RUN
 ): Promise<{ generated: number; skipped: number; recipes: GeneratedRecipe[] }> {
   logger.info('Starting ML recipe generation from product associations...')
+
+  // ENHANCEMENT: Get trending ingredients from cross-user inventory
+  logger.info('Analyzing cross-user inventory data...')
+  const trendingIngredients = await analyzeTrendingIngredients({ minHouseholds: 3, limit: 100 })
+  const trendingBarcodes = new Set(trendingIngredients.map(i => i.barcode))
+  logger.info(`Found ${trendingBarcodes.size} trending ingredients across users`)
 
   // Fetch product associations
   const associationsSnapshot = await adminDb
@@ -460,12 +471,20 @@ export async function generateRecipesFromAssociations(
   }
 
   const associations: ProductAssociation[] = associationsSnapshot.docs.map(doc => doc.data() as ProductAssociation)
-  logger.info(`Found ${associations.length} product associations`)
+
+  // ENHANCEMENT: Prioritize associations with trending ingredients
+  const prioritizedAssociations = associations.sort((a, b) => {
+    const aIsTrending = trendingBarcodes.has(a.barcode) ? 1 : 0
+    const bIsTrending = trendingBarcodes.has(b.barcode) ? 1 : 0
+    return bIsTrending - aIsTrending
+  })
+
+  logger.info(`Found ${associations.length} product associations (prioritized by trending ingredients)`)
 
   const generatedRecipes: GeneratedRecipe[] = []
   let skipped = 0
 
-  for (const association of associations) {
+  for (const association of prioritizedAssociations) {
     if (generatedRecipes.length >= limit) break
 
     // Filter for strong associations
@@ -505,14 +524,26 @@ export async function generateRecipesFromAssociations(
     const recipe = await buildRecipe(mainProduct, relatedProducts, avgLift)
 
     if (recipe) {
+      // ENHANCEMENT: Mark if recipe uses trending ingredients
+      const usesTrendingIngredients = recipe.ingredientsV2.some(ing =>
+        ing.productBarcode && trendingBarcodes.has(ing.productBarcode)
+      )
+
+      // Add community metadata to description
+      if (usesTrendingIngredients) {
+        recipe.description += ' Uses ingredients popular across our community!'
+      }
+
       generatedRecipes.push(recipe)
-      logger.info(`Generated recipe: ${recipe.name} (${recipe.ingredientsV2.length} ingredients, lift: ${avgLift.toFixed(2)})`)
+      logger.info(`Generated recipe: ${recipe.name} (${recipe.ingredientsV2.length} ingredients, lift: ${avgLift.toFixed(2)}, trending: ${usesTrendingIngredients})`)
     } else {
       skipped++
     }
   }
 
   logger.info(`Generated ${generatedRecipes.length} recipes, skipped ${skipped}`)
+  logger.info(`Cross-user data integration: ${generatedRecipes.filter(r => r.description.includes('popular across')).length} recipes use trending ingredients`)
+
   return { generated: generatedRecipes.length, skipped, recipes: generatedRecipes }
 }
 

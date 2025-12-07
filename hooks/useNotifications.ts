@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getToken, onMessage } from 'firebase/messaging'
 import { initializeMessaging } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
@@ -11,6 +11,22 @@ import {
   updateNotificationSettings,
   type NotificationSettings
 } from '@/lib/nudge-system'
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  doc,
+  updateDoc,
+  writeBatch,
+  getDocs,
+  getCountFromServer,
+  Timestamp
+} from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import type { Notification, NotificationFilter } from '@/types/notifications'
 import toast from 'react-hot-toast'
 
 export interface NotificationState {
@@ -23,7 +39,7 @@ export interface NotificationState {
 }
 
 /**
- * Hook to manage push notification permissions and settings
+ * Hook to manage push notification permissions, settings, and notification fetching
  */
 export function useNotifications(userId: string | undefined) {
   const [state, setState] = useState<NotificationState>({
@@ -34,6 +50,10 @@ export function useNotifications(userId: string | undefined) {
     loading: true,
     error: null
   })
+
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
 
   /**
    * Check notification support and initial permission state
@@ -71,6 +91,34 @@ export function useNotifications(userId: string | undefined) {
     }
 
     checkSupport()
+  }, [userId])
+
+  /**
+   * Real-time listener for unread count
+   */
+  useEffect(() => {
+    if (!userId) {
+      setUnreadCount(0)
+      return
+    }
+
+    const unreadQuery = query(
+      collection(db, 'notifications'),
+      where('userId', '==', userId),
+      where('read', '==', false)
+    )
+
+    const unsubscribe = onSnapshot(
+      unreadQuery,
+      (snapshot) => {
+        setUnreadCount(snapshot.size)
+      },
+      (error) => {
+        logger.error('[useNotifications] Error listening to unread count:', error)
+      }
+    )
+
+    return () => unsubscribe()
   }, [userId])
 
   /**
@@ -112,7 +160,6 @@ export function useNotifications(userId: string | undefined) {
       }
 
       // Get FCM token with VAPID key
-      // TODO: Replace with your actual VAPID key from Firebase Console
       const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
 
       if (!vapidKey) {
@@ -217,10 +264,202 @@ export function useNotifications(userId: string | undefined) {
     }
   }
 
+  /**
+   * Get notifications with filters
+   */
+  const getNotifications = useCallback(async (filters?: NotificationFilter): Promise<Notification[]> => {
+    if (!userId) return []
+
+    try {
+      setNotificationsLoading(true)
+
+      let notificationQuery = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId)
+      )
+
+      // Apply filters
+      if (filters?.patientId) {
+        notificationQuery = query(notificationQuery, where('patientId', '==', filters.patientId))
+      }
+
+      if (filters?.type) {
+        const types = Array.isArray(filters.type) ? filters.type : [filters.type]
+        notificationQuery = query(notificationQuery, where('type', 'in', types))
+      }
+
+      if (filters?.read !== undefined) {
+        notificationQuery = query(notificationQuery, where('read', '==', filters.read))
+      }
+
+      if (filters?.priority) {
+        const priorities = Array.isArray(filters.priority) ? filters.priority : [filters.priority]
+        notificationQuery = query(notificationQuery, where('priority', 'in', priorities))
+      }
+
+      // Always order by createdAt descending
+      notificationQuery = query(notificationQuery, orderBy('createdAt', 'desc'))
+
+      // Apply limit
+      if (filters?.limit) {
+        notificationQuery = query(notificationQuery, limit(filters.limit))
+      }
+
+      const snapshot = await getDocs(notificationQuery)
+      const fetchedNotifications = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Notification[]
+
+      setNotifications(fetchedNotifications)
+      setNotificationsLoading(false)
+      return fetchedNotifications
+    } catch (error) {
+      logger.error('[useNotifications] Error fetching notifications:', error as Error)
+      setNotificationsLoading(false)
+      return []
+    }
+  }, [userId])
+
+  /**
+   * Get unread count
+   */
+  const getUnreadCount = useCallback(async (): Promise<number> => {
+    if (!userId) return 0
+
+    try {
+      const unreadQuery = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+        where('read', '==', false)
+      )
+
+      const snapshot = await getCountFromServer(unreadQuery)
+      return snapshot.data().count
+    } catch (error) {
+      logger.error('[useNotifications] Error getting unread count:', error as Error)
+      return 0
+    }
+  }, [userId])
+
+  /**
+   * Mark notification as read
+   */
+  const markAsRead = useCallback(async (notificationId: string): Promise<void> => {
+    if (!userId) return
+
+    try {
+      const notificationRef = doc(db, 'notifications', notificationId)
+      await updateDoc(notificationRef, {
+        read: true,
+        readAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      })
+
+      // Update local state
+      setNotifications(prev =>
+        prev.map(n =>
+          n.id === notificationId
+            ? { ...n, read: true, readAt: new Date().toISOString() }
+            : n
+        )
+      )
+    } catch (error) {
+      logger.error('[useNotifications] Error marking notification as read:', error as Error)
+      throw error
+    }
+  }, [userId])
+
+  /**
+   * Mark all notifications as read
+   */
+  const markAllAsRead = useCallback(async (): Promise<void> => {
+    if (!userId) return
+
+    try {
+      const unreadQuery = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+        where('read', '==', false)
+      )
+
+      const snapshot = await getDocs(unreadQuery)
+
+      if (snapshot.empty) {
+        toast('No unread notifications')
+        return
+      }
+
+      const batch = writeBatch(db)
+      const now = new Date().toISOString()
+
+      snapshot.docs.forEach(doc => {
+        batch.update(doc.ref, {
+          read: true,
+          readAt: now,
+          updatedAt: now
+        })
+      })
+
+      await batch.commit()
+
+      // Update local state
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, read: true, readAt: now }))
+      )
+
+      toast.success(`Marked ${snapshot.size} notifications as read`)
+    } catch (error) {
+      logger.error('[useNotifications] Error marking all as read:', error as Error)
+      toast.error('Failed to mark all as read')
+      throw error
+    }
+  }, [userId])
+
+  /**
+   * Real-time listener for latest notifications
+   */
+  const subscribeToNotifications = useCallback((limitCount: number = 5) => {
+    if (!userId) return () => {}
+
+    const notificationQuery = query(
+      collection(db, 'notifications'),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    )
+
+    const unsubscribe = onSnapshot(
+      notificationQuery,
+      (snapshot) => {
+        const latestNotifications = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Notification[]
+
+        setNotifications(latestNotifications)
+      },
+      (error) => {
+        logger.error('[useNotifications] Error subscribing to notifications:', error)
+      }
+    )
+
+    return unsubscribe
+  }, [userId])
+
   return {
     ...state,
     requestPermission,
     revokePermission,
-    updateSettings
+    updateSettings,
+    // New notification functions
+    notifications,
+    unreadCount,
+    notificationsLoading,
+    getNotifications,
+    getUnreadCount,
+    markAsRead,
+    markAllAsRead,
+    subscribeToNotifications
   }
 }

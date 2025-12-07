@@ -11,7 +11,7 @@
  * - Expiring items alerts
  */
 
-import { useState, Suspense, useMemo } from 'react'
+import { useState, Suspense, useMemo, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
@@ -28,15 +28,19 @@ import { ShareListButton } from '@/components/shopping/ShareListButton'
 import { SearchFilter } from '@/components/shopping/SearchFilter'
 import { StorePicker } from '@/components/shopping/StorePicker'
 import { SmartSuggestions } from '@/components/shopping/SmartSuggestions'
+import { HealthSuggestions } from '@/components/shopping/HealthSuggestions'
 import { SequentialShoppingFlow } from '@/components/shopping/SequentialShoppingFlow'
 import { RecipeLinks } from '@/components/shopping/RecipeLinks'
 import { PurchaseConfirmation } from '@/components/shopping/PurchaseConfirmation'
+import { FamilyMemberBadge } from '@/components/shopping/FamilyMemberBadge'
 import type { ProductCategory, ShoppingItem } from '@/types/shopping'
+import type { PatientProfile } from '@/types/medical'
 import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
 import { Spinner } from '@/components/ui/Spinner'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
 import { addManualShoppingItem } from '@/lib/shopping-operations'
+import { patientOperations } from '@/lib/medical-operations'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 
 // Dynamic imports
@@ -176,10 +180,68 @@ function ShoppingListContent() {
   const [selectedItem, setSelectedItem] = useState<ShoppingItem | null>(null)
   const [showSequentialFlow, setShowSequentialFlow] = useState(false)
 
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterCategory, setFilterCategory] = useState<ProductCategory | 'all'>('all')
+  const [members, setMembers] = useState<Record<string, PatientProfile>>({})
+
   const summary = getSummary()
+
+  /**
+   * Fetch household members for display
+   */
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const patients = await patientOperations.getPatients()
+        const memberMap: Record<string, PatientProfile> = {}
+        patients.forEach(p => {
+          memberMap[p.id] = p
+        })
+        setMembers(memberMap)
+      } catch (error) {
+        logger.error('Error fetching household members', error as Error)
+      }
+    }
+    fetchMembers()
+  }, [])
+
+  /**
+   * Get member display name
+   */
+  const getMemberName = (userId?: string): string => {
+    if (!userId) return ''
+    const member = members[userId]
+    if (member) {
+      return member.name || 'Member'
+    }
+    return auth.currentUser?.uid === userId ? 'You' : 'Member'
+  }
 
   // Get display items based on debug mode
   const displayItems = showDebugMode ? allItems : neededItems
+
+  // Filter items based on search query and category
+  const filteredItems = useMemo(() => {
+    let filtered = displayItems
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(item =>
+        item.productName.toLowerCase().includes(query) ||
+        item.brand?.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query)
+      )
+    }
+
+    // Apply category filter
+    if (filterCategory !== 'all') {
+      filtered = filtered.filter(item => item.category === filterCategory)
+    }
+
+    return filtered
+  }, [displayItems, searchQuery, filterCategory])
 
   // Identify orphaned items (not in stock, not needed, quantity 0)
   const orphanedItems = allItems.filter(item =>
@@ -201,6 +263,42 @@ function ShoppingListContent() {
       console.error('[Shopping] Error fixing orphaned item:', error)
       toast.error(`Failed to fix item: ${error?.message || 'Unknown error'}`)
     }
+  }
+
+  /**
+   * Check for duplicate items in the shopping list
+   */
+  const checkForDuplicates = (productName: string, barcode?: string) => {
+    // Check by barcode first (most accurate)
+    if (barcode) {
+      const barcodeMatch = allItems.find(item => item.barcode === barcode)
+      if (barcodeMatch) {
+        return {
+          found: true,
+          item: barcodeMatch,
+          matchType: 'exact' as const
+        }
+      }
+    }
+
+    // Check by product name (fuzzy match)
+    const nameLower = productName.toLowerCase()
+    const nameMatch = allItems.find(item => {
+      const itemNameLower = item.productName.toLowerCase()
+      return itemNameLower === nameLower ||
+             itemNameLower.includes(nameLower) ||
+             nameLower.includes(itemNameLower)
+    })
+
+    if (nameMatch) {
+      return {
+        found: true,
+        item: nameMatch,
+        matchType: 'name' as const
+      }
+    }
+
+    return { found: false, item: null, matchType: null }
   }
 
   /**
@@ -247,7 +345,43 @@ function ShoppingListContent() {
           toast.success(`✓ Checked off: ${product.name}`)
         }
       } else {
-        // Item NOT on list - show impulse purchase confirmation
+        // Check for duplicates before adding as impulse purchase
+        const duplicate = checkForDuplicates(product.name, barcode)
+
+        if (duplicate.found && duplicate.item) {
+          // Found duplicate - offer to mark as needed instead of adding new
+          if (!duplicate.item.needed) {
+            toast((t) => (
+              <div className="flex flex-col gap-2">
+                <span className="font-semibold">"{duplicate.item.productName}" already in list</span>
+                <span className="text-sm">Would you like to mark it as needed?</span>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={async () => {
+                      await handleToggleNeeded(duplicate.item.id, false)
+                      toast.dismiss(t.id)
+                      toast.success('Marked as needed!')
+                    }}
+                    className="px-3 py-1 bg-primary text-white rounded text-sm"
+                  >
+                    Mark as Needed
+                  </button>
+                  <button
+                    onClick={() => toast.dismiss(t.id)}
+                    className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ), { duration: 6000, id: 'duplicate-check' })
+          } else {
+            toast.error(`"${duplicate.item.productName}" is already on your shopping list`, { duration: 4000 })
+          }
+          return
+        }
+
+        // Item NOT on list and no duplicates - show impulse purchase confirmation
         const category = detectCategory(response.product!)
         setScannedProduct({
           product: response.product!,
@@ -509,6 +643,15 @@ function ShoppingListContent() {
             </div>
           </div>
 
+          {/* Search and Filter */}
+          <div className="mb-6">
+            <SearchFilter
+              onSearch={setSearchQuery}
+              onFilterCategory={setFilterCategory}
+              selectedCategory={filterCategory}
+            />
+          </div>
+
           {/* Actions */}
           <div className="mb-6 flex gap-3">
             <button
@@ -536,6 +679,20 @@ function ShoppingListContent() {
             onConfirm={refresh}
             memberId={memberId || undefined}
           />
+
+          {/* Health-Based Suggestions (Member-Specific) */}
+          {memberId && (
+            <div className="mb-6">
+              <HealthSuggestions
+                patientId={memberId}
+                userId={userId}
+                onAddItem={async (productName: string) => {
+                  await addManualShoppingItem(userId, productName, { householdId: userId })
+                  await refresh()
+                }}
+              />
+            </div>
+          )}
 
           {/* Debug Mode Toggle & Orphaned Items Warning */}
           {orphanedItems.length > 0 && (
@@ -620,21 +777,44 @@ function ShoppingListContent() {
                         onClick={handleItemClick}
                         showDebugInfo={true}
                         onFixOrphaned={handleFixOrphanedItem}
+                        searchQuery={searchQuery}
+                        getMemberName={getMemberName}
                       />
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* Search Results Info */}
+              {(searchQuery || filterCategory !== 'all') && (
+                <div className="mb-4 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-2">
+                  <span className="text-sm text-blue-700 dark:text-blue-300">
+                    Showing {filteredItems.length} of {displayItems.length} items
+                  </span>
+                  {(searchQuery || filterCategory !== 'all') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery('')
+                        setFilterCategory('all')
+                      }}
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* High Priority Items */}
-              {displayItems.filter(item => item.priority === 'high' && item.needed).length > 0 && (
+              {filteredItems.filter(item => item.priority === 'high' && item.needed).length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold text-warning dark:text-orange-400 mb-3 flex items-center gap-2">
                     <span>⚠️</span>
                     HIGH PRIORITY
                   </h3>
                   <div className="space-y-3">
-                    {displayItems
+                    {filteredItems
                       .filter(item => item.priority === 'high' && item.needed)
                       .map(item => (
                         <ShoppingItemCard
@@ -644,6 +824,8 @@ function ShoppingListContent() {
                           onDelete={(id) => handleDeleteItem(id, item.productName)}
                           onClick={handleItemClick}
                           showDebugInfo={showDebugMode}
+                          searchQuery={searchQuery}
+                          getMemberName={getMemberName}
                         />
                       ))}
                   </div>
@@ -651,15 +833,15 @@ function ShoppingListContent() {
               )}
 
               {/* Regular Items */}
-              {displayItems.filter(item => item.priority !== 'high' && item.needed).length > 0 && (
+              {filteredItems.filter(item => item.priority !== 'high' && item.needed).length > 0 && (
                 <div>
-                  {displayItems.filter(item => item.priority === 'high' && item.needed).length > 0 && (
+                  {filteredItems.filter(item => item.priority === 'high' && item.needed).length > 0 && (
                     <h3 className="text-sm font-semibold text-muted-foreground mb-3">
                       OTHER ITEMS
                     </h3>
                   )}
                   <div className="space-y-3">
-                    {displayItems
+                    {filteredItems
                       .filter(item => item.priority !== 'high' && item.needed)
                       .map(item => (
                         <ShoppingItemCard
@@ -669,9 +851,34 @@ function ShoppingListContent() {
                           onDelete={(id) => handleDeleteItem(id, item.productName)}
                           onClick={handleItemClick}
                           showDebugInfo={showDebugMode}
+                          searchQuery={searchQuery}
+                          getMemberName={getMemberName}
                         />
                       ))}
                   </div>
+                </div>
+              )}
+
+              {/* No Results Message */}
+              {filteredItems.length === 0 && displayItems.length > 0 && (
+                <div className="bg-card rounded-lg shadow p-8 text-center">
+                  <div className="text-6xl mb-4">🔍</div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">
+                    No Items Found
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    No items match your search or filter criteria.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('')
+                      setFilterCategory('all')
+                    }}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+                  >
+                    Clear Filters
+                  </button>
                 </div>
               )}
             </div>
@@ -779,7 +986,9 @@ function ShoppingItemCard({
   onDelete,
   onClick,
   showDebugInfo,
-  onFixOrphaned
+  onFixOrphaned,
+  searchQuery,
+  getMemberName
 }: {
   item: ShoppingItem
   onToggle: (id: string, current: boolean) => void
@@ -787,9 +996,32 @@ function ShoppingItemCard({
   onClick?: (item: ShoppingItem) => void
   showDebugInfo?: boolean
   onFixOrphaned?: (itemId: string, itemName: string) => void
+  searchQuery?: string
+  getMemberName?: (userId?: string) => string
 }) {
   const categoryMeta = getCategoryMetadata(item.category)
   const isOrphaned = !item.inStock && !item.needed && item.quantity === 0
+
+  // Highlight matching text in search results
+  const highlightText = (text: string) => {
+    if (!searchQuery || !searchQuery.trim()) return text
+
+    const query = searchQuery.toLowerCase()
+    const lowerText = text.toLowerCase()
+    const index = lowerText.indexOf(query)
+
+    if (index === -1) return text
+
+    return (
+      <>
+        {text.slice(0, index)}
+        <mark className="bg-yellow-200 dark:bg-yellow-600/50 font-semibold">
+          {text.slice(index, index + query.length)}
+        </mark>
+        {text.slice(index + query.length)}
+      </>
+    )
+  }
 
   return (
     <div
@@ -812,11 +1044,11 @@ function ShoppingItemCard({
       {/* Product Info */}
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-foreground truncate">
-          {item.productName}
+          {highlightText(item.productName)}
         </h3>
         {item.brand && (
           <p className="text-sm text-muted-foreground truncate">
-            {item.brand}
+            {highlightText(item.brand)}
           </p>
         )}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -833,6 +1065,12 @@ function ShoppingItemCard({
               Last: {new Date(item.lastPurchased).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
+          {/* Family member badge - Shows who requested or added this item */}
+          <FamilyMemberBadge
+            requestedBy={item.requestedBy}
+            addedBy={item.addedBy}
+            getMemberName={getMemberName}
+          />
         </div>
 
         {/* Recipe Links - Show which recipes use this ingredient */}

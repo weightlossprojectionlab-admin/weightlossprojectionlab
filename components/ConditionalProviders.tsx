@@ -6,6 +6,7 @@ import { ServiceWorkerProvider } from '@/components/ServiceWorkerProvider'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { MenuProvider } from '@/contexts/MenuContext'
 import { AccountProvider } from '@/contexts/AccountContext'
+import { HouseholdProvider } from '@/contexts/HouseholdContext'
 import { AppMenu } from '@/components/ui/AppMenu'
 import { CsrfInitializer } from '@/components/CsrfInitializer'
 import { GlobalAlertModal } from '@/components/GlobalAlertModal'
@@ -37,14 +38,15 @@ export function ConditionalProviders({ children }: { children: React.ReactNode }
     <ThemeProvider>
       <ServiceWorkerProvider>
         <AccountProvider>
-          <MenuProvider>
-            <CsrfInitializer />
-            <GlobalAlertModal />
-            <div className="flex min-h-full flex-col">
-              {children}
-            </div>
-            <AppMenu />
-            <Toaster
+          <HouseholdProvider>
+            <MenuProvider>
+              <CsrfInitializer />
+              <GlobalAlertModal />
+              <div className="flex min-h-full flex-col">
+                {children}
+              </div>
+              <AppMenu />
+              <Toaster
               position="top-center"
               toastOptions={{
                 duration: 4000,
@@ -68,7 +70,8 @@ export function ConditionalProviders({ children }: { children: React.ReactNode }
                 },
               }}
             />
-          </MenuProvider>
+            </MenuProvider>
+          </HouseholdProvider>
         </AccountProvider>
       </ServiceWorkerProvider>
     </ThemeProvider>

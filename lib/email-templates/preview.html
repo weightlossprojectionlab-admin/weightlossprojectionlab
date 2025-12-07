@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Template Previews - WLPL Notifications</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      padding: 40px 20px;
+      margin: 0;
+    }
+    .preview-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      color: #1f2937;
+      margin-bottom: 40px;
+    }
+    .template-preview {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 40px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .template-title {
+      color: #667eea;
+      font-size: 24px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .template-description {
+      color: #6b7280;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .email-frame {
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    iframe {
+      width: 100%;
+      border: none;
+      min-height: 600px;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-container">
+    <h1>Email Notification Templates Preview</h1>
+
+    <!-- Medication Added -->
+    <div class="template-preview">
+      <div class="template-title">1. Medication Added Email</div>
+      <div class="template-description">
+        Notifies family members when a new medication is added to a patient's profile.
+        Features blue color coding, full medication details, and direct link to medications tab.
+      </div>
+      <div class="email-frame">
+        <iframe srcdoc="
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Medication Added - Mary Smith</title>
+</head>
+<body style='font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;'>
+  <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>
+    <h1 style='color: white; margin: 0; font-size: 28px;'>Medication Added</h1>
+    <p style='color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;'>Weight Loss Projection Lab</p>
+  </div>
+
+  <div style='background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;'>
+    <h2 style='color: #667eea; margin-top: 0;'>Hello John Smith,</h2>
+
+    <p>A medication has been <strong>added</strong> for <strong>Mary Smith</strong>.</p>
+
+    <div style='background: #f9fafb; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0;'>
+      <p style='margin: 0 0 15px 0; font-size: 18px; color: #667eea; font-weight: 600;'>
+        Lisinopril
+      </p>
+      <div style='color: #4b5563; font-size: 14px; line-height: 1.8;'>
+        <strong>Medication:</strong> Lisinopril<br>
+        <strong>Strength:</strong> 10mg<br>
+        <strong>Form:</strong> Tablet<br>
+        <strong>Prescribed For:</strong> High Blood Pressure
+      </div>
+    </div>
+
+    <div style='background: #f9fafb; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0;'>
+      <p style='margin: 0; color: #4b5563;'>
+        <strong>Changed By:</strong> Dr. Sarah Johnson<br>
+        <strong>Changed On:</strong> January 15, 2024 at 10:30 AM
+      </p>
+    </div>
+
+    <div style='text-align: center; margin: 30px 0;'>
+      <a href='http://localhost:3000/patients/patient-123?tab=medications'
+         style='display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;'>
+        View All Medications
+      </a>
+    </div>
+
+    <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;'>
+
+    <p style='color: #6b7280; font-size: 14px; margin: 0;'>
+      You're receiving this notification because you're a family member with access to Mary Smith's health records.
+    </p>
+  </div>
+
+  <div style='text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;'>
+    <p style='margin: 0;'>
+      © 2025 Weight Loss Projection Lab. All rights reserved.
+    </p>
+    <p style='margin: 10px 0 0 0;'>
+      This is an automated notification. Please do not reply to this email.
+    </p>
+  </div>
+</body>
+</html>
+        "></iframe>
+      </div>
+    </div>
+
+    <!-- Weight Vital -->
+    <div class="template-preview">
+      <div class="template-title">2. Weight Vital Logged Email</div>
+      <div class="template-description">
+        Notifies family members when a new weight reading is logged.
+        Features large emoji display, prominent value, and optional notes field.
+      </div>
+      <div class="email-frame">
+        <iframe srcdoc="
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>New Vital Logged - Mary Smith</title>
+</head>
+<body style='font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;'>
+  <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>
+    <h1 style='color: white; margin: 0; font-size: 28px;'>New Vital Logged</h1>
+    <p style='color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;'>Weight Loss Projection Lab</p>
+  </div>
+
+  <div style='background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;'>
+    <h2 style='color: #667eea; margin-top: 0;'>Hello John Smith,</h2>
+
+    <p>A new vital has been logged for <strong>Mary Smith</strong>.</p>
+
+    <div style='background: #f9fafb; padding: 25px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0; text-align: center;'>
+      <p style='margin: 0; font-size: 48px;'>⚖️</p>
+      <p style='margin: 10px 0 5px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;'>
+        Weight
+      </p>
+      <p style='margin: 0; font-size: 36px; font-weight: bold; color: #667eea;'>
+        165.2 lbs
+      </p>
+    </div>
+
+    <div style='background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;'>
+      <p style='margin: 0; color: #92400e;'><strong>Notes:</strong></p>
+      <p style='margin: 10px 0 0 0; color: #78350f; font-style: italic;'>&quot;Morning weight after breakfast, patient reports feeling great&quot;</p>
+    </div>
+
+    <div style='background: #f9fafb; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0;'>
+      <p style='margin: 0; color: #4b5563;'>
+        <strong>Logged By:</strong> Nurse Jennifer Williams<br>
+        <strong>Logged On:</strong> January 15, 2024 at 8:00 AM
+      </p>
+    </div>
+
+    <div style='text-align: center; margin: 30px 0;'>
+      <a href='http://localhost:3000/patients/patient-123?tab=vitals'
+         style='display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;'>
+        View All Vitals
+      </a>
+    </div>
+
+    <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;'>
+
+    <p style='color: #6b7280; font-size: 14px; margin: 0;'>
+      You're receiving this notification because you're a family member with access to Mary Smith's health records.
+    </p>
+  </div>
+
+  <div style='text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;'>
+    <p style='margin: 0;'>
+      © 2025 Weight Loss Projection Lab. All rights reserved.
+    </p>
+    <p style='margin: 10px 0 0 0;'>
+      This is an automated notification. Please do not reply to this email.
+    </p>
+  </div>
+</body>
+</html>
+        "></iframe>
+      </div>
+    </div>
+
+    <!-- Lab Document -->
+    <div class="template-preview">
+      <div class="template-title">3. Lab Results Document Uploaded Email</div>
+      <div class="template-description">
+        Notifies family members when a new lab results document is uploaded.
+        Features lab flask icon, blue color coding, and file size information.
+      </div>
+      <div class="email-frame">
+        <iframe srcdoc="
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>New Document Uploaded - Mary Smith</title>
+</head>
+<body style='font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;'>
+  <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>
+    <h1 style='color: white; margin: 0; font-size: 28px;'>New Document Uploaded</h1>
+    <p style='color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;'>Weight Loss Projection Lab</p>
+  </div>
+
+  <div style='background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;'>
+    <h2 style='color: #667eea; margin-top: 0;'>Hello John Smith,</h2>
+
+    <p>A new document has been uploaded for <strong>Mary Smith</strong>.</p>
+
+    <div style='background: #f9fafb; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 20px 0;'>
+      <div style='display: table; width: 100%;'>
+        <div style='display: table-cell; vertical-align: top; padding-right: 15px; font-size: 36px;'>
+          🧪
+        </div>
+        <div style='display: table-cell; vertical-align: middle;'>
+          <p style='margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #1f2937;'>
+            Comprehensive Metabolic Panel - January 2024.pdf
+          </p>
+          <p style='margin: 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;'>
+            Lab Results
+          </p>
+          <p style='margin: 5px 0 0 0; color: #9ca3af; font-size: 13px;'>
+            2.4 MB
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div style='background: #f9fafb; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0;'>
+      <p style='margin: 0; color: #4b5563;'>
+        <strong>Uploaded By:</strong> Dr. Sarah Johnson<br>
+        <strong>Uploaded On:</strong> January 15, 2024 at 4:20 PM
+      </p>
+    </div>
+
+    <div style='text-align: center; margin: 30px 0;'>
+      <a href='http://localhost:3000/patients/patient-123?tab=documents'
+         style='display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;'>
+        View All Documents
+      </a>
+    </div>
+
+    <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;'>
+
+    <p style='color: #6b7280; font-size: 14px; margin: 0;'>
+      You're receiving this notification because you're a family member with access to Mary Smith's health records.
+    </p>
+  </div>
+
+  <div style='text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;'>
+    <p style='margin: 0;'>
+      © 2025 Weight Loss Projection Lab. All rights reserved.
+    </p>
+    <p style='margin: 10px 0 0 0;'>
+      This is an automated notification. Please do not reply to this email.
+    </p>
+  </div>
+</body>
+</html>
+        "></iframe>
+      </div>
+    </div>
+
+    <!-- Health Report -->
+    <div class="template-preview">
+      <div class="template-title">4. Monthly Health Report Email</div>
+      <div class="template-description">
+        Notifies family members when a health report is generated.
+        Features chart icon, summary section, and key findings list.
+      </div>
+      <div class="email-frame">
+        <iframe srcdoc="
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Health Report Generated - Mary Smith</title>
+</head>
+<body style='font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;'>
+  <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>
+    <h1 style='color: white; margin: 0; font-size: 28px;'>Health Report Generated</h1>
+    <p style='color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;'>Weight Loss Projection Lab</p>
+  </div>
+
+  <div style='background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;'>
+    <h2 style='color: #667eea; margin-top: 0;'>Hello John Smith,</h2>
+
+    <p>A new health report has been generated for <strong>Mary Smith</strong>.</p>
+
+    <div style='background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); padding: 25px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0;'>
+      <p style='margin: 0; font-size: 36px; text-align: center;'>📊</p>
+      <p style='margin: 15px 0 5px 0; font-size: 20px; font-weight: 600; color: #1e40af; text-align: center;'>
+        Monthly Health Summary
+      </p>
+      <p style='margin: 0; color: #3b82f6; font-size: 14px; text-align: center;'>
+        Report Date: January 15, 2024
+      </p>
+    </div>
+
+    <div style='background: #f9fafb; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0;'>
+      <p style='margin: 0 0 10px 0; color: #374151; font-weight: 600;'>Summary:</p>
+      <p style='margin: 0; color: #4b5563; line-height: 1.8;'>
+        Overall health metrics show positive trends this month. Patient has achieved excellent weight loss progress and maintained consistent medication compliance.
+      </p>
+    </div>
+
+    <div style='background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;'>
+      <p style='margin: 0 0 10px 0; color: #92400e; font-weight: 600;'>Key Findings:</p>
+      <ul style='margin: 5px 0; padding-left: 20px; color: #78350f;'>
+        <li style='margin: 5px 0;'>Weight decreased by 5.2 lbs (3.1% of starting weight)</li>
+        <li style='margin: 5px 0;'>Blood pressure averaged 118/78 mmHg (optimal range)</li>
+        <li style='margin: 5px 0;'>Medication compliance at 98% (all doses taken on time)</li>
+      </ul>
+    </div>
+
+    <div style='background: #f9fafb; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0;'>
+      <p style='margin: 0; color: #4b5563;'>
+        <strong>Generated By:</strong> Dr. Sarah Johnson<br>
+        <strong>Generated On:</strong> December 5, 2025
+      </p>
+    </div>
+
+    <div style='text-align: center; margin: 30px 0;'>
+      <a href='http://localhost:3000/patients/patient-123/reports/report-456'
+         style='display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;'>
+        View Full Report
+      </a>
+    </div>
+
+    <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;'>
+
+    <p style='color: #6b7280; font-size: 14px; margin: 0;'>
+      You're receiving this notification because you're a family member with access to Mary Smith's health records.
+    </p>
+  </div>
+
+  <div style='text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;'>
+    <p style='margin: 0;'>
+      © 2025 Weight Loss Projection Lab. All rights reserved.
+    </p>
+    <p style='margin: 10px 0 0 0;'>
+      This is an automated notification. Please do not reply to this email.
+    </p>
+  </div>
+</body>
+</html>
+        "></iframe>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

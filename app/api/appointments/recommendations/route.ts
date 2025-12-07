@@ -33,8 +33,15 @@ export async function GET(request: NextRequest) {
     const decodedToken = await verifyIdToken(idToken)
     const userId = decodedToken.uid
 
-    console.log('[API /appointments/recommendations GET] Fetching recommendations for user:', userId)
-    const recommendations = await getActiveRecommendations(userId)
+    // Get patientId from query params (optional - for family member view)
+    const { searchParams } = new URL(request.url)
+    const patientId = searchParams.get('patientId')
+
+    // Use patientId if provided, otherwise use current userId
+    const targetUserId = patientId || userId
+
+    console.log('[API /appointments/recommendations GET] Fetching recommendations for user:', targetUserId, patientId ? '(family member)' : '(self)')
+    const recommendations = await getActiveRecommendations(targetUserId)
     console.log('[API /appointments/recommendations GET] Successfully fetched:', recommendations.length, 'recommendations')
 
     return NextResponse.json({
@@ -73,8 +80,15 @@ export async function POST(request: NextRequest) {
     const decodedToken = await verifyIdToken(idToken)
     const userId = decodedToken.uid
 
-    console.log('[API /appointments/recommendations POST] Generating recommendations for user:', userId)
-    const recommendations = await generateRecommendations(userId)
+    // Get patientId from query params (optional - for family member view)
+    const { searchParams } = new URL(request.url)
+    const patientId = searchParams.get('patientId')
+
+    // Use patientId if provided, otherwise use current userId
+    const targetUserId = patientId || userId
+
+    console.log('[API /appointments/recommendations POST] Generating recommendations for user:', targetUserId, patientId ? '(family member)' : '(self)')
+    const recommendations = await generateRecommendations(targetUserId)
     console.log('[API /appointments/recommendations POST] Successfully generated:', recommendations.length, 'recommendations')
 
     return NextResponse.json({

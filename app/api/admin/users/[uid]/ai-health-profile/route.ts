@@ -9,8 +9,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb as db } from '@/lib/firebase-admin'
+import { adminDb as db } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { requireAdmin } from '@/lib/admin-auth'
 import type { AIHealthProfile, AIDecision } from '@/types'
 
 export async function GET(
@@ -18,42 +19,17 @@ export async function GET(
   context: { params: Promise<{ uid: string }> }
 ) {
   try {
-    // 1. Verify admin authentication
+    // 1. Verify admin authentication using unified auth
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Missing authentication token' },
-        { status: 401 }
-      )
+    const cookieToken = request.cookies.get('idToken')?.value
+
+    const authResult = await requireAdmin(authHeader, cookieToken)
+
+    if ('error' in authResult) {
+      return NextResponse.json(authResult.error, { status: authResult.status })
     }
 
-    const token = authHeader.split('Bearer ')[1]
-
-    // Verify the Firebase ID token and check admin role
-    let adminUser
-    try {
-      const decodedToken = await adminAuth.verifyIdToken(token)
-      const adminUserRecord = await adminAuth.getUser(decodedToken.uid)
-      const customClaims = adminUserRecord.customClaims || {}
-
-      if (customClaims.role !== 'admin') {
-        logger.warn('[AI Health Profile Admin] Non-admin access attempt', {
-          uid: decodedToken.uid
-        })
-        return NextResponse.json(
-          { error: 'Forbidden: Admin access required' },
-          { status: 403 }
-        )
-      }
-
-      adminUser = decodedToken.uid
-    } catch (authError) {
-      logger.error('[AI Health Profile Admin] Auth failed', authError as Error)
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid authentication token' },
-        { status: 401 }
-      )
-    }
+    const { uid: adminUser, email: adminEmail } = authResult
 
     // 2. Get target user ID from params
     const params = await context.params
@@ -61,6 +37,7 @@ export async function GET(
 
     logger.debug('[AI Health Profile Admin] Fetching profile', {
       admin: adminUser,
+      adminEmail,
       targetUser: targetUserId
     })
 

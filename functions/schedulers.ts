@@ -18,6 +18,11 @@ import {
   calculateAllTrustScores,
   checkAllInactiveMembers,
 } from './engagement/group_missions';
+import {
+  sendVitalReminders,
+  checkMissedVitals,
+  generateDailyComplianceReports
+} from './health/vital-reminders';
 
 /**
  * Scheduler definitions matching PRD requirements
@@ -108,6 +113,36 @@ export const SCHEDULERS = {
     timezone: 'local',
     handler: reviewAICoachOutcome,
     description: 'Review AI coach outcomes and unlock human coaching if eligible',
+  },
+
+  // Vital reminders
+  // Schedule: Every 15 minutes
+  sendVitalReminders: {
+    name: 'sendVitalReminders',
+    schedule: '*/15 * * * *', // Cron: Every 15 minutes
+    timezone: 'UTC',
+    handler: sendVitalReminders,
+    description: 'Send vital sign monitoring reminders to users',
+  },
+
+  // Check missed vitals
+  // Schedule: Daily 02:00 UTC
+  checkMissedVitals: {
+    name: 'checkMissedVitals',
+    schedule: '0 2 * * *', // Cron: 02:00 daily
+    timezone: 'UTC',
+    handler: checkMissedVitals,
+    description: 'Mark vitals as missed if past compliance window',
+  },
+
+  // Generate compliance reports
+  // Schedule: Daily 03:00 UTC
+  generateDailyComplianceReports: {
+    name: 'generateDailyComplianceReports',
+    schedule: '0 3 * * *', // Cron: 03:00 daily
+    timezone: 'UTC',
+    handler: generateDailyComplianceReports,
+    description: 'Generate daily compliance reports for all active schedules',
   },
 };
 

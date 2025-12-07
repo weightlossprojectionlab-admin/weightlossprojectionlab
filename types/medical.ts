@@ -794,6 +794,26 @@ export function isNumericVitalValue(value: VitalValue): value is number {
 
 // ==================== MEDICATIONS ====================
 
+/**
+ * Medication Image - For multi-image prescription capture and OCR
+ */
+export interface MedicationImage {
+  id: string // Unique image ID
+  url: string // Firebase Storage URL
+  storagePath: string // Firebase Storage path for deletion
+  uploadedAt: string // ISO 8601 timestamp
+  uploadedBy: string // userId who uploaded
+  label: 'front' | 'back' | 'bottle' | 'label' | 'information' | 'other' // Image type
+  ocrProcessed: boolean // Whether OCR has been run on this image
+  ocrConfidence?: number // OCR confidence score (0-100)
+  ocrExtractedText?: string // Raw OCR text from this image
+  isPrimary?: boolean // Primary image for display
+  thumbnailUrl?: string // Optional thumbnail for gallery view
+  width?: number // Image width in pixels
+  height?: number // Image height in pixels
+  fileSize?: number // File size in bytes
+}
+
 export interface PatientMedication {
   id: string
   patientId: string
@@ -830,14 +850,65 @@ export interface PatientMedication {
   pharmacyName?: string
   pharmacyPhone?: string
 
-  // Image/Photo
-  imageUrl?: string // URL to medication bottle image
-  photoUrl?: string // Alternative field name for image URL (for compatibility)
+  // Image/Photo - Multi-image support for re-OCR and analysis
+  imageUrl?: string // @deprecated Use images array - kept for backward compatibility
+  photoUrl?: string // @deprecated Alternative field name - kept for backward compatibility
+  images?: MedicationImage[] // Multiple prescription images for OCR and analysis
+
+  // Family Member Assignment
+  assignedToMemberId?: string // PatientProfile.id - which family member this medication is for
+  assignedToMemberName?: string // Denormalized for display
+  assignedToMemberType?: 'human' | 'pet' // For UI icons (👤 vs 🐾)
+  assignedToMemberRelationship?: string // 'self' | 'spouse' | 'child' | 'pet'
 
   // Metadata
   addedAt: string // ISO 8601
   addedBy: string // userId of person who added
   scannedAt?: string // ISO 8601 - if scanned from label
   lastModified: string // ISO 8601
+  lastModifiedBy?: string // userId of person who last modified
   notes?: string
+
+  // Audit Trail
+  auditLogCount?: number // Number of audit entries (for UI badge)
+}
+
+/**
+ * Medication Audit Log - Immutable audit trail for medication changes
+ * Stored at: /users/{userId}/patients/{patientId}/medications/{medicationId}/auditLogs/{logId}
+ */
+export interface MedicationAuditLog {
+  id: string
+  medicationId: string
+  patientId: string
+  userId: string // Owner of patient record
+
+  // Action details
+  action: 'created' | 'updated' | 'deleted' | 'dose_logged'
+  performedBy: string // userId who made the change
+  performedByName: string // Display name for UI
+  performedAt: string // ISO 8601
+
+  // Change tracking (field-level)
+  changes: MedicationFieldChange[]
+
+  // Context
+  reason?: string // Optional reason for change (admin use)
+  ipAddress?: string // For security auditing
+  userAgent?: string // Browser/device info
+
+  // Denormalized data (for quick display without joins)
+  patientName: string
+  medicationName: string
+}
+
+/**
+ * Field-level change record within audit log
+ */
+export interface MedicationFieldChange {
+  field: string // Field name (e.g., 'strength', 'frequency')
+  fieldLabel: string // Human-readable label (e.g., 'Dosage Strength')
+  oldValue: any // Previous value (null for creation)
+  newValue: any // New value (null for deletion)
+  dataType: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object'
 }

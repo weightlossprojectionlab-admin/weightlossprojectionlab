@@ -74,8 +74,9 @@ function setTokenCookie(token: string): void {
     // Use underscore instead of hyphen (some browsers block hyphens)
     const cookieName = 'csrf_token'
 
-    // 1. Try setting as a regular cookie (without any special attributes first)
-    document.cookie = `${cookieName}=${token}; path=/`
+    // 1. Set cookie with SameSite=Lax to ensure it's sent with same-site requests
+    // Using Lax instead of Strict allows the cookie to be sent on same-site navigation
+    document.cookie = `${cookieName}=${token}; path=/; SameSite=Lax`
 
     // 2. Also store in sessionStorage as backup (not sent to server, but available client-side)
     try {
@@ -84,11 +85,17 @@ function setTokenCookie(token: string): void {
       console.warn('[CSRF] Could not store in sessionStorage:', storageError)
     }
 
-    // Verify after a short delay (only in development)
+    // Verify after a short delay
     if (process.env.NODE_ENV === 'development') {
       setTimeout(() => {
         const verification = getTokenFromCookie()
         const success = token === verification
+        console.log('[CSRF] Cookie verification:', {
+          success,
+          tokenSet: token.substring(0, 10) + '...',
+          tokenRead: verification?.substring(0, 10) + '...',
+          allCookies: document.cookie
+        })
         if (!success) {
           console.error('[CSRF] Failed to set cookie! Using sessionStorage fallback.')
         }

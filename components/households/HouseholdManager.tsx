@@ -7,53 +7,21 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { PlusIcon, HomeIcon, MapPinIcon, UsersIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import type { Household } from '@/types/household'
-import type { PatientProfile } from '@/types/medical'
 import { HouseholdFormModal } from './HouseholdFormModal'
+import { useHouseholdMembers } from '@/hooks/useHouseholdMembers'
+import { useHouseholds } from '@/hooks/useHouseholds'
 
 export function HouseholdManager() {
-  const [households, setHouseholds] = useState<Household[]>([])
-  const [loading, setLoading] = useState(true)
+  const { households, loading, error: fetchError } = useHouseholds()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingHousehold, setEditingHousehold] = useState<Household | undefined>()
   const [expandedHouseholdId, setExpandedHouseholdId] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetchHouseholds()
-  }, [])
-
-  const fetchHouseholds = async () => {
-    const user = auth.currentUser
-    if (!user) return
-
-    try {
-      setLoading(true)
-      const token = await user.getIdToken()
-      const response = await fetch('/api/households', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(`Failed to fetch households: ${response.status} - ${errorData.error || response.statusText}`)
-      }
-
-      const data = await response.json()
-      setHouseholds(data.households || [])
-    } catch (error) {
-      logger.error('Failed to fetch households', error as Error)
-      toast.error(`Failed to load households: ${(error as Error).message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleDelete = async (householdId: string, householdName: string) => {
     const user = auth.currentUser
@@ -77,7 +45,7 @@ export function HouseholdManager() {
       }
 
       toast.success('Household deleted successfully')
-      fetchHouseholds()
+      // Real-time listener will auto-update the list
     } catch (error) {
       logger.error('Failed to delete household', error as Error)
       toast.error('Failed to delete household')
@@ -91,7 +59,7 @@ export function HouseholdManager() {
 
   const handleFormSuccess = () => {
     setEditingHousehold(undefined)
-    fetchHouseholds()
+    // Real-time listener will auto-update the list
   }
 
   const handleFormClose = () => {
@@ -116,6 +84,17 @@ export function HouseholdManager() {
         <div className="animate-pulse space-y-3">
           <div className="h-20 bg-muted rounded"></div>
           <div className="h-20 bg-muted rounded"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (fetchError) {
+    return (
+      <div className="bg-card rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Households</h2>
+        <div className="bg-error-light dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-error-dark font-medium">{fetchError}</p>
         </div>
       </div>
     )
@@ -268,53 +247,26 @@ export function HouseholdManager() {
 }
 
 /**
- * Sub-component: Display household members
+ * Sub-component: Display household members with real-time updates
  */
 function HouseholdMembersList({ householdId }: { householdId: string }) {
-  const [patients, setPatients] = useState<PatientProfile[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetchPatients()
-  }, [householdId])
-
-  const fetchPatients = async () => {
-    const user = auth.currentUser
-    if (!user) return
-
-    try {
-      setLoading(true)
-      const token = await user.getIdToken()
-      const response = await fetch(`/api/households/${householdId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch household details')
-      }
-
-      const data = await response.json()
-      setPatients(data.patients || [])
-    } catch (error) {
-      logger.error('Failed to fetch household patients', error as Error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { members, loading, error } = useHouseholdMembers(householdId)
 
   if (loading) {
     return <div className="text-sm text-muted-foreground">Loading members...</div>
   }
 
-  if (patients.length === 0) {
+  if (error) {
+    return <div className="text-sm text-red-600 dark:text-red-400">{error}</div>
+  }
+
+  if (members.length === 0) {
     return <div className="text-sm text-muted-foreground">No members assigned yet</div>
   }
 
   return (
     <div className="space-y-2">
-      {patients.map((patient) => (
+      {members.map((patient) => (
         <div
           key={patient.id}
           className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded"

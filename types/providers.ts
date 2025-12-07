@@ -5,7 +5,16 @@ import { Timestamp } from 'firebase/firestore'
  */
 export interface HealthcareProvider {
   id: string
-  patientId: string
+  userId: string // Account owner who manages this provider
+
+  // Family Member Assignments
+  // Array of patient IDs this provider treats
+  // Allows multiple family members to share the same provider
+  patientIds: string[]
+
+  // Legacy field for backward compatibility
+  // @deprecated Use patientIds array instead
+  patientId?: string
 
   // Basic Info
   name: string
@@ -39,6 +48,10 @@ export interface HealthcareProvider {
 
   // Notes
   notes?: string
+
+  // Per-patient notes (optional)
+  // Key: patientId, Value: patient-specific notes
+  patientNotes?: Record<string, string>
 }
 
 /**

@@ -11,41 +11,18 @@ import MedicationDetailModal from '@/components/health/MedicationDetailModal'
 interface MedicationListProps {
   patientId: string
   patientOwnerId?: string
-  onMedicationsLoad?: (count: number) => void
+  medications: PatientMedication[]
+  loading: boolean
+  onMedicationUpdated: () => void
 }
 
-export function MedicationList({ patientId, patientOwnerId, onMedicationsLoad }: MedicationListProps) {
-  const [medications, setMedications] = useState<PatientMedication[]>([])
-  const [loading, setLoading] = useState(true)
+export function MedicationList({ patientId, patientOwnerId, medications, loading, onMedicationUpdated }: MedicationListProps) {
   const [deletingMedicationId, setDeletingMedicationId] = useState<string | null>(null)
   const [medicationToDelete, setMedicationToDelete] = useState<PatientMedication | null>(null)
   const [loggingDoseId, setLoggingDoseId] = useState<string | null>(null)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
-
-  // Fetch medications using API
-  const fetchMedications = async () => {
-    if (!patientId) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      const meds = await medicalOperations.medications.getMedications(patientId)
-      setMedications(meds)
-      onMedicationsLoad?.(meds.length)
-      logger.debug('[MedicationList] Medications loaded', { count: meds.length })
-    } catch (error) {
-      logger.error('[MedicationList] Error fetching medications', error as Error)
-      toast.error('Failed to load medications')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchMedications()
-  }, [patientId])
+  const [editingMedicationId, setEditingMedicationId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<Partial<PatientMedication>>({})
 
   const handleDeleteClick = (medication: PatientMedication) => {
     setMedicationToDelete(medication)
@@ -58,7 +35,7 @@ export function MedicationList({ patientId, patientOwnerId, onMedicationsLoad }:
       setDeletingMedicationId(medicationToDelete.id)
       await medicalOperations.medications.deleteMedication(patientId, medicationToDelete.id)
       toast.success('Medication deleted')
-      await fetchMedications() // Refresh the list
+      onMedicationUpdated() // Refresh the parent's medication list
     } catch (error: any) {
       logger.error('[MedicationList] Error deleting medication', error)
       toast.error('Failed to delete medication')
@@ -75,12 +52,48 @@ export function MedicationList({ patientId, patientOwnerId, onMedicationsLoad }:
         takenAt: new Date().toISOString()
       })
       toast.success(`${medication.name} marked as taken`)
-      await fetchMedications() // Refresh the list
+      onMedicationUpdated() // Refresh the parent's medication list
     } catch (error: any) {
       logger.error('[MedicationList] Error logging dose', error)
       toast.error('Failed to log medication dose')
     } finally {
       setLoggingDoseId(null)
+    }
+  }
+
+  const handleEditClick = (medication: PatientMedication, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingMedicationId(medication.id)
+    setEditForm({
+      name: medication.name,
+      brandName: medication.brandName,
+      strength: medication.strength,
+      dosageForm: medication.dosageForm,
+      frequency: medication.frequency,
+      prescribedFor: medication.prescribedFor,
+      prescribingDoctor: medication.prescribingDoctor,
+      rxNumber: medication.rxNumber,
+      quantity: medication.quantity,
+      refills: medication.refills,
+      notes: medication.notes
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingMedicationId(null)
+    setEditForm({})
+  }
+
+  const handleSaveEdit = async (medicationId: string) => {
+    try {
+      await medicalOperations.medications.updateMedication(patientId, medicationId, editForm)
+      toast.success('Medication updated successfully')
+      setEditingMedicationId(null)
+      setEditForm({})
+      onMedicationUpdated() // Refresh the parent's medication list
+    } catch (error: any) {
+      logger.error('[MedicationList] Error updating medication', error)
+      toast.error('Failed to update medication')
     }
   }
 
@@ -122,42 +135,178 @@ export function MedicationList({ patientId, patientOwnerId, onMedicationsLoad }:
     <div className="space-y-3">
       {medications.map((med) => {
         const refillStatus = getRefillStatus(med)
+        const isEditing = editingMedicationId === med.id
+
         return (
           <div
             key={med.id}
-            className="bg-background rounded-lg p-4 border-2 border-border hover:border-primary/30 transition-colors cursor-pointer"
-            onClick={() => setSelectedMedication(med)}
+            className="bg-background rounded-lg p-4 border-2 border-border hover:border-primary/30 transition-colors"
+            onClick={() => !isEditing && setSelectedMedication(med)}
           >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex-1">
-                <h3 className="font-semibold text-foreground">
-                  {med.name}
-                  {med.brandName && (
-                    <span className="text-sm font-normal text-muted-foreground ml-2">
-                      ({med.brandName})
-                    </span>
-                  )}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {med.strength} • {med.dosageForm}
-                </p>
-                {refillStatus && (
-                  <p className={`text-xs font-medium mt-1 ${refillStatus.color}`}>
-                    {refillStatus.message}
-                  </p>
-                )}
+            {isEditing ? (
+              // Edit Mode
+              <div className="space-y-3">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-foreground">Edit Medication</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCancelEdit}
+                      className="text-sm px-3 py-1 text-muted-foreground hover:text-foreground border border-border rounded"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleSaveEdit(med.id)}
+                      className="text-sm px-3 py-1 bg-primary text-white rounded hover:bg-primary-hover"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Medication Name</label>
+                    <input
+                      type="text"
+                      value={editForm.name || ''}
+                      onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Brand Name</label>
+                    <input
+                      type="text"
+                      value={editForm.brandName || ''}
+                      onChange={(e) => setEditForm({...editForm, brandName: e.target.value})}
+                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Strength</label>
+                    <input
+                      type="text"
+                      value={editForm.strength || ''}
+                      onChange={(e) => setEditForm({...editForm, strength: e.target.value})}
+                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Dosage Form</label>
+                    <input
+                      type="text"
+                      value={editForm.dosageForm || ''}
+                      onChange={(e) => setEditForm({...editForm, dosageForm: e.target.value})}
+                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-muted-foreground">Frequency</label>
+                    <input
+                      type="text"
+                      value={editForm.frequency || ''}
+                      onChange={(e) => setEditForm({...editForm, frequency: e.target.value})}
+                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Prescribed For</label>
+                    <input
+                      type="text"
+                      value={editForm.prescribedFor || ''}
+                      onChange={(e) => setEditForm({...editForm, prescribedFor: e.target.value})}
+                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Prescribing Doctor</label>
+                    <input
+                      type="text"
+                      value={editForm.prescribingDoctor || ''}
+                      onChange={(e) => setEditForm({...editForm, prescribingDoctor: e.target.value})}
+                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Rx Number</label>
+                    <input
+                      type="text"
+                      value={editForm.rxNumber || ''}
+                      onChange={(e) => setEditForm({...editForm, rxNumber: e.target.value})}
+                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Quantity</label>
+                    <input
+                      type="text"
+                      value={editForm.quantity || ''}
+                      onChange={(e) => setEditForm({...editForm, quantity: e.target.value})}
+                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Refills</label>
+                    <input
+                      type="text"
+                      value={editForm.refills || ''}
+                      onChange={(e) => setEditForm({...editForm, refills: e.target.value})}
+                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-muted-foreground">Notes</label>
+                    <textarea
+                      value={editForm.notes || ''}
+                      onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
+                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                      rows={2}
+                    />
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleDeleteClick(med)
-                }}
-                disabled={deletingMedicationId === med.id}
-                className="text-error hover:text-error-dark text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {deletingMedicationId === med.id ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
+            ) : (
+              // View Mode
+              <>
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">
+                      {med.name}
+                      {med.brandName && (
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          ({med.brandName})
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {med.strength} • {med.dosageForm}
+                    </p>
+                    {refillStatus && (
+                      <p className={`text-xs font-medium mt-1 ${refillStatus.color}`}>
+                        {refillStatus.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => handleEditClick(med, e)}
+                      className="text-primary hover:text-primary-dark text-sm"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteClick(med)
+                      }}
+                      disabled={deletingMedicationId === med.id}
+                      className="text-error hover:text-error-dark text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {deletingMedicationId === med.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
+                </div>
 
           {med.frequency && (
             <div className="mt-2 p-2 bg-primary-light/50 rounded text-sm">
@@ -225,7 +374,9 @@ export function MedicationList({ patientId, patientOwnerId, onMedicationsLoad }:
           <p className="text-xs text-muted-foreground mt-3">
             Added {new Date(med.addedAt).toLocaleDateString()}
           </p>
-        </div>
+              </>
+            )}
+          </div>
         )
       })}
 

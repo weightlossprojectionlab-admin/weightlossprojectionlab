@@ -9,7 +9,7 @@
 
 import { PatientProfile, WeightLog } from '@/types/medical'
 import Link from 'next/link'
-import { UserIcon, CalendarIcon, HeartIcon, BellAlertIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
+import { UserIcon, CalendarIcon, HeartIcon, BellAlertIcon, ArrowRightIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import { getRoleLabel } from '@/lib/family-roles'
 import { useState, useEffect } from 'react'
 import { shouldShowWeightReminder } from '@/lib/weight-reminder-logic'
@@ -23,9 +23,10 @@ interface PatientCardProps {
   onEdit?: () => void
   onDelete?: () => void
   mode?: 'view' | 'select' // 'select' mode shows "View Dashboard" button
+  onQuickLogVitals?: () => void // AI Supervisor - Quick log vitals
 }
 
-export function PatientCard({ patient, showActions = false, onEdit, onDelete, mode = 'view' }: PatientCardProps) {
+export function PatientCard({ patient, showActions = false, onEdit, onDelete, mode = 'view', onQuickLogVitals }: PatientCardProps) {
   const router = useRouter()
   const { setSelectedPatient } = useAccount()
 
@@ -330,14 +331,30 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
           )}
         </div>
 
-        {/* Select Account Button */}
-        <button
-          onClick={handleSelectAccount}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-        >
-          <span>View Dashboard</span>
-          <ArrowRightIcon className="w-5 h-5" />
-        </button>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 gap-2">
+          {onQuickLogVitals && (
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onQuickLogVitals()
+              }}
+              className="flex items-center justify-center gap-2 px-3 py-2 bg-success text-white rounded-lg hover:bg-success-dark transition-colors font-medium text-sm"
+              title="Quick log vitals with AI guidance"
+            >
+              <ClipboardDocumentListIcon className="w-5 h-5" />
+              <span>Vitals</span>
+            </button>
+          )}
+          <button
+            onClick={handleSelectAccount}
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium text-sm"
+          >
+            <span>View Dashboard</span>
+            <ArrowRightIcon className="w-5 h-5" />
+          </button>
+        </div>
       </div>
       )}
 

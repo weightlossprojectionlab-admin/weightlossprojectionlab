@@ -31,31 +31,58 @@ function detectPlatform(): 'ios' | 'android' | 'desktop' {
 }
 
 /**
+ * Check if we're in a secure context (HTTPS or localhost)
+ */
+function isSecureContext(): boolean {
+  return window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost'
+}
+
+/**
  * Barcode Scanner Component
  * Uses html5-qrcode library for scanning 1D/2D barcodes
  */
 export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', title }: BarcodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showManualEntry, setShowManualEntry] = useState(false)
+  const [showFileUpload, setShowFileUpload] = useState(false)
   const [manualBarcode, setManualBarcode] = useState('')
   const [permissionState, setPermissionState] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown')
   const [cameraSupported, setCameraSupported] = useState(true)
+  const [secureContext, setSecureContext] = useState(true)
 
   useEffect(() => {
     if (!isOpen) {
       stopScanning()
       setShowManualEntry(false)
+      setShowFileUpload(false)
       setManualBarcode('')
       return
     }
 
-    // Set camera support flag (for UI purposes only, don't block)
-    setCameraSupported(isCameraSupported())
+    // Check secure context
+    const isSecure = isSecureContext()
+    setSecureContext(isSecure)
 
-    // Start scanner directly - getUserMedia will prompt for permission
-    // iOS Safari doesn't support navigator.permissions.query for camera
+    if (!isSecure) {
+      setError('Camera access requires HTTPS. Use manual entry or file upload instead.')
+      toast.error('Camera requires secure connection (HTTPS)')
+      return
+    }
+
+    // Set camera support flag
+    const cameraAvailable = isCameraSupported()
+    setCameraSupported(cameraAvailable)
+
+    if (!cameraAvailable) {
+      setError('Camera not available on this device. Use manual entry or file upload instead.')
+      toast.error('Camera not available on this device')
+      return
+    }
+
+    // Start scanner - getUserMedia will prompt for permission
     startScanning()
 
     return () => {
@@ -102,9 +129,30 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
         })
       }
 
-      // Start scanning
+      // Get camera list first (better mobile compatibility)
+      const devices = await Html5Qrcode.getCameras()
+
+      if (!devices || devices.length === 0) {
+        throw new Error('No cameras found on this device')
+      }
+
+      // Find back camera (prefer environment facing camera on mobile)
+      const backCamera = devices.find(device =>
+        device.label?.toLowerCase().includes('back') ||
+        device.label?.toLowerCase().includes('environment')
+      )
+
+      const cameraId = backCamera?.id || devices[0].id
+
+      console.log('[BarcodeScanner] Starting camera:', {
+        totalCameras: devices.length,
+        selectedCamera: backCamera?.label || devices[0].label,
+        platform: detectPlatform()
+      })
+
+      // Start scanning with specific camera ID (better than facingMode on some devices)
       await scannerRef.current.start(
-        { facingMode: 'environment' }, // Use back camera
+        cameraId,
         {
           fps: 10,
           qrbox: { width: 250, height: 250 },
@@ -121,13 +169,16 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
       )
 
       setIsScanning(true)
+      setPermissionState('granted')
     } catch (err: any) {
       // Log detailed error info for debugging
-      console.error('Scanner error details:', {
+      console.error('[BarcodeScanner] Scanner error details:', {
         name: err?.name,
         message: err?.message,
         code: err?.code,
         stack: err?.stack,
+        platform: detectPlatform(),
+        secureContext: isSecureContext(),
         fullError: err
       })
       logger.error('Failed to start scanner', err as Error)
@@ -140,18 +191,21 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
         setPermissionState('denied')
         showPermissionError()
         return
-      } else if (err.name === 'NotFoundError' || err.message?.includes('not found')) {
-        errorMessage = 'No camera found. Please use manual entry below or try a different device.'
+      } else if (err.name === 'NotFoundError' || err.message?.includes('not found') || err.message?.includes('No cameras')) {
+        errorMessage = 'No camera found. Please use photo upload or manual entry below.'
         toastMessage = 'No camera detected on this device'
       } else if (err.name === 'NotReadableError' || err.message?.includes('use')) {
         errorMessage = 'Camera is already in use by another application. Please close other apps using the camera.'
         toastMessage = 'Camera is already in use'
       } else if (err.name === 'NotSupportedError' || err.message?.includes('not support')) {
-        errorMessage = 'Camera not supported on this device/browser. Please use manual entry.'
+        errorMessage = 'Camera not supported on this device/browser. Please use photo upload or manual entry.'
         toastMessage = 'Camera not supported'
+      } else if (err.message?.includes('secure') || err.message?.includes('https')) {
+        errorMessage = 'Camera requires HTTPS connection. Use photo upload or manual entry instead.'
+        toastMessage = 'Camera requires secure connection'
       } else {
-        errorMessage = err.message || err.toString() || 'Failed to access camera. Please try manual entry below.'
-        toastMessage = err.message || 'Failed to access camera. Try manual entry.'
+        errorMessage = err.message || err.toString() || 'Failed to access camera. Please try photo upload or manual entry below.'
+        toastMessage = 'Camera unavailable. Try photo upload or manual entry.'
       }
 
       setError(errorMessage)
@@ -220,6 +274,44 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
     setManualBarcode('')
     setShowManualEntry(false)
     onClose()
+  }
+
+  /**
+   * Handle file upload for scanning
+   * Fallback for devices where camera doesn't work
+   */
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      toast.loading('Scanning image...', { id: 'file-scan' })
+
+      // Initialize scanner if needed
+      if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode('barcode-reader', {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.QR_CODE
+          ],
+          verbose: false
+        })
+      }
+
+      // Scan the file
+      const result = await scannerRef.current.scanFile(file, false)
+
+      toast.success('Barcode found!', { id: 'file-scan' })
+      handleScanSuccess(result)
+    } catch (err: any) {
+      console.error('[BarcodeScanner] File scan error:', err)
+      toast.error('No barcode found in image. Try manual entry instead.', { id: 'file-scan' })
+    }
   }
 
 
@@ -354,16 +446,41 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-2">
-          {/* Manual Entry Toggle */}
-          {!showManualEntry && cameraSupported && (
-            <button
-              type="button"
-              onClick={() => setShowManualEntry(true)}
-              className="w-full px-4 py-3 bg-muted text-foreground rounded-lg hover:bg-gray-200 transition-colors font-medium"
-            >
-              Can't scan? Enter barcode manually
-            </button>
+        <div className="space-y-2 mt-4">
+          {/* File Upload (Hidden Input) */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+
+          {/* Camera not working options */}
+          {!isScanning && !showManualEntry && (
+            <>
+              {/* Upload Photo Button */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full px-4 py-3 bg-secondary text-white rounded-lg hover:bg-secondary-hover transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Take/Upload Photo
+              </button>
+
+              {/* Manual Entry Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowManualEntry(true)}
+                className="w-full px-4 py-3 bg-muted text-foreground rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+              >
+                Enter barcode manually
+              </button>
+            </>
           )}
 
           {/* Cancel Button */}

@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 
 interface UseRecommendationsOptions {
   autoFetch?: boolean
+  patientId?: string | null
 }
 
 interface UseRecommendationsReturn {
@@ -24,7 +25,8 @@ interface UseRecommendationsReturn {
 }
 
 export function useRecommendations({
-  autoFetch = true
+  autoFetch = true,
+  patientId
 }: UseRecommendationsOptions = {}): UseRecommendationsReturn {
   const [recommendations, setRecommendations] = useState<AppointmentRecommendation[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,7 +37,12 @@ export function useRecommendations({
       setLoading(true)
       setError(null)
 
-      const data = await apiClient.get<{ data: AppointmentRecommendation[] }>('/appointments/recommendations')
+      // Add patientId as query parameter if provided
+      const endpoint = patientId
+        ? `/appointments/recommendations?patientId=${patientId}`
+        : '/appointments/recommendations'
+
+      const data = await apiClient.get<{ data: AppointmentRecommendation[] }>(endpoint)
       setRecommendations(data.data || [])
     } catch (err: any) {
       const errorMsg = err.message || 'Failed to fetch recommendations'
@@ -44,7 +51,7 @@ export function useRecommendations({
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [patientId])
 
   useEffect(() => {
     if (autoFetch) {
@@ -57,8 +64,13 @@ export function useRecommendations({
       setLoading(true)
       setError(null)
 
+      // Add patientId as query parameter if provided
+      const endpoint = patientId
+        ? `/appointments/recommendations?patientId=${patientId}`
+        : '/appointments/recommendations'
+
       const data = await apiClient.post<{ data: AppointmentRecommendation[]; count: number; message?: string }>(
-        '/appointments/recommendations',
+        endpoint,
         {}
       )
       setRecommendations(data.data || [])
@@ -76,7 +88,7 @@ export function useRecommendations({
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [patientId])
 
   const dismiss = useCallback(async (recommendationId: string) => {
     try {

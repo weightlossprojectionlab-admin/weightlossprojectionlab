@@ -16,9 +16,11 @@ import { SparklesIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 
 interface RecommendationsSectionProps {
   className?: string
+  patientId?: string | null
+  showOnlyUrgent?: boolean
 }
 
-export function RecommendationsSection({ className = '' }: RecommendationsSectionProps) {
+export function RecommendationsSection({ className = '', patientId, showOnlyUrgent = false }: RecommendationsSectionProps) {
   const {
     recommendations,
     loading,
@@ -27,7 +29,7 @@ export function RecommendationsSection({ className = '' }: RecommendationsSectio
     generate,
     dismiss,
     markScheduled
-  } = useRecommendations()
+  } = useRecommendations({ patientId })
 
   const [selectedRecommendation, setSelectedRecommendation] = useState<AppointmentRecommendation | null>(null)
   const [generating, setGenerating] = useState(false)
@@ -61,13 +63,26 @@ export function RecommendationsSection({ className = '' }: RecommendationsSectio
   const highRecs = recommendations.filter(r => r.severity === 'high' && r.urgency !== 'urgent')
   const normalRecs = recommendations.filter(r => r.severity !== 'high' && r.urgency !== 'urgent')
 
-  if (loading && recommendations.length === 0) {
+  // If showing only urgent and no urgent recommendations, don't render anything
+  if (showOnlyUrgent && urgentRecs.length === 0) {
+    return null
+  }
+
+  // When not showing urgent-only, filter out urgent recs (they're shown separately at top)
+  const displayRecs = showOnlyUrgent ? urgentRecs : recommendations.filter(r => r.urgency !== 'urgent')
+
+  // Hide if no recommendations to display
+  if (!loading && displayRecs.length === 0) {
+    return null
+  }
+
+  if (loading && displayRecs.length === 0) {
     return (
       <div className={`bg-card rounded-lg shadow-sm p-6 ${className}`}>
         <div className="flex items-center gap-3 mb-4">
           <SparklesIcon className="w-6 h-6 text-primary" />
           <h2 className="text-xl font-bold text-foreground">
-            AI Appointment Recommendations
+            {showOnlyUrgent ? '⚠️ Health Alerts' : 'AI Appointment Recommendations'}
           </h2>
         </div>
         <div className="animate-pulse space-y-3">
@@ -80,31 +95,39 @@ export function RecommendationsSection({ className = '' }: RecommendationsSectio
 
   return (
     <>
-      <div className={`bg-card rounded-lg shadow-sm p-6 ${className}`}>
+      <div className={`${showOnlyUrgent ? 'bg-red-50 dark:bg-red-900/10 border-2 border-red-200 dark:border-red-800' : 'bg-card'} rounded-lg shadow-sm p-6 ${className}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary-light dark:bg-purple-900/20 rounded-lg">
-              <SparklesIcon className="w-6 h-6 text-primary dark:text-purple-400" />
+            <div className={`p-2 ${showOnlyUrgent ? 'bg-red-100 dark:bg-red-900/30' : 'bg-primary-light dark:bg-purple-900/20'} rounded-lg`}>
+              {showOnlyUrgent ? (
+                <span className="text-2xl">⚠️</span>
+              ) : (
+                <SparklesIcon className="w-6 h-6 text-primary dark:text-purple-400" />
+              )}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">
-                AI Appointment Recommendations
+              <h2 className={`text-xl font-bold ${showOnlyUrgent ? 'text-red-900 dark:text-red-200' : 'text-foreground'}`}>
+                {showOnlyUrgent ? 'Health Alerts' : 'AI Health Insights'}
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Based on your progress, vitals, and appointment history
+              <p className={`text-sm ${showOnlyUrgent ? 'text-red-700 dark:text-red-300' : 'text-muted-foreground'}`}>
+                {showOnlyUrgent
+                  ? 'Urgent concerns requiring attention'
+                  : 'Based on progress, vitals, and appointment history'}
               </p>
             </div>
           </div>
 
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <ArrowPathIcon className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-            {generating ? 'Analyzing...' : 'Refresh Analysis'}
-          </button>
+          {!showOnlyUrgent && (
+            <button
+              onClick={handleGenerate}
+              disabled={generating}
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <ArrowPathIcon className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
+              {generating ? 'Analyzing...' : 'Refresh Analysis'}
+            </button>
+          )}
         </div>
 
         {/* Error State */}
@@ -133,19 +156,21 @@ export function RecommendationsSection({ className = '' }: RecommendationsSectio
         )}
 
         {/* Recommendations List */}
-        {recommendations.length > 0 && (
+        {displayRecs.length > 0 && (
           <div className="space-y-6">
             {/* Urgent Section */}
             {urgentRecs.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-error-dark dark:text-red-300 text-xs font-bold rounded uppercase">
-                    Urgent
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    Schedule this week
-                  </span>
-                </div>
+                {!showOnlyUrgent && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-error-dark dark:text-red-300 text-xs font-bold rounded uppercase">
+                      Urgent
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      Schedule this week
+                    </span>
+                  </div>
+                )}
                 <div className="space-y-3">
                   {urgentRecs.map(rec => (
                     <RecommendationCard
@@ -159,8 +184,8 @@ export function RecommendationsSection({ className = '' }: RecommendationsSectio
               </div>
             )}
 
-            {/* High Priority Section */}
-            {highRecs.length > 0 && (
+            {/* High Priority Section - Hide in urgent-only mode */}
+            {!showOnlyUrgent && highRecs.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-bold rounded uppercase">
@@ -183,8 +208,8 @@ export function RecommendationsSection({ className = '' }: RecommendationsSectio
               </div>
             )}
 
-            {/* Normal Priority Section */}
-            {normalRecs.length > 0 && (
+            {/* Normal Priority Section - Hide in urgent-only mode */}
+            {!showOnlyUrgent && normalRecs.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold rounded uppercase">

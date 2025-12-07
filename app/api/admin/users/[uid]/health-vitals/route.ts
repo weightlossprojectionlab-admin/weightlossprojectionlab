@@ -13,8 +13,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb as db } from '@/lib/firebase-admin'
+import { adminDb as db } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { requireAdmin } from '@/lib/admin-auth'
 import type { HealthVitalsSummary } from '@/types'
 
 interface RouteParams {
@@ -30,45 +31,22 @@ export async function GET(
   try {
     const { uid } = await params
 
-    // 1. Verify authentication and admin status
+    // 1. Verify authentication and admin status using unified auth
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Missing authentication token' },
-        { status: 401 }
-      )
+    const cookieToken = request.cookies.get('idToken')?.value
+
+    const authResult = await requireAdmin(authHeader, cookieToken)
+
+    if ('error' in authResult) {
+      return NextResponse.json(authResult.error, { status: authResult.status })
     }
 
-    const token = authHeader.split('Bearer ')[1]
+    const { uid: adminUid, email: adminEmail } = authResult
 
-    let adminUid: string
-    try {
-      const decodedToken = await adminAuth.verifyIdToken(token)
-      adminUid = decodedToken.uid
+    // TODO: Log PHI access for HIPAA audit trail
+    // await logPHIAccess({ adminUid, operation: 'READ', collection: 'health-vitals', targetUserId: uid })
 
-      // Check if user is admin
-      const adminDoc = await db.collection('users').doc(adminUid).get()
-      const isAdmin = adminDoc.data()?.profile?.isAdmin === true
-
-      if (!isAdmin) {
-        logger.warn('[Health Vitals API] Non-admin attempted access', { adminUid, targetUid: uid })
-        return NextResponse.json(
-          { error: 'Forbidden: Admin access required' },
-          { status: 403 }
-        )
-      }
-
-      // TODO: Log PHI access for HIPAA audit trail
-      // await logPHIAccess({ adminUid, operation: 'READ', collection: 'health-vitals', targetUserId: uid })
-
-      logger.debug('[Health Vitals API] Admin authenticated', { adminUid, targetUid: uid })
-    } catch (authError) {
-      logger.error('[Health Vitals API] Auth failed', authError as Error)
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid authentication token' },
-        { status: 401 }
-      )
-    }
+    logger.debug('[Health Vitals API] Admin authenticated', { adminUid, targetUid: uid })
 
     // 2. Fetch user's health vitals from Firestore
     const summary = await generateHealthVitalsSummary(uid)

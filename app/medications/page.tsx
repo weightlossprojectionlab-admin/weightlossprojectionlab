@@ -7,6 +7,7 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MedicationCard } from '@/components/health/MedicationCard'
 import MedicationScanner from '@/components/health/MedicationScanner'
+import EditMedicationModal from '@/components/health/EditMedicationModal'
 import { ScannedMedication } from '@/lib/medication-lookup'
 import { medicalOperations } from '@/lib/medical-operations'
 import { PatientProfile, PatientMedication } from '@/types/medical'
@@ -152,6 +153,38 @@ function MedicationsContent() {
     }
   }
 
+  // State for editing
+  const [editingMedication, setEditingMedication] = useState<PatientMedication | null>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+
+  // Edit medication handler
+  const handleEditMedication = (medication: PatientMedication) => {
+    setEditingMedication(medication)
+    setShowEditModal(true)
+  }
+
+  // Save edited medication
+  const handleSaveEdit = async (updates: Partial<PatientMedication>) => {
+    if (!selectedPatientId || !editingMedication) return
+
+    try {
+      await medicalOperations.medications.updateMedication(
+        selectedPatientId,
+        editingMedication.id,
+        updates
+      )
+      toast.success('Medication updated successfully')
+      setShowEditModal(false)
+      setEditingMedication(null)
+
+      // Reload medications
+      await loadMedications(selectedPatientId)
+    } catch (error) {
+      logger.error('[Medications Page] Error updating medication', error as Error)
+      toast.error('Failed to update medication')
+    }
+  }
+
   // Delete medication handler
   const handleDeleteMedication = async (medicationId: string, medicationName: string) => {
     if (!selectedPatientId) return
@@ -280,6 +313,7 @@ function MedicationsContent() {
                 <MedicationCard
                   key={med.id}
                   medication={med}
+                  onEdit={() => handleEditMedication(med)}
                   onDelete={() => handleDeleteMedication(med.id, med.name)}
                   showActions={true}
                 />
@@ -295,6 +329,19 @@ function MedicationsContent() {
           onMedicationScanned={handleMedicationScanned}
           prescribedFor={selectedCondition}
         />
+
+        {/* Edit Medication Modal */}
+        {showEditModal && editingMedication && selectedPatientId && (
+          <EditMedicationModal
+            medication={editingMedication}
+            patientId={selectedPatientId}
+            onClose={() => {
+              setShowEditModal(false)
+              setEditingMedication(null)
+            }}
+            onSave={handleSaveEdit}
+          />
+        )}
       </main>
     </div>
   )

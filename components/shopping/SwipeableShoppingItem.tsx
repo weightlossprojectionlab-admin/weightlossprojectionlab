@@ -14,12 +14,14 @@ import { CheckCircleIcon, TrashIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import type { ShoppingItem } from '@/types/shopping'
 import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
+import { FamilyMemberBadge } from './FamilyMemberBadge'
 
 interface SwipeableShoppingItemProps {
   item: ShoppingItem
   onPurchase: (itemId: string) => Promise<void>
   onDelete: (itemId: string) => Promise<void>
   onClick?: (item: ShoppingItem) => void
+  getMemberName?: (userId?: string) => string
   className?: string
 }
 
@@ -28,6 +30,7 @@ export function SwipeableShoppingItem({
   onPurchase,
   onDelete,
   onClick,
+  getMemberName,
   className = '',
 }: SwipeableShoppingItemProps) {
   const [swipeOffset, setSwipeOffset] = useState(0)
@@ -157,8 +160,16 @@ export function SwipeableShoppingItem({
             <div className="font-medium text-foreground dark:text-white">
               {item.productName}
             </div>
-            <div className="text-sm text-muted-foreground">
-              {item.displayQuantity || `${item.quantity} ${item.unit || 'units'}`}
+            <div className="flex items-center gap-2 flex-wrap mt-1">
+              <div className="text-sm text-muted-foreground">
+                {item.displayQuantity || `${item.quantity} ${item.unit || 'units'}`}
+              </div>
+              {/* Family member badge */}
+              <FamilyMemberBadge
+                requestedBy={item.requestedBy}
+                addedBy={item.addedBy}
+                getMemberName={getMemberName}
+              />
             </div>
             {/* Recipe badge */}
             {recipeName && (

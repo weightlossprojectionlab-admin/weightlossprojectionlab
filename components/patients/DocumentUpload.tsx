@@ -113,15 +113,16 @@ export default function DocumentUpload({ patientId, onSuccess, onCancel }: Docum
         fileSize: selectedFiles.reduce((sum, f) => sum + f.size, 0),
         originalUrl: uploadedImages[0].url,
         images: fileType === 'image' ? uploadedImages : undefined,
-        ocrStatus: 'pending',
+        ocrStatus: 'not_started', // Don't run OCR automatically - let user trigger it manually
         notes
       })
 
       // Step 3: Show success message - upload complete
       toast.success('Document uploaded successfully', { id: uploadToast })
 
-      // Step 4: Start OCR processing in background (don't block UI)
-      processOcrInBackground(uploadedDocument, fileType, firstFile, uploadedImages[0].url)
+      // OCR is now OPTIONAL - user can trigger from document detail modal
+      // This saves API costs and improves performance
+      console.log('[DocumentUpload] OCR skipped - user can trigger manually if needed')
 
       // Reset form
       setSelectedFiles([])

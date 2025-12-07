@@ -23,7 +23,11 @@ import {
   orderBy,
   limit as firestoreLimit,
   Timestamp,
-  addDoc
+  addDoc,
+  runTransaction,
+  writeBatch,
+  increment,
+  arrayUnion
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type {
@@ -260,6 +264,7 @@ export async function addManualShoppingItem(
     quantity?: number
     unit?: QuantityUnit
     priority?: 'low' | 'medium' | 'high'
+    householdId?: string // NEW: If provided, uses household mode
   } = {}
 ): Promise<ShoppingItem> {
   try {
@@ -272,6 +277,7 @@ export async function addManualShoppingItem(
 
     const newItem: Omit<ShoppingItem, 'id'> = {
       userId,
+      householdId: options.householdId, // NEW: Add household ID if provided
       barcode: undefined, // No barcode for manual entries
       productName: ingredientName,
       brand: '',
@@ -974,5 +980,320 @@ export async function updateGlobalProductDatabase(
   } catch (error) {
     logger.error('[GlobalProduct] Error updating global product database', error as Error, { barcode, userId })
     // Don't throw - this is a best-effort aggregation, don't block user flow
+  }
+}
+
+// ============================================================================
+// REAL-TIME MULTI-USER OPERATIONS (Transaction-Based for Safety)
+// ============================================================================
+
+/**
+ * Discard item from inventory with transaction safety
+ * Prevents race conditions when multiple users discard the same item
+ */
+export async function discardItemSafely(
+  itemId: string,
+  userId: string,
+  options: {
+    addToShoppingList?: boolean
+    reason?: 'expired' | 'spoiled' | 'moldy' | 'other'
+    notes?: string
+  } = {}
+): Promise<void> {
+  try {
+    const itemRef = doc(db, SHOPPING_ITEMS_COLLECTION, itemId)
+    const actionRef = doc(collection(db, 'inventory_actions'))
+
+    await runTransaction(db, async (transaction) => {
+      const itemDoc = await transaction.get(itemRef)
+
+      if (!itemDoc.exists()) {
+        throw new Error('Item does not exist')
+      }
+
+      const item = itemDoc.data() as ShoppingItem
+
+      // Check if already discarded
+      if (!item.inStock) {
+        const discardedBy = item.discardedBy || 'another user'
+        throw new Error(`Item already discarded by ${discardedBy}`)
+      }
+
+      const now = Timestamp.now()
+
+      // Update item - mark as discarded
+      transaction.update(itemRef, {
+        inStock: false,
+        quantity: 0,
+        discardedAt: now,
+        discardedBy: userId,
+        discardReason: options.reason || 'other',
+        notes: options.notes || null,
+        lastModifiedBy: userId,
+        updatedAt: now
+      })
+
+      // Log audit trail
+      transaction.set(actionRef, {
+        id: actionRef.id,
+        itemId,
+        action: 'discarded',
+        reason: options.reason || 'other',
+        performedBy: userId,
+        timestamp: now,
+        notes: options.notes || null,
+        productName: item.productName
+      })
+
+      // Re-add to shopping list if requested
+      if (options.addToShoppingList) {
+        transaction.update(itemRef, {
+          needed: true,
+          priority: 'medium',
+          requestedBy: arrayUnion(userId)
+        })
+      }
+    })
+
+    logger.info('[Shopping] Item discarded safely', {
+      itemId,
+      userId,
+      addToShoppingList: options.addToShoppingList
+    })
+  } catch (error) {
+    logger.error('[Shopping] Failed to discard item', error as Error, { itemId, userId })
+    throw error
+  }
+}
+
+/**
+ * Remove item from inventory with reason tracking
+ * Use for non-discard removals (gave away, returned, etc.)
+ */
+export async function removeFromInventory(
+  itemId: string,
+  userId: string,
+  reason: 'gave_away' | 'returned' | 'transferred' | 'duplicate' | 'error' | 'other',
+  notes?: string
+): Promise<void> {
+  try {
+    const itemRef = doc(db, SHOPPING_ITEMS_COLLECTION, itemId)
+    const actionRef = doc(collection(db, 'inventory_actions'))
+
+    await runTransaction(db, async (transaction) => {
+      const itemDoc = await transaction.get(itemRef)
+
+      if (!itemDoc.exists()) {
+        throw new Error('Item does not exist')
+      }
+
+      const item = itemDoc.data() as ShoppingItem
+
+      // Delete from inventory
+      transaction.delete(itemRef)
+
+      // Log audit trail
+      transaction.set(actionRef, {
+        id: actionRef.id,
+        itemId,
+        action: 'removed',
+        reason,
+        performedBy: userId,
+        timestamp: Timestamp.now(),
+        notes: notes || null,
+        productName: item.productName
+      })
+    })
+
+    logger.info('[Shopping] Item removed from inventory', { itemId, reason, userId })
+  } catch (error) {
+    logger.error('[Shopping] Failed to remove item', error as Error, { itemId, userId })
+    throw error
+  }
+}
+
+/**
+ * Remove item from shopping list
+ * Use when item is no longer needed
+ */
+export async function removeFromShoppingList(
+  itemId: string,
+  userId: string,
+  reason?: 'duplicate' | 'changed_mind' | 'already_bought' | 'unavailable' | 'other',
+  notes?: string
+): Promise<void> {
+  try {
+    const itemRef = doc(db, SHOPPING_ITEMS_COLLECTION, itemId)
+    const actionRef = doc(collection(db, 'inventory_actions'))
+
+    await runTransaction(db, async (transaction) => {
+      const itemDoc = await transaction.get(itemRef)
+
+      if (!itemDoc.exists()) {
+        throw new Error('Item does not exist')
+      }
+
+      const item = itemDoc.data() as ShoppingItem
+
+      // Mark as not needed
+      transaction.update(itemRef, {
+        needed: false,
+        lastModifiedBy: userId,
+        updatedAt: Timestamp.now()
+      })
+
+      // Log audit trail
+      transaction.set(actionRef, {
+        id: actionRef.id,
+        itemId,
+        action: 'removed_from_list',
+        reason: reason || 'other',
+        performedBy: userId,
+        timestamp: Timestamp.now(),
+        notes: notes || null,
+        productName: item.productName
+      })
+    })
+
+    logger.info('[Shopping] Item removed from shopping list', { itemId, reason, userId })
+  } catch (error) {
+    logger.error('[Shopping] Failed to remove from shopping list', error as Error, { itemId, userId })
+    throw error
+  }
+}
+
+/**
+ * Update item quantity safely with atomic increment
+ * Prevents race conditions on quantity updates
+ */
+export async function updateQuantitySafely(
+  itemId: string,
+  delta: number,
+  userId: string
+): Promise<void> {
+  try {
+    const itemRef = doc(db, SHOPPING_ITEMS_COLLECTION, itemId)
+
+    await updateDoc(itemRef, {
+      quantity: increment(delta), // Atomic increment/decrement
+      lastModifiedBy: userId,
+      updatedAt: Timestamp.now()
+    })
+
+    logger.info('[Shopping] Quantity updated safely', { itemId, delta, userId })
+  } catch (error) {
+    logger.error('[Shopping] Failed to update quantity', error as Error, { itemId, delta })
+    throw error
+  }
+}
+
+/**
+ * Batch discard multiple items
+ * More efficient than calling discardItemSafely multiple times
+ */
+export async function batchDiscardItems(
+  itemIds: string[],
+  userId: string,
+  options: {
+    addToShoppingList?: boolean
+    reason?: 'expired' | 'spoiled' | 'moldy' | 'other'
+  } = {}
+): Promise<{ succeeded: string[]; failed: Array<{ itemId: string; error: string }> }> {
+  const results = {
+    succeeded: [] as string[],
+    failed: [] as Array<{ itemId: string; error: string }>
+  }
+
+  // Process in batches of 500 (Firestore limit)
+  const batchSize = 500
+  for (let i = 0; i < itemIds.length; i += batchSize) {
+    const batchItemIds = itemIds.slice(i, i + batchSize)
+
+    try {
+      const batch = writeBatch(db)
+      const now = Timestamp.now()
+
+      for (const itemId of batchItemIds) {
+        const itemRef = doc(db, SHOPPING_ITEMS_COLLECTION, itemId)
+        const actionRef = doc(collection(db, 'inventory_actions'))
+
+        // Note: Batch writes don't support reads, so we can't check if already discarded
+        // This is a trade-off for performance
+        batch.update(itemRef, {
+          inStock: false,
+          quantity: 0,
+          discardedAt: now,
+          discardedBy: userId,
+          discardReason: options.reason || 'other',
+          lastModifiedBy: userId,
+          updatedAt: now
+        })
+
+        batch.set(actionRef, {
+          id: actionRef.id,
+          itemId,
+          action: 'discarded',
+          reason: options.reason || 'other',
+          performedBy: userId,
+          timestamp: now
+        })
+
+        if (options.addToShoppingList) {
+          batch.update(itemRef, {
+            needed: true,
+            priority: 'medium',
+            requestedBy: arrayUnion(userId)
+          })
+        }
+      }
+
+      await batch.commit()
+      results.succeeded.push(...batchItemIds)
+
+      logger.info('[Shopping] Batch discard completed', {
+        count: batchItemIds.length,
+        userId
+      })
+    } catch (error) {
+      logger.error('[Shopping] Batch discard failed', error as Error, {
+        batchItemIds,
+        userId
+      })
+
+      // Record failures
+      batchItemIds.forEach(itemId => {
+        results.failed.push({
+          itemId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+      })
+    }
+  }
+
+  return results
+}
+
+/**
+ * Mark item as expired (without discarding yet)
+ * Allows users to review before discarding
+ */
+export async function markItemAsExpired(
+  itemId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const itemRef = doc(db, SHOPPING_ITEMS_COLLECTION, itemId)
+
+    await updateDoc(itemRef, {
+      expiresAt: Timestamp.now(), // Set to now = expired
+      priority: 'high', // Raise priority
+      lastModifiedBy: userId,
+      updatedAt: Timestamp.now()
+    })
+
+    logger.info('[Shopping] Item marked as expired', { itemId, userId })
+  } catch (error) {
+    logger.error('[Shopping] Failed to mark as expired', error as Error, { itemId })
+    throw error
   }
 }

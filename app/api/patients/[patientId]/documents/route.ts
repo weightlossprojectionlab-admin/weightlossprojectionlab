@@ -3,6 +3,8 @@ import { adminDb } from '@/lib/firebase-admin'
 import { removeUndefinedValues } from '@/lib/firestore-helpers'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import type { PatientDocument } from '@/types/medical'
+import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
+import { logger } from '@/lib/logger'
 
 export async function GET(
   request: NextRequest,
@@ -115,6 +117,39 @@ export async function POST(
       .doc(patientId)
       .collection('documents')
       .add(document)
+
+    // Trigger notification to family members
+    try {
+      // Get user info for notification
+      const userDoc = await adminDb.collection('users').doc(userId).get()
+      const userName = userDoc.exists ? userDoc.data()?.name || userDoc.data()?.email : 'Unknown User'
+
+      await sendNotificationToFamilyMembers({
+        userId: '', // Will be overridden for each recipient
+        patientId,
+        type: 'document_uploaded',
+        priority: 'normal',
+        title: 'Document Uploaded',
+        message: `${userName} uploaded a new document`,
+        excludeUserId: userId,
+        metadata: {
+          documentId: docRef.id,
+          documentName: body.name || body.fileName || 'Document',
+          documentCategory: body.category || 'other',
+          patientName: patientDoc.data()?.name || 'Patient',
+          fileType: body.fileType || 'other',
+          fileSize: body.fileSize,
+          actionBy: userName,
+          actionByUserId: userId
+        }
+      })
+    } catch (notificationError) {
+      // Log error but don't fail the main operation
+      logger.error('[Documents API] Error sending notification', notificationError as Error, {
+        patientId,
+        documentId: docRef.id
+      })
+    }
 
     return NextResponse.json({
       success: true,

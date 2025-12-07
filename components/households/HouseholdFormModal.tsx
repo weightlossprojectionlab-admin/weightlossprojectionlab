@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
+import { apiClient } from '@/lib/api-client'
 import toast from 'react-hot-toast'
 import type { Household, HouseholdFormData } from '@/types/household'
 import type { PatientProfile } from '@/types/medical'
@@ -89,19 +90,9 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
 
     try {
       setLoadingPatients(true)
-      const token = await user.getIdToken()
-      const response = await fetch('/api/patients', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch patients')
-      }
-
-      const data = await response.json()
-      setAvailablePatients(data.data || [])
+      // apiClient.get() already unwraps the 'data' field from the API response
+      const patients = await apiClient.get<PatientProfile[]>('/patients')
+      setAvailablePatients(patients || [])
     } catch (error) {
       logger.error('Failed to fetch patients', error as Error)
       toast.error('Failed to load patients')
@@ -128,34 +119,30 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
 
     try {
       setLoading(true)
-      const token = await user.getIdToken()
 
-      const url = household
-        ? `/api/households/${household.id}`
-        : '/api/households'
+      const endpoint = household
+        ? `/households/${household.id}`
+        : '/households'
 
       const method = household ? 'PUT' : 'POST'
 
-      const response = await fetch(url, {
+      // Use apiClient which handles CSRF tokens automatically
+      await apiClient.request(endpoint, {
         method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(formData)
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to save household')
-      }
 
       toast.success(household ? 'Household updated successfully' : 'Household created successfully')
       onSuccess()
       onClose()
       resetForm()
     } catch (error) {
-      logger.error('Failed to save household', error as Error)
+      logger.error('Failed to save household', error as Error, {
+        operation: household ? 'update' : 'create',
+        householdId: household?.id,
+        householdName: formData.name,
+        memberCount: formData.memberIds?.length || 0
+      })
       toast.error(error instanceof Error ? error.message : 'Failed to save household')
     } finally {
       setLoading(false)

@@ -8,12 +8,14 @@
  * Highlights expiring items
  */
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
+import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { useInventory } from '@/hooks/useInventory'
+import { useRealtimeInventory } from '@/hooks/useRealtimeInventory'
+import { useRealtimeExpiredItems } from '@/hooks/useRealtimeExpiredItems'
 import { useShopping } from '@/hooks/useShopping'
 import { getCategoryMetadata, formatQuantityDisplay } from '@/lib/product-categories'
 import { formatExpirationDate } from '@/lib/product-categories'
@@ -26,8 +28,10 @@ import { RecipeLinks } from '@/components/shopping/RecipeLinks'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { addManualShoppingItem } from '@/lib/shopping-operations'
 import type { ScanContext } from '@/types/shopping'
+import type { PatientProfile } from '@/types/medical'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
+import { patientOperations } from '@/lib/medical-operations'
 
 // Dynamic imports
 const BarcodeScanner = dynamic(
@@ -36,16 +40,25 @@ const BarcodeScanner = dynamic(
 )
 
 function KitchenInventoryContent() {
+  // Real-time inventory hook
   const {
     fridgeItems,
     freezerItems,
     pantryItems,
     counterItems,
-    expirationAlerts,
-    loading,
+    loading: inventoryLoading,
     getSummary,
     refresh
-  } = useInventory()
+  } = useRealtimeInventory()
+
+  // Real-time expired items hook
+  const {
+    totalExpired,
+    criticalItems,
+    highRiskItems,
+    expirationAlerts,
+    loading: expiredLoading
+  } = useRealtimeExpiredItems()
 
   const { consumeItem, addItem, updateItem } = useShopping()
 
@@ -54,10 +67,43 @@ function KitchenInventoryContent() {
   const [showScanContext, setShowScanContext] = useState(false)
   const [scanContext, setScanContext] = useState<ScanContext>('inventory')
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null)
+  const [members, setMembers] = useState<Record<string, PatientProfile>>({})
 
   const summary = getSummary()
-  const criticalAlerts = expirationAlerts.filter(a => a.severity === 'critical' || a.severity === 'expired')
+  const loading = inventoryLoading || expiredLoading
+  const needsCleanup = criticalItems.length + highRiskItems.length
   const allInventoryItems = [...fridgeItems, ...freezerItems, ...pantryItems, ...counterItems]
+
+  /**
+   * Fetch household members for display
+   */
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const patients = await patientOperations.getPatients()
+        const memberMap: Record<string, PatientProfile> = {}
+        patients.forEach(p => {
+          memberMap[p.id] = p
+        })
+        setMembers(memberMap)
+      } catch (error) {
+        logger.error('Error fetching household members', error as Error)
+      }
+    }
+    fetchMembers()
+  }, [])
+
+  /**
+   * Get member display name
+   */
+  const getMemberName = (userId?: string): string => {
+    if (!userId) return ''
+    const member = members[userId]
+    if (member) {
+      return member.name || 'Member'
+    }
+    return auth.currentUser?.uid === userId ? 'You' : 'Member'
+  }
 
   /**
    * Get items for selected location
@@ -182,37 +228,44 @@ function KitchenInventoryContent() {
         />
 
         <main className="container mx-auto px-4 py-6 max-w-4xl">
-          {/* Expiration Alerts */}
-          {criticalAlerts.length > 0 && (
-            <div className="mb-6 bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-500 dark:border-orange-700 rounded-lg p-4">
-              <h3 className="font-semibold text-orange-900 dark:text-orange-200 mb-2 flex items-center gap-2">
-                <span>⚠️</span>
-                {criticalAlerts.length} Item{criticalAlerts.length !== 1 ? 's' : ''} Expiring Soon
-              </h3>
-              <div className="space-y-2">
-                {criticalAlerts.slice(0, 3).map(alert => (
-                  <div key={alert.itemId} className="text-sm text-orange-800 dark:text-orange-300">
-                    • {alert.productName} - {formatExpirationDate(alert.expiresAt)}
-                  </div>
-                ))}
-                {criticalAlerts.length > 3 && (
-                  <div className="text-sm text-orange-700 dark:text-orange-400">
-                    + {criticalAlerts.length - 3} more
-                  </div>
-                )}
+          {/* Expired Items Alert */}
+          {totalExpired > 0 && (
+            <div className="mb-6 bg-red-50 dark:bg-red-900/20 border-2 border-red-500 dark:border-red-700 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-red-900 dark:text-red-200 mb-2 flex items-center gap-2">
+                    <span>🚨</span>
+                    {totalExpired} Expired Item{totalExpired !== 1 ? 's' : ''} Found
+                  </h3>
+                  {needsCleanup > 0 && (
+                    <p className="text-sm text-red-800 dark:text-red-300">
+                      {needsCleanup} item{needsCleanup !== 1 ? 's need' : ' needs'} immediate attention
+                    </p>
+                  )}
+                </div>
+                <Link
+                  href="/inventory/cleanup"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Clean Up Now
+                </Link>
               </div>
             </div>
           )}
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-card rounded-lg shadow p-4">
-              <div className="text-2xl font-bold text-primary">{summary.inStockItems}</div>
+              <div className="text-2xl font-bold text-primary">{summary.totalItems}</div>
               <div className="text-sm text-muted-foreground">Total Items</div>
             </div>
             <div className="bg-card rounded-lg shadow p-4">
               <div className="text-2xl font-bold text-warning">{summary.expiringWithin7Days}</div>
               <div className="text-sm text-muted-foreground">Expiring Soon</div>
+            </div>
+            <div className="bg-card rounded-lg shadow p-4">
+              <div className="text-2xl font-bold text-destructive">{totalExpired}</div>
+              <div className="text-sm text-muted-foreground">Expired</div>
             </div>
           </div>
 
@@ -278,7 +331,7 @@ function KitchenInventoryContent() {
             <div className="space-y-3">
               {items.map(item => {
                 const categoryMeta = getCategoryMetadata(item.category)
-                const expirationAlert = expirationAlerts.find(a => a.itemId === item.id)
+                const expirationAlert = expirationAlerts?.find((a: any) => a.itemId === item.id)
                 const expirationColors = expirationAlert ? getExpirationColor(expirationAlert.severity) : null
 
                 return (
@@ -319,9 +372,27 @@ function KitchenInventoryContent() {
                           <span className="text-xs px-2 py-1 bg-muted rounded">
                             {item.displayQuantity || formatQuantityDisplay(item.quantity, item.unit)}
                           </span>
-                          {item.expiresAt && expirationAlert && (
-                            <span className={`text-xs px-2 py-1 rounded ${expirationColors?.bg} ${expirationColors?.text}`}>
+                          {item.expiresAt && (
+                            <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded">
                               {formatExpirationDate(item.expiresAt)}
+                            </span>
+                          )}
+                          {/* Show who purchased this item */}
+                          {item.purchasedBy && (
+                            <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              {getMemberName(item.purchasedBy)}
+                            </span>
+                          )}
+                          {/* Show who added this to the list originally */}
+                          {!item.purchasedBy && item.addedBy && item.addedBy.length > 0 && (
+                            <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              {item.addedBy.map(id => getMemberName(id)).filter(Boolean).join(', ') || 'Added'}
                             </span>
                           )}
                         </div>
@@ -349,7 +420,6 @@ function KitchenInventoryContent() {
                             try {
                               await consumeItem(item.id)
                               toast.success(`✓ Moved ${item.productName} to shopping list`)
-                              refresh()
                             } catch (error: any) {
                               console.error('[Inventory] Error marking as consumed:', error)
                               toast.error(`Failed to move item: ${error?.message || 'Unknown error'}`)

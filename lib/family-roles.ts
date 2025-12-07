@@ -145,7 +145,18 @@ export function canEditMember(
   editorRole: FamilyRole,
   targetRole: FamilyRole
 ): boolean {
+  // Handle undefined/invalid roles
+  if (!editorRole || !targetRole) {
+    return false
+  }
+
   const capabilities = ROLE_CAPABILITIES[editorRole]
+
+  // If no capabilities found for this role, deny access
+  if (!capabilities) {
+    console.warn(`[canEditMember] No capabilities found for role: ${editorRole}`)
+    return false
+  }
 
   switch (targetRole) {
     case 'account_owner':

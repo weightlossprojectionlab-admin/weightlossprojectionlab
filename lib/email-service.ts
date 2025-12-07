@@ -49,10 +49,24 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams): P
       },
       subject,
       html,
-      text: text || stripHtml(html)
+      text: text || stripHtml(html),
+      // Gmail 2024 requirement: List-Unsubscribe header
+      headers: {
+        'List-Unsubscribe': `<mailto:${REPLY_TO_EMAIL || FROM_EMAIL}?subject=Unsubscribe>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        'X-Entity-Ref-ID': `wlpl-invitation-${Date.now()}`
+      },
+      trackingSettings: {
+        clickTracking: {
+          enable: false
+        },
+        openTracking: {
+          enable: false
+        }
+      }
     }
 
-    // Add reply-to if configured (useful if using noreply@ address)
+    // Add reply-to if configured
     if (REPLY_TO_EMAIL) {
       mailOptions.replyTo = REPLY_TO_EMAIL
     }
@@ -89,17 +103,19 @@ export async function sendFamilyInvitationEmail(params: {
 
   const html = `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Family Health Access Invitation</title>
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <title>Family Health Access Invitation from ${inviterName}</title>
     </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 28px;">Family Health Access</h1>
-        <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">Weight Loss Projection Lab</p>
-      </div>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+      <div style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Family Health Access</h1>
+          <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">Weight Loss Projection Lab</p>
+        </div>
 
       <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
         <h2 style="color: #667eea; margin-top: 0;">You've Been Invited!</h2>
@@ -149,13 +165,14 @@ export async function sendFamilyInvitationEmail(params: {
         </p>
       </div>
 
-      <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
-        <p style="margin: 0;">
-          © ${new Date().getFullYear()} Weight Loss Projection Lab. All rights reserved.
-        </p>
-        <p style="margin: 10px 0 0 0;">
-          This is an automated message. Please do not reply to this email.
-        </p>
+        <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px; background-color: #f9fafb;">
+          <p style="margin: 0;">
+            © ${new Date().getFullYear()} Weight Loss Projection Lab. All rights reserved.
+          </p>
+          <p style="margin: 10px 0 0 0;">
+            This is an automated message. Please do not reply to this email.
+          </p>
+        </div>
       </div>
     </body>
     </html>

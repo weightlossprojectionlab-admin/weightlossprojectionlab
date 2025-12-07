@@ -6,6 +6,7 @@
 
 import { MealSuggestion } from './meal-suggestions'
 import { scaleIngredients } from './ingredient-parser'
+import { getServingSize } from './recipe-utils'
 
 export interface ScaledRecipe extends Omit<MealSuggestion, 'servingSize' | 'calories' | 'macros' | 'ingredients'> {
   servingSize: number
@@ -28,7 +29,7 @@ export function scaleRecipe(
   recipe: MealSuggestion,
   newServingSize: number
 ): ScaledRecipe {
-  const originalServingSize = recipe.servingSize
+  const originalServingSize = getServingSize(recipe.servingSize)
   const multiplier = newServingSize / originalServingSize
 
   // Scale ingredients
@@ -77,14 +78,16 @@ export function getPerServingNutrition(scaledRecipe: ScaledRecipe) {
  */
 export function calculateAdjustedPrepTime(
   originalPrepTime: number,
-  originalServingSize: number,
+  originalServingSize: number | undefined,
   newServingSize: number
 ): number {
-  if (newServingSize === originalServingSize) {
+  const safeOriginalSize = getServingSize(originalServingSize)
+
+  if (newServingSize === safeOriginalSize) {
     return originalPrepTime
   }
 
-  const multiplier = newServingSize / originalServingSize
+  const multiplier = newServingSize / safeOriginalSize
 
   // Use logarithmic scaling for prep time
   // 2x servings ≈ 1.3x time, 4x servings ≈ 1.6x time

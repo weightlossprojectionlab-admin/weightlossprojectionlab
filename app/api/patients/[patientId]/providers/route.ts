@@ -52,16 +52,41 @@ export async function GET(
     })
 
     // Query providers from Firebase Admin
+    // Support both new patientIds array and legacy patientId field
     const providersSnapshot = await adminDb
+      .collection('healthcareProviders')
+      .where('patientIds', 'array-contains', patientId)
+      .orderBy('name', 'asc')
+      .get()
+
+    // Also fetch legacy providers (for backward compatibility during migration)
+    const legacyProvidersSnapshot = await adminDb
       .collection('healthcareProviders')
       .where('patientId', '==', patientId)
       .orderBy('name', 'asc')
       .get()
 
-    const providers: HealthcareProvider[] = providersSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as HealthcareProvider[]
+    // Combine and deduplicate providers
+    const providerMap = new Map<string, HealthcareProvider>()
+
+    providersSnapshot.docs.forEach(doc => {
+      providerMap.set(doc.id, {
+        id: doc.id,
+        ...doc.data()
+      } as HealthcareProvider)
+    })
+
+    legacyProvidersSnapshot.docs.forEach(doc => {
+      if (!providerMap.has(doc.id)) {
+        providerMap.set(doc.id, {
+          id: doc.id,
+          ...doc.data()
+        } as HealthcareProvider)
+      }
+    })
+
+    const providers: HealthcareProvider[] = Array.from(providerMap.values())
+      .sort((a, b) => a.name.localeCompare(b.name))
 
     logger.info('[API /patients/[id]/providers GET] Providers fetched successfully', {
       userId,
@@ -132,10 +157,27 @@ export async function POST(
       )
     }
 
+    // Handle patient IDs - support both array and single patientId
+    let patientIds: string[] = []
+    if (body.patientIds && Array.isArray(body.patientIds)) {
+      patientIds = body.patientIds
+    } else if (body.patientId) {
+      patientIds = [body.patientId]
+    } else {
+      patientIds = [patientId] // Use URL param as default
+    }
+
+    // Ensure the current patient is included
+    if (!patientIds.includes(patientId)) {
+      patientIds.push(patientId)
+    }
+
     // Create provider document
     const now = new Date()
     const providerData: Omit<HealthcareProvider, 'id'> = {
-      patientId,
+      userId: ownerUserId, // Store the account owner's ID
+      patientIds, // New multi-member field
+      patientId, // Legacy field for backward compatibility
       name: body.name,
       title: body.title,
       specialty: body.specialty,
@@ -151,7 +193,8 @@ export async function POST(
       sourceId: body.sourceId,
       lastContactDate: body.lastContactDate,
       lastContactType: body.lastContactType,
-      notes: body.notes
+      notes: body.notes,
+      patientNotes: body.patientNotes || {}
     }
 
     const providerRef = await adminDb

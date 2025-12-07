@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { ShoppingItem } from '@/types/shopping'
 import { auth } from '@/lib/firebase'
@@ -17,7 +18,8 @@ import { medicalOperations } from '@/lib/medical-operations'
 import {
   CheckCircleIcon,
   ShoppingCartIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline'
 
 interface PurchaseConfirmationProps {
@@ -27,6 +29,7 @@ interface PurchaseConfirmationProps {
 }
 
 export function PurchaseConfirmation({ pendingItems, onConfirm, memberId }: PurchaseConfirmationProps) {
+  const router = useRouter()
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
   const [store, setStore] = useState('')
@@ -281,6 +284,15 @@ export function PurchaseConfirmation({ pendingItems, onConfirm, memberId }: Purc
             </span>
           </>
         )}
+      </button>
+
+      {/* Go to Shopping List Button */}
+      <button
+        onClick={() => router.push('/shopping')}
+        className="w-full mt-3 flex items-center justify-center gap-2 px-6 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors"
+      >
+        <span>View Full Shopping List</span>
+        <ArrowRightIcon className="w-4 h-4" />
       </button>
 
       {/* Help Text */}

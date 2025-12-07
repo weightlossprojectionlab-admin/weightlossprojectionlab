@@ -101,6 +101,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Bypass CSRF for requests with Firebase Authorization bearer tokens
+  // These are already authenticated via Firebase Admin SDK in the API routes
+  const authHeader = request.headers.get('Authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return NextResponse.next()
+  }
+
   // For unsafe methods, validate CSRF token
   if (UNSAFE_METHODS.includes(method)) {
     // Support both csrf_token (underscore) and csrf-token (hyphen) for compatibility

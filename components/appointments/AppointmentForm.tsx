@@ -1,6 +1,18 @@
 /**
  * Appointment Form Component
  * Reusable form for creating/editing appointments
+ *
+ * @deprecated This component is deprecated in favor of AppointmentWizard.
+ * Please use AppointmentWizard from @/components/wizards/AppointmentWizard instead.
+ *
+ * The AppointmentWizard provides:
+ * - Better UX with guided step-by-step flow
+ * - Google Places API integration for addresses
+ * - Auto-population of provider locations
+ * - Custom appointment type creation
+ * - Comprehensive validation and error handling
+ *
+ * This component will be removed in a future release once all references are migrated.
  */
 
 'use client'

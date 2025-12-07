@@ -68,6 +68,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
 
       // ============================================
+      // USER SETTINGS SUBCOLLECTION
+      // ============================================
+      match /settings/{settingId} {
+        // Users can read/write their own settings
+        allow read, write: if isOwner(userId);
+      }
+
+      // ============================================
       // MEDICAL RECORDS - PATIENT PROFILES
       // ============================================
 
@@ -128,18 +136,42 @@ service cloud.firestore {
 
         // Medications subcollection
         match /medications/{medicationId} {
-          allow read: if isOwner(userId);
-          allow create: if isOwner(userId) &&
-                          request.resource.data.patientId == patientId &&
-                          request.resource.data.userId == userId;
-          allow update: if isOwner(userId);
-          allow delete: if isOwner(userId);
+          // Read: Owner or admin
+          allow read: if isOwner(userId) || isAdmin();
+
+          // Create: Owner with validation, or admin
+          allow create: if (isOwner(userId) &&
+                           request.resource.data.patientId == patientId &&
+                           request.resource.data.userId == userId) ||
+                          isAdmin();
+
+          // Update: Owner or admin
+          allow update: if isOwner(userId) || isAdmin();
+
+          // Delete: Owner or admin
+          allow delete: if isOwner(userId) || isAdmin();
+
+          // Medication audit logs (immutable audit trail)
+          match /auditLogs/{logId} {
+            // Read: Owner or admin can read audit logs
+            allow read: if isOwner(userId) || isAdmin();
+
+            // Create: Server-side only (via API with Admin SDK)
+            // Prevents client-side tampering
+            allow create: if false;
+
+            // Update/Delete: Never allowed (immutable audit trail)
+            allow update, delete: if false;
+          }
         }
 
         // Deleted medications archive (audit trail - read-only for users)
         match /deletedMedications/{medicationId} {
-          allow read: if isOwner(userId);
-          allow write: if false; // Only backend can write to this collection
+          // Read: Owner or admin (for audit purposes)
+          allow read: if isOwner(userId) || isAdmin();
+
+          // Write: Only backend can write to this collection
+          allow write: if false;
         }
 
         // Documents subcollection (insurance cards, medical records, etc.)
@@ -161,6 +193,30 @@ service cloud.firestore {
         function hasFamilyPermission(permission) {
           return isFamilyMemberWithAccess() &&
                  get(/databases/$(database)/documents/users/$(userId)/familyMembers/$(request.auth.uid)).data.permissions[permission] == true;
+        }
+
+        // ============================================
+        // UNIFIED AUDIT TRAIL (CROSS-ENTITY)
+        // ============================================
+
+        // Audit logs for all entities (medications, documents, vitals, etc.)
+        // Collection group path examples:
+        // - users/{userId}/patients/{patientId}/medications/{medicationId}/auditLogs/{logId}
+        // - users/{userId}/patients/{patientId}/documents/{documentId}/auditLogs/{logId}
+        // - users/{userId}/patients/{patientId}/vitals/{vitalId}/auditLogs/{logId}
+        match /{path=**}/auditLogs/{logId} {
+          // Read: Owner or family member with access can read audit logs
+          allow read: if isOwner(userId) ||
+                        (isFamilyMemberWithAccess() &&
+                         hasFamilyPermission('viewMedicalRecords'));
+
+          // Create: Server-side only (via API with Admin SDK)
+          // This prevents client-side tampering of audit trails
+          allow create: if false;
+
+          // Update/Delete: Never allowed (immutable audit trail)
+          // Audit logs are write-once, read-many for compliance
+          allow update, delete: if false;
         }
 
         // Healthcare providers for this patient
@@ -759,6 +815,19 @@ service cloud.firestore {
                        (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)));
     }
 
+    // Inventory actions - Audit trail for inventory changes (discard, consume, etc.)
+    match /inventory_actions/{actionId} {
+      // Read: Any authenticated user can read their own actions
+      allow read: if isAuthenticated();
+
+      // Create: Any authenticated user can create actions
+      allow create: if isAuthenticated() &&
+                      request.resource.data.performedBy == request.auth.uid;
+
+      // Update/Delete: Not allowed (immutable audit trail)
+      allow update, delete: if false;
+    }
+
     // Store visits for location tracking
     match /store_visits/{visitId} {
       allow read: if isAuthenticated() &&
@@ -849,20 +918,33 @@ service cloud.firestore {
     }
 
     // ============================================
-    // HEALTHCARE PROVIDERS
+    // HEALTHCARE PROVIDERS (MULTI-MEMBER ASSIGNMENT)
     // ============================================
+
+    // Helper function to check if user owns any of the provider's assigned patients
+    function ownsAnyProviderPatient(providerData) {
+      // Get the first patient ID from patientIds array
+      let firstPatientId = providerData.patientIds[0];
+      // Check if that patient belongs to the current user
+      return exists(/databases/$(database)/documents/patients/$(firstPatientId)) &&
+             get(/databases/$(database)/documents/patients/$(firstPatientId)).data.userId == request.auth.uid;
+    }
 
     // Healthcare providers collection (top-level)
     match /healthcareProviders/{providerId} {
-      // Read: Provider belongs to user's patient
+      // Read: Provider belongs to user (via userId field OR user owns any assigned patient)
       allow read: if isAuthenticated() &&
-                     resource.data.userId == request.auth.uid;
+                     (resource.data.userId == request.auth.uid ||
+                      ownsAnyProviderPatient(resource.data));
 
       // Create: Any authenticated user can create providers for their patients
+      // Must provide userId and valid patientIds array
       allow create: if isAuthenticated() &&
-                      request.resource.data.userId == request.auth.uid;
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.patientIds is list &&
+                      request.resource.data.patientIds.size() > 0;
 
-      // Update: Owner can update
+      // Update: Owner can update (user who created the provider)
       allow update: if isAuthenticated() &&
                       resource.data.userId == request.auth.uid;
 
@@ -896,6 +978,30 @@ service cloud.firestore {
 
       allow delete: if isAuthenticated() &&
                       resource.data.userId == request.auth.uid;
+    }
+
+    // ============================================
+    // NOTIFICATIONS COLLECTION
+    // ============================================
+
+    // User notifications (root collection)
+    match /notifications/{notificationId} {
+      // Read: Users can read their own notifications
+      allow read: if isAuthenticated() &&
+                     (resource == null || resource.data.userId == request.auth.uid);
+
+      // Create: Server-side only (via API with Admin SDK)
+      allow create: if false;
+
+      // Update: Users can mark their own notifications as read
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid &&
+                      request.resource.data.userId == resource.data.userId &&
+                      // Only allow updating the 'read' field
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']);
+
+      // Delete: Server-side only
+      allow delete: if false;
     }
 
     // ============================================

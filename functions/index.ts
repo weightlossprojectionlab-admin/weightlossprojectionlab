@@ -46,5 +46,12 @@ export {
   recalculateUserLevel,
 } from './engagement/xp_integrity';
 
+// Health Monitoring
+export {
+  sendVitalReminders,
+  checkMissedVitals,
+  generateDailyComplianceReports
+} from './health/vital-reminders';
+
 // Schedulers
 export { SCHEDULERS, getSchedulerConfig, listSchedulers } from './schedulers';

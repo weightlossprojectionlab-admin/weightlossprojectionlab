@@ -19,6 +19,14 @@ interface UseVitalsOptions {
   autoFetch?: boolean
 }
 
+interface DuplicateCheckResult {
+  isDuplicate: boolean
+  existing: VitalSign | null
+  takenBy: string | null
+  recordedAt: string | null
+  hoursAgo: number
+}
+
 interface UseVitalsReturn {
   vitals: VitalSign[]
   loading: boolean
@@ -28,6 +36,7 @@ interface UseVitalsReturn {
   updateVital: (vitalId: string, updates: Partial<VitalSign>) => Promise<VitalSign>
   deleteVital: (vitalId: string) => Promise<void>
   getLatestVital: (type: VitalType) => VitalSign | null
+  checkDuplicateToday: (type: VitalType) => Promise<DuplicateCheckResult>
 }
 
 export function useVitals({
@@ -42,6 +51,12 @@ export function useVitals({
 
   // Fetch vitals
   const fetchVitals = useCallback(async () => {
+    // Don't fetch if no patientId
+    if (!patientId) {
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
@@ -152,6 +167,67 @@ export function useVitals({
     return filtered.length > 0 ? filtered[0] : null
   }, [vitals])
 
+  // Check for duplicate vital reading today
+  const checkDuplicateToday = useCallback(async (
+    type: VitalType
+  ): Promise<DuplicateCheckResult> => {
+    try {
+      logger.debug('[useVitals] Checking for duplicate', { patientId, type })
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      // Filter vitals recorded today for this type
+      const todayVitals = vitals.filter(vital => {
+        const vitalDate = new Date(vital.recordedAt)
+        return vital.type === type && vitalDate >= today
+      })
+
+      if (todayVitals.length > 0) {
+        const existing = todayVitals[0] // Most recent
+        const recordedAt = new Date(existing.recordedAt)
+        const now = new Date()
+        const hoursAgo = (now.getTime() - recordedAt.getTime()) / (1000 * 60 * 60)
+
+        // Warn if logged within 30 minutes (matches AI supervisor logic)
+        const isDuplicate = hoursAgo < 0.5
+
+        logger.info('[useVitals] Duplicate check result', {
+          patientId,
+          type,
+          isDuplicate,
+          hoursAgo: hoursAgo.toFixed(1)
+        })
+
+        return {
+          isDuplicate,
+          existing,
+          takenBy: existing.takenBy,
+          recordedAt: existing.recordedAt,
+          hoursAgo: Math.round(hoursAgo * 10) / 10 // Round to 1 decimal
+        }
+      }
+
+      return {
+        isDuplicate: false,
+        existing: null,
+        takenBy: null,
+        recordedAt: null,
+        hoursAgo: 0
+      }
+    } catch (err: any) {
+      logger.error('[useVitals] Error checking duplicate', err, { patientId, type })
+      // Return safe default on error
+      return {
+        isDuplicate: false,
+        existing: null,
+        takenBy: null,
+        recordedAt: null,
+        hoursAgo: 0
+      }
+    }
+  }, [vitals, patientId])
+
   return {
     vitals,
     loading,
@@ -160,6 +236,7 @@ export function useVitals({
     logVital,
     updateVital,
     deleteVital,
-    getLatestVital
+    getLatestVital,
+    checkDuplicateToday
   }
 }

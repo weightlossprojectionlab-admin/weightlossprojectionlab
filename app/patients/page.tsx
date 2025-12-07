@@ -19,11 +19,23 @@ import { UpgradeModal } from '@/components/subscription/UpgradeModal'
 import { PlanBadge } from '@/components/subscription/PlanBadge'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import {
+  transformWizardDataToVitals,
+  hasAnyVitalMeasurement
+} from '@/lib/vitals-wizard-transform'
+import {
   getTrackingPageTitle,
   getTrackingPageSubtitle,
   getAddButtonText,
   getTrackingTerminology
 } from '@/lib/user-role-helper'
+import { DashboardSelectorCompact } from '@/components/dashboard/DashboardSelector'
+import SupervisedVitalsWizard from '@/components/wizards/SupervisedVitalsWizard'
+import VitalsQuickViewModal from '@/components/patients/VitalsQuickViewModal'
+import { useAuth } from '@/hooks/useAuth'
+import { logger } from '@/lib/logger'
+import { medicalOperations } from '@/lib/medical-operations'
+import { useVitals } from '@/hooks/useVitals'
+import { VitalSign } from '@/types/medical'
 
 export default function PatientsPage() {
   return (
@@ -37,6 +49,9 @@ function PatientsContent() {
   const { patients, loading, error } = usePatients()
   const [filter, setFilter] = useState<'all' | 'human' | 'pet'>('all')
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [selectedPatientForVitalsView, setSelectedPatientForVitalsView] = useState<any>(null)
+  const [selectedPatientForWizard, setSelectedPatientForWizard] = useState<any>(null)
+  const { user } = useAuth()
 
   // Ensure patients is always an array
   const safePatients = patients || []
@@ -52,6 +67,11 @@ function PatientsContent() {
   const { subscription, isAdmin } = useSubscription()
   const { current, max, canAdd, percentage } = usePatientLimit(safePatients.length)
   const { profile: userProfile } = useUserProfile()
+
+  // Load vitals for the selected patient (for quick view modal)
+  const { vitals, loading: vitalsLoading } = useVitals({
+    patientId: selectedPatientForVitalsView?.id
+  })
 
   // Determine if this is account selection mode (caregiver with 2+ patients)
   const isAccountSelectionMode = safePatients.length >= 2
@@ -98,6 +118,13 @@ function PatientsContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Family Admin Dashboard Link - Prominent placement for caregivers with 2+ patients */}
+        {safePatients.length >= 2 && (
+          <div className="mb-6">
+            <DashboardSelectorCompact />
+          </div>
+        )}
+
         {/* Member Limit Indicator */}
         {subscription && (
           <div className="mb-6 bg-card rounded-lg shadow-sm border border-border p-4">
@@ -200,6 +227,7 @@ function PatientsContent() {
                 key={patient.id}
                 patient={patient}
                 mode={isAccountSelectionMode ? 'select' : 'view'}
+                onQuickLogVitals={() => setSelectedPatientForVitalsView(patient)}
               />
             ))}
           </div>
@@ -215,6 +243,67 @@ function PatientsContent() {
         onClose={() => setShowUpgradeModal(false)}
         currentPlan={subscription?.plan}
       />
+
+      {/* Vitals Quick View Modal */}
+      {selectedPatientForVitalsView && (
+        <VitalsQuickViewModal
+          isOpen={true}
+          onClose={() => setSelectedPatientForVitalsView(null)}
+          vitals={vitals || []}
+          patientName={selectedPatientForVitalsView.name}
+          onOpenWizard={() => {
+            setSelectedPatientForWizard(selectedPatientForVitalsView)
+            setSelectedPatientForVitalsView(null)
+          }}
+          loading={vitalsLoading}
+        />
+      )}
+
+      {/* AI Supervisor - Vitals Wizard */}
+      {selectedPatientForWizard && (
+        <SupervisedVitalsWizard
+          isOpen={true}
+          onClose={() => setSelectedPatientForWizard(null)}
+          familyMember={{
+            id: selectedPatientForWizard.id,
+            name: selectedPatientForWizard.name,
+            age: selectedPatientForWizard.age,
+            conditions: selectedPatientForWizard.conditions || []
+          }}
+          onSubmit={async (vitals) => {
+            try {
+              logger.info('[PatientsPage] Submitting vitals', { patientId: selectedPatientForWizard.id, vitals })
+
+              // Use shared transformation utility (DRY principle)
+              const vitalInputs = transformWizardDataToVitals(vitals)
+
+              // Validate at least one vital was recorded
+              if (!hasAnyVitalMeasurement(vitals)) {
+                alert('Please record at least one vital sign measurement.')
+                return
+              }
+
+              // Save all vitals
+              const vitalPromises = vitalInputs.map(vitalInput =>
+                medicalOperations.vitals.logVital(selectedPatientForWizard.id, vitalInput)
+              )
+
+              await Promise.all(vitalPromises)
+
+              logger.info('[PatientsPage] Vitals saved successfully', { count: vitalInputs.length })
+
+              // TODO: Trigger notification to other caregivers
+              // await sendNotificationToFamilyMembers({ ... })
+
+              setSelectedPatientForWizard(null)
+            } catch (error) {
+              logger.error('[PatientsPage] Failed to save vitals', error)
+              alert(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              throw error
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

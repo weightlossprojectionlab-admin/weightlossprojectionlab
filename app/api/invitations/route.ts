@@ -270,6 +270,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Send invitation email
+    let emailSent = false
+    let emailError = null
     try {
       await sendFamilyInvitationEmail({
         recipientEmail: validatedData.recipientEmail,
@@ -280,15 +282,22 @@ export async function POST(request: NextRequest) {
         expiresAt
       })
       console.log(`Invitation email sent to ${validatedData.recipientEmail}`)
-    } catch (emailError) {
-      console.error('Failed to send invitation email:', emailError)
+      emailSent = true
+    } catch (error: any) {
+      console.error('Failed to send invitation email:', error)
+      emailError = error.message
       // Don't fail the whole request if email fails - invitation is still created
     }
 
     return NextResponse.json({
       success: true,
       data: createdInvitation,
-      message: `Invitation sent to ${validatedData.recipientEmail}`
+      message: emailSent
+        ? `Invitation sent to ${validatedData.recipientEmail}`
+        : `Invitation created for ${validatedData.recipientEmail}. Share code: ${inviteCode}`,
+      emailSent,
+      emailError,
+      inviteCode // Include invite code in response for easy sharing
     })
   } catch (error: any) {
     console.error('Error creating invitation:', error)

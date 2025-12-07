@@ -4,6 +4,7 @@ import { removeUndefinedValues } from '@/lib/firestore-helpers'
 import { logger } from '@/lib/logger'
 import { authorizePatientAccess, assertPatientAccess } from '@/lib/rbac-middleware'
 import type { PatientMedication } from '@/types/medical'
+import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
 
 /**
  * GET /api/patients/[patientId]/medications
@@ -163,6 +164,38 @@ export async function POST(
     await medicationRef.set(medication)
 
     logger.info('[Medications API] Medication added', { patientId, medicationId: medication.id })
+
+    // Trigger notification to family members
+    try {
+      // Get patient name and user name for notification
+      const userDoc = await adminDb.collection('users').doc(accessInfo.userId).get()
+      const userName = userDoc.exists ? userDoc.data()?.name || userDoc.data()?.email : 'Unknown User'
+
+      await sendNotificationToFamilyMembers({
+        userId: '', // Will be overridden for each recipient
+        patientId,
+        type: 'medication_added',
+        priority: 'normal',
+        title: 'New Medication Added',
+        message: `${userName} added a new medication`,
+        excludeUserId: accessInfo.userId,
+        metadata: {
+          medicationId: medicationRef.id,
+          actionBy: userName,
+          actionByUserId: accessInfo.userId,
+          patientName: patientDoc.data()?.name || 'Patient',
+          medicationName: medication.name,
+          strength: medication.strength,
+          prescribedFor: medication.prescribedFor
+        }
+      })
+    } catch (notificationError) {
+      // Log error but don't fail the main operation
+      logger.error('[Medications API] Error sending notification', notificationError as Error, {
+        patientId,
+        medicationId: medication.id
+      })
+    }
 
     return NextResponse.json({ success: true, data: medication }, { status: 201 })
   } catch (error: any) {

@@ -6,7 +6,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/firebase'
 import { medicalOperations } from '@/lib/medical-operations'
@@ -19,6 +19,8 @@ import { useUserProfile } from '@/hooks/useUserProfile'
 import { PatientProfile, VitalType, VitalSign, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication } from '@/types/medical'
 import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
+import DailyVitalsSummary from '@/components/vitals/DailyVitalsSummary'
+import VitalsHistory from '@/components/vitals/VitalsHistory'
 import { FamilyMemberCard } from '@/components/family/FamilyMemberCard'
 import { PermissionsMatrix } from '@/components/family/PermissionsMatrix'
 import { InviteModal } from '@/components/family/InviteModal'
@@ -35,7 +37,6 @@ import MedicationDetailModal from '@/components/health/MedicationDetailModal'
 import { RecipeView } from '@/components/patients/RecipeView'
 import { PageHeader } from '@/components/ui/PageHeader'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { AppointmentForm } from '@/components/appointments/AppointmentForm'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { ChartBarIcon, ShieldCheckIcon, ChevronDownIcon, ChevronUpIcon, ScaleIcon, CameraIcon, FireIcon, StarIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
@@ -44,6 +45,14 @@ import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
+import SupervisedVitalsWizard from '@/components/wizards/SupervisedVitalsWizard'
+import VitalsSummaryModal from '@/components/wizards/VitalsSummaryModal'
+import AppointmentWizard from '@/components/wizards/AppointmentWizard'
+import { transformWizardDataToVitals, hasAnyVitalMeasurement } from '@/lib/vitals-wizard-transform'
+import { useAuth } from '@/hooks/useAuth'
+import { useAppointments } from '@/hooks/useAppointments'
+import { useProviders } from '@/hooks/useProviders'
+import { useVitalSchedules } from '@/hooks/useVitalSchedules'
 
 export default function PatientDetailPage() {
   return (
@@ -56,6 +65,7 @@ export default function PatientDetailPage() {
 function PatientDetailContent() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const patientId = params.patientId as string
 
   // Get tab from query parameter, default to 'vitals'
@@ -82,13 +92,20 @@ function PatientDetailContent() {
   const [loadingMedications, setLoadingMedications] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
   const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'weight' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments'>(tabParam || 'vitals')
-  const [showAppointmentForm, setShowAppointmentForm] = useState(false)
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
+  const [showVitalsWizard, setShowVitalsWizard] = useState(false)
+  const [showVitalsSummary, setShowVitalsSummary] = useState(false)
+  const [summaryVitals, setSummaryVitals] = useState<VitalSign[]>([])
+  const [showAppointmentWizard, setShowAppointmentWizard] = useState(false)
 
+  const { user } = useAuth()
   const { vitals, loading: vitalsLoading, logVital, updateVital, deleteVital, refetch } = useVitals({
     patientId,
     autoFetch: true
   })
+  const { createAppointment } = useAppointments()
+  const { providers } = useProviders()
+  const { createSchedule } = useVitalSchedules({ patientId, autoFetch: false })
 
   const {
     role,
@@ -349,7 +366,26 @@ function PatientDetailContent() {
     if (!deletingVital) return
 
     try {
+      // Find the vital being deleted for audit trail
+      const vitalToDelete = vitals.find(v => v.id === deletingVital.id)
+
       await deleteVital(deletingVital.id)
+
+      // Audit trail: Log the deletion
+      if (vitalToDelete && patient) {
+        logger.info('[PatientDetail] Vital deleted - audit trail', {
+          entityType: 'vital_sign',
+          entityId: deletingVital.id,
+          entityName: `${deletingVital.type} - ${vitalToDelete.value}`,
+          patientId: patient.id,
+          patientName: patient.name,
+          action: 'deleted',
+          performedBy: user?.uid || 'unknown',
+          performedByName: userProfile?.displayName || userProfile?.email || 'Unknown',
+          deletedData: vitalToDelete
+        })
+      }
+
       toast.success('Vital sign deleted successfully')
       await refetch()
       setDeletingVital(null)
@@ -410,10 +446,10 @@ function PatientDetailContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Sidebar - Quick Actions */}
-          <aside className="hidden lg:block w-64 flex-shrink-0">
-            <div className="sticky top-4">
+          <aside className="w-full lg:w-64 flex-shrink-0 mb-6 lg:mb-0">
+            <div className="lg:sticky lg:top-4">
               <div className="bg-card rounded-lg shadow-sm border border-border p-4">
                 <h3 className="font-semibold text-foreground mb-3">Quick Actions</h3>
                 <div className="space-y-2">
@@ -461,17 +497,21 @@ function PatientDetailContent() {
                   </button>
                   <button
                     onClick={() => {
-                      setActiveTab('vitals')
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      setShowVitalsWizard(true)
                     }}
-                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 ${
-                      activeTab === 'vitals'
-                        ? 'bg-primary text-white'
-                        : 'bg-muted hover:bg-muted/80 text-foreground'
-                    }`}
+                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground`}
                   >
                     <span>🩺</span>
-                    <span>Log Vitals</span>
+                    <span>Vitals</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowAppointmentWizard(true)
+                    }}
+                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground`}
+                  >
+                    <span>📅</span>
+                    <span>Schedule Appointment</span>
                   </button>
                   <button
                     onClick={() => {
@@ -829,30 +869,34 @@ function PatientDetailContent() {
           {/* Show content based on active tab */}
           {activeTab === 'vitals' && (
             <>
-              {/* Vitals Form */}
-              {canLogVitals && (
-                <div className="bg-card rounded-lg shadow-sm p-6">
-                  <h2 className="text-lg font-bold text-foreground mb-4">
-                    Log Vital Signs
-                  </h2>
-                  <VitalLogForm
-                    patientId={patientId}
-                    onSubmit={handleLogVital}
-                    defaultType={selectedVitalType}
-                    onTypeChange={setSelectedVitalType}
-                    initialData={editingVital ? {
-                      type: editingVital.type,
-                      value: editingVital.value,
-                      recordedAt: new Date(editingVital.recordedAt),
-                      notes: editingVital.notes
-                    } : undefined}
-                    isEditing={!!editingVital}
-                    onCancel={() => {
-                      setEditingVital(null)
-                      setShowVitalsModal(false)
-                    }}
-                  />
+              {/* Quick Action Reminder - Use wizard instead of inline form (DRY) */}
+              {canLogVitals && !vitals.length && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <span className="text-4xl">🩺</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                        Start Tracking Vitals
+                      </h3>
+                      <p className="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                        Use the "Vitals" quick action to record vital signs with our guided wizard.
+                      </p>
+                      <button
+                        onClick={() => setShowVitalsWizard(true)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                      >
+                        Log Vitals Now
+                      </button>
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              {/* Daily Vitals Summary Report */}
+              {patient && vitals.length > 0 && (
+                <DailyVitalsSummary vitals={vitals} patientName={patient.name} />
               )}
 
               {/* Chart */}
@@ -888,11 +932,20 @@ function PatientDetailContent() {
                       No {selectedVitalType.replace('_', ' ')} readings yet
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Use the form above to log vital signs
+                      Use the "Vitals" quick action to add readings
                     </p>
                   </div>
                 )}
               </div>
+
+              {/* Vitals History Table with Filters */}
+              <VitalsHistory
+                vitals={vitals}
+                onEdit={handleEditVital}
+                onDelete={handleDeleteVitalClick}
+                canEdit={canLogVitals || isOwner}
+                getDisplayName={getDisplayName}
+              />
             </>
           )}
 
@@ -968,7 +1021,13 @@ function PatientDetailContent() {
                   />
                   <div className="mt-6 pt-6 border-t border-border">
                     <h3 className="font-semibold text-foreground mb-4">Current Medications</h3>
-                    <MedicationList patientId={patientId} patientOwnerId={patient?.userId} />
+                    <MedicationList
+                      patientId={patientId}
+                      patientOwnerId={patient?.userId}
+                      medications={medications}
+                      loading={loadingMedications}
+                      onMedicationUpdated={fetchMedications}
+                    />
                   </div>
                 </>
               ) : (
@@ -987,29 +1046,22 @@ function PatientDetailContent() {
           {/* Appointments Tab */}
           {activeTab === 'appointments' && (
             <div className="space-y-6">
-              {/* Appointment Form - Collapsible */}
+              {/* Schedule Appointment - Uses Wizard */}
               <div className="bg-card rounded-lg shadow-sm p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-foreground">
                     Schedule New Appointment
                   </h2>
                   <button
-                    onClick={() => setShowAppointmentForm(!showAppointmentForm)}
-                    className="text-sm text-primary hover:text-primary-dark font-medium"
+                    onClick={() => setShowAppointmentWizard(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                   >
-                    {showAppointmentForm ? 'Hide Form' : 'Show Form'}
+                    Schedule Appointment
                   </button>
                 </div>
-                {showAppointmentForm && (
-                  <AppointmentForm
-                    preSelectedPatientId={patientId}
-                    onSuccess={() => {
-                      setShowAppointmentForm(false)
-                      toast.success('Appointment scheduled!')
-                    }}
-                    onCancel={() => setShowAppointmentForm(false)}
-                  />
-                )}
+                <p className="text-sm text-muted-foreground">
+                  Use the appointment wizard to ensure all details are captured accurately.
+                </p>
               </div>
 
               {/* Appointment List */}
@@ -1127,7 +1179,7 @@ function PatientDetailContent() {
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Log Vitals</span>
+                      <span className="text-muted-foreground">Vitals</span>
                       <span className={canLogVitals ? 'text-success' : 'text-muted-foreground'}>
                         {canLogVitals ? '✓' : '✗'}
                       </span>
@@ -1244,10 +1296,10 @@ function PatientDetailContent() {
           </div>
 
           {/* Right Sidebar - Recent Data */}
-          <aside className="hidden lg:block w-80 flex-shrink-0">
-          <div className="sticky top-4 space-y-4">
-            {/* Recent Meals */}
-            <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+          <aside className="w-full lg:w-80 flex-shrink-0 mt-6 lg:mt-0">
+          <div className="lg:sticky lg:top-4 space-y-4">
+            {/* Recent Meals - Hide on mobile when Meals tab is active to avoid duplication */}
+            <div className={`bg-card rounded-lg shadow-sm border border-border p-4 ${activeTab === 'meals' ? 'hidden lg:block' : ''}`}>
               <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                 <CameraIcon className="w-5 h-5 text-primary" />
                 Recent Meals
@@ -1305,91 +1357,8 @@ function PatientDetailContent() {
               )}
             </div>
 
-            {/* Recent Vitals */}
-            <div className="bg-card rounded-lg shadow-sm border border-border p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-foreground flex items-center gap-2">
-                  <ChartBarIcon className="w-5 h-5 text-success" />
-                  Recent Vitals
-                </h3>
-                {vitals && vitals.length > 0 && (
-                  <button
-                    onClick={() => setShowVitalsModal(true)}
-                    className="text-xs text-primary hover:text-primary-dark"
-                  >
-                    View All
-                  </button>
-                )}
-              </div>
-              {vitals && vitals.length > 0 ? (
-                <div className="space-y-2">
-                  {(() => {
-                    // Group vitals by type and get most recent for each
-                    const vitalsByType = new Map<string, any>()
-                    vitals.forEach((vital: any) => {
-                      const existing = vitalsByType.get(vital.type)
-                      if (!existing || new Date(vital.recordedAt) > new Date(existing.recordedAt)) {
-                        vitalsByType.set(vital.type, vital)
-                      }
-                    })
-
-                    // Convert to array and take first 5
-                    return Array.from(vitalsByType.values()).slice(0, 5).map((vital: any) => {
-                      // Handle blood pressure which has systolic/diastolic
-                      const displayValue = typeof vital.value === 'object'
-                        ? `${vital.value.systolic}/${vital.value.diastolic}`
-                        : vital.value
-
-                      return (
-                        <div key={vital.id} className="text-sm p-2 bg-muted rounded group">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium capitalize">
-                              {vital.type.replace('_', ' ')}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(vital.recordedAt).toLocaleDateString()}
-                              </span>
-                              {(canLogVitals || isOwner) && (
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    onClick={() => handleEditVital(vital)}
-                                    className="text-blue-600 hover:text-blue-700 text-xs"
-                                    title="Edit"
-                                  >
-                                    ✏️
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteVitalClick(vital.id, vital.type)}
-                                    className="text-red-600 hover:text-red-700 text-xs"
-                                    title="Delete"
-                                  >
-                                    🗑️
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <p className="text-xs text-foreground mt-1">
-                            {displayValue} {vital.unit}
-                          </p>
-                          {vital.takenBy && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Logged by: {getDisplayName(vital.takenBy)}
-                            </p>
-                          )}
-                        </div>
-                      )
-                    })
-                  })()}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No vitals logged yet</p>
-              )}
-            </div>
-
-            {/* Current Medications */}
-            <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+            {/* Current Medications - Hide on mobile when Medications tab is active to avoid duplication */}
+            <div className={`bg-card rounded-lg shadow-sm border border-border p-4 ${activeTab === 'medications' ? 'hidden lg:block' : ''}`}>
               <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                 <span className="text-lg">💊</span>
                 Current Medications
@@ -1841,6 +1810,165 @@ function PatientDetailContent() {
         cancelText="Cancel"
         variant="danger"
       />
+
+      {/* Vitals Wizard Integration */}
+      {patient && showVitalsWizard && (
+        <SupervisedVitalsWizard
+          isOpen={showVitalsWizard}
+          onClose={() => setShowVitalsWizard(false)}
+          familyMember={{
+            id: patient.id,
+            name: patient.name,
+            age: patient.age,
+            conditions: patient.conditions || []
+          }}
+          onSubmit={async (vitals) => {
+            try {
+              logger.info('[PatientDetail] Submitting vitals from wizard', { patientId: patient.id, vitals })
+
+              // Use shared transformation utility (DRY principle)
+              const vitalInputs = transformWizardDataToVitals(vitals)
+
+              // Validate at least one vital was recorded
+              if (!hasAnyVitalMeasurement(vitals)) {
+                toast.error('Please record at least one vital sign measurement.')
+                return
+              }
+
+              // Save all vitals
+              const savedVitals: VitalSign[] = []
+              for (const vitalInput of vitalInputs) {
+                const saved = await medicalOperations.vitals.logVital(patient.id, vitalInput)
+                savedVitals.push(saved)
+              }
+
+              logger.info('[PatientDetail] Vitals saved successfully', { count: savedVitals.length })
+
+              // Create schedules if user enabled them
+              if (vitals.schedulePreferences?.enabled && user) {
+                const { vitalTypes, frequency, times, notificationChannels } = vitals.schedulePreferences
+
+                logger.info('[PatientDetail] Creating vital monitoring schedules', {
+                  vitalTypes,
+                  frequency,
+                  times
+                })
+
+                // Create a schedule for each selected vital type
+                for (const vitalType of vitalTypes) {
+                  try {
+                    await createSchedule({
+                      userId: user.uid,
+                      patientId: patient.id,
+                      patientName: patient.name,
+                      vitalType: vitalType as any, // Maps 'blood_pressure', 'blood_sugar', etc.
+                      frequency: frequency as any,
+                      specificTimes: times,
+                      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, // User's timezone
+                      notificationChannels: {
+                        ...notificationChannels,
+                        voice: [] // Voice assistants not configured yet
+                      },
+                      advanceReminderMinutes: 15,
+                      complianceTarget: 90,
+                      complianceWindow: 2
+                    })
+
+                    logger.info('[PatientDetail] Schedule created', { vitalType })
+                  } catch (scheduleError) {
+                    logger.error('[PatientDetail] Failed to create schedule', {
+                      vitalType,
+                      error: scheduleError
+                    })
+                    // Don't fail the whole operation if schedule creation fails
+                    toast.error(`Warning: Could not set up reminder for ${vitalType}`)
+                  }
+                }
+
+                toast.success(`Reminders set up for ${vitalTypes.length} vital${vitalTypes.length !== 1 ? 's' : ''}!`, {
+                  duration: 4000
+                })
+              }
+
+              // Store saved vitals for summary
+              setSummaryVitals(savedVitals)
+
+              // Refresh vitals data in real-time
+              await refetch()
+
+              // Show summary modal
+              setShowVitalsSummary(true)
+
+              // Close wizard
+              setShowVitalsWizard(false)
+
+              toast.success(`${savedVitals.length} vital sign${savedVitals.length !== 1 ? 's' : ''} logged successfully!`)
+            } catch (error) {
+              logger.error('[PatientDetail] Failed to save vitals', error)
+              toast.error(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              throw error
+            }
+          }}
+        />
+      )}
+
+      {/* Vitals Summary Modal */}
+      {patient && (
+        <VitalsSummaryModal
+          vitals={summaryVitals}
+          patientName={patient.name}
+          isOpen={showVitalsSummary}
+          onClose={() => {
+            setShowVitalsSummary(false)
+            setSummaryVitals([])
+          }}
+          onViewDashboard={() => {
+            setShowVitalsSummary(false)
+            setSummaryVitals([])
+            setActiveTab('vitals')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+        />
+      )}
+
+      {/* Appointment Wizard */}
+      {patient && showAppointmentWizard && (
+        <AppointmentWizard
+          isOpen={showAppointmentWizard}
+          onClose={() => setShowAppointmentWizard(false)}
+          familyMember={{
+            id: patient.id,
+            name: patient.name
+          }}
+          providers={providers}
+          familyMembers={familyMembers}
+          onSubmit={async (appointmentData) => {
+            try {
+              logger.info('[PatientDetail] Creating appointment from wizard', {
+                patientId: patient.id,
+                appointmentData
+              })
+
+              const appointmentId = await createAppointment({
+                patientId: patient.id,
+                ...appointmentData,
+                status: 'scheduled'
+              })
+
+              logger.info('[PatientDetail] Appointment created successfully', { appointmentId })
+
+              toast.success('Appointment scheduled successfully!')
+              setShowAppointmentWizard(false)
+
+              // Redirect to calendar view
+              router.push('/calendar')
+            } catch (error) {
+              logger.error('[PatientDetail] Failed to create appointment', error)
+              throw error
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
