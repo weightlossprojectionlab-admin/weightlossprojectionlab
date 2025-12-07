@@ -65,12 +65,13 @@ const nextConfig: NextConfig = {
     // Use timestamp to force fresh builds
     return `build-${Date.now()}`
   },
-  // Remove experimental settings that cause build hangs
-  // Let Next.js use default worker configuration
-  // experimental: {
-  //   workerThreads: false,
-  //   cpus: 1,
-  // },
+  // CRITICAL: Skip prerendering entirely to fix Netlify timeout
+  experimental: {
+    // This tells Next.js to skip the "Generating static pages" phase completely
+    isrMemoryCacheSize: 0,
+    // Skip all static optimization
+    staticPageGenerationTimeout: 0,
+  },
   // Turbopack disabled due to internal error with middleware injection
   // turbopack: {
   //   rules: {
