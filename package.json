@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:https": "node server.js",
     "setup:https": "powershell -ExecutionPolicy Bypass -File ./setup-https.ps1",
-    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" NEXT_PRIVATE_WORKER_THREADS=4 next build --webpack",
+    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" NEXT_PRIVATE_WORKER_THREADS=1 NEXT_PRIVATE_SKIP_STATIC_GENERATION=1 next build --webpack",
     "build:debug": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" NEXT_DEBUG_BUILD=1 next build",
     "build:fast": "cross-env NODE_ENV=production NODE_OPTIONS=\"--max-old-space-size=8192\" next build",
     "start": "next start",
