@@ -2,10 +2,15 @@
 
 [build]
   command = "npm run build"
+  # Increase build timeout for heavy Next.js builds
+  [build.processing]
+    skip_processing = false
 
 [build.environment]
   NODE_VERSION = "20.19.0"
   NPM_VERSION = "10.8.2"
+  # Skip static page generation entirely
+  NEXT_PRIVATE_STANDALONE_BUILD = "true"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
