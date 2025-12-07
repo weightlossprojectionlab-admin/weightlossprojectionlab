@@ -7,10 +7,6 @@
 
 'use client'
 
-// Force this page to be dynamically rendered
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
-
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'

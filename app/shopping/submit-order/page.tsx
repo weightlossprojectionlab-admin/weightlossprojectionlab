@@ -1,9 +1,5 @@
 'use client'
 
-// Force dynamic rendering - this page requires runtime data and server-side operations
-export const dynamic = 'force-dynamic'
-export const dynamicParams = true
-
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'

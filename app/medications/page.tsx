@@ -1,5 +1,4 @@
 'use client'
-// Force dynamic renderingexport const dynamic = 'force-dynamic'
 
 import { useState, useMemo, useEffect } from 'react'
 import { useUserProfile } from '@/hooks/useUserProfile'

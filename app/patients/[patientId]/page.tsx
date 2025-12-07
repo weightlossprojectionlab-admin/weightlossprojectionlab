@@ -5,9 +5,6 @@
 
 'use client'
 
-// Force dynamic rendering - this page has heavy imports and runtime data
-export const dynamic = 'force-dynamic'
-
 import { useState, useEffect } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'

@@ -4,7 +4,6 @@
  */
 
 'use client'
-// Force dynamic renderingexport const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import { usePatients } from '@/hooks/usePatients'

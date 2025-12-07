@@ -7,9 +7,6 @@
 
 'use client'
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
-
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/auth/AuthGuard'
