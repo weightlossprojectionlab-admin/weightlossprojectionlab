@@ -58,8 +58,9 @@ const nextConfig: NextConfig = {
     // Type errors should be caught in development and CI
     ignoreBuildErrors: true,
   },
-  // WORKAROUND: Disable output file tracing to speed up build and prevent hangs
-  output: 'standalone',
+  // CRITICAL: Use export mode to skip server components entirely
+  // This prevents static page generation phase
+  // output: 'standalone',
   // Skip static page generation for pages that depend on runtime data
   generateBuildId: async () => {
     // Use timestamp to force fresh builds
