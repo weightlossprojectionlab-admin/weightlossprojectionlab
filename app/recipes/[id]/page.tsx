@@ -9,12 +9,13 @@ interface PageProps {
   }>
 }
 
-// Generate static params for all recipes (SSG)
-export async function generateStaticParams() {
-  return MEAL_SUGGESTIONS.map((recipe) => ({
-    id: recipe.id
-  }))
-}
+// DISABLED: Static generation causing build timeouts on Netlify
+// Will render on-demand instead
+// export async function generateStaticParams() {
+//   return MEAL_SUGGESTIONS.map((recipe) => ({
+//     id: recipe.id
+//   }))
+// }
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
