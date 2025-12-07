@@ -133,6 +133,9 @@ export async function POST(request: NextRequest) {
 
     // Use Google Gemini Vision API for real analysis
     let analysis
+    // Track data source for transparency (defined outside try block for scope)
+    let dataSource: 'gemini' | 'mock_no_api_key' | 'mock_rate_limit' | 'mock_api_error' = 'gemini'
+    let diagnosticError: string | undefined
 
     try {
       // Check rate limits first (per-minute and daily)
@@ -145,12 +148,16 @@ export async function POST(request: NextRequest) {
 
       if (!process.env.GEMINI_API_KEY) {
         logger.warn('GEMINI_API_KEY not set, using mock data')
+        dataSource = 'mock_no_api_key'
+        diagnosticError = 'GEMINI_API_KEY environment variable not configured'
         analysis = getMockAnalysis()
       } else if (rateLimitExceeded) {
         const reason = minuteLimit && !minuteLimit.success
           ? 'Rate limit: 10 requests per minute'
           : 'Daily limit reached (500 requests)'
         logger.warn(reason)
+        dataSource = 'mock_rate_limit'
+        diagnosticError = reason
         analysis = getMockAnalysis()
       } else {
         logger.info('Calling Google Gemini Vision API')
@@ -158,7 +165,7 @@ export async function POST(request: NextRequest) {
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
         const model = genAI.getGenerativeModel({
-          model: 'gemini-2.0-flash-exp',
+          model: 'gemini-1.5-flash-latest', // Stable production model (v1beta compatible)
           generationConfig: {
             temperature: 0.4,
             topK: 32,
@@ -178,6 +185,7 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Wrap in timeout to prevent Netlify function timeout
         const prompt = `Analyze this meal photo and provide a detailed nutritional analysis with per-item breakdown.
 
 Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
@@ -217,7 +225,14 @@ Guidelines:
 - User specified this as: ${mealType || 'unspecified'}, but analyze independently
 - For mixed dishes (e.g., stir-fry, casserole), break down into main components when possible`
 
-        const result = await model.generateContent([prompt, imagePart])
+        // Add 8-second timeout to stay under Netlify's 10-second function limit
+        const result = await Promise.race([
+          model.generateContent([prompt, imagePart]),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Gemini API timeout after 8 seconds')), 8000)
+          )
+        ]) as any
+
         const response = result.response
         const text = response.text()
 
@@ -235,9 +250,10 @@ Guidelines:
       }
     } catch (error) {
       logger.error('❌ Gemini API Error - Falling back to mock data:', error as Error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
       logger.error('Error details:', {
         name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
+        message: errorMessage,
         stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : undefined
       })
       ErrorHandler.handle(error, {
@@ -246,6 +262,8 @@ Guidelines:
         component: 'api/ai/analyze-meal',
         severity: 'warning'
       })
+      dataSource = 'mock_api_error'
+      diagnosticError = errorMessage
       analysis = getMockAnalysis()
     }
 
@@ -323,6 +341,13 @@ Guidelines:
         foodItems: validatedFoodItems,
         title,
         usdaValidation: usdaMessages.length > 0 ? usdaMessages : undefined
+      },
+      _diagnostics: {
+        isRealAnalysis: dataSource === 'gemini',
+        dataSource,
+        timestamp: new Date().toISOString(),
+        error: diagnosticError,
+        model: dataSource === 'gemini' ? 'gemini-1.5-flash-latest' : undefined
       }
     })
 

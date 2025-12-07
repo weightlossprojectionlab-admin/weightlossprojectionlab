@@ -205,7 +205,7 @@ export function useMissions(userId: string | undefined) {
 
       setMissions(updatedMissions)
     } catch (err) {
-      logger.error('[useMissions] Error updating mission progress:', err as Error)
+      logger.error('[useMissions] Error updating mission progress', err as Error)
     }
   }
 
