@@ -23,7 +23,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { format, addDays, startOfDay, endOfDay, parseISO, addHours, subMinutes, isWithinInterval } from 'date-fns'
-import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz'
+import { fromZonedTime, toZonedTime } from 'date-fns-tz'
 import {
   VitalMonitoringSchedule,
   ScheduledVitalInstance,
@@ -269,7 +269,7 @@ export async function createScheduleInstances(scheduleId: string, days: number):
         localDateTime.setHours(hours, minutes, 0, 0)
 
         // Convert to UTC
-        const utcDateTime = zonedTimeToUtc(localDateTime, schedule.timezone)
+        const utcDateTime = fromZonedTime(localDateTime, schedule.timezone)
 
         // Calculate compliance window
         const windowEnd = addHours(utcDateTime, schedule.complianceWindow)

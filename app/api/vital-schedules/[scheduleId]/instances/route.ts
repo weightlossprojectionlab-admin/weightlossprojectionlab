@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/firebase-admin'
+import { verifyIdToken } from '@/lib/firebase-admin'
 import { getSchedule } from '@/lib/vital-schedule-service'
 import { collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -37,7 +37,7 @@ export async function GET(
     }
 
     const token = authHeader.split('Bearer ')[1]
-    const decodedToken = await auth.verifyIdToken(token)
+    const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
     const { scheduleId } = params

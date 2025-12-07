@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/firebase-admin'
+import { verifyIdToken } from '@/lib/firebase-admin'
 import { createSchedule, getPatientSchedules, getActiveSchedules } from '@/lib/vital-schedule-service'
 import { CreateScheduleParams } from '@/types/vital-schedules'
 import { logger } from '@/lib/logger'
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.split('Bearer ')[1]
-    const decodedToken = await auth.verifyIdToken(token)
+    const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
     // Parse request body
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.split('Bearer ')[1]
-    const decodedToken = await auth.verifyIdToken(token)
+    const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
     // Get query parameters

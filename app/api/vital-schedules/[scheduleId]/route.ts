@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/firebase-admin'
+import { verifyIdToken } from '@/lib/firebase-admin'
 import {
   getSchedule,
   updateSchedule,
@@ -40,7 +40,7 @@ export async function GET(
     }
 
     const token = authHeader.split('Bearer ')[1]
-    const decodedToken = await auth.verifyIdToken(token)
+    const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
     const { scheduleId } = params
@@ -100,7 +100,7 @@ export async function PATCH(
     }
 
     const token = authHeader.split('Bearer ')[1]
-    const decodedToken = await auth.verifyIdToken(token)
+    const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
     const { scheduleId } = params
@@ -206,7 +206,7 @@ export async function DELETE(
     }
 
     const token = authHeader.split('Bearer ')[1]
-    const decodedToken = await auth.verifyIdToken(token)
+    const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
     const { scheduleId } = params
