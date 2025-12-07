@@ -53,10 +53,6 @@ const nextConfig: NextConfig = {
     // optimizeCss: true,
     // optimizePackageImports: ['recharts', 'react-hot-toast', '@heroicons/react'],
   },
-  eslint: {
-    // Allow builds to complete even with ESLint errors (warnings will still show)
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     // TEMPORARILY: Skip type checking during build to isolate the hang issue
     // Type errors should be caught in development and CI
