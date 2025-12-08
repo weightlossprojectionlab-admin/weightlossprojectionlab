@@ -17,13 +17,13 @@ export async function compressImage(file: File): Promise<{
 }> {
   const originalSize = file.size
 
-  // Compression options - optimized for Netlify dev server limits
+  // Compression options - VERY aggressive for Netlify dev server
   const options = {
-    maxSizeMB: 0.2, // Maximum file size 200KB - works with Netlify dev server
-    maxWidthOrHeight: 800, // Reasonable resolution for AI analysis
+    maxSizeMB: 0.08, // Maximum file size 80KB - very small for Netlify dev server
+    maxWidthOrHeight: 600, // Lower resolution still works for AI
     useWebWorker: false, // Disabled: Web workers can crash Netlify dev tunnel
     fileType: 'image/jpeg', // JPEG for better compatibility
-    initialQuality: 0.7, // Good balance of quality and size
+    initialQuality: 0.5, // Lower quality to ensure small size
   }
 
   try {
