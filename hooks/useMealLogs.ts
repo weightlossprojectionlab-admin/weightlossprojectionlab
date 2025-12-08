@@ -79,10 +79,20 @@ export function useMealLogsRealtime(params?: {
       const data = await response.json()
       const logs = data.data || []
 
+      // Debug: Log first meal to check photoUrl
+      if (logs.length > 0) {
+        logger.debug(`📊 ${logs.length} meal logs loaded, first meal:`, {
+          id: logs[0].id,
+          mealType: logs[0].mealType,
+          hasPhotoUrl: !!logs[0].photoUrl,
+          photoUrl: logs[0].photoUrl
+        })
+      } else {
+        logger.debug(`📊 ${logs.length} meal logs loaded`)
+      }
+
       setMealLogs(logs)
       setLoading(false)
-
-      logger.debug(`📊 ${logs.length} meal logs loaded`)
     } catch (err) {
       logger.error('❌ Error fetching meal logs:', err as Error)
       setError(err as Error)
