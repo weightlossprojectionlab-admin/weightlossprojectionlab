@@ -1049,9 +1049,15 @@ function LogMealContent() {
         })
 
         try {
-          // Convert base64 to blob for compression
-          const base64Response = await fetch(imageToUpload)
-          const blob = await base64Response.blob()
+          // Convert base64 to blob for compression (without fetch to avoid CSP violation)
+          const base64Data = imageToUpload.split(',')[1]
+          const byteCharacters = atob(base64Data)
+          const byteNumbers = new Array(byteCharacters.length)
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i)
+          }
+          const byteArray = new Uint8Array(byteNumbers)
+          const blob = new Blob([byteArray], { type: 'image/jpeg' })
           const file = new File([blob], 'meal-photo.jpg', { type: 'image/jpeg' })
 
           // Dynamically import image compression (browser-image-compression library ~30kB)
