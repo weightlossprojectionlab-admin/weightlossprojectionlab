@@ -1041,7 +1041,19 @@ function LogMealContent() {
           })
 
           setUploadProgress('Uploading photo...')
-          logger.debug('📤 Uploading compressed photo to Storage...')
+
+          // Verify auth state before upload
+          const currentUser = auth.currentUser
+          logger.debug('📤 Uploading compressed photo to Storage...', {
+            userAuthenticated: !!currentUser,
+            userId: currentUser?.uid,
+            userEmail: currentUser?.email,
+            emailVerified: currentUser?.emailVerified
+          })
+
+          if (!currentUser) {
+            throw new Error('User not authenticated - please sign in again')
+          }
 
           // Upload compressed image with 30s timeout (increased for slower connections)
           photoUrl = await Promise.race([
@@ -1052,15 +1064,25 @@ function LogMealContent() {
           ])
           logger.debug('✅ Photo uploaded:', { photoUrl })
         } catch (uploadError) {
-          const error = uploadError as Error
-          logger.error('❌ Photo upload failed:', error, {
-            errorMessage: error?.message,
-            errorName: error?.name,
-            errorStack: error?.stack,
-            errorString: String(uploadError)
-          })
+          // Comprehensive error capture for debugging
+          const errorInfo = {
+            message: (uploadError as any)?.message || 'No message',
+            name: (uploadError as any)?.name || 'Unknown',
+            code: (uploadError as any)?.code,
+            isTimeoutError: (uploadError as Error)?.message?.includes('timeout'),
+            errorType: Object.prototype.toString.call(uploadError),
+            errorKeys: Object.keys(uploadError || {}),
+            rawError: String(uploadError)
+          }
+
+          console.error('❌ PHOTO UPLOAD FAILED - FULL ERROR:', errorInfo)
+          logger.error('❌ Photo upload failed:', uploadError as Error, errorInfo)
+
           // Continue saving even if photo upload fails
-          toast.error(`Photo upload failed: ${error?.message || 'Unknown error'}`)
+          const displayMessage = errorInfo.isTimeoutError
+            ? 'Upload timed out - please check your internet connection'
+            : errorInfo.message || 'Unknown error'
+          toast.error(`Photo upload failed: ${displayMessage}`)
         }
       }
 

@@ -38,14 +38,35 @@ export async function uploadBase64Image(
 
     return downloadURL
   } catch (error) {
-    const err = error as Error
-    logger.error('Error uploading image', err, {
-      errorMessage: err?.message,
-      errorName: err?.name,
-      errorCode: (error as any)?.code,
+    // Firebase Storage errors have special structure - capture everything
+    const errorDetails = {
+      // Standard Error properties
+      message: (error as any)?.message,
+      name: (error as any)?.name,
+      stack: (error as any)?.stack,
+      // Firebase-specific properties
+      code: (error as any)?.code,
+      serverResponse: (error as any)?.serverResponse,
+      customData: (error as any)?.customData,
+      // Raw error inspection
+      errorType: Object.prototype.toString.call(error),
+      errorConstructor: error?.constructor?.name,
+      errorKeys: Object.keys(error || {}),
+      // Full serialization attempt
+      errorJSON: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+      // User context
       userId: user.uid,
-      path: `users/${user.uid}/${path}`
-    })
+      path: `users/${user.uid}/${path}`,
+      authState: {
+        uid: user.uid,
+        email: user.email,
+        emailVerified: user.emailVerified
+      }
+    }
+
+    console.error('🔍 DETAILED ERROR CAPTURE:', errorDetails)
+    logger.error('Error uploading image', error as Error, errorDetails)
+
     // Re-throw the original error to preserve details
     throw error
   }
