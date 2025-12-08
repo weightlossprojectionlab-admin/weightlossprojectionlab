@@ -131,11 +131,11 @@ export function useMissions(userId: string | undefined) {
       const weekId = getWeekIdentifier()
       const weekStart = getCurrentWeek().start
 
-      // Fetch user activity data for the week
+      // Fetch user activity data for the week (gracefully handle if collections don't exist)
       const [meals, weightLogs, recipes] = await Promise.all([
-        fetchUserMeals(userId, weekStart),
-        fetchUserWeightLogs(userId, weekStart),
-        fetchUserRecipes(userId, weekStart)
+        fetchUserMeals(userId, weekStart).catch(() => []),
+        fetchUserWeightLogs(userId, weekStart).catch(() => []),
+        fetchUserRecipes(userId, weekStart).catch(() => [])
       ])
 
       // Get user missions
@@ -205,7 +205,12 @@ export function useMissions(userId: string | undefined) {
 
       setMissions(updatedMissions)
     } catch (err) {
-      logger.error('[useMissions] Error updating mission progress', err as Error)
+      const error = err as Error
+      logger.error('[useMissions] Error updating mission progress', error, {
+        errorMessage: error?.message,
+        errorName: error?.name,
+        errorStack: error?.stack
+      })
     }
   }
 
@@ -319,9 +324,9 @@ async function fetchUserMeals(userId: string, weekStart: Date): Promise<MealLog[
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekEnd.getDate() + 7)
 
+  // Query the correct subcollection: users/{userId}/mealLogs
   const mealsQuery = query(
-    collection(db, 'meals'),
-    where('userId', '==', userId),
+    collection(db, 'users', userId, 'mealLogs'),
     where('loggedAt', '>=', weekStart.toISOString()),
     where('loggedAt', '<=', weekEnd.toISOString())
   )
