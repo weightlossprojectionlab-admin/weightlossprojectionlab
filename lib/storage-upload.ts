@@ -24,16 +24,30 @@ export async function uploadBase64Image(
     // Create storage reference
     const storageRef = ref(storage, `users/${user.uid}/${path}`)
 
+    logger.debug('📤 Uploading to Firebase Storage:', { path: `users/${user.uid}/${path}` })
+
     // Upload base64 string
     const snapshot = await uploadString(storageRef, base64Image, 'data_url')
+
+    logger.debug('✅ Upload complete, getting download URL...')
 
     // Get download URL
     const downloadURL = await getDownloadURL(snapshot.ref)
 
+    logger.debug('✅ Download URL retrieved:', { downloadURL })
+
     return downloadURL
   } catch (error) {
-    logger.error('Error uploading image', error as Error)
-    throw new Error('Failed to upload image')
+    const err = error as Error
+    logger.error('Error uploading image', err, {
+      errorMessage: err?.message,
+      errorName: err?.name,
+      errorCode: (error as any)?.code,
+      userId: user.uid,
+      path: `users/${user.uid}/${path}`
+    })
+    // Re-throw the original error to preserve details
+    throw error
   }
 }
 

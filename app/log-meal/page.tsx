@@ -1052,9 +1052,15 @@ function LogMealContent() {
           ])
           logger.debug('✅ Photo uploaded:', { photoUrl })
         } catch (uploadError) {
-          logger.error('❌ Photo upload failed:', uploadError as Error)
+          const error = uploadError as Error
+          logger.error('❌ Photo upload failed:', error, {
+            errorMessage: error?.message,
+            errorName: error?.name,
+            errorStack: error?.stack,
+            errorString: String(uploadError)
+          })
           // Continue saving even if photo upload fails
-          toast.error('Photo upload failed, but saving meal data anyway.')
+          toast.error(`Photo upload failed: ${error?.message || 'Unknown error'}`)
         }
       }
 
