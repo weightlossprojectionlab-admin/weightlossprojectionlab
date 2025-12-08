@@ -19,10 +19,13 @@ The meal analyzer is returning mock data in production because:
 
 ### Step 1: Get Your API Key
 
-Your Gemini API key (from `.env.local`):
+Get your Gemini API key from your local `.env.local` file:
+```bash
+# Look for this line in .env.local
+GEMINI_API_KEY=your-actual-api-key-here
 ```
-GEMINI_API_KEY=AIzaSyCzhmblvbBdk7i7GD-Ok330HYCpR-m6Q58
-```
+
+Or get a new one at: https://makersuite.google.com/app/apikey
 
 ### Step 2: Add to Netlify
 
@@ -32,7 +35,7 @@ GEMINI_API_KEY=AIzaSyCzhmblvbBdk7i7GD-Ok330HYCpR-m6Q58
 4. Click **Add a variable**
 5. Add:
    - **Key:** `GEMINI_API_KEY`
-   - **Value:** `AIzaSyCzhmblvbBdk7i7GD-Ok330HYCpR-m6Q58`
+   - **Value:** `[paste your actual API key from .env.local]`
    - **Scopes:** Production, Deploy previews, Branch deploys (all)
 
 ### Step 3: Redeploy
@@ -111,7 +114,7 @@ The app has rate limiting built-in to respect these limits. If exceeded, it will
 
 ## Quick Checklist
 
-- [ ] Copy API key from `.env.local`: `GEMINI_API_KEY=AIzaSy...`
+- [ ] Copy API key from `.env.local` (starts with "AIza...")
 - [ ] Add to Netlify environment variables
 - [ ] Trigger new deployment
 - [ ] Test meal analyzer in production
