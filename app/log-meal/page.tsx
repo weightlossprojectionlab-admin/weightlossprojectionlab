@@ -103,6 +103,7 @@ function LogMealContent() {
   const [loadingPatient, setLoadingPatient] = useState(!!patientIdParam)
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(detectMealTypeFromTime())
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
+  const capturedImageRef = useRef<string | null>(null) // Ref to preserve image across renders
   const [imageObjectUrl, setImageObjectUrl] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null)
@@ -161,6 +162,7 @@ function LogMealContent() {
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileReaderRef = useRef<FileReader | null>(null)
+  const capturedImageRef = useRef<string | null>(null) // Ref to preserve image data across renders
 
   const { confirm, ConfirmDialog } = useConfirm()
 
@@ -459,6 +461,8 @@ function LogMealContent() {
         const base64Data = event.target?.result as string
         logger.debug('✅ Image converted to base64, length:', { length: base64Data.length })
         setCapturedImage(base64Data)
+        capturedImageRef.current = base64Data // Also store in ref for persistence
+        logger.debug('📸 Image stored in both state and ref')
 
         // Start AI analysis with high-quality image
         analyzeImage(base64Data)
@@ -948,7 +952,12 @@ function LogMealContent() {
     setSaving(true)
 
     try {
-      logger.debug('💾 Starting meal save...')
+      logger.debug('💾 Starting meal save...', {
+        hasCapturedImage: !!capturedImage,
+        hasCapturedImageRef: !!capturedImageRef.current,
+        hasAiAnalysis: !!aiAnalysis,
+        selectedMealType
+      })
 
       // Check meal safety if we have AI analysis and haven't overridden
       if (aiAnalysis && !overrideSafety) {
@@ -1010,6 +1019,7 @@ function LogMealContent() {
           setImageObjectUrl(null)
         }
         setCapturedImage(null)
+        capturedImageRef.current = null // Clear ref as well
         setAiAnalysis(null)
         setAdditionalPhotos([])
 
@@ -1019,14 +1029,29 @@ function LogMealContent() {
       // Online - proceed with normal save
       let photoUrl: string | undefined = undefined
 
+      // CRITICAL: Use ref as source of truth (state may be stale due to React batching)
+      const imageToUpload = capturedImageRef.current || capturedImage
+
+      // DEBUG: Log state vs ref to diagnose state loss
+      logger.debug('🔍 Image availability check:', {
+        hasStateImage: !!capturedImage,
+        hasRefImage: !!capturedImageRef.current,
+        usingImage: !!imageToUpload,
+        stateLength: capturedImage?.length || 0,
+        refLength: capturedImageRef.current?.length || 0
+      })
+
       // Upload photo to Firebase Storage if we have one
-      if (capturedImage) {
+      if (imageToUpload) {
         setUploadProgress('Compressing image...')
-        logger.debug('🗜️ Compressing image before upload...')
+        logger.debug('🗜️ Compressing image before upload...', {
+          source: capturedImageRef.current ? 'ref' : 'state',
+          imageLength: imageToUpload.length
+        })
 
         try {
           // Convert base64 to blob for compression
-          const base64Response = await fetch(capturedImage)
+          const base64Response = await fetch(imageToUpload)
           const blob = await base64Response.blob()
           const file = new File([blob], 'meal-photo.jpg', { type: 'image/jpeg' })
 
@@ -1186,6 +1211,7 @@ function LogMealContent() {
         setImageObjectUrl(null)
       }
       setCapturedImage(null)
+      capturedImageRef.current = null // Clear ref as well
       setAiAnalysis(null)
       setAdditionalPhotos([])
 
