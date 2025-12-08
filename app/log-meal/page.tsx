@@ -103,7 +103,6 @@ function LogMealContent() {
   const [loadingPatient, setLoadingPatient] = useState(!!patientIdParam)
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(detectMealTypeFromTime())
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
-  const capturedImageRef = useRef<string | null>(null) // Ref to preserve image across renders
   const [imageObjectUrl, setImageObjectUrl] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null)
