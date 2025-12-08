@@ -2072,6 +2072,7 @@ function LogMealContent() {
                     <input
                       type="file"
                       accept="image/*"
+                      capture="environment"
                       multiple
                       onChange={handleAdditionalPhotos}
                       className="hidden"
