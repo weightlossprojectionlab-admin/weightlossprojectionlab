@@ -242,16 +242,15 @@ export function MealLogForm({ patientId }: { patientId: string }) {
 
 ## Migration Steps
 
-1. ✅ Create `hooks/useMealCapture.ts` (photo logic)
-2. ✅ Create `hooks/useMealAnalysis.ts` (AI logic)
-3. ✅ Create `hooks/useMealSave.ts` (save logic)
-4. ✅ Test hooks in isolation
-5. ✅ Refactor `/log-meal/page.tsx` to use hooks
-6. ✅ Test user meal logging still works
-7. ✅ Update `/components/patients/MealLogForm.tsx`
-8. ✅ Test patient meal logging with photos
-9. ✅ Remove old duplicated code
-10. ✅ Update documentation
+1. ✅ **COMPLETE** - Create `hooks/useMealCapture.ts` (photo logic)
+2. ✅ **COMPLETE** - Create `hooks/useMealAnalysis.ts` (AI logic)
+3. ✅ **COMPLETE** - Create `hooks/useMealSave.ts` (save logic)
+4. ✅ **COMPLETE** - Update `/components/patients/MealLogForm.tsx` with photo/AI
+5. ⏳ **NEXT** - Refactor `/log-meal/page.tsx` to use hooks (reduce from ~2500 to ~500 lines)
+6. 🧪 **TESTING** - Test user meal logging still works
+7. 🧪 **TESTING** - Test patient meal logging with photos
+8. 🔄 **PENDING** - Remove old duplicated code from /log-meal
+9. ✅ **COMPLETE** - Update documentation
 
 ---
 
@@ -274,19 +273,27 @@ export function MealLogForm({ patientId }: { patientId: string }) {
 
 ---
 
-## Files to Create
+## Files Created ✅
 
-- `hooks/useMealCapture.ts` (~200 lines)
-- `hooks/useMealAnalysis.ts` (~150 lines)
-- `hooks/useMealSave.ts` (~100 lines)
+- ✅ `hooks/useMealCapture.ts` (~350 lines) - Photo capture, compression, upload with retry
+- ✅ `hooks/useMealAnalysis.ts` (~200 lines) - AI analysis, portion adjustment
+- ✅ `hooks/useMealSave.ts` (~120 lines) - Unified save for user/patient modes
 
-## Files to Modify
+## Files Modified ✅
 
-- `app/log-meal/page.tsx` (reduce from 2500 to 500 lines)
-- `components/patients/MealLogForm.tsx` (expand from 100 to 300 lines)
+- ✅ `components/patients/MealLogForm.tsx` (expanded from 109 to 274 lines) - Now has photo/AI mode!
+  - Added photo capture with camera
+  - AI analysis with Gemini Vision
+  - Real-time nutritional display
+  - Mode toggle (Manual vs Photo+AI)
+- ⏳ `app/log-meal/page.tsx` (NEXT: reduce from ~2500 to ~500 lines)
 
-## Net Result
+## Current Status
 
-**Code reduction:** ~2000 lines
-**Maintainability:** Significantly improved
-**Feature parity:** User and patient modes identical
+**Phase 1 Complete:** ✅ Hooks extracted and MealLogForm upgraded
+**Phase 2 Pending:** ⏳ Refactor /log-meal/page.tsx to use hooks
+**Code reduction so far:** +670 lines in hooks, +165 lines in form = **+835 new lines**
+**Code to be removed:** ~2000 lines from /log-meal when refactored
+**Net reduction (when complete):** ~1165 lines removed
+**Maintainability:** Significantly improved - hooks are reusable and testable
+**Feature parity:** ✅ Patient mode now has photo/AI (same as user mode!)
