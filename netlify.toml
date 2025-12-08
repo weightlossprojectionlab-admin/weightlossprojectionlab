@@ -29,10 +29,11 @@
 # - STRIPE_SECRET_KEY
 # - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 # - STRIPE_WEBHOOK_SECRET
+# - GEMINI_API_KEY (for AI meal analysis - get at https://makersuite.google.com/app/apikey)
 #
 # Optional:
-# - NEXT_PUBLIC_GEMINI_API_KEY
 # - NEXT_PUBLIC_BASE_URL
+# - USDA_API_KEY (for nutrition validation)
 
 # Cache static assets for 1 year
 [[headers]]
