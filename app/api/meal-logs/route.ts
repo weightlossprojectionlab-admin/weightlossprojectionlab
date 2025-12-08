@@ -43,18 +43,23 @@ export async function GET(request: NextRequest) {
 
     // Build Firestore query
     const mealLogsRef = adminDb.collection('users').doc(userId).collection('mealLogs')
-    let queryRef = mealLogsRef.orderBy('loggedAt', 'desc')
+    let queryRef: any = mealLogsRef
 
-    // Add filters if provided
+    // Add mealType filter FIRST (required for proper index usage)
+    if (validatedQuery.mealType) {
+      queryRef = queryRef.where('mealType', '==', validatedQuery.mealType)
+    }
+
+    // Add date range filters
     if (validatedQuery.startDate) {
       queryRef = queryRef.where('loggedAt', '>=', new Date(validatedQuery.startDate))
     }
     if (validatedQuery.endDate) {
       queryRef = queryRef.where('loggedAt', '<=', new Date(validatedQuery.endDate))
     }
-    if (validatedQuery.mealType) {
-      queryRef = queryRef.where('mealType', '==', validatedQuery.mealType)
-    }
+
+    // Always orderBy loggedAt last (must be after where clauses for same field)
+    queryRef = queryRef.orderBy('loggedAt', 'desc')
 
     // Limit results
     queryRef = queryRef.limit(validatedQuery.limit)
