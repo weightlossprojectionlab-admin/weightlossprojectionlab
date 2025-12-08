@@ -102,11 +102,20 @@ export function useMealLogsRealtime(params?: {
       const unsubscribe = onSnapshot(
         q,
         (snapshot) => {
-          const logs = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            loggedAt: doc.data().loggedAt?.toDate?.()?.toISOString() || doc.data().loggedAt
-          })) as MealLogData[]
+          const logs = snapshot.docs.map(doc => {
+            const data = doc.data()
+            return {
+              id: doc.id,
+              ...data,
+              // Map API structure (totalCalories, macros.protein) to UI structure (calories, protein)
+              calories: data.totalCalories || 0,
+              protein: data.macros?.protein || 0,
+              carbs: data.macros?.carbs || 0,
+              fat: data.macros?.fat || 0,
+              fiber: data.macros?.fiber || 0,
+              loggedAt: data.loggedAt?.toDate?.()?.toISOString() || data.loggedAt
+            }
+          }) as MealLogData[]
 
           logger.debug(`📊 ${logs.length} meal logs loaded (real-time)`, {
             firstMeal: logs[0] ? {
