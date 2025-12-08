@@ -66,11 +66,15 @@ export async function GET(request: NextRequest) {
 
     // Execute query
     const snapshot = await queryRef.get()
-    const mealLogs = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      loggedAt: doc.data().loggedAt.toDate().toISOString()
-    }))
+    const mealLogs = snapshot.docs.map(doc => {
+      const data = doc.data()
+      logger.debug('[GET /api/meal-logs] Meal log data:', { id: doc.id, hasPhotoUrl: !!data.photoUrl, photoUrl: data.photoUrl })
+      return {
+        id: doc.id,
+        ...data,
+        loggedAt: data.loggedAt.toDate().toISOString()
+      }
+    })
 
     return NextResponse.json({
       success: true,
@@ -192,7 +196,10 @@ export async function POST(request: NextRequest) {
 
     // Only add optional fields if they have values
     if (photoUrl) {
+      logger.debug('[POST /api/meal-logs] Saving photoUrl:', { photoUrl })
       mealLogData.photoUrl = photoUrl
+    } else {
+      logger.debug('[POST /api/meal-logs] No photoUrl provided in request')
     }
     if (additionalPhotos && additionalPhotos.length > 0) {
       mealLogData.additionalPhotos = additionalPhotos
