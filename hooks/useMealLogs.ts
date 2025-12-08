@@ -40,33 +40,37 @@ export function useMealLogsRealtime(params?: {
 
   // Fetch meal logs using API
   const fetchMealLogs = useCallback(async () => {
-    if (!currentUser || !params?.patientId) {
+    if (!currentUser) {
       setMealLogs([])
       setLoading(false)
       return
     }
 
     try {
-      logger.debug(`🔄 Fetching meal logs for patient: ${params.patientId}`)
       setLoading(true)
       setError(null)
 
       // Build query params
       const queryParams = new URLSearchParams()
-      if (params.limitCount) queryParams.set('limit', params.limitCount.toString())
-      if (params.mealType) queryParams.set('mealType', params.mealType)
-      if (params.startDate) queryParams.set('startDate', params.startDate)
-      if (params.endDate) queryParams.set('endDate', params.endDate)
+      if (params?.limitCount) queryParams.set('limit', params.limitCount.toString())
+      if (params?.mealType) queryParams.set('mealType', params.mealType)
+      if (params?.startDate) queryParams.set('startDate', params.startDate)
+      if (params?.endDate) queryParams.set('endDate', params.endDate)
 
       const token = await currentUser.getIdToken()
-      const response = await fetch(
-        `/api/patients/${params.patientId}/meal-logs?${queryParams}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
+
+      // Choose API endpoint based on whether we're fetching patient or user meal logs
+      const endpoint = params?.patientId
+        ? `/api/patients/${params.patientId}/meal-logs?${queryParams}`
+        : `/api/meal-logs?${queryParams}`
+
+      logger.debug(`🔄 Fetching meal logs from: ${endpoint}`)
+
+      const response = await fetch(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
 
       if (!response.ok) {
         throw new Error('Failed to fetch meal logs')
@@ -78,7 +82,7 @@ export function useMealLogsRealtime(params?: {
       setMealLogs(logs)
       setLoading(false)
 
-      logger.debug(`📊 ${logs.length} meal logs loaded for patient ${params.patientId}`)
+      logger.debug(`📊 ${logs.length} meal logs loaded`)
     } catch (err) {
       logger.error('❌ Error fetching meal logs:', err as Error)
       setError(err as Error)
