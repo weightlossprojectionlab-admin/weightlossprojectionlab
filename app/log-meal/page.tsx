@@ -1070,29 +1070,37 @@ function LogMealContent() {
             compressed: formatFileSize(compressed.compressedSize)
           })
 
-          setUploadProgress('Uploading photo...')
+          // Check if compressed size is still too large for Netlify dev server
+          const maxDevSize = 50 * 1024 // 50KB limit for Netlify dev
+          if (compressed.compressedSize > maxDevSize && window.location.hostname.includes('localhost')) {
+            logger.warn(`⚠️ Compressed image (${formatFileSize(compressed.compressedSize)}) exceeds Netlify dev server limit (${formatFileSize(maxDevSize)}). Skipping photo upload in development.`)
+            toast.error(`Photo too large for dev server (${formatFileSize(compressed.compressedSize)}). Saving meal without photo. Deploy to production to test photo uploads.`)
+            photoUrl = undefined // Skip upload
+          } else {
+            setUploadProgress('Uploading photo...')
 
-          // Verify auth state before upload
-          const currentUser = auth.currentUser
-          logger.debug('📤 Uploading compressed photo to Storage...', {
-            userAuthenticated: !!currentUser,
-            userId: currentUser?.uid,
-            userEmail: currentUser?.email,
-            emailVerified: currentUser?.emailVerified
-          })
+            // Verify auth state before upload
+            const currentUser = auth.currentUser
+            logger.debug('📤 Uploading compressed photo to Storage...', {
+              userAuthenticated: !!currentUser,
+              userId: currentUser?.uid,
+              userEmail: currentUser?.email,
+              emailVerified: currentUser?.emailVerified
+            })
 
-          if (!currentUser) {
-            throw new Error('User not authenticated - please sign in again')
+            if (!currentUser) {
+              throw new Error('User not authenticated - please sign in again')
+            }
+
+            // Upload compressed image with 30s timeout (increased for slower connections)
+            photoUrl = await Promise.race([
+              uploadMealPhoto(compressed.base64DataUrl),
+              new Promise<string>((_, reject) =>
+                setTimeout(() => reject(new Error('Upload timeout after 30s')), 30000)
+              )
+            ])
+            logger.debug('✅ Photo uploaded:', { photoUrl })
           }
-
-          // Upload compressed image with 30s timeout (increased for slower connections)
-          photoUrl = await Promise.race([
-            uploadMealPhoto(compressed.base64DataUrl),
-            new Promise<string>((_, reject) =>
-              setTimeout(() => reject(new Error('Upload timeout after 30s')), 30000)
-            )
-          ])
-          logger.debug('✅ Photo uploaded:', { photoUrl })
         } catch (uploadError) {
           // Comprehensive error capture for debugging
           const errorInfo = {
