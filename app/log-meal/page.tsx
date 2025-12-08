@@ -1043,11 +1043,11 @@ function LogMealContent() {
           setUploadProgress('Uploading photo...')
           logger.debug('📤 Uploading compressed photo to Storage...')
 
-          // Upload compressed image with 15s timeout (prevents Netlify tunnel crash)
+          // Upload compressed image with 30s timeout (increased for slower connections)
           photoUrl = await Promise.race([
             uploadMealPhoto(compressed.base64DataUrl),
             new Promise<string>((_, reject) =>
-              setTimeout(() => reject(new Error('Upload timeout after 15s')), 15000)
+              setTimeout(() => reject(new Error('Upload timeout after 30s')), 30000)
             )
           ])
           logger.debug('✅ Photo uploaded:', { photoUrl })
@@ -1093,6 +1093,14 @@ function LogMealContent() {
 
       // If logging for a patient, use patient meal logs
       if (patientIdParam && patientProfile) {
+        // CRITICAL DEBUG: Log photoUrl value right before API call (patient path)
+        logger.debug('📸 Saving patient meal data with photoUrl:', {
+          photoUrl,
+          hasPhotoUrl: !!photoUrl,
+          capturedImageExists: !!capturedImage,
+          photoUrlType: typeof photoUrl
+        })
+
         await medicalOperations.mealLogs.logMeal(patientIdParam, {
           mealType: selectedMealType,
           foodItems: aiAnalysis?.foodItems?.map(item => item.name) || [],
@@ -1109,10 +1117,18 @@ function LogMealContent() {
           aiConfidence: aiAnalysis ? 0.9 : undefined,
           tags: []
         })
-        logger.debug('✅ Meal logged for patient:', { patientId: patientIdParam, patientName: patientProfile.name })
+        logger.debug('✅ Meal logged for patient:', { patientId: patientIdParam, patientName: patientProfile.name, photoUrl })
         toast.success(`Meal logged for ${patientProfile.name}!`)
       } else {
         // Otherwise use regular user meal logs (note: additionalPhotos not supported in MealLog type)
+        // CRITICAL DEBUG: Log photoUrl value right before API call
+        logger.debug('📸 Saving meal data with photoUrl:', {
+          photoUrl,
+          hasPhotoUrl: !!photoUrl,
+          capturedImageExists: !!capturedImage,
+          photoUrlType: typeof photoUrl
+        })
+
         const response = await mealLogOperations.createMealLog({
           mealType: selectedMealType,
           photoUrl: photoUrl || undefined,
@@ -1120,7 +1136,12 @@ function LogMealContent() {
           aiAnalysis: aiAnalysis || undefined,
           loggedAt: new Date().toISOString()
         })
-        logger.debug('✅ Meal logged successfully:', response.data)
+        logger.debug('✅ Meal logged successfully:', {
+          mealId: response.data?.id,
+          hasPhotoUrl: !!response.data?.photoUrl,
+          photoUrl: response.data?.photoUrl,
+          fullResponse: response.data
+        })
         toast.success('Meal logged successfully!')
       }
 
