@@ -1092,14 +1092,30 @@ function LogMealContent() {
               throw new Error('User not authenticated - please sign in again')
             }
 
-            // Upload compressed image with 30s timeout (increased for slower connections)
-            photoUrl = await Promise.race([
-              uploadMealPhoto(compressed.base64DataUrl),
-              new Promise<string>((_, reject) =>
-                setTimeout(() => reject(new Error('Upload timeout after 30s')), 30000)
-              )
-            ])
-            logger.debug('✅ Photo uploaded:', { photoUrl })
+            // Upload compressed image with 60s timeout and retry logic
+            let uploadAttempts = 0
+            const maxAttempts = 2
+
+            while (uploadAttempts < maxAttempts && !photoUrl) {
+              try {
+                uploadAttempts++
+                logger.debug(`📤 Upload attempt ${uploadAttempts}/${maxAttempts}`)
+
+                photoUrl = await Promise.race([
+                  uploadMealPhoto(compressed.base64DataUrl),
+                  new Promise<string>((_, reject) =>
+                    setTimeout(() => reject(new Error('Upload timeout after 60s')), 60000)
+                  )
+                ])
+                logger.debug('✅ Photo uploaded:', { photoUrl })
+              } catch (retryError) {
+                if (uploadAttempts >= maxAttempts) {
+                  throw retryError // Throw on final attempt
+                }
+                logger.warn(`⚠️ Upload attempt ${uploadAttempts} failed, retrying...`)
+                await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1s before retry
+              }
+            }
           }
         } catch (uploadError) {
           // Comprehensive error capture for debugging
