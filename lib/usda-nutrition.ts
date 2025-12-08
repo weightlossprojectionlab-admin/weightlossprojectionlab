@@ -66,8 +66,9 @@ export async function searchUSDAFood(
 ): Promise<NutritionData[]> {
   const apiKey = process.env.USDA_API_KEY
 
-  if (!apiKey) {
-    logger.warn('USDA_API_KEY not set, skipping USDA lookup')
+  // Check if API key is missing or is a placeholder
+  if (!apiKey || apiKey.startsWith('your-') || apiKey.includes('api-key') || apiKey === 'DEMO_KEY') {
+    logger.warn('USDA_API_KEY not configured (get free key at: https://fdc.nal.usda.gov/api-key-signup/)')
     return []
   }
 
@@ -113,8 +114,9 @@ export async function searchUSDAFood(
 export async function getUSDAFoodDetails(fdcId: number): Promise<NutritionData | null> {
   const apiKey = process.env.USDA_API_KEY
 
-  if (!apiKey) {
-    logger.warn('USDA_API_KEY not set, skipping USDA lookup')
+  // Check if API key is missing or is a placeholder
+  if (!apiKey || apiKey.startsWith('your-') || apiKey.includes('api-key') || apiKey === 'DEMO_KEY') {
+    logger.warn('USDA_API_KEY not configured (get free key at: https://fdc.nal.usda.gov/api-key-signup/)')
     return null
   }
 
