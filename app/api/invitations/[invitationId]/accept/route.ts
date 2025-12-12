@@ -157,23 +157,28 @@ export async function POST(
       acceptedAt
     })
 
-    // Update the accepting user's profile to set userMode='caregiver'
-    // This ensures they see the caregiver dashboard
+    // Add caregiver context to user's profile (family plan multi-tenancy)
+    // Do NOT set userMode or force onboarding - caregiver-only users skip onboarding
     const userRef = adminDb.collection('users').doc(userId)
+
+    // Build caregiver context object
+    const caregiverContext = {
+      accountOwnerId: invitation.invitedByUserId,
+      accountOwnerName: invitation.invitedByName,
+      role: invitation.familyRole || 'caregiver',
+      patientsAccess: invitation.patientsShared,
+      permissions: invitation.permissions,
+      addedAt: acceptedAt,
+      invitationId: invitationId,
+      familyPlan: true
+    }
+
+    // Add to caregiverOf array (supports multiple family accounts)
+    const userSnapshot = await userRef.get()
+    const existingCaregiverOf = userSnapshot.data()?.caregiverOf || []
+
     await userRef.set({
-      preferences: {
-        userMode: 'caregiver',
-        onboardingAnswers: {
-          userMode: 'caregiver',
-          primaryRole: 'caregiver',
-          featurePreferences: ['medical_tracking', 'caregiving', 'vitals', 'medications'],
-          kitchenMode: 'self',
-          mealLoggingMode: 'both',
-          automationLevel: 'no',
-          addFamilyNow: false,
-          completedAt: acceptedAt
-        }
-      }
+      caregiverOf: [...existingCaregiverOf, caregiverContext]
     }, { merge: true })
 
     const createdMember: FamilyMember = {
@@ -181,7 +186,7 @@ export async function POST(
       ...familyMember
     }
 
-    console.log(`Invitation ${invitationId} accepted by ${userId}, userMode set to 'caregiver'`)
+    console.log(`Invitation ${invitationId} accepted by ${userId}, added to caregiverOf array`)
 
     return NextResponse.json({
       success: true,

@@ -26,6 +26,19 @@
 
 import { JsonObject } from './common'
 
+// Caregiver Context - When user is invited as caregiver to someone else's family plan
+export interface CaregiverContext {
+  accountOwnerId: string // The account owner's userId
+  accountOwnerName: string // Display name of account owner
+  accountOwnerEmail?: string // Account owner's email
+  role: string // Their role in that family ('caregiver', 'viewer', etc.)
+  patientsAccess: string[] // Patient IDs they can access
+  permissions: Record<string, boolean> // Granted permissions
+  addedAt: string // ISO 8601 - when they were added as caregiver
+  invitationId?: string // Original invitation ID
+  familyPlan: true // Flag to indicate this is family plan caregiver access
+}
+
 // User Types
 export interface User {
   id: string
@@ -35,6 +48,7 @@ export interface User {
   goals?: UserGoals
   preferences: UserPreferences
   subscription?: UserSubscription  // Subscription plan and features
+  caregiverOf?: CaregiverContext[]  // Accounts where this user is a caregiver (family plan only)
   createdAt: Date
   lastActiveAt: Date
 }

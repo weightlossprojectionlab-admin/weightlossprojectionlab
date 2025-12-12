@@ -81,17 +81,20 @@ export async function GET(request: NextRequest) {
           const userDoc = await adminDb.collection('users').doc(user.uid).get()
           const userData = userDoc.data()
 
-          // Get activity counts
-          const [mealLogs, weightLogs, stepLogs] = await Promise.all([
+          // Get activity counts and family relationships
+          const [mealLogs, weightLogs, stepLogs, patientsCount, familyMembersCount] = await Promise.all([
             adminDb.collection(`users/${user.uid}/mealLogs`).count().get(),
             adminDb.collection(`users/${user.uid}/weightLogs`).count().get(),
             adminDb.collection(`users/${user.uid}/stepLogs`).count().get(),
+            adminDb.collection(`users/${user.uid}/patients`).count().get(),
+            adminDb.collection(`users/${user.uid}/familyMembers`).count().get(),
           ])
 
           return {
             uid: user.uid,
             email: user.email,
             displayName: user.displayName || userData?.displayName,
+            name: userData?.name,
             createdAt: user.metadata.creationTime,
             lastActiveAt: userData?.lastActiveAt?.toDate?.() || null,
             role: userData?.role,
@@ -99,6 +102,13 @@ export async function GET(request: NextRequest) {
             mealLogsCount: mealLogs.data().count,
             weightLogsCount: weightLogs.data().count,
             stepLogsCount: stepLogs.data().count,
+            patientsCount: patientsCount.data().count,
+            familyMembersCount: familyMembersCount.data().count,
+            caregiverOf: userData?.caregiverOf || [],
+            onboardingCompleted: userData?.profile?.onboardingCompleted,
+            userMode: userData?.preferences?.userMode,
+            isAccountOwner: userData?.preferences?.isAccountOwner,
+            subscription: userData?.subscription || null,
           }
         } catch (err) {
           logger.error('Error enriching user data', err as Error, { uid: user.uid })

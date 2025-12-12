@@ -61,9 +61,12 @@ function ProfileContent() {
   const familyMembers = patients
 
   // Get the currently selected member (or null if viewing own profile)
-  const currentlyViewingMember = selectedMemberId
+  const currentlyViewingMember = selectedMemberId && selectedMemberId !== user?.uid
     ? familyMembers.find(m => m.id === selectedMemberId)
     : null
+
+  // Get the effective patient ID for medications (DRY)
+  const effectivePatientId = selectedMemberId || user?.uid || ''
 
   useEffect(() => {
     setMounted(true)
@@ -460,7 +463,7 @@ function ProfileContent() {
             profileData={profileData}
             onSave={handleSaveAdvancedProfile}
             isPatientProfile={!!currentlyViewingMember}
-            patientId={currentlyViewingMember?.id}
+            patientId={effectivePatientId}
           />
         )}
 

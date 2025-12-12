@@ -116,10 +116,10 @@ export function AdvancedHealthProfile({
     profileData?.profile?.healthConditions || profileData?.healthConditions || []
   )
 
-  // Use real-time medications hook (DRY)
+  // Use real-time medications hook (DRY) - works for both user profile and patient profiles
   const { medications, loading: loadingMedications } = useMedications({
-    patientId: patientId || '',
-    autoFetch: !!patientId // Only fetch if patientId exists
+    patientId: patientId, // Will be selectedMemberId || user?.uid from parent
+    autoFetch: true
   })
 
   const [lifestyle, setLifestyle] = useState(

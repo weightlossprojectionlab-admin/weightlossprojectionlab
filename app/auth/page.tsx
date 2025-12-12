@@ -86,6 +86,9 @@ function AuthContent() {
           } else if (destination.type === 'patients') {
             logger.debug('➡️ Redirecting to patients:', { reason: destination.reason })
             router.push('/patients')
+          } else if (destination.type === 'caregiver') {
+            logger.debug('➡️ Redirecting to caregiver dashboard:', { reason: destination.reason })
+            router.push(`/caregiver/${destination.accountOwnerId}`)
           } else if (destination.type === 'onboarding') {
             logger.debug('➡️ Redirecting to onboarding:', { reason: destination.reason })
             router.push('/onboarding')

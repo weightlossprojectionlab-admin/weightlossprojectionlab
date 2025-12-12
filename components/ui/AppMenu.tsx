@@ -7,6 +7,7 @@ import { useMenu } from '@/contexts/MenuContext'
 import { useLazyAuth } from '@/hooks/useLazyAuth'
 import { useSubscription } from '@/hooks/useSubscription'
 import { PlanBadge } from '@/components/subscription/PlanBadge'
+import { AccountSwitcher } from '@/components/ui/AccountSwitcher'
 import { signOut } from '@/lib/auth'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import {
@@ -158,6 +159,11 @@ export function AppMenu() {
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
+          </div>
+
+          {/* Account Switcher - for dual-context users */}
+          <div className="px-4 pb-3">
+            <AccountSwitcher />
           </div>
 
           {/* Subscription Badge */}

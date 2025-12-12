@@ -97,23 +97,28 @@ function AcceptInvitationContent() {
       return
     }
 
-    // If user IS authenticated (existing user), accept invitation and redirect to patient records
+    // If user IS authenticated, accept invitation and redirect based on their account status
     setLoading(true)
     try {
       await medicalOperations.family.acceptInvitation(invitation.id)
-      toast.success('Invitation accepted! Loading patient records...')
+      toast.success('Invitation accepted!')
 
-      // Redirect to the first patient they have access to
-      // If multiple patients, go to the first one; if only one, go directly to that patient's page
+      // Check if user has their own account (onboarding completed)
+      const userProfileResponse = await fetch('/api/users/profile')
+      const userProfile = userProfileResponse.ok ? await userProfileResponse.json() : null
+
+      const hasOwnAccount = userProfile?.data?.profile?.onboardingCompleted === true
+
+      // Redirect based on account status
       setTimeout(() => {
-        if (invitation.patientsShared && invitation.patientsShared.length > 0) {
-          const firstPatientId = invitation.patientsShared[0]
-          router.push(`/patients/${firstPatientId}`)
+        if (hasOwnAccount) {
+          // User has their own account - redirect to family dashboard (can switch contexts)
+          router.push('/family/dashboard')
         } else {
-          // Fallback to patients list if no specific patient
-          router.push('/patients')
+          // User is caregiver-only - redirect to caregiver-only dashboard
+          router.push(`/caregiver/${invitation.invitedByUserId}`)
         }
-      }, 1500)
+      }, 1000)
     } catch (err: any) {
       toast.error(err.message || 'Failed to accept invitation')
       setError(err.message || 'Failed to accept invitation')

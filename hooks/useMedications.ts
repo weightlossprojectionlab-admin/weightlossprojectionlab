@@ -27,7 +27,7 @@ interface MedicationLog {
 }
 
 interface UseMedicationsOptions {
-  patientId: string
+  patientId?: string // Optional - will use current user's ID if not provided
   autoFetch?: boolean
 }
 
@@ -60,6 +60,10 @@ export function useMedications({
   const [loading, setLoading] = useState<boolean>(autoFetch)
   const [error, setError] = useState<string | null>(null)
 
+  // DRY: Get patient ID - use provided patientId, or default to empty string if not available
+  // The caller should ensure a valid patientId is passed
+  const effectivePatientId = patientId || ''
+
   // Fetch medications (one-time, used for manual refetch)
   const fetchMedications = useCallback(async () => {
     try {
@@ -87,27 +91,27 @@ export function useMedications({
     }
   }, [patientId])
 
-  // Set up real-time listener (if autoFetch is true)
+  // Set up real-time listener (if autoFetch is true AND patientId exists)
   useEffect(() => {
-    if (!autoFetch) return
+    if (!autoFetch || !effectivePatientId) return
 
     setLoading(true)
     setError(null)
-    logger.debug('[useMedications] Setting up real-time medication listener', { patientId })
+    logger.debug('[useMedications] Setting up real-time medication listener', { patientId: effectivePatientId })
 
     const unsubscribe = medicalOperations.medications.listenToMedications(
-      patientId,
+      effectivePatientId,
       (data) => {
         setMedications(data)
         setLoading(false)
         logger.info('[useMedications] Medications updated via real-time listener', {
-          patientId,
+          patientId: effectivePatientId,
           count: data.length
         })
       },
       (err) => {
         const errorMessage = err.message || 'Failed to fetch medications'
-        logger.error('[useMedications] Real-time listener error', err, { patientId })
+        logger.error('[useMedications] Real-time listener error', err, { patientId: effectivePatientId })
         setError(errorMessage)
         setLoading(false)
       }
@@ -115,10 +119,10 @@ export function useMedications({
 
     // Cleanup listener on unmount
     return () => {
-      logger.debug('[useMedications] Cleaning up real-time medication listener', { patientId })
+      logger.debug('[useMedications] Cleaning up real-time medication listener', { patientId: effectivePatientId })
       unsubscribe()
     }
-  }, [patientId, autoFetch])
+  }, [effectivePatientId, autoFetch])
 
   // Log medication administration
   const logMedication = useCallback(async (

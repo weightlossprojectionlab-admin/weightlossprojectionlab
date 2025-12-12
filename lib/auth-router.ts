@@ -23,6 +23,7 @@ export type UserDestination =
   | { type: 'onboarding', resumeStep?: number, reason?: string }
   | { type: 'dashboard', reason?: string }
   | { type: 'patients', reason?: string }
+  | { type: 'caregiver', accountOwnerId: string, reason?: string } // Caregiver-only view
   | { type: 'loading' }
   | { type: 'stay', reason?: string } // User can stay where they are
 
@@ -68,7 +69,8 @@ export async function determineUserDestination(
 
     logger.debug('[AuthRouter] Profile found', {
       onboardingCompleted: profile.profile?.onboardingCompleted,
-      currentStep: profile.profile?.currentOnboardingStep
+      currentStep: profile.profile?.currentOnboardingStep,
+      caregiverOf: profile.caregiverOf?.length || 0
     })
 
     // DEBUG: Log entire profile structure to diagnose onboarding redirect
@@ -76,6 +78,41 @@ export async function determineUserDestination(
     console.log('[AuthRouter DEBUG] profile.profile:', profile.profile)
     console.log('[AuthRouter DEBUG] onboardingCompleted value:', profile.profile?.onboardingCompleted)
     console.log('[AuthRouter DEBUG] typeof onboardingCompleted:', typeof profile.profile?.onboardingCompleted)
+    console.log('[AuthRouter DEBUG] caregiverOf:', profile.caregiverOf)
+
+    // Step 3.5: Check if user is ONLY a caregiver (no personal account)
+    const isCaregiverOnly = !profile.profile?.onboardingCompleted && profile.caregiverOf && profile.caregiverOf.length > 0
+
+    if (isCaregiverOnly) {
+      // User is a caregiver but has not created their own account
+      logger.debug('[AuthRouter] Caregiver-only user detected', {
+        caregiverAccounts: profile.caregiverOf.length
+      })
+
+      // Get the first caregiver context (they might have multiple)
+      const firstCaregiverContext = profile.caregiverOf[0]
+
+      // If on /auth or /onboarding, redirect to caregiver dashboard
+      if (currentPath === '/auth' || currentPath === '/onboarding') {
+        return {
+          type: 'caregiver',
+          accountOwnerId: firstCaregiverContext.accountOwnerId,
+          reason: 'Caregiver-only user - redirect to caregiver dashboard'
+        }
+      }
+
+      // If already on caregiver page, let them stay
+      if (currentPath.startsWith('/caregiver/')) {
+        return { type: 'stay', reason: 'Viewing caregiver dashboard' }
+      }
+
+      // Otherwise redirect to first caregiver account
+      return {
+        type: 'caregiver',
+        accountOwnerId: firstCaregiverContext.accountOwnerId,
+        reason: 'Caregiver-only user accessing non-caregiver page'
+      }
+    }
 
     // Step 4: Check onboarding completion status
     const isOnboardingCompleted = profile.profile?.onboardingCompleted === true
