@@ -24,6 +24,26 @@ const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@wlpl.app'
 const FROM_NAME = process.env.SENDGRID_FROM_NAME || 'WLPL Family Health'
 const REPLY_TO_EMAIL = process.env.SENDGRID_REPLY_TO_EMAIL || undefined
 
+/**
+ * Get the application URL for email links
+ * Uses environment variable in production, falls back to production URL
+ */
+function getAppUrl(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+
+  if (!appUrl) {
+    if (process.env.NODE_ENV === 'production') {
+      // Production fallback
+      return 'https://weightlossprojectionlab.com'
+    }
+    // Development fallback
+    console.warn('[Email Service] NEXT_PUBLIC_APP_URL not set, using localhost (development only)')
+    return 'http://localhost:3000'
+  }
+
+  return appUrl
+}
+
 interface SendEmailParams {
   to: string
   subject: string
@@ -141,7 +161,7 @@ export async function sendFamilyInvitationEmail(params: {
         </div>
 
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/accept-invitation?code=${inviteCode}"
+          <a href="${getAppUrl()}/accept-invitation?code=${inviteCode}"
              style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
             Accept Invitation
           </a>
@@ -188,7 +208,7 @@ ${message ? `\nPersonal Message: "${message}"\n` : ''}
 
 Your Invitation Code: ${inviteCode}
 
-To accept this invitation, visit ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/accept-invitation?code=${inviteCode} or enter your invitation code at the Family page.
+To accept this invitation, visit ${getAppUrl()}/accept-invitation?code=${inviteCode} or enter your invitation code at the Family page.
 
 This invitation expires on ${expiryDate}.
 

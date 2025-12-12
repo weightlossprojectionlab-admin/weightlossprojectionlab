@@ -5,8 +5,28 @@
  * documents, and health reports with consistent purple gradient styling.
  */
 
+/**
+ * Get the application URL for email links
+ * Uses environment variable in production, falls back to production URL
+ */
+function getAppUrl(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+
+  if (!appUrl) {
+    if (process.env.NODE_ENV === 'production') {
+      // Production fallback
+      return 'https://weightlossprojectionlab.com'
+    }
+    // Development fallback
+    console.warn('[Email Templates] NEXT_PUBLIC_APP_URL not set, using localhost (development only)')
+    return 'http://localhost:3000'
+  }
+
+  return appUrl
+}
+
 // Base URL for linking to the app
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+const APP_URL = getAppUrl()
 
 // Common email styles matching the family invitation template
 const emailStyles = {
