@@ -8,6 +8,7 @@
 /**
  * Get the application URL for email links
  * Uses environment variable in production, falls back to production URL
+ * Removes trailing slashes to prevent double slashes in URLs
  */
 function getAppUrl(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
@@ -22,7 +23,8 @@ function getAppUrl(): string {
     return 'http://localhost:3000'
   }
 
-  return appUrl
+  // Remove trailing slash to prevent double slashes
+  return appUrl.replace(/\/$/, '')
 }
 
 // Base URL for linking to the app

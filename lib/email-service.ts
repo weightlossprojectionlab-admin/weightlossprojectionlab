@@ -27,6 +27,7 @@ const REPLY_TO_EMAIL = process.env.SENDGRID_REPLY_TO_EMAIL || undefined
 /**
  * Get the application URL for email links
  * Uses environment variable in production, falls back to production URL
+ * Removes trailing slashes to prevent double slashes in URLs
  */
 function getAppUrl(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
@@ -41,7 +42,8 @@ function getAppUrl(): string {
     return 'http://localhost:3000'
   }
 
-  return appUrl
+  // Remove trailing slash to prevent double slashes
+  return appUrl.replace(/\/$/, '')
 }
 
 interface SendEmailParams {
