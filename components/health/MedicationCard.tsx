@@ -31,11 +31,11 @@ export function MedicationCard({
 
     const colors = [
       'bg-primary-light text-primary-dark',
-      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-      'bg-green-100 text-success-dark dark:bg-green-900/30 dark:text-green-300',
-      'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-      'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
-      'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+      'bg-blue-100 text-blue-700',
+      'bg-green-100 text-success-dark',
+      'bg-yellow-100 text-yellow-700',
+      'bg-pink-100 text-pink-700',
+      'bg-indigo-100 text-indigo-700',
     ]
 
     const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
@@ -52,9 +52,9 @@ export function MedicationCard({
       const daysUntilExpiration = Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
       if (daysUntilExpiration < 0) {
-        return { status: 'expired', message: 'EXPIRED', color: 'text-error', bgColor: 'bg-error-light dark:bg-red-900/20' }
+        return { status: 'expired', message: 'EXPIRED', color: 'text-error', bgColor: 'bg-error-light' }
       } else if (daysUntilExpiration <= 30) {
-        return { status: 'expiring-soon', message: `Expires in ${daysUntilExpiration} days`, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-50 dark:bg-amber-900/20' }
+        return { status: 'expiring-soon', message: `Expires in ${daysUntilExpiration} days`, color: 'text-amber-600', bgColor: 'bg-amber-50' }
       } else if (daysUntilExpiration <= 90) {
         return { status: 'expiring-later', message: `Expires ${expirationDate}`, color: 'text-muted-foreground', bgColor: '' }
       }
@@ -115,9 +115,9 @@ export function MedicationCard({
       const daysRemaining = Math.floor((runOutDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
       if (daysRemaining < 0) {
-        return { status: 'out', message: 'Refill Needed', color: 'text-error', bgColor: 'bg-error-light dark:bg-red-900/20', icon: '🔴' }
+        return { status: 'out', message: 'Refill Needed', color: 'text-error', bgColor: 'bg-error-light', icon: '🔴' }
       } else if (daysRemaining <= 7) {
-        return { status: 'low', message: `Refill in ${daysRemaining} days`, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-50 dark:bg-amber-900/20', icon: '⚠️' }
+        return { status: 'low', message: `Refill in ${daysRemaining} days`, color: 'text-amber-600', bgColor: 'bg-amber-50', icon: '⚠️' }
       } else if (daysRemaining <= 14) {
         return { status: 'soon', message: `${daysRemaining} days remaining`, color: 'text-muted-foreground', bgColor: '', icon: '💊' }
       }
@@ -130,12 +130,28 @@ export function MedicationCard({
 
   const refillStatus = getRefillStatus()
 
+  // Get medication image URL (check both imageUrl and photoUrl)
+  const medicationImage = medication.imageUrl || (medication as any).photoUrl
+
   return (
     <div className={`bg-card rounded-lg border-2 ${
-      expirationStatus?.status === 'expired' || refillStatus?.status === 'out' ? 'border-red-300 dark:border-red-700' :
-      expirationStatus?.status === 'expiring-soon' || refillStatus?.status === 'low' ? 'border-amber-300 dark:border-amber-700' :
+      expirationStatus?.status === 'expired' || refillStatus?.status === 'out' ? 'border-red-300' :
+      expirationStatus?.status === 'expiring-soon' || refillStatus?.status === 'low' ? 'border-amber-300' :
       'border-border'
-    } p-4 hover:border-purple-300 dark:hover:border-purple-700 transition-all hover:shadow-md`}>
+    } p-4 hover:border-purple-300 transition-all hover:shadow-md`}>
+      {/* Medication Image Preview */}
+      {medicationImage && (
+        <div className="mb-3">
+          <img
+            src={medicationImage}
+            alt={`${medication.name} medication bottle`}
+            className="w-full h-32 object-cover rounded-lg border border-border cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => window.open(medicationImage, '_blank')}
+            title="Click to view full size"
+          />
+        </div>
+      )}
+
       {/* Warning Banners */}
       <div className="space-y-2 mb-3">
         {/* Expiration Warning */}
@@ -177,7 +193,7 @@ export function MedicationCard({
             {medication.name}
           </h3>
           {medication.brandName && (
-            <p className="text-xs text-muted-foreground dark:text-muted-foreground italic">
+            <p className="text-xs text-muted-foreground italic">
               ({medication.brandName})
             </p>
           )}
@@ -207,14 +223,14 @@ export function MedicationCard({
         {medication.prescribedFor && (
           <div className="text-sm">
             <span className="text-muted-foreground">For:</span>{' '}
-            <span className="text-primary dark:text-purple-400 font-medium">
+            <span className="text-primary font-medium">
               {medication.prescribedFor}
             </span>
           </div>
         )}
 
         {medication.drugClass && (
-          <div className="text-xs text-muted-foreground dark:text-muted-foreground italic">
+          <div className="text-xs text-muted-foreground italic">
             {medication.drugClass}
           </div>
         )}
@@ -257,13 +273,13 @@ export function MedicationCard({
         )}
 
         {medication.warnings && medication.warnings.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-amber-200 dark:border-amber-800">
-            <div className="text-xs font-medium text-amber-700 dark:text-amber-300 mb-1">⚠️ Warnings:</div>
+          <div className="mt-2 pt-2 border-t border-amber-200">
+            <div className="text-xs font-medium text-amber-700 mb-1">⚠️ Warnings:</div>
             {medication.warnings.slice(0, 2).map((warning, idx) => (
-              <div key={idx} className="text-xs text-amber-600 dark:text-amber-400">• {warning}</div>
+              <div key={idx} className="text-xs text-amber-600">• {warning}</div>
             ))}
             {medication.warnings.length > 2 && (
-              <div className="text-xs text-amber-500 dark:text-amber-500 italic">
+              <div className="text-xs text-amber-500 italic">
                 +{medication.warnings.length - 2} more
               </div>
             )}
@@ -277,7 +293,7 @@ export function MedicationCard({
           {onEdit && (
             <button
               onClick={onEdit}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-muted-foreground hover:text-primary dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-muted-foreground hover:text-primary hover:bg-purple-50 rounded-lg transition-colors"
               aria-label="Edit medication"
             >
               <PencilIcon className="w-4 h-4" />
@@ -287,7 +303,7 @@ export function MedicationCard({
           {onDelete && (
             <button
               onClick={onDelete}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-muted-foreground hover:text-error dark:hover:text-red-400 hover:bg-error-light dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-muted-foreground hover:text-error hover:bg-error-light rounded-lg transition-colors"
               aria-label="Remove medication"
             >
               <TrashIcon className="w-4 h-4" />

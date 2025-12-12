@@ -9,6 +9,8 @@
 
 import { logger } from '@/lib/logger'
 import { apiClient } from '@/lib/api-client'
+import { db } from '@/lib/firebase'
+import { collection, query, where, onSnapshot, Unsubscribe } from 'firebase/firestore'
 import type {
   PatientProfile,
   VitalSign,
@@ -1119,6 +1121,51 @@ export const medicationOperations = {
       return medications || []
     } catch (error) {
       logger.error('[MedicalOps] Error fetching medications', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /**
+   * Listen to real-time medication updates for a patient
+   * @returns Unsubscribe function to stop listening
+   */
+  listenToMedications(
+    patientId: string,
+    onUpdate: (medications: PatientMedication[]) => void,
+    onError?: (error: Error) => void
+  ): Unsubscribe {
+    try {
+      logger.debug('[MedicalOps] Setting up real-time listener for medications', { patientId })
+
+      const medicationsRef = collection(db, 'medications')
+      const q = query(medicationsRef, where('patientId', '==', patientId))
+
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const medications: PatientMedication[] = []
+          snapshot.forEach((doc) => {
+            medications.push({ id: doc.id, ...doc.data() } as PatientMedication)
+          })
+
+          logger.debug('[MedicalOps] Medications updated via listener', {
+            patientId,
+            count: medications.length
+          })
+
+          onUpdate(medications)
+        },
+        (error) => {
+          logger.error('[MedicalOps] Medication listener error', error as Error, { patientId })
+          if (onError) {
+            onError(error as Error)
+          }
+        }
+      )
+
+      return unsubscribe
+    } catch (error) {
+      logger.error('[MedicalOps] Error setting up medication listener', error as Error, { patientId })
       throw error
     }
   },

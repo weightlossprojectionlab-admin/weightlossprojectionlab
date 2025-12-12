@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { signOut } from '@/lib/auth'
 import { useAuth } from '@/hooks/useAuth'
 import AuthGuard from '@/components/auth/AuthGuard'
+import { getAuth } from 'firebase/auth'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useStepTracking, StepTrackingProvider } from '@/components/StepTrackingProvider'
 import { userProfileOperations } from '@/lib/firebase-operations'
@@ -30,6 +31,7 @@ import { UpgradeModal } from '@/components/subscription/UpgradeModal'
 import { usePatients } from '@/hooks/usePatients'
 import { NotificationSettings } from '@/components/ui/NotificationPrompt'
 import { NotificationPreferences } from '@/components/settings/NotificationPreferences'
+import { AdvancedHealthProfile } from '@/components/profile/AdvancedHealthProfile'
 
 function ProfileContent() {
   const { user } = useAuth()
@@ -38,7 +40,7 @@ function ProfileContent() {
 
   // Subscription state
   const { subscription, loading: subscriptionLoading } = useSubscription()
-  const { patients } = usePatients()
+  const { patients, loading: patientsLoading } = usePatients()
   const { current, max, percentage } = usePatientLimit(patients.length)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const { isEnabled: stepTrackingEnabled, enableTracking, disableTracking, isTracking } = useStepTracking()
@@ -48,25 +50,42 @@ function ProfileContent() {
   const [loading, setLoading] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const [editMode, setEditMode] = useState(false)
   const [profileData, setProfileData] = useState<any>(null)
-  const [saving, setSaving] = useState(false)
   const [signOutLoading, setSignOutLoading] = useState(false)
   const [showHealthModal, setShowHealthModal] = useState(false)
   const [healthApp, setHealthApp] = useState<'apple-health' | 'google-fit' | 'none'>('none')
   const [sendingTestNotif, setSendingTestNotif] = useState(false)
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('')
+
+  // Use patients as family members (patients ARE the family members)
+  const familyMembers = patients
+
+  // Get the currently selected member (or null if viewing own profile)
+  const currentlyViewingMember = selectedMemberId
+    ? familyMembers.find(m => m.id === selectedMemberId)
+    : null
 
   useEffect(() => {
     setMounted(true)
     checkBiometricStatus()
   }, [user])
 
-  // Fetch user profile data
+  // Fetch user profile data (or selected member profile)
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return
 
       try {
+        // If a family member is selected, load their profile from patients
+        if (selectedMemberId && selectedMemberId !== user.uid) {
+          const selectedMember = familyMembers.find(m => m.id === selectedMemberId)
+          if (selectedMember) {
+            setProfileData(selectedMember)
+            return
+          }
+        }
+
+        // Otherwise load own profile
         const profile = await userProfileOperations.getUserProfile()
         setProfileData(profile.data)
       } catch (error) {
@@ -76,7 +95,7 @@ function ProfileContent() {
     }
 
     fetchProfile()
-  }, [user])
+  }, [user, selectedMemberId, familyMembers])
 
   // Detect platform and health app
   useEffect(() => {
@@ -136,7 +155,7 @@ function ProfileContent() {
   const handleToggleStepTracking = async () => {
     try {
       if (stepTrackingEnabled) {
-        disableTracking()
+        await disableTracking()
         toast.success('Automatic step tracking disabled')
       } else {
         await enableTracking()
@@ -251,42 +270,80 @@ function ProfileContent() {
     }
   }
 
-  const handleSaveProfile = async () => {
-    setSaving(true)
+  const handleSaveAdvancedProfile = async (updates: any) => {
     try {
-      // Only send user-editable fields, not system fields
-      await userProfileOperations.updateUserProfile({
-        preferences: {
-          dietaryPreferences: profileData.preferences?.dietaryPreferences || []
-        },
-        profile: {
-          foodAllergies: profileData.profile?.foodAllergies || [],
-          healthConditions: profileData.profile?.healthConditions || []
+      // If viewing a family member, update their patient record
+      if (currentlyViewingMember) {
+        // Merge the updates with existing patient data
+        const updatedPatientData = {
+          ...currentlyViewingMember,
+          ...updates,
+          // Ensure required fields are present
+          name: currentlyViewingMember.name,
+          relationship: currentlyViewingMember.relationship,
+          userId: currentlyViewingMember.userId,
         }
+
+        // Get Firebase auth token (bypasses CSRF check in middleware)
+        const auth = getAuth()
+        const currentUser = auth.currentUser
+        if (!currentUser) {
+          throw new Error('Not authenticated')
+        }
+        const authToken = await currentUser.getIdToken()
+
+        const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(updatedPatientData)
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || 'Failed to update patient profile')
+        }
+
+        toast.success(`${currentlyViewingMember.name}'s health profile updated successfully!`)
+
+        // Refresh the patient data by refetching from the updated response
+        const result = await response.json()
+        setProfileData(result.patient || { ...currentlyViewingMember, ...updates })
+      } else {
+        // Saving own profile - need to structure the data correctly for user profile API
+        const userProfileUpdates = {
+          profile: {
+            foodAllergies: updates.foodAllergies,
+            healthConditions: updates.healthConditions,
+            conditionDetails: updates.conditionDetails,
+          },
+          preferences: {
+            dietaryPreferences: updates.dietaryPreferences,
+          },
+          lifestyle: updates.lifestyle,
+          bodyMeasurements: updates.bodyMeasurements,
+        }
+
+        await userProfileOperations.updateUserProfile(userProfileUpdates)
+        toast.success('Health profile updated successfully!')
+
+        // Refresh profile data
+        const updated = await userProfileOperations.getUserProfile()
+        setProfileData(updated.data)
+      }
+    } catch (error: any) {
+      console.error('Full save error:', error)
+      console.error('Error details:', {
+        message: error?.message,
+        status: error?.status,
+        response: error?.response,
+        stack: error?.stack
       })
-
-      toast.success('Profile updated successfully!')
-      setEditMode(false)
-
-      // Refresh profile data
-      const updated = await userProfileOperations.getUserProfile()
-      setProfileData(updated.data)
-    } catch (error) {
-      logger.error('Save profile error', error as Error)
-      toast.error('Failed to save profile. Please try again.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleCancelEdit = async () => {
-    setEditMode(false)
-    // Refresh to reset any unsaved changes
-    try {
-      const profile = await userProfileOperations.getUserProfile()
-      setProfileData(profile.data)
-    } catch (error) {
-      logger.error('Error refreshing profile', error as Error)
+      logger.error('Save advanced profile error', error as Error)
+      toast.error(error?.message || 'Failed to save health profile. Please try again.')
+      throw error
     }
   }
 
@@ -311,242 +368,100 @@ function ProfileContent() {
             >
               ← Back
             </Link>
-            <h1 className="text-xl font-semibold text-foreground">Profile & Settings</h1>
+            <div className="flex-1">
+              <h1 className="text-xl font-semibold text-foreground">
+                {currentlyViewingMember
+                  ? `${currentlyViewingMember.name}'s Profile`
+                  : 'Your Profile & Settings'
+                }
+              </h1>
+              {currentlyViewingMember && (
+                <p className="text-xs text-muted-foreground">
+                  Managing {currentlyViewingMember.relationship}&apos;s health information
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-md px-4 py-6 space-y-6">
-        {/* Profile Completeness Banner */}
-        {profileData && (() => {
-          const completeness = checkProfileCompleteness(profileData)
-          return !completeness.isSafe && (
-            <div className="bg-error-light dark:bg-red-900/20 border-2 border-error dark:border-red-800 rounded-lg p-4">
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">⚠️</span>
-                <div className="flex-1">
-                  <h3 className="font-bold text-error-dark dark:text-red-200 mb-1">
-                    Confirm Your Dietary Information
-                  </h3>
-                  <p className="text-sm text-error-dark dark:text-red-300 mb-3">
-                    We need to know if you have any dietary restrictions, allergies, or health conditions.
-                    <strong> Even if you have none, please confirm by selecting "None".</strong>
-                  </p>
-                  <p className="text-xs text-error-dark dark:text-red-300">
-                    Profile Completeness: {completeness.score}%
-                  </p>
-                </div>
+      <div className="mx-auto max-w-2xl px-4 py-6 space-y-6">
+        {/* Family Member Selector - ALWAYS SHOW */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 shadow-lg border-2 border-blue-300">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-3xl">
+                {currentlyViewingMember ? '👥' : '🙋'}
               </div>
-            </div>
-          )
-        })()}
-
-        {/* Safety Information - MOST IMPORTANT */}
-        {profileData && (
-          <div className="bg-card rounded-lg p-6 shadow-sm border-2 border-error dark:border-red-800">
-            <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-medium text-foreground">⚠️ Dietary Information</h2>
-                <p className="text-sm text-error">Please confirm (select "None" if you have no restrictions)</p>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+                  ⭐ Currently Viewing
+                </div>
+                <h2 className="text-2xl font-bold text-foreground">
+                  {currentlyViewingMember ? currentlyViewingMember.name : (user?.displayName || 'You')}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {currentlyViewingMember
+                    ? `${currentlyViewingMember.relationship}'s Health Profile`
+                    : 'Your Personal Health Profile'
+                  }
+                </p>
               </div>
-              {!editMode && (
-                <button
-                  onClick={() => setEditMode(true)}
-                  className="btn btn-primary text-sm px-4 py-2"
-                >
-                  ✏️ Edit
-                </button>
-              )}
             </div>
-
-            {editMode ? (
-              <div className="space-y-4">
-                {/* Dietary Preferences */}
-                <div>
-                  <label className="text-label block mb-2">
-                    Dietary Preferences
-                    <span className="text-xs text-muted-foreground ml-2">(Select all that apply, or "None")</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setProfileData((prev: any) => ({
-                        ...prev,
-                        preferences: { ...prev.preferences, dietaryPreferences: [] }
-                      }))}
-                      className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
-                        profileData?.preferences?.dietaryPreferences?.length === 0
-                          ? 'border-success dark:border-success bg-success-light dark:bg-green-900/20 font-bold'
-                          : 'border-border hover:border-success/50'
-                      }`}
-                    >
-                      ✓ None
-                    </button>
-                    {['Vegan', 'Vegetarian', 'Keto', 'Paleo', 'Gluten-Free', 'Dairy-Free', 'Low-Carb'].map(pref => (
-                      <button
-                        key={pref}
-                        type="button"
-                        onClick={() => {
-                          const current = profileData?.preferences?.dietaryPreferences || []
-                          const updated = current.includes(pref)
-                            ? current.filter((p: string) => p !== pref)
-                            : [...current, pref]
-                          setProfileData((prev: any) => ({
-                            ...prev,
-                            preferences: { ...prev.preferences, dietaryPreferences: updated }
-                          }))
-                        }}
-                        className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
-                          profileData?.preferences?.dietaryPreferences?.includes(pref)
-                            ? 'border-primary bg-primary-light dark:bg-purple-900/20'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        {pref}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Food Allergies */}
-                <div>
-                  <label className="text-label block mb-2">
-                    Food Allergies
-                    <span className="text-xs text-muted-foreground ml-2">(Select all that apply, or "None")</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setProfileData((prev: any) => ({
-                        ...prev,
-                        profile: { ...prev.profile, foodAllergies: [] }
-                      }))}
-                      className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
-                        profileData?.profile?.foodAllergies?.length === 0
-                          ? 'border-success dark:border-success bg-success-light dark:bg-green-900/20 font-bold'
-                          : 'border-border hover:border-success/50'
-                      }`}
-                    >
-                      ✓ None
-                    </button>
-                    {['Peanuts', 'Tree Nuts', 'Dairy', 'Eggs', 'Shellfish', 'Soy', 'Wheat/Gluten', 'Fish'].map(allergy => (
-                      <button
-                        key={allergy}
-                        type="button"
-                        onClick={() => {
-                          const current = profileData?.profile?.foodAllergies || []
-                          const updated = current.includes(allergy)
-                            ? current.filter((a: string) => a !== allergy)
-                            : [...current, allergy]
-                          setProfileData((prev: any) => ({
-                            ...prev,
-                            profile: { ...prev.profile, foodAllergies: updated }
-                          }))
-                        }}
-                        className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
-                          profileData?.profile?.foodAllergies?.includes(allergy)
-                            ? 'border-error dark:border-error bg-error-light dark:bg-red-900/20'
-                            : 'border-border hover:border-error/50'
-                        }`}
-                      >
-                        {allergy}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Health Conditions */}
-                <div>
-                  <label className="text-label block mb-2">Health Conditions</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setProfileData((prev: any) => ({
-                        ...prev,
-                        profile: { ...prev.profile, healthConditions: [] }
-                      }))}
-                      className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
-                        profileData?.profile?.healthConditions?.length === 0
-                          ? 'border-success dark:border-success bg-success-light dark:bg-green-900/20 font-bold'
-                          : 'border-border hover:border-success/50'
-                      }`}
-                    >
-                      ✓ None
-                    </button>
-                    {['Type 2 Diabetes', 'Heart Disease', 'High Blood Pressure', 'High Cholesterol'].map(condition => (
-                      <button
-                        key={condition}
-                        type="button"
-                        onClick={() => {
-                          const current = profileData?.profile?.healthConditions || []
-                          const updated = current.includes(condition)
-                            ? current.filter((c: string) => c !== condition)
-                            : [...current, condition]
-                          setProfileData((prev: any) => ({
-                            ...prev,
-                            profile: { ...prev.profile, healthConditions: updated }
-                          }))
-                        }}
-                        className={`px-3 py-2 rounded-lg border-2 text-sm transition-all ${
-                          profileData?.profile?.healthConditions?.includes(condition)
-                            ? 'border-warning dark:border-yellow-600 bg-warning-light'
-                            : 'border-border hover:border-warning/50'
-                        }`}
-                      >
-                        {condition}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Save/Cancel Buttons */}
-                <div className="flex space-x-3 pt-4 border-t border-border">
-                  <button
-                    onClick={handleSaveProfile}
-                    disabled={saving}
-                    className={`btn btn-primary flex-1 inline-flex items-center justify-center space-x-2 ${saving ? 'cursor-wait' : ''}`}
-                  >
-                    {saving && <Spinner size="sm" />}
-                    <span>{saving ? 'Saving...' : '💾 Save Changes'}</span>
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    disabled={saving}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3 text-sm">
-                <div>
-                  <label className="text-muted-foreground text-xs">Dietary Preferences</label>
-                  <p className="font-medium">
-                    {profileData?.preferences?.dietaryPreferences?.length > 0
-                      ? profileData.preferences.dietaryPreferences.join(', ')
-                      : 'None'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-muted-foreground text-xs">Food Allergies</label>
-                  <p className="font-medium">
-                    {profileData?.profile?.foodAllergies?.length > 0
-                      ? profileData.profile.foodAllergies.join(', ')
-                      : 'None'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-muted-foreground text-xs">Health Conditions</label>
-                  <p className="font-medium">
-                    {profileData?.profile?.healthConditions?.length > 0
-                      ? profileData.profile.healthConditions.join(', ')
-                      : 'None'}
-                  </p>
-                </div>
+            {currentlyViewingMember && (
+              <div className="flex flex-col items-end gap-2">
+                <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full uppercase">
+                  Family Member
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {currentlyViewingMember.relationship}
+                </span>
               </div>
             )}
           </div>
+
+          {patientsLoading ? (
+            <div className="border-t border-gray-300 pt-4">
+              <p className="text-sm text-muted-foreground">Loading family members...</p>
+            </div>
+          ) : familyMembers.length > 0 ? (
+            <div className="border-t border-gray-300 pt-4">
+              <label className="block text-sm font-bold text-foreground mb-3">
+                💫 Switch to Different Profile:
+              </label>
+              <select
+                value={selectedMemberId || user?.uid || ''}
+                onChange={(e) => setSelectedMemberId(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 font-medium text-base"
+              >
+                <option value={user?.uid || ''}>🙋 {user?.displayName || 'Me'} (My Profile)</option>
+                {familyMembers.map(member => (
+                  <option key={member.id} value={member.id}>
+                    👥 {member.name} ({member.relationship})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-2">
+                Select a family member to view and manage their health information
+              </p>
+            </div>
+          ) : (
+            <div className="border-t border-gray-300 pt-4">
+              <p className="text-sm text-muted-foreground">
+                No family members in household yet. Add family members from the dashboard to manage their health profiles.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Advanced Health Profile Component */}
+        {profileData && (
+          <AdvancedHealthProfile
+            profileData={profileData}
+            onSave={handleSaveAdvancedProfile}
+            isPatientProfile={!!currentlyViewingMember}
+            patientId={currentlyViewingMember?.id}
+          />
         )}
 
         {/* Account Information */}

@@ -504,35 +504,45 @@ export async function extractMedicationFromImage(
   onProgress?: (progress: number) => void
 ): Promise<ExtractedMedicationText | null> {
   try {
-    logger.info('[OCR] Extracting medication from image')
+    logger.info('[OCR] Extracting medication from image - ACCURACY MODE: Using Gemini Vision AI first')
 
-    // Step 1: Extract raw text with Tesseract
-    const { text, confidence } = await extractTextFromImage(imageFile, onProgress)
-
-    if (!text || text.length < 10) {
-      logger.warn('[OCR] Insufficient text extracted, trying Gemini Vision fallback')
-      return await extractMedicationWithGemini(imageFile)
-    }
-
-    // Step 2: Parse medication info from text
-    const medication = parseMedicationFromText(text)
-
-    // Step 3: If parsing failed or confidence is too low, try Gemini Vision
-    if (!medication || confidence < 50) {
-      logger.warn('[OCR] Low confidence or parsing failed', {
-        confidence: Math.round(confidence),
-        medicationFound: !!medication
-      })
-      logger.info('[OCR] Attempting Gemini Vision fallback')
-
+    // ACCURACY PRIORITY: Try Gemini Vision AI FIRST for maximum accuracy
+    // Gemini understands context, handles poor quality images, and extracts structured data reliably
+    try {
+      logger.info('[OCR] Attempting Gemini Vision AI (primary method)')
       const geminiResult = await extractMedicationWithGemini(imageFile)
-      if (geminiResult) {
+
+      if (geminiResult && geminiResult.medicationName && geminiResult.medicationName !== 'Unknown') {
+        logger.info('[OCR] ✅ Gemini Vision succeeded - high accuracy extraction')
         return geminiResult
       }
 
-      // If Gemini also fails, return Tesseract result if we have one
-      return medication
+      logger.warn('[OCR] Gemini Vision returned incomplete data, falling back to Tesseract OCR')
+    } catch (geminiError) {
+      logger.error('[OCR] Gemini Vision failed, falling back to Tesseract OCR', geminiError as Error)
     }
+
+    // FALLBACK: Only use Tesseract OCR if Gemini fails (free but less accurate)
+    logger.info('[OCR] Using Tesseract OCR fallback')
+    const { text, confidence } = await extractTextFromImage(imageFile, onProgress)
+
+    if (!text || text.length < 10) {
+      logger.error('[OCR] Both Gemini and Tesseract failed - no text extracted')
+      return null
+    }
+
+    // Parse medication info from OCR text
+    const medication = parseMedicationFromText(text)
+
+    if (!medication) {
+      logger.error('[OCR] Failed to parse medication from OCR text')
+      return null
+    }
+
+    logger.info('[OCR] Tesseract OCR extraction complete', {
+      confidence: Math.round(confidence),
+      medicationName: medication.medicationName
+    })
 
     return medication
 

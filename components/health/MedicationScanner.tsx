@@ -120,6 +120,10 @@ export default function MedicationScanner({
     if (!files || files.length === 0) return
 
     logger.info('[Medication Scanner] Multiple OCR images uploaded', { count: files.length })
+
+    // Reset the input value to allow re-selecting the same files
+    event.target.value = ''
+
     setProcessingMultipleImages(true)
     setScanStatus('processing')
     setScanMode('ocr')
@@ -464,15 +468,15 @@ export default function MedicationScanner({
               </div>
               <button
                 onClick={() => multiFileInputRef.current?.click()}
-                className="w-full flex items-center gap-4 p-5 sm:p-4 rounded-lg border-2 border-primary bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/30 dark:to-blue-900/30 hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-900/40 dark:hover:to-blue-900/40 transition-all min-h-[72px] sm:min-h-0 active:scale-98"
+                className="w-full flex items-center gap-4 p-5 sm:p-4 rounded-lg border-2 border-primary bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 transition-all min-h-[72px] sm:min-h-0 active:scale-98"
               >
                 <CameraIcon className="w-10 h-10 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
                 <div className="text-left flex-1">
                   <div className="font-semibold text-foreground text-base sm:text-sm">
-                    📸 Take Multiple Photos
+                    📸 Upload Multiple Photos
                   </div>
                   <div className="text-sm sm:text-xs text-muted-foreground">
-                    Capture front, back & side for complete info
+                    Select 2-3 photos (front, back, side). Hold Ctrl/Cmd to select multiple files.
                   </div>
                 </div>
               </button>
@@ -533,7 +537,7 @@ export default function MedicationScanner({
             className="hidden"
           />
 
-          {/* Hidden file input for multi-image upload */}
+          {/* Hidden file input for multi-image upload - allows selecting multiple images from gallery or camera */}
           <input
             ref={multiFileInputRef}
             type="file"
@@ -542,6 +546,7 @@ export default function MedicationScanner({
             onChange={handleMultipleOCRImageUpload}
             className="hidden"
             id="multi-image-input"
+            aria-label="Upload multiple medication photos"
           />
         </div>
       </div>
@@ -590,7 +595,7 @@ export default function MedicationScanner({
                     {ocrProgress}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-primary h-2 rounded-full transition-all duration-300"
                     style={{ width: `${ocrProgress}%` }}
@@ -796,7 +801,7 @@ export default function MedicationScanner({
 
               {scannedMedication.warnings && scannedMedication.warnings.length > 0 && (
                 <div className="pt-2 border-t border-border">
-                  <div className="text-sm font-medium text-amber-600 dark:text-amber-400 mb-1">⚠️ Warnings</div>
+                  <div className="text-sm font-medium text-amber-600 mb-1">⚠️ Warnings</div>
                   <ul className="list-disc list-inside space-y-1">
                     {scannedMedication.warnings.map((warning, idx) => (
                       <li key={idx} className="text-xs text-foreground">{warning}</li>
@@ -836,7 +841,7 @@ export default function MedicationScanner({
                       className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
                         selectedCondition === suggestion.condition
                           ? 'border-primary bg-primary-light'
-                          : 'border-border hover:border-border dark:hover:border-gray-600'
+                          : 'border-border hover:border-border'
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -852,10 +857,10 @@ export default function MedicationScanner({
                           {/* Confidence badge */}
                           <span className={`text-xs font-bold px-2 py-1 rounded ${
                             suggestion.confidence >= 90
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                              ? 'bg-green-100 text-green-800'
                               : suggestion.confidence >= 70
-                              ? 'bg-yellow-100 text-warning-dark dark:bg-yellow-900/30'
-                              : 'bg-muted text-foreground dark:text-gray-200'
+                              ? 'bg-yellow-100 text-warning-dark'
+                              : 'bg-muted text-foreground'
                           }`}>
                             {suggestion.confidence}%
                           </span>
@@ -868,7 +873,7 @@ export default function MedicationScanner({
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground mt-2">
                   💡 AI-powered suggestion based on medical databases. Select the correct condition or confirm auto-selection.
                 </p>
               </div>
@@ -887,7 +892,7 @@ export default function MedicationScanner({
                     {ocrConfidence}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                <div className="w-full bg-gray-200 rounded-full h-1.5">
                   <div
                     className={`h-1.5 rounded-full ${
                       ocrConfidence >= 70 ? 'bg-success' : ocrConfidence >= 50 ? 'bg-warning' : 'bg-error'
@@ -896,7 +901,7 @@ export default function MedicationScanner({
                   />
                 </div>
                 {ocrConfidence < 70 && (
-                  <p className="text-xs text-warning-dark dark:text-warning-light mt-2">
+                  <p className="text-xs text-warning-dark mt-2">
                     ⚠️ {ocrConfidence < 50 ? 'Low' : 'Medium'} confidence extraction. Please verify all details are correct.
                   </p>
                 )}
@@ -950,7 +955,7 @@ export default function MedicationScanner({
             <label htmlFor="patientName" className="block text-sm font-medium text-foreground mb-2">
               Who is this medication for? (Optional)
               {scannedMedication?.patientName && (
-                <span className="ml-2 text-xs text-success dark:text-green-400 font-normal">
+                <span className="ml-2 text-xs text-success font-normal">
                   ✓ Auto-detected from label
                 </span>
               )}
@@ -961,9 +966,9 @@ export default function MedicationScanner({
               value={patientName}
               onChange={(e) => setPatientName(e.target.value)}
               placeholder="e.g., Me, Mom, Dad, Johnny..."
-              className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-purple-600/20 transition-colors"
+              className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground placeholder-gray-400 focus:border-primary focus:ring-2 focus:ring-purple-600/20 transition-colors"
             />
-            <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               💡 Helps track medications for different family members
             </p>
             </div>
@@ -973,7 +978,7 @@ export default function MedicationScanner({
             <label htmlFor="prescriberName" className="block text-sm font-medium text-foreground mb-2">
               Prescribing Doctor
               {scannedMedication?.prescribingDoctor && (
-                <span className="ml-2 text-xs text-success dark:text-green-400 font-normal">
+                <span className="ml-2 text-xs text-success font-normal">
                   ✓ Auto-detected from label
                 </span>
               )}
@@ -991,9 +996,9 @@ export default function MedicationScanner({
                 }
               }}
               placeholder="e.g., Dr. Smith, Dr. V.Atieh"
-              className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary focus:ring-2 focus:ring-purple-600/20 transition-colors"
+              className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground placeholder-gray-400 focus:border-primary focus:ring-2 focus:ring-purple-600/20 transition-colors"
             />
-            <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               👨‍⚕️ Add or correct the prescribing doctor's name
             </p>
             </div>
@@ -1005,24 +1010,24 @@ export default function MedicationScanner({
               <div className="space-y-2">
                 {/* Show missing info alert */}
                 {(!scannedMedication?.rxNumber || !scannedMedication?.expirationDate || !scannedMedication?.pharmacyName || !scannedMedication?.prescribingDoctor) && (
-                  <div className="px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-lg">
+                  <div className="px-4 py-3 bg-amber-50 border-2 border-amber-300 rounded-lg">
                     <div className="flex items-start gap-2">
-                      <span className="text-amber-600 dark:text-amber-400 text-lg">⚠️</span>
+                      <span className="text-amber-600 text-lg">⚠️</span>
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                        <p className="text-sm font-semibold text-amber-900 mb-1">
                           Missing Important Information
                         </p>
-                        <p className="text-xs text-amber-800 dark:text-amber-200 mb-2">
+                        <p className="text-xs text-amber-800 mb-2">
                           We couldn't find these details on the front label:
                         </p>
-                        <ul className="text-xs text-amber-800 dark:text-amber-200 space-y-0.5 ml-4 list-disc">
+                        <ul className="text-xs text-amber-800 space-y-0.5 ml-4 list-disc">
                           {!scannedMedication?.prescribingDoctor && <li>Prescribing Doctor</li>}
                           {!scannedMedication?.rxNumber && <li>Prescription Number (Rx#)</li>}
                           {!scannedMedication?.expirationDate && <li>Expiration Date</li>}
                           {!scannedMedication?.pharmacyName && <li>Pharmacy Information</li>}
                           {!scannedMedication?.ndc && <li>NDC Code</li>}
                         </ul>
-                        <p className="text-xs text-amber-800 dark:text-amber-200 mt-2 font-medium">
+                        <p className="text-xs text-amber-800 mt-2 font-medium">
                           💡 Scan the back or side of the bottle to capture these details, or add them manually above
                         </p>
                       </div>
@@ -1097,8 +1102,8 @@ export default function MedicationScanner({
           </div>
 
           {/* Error message */}
-          <div className="bg-error-light dark:bg-error-dark/20 rounded-lg p-4 mb-6">
-            <p className="text-error-dark dark:text-error-light">
+          <div className="bg-error-light rounded-lg p-4 mb-6">
+            <p className="text-error-dark">
               {errorMessage || 'Failed to scan medication. Please try again.'}
             </p>
           </div>

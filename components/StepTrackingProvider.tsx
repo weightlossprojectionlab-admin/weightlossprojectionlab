@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { useLazyAuth } from '@/hooks/useLazyAuth'
 import { useStepCounter } from '@/hooks/useStepCounter'
 import { logger } from '@/lib/logger'
+import { userProfileOperations } from '@/lib/firebase-operations'
 
 /**
  * Step Tracking Context
@@ -17,7 +18,7 @@ interface StepTrackingContextValue {
   isTracking: boolean
   isEnabled: boolean
   enableTracking: () => Promise<void>
-  disableTracking: () => void
+  disableTracking: () => Promise<void>
   todaysSteps: number // From sensor, not logs
   lastSaveStepCount: number // Last saved count
   manualSave: () => Promise<void> // Manual save trigger
@@ -56,16 +57,34 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
   } = useStepCounter()
 
   /**
-   * Load step tracking preference from localStorage on mount
-   * (Will be replaced with Firebase preferences later)
+   * Load step tracking preference from Firestore, fallback to localStorage
    */
   useEffect(() => {
-    const loadPreference = () => {
+    const loadPreference = async () => {
       try {
+        // Try Firebase first if user is authenticated
+        if (user) {
+          try {
+            const profile = await userProfileOperations.getUserProfile()
+            const firestoreEnabled = profile.data?.preferences?.stepTrackingEnabled
+
+            if (typeof firestoreEnabled === 'boolean') {
+              setIsEnabled(firestoreEnabled)
+              // Sync to localStorage
+              localStorage.setItem('step-tracking-enabled', firestoreEnabled.toString())
+              logger.debug('📍 Step tracking loaded from Firestore:', firestoreEnabled)
+              return
+            }
+          } catch (err) {
+            logger.error('Failed to load from Firestore, using localStorage fallback:', err as Error)
+          }
+        }
+
+        // Fallback to localStorage
         const enabled = localStorage.getItem('step-tracking-enabled')
         if (enabled === 'true') {
           setIsEnabled(true)
-          logger.debug('📍 Step tracking enabled from preferences')
+          logger.debug('📍 Step tracking enabled from localStorage')
         }
       } catch (err) {
         logger.error('Failed to load step tracking preference:', err as Error)
@@ -73,7 +92,7 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
     }
 
     loadPreference()
-  }, [])
+  }, [user])
 
   /**
    * Auto-start step counting when enabled and user is logged in
@@ -186,7 +205,20 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
   const enableTracking = async () => {
     setIsEnabled(true)
     localStorage.setItem('step-tracking-enabled', 'true')
-    logger.debug('✅ Step tracking enabled')
+
+    // Save to Firestore if authenticated
+    if (user) {
+      try {
+        await userProfileOperations.updateUserProfile({
+          preferences: { stepTrackingEnabled: true }
+        })
+        logger.debug('✅ Step tracking enabled and saved to Firestore')
+      } catch (err) {
+        logger.error('Failed to save step tracking preference to Firestore:', err as Error)
+      }
+    } else {
+      logger.debug('✅ Step tracking enabled (localStorage only)')
+    }
 
     // Start counting immediately
     if (user && sensorStatus?.isAvailable) {
@@ -197,11 +229,24 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
   /**
    * Disable step tracking
    */
-  const disableTracking = () => {
+  const disableTracking = async () => {
     setIsEnabled(false)
     localStorage.setItem('step-tracking-enabled', 'false')
     stopCounting()
-    logger.debug('⏸️ Step tracking disabled')
+
+    // Save to Firestore if authenticated
+    if (user) {
+      try {
+        await userProfileOperations.updateUserProfile({
+          preferences: { stepTrackingEnabled: false }
+        })
+        logger.debug('⏸️ Step tracking disabled and saved to Firestore')
+      } catch (err) {
+        logger.error('Failed to save step tracking preference to Firestore:', err as Error)
+      }
+    } else {
+      logger.debug('⏸️ Step tracking disabled (localStorage only)')
+    }
   }
 
   /**

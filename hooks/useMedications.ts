@@ -60,7 +60,7 @@ export function useMedications({
   const [loading, setLoading] = useState<boolean>(autoFetch)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch medications
+  // Fetch medications (one-time, used for manual refetch)
   const fetchMedications = useCallback(async () => {
     try {
       setLoading(true)
@@ -87,12 +87,38 @@ export function useMedications({
     }
   }, [patientId])
 
-  // Initial fetch (if autoFetch is true)
+  // Set up real-time listener (if autoFetch is true)
   useEffect(() => {
-    if (autoFetch) {
-      fetchMedications()
+    if (!autoFetch) return
+
+    setLoading(true)
+    setError(null)
+    logger.debug('[useMedications] Setting up real-time medication listener', { patientId })
+
+    const unsubscribe = medicalOperations.medications.listenToMedications(
+      patientId,
+      (data) => {
+        setMedications(data)
+        setLoading(false)
+        logger.info('[useMedications] Medications updated via real-time listener', {
+          patientId,
+          count: data.length
+        })
+      },
+      (err) => {
+        const errorMessage = err.message || 'Failed to fetch medications'
+        logger.error('[useMedications] Real-time listener error', err, { patientId })
+        setError(errorMessage)
+        setLoading(false)
+      }
+    )
+
+    // Cleanup listener on unmount
+    return () => {
+      logger.debug('[useMedications] Cleaning up real-time medication listener', { patientId })
+      unsubscribe()
     }
-  }, [fetchMedications, autoFetch])
+  }, [patientId, autoFetch])
 
   // Log medication administration
   const logMedication = useCallback(async (
