@@ -2,16 +2,18 @@
 
 import {Fragment} from'react'
 
-interface ConfirmModalProps {isOpen: boolean
- onClose: () => void
- onConfirm: () => void
- title: string
- message: string
- confirmText?: string
- cancelText?: string
- variant?:'danger' |'warning' |'info'
- customIcon?: React.ReactNode // Allow custom icon override
- iconSize?:'small' |'medium' |'large' // Icon size option}
+interface ConfirmModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onConfirm: () => void
+  title: string
+  message: string
+  confirmText?: string
+  cancelText?: string
+  variant?: 'danger' | 'warning' | 'info'
+  customIcon?: React.ReactNode // Allow custom icon override
+  iconSize?: 'small' | 'medium' | 'large' // Icon size option
+}
 
 export default function ConfirmModal({isOpen,
  onClose,
