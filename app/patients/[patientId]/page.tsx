@@ -1466,7 +1466,14 @@ function PatientDetailContent() {const params = useParams()
  setShowAppointmentWizard(false)
 
  // Redirect to calendar view
- router.push('/calendar')} catch (error) {logger.error('[PatientDetail] Failed to create appointment', error)
- throw error}}}
- />)}
- </div>)}
+ router.push('/calendar')
+ } catch (error) {
+   logger.error('[PatientDetail] Failed to create appointment', error)
+   throw error
+ }
+}}
+ />
+)}
+ </div>
+)
+}

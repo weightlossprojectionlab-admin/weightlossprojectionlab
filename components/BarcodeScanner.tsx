@@ -176,10 +176,13 @@ export function BarcodeScanner({onScan, onClose, isOpen, context ='meal', title}
 
  // Stop scanning after successful scan
  stopScanning()
- onClose()}
+ onClose()
+}
 
- const handleClose = () => {stopScanning()
- onClose()}
+ const handleClose = () => {
+   stopScanning()
+   onClose()
+ }
 
  /**
  * Handle manual barcode entry
