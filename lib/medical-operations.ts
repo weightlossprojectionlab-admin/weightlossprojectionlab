@@ -1127,6 +1127,9 @@ export const medicationOperations = {
 
   /**
    * Listen to real-time medication updates for a patient
+   * NOTE: Uses API call instead of direct Firestore listener because medications are stored in
+   * users/{userId}/patients/{patientId}/medications which requires knowing the userId
+   * For DRY real-time updates, use polling or switch to top-level collection
    * @returns Unsubscribe function to stop listening
    */
   listenToMedications(
@@ -1135,8 +1138,56 @@ export const medicationOperations = {
     onError?: (error: Error) => void
   ): Unsubscribe {
     try {
-      logger.debug('[MedicalOps] Setting up real-time listener for medications', { patientId })
+      // Safety check: don't set up listener with invalid patientId
+      if (!patientId || patientId.length === 0) {
+        logger.warn('[MedicalOps] Cannot set up medication listener with empty patientId')
+        // Return a no-op unsubscribe function
+        return () => {}
+      }
 
+      logger.debug('[MedicalOps] Setting up polling-based medication updates', { patientId })
+
+      // Use API polling since we can't query nested collection without userId
+      const fetchMedications = async () => {
+        try {
+          const data = await this.getMedications(patientId)
+          onUpdate(data)
+        } catch (error) {
+          if (onError) {
+            onError(error as Error)
+          }
+        }
+      }
+
+      // Initial fetch
+      fetchMedications()
+
+      // Poll every 5 seconds for updates
+      const intervalId = setInterval(fetchMedications, 5000)
+
+      // Return unsubscribe function that clears the interval
+      return () => {
+        logger.debug('[MedicalOps] Cleaning up medication polling', { patientId })
+        clearInterval(intervalId)
+      }
+    } catch (error) {
+      logger.error('[MedicalOps] Error setting up medication polling', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /**
+   * DEPRECATED: Old onSnapshot-based listener (doesn't work with nested collections)
+   */
+  _listenToMedicationsFirestore(
+    patientId: string,
+    onUpdate: (medications: PatientMedication[]) => void,
+    onError?: (error: Error) => void
+  ): Unsubscribe {
+    try {
+      logger.debug('[MedicalOps] Setting up Firestore listener for medications', { patientId })
+
+      // This queries top-level collection which may not exist
       const medicationsRef = collection(db, 'medications')
       const q = query(medicationsRef, where('patientId', '==', patientId))
 
@@ -1156,7 +1207,12 @@ export const medicationOperations = {
           onUpdate(medications)
         },
         (error) => {
-          logger.error('[MedicalOps] Medication listener error', error as Error, { patientId })
+          logger.error('[MedicalOps] Medication listener error', error as Error, {
+            patientId,
+            errorMessage: (error as any)?.message,
+            errorCode: (error as any)?.code,
+            errorName: (error as any)?.name
+          })
           if (onError) {
             onError(error as Error)
           }

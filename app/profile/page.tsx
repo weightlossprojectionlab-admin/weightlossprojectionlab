@@ -68,6 +68,18 @@ function ProfileContent() {
   // Get the effective patient ID for medications (DRY)
   const effectivePatientId = selectedMemberId || user?.uid || ''
 
+  // Debug logging for medication sync
+  useEffect(() => {
+    if (effectivePatientId) {
+      logger.debug('[Profile] Patient ID for medications', {
+        selectedMemberId,
+        userId: user?.uid,
+        effectivePatientId,
+        currentMember: currentlyViewingMember?.name
+      })
+    }
+  }, [effectivePatientId, selectedMemberId, user?.uid, currentlyViewingMember])
+
   useEffect(() => {
     setMounted(true)
     checkBiometricStatus()

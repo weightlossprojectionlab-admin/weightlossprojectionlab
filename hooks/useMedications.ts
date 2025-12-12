@@ -93,7 +93,11 @@ export function useMedications({
 
   // Set up real-time listener (if autoFetch is true AND patientId exists)
   useEffect(() => {
-    if (!autoFetch || !effectivePatientId) return
+    // Don't set up listener if no valid patientId
+    if (!autoFetch || !effectivePatientId || effectivePatientId.length === 0) {
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
     setError(null)
@@ -111,7 +115,11 @@ export function useMedications({
       },
       (err) => {
         const errorMessage = err.message || 'Failed to fetch medications'
-        logger.error('[useMedications] Real-time listener error', err, { patientId: effectivePatientId })
+        logger.error('[useMedications] Real-time listener error', err, {
+          patientId: effectivePatientId,
+          errorMessage,
+          errorCode: (err as any)?.code
+        })
         setError(errorMessage)
         setLoading(false)
       }
