@@ -1151,10 +1151,22 @@ export const medicationOperations = {
       const fetchMedications = async () => {
         try {
           const data = await this.getMedications(patientId)
-          onUpdate(data)
+          onUpdate(data || []) // Handle null/undefined as empty array
         } catch (error) {
-          if (onError) {
-            onError(error as Error)
+          // Silently handle 404 or "no medications" - this is normal
+          const errorMessage = (error as any)?.message || ''
+          const is404 = (error as any)?.status === 404
+          const isNoMedications = errorMessage.includes('no medications') || errorMessage.includes('not found')
+
+          if (!is404 && !isNoMedications) {
+            // Only report actual errors, not missing medications
+            logger.warn('[MedicalOps] Medication fetch issue (non-critical)', { patientId, errorMessage })
+            if (onError) {
+              onError(error as Error)
+            }
+          } else {
+            // Patient has no medications - this is fine, return empty array
+            onUpdate([])
           }
         }
       }

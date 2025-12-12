@@ -115,12 +115,22 @@ export function useMedications({
       },
       (err) => {
         const errorMessage = err.message || 'Failed to fetch medications'
-        logger.error('[useMedications] Real-time listener error', err, {
-          patientId: effectivePatientId,
-          errorMessage,
-          errorCode: (err as any)?.code
-        })
-        setError(errorMessage)
+        const is404 = (err as any)?.status === 404
+        const isNoMedications = errorMessage.includes('no medications') || errorMessage.includes('not found')
+
+        // Don't treat "no medications" as an error
+        if (!is404 && !isNoMedications) {
+          logger.error('[useMedications] Real-time listener error', err, {
+            patientId: effectivePatientId,
+            errorMessage,
+            errorCode: (err as any)?.code
+          })
+          setError(errorMessage)
+        } else {
+          // Patient has no medications - this is fine
+          setMedications([])
+          setError(null)
+        }
         setLoading(false)
       }
     )
