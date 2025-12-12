@@ -1,610 +1,426 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
-import AuthGuard from '@/components/auth/AuthGuard'
-import DashboardRouter from '@/components/auth/DashboardRouter'
-import { DashboardErrorBoundary } from '@/components/error/DashboardErrorBoundary'
-import { PageHeader } from '@/components/ui/PageHeader'
-import { PlateauDetectionEmpty } from '@/components/ui/EmptyState'
-import { RecipeQueue } from '@/components/ui/RecipeQueue'
-import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
-import { NotificationPrompt } from '@/components/ui/NotificationPrompt'
-import { useMissions } from '@/hooks/useMissions'
-import { MissionList } from '@/components/ui/MissionCard'
-import { XPBadge } from '@/components/ui/XPBadge'
-import { auth } from '@/lib/auth'
-import { useDashboardData } from '@/hooks/useDashboardData'
-import { useDashboardStats } from '@/hooks/useDashboardStats'
-import { useStepTracking, StepTrackingProvider } from '@/components/StepTrackingProvider'
-import { useUserProfile } from '@/hooks/useUserProfile'
-import { useWeightProjection } from '@/hooks/useWeightProjection'
-import { useTrendProjection } from '@/hooks/useTrendProjection'
-import { useInstallPrompt } from '@/hooks/useInstallPrompt'
-import { useInventory } from '@/hooks/useInventory'
-import { formatProjectionDisplay } from '@/lib/weight-projection-agent'
-import { getNextMealContext, getMealCTA } from '@/lib/meal-context'
-import { checkProfileCompleteness } from '@/lib/profile-completeness'
-import { Spinner } from '@/components/ui/Spinner'
-import { MealSuggestion } from '@/lib/meal-suggestions'
-import { useRecipes } from '@/hooks/useRecipes'
-import { generateRecipeAltText } from '@/lib/utils'
-import Image from 'next/image'
-import toast from 'react-hot-toast'
-import { logger } from '@/lib/logger'
-import { shouldShowWeightReminder, getWeightReminderMessage, getWeightReminderColor } from '@/lib/weight-reminder-logic'
+import {useState, useEffect, useMemo} from'react'
+import Link from'next/link'
+import {useRouter} from'next/navigation'
+import dynamic from'next/dynamic'
+import AuthGuard from'@/components/auth/AuthGuard'
+import DashboardRouter from'@/components/auth/DashboardRouter'
+import {DashboardErrorBoundary} from'@/components/error/DashboardErrorBoundary'
+import {PageHeader} from'@/components/ui/PageHeader'
+import {PlateauDetectionEmpty} from'@/components/ui/EmptyState'
+import {RecipeQueue} from'@/components/ui/RecipeQueue'
+import {OfflineIndicator} from'@/components/ui/OfflineIndicator'
+import {NotificationPrompt} from'@/components/ui/NotificationPrompt'
+import {useMissions} from'@/hooks/useMissions'
+import {MissionList} from'@/components/ui/MissionCard'
+import {XPBadge} from'@/components/ui/XPBadge'
+import {auth} from'@/lib/auth'
+import {useDashboardData} from'@/hooks/useDashboardData'
+import {useDashboardStats} from'@/hooks/useDashboardStats'
+import {useStepTracking, StepTrackingProvider} from'@/components/StepTrackingProvider'
+import {useUserProfile} from'@/hooks/useUserProfile'
+import {useWeightProjection} from'@/hooks/useWeightProjection'
+import {useTrendProjection} from'@/hooks/useTrendProjection'
+import {useInstallPrompt} from'@/hooks/useInstallPrompt'
+import {useInventory} from'@/hooks/useInventory'
+import {formatProjectionDisplay} from'@/lib/weight-projection-agent'
+import {getNextMealContext, getMealCTA} from'@/lib/meal-context'
+import {checkProfileCompleteness} from'@/lib/profile-completeness'
+import {Spinner} from'@/components/ui/Spinner'
+import {MealSuggestion} from'@/lib/meal-suggestions'
+import {useRecipes} from'@/hooks/useRecipes'
+import {generateRecipeAltText} from'@/lib/utils'
+import Image from'next/image'
+import toast from'react-hot-toast'
+import {logger} from'@/lib/logger'
+import {shouldShowWeightReminder, getWeightReminderMessage, getWeightReminderColor} from'@/lib/weight-reminder-logic'
 
 // Dynamic imports for heavy components (lazy loaded on demand)
-const GoalsEditor = dynamic(() => import('@/components/ui/GoalsEditor').then(mod => ({ default: mod.GoalsEditor })), {
-  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><Spinner /></div>,
-  ssr: false
-})
+const GoalsEditor = dynamic(() => import('@/components/ui/GoalsEditor').then(mod => ({default: mod.GoalsEditor})), {loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><Spinner /></div>,
+ ssr: false})
 
-const RecipeModal = dynamic(() => import('@/components/ui/RecipeModal').then(mod => ({ default: mod.RecipeModal })), {
-  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><Spinner /></div>,
-  ssr: false
-})
+const RecipeModal = dynamic(() => import('@/components/ui/RecipeModal').then(mod => ({default: mod.RecipeModal})), {loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><Spinner /></div>,
+ ssr: false})
 
-const ChatWidget = dynamic(() => import('@/components/ui/ChatInterface').then(mod => ({ default: mod.ChatWidget })), {
-  loading: () => null, // Chat widget loads silently in background
-  ssr: false
-})
+const ChatWidget = dynamic(() => import('@/components/ui/ChatInterface').then(mod => ({default: mod.ChatWidget})), {loading: () => null, // Chat widget loads silently in background
+ ssr: false})
 
-const QuickWeightLogModal = dynamic(() => import('@/components/ui/QuickWeightLogModal').then(mod => ({ default: mod.QuickWeightLogModal })), {
-  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><Spinner /></div>,
-  ssr: false
-})
+const QuickWeightLogModal = dynamic(() => import('@/components/ui/QuickWeightLogModal').then(mod => ({default: mod.QuickWeightLogModal})), {loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><Spinner /></div>,
+ ssr: false})
 
-const WeightReminderModal = dynamic(() => import('@/components/ui/WeightReminderModal').then(mod => ({ default: mod.WeightReminderModal })), {
-  ssr: false
-})
+const WeightReminderModal = dynamic(() => import('@/components/ui/WeightReminderModal').then(mod => ({default: mod.WeightReminderModal})), {ssr: false})
 
-const UrgentRecommendationsWidget = dynamic(() => import('@/components/appointments/UrgentRecommendationsWidget').then(mod => ({ default: mod.UrgentRecommendationsWidget })), {
-  loading: () => null,
-  ssr: false
-})
+const UrgentRecommendationsWidget = dynamic(() => import('@/components/appointments/UrgentRecommendationsWidget').then(mod => ({default: mod.UrgentRecommendationsWidget})), {loading: () => null,
+ ssr: false})
 
 // Helper function to get meal type emoji for placeholders
-const getMealEmoji = (mealType: string): string => {
-  const emojis: Record<string, string> = {
-    breakfast: '🍳',
-    lunch: '🥗',
-    dinner: '🍽️',
-    snack: '🍎'
-  }
-  return emojis[mealType] || '🍴'
-}
+const getMealEmoji = (mealType: string): string => {const emojis: Record<string, string> = {breakfast:'🍳',
+ lunch:'🥗',
+ dinner:'🍽️',
+ snack:'🍎'}
+ return emojis[mealType] ||'🍴'}
 
-function DashboardContent() {
-  const router = useRouter()
-  const [showGoalsEditor, setShowGoalsEditor] = useState(false)
-  const [selectedRecipe, setSelectedRecipe] = useState<MealSuggestion | null>(null)
-  const [showRecipeModal, setShowRecipeModal] = useState(false)
-  const [showWeightModal, setShowWeightModal] = useState(false)
-  const [showReminderModal, setShowReminderModal] = useState(false)
-  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+function DashboardContent() {const router = useRouter()
+ const [showGoalsEditor, setShowGoalsEditor] = useState(false)
+ const [selectedRecipe, setSelectedRecipe] = useState<MealSuggestion | null>(null)
+ const [showRecipeModal, setShowRecipeModal] = useState(false)
+ const [showWeightModal, setShowWeightModal] = useState(false)
+ const [showReminderModal, setShowReminderModal] = useState(false)
+ const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
-  // Fetch all dashboard data for current user (no family member selection)
-  const {
-    userProfile,
-    todayMeals,
-    allMeals,
-    weightData,
-    stepsData,
-    loading,
-    loadingMeals
-  } = useDashboardData(null)
+ // Fetch all dashboard data for current user (no family member selection)
+ const {userProfile,
+ todayMeals,
+ allMeals,
+ weightData,
+ stepsData,
+ loading,
+ loadingMeals} = useDashboardData(null)
 
-  // Get real-time step count from automatic tracking
-  const { todaysSteps, isTracking, isEnabled } = useStepTracking()
+ // Get real-time step count from automatic tracking
+ const {todaysSteps, isTracking, isEnabled} = useStepTracking()
 
-  // Calculate all statistics with memoization
-  const {
-    nutritionSummary,
-    weightTrend,
-    activitySummary,
-    calorieProgress,
-    stepProgress
-  } = useDashboardStats(todayMeals, weightData, stepsData, userProfile)
+ // Calculate all statistics with memoization
+ const {nutritionSummary,
+ weightTrend,
+ activitySummary,
+ calorieProgress,
+ stepProgress} = useDashboardStats(todayMeals, weightData, stepsData, userProfile)
 
-  // Calculate weight projection based on deficit (with plateau detection)
-  const weightProjection = useWeightProjection(allMeals, stepsData, userProfile, weightTrend.current)
+ // Calculate weight projection based on deficit (with plateau detection)
+ const weightProjection = useWeightProjection(allMeals, stepsData, userProfile, weightTrend.current)
 
-  // Calculate trend-based projection using historical weight logs
-  const trendProjection = useTrendProjection(weightData, userProfile)
-  const projectionDisplay = trendProjection ? formatProjectionDisplay(trendProjection) : null
+ // Calculate trend-based projection using historical weight logs
+ const trendProjection = useTrendProjection(weightData, userProfile)
+ const projectionDisplay = trendProjection ? formatProjectionDisplay(trendProjection) : null
 
-  // PWA install prompt
-  const { isInstallable, promptInstall } = useInstallPrompt()
+ // PWA install prompt
+ const {isInstallable, promptInstall} = useInstallPrompt()
 
-  // Weekly missions and gamification
-  const { missions, gamification, loading: missionsLoading, checkProgress } = useMissions(userProfile?.userId)
+ // Weekly missions and gamification
+ const {missions, gamification, loading: missionsLoading, checkProgress} = useMissions(userProfile?.userId)
 
-  // Get recipes with Firestore media data (images/videos)
-  const { recipes: recipesWithMedia } = useRecipes()
+ // Get recipes with Firestore media data (images/videos)
+ const {recipes: recipesWithMedia} = useRecipes()
 
-  // Get inventory items for ingredient-aware suggestions
-  const { allItems: inventoryItems } = useInventory()
+ // Get inventory items for ingredient-aware suggestions
+ const {allItems: inventoryItems} = useInventory()
 
-  // Calculate weight reminder status
-  // weightData is sorted desc (newest first), so [0] is most recent
-  const lastWeightLog = weightData.length > 0 ? weightData[0] : null
-  const weightReminder = useMemo(() => {
-    const reminder = shouldShowWeightReminder(
-      lastWeightLog,
-      userProfile?.preferences?.weightCheckInFrequency || 'weekly'
-    )
-    // Debug logging
-    if (lastWeightLog) {
-      logger.debug('Weight reminder calculation', {
-        lastLogDate: lastWeightLog.loggedAt,
-        frequency: userProfile?.preferences?.weightCheckInFrequency,
-        shouldShow: reminder.shouldShow,
-        daysSince: reminder.daysSince,
-        status: reminder.status
-      })
-    }
-    return reminder
-  }, [lastWeightLog, userProfile?.preferences?.weightCheckInFrequency])
+ // Calculate weight reminder status
+ // weightData is sorted desc (newest first), so [0] is most recent
+ const lastWeightLog = weightData.length > 0 ? weightData[0] : null
+ const weightReminder = useMemo(() => {const reminder = shouldShowWeightReminder(lastWeightLog,
+ userProfile?.preferences?.weightCheckInFrequency ||'weekly')
+ // Debug logging
+ if (lastWeightLog) {logger.debug('Weight reminder calculation', {lastLogDate: lastWeightLog.loggedAt,
+ frequency: userProfile?.preferences?.weightCheckInFrequency,
+ shouldShow: reminder.shouldShow,
+ daysSince: reminder.daysSince,
+ status: reminder.status})}
+ return reminder}, [lastWeightLog, userProfile?.preferences?.weightCheckInFrequency])
 
-  // Get contextual meal recommendations with personalized suggestions (with images)
-  // MEMOIZED: Prevents expensive recalculation on every render (237 lines of logic + 692-line meal array)
-  const mealContext = useMemo(() => {
-    return getNextMealContext(
-      todayMeals
-        .filter(m => m && m.mealType && typeof m.calories === 'number')
-        .map(m => ({ mealType: m.mealType, totalCalories: m.calories })),
-      nutritionSummary.goalCalories || 2000,
-      {
-        dietaryPreferences: userProfile?.preferences?.dietaryPreferences || [],
-        foodAllergies: userProfile?.profile?.foodAllergies || [],
-        mealSchedule: userProfile?.preferences?.mealSchedule
-      },
-      auth.currentUser?.uid,
-      recipesWithMedia || [], // Pass recipes with images/videos from Firestore
-      inventoryItems // Pass inventory for ingredient checking
-    )
-  }, [
-    todayMeals,
-    nutritionSummary.goalCalories,
-    userProfile?.preferences?.dietaryPreferences,
-    userProfile?.profile?.foodAllergies,
-    userProfile?.preferences?.mealSchedule,
-    auth.currentUser?.uid,
-    recipesWithMedia,
-    inventoryItems // Add to dependencies
-  ])
+ // Get contextual meal recommendations with personalized suggestions (with images)
+ // MEMOIZED: Prevents expensive recalculation on every render (237 lines of logic + 692-line meal array)
+ const mealContext = useMemo(() => {return getNextMealContext(todayMeals
+ .filter(m => m && m.mealType && typeof m.calories ==='number')
+ .map(m => ({mealType: m.mealType, totalCalories: m.calories})),
+ nutritionSummary.goalCalories || 2000,
+ {dietaryPreferences: userProfile?.preferences?.dietaryPreferences || [],
+ foodAllergies: userProfile?.profile?.foodAllergies || [],
+ mealSchedule: userProfile?.preferences?.mealSchedule},
+ auth.currentUser?.uid,
+ recipesWithMedia || [], // Pass recipes with images/videos from Firestore
+ inventoryItems // Pass inventory for ingredient checking)}, [todayMeals,
+ nutritionSummary.goalCalories,
+ userProfile?.preferences?.dietaryPreferences,
+ userProfile?.profile?.foodAllergies,
+ userProfile?.preferences?.mealSchedule,
+ auth.currentUser?.uid,
+ recipesWithMedia,
+ inventoryItems // Add to dependencies])
 
-  // Check profile completeness for safety warnings
-  // MEMOIZED: Prevents expensive recalculation on every render (147 lines of logic)
-  const profileCompleteness = useMemo(() => {
-    return checkProfileCompleteness(userProfile)
-  }, [userProfile])
+ // Check profile completeness for safety warnings
+ // MEMOIZED: Prevents expensive recalculation on every render (147 lines of logic)
+ const profileCompleteness = useMemo(() => {return checkProfileCompleteness(userProfile)}, [userProfile])
 
-  // Use sensor steps if tracking is enabled, otherwise use logged steps
-  const displaySteps = isEnabled ? todaysSteps : activitySummary.todaySteps
-  const displayProgress = (displaySteps / activitySummary.goalSteps) * 100
+ // Use sensor steps if tracking is enabled, otherwise use logged steps
+ const displaySteps = isEnabled ? todaysSteps : activitySummary.todaySteps
+ const displayProgress = (displaySteps / activitySummary.goalSteps) * 100
 
-  // Generate AI Coach recommendations based on live data (memoized to prevent recalculation on every render)
-  const aiRecommendations = useMemo(() => {
-    const recommendations: string[] = []
+ // Generate AI Coach recommendations based on live data (memoized to prevent recalculation on every render)
+ const aiRecommendations = useMemo(() => {const recommendations: string[] = []
 
-    // Calorie recommendations (only if user has logged meals)
-    if (nutritionSummary.mealsLogged > 0) {
-      const calorieDiff = nutritionSummary.todayCalories - nutritionSummary.goalCalories
-      const caloriePercent = calorieProgress
+ // Calorie recommendations (only if user has logged meals)
+ if (nutritionSummary.mealsLogged > 0) {const calorieDiff = nutritionSummary.todayCalories - nutritionSummary.goalCalories
+ const caloriePercent = calorieProgress
 
-      if (caloriePercent < 70) {
-        recommendations.push(
-          `You're ${Math.abs(calorieDiff).toFixed(0)} calories under your goal. Make sure you're eating enough to stay healthy and energized!`
-        )
-      } else if (caloriePercent < 90) {
-        recommendations.push(
-          `You're ${Math.abs(calorieDiff).toFixed(0)} calories under your goal. Consider adding a healthy snack with protein to reach your target.`
-        )
-      } else if (caloriePercent <= 110) {
-        recommendations.push(`Perfect! You're right on track with your calorie goal for today.`)
-      } else if (caloriePercent <= 130) {
-        recommendations.push(
-          `You're ${calorieDiff.toFixed(0)} calories over your goal. That's okay! Just keep it in mind for tomorrow.`
-        )
-      } else {
-        recommendations.push(
-          `You're ${calorieDiff.toFixed(0)} calories over your goal today. Consider lighter meals or extra activity to balance it out.`
-        )
-      }
-    } else {
-      recommendations.push(mealContext.message)
-    }
+ if (caloriePercent < 70) {recommendations.push(`You're ${Math.abs(calorieDiff).toFixed(0)} calories under your goal. Make sure you're eating enough to stay healthy and energized!`)} else if (caloriePercent < 90) {recommendations.push(`You're ${Math.abs(calorieDiff).toFixed(0)} calories under your goal. Consider adding a healthy snack with protein to reach your target.`)} else if (caloriePercent <= 110) {recommendations.push(`Perfect! You're right on track with your calorie goal for today.`)} else if (caloriePercent <= 130) {recommendations.push(`You're ${calorieDiff.toFixed(0)} calories over your goal. That's okay! Just keep it in mind for tomorrow.`)} else {recommendations.push(`You're ${calorieDiff.toFixed(0)} calories over your goal today. Consider lighter meals or extra activity to balance it out.`)}} else {recommendations.push(mealContext.message)}
 
-    // Step recommendations
-    if (displaySteps > 0) {
-      const stepDiff = activitySummary.goalSteps - displaySteps
-      const walkingMinutes = Math.ceil(stepDiff / 100) // ~100 steps per minute
+ // Step recommendations
+ if (displaySteps > 0) {const stepDiff = activitySummary.goalSteps - displaySteps
+ const walkingMinutes = Math.ceil(stepDiff / 100) // ~100 steps per minute
 
-      if (stepProgress >= 100) {
-        recommendations.push(`Excellent! You've hit your step goal for today! 🎉`)
-      } else if (stepProgress >= 80) {
-        recommendations.push(
-          `Almost there! Just ${stepDiff.toLocaleString()} more steps (~${walkingMinutes} min walk) to reach your goal!`
-        )
-      } else if (stepProgress >= 50) {
-        recommendations.push(
-          `You're ${stepDiff.toLocaleString()} steps away from your goal. A ${walkingMinutes}-minute walk will get you there!`
-        )
-      } else {
-        recommendations.push(
-          `Let's get moving! You need ${stepDiff.toLocaleString()} more steps (~${walkingMinutes} min) to reach your goal today.`
-        )
-      }
-    } else {
-      recommendations.push(`Start tracking your steps to get personalized activity recommendations!`)
-    }
+ if (stepProgress >= 100) {recommendations.push(`Excellent! You've hit your step goal for today! 🎉`)} else if (stepProgress >= 80) {recommendations.push(`Almost there! Just ${stepDiff.toLocaleString()} more steps (~${walkingMinutes} min walk) to reach your goal!`)} else if (stepProgress >= 50) {recommendations.push(`You're ${stepDiff.toLocaleString()} steps away from your goal. A ${walkingMinutes}-minute walk will get you there!`)} else {recommendations.push(`Let's get moving! You need ${stepDiff.toLocaleString()} more steps (~${walkingMinutes} min) to reach your goal today.`)}} else {recommendations.push(`Start tracking your steps to get personalized activity recommendations!`)}
 
-    // Weight trend recommendations (only if user has logged 2+ weights)
-    // Don't show for brand new users with only onboarding weight
-    const hasActualWeightTrend = weightData.length >= 2 &&
-                                  weightTrend.change !== 0 &&
-                                  Math.abs(weightTrend.change) >= 0.1
+ // Weight trend recommendations (only if user has logged 2+ weights)
+ // Don't show for brand new users with only onboarding weight
+ const hasActualWeightTrend = weightData.length >= 2 &&
+ weightTrend.change !== 0 &&
+ Math.abs(weightTrend.change) >= 0.1
 
-    if (hasActualWeightTrend) {
-      if (weightTrend.change < 0) {
-        recommendations.push(
-          `Great progress! You've lost ${Math.abs(weightTrend.change).toFixed(1)} lbs recently. Keep up the excellent work!`
-        )
-      } else {
-        recommendations.push(
-          `Your weight increased by ${weightTrend.change.toFixed(1)} lbs. Stay focused on your calorie deficit and activity goals.`
-        )
-      }
-    }
+ if (hasActualWeightTrend) {if (weightTrend.change < 0) {recommendations.push(`Great progress! You've lost ${Math.abs(weightTrend.change).toFixed(1)} lbs recently. Keep up the excellent work!`)} else {recommendations.push(`Your weight increased by ${weightTrend.change.toFixed(1)} lbs. Stay focused on your calorie deficit and activity goals.`)}}
 
-    return recommendations
-  }, [
-    nutritionSummary.mealsLogged,
-    nutritionSummary.todayCalories,
-    nutritionSummary.goalCalories,
-    calorieProgress,
-    mealContext.message,
-    displaySteps,
-    activitySummary.goalSteps,
-    stepProgress,
-    weightData.length,
-    weightTrend.change
-  ])
+ return recommendations}, [nutritionSummary.mealsLogged,
+ nutritionSummary.todayCalories,
+ nutritionSummary.goalCalories,
+ calorieProgress,
+ mealContext.message,
+ displaySteps,
+ activitySummary.goalSteps,
+ stepProgress,
+ weightData.length,
+ weightTrend.change])
 
-  // Onboarding check is now handled by DashboardRouter
+ // Onboarding check is now handled by DashboardRouter
 
-  return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Offline Indicator */}
-      <OfflineIndicator />
+ return (<main className="min-h-screen bg-gray-50">
+ {/* Offline Indicator */}
+ <OfflineIndicator />
 
-      <PageHeader
-        title="Dashboard"
-      />
+ <PageHeader
+ title="Dashboard"/>
 
-      <div className="container-narrow py-6 space-y-6">
-        {loading || loadingMeals ? (
-          <div className="text-center py-12">
-            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-gray-600 dark:text-gray-400 mt-4">Loading your dashboard...</p>
-          </div>
-        ) : (
-          <>
-            {/* Quick Access to Family Health Tracking */}
-            <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-primary">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-foreground">Family Health Tracking</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Track weight, meals, steps, and vitals for family members
-                  </p>
-                </div>
-                <button
-                  onClick={() => router.push('/patients')}
-                  className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
-                >
-                  View Family →
-                </button>
-              </div>
-            </div>
+ <div className="container-narrow py-6 space-y-6">
+ {loading || loadingMeals ? (<div className="text-center py-12">
+ <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+ <p className="text-gray-600 mt-4">Loading your dashboard...</p>
+ </div>) : (<>
+ {/* Quick Access to Family Health Tracking */}
+ <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-primary">
+ <div className="flex items-center justify-between">
+ <div>
+ <h3 className="font-semibold text-foreground">Family Health Tracking</h3>
+ <p className="text-sm text-muted-foreground mt-1">
+ Track weight, meals, steps, and vitals for family members
+ </p>
+ </div>
+ <button
+ onClick={() => router.push('/patients')}
+ className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium">
+ View Family →
+ </button>
+ </div>
+ </div>
 
-            {/* Urgent AI Recommendations Widget */}
-            <UrgentRecommendationsWidget />
+ {/* Urgent AI Recommendations Widget */}
+ <UrgentRecommendationsWidget />
 
-            {/* Progress Charts Link */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold mb-1">📊 Visualize Your Progress</h3>
-                  <p className="text-sm text-purple-100">View interactive charts and detailed trends</p>
-                </div>
-                <a
-                  href="/progress"
-                  className="px-6 py-3 bg-white dark:bg-gray-900 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium flex items-center gap-2"
-                >
-                  <span>View Charts</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </a>
-              </div>
-            </div>
+ {/* Progress Charts Link */}
+ <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
+ <div className="flex items-center justify-between">
+ <div>
+ <h3 className="text-lg font-bold mb-1">📊 Visualize Your Progress</h3>
+ <p className="text-sm text-purple-100">View interactive charts and detailed trends</p>
+ </div>
+ <a
+ href="/progress"className="px-6 py-3 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium flex items-center gap-2">
+ <span>View Charts</span>
+ <svg className="w-5 h-5"fill="none"stroke="currentColor"viewBox="0 0 24 24">
+ <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M9 5l7 7-7 7"/>
+ </svg>
+ </a>
+ </div>
+ </div>
 
-            {/* Photo Gallery Link */}
-            <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold mb-1">📸 Browse Your Meal Photos</h3>
-                  <p className="text-sm text-indigo-100">View your food journey in a beautiful gallery</p>
-                </div>
-                <a
-                  href="/gallery"
-                  className="px-6 py-3 bg-white dark:bg-gray-900 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-medium flex items-center gap-2"
-                >
-                  <span>View Gallery</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </a>
-              </div>
-            </div>
+ {/* Photo Gallery Link */}
+ <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
+ <div className="flex items-center justify-between">
+ <div>
+ <h3 className="text-lg font-bold mb-1">📸 Browse Your Meal Photos</h3>
+ <p className="text-sm text-indigo-100">View your food journey in a beautiful gallery</p>
+ </div>
+ <a
+ href="/gallery"className="px-6 py-3 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-medium flex items-center gap-2">
+ <span>View Gallery</span>
+ <svg className="w-5 h-5"fill="none"stroke="currentColor"viewBox="0 0 24 24">
+ <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+ </svg>
+ </a>
+ </div>
+ </div>
 
-            {/* Medical Info Link */}
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold mb-1">🏥 Medical Info</h3>
-                  <p className="text-sm text-green-100">Manage health information for you or your family</p>
-                </div>
-                <a
-                  href="/medical"
-                  className="px-6 py-3 bg-white dark:bg-gray-900 text-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium flex items-center gap-2"
-                >
-                  <span>View Info</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </a>
-              </div>
-            </div>
+ {/* Medical Info Link */}
+ <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
+ <div className="flex items-center justify-between">
+ <div>
+ <h3 className="text-lg font-bold mb-1">🏥 Medical Info</h3>
+ <p className="text-sm text-green-100">Manage health information for you or your family</p>
+ </div>
+ <a
+ href="/medical"className="px-6 py-3 bg-white text-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium flex items-center gap-2">
+ <span>View Info</span>
+ <svg className="w-5 h-5"fill="none"stroke="currentColor"viewBox="0 0 24 24">
+ <path strokeLinecap="round"strokeLinejoin="round"strokeWidth={2} d="M9 5l7 7-7 7"/>
+ </svg>
+ </a>
+ </div>
+ </div>
 
-            {/* PATIENT-SPECIFIC HEALTH DATA REMOVED - Now on /patients/[patientId] pages */}
-          </>
-        )}
+ {/* PATIENT-SPECIFIC HEALTH DATA REMOVED - Now on /patients/[patientId] pages */}
+ </>)}
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            onClick={() => {
-              setNavigatingTo('log-meal')
-              router.push('/log-meal')
-            }}
-            disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Log meal"
-          >
-            {navigatingTo === 'log-meal' ? (
-              <Spinner size="md" className="text-primary" />
-            ) : (
-              <span className="text-2xl" role="img" aria-label="camera">📸</span>
-            )}
-            <span className="text-sm font-medium">Log Meal</span>
-          </button>
+ {/* Quick Actions */}
+ <div className="grid grid-cols-2 gap-4">
+ <button
+ onClick={() => {setNavigatingTo('log-meal')
+ router.push('/log-meal')}}
+ disabled={!!navigatingTo}
+ className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"aria-label="Log meal">
+ {navigatingTo ==='log-meal' ? (<Spinner size="md"className="text-primary"/>) : (<span className="text-2xl"role="img"aria-label="camera">📸</span>)}
+ <span className="text-sm font-medium">Log Meal</span>
+ </button>
 
-          <button
-            onClick={() => {
-              setNavigatingTo('medications')
-              router.push('/medications')
-            }}
-            disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Manage medications"
-          >
-            {navigatingTo === 'medications' ? (
-              <Spinner size="md" className="text-primary" />
-            ) : (
-              <span className="text-2xl" role="img" aria-label="medications">💊</span>
-            )}
-            <span className="text-sm font-medium">Medications</span>
-          </button>
+ <button
+ onClick={() => {setNavigatingTo('medications')
+ router.push('/medications')}}
+ disabled={!!navigatingTo}
+ className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"aria-label="Manage medications">
+ {navigatingTo ==='medications' ? (<Spinner size="md"className="text-primary"/>) : (<span className="text-2xl"role="img"aria-label="medications">💊</span>)}
+ <span className="text-sm font-medium">Medications</span>
+ </button>
 
-          <button
-            onClick={() => {
-              setNavigatingTo('gallery')
-              router.push('/gallery')
-            }}
-            disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Photo gallery with social sharing"
-          >
-            {navigatingTo === 'gallery' ? (
-              <Spinner size="md" className="text-primary" />
-            ) : (
-              <span className="text-2xl" role="img" aria-label="gallery">🖼️</span>
-            )}
-            <span className="text-sm font-medium">Gallery</span>
-          </button>
+ <button
+ onClick={() => {setNavigatingTo('gallery')
+ router.push('/gallery')}}
+ disabled={!!navigatingTo}
+ className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"aria-label="Photo gallery with social sharing">
+ {navigatingTo ==='gallery' ? (<Spinner size="md"className="text-primary"/>) : (<span className="text-2xl"role="img"aria-label="gallery">🖼️</span>)}
+ <span className="text-sm font-medium">Gallery</span>
+ </button>
 
-          <button
-            onClick={() => {
-              setNavigatingTo('shopping')
-              router.push('/shopping')
-            }}
-            disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Shopping list"
-          >
-            {navigatingTo === 'shopping' ? (
-              <Spinner size="md" className="text-primary" />
-            ) : (
-              <span className="text-2xl" role="img" aria-label="shopping">🛒</span>
-            )}
-            <span className="text-sm font-medium">Shopping</span>
-          </button>
+ <button
+ onClick={() => {setNavigatingTo('shopping')
+ router.push('/shopping')}}
+ disabled={!!navigatingTo}
+ className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"aria-label="Shopping list">
+ {navigatingTo ==='shopping' ? (<Spinner size="md"className="text-primary"/>) : (<span className="text-2xl"role="img"aria-label="shopping">🛒</span>)}
+ <span className="text-sm font-medium">Shopping</span>
+ </button>
 
-          <button
-            onClick={() => setShowWeightModal(true)}
-            disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Log weight"
-          >
-            <span className="text-2xl" role="img" aria-label="scale">⚖️</span>
-            <span className="text-sm font-medium">Log Weight</span>
-          </button>
+ <button
+ onClick={() => setShowWeightModal(true)}
+ disabled={!!navigatingTo}
+ className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"aria-label="Log weight">
+ <span className="text-2xl"role="img"aria-label="scale">⚖️</span>
+ <span className="text-sm font-medium">Log Weight</span>
+ </button>
 
-          <button
-            onClick={() => {
-              setNavigatingTo('inventory')
-              router.push('/inventory')
-            }}
-            disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Kitchen inventory"
-          >
-            {navigatingTo === 'inventory' ? (
-              <Spinner size="md" className="text-primary" />
-            ) : (
-              <span className="text-2xl" role="img" aria-label="inventory">📦</span>
-            )}
-            <span className="text-sm font-medium">Inventory</span>
-          </button>
+ <button
+ onClick={() => {setNavigatingTo('inventory')
+ router.push('/inventory')}}
+ disabled={!!navigatingTo}
+ className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"aria-label="Kitchen inventory">
+ {navigatingTo ==='inventory' ? (<Spinner size="md"className="text-primary"/>) : (<span className="text-2xl"role="img"aria-label="inventory">📦</span>)}
+ <span className="text-sm font-medium">Inventory</span>
+ </button>
 
-          <button
-            onClick={() => {
-              setNavigatingTo('settings')
-              router.push('/profile')
-            }}
-            disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Profile settings"
-          >
-            {navigatingTo === 'settings' ? (
-              <Spinner size="md" className="text-primary" />
-            ) : (
-              <span className="text-2xl" role="img" aria-label="settings">⚙️</span>
-            )}
-            <span className="text-sm font-medium">Settings</span>
-          </button>
+ <button
+ onClick={() => {setNavigatingTo('settings')
+ router.push('/profile')}}
+ disabled={!!navigatingTo}
+ className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"aria-label="Profile settings">
+ {navigatingTo ==='settings' ? (<Spinner size="md"className="text-primary"/>) : (<span className="text-2xl"role="img"aria-label="settings">⚙️</span>)}
+ <span className="text-sm font-medium">Settings</span>
+ </button>
 
-          {/* PWA Install Button - Only visible if installable */}
-          {isInstallable && (
-            <button
-              onClick={async () => {
-                const success = await promptInstall()
-                if (success) {
-                  toast.success('App installed successfully!')
-                }
-              }}
-              className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6"
-              aria-label="Install app"
-            >
-              <span className="text-2xl" role="img" aria-label="install">📱</span>
-              <span className="text-sm font-medium">Install App</span>
-            </button>
-          )}
-        </div>
+ {/* PWA Install Button - Only visible if installable */}
+ {isInstallable && (<button
+ onClick={async () => {const success = await promptInstall()
+ if (success) {toast.success('App installed successfully!')}}}
+ className="bg-white rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6"aria-label="Install app">
+ <span className="text-2xl"role="img"aria-label="install">📱</span>
+ <span className="text-sm font-medium">Install App</span>
+ </button>)}
+ </div>
 
-        {/* Notification Permission Prompt */}
-        <NotificationPrompt userId={userProfile?.userId} />
+ {/* Notification Permission Prompt */}
+ <NotificationPrompt userId={userProfile?.userId} />
 
-        {/* Gamification: XP & Level */}
-        {gamification && (
-          <XPBadge gamification={gamification} />
-        )}
+ {/* Gamification: XP & Level */}
+ {gamification && (<XPBadge gamification={gamification} />)}
 
-        {/* Weekly Missions */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Weekly Missions</h2>
-            <span className="text-xs text-gray-600 dark:text-gray-400">Resets Monday</span>
-          </div>
-          <MissionList missions={missions} loading={missionsLoading} />
-        </div>
+ {/* Weekly Missions */}
+ <div className="bg-white rounded-lg p-6">
+ <div className="flex items-center justify-between mb-4">
+ <h2 className="text-xl font-bold">Weekly Missions</h2>
+ <span className="text-xs text-gray-600">Resets Monday</span>
+ </div>
+ <MissionList missions={missions} loading={missionsLoading} />
+ </div>
 
-        {/* Recipe Queue */}
-        <RecipeQueue />
+ {/* Recipe Queue */}
+ <RecipeQueue />
 
-        {/* AI Recommendations */}
-        {aiRecommendations.length > 0 && (
-          <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-6">
-            <h2 className="mb-3">AI Coach</h2>
-            <div className="space-y-3">
-              {aiRecommendations.map((recommendation, index) => (
-                <div key={index} className="bg-white dark:bg-gray-900 rounded-lg p-4">
-                  <p className="text-sm text-gray-900 dark:text-gray-100">
-                    {recommendation}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+ {/* AI Recommendations */}
+ {aiRecommendations.length > 0 && (<div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-6">
+ <h2 className="mb-3">AI Coach</h2>
+ <div className="space-y-3">
+ {aiRecommendations.map((recommendation, index) => (<div key={index} className="bg-white rounded-lg p-4">
+ <p className="text-sm text-gray-900">
+ {recommendation}
+ </p>
+ </div>))}
+ </div>
+ </div>)}
+ </div>
 
-      {/* Goals Editor Modal */}
-      <GoalsEditor
-        isOpen={showGoalsEditor}
-        onClose={() => setShowGoalsEditor(false)}
-        userProfile={userProfile}
-        currentWeight={weightTrend.current}
-        onSuccess={() => window.location.reload()}
-      />
+ {/* Goals Editor Modal */}
+ <GoalsEditor
+ isOpen={showGoalsEditor}
+ onClose={() => setShowGoalsEditor(false)}
+ userProfile={userProfile}
+ currentWeight={weightTrend.current}
+ onSuccess={() => window.location.reload()}
+ />
 
-      {/* Recipe Modal */}
-      {selectedRecipe && (
-        <RecipeModal
-          suggestion={selectedRecipe}
-          isOpen={showRecipeModal}
-          onClose={() => {
-            setShowRecipeModal(false)
-            setSelectedRecipe(null)
-          }}
-          userDietaryPreferences={userProfile?.preferences?.dietaryPreferences}
-          userAllergies={userProfile?.profile?.foodAllergies}
-        />
-      )}
+ {/* Recipe Modal */}
+ {selectedRecipe && (<RecipeModal
+ suggestion={selectedRecipe}
+ isOpen={showRecipeModal}
+ onClose={() => {setShowRecipeModal(false)
+ setSelectedRecipe(null)}}
+ userDietaryPreferences={userProfile?.preferences?.dietaryPreferences}
+ userAllergies={userProfile?.profile?.foodAllergies}
+ />)}
 
-      {/* Weight Reminder Modal (auto-shows on mount if due) - only for single user accounts */}
-      {!loading && (
-        <WeightReminderModal
-          lastWeightLog={lastWeightLog}
-          frequency={userProfile?.preferences?.weightCheckInFrequency || 'weekly'}
-          onLogWeight={() => {
-            setShowReminderModal(false)
-            setShowWeightModal(true)
-          }}
-          onDismiss={() => setShowReminderModal(false)}
-        />
-      )}
+ {/* Weight Reminder Modal (auto-shows on mount if due) - only for single user accounts */}
+ {!loading && (<WeightReminderModal
+ lastWeightLog={lastWeightLog}
+ frequency={userProfile?.preferences?.weightCheckInFrequency ||'weekly'}
+ onLogWeight={() => {setShowReminderModal(false)
+ setShowWeightModal(true)}}
+ onDismiss={() => setShowReminderModal(false)}
+ />)}
 
-      {/* Quick Weight Log Modal */}
-      <QuickWeightLogModal
-        isOpen={showWeightModal}
-        onClose={() => setShowWeightModal(false)}
-        onSuccess={() => window.location.reload()}
-        patientId={null}
-      />
+ {/* Quick Weight Log Modal */}
+ <QuickWeightLogModal
+ isOpen={showWeightModal}
+ onClose={() => setShowWeightModal(false)}
+ onSuccess={() => window.location.reload()}
+ patientId={null}
+ />
 
-      {/* AI Coach Chat Widget */}
-      <ChatWidget userId={userProfile?.userId} />
-    </main>
-  )
-}
+ {/* AI Coach Chat Widget */}
+ <ChatWidget userId={userProfile?.userId} />
+ </main>)}
 
-export default function DashboardPage() {
-  return (
-    <AuthGuard>
-      <DashboardRouter>
-        <StepTrackingProvider>
-          <DashboardErrorBoundary>
-            <DashboardContent />
-          </DashboardErrorBoundary>
-        </StepTrackingProvider>
-      </DashboardRouter>
-    </AuthGuard>
-  )
-}
+export default function DashboardPage() {return (<AuthGuard>
+ <DashboardRouter>
+ <StepTrackingProvider>
+ <DashboardErrorBoundary>
+ <DashboardContent />
+ </DashboardErrorBoundary>
+ </StepTrackingProvider>
+ </DashboardRouter>
+ </AuthGuard>)}

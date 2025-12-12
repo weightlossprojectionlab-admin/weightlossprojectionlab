@@ -1,128 +1,105 @@
 // Groups Dashboard Page
-// PRD Reference: social_retention_and_group_missions (PRD v1.3.7)
+// PRD Reference: social_retention_and_group_missions (PRD v1.3.7)'use client';
 
-'use client';
-
-import { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import GroupsList from '@/components/groups/GroupsList';
-import { PlusIcon } from '@heroicons/react/24/outline';
-import { logger } from '@/lib/logger'
+import {useState} from'react';
+import {useAuth} from'@/hooks/useAuth';
+import GroupsList from'@/components/groups/GroupsList';
+import {PlusIcon} from'@heroicons/react/24/outline';
+import {logger} from'@/lib/logger'
 
 // TODO: Create useGroups hook similar to useMissions
 // For now, using mock data structure
 
-export default function GroupsPage() {
-  const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+export default function GroupsPage() {const {user} = useAuth();
+ const [isLoading, setIsLoading] = useState(false);
 
-  // TODO: Replace with actual useGroups hook
-  const groups: any[] = [];
-  const userGroupIds: string[] = [];
-  const error = null;
+ // TODO: Replace with actual useGroups hook
+ const groups: any[] = [];
+ const userGroupIds: string[] = [];
+ const error = null;
 
-  const handleJoinGroup = async (groupId: string) => {
-    logger.debug('Join group:', { groupId });
-    // TODO: Implement Firebase function to join group
-  };
+ const handleJoinGroup = async (groupId: string) => {logger.debug('Join group:', {groupId});
+ // TODO: Implement Firebase function to join group};
 
-  const handleLeaveGroup = async (groupId: string) => {
-    logger.debug('Leave group:', { groupId });
-    // TODO: Implement Firebase function to leave group
-  };
+ const handleLeaveGroup = async (groupId: string) => {logger.debug('Leave group:', {groupId});
+ // TODO: Implement Firebase function to leave group};
 
-  const handleViewGroup = (groupId: string) => {
-    logger.debug('View group:', { groupId });
-    // TODO: Navigate to group detail page
-  };
+ const handleViewGroup = (groupId: string) => {logger.debug('View group:', {groupId});
+ // TODO: Navigate to group detail page};
 
-  const handleCreateGroup = () => {
-    logger.debug('Create new group');
-    // TODO: Open create group modal or navigate to create page
-  };
+ const handleCreateGroup = () => {logger.debug('Create new group');
+ // TODO: Open create group modal or navigate to create page};
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-dark mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading groups...</p>
-        </div>
-      </div>
-    );
-  }
+ if (isLoading) {return (<div className="flex items-center justify-center min-h-screen">
+ <div className="text-center">
+ <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-dark mx-auto mb-4"/>
+ <p className="text-muted-foreground">Loading groups...</p>
+ </div>
+ </div>);}
 
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="bg-error-light border border-error rounded-lg p-4">
-          <h2 className="text-error-dark font-semibold mb-2">Error Loading Groups</h2>
-          <p className="text-error-dark">{error}</p>
-        </div>
-      </div>
-    );
-  }
+ if (error) {return (<div className="p-6">
+ <div className="bg-error-light border border-error rounded-lg p-4">
+ <h2 className="text-error-dark font-semibold mb-2">Error Loading Groups</h2>
+ <p className="text-error-dark">{error}</p>
+ </div>
+ </div>);}
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Groups</h1>
-          <p className="text-muted-foreground mt-1">Join groups to connect with others and complete missions together</p>
-        </div>
-        <button
-          onClick={handleCreateGroup}
-          className="inline-flex items-center space-x-2 px-4 py-2 bg-accent-dark text-white rounded-lg font-medium hover:bg-accent-dark transition-colors"
-        >
-          <PlusIcon className="h-5 w-5" />
-          <span>Create Group</span>
-        </button>
-      </div>
+ return (<div className="p-6 max-w-7xl mx-auto">
+ {/* Header */}
+ <div className="flex items-center justify-between mb-6">
+ <div>
+ <h1 className="text-3xl font-bold">Groups</h1>
+ <p className="text-muted-foreground mt-1">Join groups to connect with others and complete missions together</p>
+ </div>
+ <button
+ onClick={handleCreateGroup}
+ className="inline-flex items-center space-x-2 px-4 py-2 bg-accent-dark text-white rounded-lg font-medium hover:bg-accent-dark transition-colors">
+ <PlusIcon className="h-5 w-5"/>
+ <span>Create Group</span>
+ </button>
+ </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">My Groups</div>
-          <div className="text-2xl font-bold text-foreground">{userGroupIds.length}</div>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">Total Groups</div>
-          <div className="text-2xl font-bold text-foreground">{groups.length}</div>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">Public Groups</div>
-          <div className="text-2xl font-bold text-foreground">
-            {groups.filter(g => g.privacy === 'public').length}
-          </div>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">Total Members</div>
-          <div className="text-2xl font-bold text-foreground">
-            {groups.reduce((sum, g) => sum + (g.memberIds?.length || 0), 0)}
-          </div>
-        </div>
-      </div>
+ {/* Stats Overview */}
+ <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+ <div className="bg-card border border-border rounded-lg p-4">
+ <div className="text-sm text-muted-foreground mb-1">My Groups</div>
+ <div className="text-2xl font-bold text-foreground">{userGroupIds.length}</div>
+ </div>
+ <div className="bg-card border border-border rounded-lg p-4">
+ <div className="text-sm text-muted-foreground mb-1">Total Groups</div>
+ <div className="text-2xl font-bold text-foreground">{groups.length}</div>
+ </div>
+ <div className="bg-card border border-border rounded-lg p-4">
+ <div className="text-sm text-muted-foreground mb-1">Public Groups</div>
+ <div className="text-2xl font-bold text-foreground">
+ {groups.filter(g => g.privacy ==='public').length}
+ </div>
+ </div>
+ <div className="bg-card border border-border rounded-lg p-4">
+ <div className="text-sm text-muted-foreground mb-1">Total Members</div>
+ <div className="text-2xl font-bold text-foreground">
+ {groups.reduce((sum, g) => sum + (g.memberIds?.length || 0), 0)}
+ </div>
+ </div>
+ </div>
 
-      {/* Groups List */}
-      <GroupsList
-        groups={groups}
-        userGroupIds={userGroupIds}
-        onJoinGroup={handleJoinGroup}
-        onLeaveGroup={handleLeaveGroup}
-        onViewGroup={handleViewGroup}
-      />
+ {/* Groups List */}
+ <GroupsList
+ groups={groups}
+ userGroupIds={userGroupIds}
+ onJoinGroup={handleJoinGroup}
+ onLeaveGroup={handleLeaveGroup}
+ onViewGroup={handleViewGroup}
+ />
 
-      {/* Info Box */}
-      <div className="mt-8 bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-accent-dark mb-2">About Groups</h2>
-        <ul className="space-y-2 text-sm text-accent-dark">
-          <li>• Join groups to connect with others on similar weight loss journeys</li>
-          <li>• Complete group missions to earn bonus XP</li>
-          <li>• Private groups require approval to join</li>
-          <li>• Group admins can create custom missions for their members</li>
-        </ul>
-      </div>
-    </div>
-  );
-}
+ {/* Info Box */}
+ <div className="mt-8 bg-indigo-100 /20 border border-accent rounded-lg p-6">
+ <h2 className="text-lg font-semibold text-accent-dark mb-2">About Groups</h2>
+ <ul className="space-y-2 text-sm text-accent-dark">
+ <li>• Join groups to connect with others on similar weight loss journeys</li>
+ <li>• Complete group missions to earn bonus XP</li>
+ <li>• Private groups require approval to join</li>
+ <li>• Group admins can create custom missions for their members</li>
+ </ul>
+ </div>
+ </div>);}

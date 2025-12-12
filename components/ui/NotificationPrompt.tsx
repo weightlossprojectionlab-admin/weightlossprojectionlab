@@ -1,258 +1,199 @@
 'use client'
 
-import { memo, useState } from 'react'
-import { useNotifications } from '@/hooks/useNotifications'
-import { logger } from '@/lib/logger'
-import { auth } from '@/lib/firebase'
-import toast from 'react-hot-toast'
+import {memo, useState} from'react'
+import {useNotifications} from'@/hooks/useNotifications'
+import {logger} from'@/lib/logger'
+import {auth} from'@/lib/firebase'
+import toast from'react-hot-toast'
 
-export interface NotificationPromptProps {
-  userId: string | undefined
-}
+export interface NotificationPromptProps {userId: string | undefined}
 
 /**
  * Prompt card to request notification permission
  */
-export const NotificationPrompt = memo(function NotificationPrompt({ userId }: NotificationPromptProps) {
-  const {
-    permission,
-    isSupported,
-    isSubscribed,
-    loading,
-    requestPermission
-  } = useNotifications(userId)
+export const NotificationPrompt = memo(function NotificationPrompt({userId}: NotificationPromptProps) {const {permission,
+ isSupported,
+ isSubscribed,
+ loading,
+ requestPermission} = useNotifications(userId)
 
-  // Don't show if not supported or already granted
-  if (!isSupported || permission === 'granted' || isSubscribed) {
-    return null
-  }
+ // Don't show if not supported or already granted
+ if (!isSupported || permission ==='granted' || isSubscribed) {return null}
 
-  // Don't show if user has denied (respect their choice)
-  if (permission === 'denied') {
-    return null
-  }
+ // Don't show if user has denied (respect their choice)
+ if (permission ==='denied') {return null}
 
-  return (
-    <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg p-6 shadow-lg">
-      <div className="flex items-start gap-4">
-        {/* Icon */}
-        <div className="text-4xl">🔔</div>
+ return (<div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg p-6 shadow-lg">
+ <div className="flex items-start gap-4">
+ {/* Icon */}
+ <div className="text-4xl">🔔</div>
 
-        <div className="flex-1">
-          <h3 className="font-bold text-lg mb-2">Stay on track with reminders</h3>
-          <p className="text-sm opacity-90 mb-4">
-            Get helpful notifications for:
-          </p>
-          <ul className="text-sm space-y-1 mb-4">
-            <li>• Meal logging reminders</li>
-            <li>• Milestone celebrations</li>
-            <li>• Encouragement messages</li>
-            <li>• Weekly progress summaries</li>
-          </ul>
+ <div className="flex-1">
+ <h3 className="font-bold text-lg mb-2">Stay on track with reminders</h3>
+ <p className="text-sm opacity-90 mb-4">
+ Get helpful notifications for:
+ </p>
+ <ul className="text-sm space-y-1 mb-4">
+ <li>• Meal logging reminders</li>
+ <li>• Milestone celebrations</li>
+ <li>• Encouragement messages</li>
+ <li>• Weekly progress summaries</li>
+ </ul>
 
-          <button
-            onClick={requestPermission}
-            disabled={loading}
-            className="bg-background text-secondary font-semibold px-6 py-2 rounded-lg hover:bg-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Enabling...' : 'Enable Notifications'}
-          </button>
-        </div>
+ <button
+ onClick={requestPermission}
+ disabled={loading}
+ className="bg-background text-secondary font-semibold px-6 py-2 rounded-lg hover:bg-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+ {loading ?'Enabling...' :'Enable Notifications'}
+ </button>
+ </div>
 
-        {/* Close button (optional) */}
-        <button
-          className="text-white opacity-60 hover:opacity-100 text-xl"
-          onClick={() => {
-            // TODO: Implement "don't show again" preference
-            logger.debug('Notification prompt dismissed')
-          }}
-        >
-          ✕
-        </button>
-      </div>
-    </div>
-  )
-})
+ {/* Close button (optional) */}
+ <button
+ className="text-white opacity-60 hover:opacity-100 text-xl"onClick={() => {// TODO: Implement"don't show again"preference
+ logger.debug('Notification prompt dismissed')}}
+ >
+ ✕
+ </button>
+ </div>
+ </div>)})
 
 /**
  * Notification settings panel
  */
-export interface NotificationSettingsProps {
-  userId: string | undefined
-}
+export interface NotificationSettingsProps {userId: string | undefined}
 
-export const NotificationSettings = memo(function NotificationSettings({ userId }: NotificationSettingsProps) {
-  const {
-    isSupported,
-    isSubscribed,
-    settings,
-    loading,
-    updateSettings,
-    revokePermission
-  } = useNotifications(userId)
+export const NotificationSettings = memo(function NotificationSettings({userId}: NotificationSettingsProps) {const {isSupported,
+ isSubscribed,
+ settings,
+ loading,
+ updateSettings,
+ revokePermission} = useNotifications(userId)
 
-  const [sendingTest, setSendingTest] = useState(false)
+ const [sendingTest, setSendingTest] = useState(false)
 
-  if (!isSupported || !isSubscribed || !settings) {
-    return null
-  }
+ if (!isSupported || !isSubscribed || !settings) {return null}
 
-  const sendTestNotification = async () => {
-    setSendingTest(true)
-    try {
-      const user = auth.currentUser
-      if (!user) {
-        toast.error('Please sign in to send test notification')
-        return
-      }
+ const sendTestNotification = async () => {setSendingTest(true)
+ try {const user = auth.currentUser
+ if (!user) {toast.error('Please sign in to send test notification')
+ return}
 
-      const idToken = await user.getIdToken()
+ const idToken = await user.getIdToken()
 
-      const response = await fetch('/api/notifications/test', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-          'Content-Type': 'application/json'
-        }
-      })
+ const response = await fetch('/api/notifications/test', {method:'POST',
+ headers: {'Authorization':`Bearer ${idToken}`,'Content-Type':'application/json'}})
 
-      const data = await response.json()
+ const data = await response.json()
 
-      if (response.ok) {
-        toast.success('Test notification sent! Check your notifications.')
-      } else {
-        toast.error(data.error || 'Failed to send test notification')
-      }
-    } catch (error) {
-      logger.error('Error sending test notification:', error as Error)
-      toast.error('Failed to send test notification')
-    } finally {
-      setSendingTest(false)
-    }
-  }
+ if (response.ok) {toast.success('Test notification sent! Check your notifications.')} else {toast.error(data.error ||'Failed to send test notification')}} catch (error) {logger.error('Error sending test notification:', error as Error)
+ toast.error('Failed to send test notification')} finally {setSendingTest(false)}}
 
-  return (
-    <div className="bg-card rounded-lg p-6">
-      <h3 className="font-bold text-lg mb-4">Notification Preferences</h3>
+ return (<div className="bg-card rounded-lg p-6">
+ <h3 className="font-bold text-lg mb-4">Notification Preferences</h3>
 
-      {/* Test Notification Button */}
-      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <p className="text-sm text-blue-900 dark:text-blue-100 mb-3">
-          Test your notification setup to make sure everything is working correctly.
-        </p>
-        <button
-          onClick={sendTestNotification}
-          disabled={sendingTest}
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {sendingTest ? 'Sending...' : '🔔 Send Test Notification'}
-        </button>
-      </div>
+ {/* Test Notification Button */}
+ <div className="mb-6 p-4 bg-blue-50 /20 border border-blue-200 rounded-lg">
+ <p className="text-sm text-blue-900 mb-3">
+ Test your notification setup to make sure everything is working correctly.
+ </p>
+ <button
+ onClick={sendTestNotification}
+ disabled={sendingTest}
+ className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed">
+ {sendingTest ?'Sending...' :'🔔 Send Test Notification'}
+ </button>
+ </div>
 
-      <div className="space-y-4">
-        {/* Master toggle */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium">Enable Notifications</p>
-            <p className="text-sm text-muted-foreground">Receive all notifications</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={settings.enabled}
-              onChange={(e) => updateSettings({ enabled: e.target.checked })}
-              disabled={loading}
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-          </label>
-        </div>
+ <div className="space-y-4">
+ {/* Master toggle */}
+ <div className="flex items-center justify-between">
+ <div>
+ <p className="font-medium">Enable Notifications</p>
+ <p className="text-sm text-muted-foreground">Receive all notifications</p>
+ </div>
+ <label className="relative inline-flex items-center cursor-pointer">
+ <input
+ type="checkbox"className="sr-only peer"checked={settings.enabled}
+ onChange={(e) => updateSettings({enabled: e.target.checked})}
+ disabled={loading}
+ />
+ <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+ </label>
+ </div>
 
-        {/* Individual toggles */}
-        {settings.enabled && (
-          <>
-            <div className="flex items-center justify-between border-t pt-4">
-              <div>
-                <p className="font-medium">Meal Reminders</p>
-                <p className="text-sm text-muted-foreground">Reminders to log meals</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={settings.mealReminders}
-                  onChange={(e) => updateSettings({ mealReminders: e.target.checked })}
-                  disabled={loading}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
+ {/* Individual toggles */}
+ {settings.enabled && (<>
+ <div className="flex items-center justify-between border-t pt-4">
+ <div>
+ <p className="font-medium">Meal Reminders</p>
+ <p className="text-sm text-muted-foreground">Reminders to log meals</p>
+ </div>
+ <label className="relative inline-flex items-center cursor-pointer">
+ <input
+ type="checkbox"className="sr-only peer"checked={settings.mealReminders}
+ onChange={(e) => updateSettings({mealReminders: e.target.checked})}
+ disabled={loading}
+ />
+ <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+ </label>
+ </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Encouragement</p>
-                <p className="text-sm text-muted-foreground">Motivational messages</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={settings.encouragement}
-                  onChange={(e) => updateSettings({ encouragement: e.target.checked })}
-                  disabled={loading}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
+ <div className="flex items-center justify-between">
+ <div>
+ <p className="font-medium">Encouragement</p>
+ <p className="text-sm text-muted-foreground">Motivational messages</p>
+ </div>
+ <label className="relative inline-flex items-center cursor-pointer">
+ <input
+ type="checkbox"className="sr-only peer"checked={settings.encouragement}
+ onChange={(e) => updateSettings({encouragement: e.target.checked})}
+ disabled={loading}
+ />
+ <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+ </label>
+ </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Milestones</p>
-                <p className="text-sm text-muted-foreground">Level ups and achievements</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={settings.milestones}
-                  onChange={(e) => updateSettings({ milestones: e.target.checked })}
-                  disabled={loading}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
+ <div className="flex items-center justify-between">
+ <div>
+ <p className="font-medium">Milestones</p>
+ <p className="text-sm text-muted-foreground">Level ups and achievements</p>
+ </div>
+ <label className="relative inline-flex items-center cursor-pointer">
+ <input
+ type="checkbox"className="sr-only peer"checked={settings.milestones}
+ onChange={(e) => updateSettings({milestones: e.target.checked})}
+ disabled={loading}
+ />
+ <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+ </label>
+ </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Weekly Summary</p>
-                <p className="text-sm text-muted-foreground">Progress recap every week</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={settings.weeklySummary}
-                  onChange={(e) => updateSettings({ weeklySummary: e.target.checked })}
-                  disabled={loading}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
-          </>
-        )}
+ <div className="flex items-center justify-between">
+ <div>
+ <p className="font-medium">Weekly Summary</p>
+ <p className="text-sm text-muted-foreground">Progress recap every week</p>
+ </div>
+ <label className="relative inline-flex items-center cursor-pointer">
+ <input
+ type="checkbox"className="sr-only peer"checked={settings.weeklySummary}
+ onChange={(e) => updateSettings({weeklySummary: e.target.checked})}
+ disabled={loading}
+ />
+ <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+ </label>
+ </div>
+ </>)}
 
-        {/* Disable notifications button */}
-        <div className="border-t pt-4">
-          <button
-            onClick={revokePermission}
-            disabled={loading}
-            className="text-error hover:text-error-dark text-sm font-medium disabled:opacity-60"
-          >
-            Disable All Notifications
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-})
+ {/* Disable notifications button */}
+ <div className="border-t pt-4">
+ <button
+ onClick={revokePermission}
+ disabled={loading}
+ className="text-error hover:text-error-dark text-sm font-medium disabled:opacity-60">
+ Disable All Notifications
+ </button>
+ </div>
+ </div>
+ </div>)})
 

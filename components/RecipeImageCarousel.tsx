@@ -1,118 +1,78 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import Image from 'next/image'
-import { MealType } from '@/lib/meal-suggestions'
-import { generateRecipeAltText } from '@/lib/utils'
+import {useState, useRef, useEffect} from'react'
+import Image from'next/image'
+import {MealType} from'@/lib/meal-suggestions'
+import {generateRecipeAltText} from'@/lib/utils'
 
-interface RecipeImageCarouselProps {
-  images?: string[]
-  recipeName: string
-  mealType: MealType
-  className?: string
-}
+interface RecipeImageCarouselProps {images?: string[]
+ recipeName: string
+ mealType: MealType
+ className?: string}
 
-const MEAL_TYPE_COLORS: Record<MealType, { bg: string; text: string; emoji: string }> = {
-  breakfast: { bg: 'bg-orange-100', text: 'text-warning', emoji: '🍳' },
-  lunch: { bg: 'bg-green-100', text: 'text-success', emoji: '🥗' },
-  dinner: { bg: 'bg-blue-100', text: 'text-secondary', emoji: '🍽️' },
-  snack: { bg: 'bg-primary-light', text: 'text-primary', emoji: '🍎' },
-}
+const MEAL_TYPE_COLORS: Record<MealType, {bg: string; text: string; emoji: string}> = {breakfast: {bg:'bg-orange-100', text:'text-warning', emoji:'🍳'},
+ lunch: {bg:'bg-green-100', text:'text-success', emoji:'🥗'},
+ dinner: {bg:'bg-blue-100', text:'text-secondary', emoji:'🍽️'},
+ snack: {bg:'bg-primary-light', text:'text-primary', emoji:'🍎'},}
 
-export function RecipeImageCarousel({
-  images,
-  recipeName,
-  mealType,
-  className = ''
-}: RecipeImageCarouselProps) {
-  const [activeIndex, setActiveIndex] = useState(0)
-  const isMountedRef = useRef(true)
+export function RecipeImageCarousel({images,
+ recipeName,
+ mealType,
+ className =''}: RecipeImageCarouselProps) {const [activeIndex, setActiveIndex] = useState(0)
+ const isMountedRef = useRef(true)
 
-  // Cleanup on unmount to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
+ // Cleanup on unmount to prevent memory leaks
+ useEffect(() => {return () => {isMountedRef.current = false}}, [])
 
-  // Safe state updater that checks if component is mounted
-  const safeSetActiveIndex = (index: number) => {
-    if (isMountedRef.current) {
-      setActiveIndex(index)
-    }
-  }
+ // Safe state updater that checks if component is mounted
+ const safeSetActiveIndex = (index: number) => {if (isMountedRef.current) {setActiveIndex(index)}}
 
-  // Use uploaded images or show placeholder
-  const hasImages = images && images.length > 0
-  const displayImages = hasImages ? images : []
-  const hasMultipleImages = displayImages.length > 1
+ // Use uploaded images or show placeholder
+ const hasImages = images && images.length > 0
+ const displayImages = hasImages ? images : []
+ const hasMultipleImages = displayImages.length > 1
 
-  const mealColors = MEAL_TYPE_COLORS[mealType]
+ const mealColors = MEAL_TYPE_COLORS[mealType]
 
-  return (
-    <div className={`recipe-carousel ${className}`}>
-      {/* Main Image Display */}
-      <div className="relative h-64 bg-gray-200 dark:bg-gray-700 rounded-t-lg overflow-hidden">
-        {hasImages ? (
-          <Image
-            src={displayImages[activeIndex]}
-            alt={generateRecipeAltText(
-              recipeName || 'Recipe',
-              mealType || 'snack',
-              activeIndex === 0 ? 'hero' : 'angle'
-            )}
-            fill
-            className="object-cover transition-opacity duration-300"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-        ) : (
-          <div className={`flex flex-col items-center justify-center h-full ${mealColors.bg} dark:bg-gray-700`}>
-            <div className="text-6xl mb-4">{mealColors.emoji}</div>
-            <div className={`text-2xl font-bold capitalize ${mealColors.text}`}>{mealType}</div>
-            <div className={`text-sm mt-2 ${mealColors.text} opacity-70`}>No image uploaded yet</div>
-          </div>
-        )}
-      </div>
+ return (<div className={`recipe-carousel ${className}`}>
+ {/* Main Image Display */}
+ <div className="relative h-64 bg-gray-200 rounded-t-lg overflow-hidden">
+ {hasImages ? (<Image
+ src={displayImages[activeIndex]}
+ alt={generateRecipeAltText(recipeName ||'Recipe',
+ mealType ||'snack',
+ activeIndex === 0 ?'hero' :'angle')}
+ fill
+ className="object-cover transition-opacity duration-300"sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/>) : (<div className={`flex flex-col items-center justify-center h-full ${mealColors.bg}`}>
+ <div className="text-6xl mb-4">{mealColors.emoji}</div>
+ <div className={`text-2xl font-bold capitalize ${mealColors.text}`}>{mealType}</div>
+ <div className={`text-sm mt-2 ${mealColors.text} opacity-70`}>No image uploaded yet</div>
+ </div>)}
+ </div>
 
-      {/* Thumbnail Navigation - Only show if multiple images */}
-      {hasMultipleImages && (
-        <div className="flex gap-2 p-2 bg-background rounded-b-lg overflow-x-auto">
-          {displayImages.map((image, index) => (
-            <button
-              key={index}
-              onClick={() => safeSetActiveIndex(index)}
-              className={`
-                flex-shrink-0 relative w-16 h-16 rounded-md overflow-hidden
-                border-2 transition-all
-                ${activeIndex === index
-                  ? 'border-primary scale-105 shadow-md'
-                  : 'border-border dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-                }
-              `}
-              aria-label={`View image ${index + 1}`}
-            >
-              <Image
-                src={image}
-                alt={generateRecipeAltText(
-                  recipeName || 'Recipe',
-                  mealType || 'snack',
-                  'thumbnail'
-                )}
-                fill
-                className="object-cover"
-                sizes="64px"
-              />
-            </button>
-          ))}
-        </div>
-      )}
+ {/* Thumbnail Navigation - Only show if multiple images */}
+ {hasMultipleImages && (<div className="flex gap-2 p-2 bg-background rounded-b-lg overflow-x-auto">
+ {displayImages.map((image, index) => (<button
+ key={index}
+ onClick={() => safeSetActiveIndex(index)}
+ className={`flex-shrink-0 relative w-16 h-16 rounded-md overflow-hidden
+ border-2 transition-all
+ ${activeIndex === index
+ ?'border-primary scale-105 shadow-md'
+ :'border-border hover:border-gray-400'}`}
+ aria-label={`View image ${index + 1}`}
+ >
+ <Image
+ src={image}
+ alt={generateRecipeAltText(recipeName ||'Recipe',
+ mealType ||'snack','thumbnail')}
+ fill
+ className="object-cover"sizes="64px"/>
+ </button>))}
+ </div>)}
 
-      {/* Image Counter */}
-      {hasMultipleImages && (
-        <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
-          {activeIndex + 1} / {displayImages.length}
-        </div>
-      )}
-    </div>
-  )
-}
+ {/* Image Counter */}
+ {hasMultipleImages && (<div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
+ {activeIndex + 1} / {displayImages.length}
+ </div>)}
+ </div>)}

@@ -8,138 +8,85 @@
  * Makes recipe names clickable to open recipe modal.
  */
 
-import { useState } from 'react'
-import { useRecipeNames } from '@/hooks/useRecipeNames'
+import {useState} from'react'
+import {useRecipeNames} from'@/hooks/useRecipeNames'
 
-interface RecipeLinksProps {
-  recipeIds?: string[]
-  primaryRecipeId?: string
-  onRecipeClick?: (recipeId: string, recipeName: string) => void
-  compact?: boolean // Compact mode for smaller displays
-}
+interface RecipeLinksProps {recipeIds?: string[]
+ primaryRecipeId?: string
+ onRecipeClick?: (recipeId: string, recipeName: string) => void
+ compact?: boolean // Compact mode for smaller displays}
 
-export function RecipeLinks({
-  recipeIds = [],
-  primaryRecipeId,
-  onRecipeClick,
-  compact = false
-}: RecipeLinksProps) {
-  const { names, isLoading, error } = useRecipeNames(recipeIds)
-  const [expanded, setExpanded] = useState(false)
+export function RecipeLinks({recipeIds = [],
+ primaryRecipeId,
+ onRecipeClick,
+ compact = false}: RecipeLinksProps) {const {names, isLoading, error} = useRecipeNames(recipeIds)
+ const [expanded, setExpanded] = useState(false)
 
-  // No recipes linked
-  if (!recipeIds || recipeIds.length === 0) {
-    return null
-  }
+ // No recipes linked
+ if (!recipeIds || recipeIds.length === 0) {return null}
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground dark:text-muted-foreground">
-        <span className="animate-pulse">🍳</span>
-        <span>Loading recipes...</span>
-      </div>
-    )
-  }
+ // Loading state
+ if (isLoading) {return (<div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+ <span className="animate-pulse">🍳</span>
+ <span>Loading recipes...</span>
+ </div>)}
 
-  // Error state
-  if (error) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs text-error">
-        <span>⚠️</span>
-        <span>Failed to load recipes</span>
-      </div>
-    )
-  }
+ // Error state
+ if (error) {return (<div className="flex items-center gap-1.5 text-xs text-error">
+ <span>⚠️</span>
+ <span>Failed to load recipes</span>
+ </div>)}
 
-  // Get primary recipe name
-  const primaryRecipe = primaryRecipeId ? names[primaryRecipeId] : null
-  const additionalRecipes = recipeIds.filter(id => id !== primaryRecipeId)
-  const additionalCount = additionalRecipes.length
+ // Get primary recipe name
+ const primaryRecipe = primaryRecipeId ? names[primaryRecipeId] : null
+ const additionalRecipes = recipeIds.filter(id => id !== primaryRecipeId)
+ const additionalCount = additionalRecipes.length
 
-  // Compact mode - just show icon + count
-  if (compact) {
-    return (
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          setExpanded(!expanded)
-        }}
-        className="flex items-center gap-1 text-xs px-2 py-1 bg-primary-light text-primary-dark rounded-full hover:bg-primary-light dark:hover:bg-purple-900/30 transition-colors"
-      >
-        <span>🍳</span>
-        <span className="font-medium">{recipeIds.length} recipe{recipeIds.length > 1 ? 's' : ''}</span>
-      </button>
-    )
-  }
+ // Compact mode - just show icon + count
+ if (compact) {return (<button
+ onClick={(e) => {e.stopPropagation()
+ setExpanded(!expanded)}}
+ className="flex items-center gap-1 text-xs px-2 py-1 bg-primary-light text-primary-dark rounded-full hover:bg-primary-light /30 transition-colors">
+ <span>🍳</span>
+ <span className="font-medium">{recipeIds.length} recipe{recipeIds.length > 1 ?'s' :''}</span>
+ </button>)}
 
-  return (
-    <div className="text-xs space-y-1">
-      {/* Primary Recipe */}
-      {primaryRecipe && (
-        <div className="flex items-center gap-1.5">
-          <span>🍳</span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              if (onRecipeClick && primaryRecipeId) {
-                onRecipeClick(primaryRecipeId, primaryRecipe)
-              }
-            }}
-            className="text-primary-dark hover:text-purple-900 dark:hover:text-purple-100 hover:underline font-medium transition-colors"
-          >
-            {primaryRecipe}
-          </button>
-          {additionalCount > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setExpanded(!expanded)
-              }}
-              className="px-1.5 py-0.5 bg-primary-light text-primary-dark rounded-full hover:bg-purple-200 dark:hover:bg-purple-900/40 font-medium transition-colors"
-            >
-              +{additionalCount} more
-            </button>
-          )}
-        </div>
-      )}
+ return (<div className="text-xs space-y-1">
+ {/* Primary Recipe */}
+ {primaryRecipe && (<div className="flex items-center gap-1.5">
+ <span>🍳</span>
+ <button
+ onClick={(e) => {e.stopPropagation()
+ if (onRecipeClick && primaryRecipeId) {onRecipeClick(primaryRecipeId, primaryRecipe)}}}
+ className="text-primary-dark hover:text-purple-900 hover:underline font-medium transition-colors">
+ {primaryRecipe}
+ </button>
+ {additionalCount > 0 && (<button
+ onClick={(e) => {e.stopPropagation()
+ setExpanded(!expanded)}}
+ className="px-1.5 py-0.5 bg-primary-light text-primary-dark rounded-full hover:bg-purple-200 /40 font-medium transition-colors">
+ +{additionalCount} more
+ </button>)}
+ </div>)}
 
-      {/* No Primary Recipe - Show count */}
-      {!primaryRecipe && recipeIds.length > 0 && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            setExpanded(!expanded)
-          }}
-          className="flex items-center gap-1.5 text-primary-dark hover:text-purple-900 dark:hover:text-purple-100 transition-colors"
-        >
-          <span>🍳</span>
-          <span className="font-medium">Used in {recipeIds.length} recipe{recipeIds.length > 1 ? 's' : ''}</span>
-        </button>
-      )}
+ {/* No Primary Recipe - Show count */}
+ {!primaryRecipe && recipeIds.length > 0 && (<button
+ onClick={(e) => {e.stopPropagation()
+ setExpanded(!expanded)}}
+ className="flex items-center gap-1.5 text-primary-dark hover:text-purple-900 transition-colors">
+ <span>🍳</span>
+ <span className="font-medium">Used in {recipeIds.length} recipe{recipeIds.length > 1 ?'s' :''}</span>
+ </button>)}
 
-      {/* Expanded - Show all additional recipes */}
-      {expanded && additionalRecipes.length > 0 && (
-        <div className="pl-5 space-y-1 mt-1">
-          {additionalRecipes.map((recipeId) => {
-            const recipeName = names[recipeId] || 'Unknown Recipe'
-            return (
-              <button
-                key={recipeId}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (onRecipeClick) {
-                    onRecipeClick(recipeId, recipeName)
-                  }
-                }}
-                className="block text-primary dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-100 hover:underline transition-colors"
-              >
-                • {recipeName}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
+ {/* Expanded - Show all additional recipes */}
+ {expanded && additionalRecipes.length > 0 && (<div className="pl-5 space-y-1 mt-1">
+ {additionalRecipes.map((recipeId) => {const recipeName = names[recipeId] ||'Unknown Recipe'
+ return (<button
+ key={recipeId}
+ onClick={(e) => {e.stopPropagation()
+ if (onRecipeClick) {onRecipeClick(recipeId, recipeName)}}}
+ className="block text-primary hover:text-purple-900 hover:underline transition-colors">
+ • {recipeName}
+ </button>)})}
+ </div>)}
+ </div>)}

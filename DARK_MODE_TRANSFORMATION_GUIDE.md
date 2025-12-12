@@ -5,40 +5,13 @@ This guide documents the systematic approach to adding Tailwind dark mode varian
 
 ## Scope
 - **Total TSX Files**: 60+ files
-- **Directories**: `app/` and `components/`
-- **Estimated Color Classes**: 1000+ occurrences
+- **Directories**:`app/`and`components/`- **Estimated Color Classes**: 1000+ occurrences
 
 ## Transformation Patterns
 
-### Text Colors
-```
-text-gray-900 → text-gray-900 dark:text-gray-100
-text-gray-800 → text-gray-800 dark:text-gray-200
-text-gray-700 → text-gray-700 dark:text-gray-300
-text-gray-600 → text-gray-600 dark:text-gray-400
-text-gray-500 → text-gray-500 dark:text-gray-500 (no change)
-text-black → text-black dark:text-white
-```
-
-### Background Colors
-```
-bg-white → bg-white dark:bg-gray-900
-bg-gray-50 → bg-gray-50 dark:bg-gray-950
-bg-gray-100 → bg-gray-100 dark:bg-gray-800
-bg-gray-200 → bg-gray-200 dark:bg-gray-700
-bg-gray-300 → bg-gray-300 dark:bg-gray-600
-bg-purple-100 → bg-purple-100 dark:bg-purple-900/20
-bg-indigo-100 → bg-indigo-100 dark:bg-indigo-900/20
-```
-
-### Border Colors
-```
-border-gray-200 → border-gray-200 dark:border-gray-700
-border-gray-300 → border-gray-300 dark:border-gray-600
-border-white → border-white dark:border-gray-700
-```
-
-## Files Requiring Updates
+### Text Colors```text-gray-900 → text-gray-900 text-gray-800 → text-gray-800 text-gray-700 → text-gray-700 text-gray-600 → text-gray-600 text-gray-500 → text-gray-500 (no change)
+text-black → text-black```### Background Colors```bg-white → bg-white bg-gray-50 → bg-gray-50 bg-gray-100 → bg-gray-100 bg-gray-200 → bg-gray-200 bg-gray-300 → bg-gray-300 bg-purple-100 → bg-purple-100 /20
+bg-indigo-100 → bg-indigo-100 /20```### Border Colors```border-gray-200 → border-gray-200 border-gray-300 → border-gray-300 border-white → border-white```## Files Requiring Updates
 
 ### High Priority (Most Color Classes)
 1. **app/dashboard/page.tsx** - ~37 color class occurrences ✅ STARTED
@@ -79,8 +52,7 @@ border-white → border-white dark:border-gray-700
 - Time estimate: 1-2 hours
 
 ### Option 3: Automated Script (Fastest)
-- Use the Python script at `scripts/add-dark-mode.py`
-- Requires testing and verification
+- Use the Python script at`scripts/add-dark-mode.py`- Requires testing and verification
 - Risk of duplicates if run multiple times
 - Time estimate: 30 minutes + verification
 
@@ -96,11 +68,9 @@ border-white → border-white dark:border-gray-700
 - All other 59 files
 
 ## Verification Checklist
-- [ ] No duplicate dark: variants (e.g., `text-gray-900 dark:text-gray-100 dark:text-gray-100`)
-- [ ] All bg-white changed to dark:bg-gray-900
-- [ ] All text-gray-900 changed to dark:text-gray-100
-- [ ] Conditional classes preserve their logic
-- [ ] No syntax errors in className strings
+- [] No duplicate dark: variants (e.g.,`text-gray-900`)
+- [] All bg-white changed to - [] All text-gray-900 changed to - [] Conditional classes preserve their logic
+- [] No syntax errors in className strings
 
 ## Notes
 - **DO NOT** modify tailwind.config.ts or globals.css (already updated)
@@ -110,23 +80,15 @@ border-white → border-white dark:border-gray-700
 
 ## Example Before/After
 
-### Before
-```tsx
+### Before```tsx
 <div className="bg-white rounded-lg shadow p-6">
-  <h2 className="text-gray-900 font-bold">Title</h2>
-  <p className="text-gray-600">Description</p>
-</div>
-```
-
-### After
-```tsx
-<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6">
-  <h2 className="text-gray-900 dark:text-gray-100 font-bold">Title</h2>
-  <p className="text-gray-600 dark:text-gray-400">Description</p>
-</div>
-```
-
-## Recommendation
+ <h2 className="text-gray-900 font-bold">Title</h2>
+ <p className="text-gray-600">Description</p>
+</div>```### After```tsx
+<div className="bg-white rounded-lg shadow p-6">
+ <h2 className="text-gray-900 font-bold">Title</h2>
+ <p className="text-gray-600">Description</p>
+</div>```## Recommendation
 Given the scale (1000+ modifications), I recommend:
 1. Continue manual edits for critical files (dashboard, log-meal, onboarding)
 2. Use regex find/replace in IDE for remaining files
@@ -134,6 +96,4 @@ Given the scale (1000+ modifications), I recommend:
 4. Verify dark mode display in browser
 
 ## Resources
-- Python script: `scripts/add-dark-mode.py`
-- Bash script: `scripts/add-dark-mode.sh`
-- This guide: `DARK_MODE_TRANSFORMATION_GUIDE.md`
+- Python script:`scripts/add-dark-mode.py`- Bash script:`scripts/add-dark-mode.sh`- This guide:`DARK_MODE_TRANSFORMATION_GUIDE.md`

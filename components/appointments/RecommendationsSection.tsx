@@ -3,246 +3,185 @@
  *
  * Displays AI-generated appointment recommendations with actions
  * Designed to be embedded in the Progress page
- */
+ */'use client'
 
-'use client'
+import {useState} from'react'
+import {useRecommendations} from'@/hooks/useRecommendations'
+import {RecommendationCard} from'./RecommendationCard'
+import {RecommendationModal} from'./RecommendationModal'
+import {AppointmentRecommendation} from'@/types/medical'
+import {SparklesIcon, ArrowPathIcon} from'@heroicons/react/24/outline'
 
-import { useState } from 'react'
-import { useRecommendations } from '@/hooks/useRecommendations'
-import { RecommendationCard } from './RecommendationCard'
-import { RecommendationModal } from './RecommendationModal'
-import { AppointmentRecommendation } from '@/types/medical'
-import { SparklesIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+interface RecommendationsSectionProps {className?: string
+ patientId?: string | null
+ showOnlyUrgent?: boolean}
 
-interface RecommendationsSectionProps {
-  className?: string
-  patientId?: string | null
-  showOnlyUrgent?: boolean
-}
+export function RecommendationsSection({className ='', patientId, showOnlyUrgent = false}: RecommendationsSectionProps) {const {recommendations,
+ loading,
+ error,
+ refetch,
+ generate,
+ dismiss,
+ markScheduled} = useRecommendations({patientId})
 
-export function RecommendationsSection({ className = '', patientId, showOnlyUrgent = false }: RecommendationsSectionProps) {
-  const {
-    recommendations,
-    loading,
-    error,
-    refetch,
-    generate,
-    dismiss,
-    markScheduled
-  } = useRecommendations({ patientId })
+ const [selectedRecommendation, setSelectedRecommendation] = useState<AppointmentRecommendation | null>(null)
+ const [generating, setGenerating] = useState(false)
 
-  const [selectedRecommendation, setSelectedRecommendation] = useState<AppointmentRecommendation | null>(null)
-  const [generating, setGenerating] = useState(false)
+ const handleGenerate = async () => {setGenerating(true)
+ try {await generate()} finally {setGenerating(false)}}
 
-  const handleGenerate = async () => {
-    setGenerating(true)
-    try {
-      await generate()
-    } finally {
-      setGenerating(false)
-    }
-  }
+ const handleSchedule = (recommendation: AppointmentRecommendation) => {setSelectedRecommendation(recommendation)}
 
-  const handleSchedule = (recommendation: AppointmentRecommendation) => {
-    setSelectedRecommendation(recommendation)
-  }
+ const handleScheduled = async (appointmentId: string) => {if (selectedRecommendation) {await markScheduled(selectedRecommendation.id, appointmentId)
+ setSelectedRecommendation(null)}}
 
-  const handleScheduled = async (appointmentId: string) => {
-    if (selectedRecommendation) {
-      await markScheduled(selectedRecommendation.id, appointmentId)
-      setSelectedRecommendation(null)
-    }
-  }
+ const handleDismiss = async (recommendationId: string) => {await dismiss(recommendationId)}
 
-  const handleDismiss = async (recommendationId: string) => {
-    await dismiss(recommendationId)
-  }
+ // Group recommendations by severity
+ const urgentRecs = recommendations.filter(r => r.urgency ==='urgent')
+ const highRecs = recommendations.filter(r => r.severity ==='high' && r.urgency !=='urgent')
+ const normalRecs = recommendations.filter(r => r.severity !=='high' && r.urgency !=='urgent')
 
-  // Group recommendations by severity
-  const urgentRecs = recommendations.filter(r => r.urgency === 'urgent')
-  const highRecs = recommendations.filter(r => r.severity === 'high' && r.urgency !== 'urgent')
-  const normalRecs = recommendations.filter(r => r.severity !== 'high' && r.urgency !== 'urgent')
+ // If showing only urgent and no urgent recommendations, don't render anything
+ if (showOnlyUrgent && urgentRecs.length === 0) {return null}
 
-  // If showing only urgent and no urgent recommendations, don't render anything
-  if (showOnlyUrgent && urgentRecs.length === 0) {
-    return null
-  }
+ // When not showing urgent-only, filter out urgent recs (they're shown separately at top)
+ const displayRecs = showOnlyUrgent ? urgentRecs : recommendations.filter(r => r.urgency !=='urgent')
 
-  // When not showing urgent-only, filter out urgent recs (they're shown separately at top)
-  const displayRecs = showOnlyUrgent ? urgentRecs : recommendations.filter(r => r.urgency !== 'urgent')
+ // Hide if no recommendations to display
+ if (!loading && displayRecs.length === 0) {return null}
 
-  // Hide if no recommendations to display
-  if (!loading && displayRecs.length === 0) {
-    return null
-  }
+ if (loading && displayRecs.length === 0) {return (<div className={`bg-card rounded-lg shadow-sm p-6 ${className}`}>
+ <div className="flex items-center gap-3 mb-4">
+ <SparklesIcon className="w-6 h-6 text-primary"/>
+ <h2 className="text-xl font-bold text-foreground">
+ {showOnlyUrgent ?'⚠️ Health Alerts' :'AI Appointment Recommendations'}
+ </h2>
+ </div>
+ <div className="animate-pulse space-y-3">
+ <div className="h-24 bg-muted rounded-lg"></div>
+ <div className="h-24 bg-muted rounded-lg"></div>
+ </div>
+ </div>)}
 
-  if (loading && displayRecs.length === 0) {
-    return (
-      <div className={`bg-card rounded-lg shadow-sm p-6 ${className}`}>
-        <div className="flex items-center gap-3 mb-4">
-          <SparklesIcon className="w-6 h-6 text-primary" />
-          <h2 className="text-xl font-bold text-foreground">
-            {showOnlyUrgent ? '⚠️ Health Alerts' : 'AI Appointment Recommendations'}
-          </h2>
-        </div>
-        <div className="animate-pulse space-y-3">
-          <div className="h-24 bg-muted rounded-lg"></div>
-          <div className="h-24 bg-muted rounded-lg"></div>
-        </div>
-      </div>
-    )
-  }
+ return (<>
+ <div className={`${showOnlyUrgent ?'bg-red-50 /10 border-2 border-red-200' :'bg-card'} rounded-lg shadow-sm p-6 ${className}`}>
+ {/* Header */}
+ <div className="flex items-center justify-between mb-6">
+ <div className="flex items-center gap-3">
+ <div className={`p-2 ${showOnlyUrgent ?'bg-red-100 /30' :'bg-primary-light /20'} rounded-lg`}>
+ {showOnlyUrgent ? (<span className="text-2xl">⚠️</span>) : (<SparklesIcon className="w-6 h-6 text-primary"/>)}
+ </div>
+ <div>
+ <h2 className={`text-xl font-bold ${showOnlyUrgent ?'text-red-900' :'text-foreground'}`}>
+ {showOnlyUrgent ?'Health Alerts' :'AI Health Insights'}
+ </h2>
+ <p className={`text-sm ${showOnlyUrgent ?'text-red-700' :'text-muted-foreground'}`}>
+ {showOnlyUrgent
+ ?'Urgent concerns requiring attention'
+ :'Based on progress, vitals, and appointment history'}
+ </p>
+ </div>
+ </div>
 
-  return (
-    <>
-      <div className={`${showOnlyUrgent ? 'bg-red-50 dark:bg-red-900/10 border-2 border-red-200 dark:border-red-800' : 'bg-card'} rounded-lg shadow-sm p-6 ${className}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 ${showOnlyUrgent ? 'bg-red-100 dark:bg-red-900/30' : 'bg-primary-light dark:bg-purple-900/20'} rounded-lg`}>
-              {showOnlyUrgent ? (
-                <span className="text-2xl">⚠️</span>
-              ) : (
-                <SparklesIcon className="w-6 h-6 text-primary dark:text-purple-400" />
-              )}
-            </div>
-            <div>
-              <h2 className={`text-xl font-bold ${showOnlyUrgent ? 'text-red-900 dark:text-red-200' : 'text-foreground'}`}>
-                {showOnlyUrgent ? 'Health Alerts' : 'AI Health Insights'}
-              </h2>
-              <p className={`text-sm ${showOnlyUrgent ? 'text-red-700 dark:text-red-300' : 'text-muted-foreground'}`}>
-                {showOnlyUrgent
-                  ? 'Urgent concerns requiring attention'
-                  : 'Based on progress, vitals, and appointment history'}
-              </p>
-            </div>
-          </div>
+ {!showOnlyUrgent && (<button
+ onClick={handleGenerate}
+ disabled={generating}
+ className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+ <ArrowPathIcon className={`w-4 h-4 ${generating ?'animate-spin' :''}`} />
+ {generating ?'Analyzing...' :'Refresh Analysis'}
+ </button>)}
+ </div>
 
-          {!showOnlyUrgent && (
-            <button
-              onClick={handleGenerate}
-              disabled={generating}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ArrowPathIcon className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-              {generating ? 'Analyzing...' : 'Refresh Analysis'}
-            </button>
-          )}
-        </div>
+ {/* Error State */}
+ {error && (<div className="mb-4 p-4 bg-error-light /10 border border-red-200 rounded-lg">
+ <p className="text-sm text-error-dark">{error}</p>
+ </div>)}
 
-        {/* Error State */}
-        {error && (
-          <div className="mb-4 p-4 bg-error-light dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-sm text-error-dark dark:text-red-300">{error}</p>
-          </div>
-        )}
+ {/* Empty State */}
+ {!loading && recommendations.length === 0 && (<div className="text-center py-12">
+ <div className="inline-block p-4 bg-green-100 /20 rounded-full mb-4">
+ <SparklesIcon className="w-8 h-8 text-success"/>
+ </div>
+ <h3 className="text-lg font-semibold text-foreground mb-2">
+ All Caught Up!
+ </h3>
+ <p className="text-muted-foreground mb-4">
+ You have no pending appointment recommendations at this time.
+ </p>
+ <p className="text-sm text-muted-foreground">
+ Our AI monitors your progress continuously and will alert you if any appointments are recommended.
+ </p>
+ </div>)}
 
-        {/* Empty State */}
-        {!loading && recommendations.length === 0 && (
-          <div className="text-center py-12">
-            <div className="inline-block p-4 bg-green-100 dark:bg-green-900/20 rounded-full mb-4">
-              <SparklesIcon className="w-8 h-8 text-success dark:text-green-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              All Caught Up!
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              You have no pending appointment recommendations at this time.
-            </p>
-            <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-              Our AI monitors your progress continuously and will alert you if any appointments are recommended.
-            </p>
-          </div>
-        )}
+ {/* Recommendations List */}
+ {displayRecs.length > 0 && (<div className="space-y-6">
+ {/* Urgent Section */}
+ {urgentRecs.length > 0 && (<div>
+ {!showOnlyUrgent && (<div className="flex items-center gap-2 mb-3">
+ <span className="px-2 py-1 bg-red-100 /30 text-error-dark text-xs font-bold rounded uppercase">
+ Urgent
+ </span>
+ <span className="text-sm text-muted-foreground">
+ Schedule this week
+ </span>
+ </div>)}
+ <div className="space-y-3">
+ {urgentRecs.map(rec => (<RecommendationCard
+ key={rec.id}
+ recommendation={rec}
+ onSchedule={handleSchedule}
+ onDismiss={handleDismiss}
+ />))}
+ </div>
+ </div>)}
 
-        {/* Recommendations List */}
-        {displayRecs.length > 0 && (
-          <div className="space-y-6">
-            {/* Urgent Section */}
-            {urgentRecs.length > 0 && (
-              <div>
-                {!showOnlyUrgent && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-error-dark dark:text-red-300 text-xs font-bold rounded uppercase">
-                      Urgent
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      Schedule this week
-                    </span>
-                  </div>
-                )}
-                <div className="space-y-3">
-                  {urgentRecs.map(rec => (
-                    <RecommendationCard
-                      key={rec.id}
-                      recommendation={rec}
-                      onSchedule={handleSchedule}
-                      onDismiss={handleDismiss}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+ {/* High Priority Section - Hide in urgent-only mode */}
+ {!showOnlyUrgent && highRecs.length > 0 && (<div>
+ <div className="flex items-center gap-2 mb-3">
+ <span className="px-2 py-1 bg-orange-100 /30 text-orange-700 text-xs font-bold rounded uppercase">
+ High Priority
+ </span>
+ <span className="text-sm text-muted-foreground">
+ Schedule soon
+ </span>
+ </div>
+ <div className="space-y-3">
+ {highRecs.map(rec => (<RecommendationCard
+ key={rec.id}
+ recommendation={rec}
+ onSchedule={handleSchedule}
+ onDismiss={handleDismiss}
+ />))}
+ </div>
+ </div>)}
 
-            {/* High Priority Section - Hide in urgent-only mode */}
-            {!showOnlyUrgent && highRecs.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs font-bold rounded uppercase">
-                    High Priority
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    Schedule soon
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {highRecs.map(rec => (
-                    <RecommendationCard
-                      key={rec.id}
-                      recommendation={rec}
-                      onSchedule={handleSchedule}
-                      onDismiss={handleDismiss}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+ {/* Normal Priority Section - Hide in urgent-only mode */}
+ {!showOnlyUrgent && normalRecs.length > 0 && (<div>
+ <div className="flex items-center gap-2 mb-3">
+ <span className="px-2 py-1 bg-blue-100 /30 text-blue-700 text-xs font-bold rounded uppercase">
+ Routine
+ </span>
+ <span className="text-sm text-muted-foreground">
+ Schedule when convenient
+ </span>
+ </div>
+ <div className="space-y-3">
+ {normalRecs.map(rec => (<RecommendationCard
+ key={rec.id}
+ recommendation={rec}
+ onSchedule={handleSchedule}
+ onDismiss={handleDismiss}
+ />))}
+ </div>
+ </div>)}
+ </div>)}
+ </div>
 
-            {/* Normal Priority Section - Hide in urgent-only mode */}
-            {!showOnlyUrgent && normalRecs.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold rounded uppercase">
-                    Routine
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    Schedule when convenient
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {normalRecs.map(rec => (
-                    <RecommendationCard
-                      key={rec.id}
-                      recommendation={rec}
-                      onSchedule={handleSchedule}
-                      onDismiss={handleDismiss}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Schedule Modal */}
-      {selectedRecommendation && (
-        <RecommendationModal
-          recommendation={selectedRecommendation}
-          onClose={() => setSelectedRecommendation(null)}
-          onScheduled={handleScheduled}
-        />
-      )}
-    </>
-  )
-}
+ {/* Schedule Modal */}
+ {selectedRecommendation && (<RecommendationModal
+ recommendation={selectedRecommendation}
+ onClose={() => setSelectedRecommendation(null)}
+ onScheduled={handleScheduled}
+ />)}
+ </>)}

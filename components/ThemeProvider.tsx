@@ -14,19 +14,13 @@ interface ThemeProviderProps {
 }
 
 /**
- * Provider component for managing app theme with three-tier system
+ * Provider component for managing app theme
  *
- * Supports:
- * - Light mode
- * - Dark mode
- * - System preference (auto)
+ * LIGHT MODE ONLY - Dark mode disabled
  *
  * Features:
  * - Firestore sync for authenticated users
  * - localStorage fallback for unauthenticated users
- * - System preference detection
- * - Live system preference updates
- * - No flash of unstyled content (FOUC)
  *
  * @example
  * ```tsx
@@ -36,13 +30,13 @@ interface ThemeProviderProps {
  * ```
  */
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  // Start with 'system' as default, will be updated on mount
-  const [theme, setThemeState] = useState<Theme>('system')
-  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>('light')
+  // Always use light mode
+  const [theme] = useState<Theme>('light')
   const [userId, setUserId] = useState<string | null>(null)
 
-  // Calculate the actual theme to render
-  const resolvedTheme = theme === 'system' ? systemTheme : theme
+  // Always resolve to light
+  const resolvedTheme = 'light' as const
+  const systemTheme = 'light' as const
 
   // Listen for auth state changes (lazy-loaded)
   useEffect(() => {
@@ -64,103 +58,29 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
   }, [])
 
-  // Detect system preference
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    setSystemTheme(mediaQuery.matches ? 'dark' : 'light')
+  // Light mode only - no system preference detection needed
 
-    const handleChange = (e: MediaQueryListEvent) => {
-      setSystemTheme(e.matches ? 'dark' : 'light')
-    }
-
-    // Modern browsers
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleChange)
-      return () => mediaQuery.removeEventListener('change', handleChange)
-    }
-    // Fallback for older browsers
-    else if (mediaQuery.addListener) {
-      mediaQuery.addListener(handleChange)
-      return () => mediaQuery.removeListener(handleChange)
-    }
-  }, [])
-
-  // Load theme from localStorage first (instant), then sync with Firestore in background
-  // This prevents blocking on Firestore/auth initialization and avoids Listen channel errors
-  useEffect(() => {
-    const loadTheme = async () => {
-      // ALWAYS try localStorage first for instant theme application
-      try {
-        const savedTheme = localStorage.getItem(STORAGE_KEY) as Theme | null
-        if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
-          setThemeState(savedTheme)
-        }
-      } catch (err) {
-        logger.error('Failed to load from localStorage:', err as Error)
-      }
-
-      // If authenticated, sync with Firestore in background (non-blocking)
-      if (userId) {
-        try {
-          const profile = await userProfileOperations.getUserProfile()
-          const firestoreTheme = profile.data?.preferences?.themePreference
-
-          if (firestoreTheme && ['light', 'dark', 'system'].includes(firestoreTheme)) {
-            // Only update if different from localStorage (avoid unnecessary re-renders)
-            const currentLocalTheme = localStorage.getItem(STORAGE_KEY)
-            if (firestoreTheme !== currentLocalTheme) {
-              setThemeState(firestoreTheme)
-              localStorage.setItem(STORAGE_KEY, firestoreTheme)
-            }
-          }
-        } catch (error) {
-          // Firestore errors are non-critical - we already have theme from localStorage
-          logger.error('Failed to sync theme from Firestore (non-critical):', error as Error)
-        }
-      }
-    }
-
-    loadTheme()
-  }, [userId])
-
-  // Apply theme to document
+  // Apply light theme to document
   useEffect(() => {
     const root = document.documentElement
 
     // Remove both classes first
     root.classList.remove('light', 'dark')
 
-    // Add the resolved theme class
-    root.classList.add(resolvedTheme)
+    // Add light class
+    root.classList.add('light')
 
-    // Update meta theme-color for mobile browsers
+    // Update meta theme-color for mobile browsers (always light)
     const metaThemeColor = document.querySelector('meta[name="theme-color"]')
     if (metaThemeColor) {
-      metaThemeColor.setAttribute(
-        'content',
-        resolvedTheme === 'dark' ? '#111827' : '#ffffff'
-      )
+      metaThemeColor.setAttribute('content', '#ffffff')
     }
-  }, [resolvedTheme])
+  }, [])
 
-  // Update theme and save to Firestore (if authenticated) or localStorage
+  // No-op setTheme since theme is always light
   const setTheme = async (newTheme: Theme) => {
-    setThemeState(newTheme)
-
-    try {
-      if (userId) {
-        // Save to Firestore
-        await userProfileOperations.updateUserProfile({
-          preferences: { themePreference: newTheme }
-        })
-      }
-
-      // Always save to localStorage as backup
-      localStorage.setItem(STORAGE_KEY, newTheme)
-    } catch (error) {
-      logger.error('Failed to save theme:', error as Error)
-      // Even if Firestore fails, we saved to localStorage
-    }
+    // Theme is always light - no-op
+    logger.debug('Theme change requested but light mode is enforced', { requestedTheme: newTheme })
   }
 
   const value: ThemeContextType = {

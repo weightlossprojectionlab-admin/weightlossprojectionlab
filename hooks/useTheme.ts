@@ -1,6 +1,5 @@
 import { useContext } from 'react'
 import { ThemeContext } from '@/components/ThemeProvider'
-import { logger } from '@/lib/logger'
 
 export type Theme = 'light' | 'dark' | 'system'
 
@@ -12,23 +11,20 @@ export interface ThemeContextType {
 }
 
 /**
- * Hook to access and control the current theme
+ * Hook to access the current theme
  *
- * @returns {ThemeContextType} Theme context with current theme and setter
+ * LIGHT MODE ONLY - Dark mode disabled
+ *
+ * @returns {ThemeContextType} Theme context (always 'light')
  * @throws {Error} If used outside ThemeProvider
  *
  * @example
  * ```tsx
- * const { theme, setTheme, resolvedTheme } = useTheme()
+ * const { theme, resolvedTheme } = useTheme()
  *
- * // Get current theme setting
- * logger.debug(theme) // 'light' | 'dark' | 'system'
- *
- * // Get actual rendered theme
- * logger.debug(resolvedTheme) // 'light' | 'dark'
- *
- * // Change theme
- * setTheme('dark')
+ * // Theme is always 'light'
+ * console.log(theme) // 'light'
+ * console.log(resolvedTheme) // 'light'
  * ```
  */
 export function useTheme(): ThemeContextType {

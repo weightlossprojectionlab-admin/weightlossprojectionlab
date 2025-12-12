@@ -12,256 +12,190 @@
  * - Filters by days until expiration
  */
 
-import { useMemo, useState } from 'react'
-import { ClockIcon, FireIcon } from '@heroicons/react/24/outline'
-import type { ShoppingItem } from '@/types/shopping'
-import { MEAL_SUGGESTIONS, MealSuggestion } from '@/lib/meal-suggestions'
-import Link from 'next/link'
+import {useMemo, useState} from'react'
+import {ClockIcon, FireIcon} from'@heroicons/react/24/outline'
+import type {ShoppingItem} from'@/types/shopping'
+import {MEAL_SUGGESTIONS, MealSuggestion} from'@/lib/meal-suggestions'
+import Link from'next/link'
 
-interface RecipeSuggestionsProps {
-  items: ShoppingItem[]
-  recipes?: MealSuggestion[]
-  className?: string
-}
+interface RecipeSuggestionsProps {items: ShoppingItem[]
+ recipes?: MealSuggestion[]
+ className?: string}
 
-interface RecipeMatch {
-  recipe: MealSuggestion
-  matchingItems: ShoppingItem[]
-  urgency: 'critical' | 'high' | 'medium'
-  daysUntilExpiry: number
-}
+interface RecipeMatch {recipe: MealSuggestion
+ matchingItems: ShoppingItem[]
+ urgency:'critical' |'high' |'medium'
+ daysUntilExpiry: number}
 
-export function RecipeSuggestions({
-  items,
-  recipes = MEAL_SUGGESTIONS,
-  className = ''
-}: RecipeSuggestionsProps) {
-  const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'critical' | 'high' | 'medium'>('all')
+export function RecipeSuggestions({items,
+ recipes = MEAL_SUGGESTIONS,
+ className =''}: RecipeSuggestionsProps) {const [urgencyFilter, setUrgencyFilter] = useState<'all' |'critical' |'high' |'medium'>('all')
 
-  /**
-   * Find recipes matching expiring items
-   */
-  const recipeMatches = useMemo((): RecipeMatch[] => {
-    const now = new Date()
-    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
-    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+ /**
+ * Find recipes matching expiring items
+ */
+ const recipeMatches = useMemo((): RecipeMatch[] => {const now = new Date()
+ const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
+ const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
-    // Get items expiring within 7 days
-    const expiringItems = items.filter(item => {
-      if (!item.inStock || !item.expiresAt) return false
-      const expiryDate = new Date(item.expiresAt)
-      return expiryDate <= sevenDaysFromNow
-    })
+ // Get items expiring within 7 days
+ const expiringItems = items.filter(item => {if (!item.inStock || !item.expiresAt) return false
+ const expiryDate = new Date(item.expiresAt)
+ return expiryDate <= sevenDaysFromNow})
 
-    if (expiringItems.length === 0) return []
+ if (expiringItems.length === 0) return []
 
-    // Match recipes with expiring items
-    const matches: RecipeMatch[] = []
+ // Match recipes with expiring items
+ const matches: RecipeMatch[] = []
 
-    recipes.forEach(recipe => {
-      const matchingItems: ShoppingItem[] = []
+ recipes.forEach(recipe => {const matchingItems: ShoppingItem[] = []
 
-      // Check if recipe ingredients match expiring items
-      recipe.ingredients.forEach(ingredient => {
-        const normalizedIngredient = ingredient.toLowerCase()
+ // Check if recipe ingredients match expiring items
+ recipe.ingredients.forEach(ingredient => {const normalizedIngredient = ingredient.toLowerCase()
 
-        expiringItems.forEach(item => {
-          const normalizedProduct = item.productName.toLowerCase()
+ expiringItems.forEach(item => {const normalizedProduct = item.productName.toLowerCase()
 
-          // Simple matching: check if product name is in ingredient or vice versa
-          if (
-            normalizedIngredient.includes(normalizedProduct) ||
-            normalizedProduct.includes(normalizedIngredient)
-          ) {
-            if (!matchingItems.find(m => m.id === item.id)) {
-              matchingItems.push(item)
-            }
-          }
-        })
-      })
+ // Simple matching: check if product name is in ingredient or vice versa
+ if (normalizedIngredient.includes(normalizedProduct) ||
+ normalizedProduct.includes(normalizedIngredient)) {if (!matchingItems.find(m => m.id === item.id)) {matchingItems.push(item)}}})})
 
-      // Only include recipes with at least 1 matching expiring item
-      if (matchingItems.length > 0) {
-        // Calculate urgency based on earliest expiring item
-        const earliestExpiry = matchingItems.reduce((earliest, item) => {
-          if (!item.expiresAt) return earliest
-          const expiryDate = new Date(item.expiresAt)
-          return !earliest || expiryDate < earliest ? expiryDate : earliest
-        }, null as Date | null)
+ // Only include recipes with at least 1 matching expiring item
+ if (matchingItems.length > 0) {// Calculate urgency based on earliest expiring item
+ const earliestExpiry = matchingItems.reduce((earliest, item) => {if (!item.expiresAt) return earliest
+ const expiryDate = new Date(item.expiresAt)
+ return !earliest || expiryDate < earliest ? expiryDate : earliest}, null as Date | null)
 
-        if (!earliestExpiry) return
+ if (!earliestExpiry) return
 
-        const daysUntilExpiry = Math.ceil((earliestExpiry.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+ const daysUntilExpiry = Math.ceil((earliestExpiry.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
 
-        let urgency: 'critical' | 'high' | 'medium' = 'medium'
-        if (daysUntilExpiry <= 1) urgency = 'critical'
-        else if (daysUntilExpiry <= 3) urgency = 'high'
+ let urgency:'critical' |'high' |'medium' ='medium'
+ if (daysUntilExpiry <= 1) urgency ='critical'
+ else if (daysUntilExpiry <= 3) urgency ='high'
 
-        matches.push({
-          recipe,
-          matchingItems,
-          urgency,
-          daysUntilExpiry: Math.max(0, daysUntilExpiry)
-        })
-      }
-    })
+ matches.push({recipe,
+ matchingItems,
+ urgency,
+ daysUntilExpiry: Math.max(0, daysUntilExpiry)})}})
 
-    // Sort by urgency (critical first) then by number of matching items
-    return matches.sort((a, b) => {
-      const urgencyOrder = { critical: 3, high: 2, medium: 1 }
-      if (urgencyOrder[a.urgency] !== urgencyOrder[b.urgency]) {
-        return urgencyOrder[b.urgency] - urgencyOrder[a.urgency]
-      }
-      return b.matchingItems.length - a.matchingItems.length
-    })
-  }, [items, recipes])
+ // Sort by urgency (critical first) then by number of matching items
+ return matches.sort((a, b) => {const urgencyOrder = {critical: 3, high: 2, medium: 1}
+ if (urgencyOrder[a.urgency] !== urgencyOrder[b.urgency]) {return urgencyOrder[b.urgency] - urgencyOrder[a.urgency]}
+ return b.matchingItems.length - a.matchingItems.length})}, [items, recipes])
 
-  /**
-   * Filter matches by urgency
-   */
-  const filteredMatches = useMemo(() => {
-    if (urgencyFilter === 'all') return recipeMatches
-    return recipeMatches.filter(match => match.urgency === urgencyFilter)
-  }, [recipeMatches, urgencyFilter])
+ /**
+ * Filter matches by urgency
+ */
+ const filteredMatches = useMemo(() => {if (urgencyFilter ==='all') return recipeMatches
+ return recipeMatches.filter(match => match.urgency === urgencyFilter)}, [recipeMatches, urgencyFilter])
 
-  /**
-   * Get urgency badge color
-   */
-  const getUrgencyColor = (urgency: RecipeMatch['urgency']) => {
-    switch (urgency) {
-      case 'critical':
-        return 'bg-red-100 dark:bg-red-900/30 text-error-dark border-red-200 dark:border-red-800'
-      case 'high':
-        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800'
-      case 'medium':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 border-warning-light'
-    }
-  }
+ /**
+ * Get urgency badge color
+ */
+ const getUrgencyColor = (urgency: RecipeMatch['urgency']) => {switch (urgency) {case'critical':
+ return'bg-red-100 /30 text-error-dark border-red-200'
+ case'high':
+ return'bg-orange-100 /30 text-orange-700 border-orange-200'
+ case'medium':
+ return'bg-yellow-100 /30 text-yellow-700 border-warning-light'}}
 
-  if (recipeMatches.length === 0) {
-    return (
-      <div className={`bg-card rounded-lg shadow p-6 text-center ${className}`}>
-        <div className="text-4xl mb-3">🍽️</div>
-        <h3 className="text-lg font-semibold text-foreground dark:text-white mb-2">
-          No Recipe Suggestions
-        </h3>
-        <p className="text-muted-foreground">
-          You don't have any items expiring soon, or no recipes match your expiring ingredients.
-        </p>
-      </div>
-    )
-  }
+ if (recipeMatches.length === 0) {return (<div className={`bg-card rounded-lg shadow p-6 text-center ${className}`}>
+ <div className="text-4xl mb-3">🍽️</div>
+ <h3 className="text-lg font-semibold text-foreground mb-2">
+ No Recipe Suggestions
+ </h3>
+ <p className="text-muted-foreground">
+ You don't have any items expiring soon, or no recipes match your expiring ingredients.
+ </p>
+ </div>)}
 
-  return (
-    <div className={className}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-foreground dark:text-white">
-          Recipe Suggestions
-        </h2>
+ return (<div className={className}>
+ {/* Header */}
+ <div className="flex items-center justify-between mb-4">
+ <h2 className="text-xl font-bold text-foreground">
+ Recipe Suggestions
+ </h2>
 
-        {/* Urgency Filter */}
-        <select
-          value={urgencyFilter}
-          onChange={(e) => {
-            const value = e.target.value as 'all' | 'critical' | 'high' | 'medium'
-            setUrgencyFilter(value)
-          }}
-          className="px-3 py-1 bg-background border border-border dark:border-gray-600 rounded-lg text-sm text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-        >
-          <option value="all">All ({recipeMatches.length})</option>
-          <option value="critical">
-            Critical ({recipeMatches.filter(m => m.urgency === 'critical').length})
-          </option>
-          <option value="high">
-            High ({recipeMatches.filter(m => m.urgency === 'high').length})
-          </option>
-          <option value="medium">
-            Medium ({recipeMatches.filter(m => m.urgency === 'medium').length})
-          </option>
-        </select>
-      </div>
+ {/* Urgency Filter */}
+ <select
+ value={urgencyFilter}
+ onChange={(e) => {const value = e.target.value as'all' |'critical' |'high' |'medium'
+ setUrgencyFilter(value)}}
+ className="px-3 py-1 bg-background border border-border rounded-lg text-sm text-foreground focus:ring-2 focus:ring-primary focus:border-transparent">
+ <option value="all">All ({recipeMatches.length})</option>
+ <option value="critical">
+ Critical ({recipeMatches.filter(m => m.urgency ==='critical').length})
+ </option>
+ <option value="high">
+ High ({recipeMatches.filter(m => m.urgency ==='high').length})
+ </option>
+ <option value="medium">
+ Medium ({recipeMatches.filter(m => m.urgency ==='medium').length})
+ </option>
+ </select>
+ </div>
 
-      {/* Recipe Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredMatches.map((match) => (
-          <Link
-            key={match.recipe.id}
-            href={`/recipes/${match.recipe.id}`}
-            className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden group"
-          >
-            {/* Recipe Image */}
-            <div className="relative h-48 bg-gray-200">
-              {match.recipe.imageUrl ? (
-                <img
-                  src={match.recipe.imageUrl}
-                  alt={match.recipe.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-6xl">
-                  🍽️
-                </div>
-              )}
+ {/* Recipe Cards */}
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+ {filteredMatches.map((match) => (<Link
+ key={match.recipe.id}
+ href={`/recipes/${match.recipe.id}`}
+ className="bg-card rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden group">
+ {/* Recipe Image */}
+ <div className="relative h-48 bg-gray-200">
+ {match.recipe.imageUrl ? (<img
+ src={match.recipe.imageUrl}
+ alt={match.recipe.name}
+ className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>) : (<div className="w-full h-full flex items-center justify-center text-6xl">
+ 🍽️
+ </div>)}
 
-              {/* Urgency Badge */}
-              <div className="absolute top-2 right-2">
-                <div className={`px-2 py-1 rounded-lg text-xs font-semibold border ${getUrgencyColor(match.urgency)}`}>
-                  {match.daysUntilExpiry === 0 ? 'Today' : `${match.daysUntilExpiry}d`}
-                </div>
-              </div>
-            </div>
+ {/* Urgency Badge */}
+ <div className="absolute top-2 right-2">
+ <div className={`px-2 py-1 rounded-lg text-xs font-semibold border ${getUrgencyColor(match.urgency)}`}>
+ {match.daysUntilExpiry === 0 ?'Today' :`${match.daysUntilExpiry}d`}
+ </div>
+ </div>
+ </div>
 
-            {/* Recipe Info */}
-            <div className="p-4">
-              <h3 className="font-semibold text-foreground dark:text-white mb-2 line-clamp-2">
-                {match.recipe.name}
-              </h3>
+ {/* Recipe Info */}
+ <div className="p-4">
+ <h3 className="font-semibold text-foreground mb-2 line-clamp-2">
+ {match.recipe.name}
+ </h3>
 
-              {/* Recipe Meta */}
-              <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
-                {match.recipe.prepTime && (
-                  <div className="flex items-center gap-1">
-                    <ClockIcon className="h-4 w-4" />
-                    <span>{match.recipe.prepTime}min</span>
-                  </div>
-                )}
-                {match.recipe.calories && (
-                  <div className="flex items-center gap-1">
-                    <FireIcon className="h-4 w-4" />
-                    <span>{match.recipe.calories} cal</span>
-                  </div>
-                )}
-              </div>
+ {/* Recipe Meta */}
+ <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
+ {match.recipe.prepTime && (<div className="flex items-center gap-1">
+ <ClockIcon className="h-4 w-4"/>
+ <span>{match.recipe.prepTime}min</span>
+ </div>)}
+ {match.recipe.calories && (<div className="flex items-center gap-1">
+ <FireIcon className="h-4 w-4"/>
+ <span>{match.recipe.calories} cal</span>
+ </div>)}
+ </div>
 
-              {/* Matching Items */}
-              <div>
-                <div className="text-xs font-semibold text-foreground mb-1">
-                  Uses {match.matchingItems.length} expiring item{match.matchingItems.length !== 1 ? 's' : ''}:
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {match.matchingItems.slice(0, 3).map((item) => (
-                    <span
-                      key={item.id}
-                      className="px-2 py-0.5 bg-muted text-xs rounded"
-                    >
-                      {item.productName}
-                    </span>
-                  ))}
-                  {match.matchingItems.length > 3 && (
-                    <span className="px-2 py-0.5 bg-muted text-xs rounded">
-                      +{match.matchingItems.length - 3} more
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  )
-}
+ {/* Matching Items */}
+ <div>
+ <div className="text-xs font-semibold text-foreground mb-1">
+ Uses {match.matchingItems.length} expiring item{match.matchingItems.length !== 1 ?'s' :''}:
+ </div>
+ <div className="flex flex-wrap gap-1">
+ {match.matchingItems.slice(0, 3).map((item) => (<span
+ key={item.id}
+ className="px-2 py-0.5 bg-muted text-xs rounded">
+ {item.productName}
+ </span>))}
+ {match.matchingItems.length > 3 && (<span className="px-2 py-0.5 bg-muted text-xs rounded">
+ +{match.matchingItems.length - 3} more
+ </span>)}
+ </div>
+ </div>
+ </div>
+ </Link>))}
+ </div>
+ </div>)}
 
 // Using MEAL_SUGGESTIONS imported from lib/meal-suggestions
 // This provides access to 200+ real recipes from the database

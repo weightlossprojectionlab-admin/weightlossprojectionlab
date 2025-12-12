@@ -1,309 +1,238 @@
 /**
  * Family Members List Page
  * Displays all family members for the current user
- */
+ */'use client'
 
-'use client'
+import {useState} from'react'
+import {usePatients} from'@/hooks/usePatients'
+import {PatientCard} from'@/components/patients/PatientCard'
+import {PageHeader} from'@/components/ui/PageHeader'
+import {PlusIcon} from'@heroicons/react/24/outline'
+import Link from'next/link'
+import AuthGuard from'@/components/auth/AuthGuard'
+import {usePatientLimit} from'@/hooks/usePatientLimit'
+import {useSubscription} from'@/hooks/useSubscription'
+import {SubscriptionSimulator} from'@/components/dev/SubscriptionSimulator'
+import {UpgradeModal} from'@/components/subscription/UpgradeModal'
+import {PlanBadge} from'@/components/subscription/PlanBadge'
+import {useUserProfile} from'@/hooks/useUserProfile'
+import {transformWizardDataToVitals,
+ hasAnyVitalMeasurement} from'@/lib/vitals-wizard-transform'
+import {getTrackingPageTitle,
+ getTrackingPageSubtitle,
+ getAddButtonText,
+ getTrackingTerminology} from'@/lib/user-role-helper'
+import {DashboardSelectorCompact} from'@/components/dashboard/DashboardSelector'
+import SupervisedVitalsWizard from'@/components/wizards/SupervisedVitalsWizard'
+import VitalsQuickViewModal from'@/components/patients/VitalsQuickViewModal'
+import {useAuth} from'@/hooks/useAuth'
+import {logger} from'@/lib/logger'
+import {medicalOperations} from'@/lib/medical-operations'
+import {useVitals} from'@/hooks/useVitals'
+import {VitalSign} from'@/types/medical'
 
-import { useState } from 'react'
-import { usePatients } from '@/hooks/usePatients'
-import { PatientCard } from '@/components/patients/PatientCard'
-import { PageHeader } from '@/components/ui/PageHeader'
-import { PlusIcon } from '@heroicons/react/24/outline'
-import Link from 'next/link'
-import AuthGuard from '@/components/auth/AuthGuard'
-import { usePatientLimit } from '@/hooks/usePatientLimit'
-import { useSubscription } from '@/hooks/useSubscription'
-import { SubscriptionSimulator } from '@/components/dev/SubscriptionSimulator'
-import { UpgradeModal } from '@/components/subscription/UpgradeModal'
-import { PlanBadge } from '@/components/subscription/PlanBadge'
-import { useUserProfile } from '@/hooks/useUserProfile'
-import {
-  transformWizardDataToVitals,
-  hasAnyVitalMeasurement
-} from '@/lib/vitals-wizard-transform'
-import {
-  getTrackingPageTitle,
-  getTrackingPageSubtitle,
-  getAddButtonText,
-  getTrackingTerminology
-} from '@/lib/user-role-helper'
-import { DashboardSelectorCompact } from '@/components/dashboard/DashboardSelector'
-import SupervisedVitalsWizard from '@/components/wizards/SupervisedVitalsWizard'
-import VitalsQuickViewModal from '@/components/patients/VitalsQuickViewModal'
-import { useAuth } from '@/hooks/useAuth'
-import { logger } from '@/lib/logger'
-import { medicalOperations } from '@/lib/medical-operations'
-import { useVitals } from '@/hooks/useVitals'
-import { VitalSign } from '@/types/medical'
+export default function PatientsPage() {return (<AuthGuard>
+ <PatientsContent />
+ </AuthGuard>)}
 
-export default function PatientsPage() {
-  return (
-    <AuthGuard>
-      <PatientsContent />
-    </AuthGuard>
-  )
-}
+function PatientsContent() {const {patients, loading, error} = usePatients()
+ const [filter, setFilter] = useState<'all' |'human' |'pet'>('all')
+ const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+ const [selectedPatientForVitalsView, setSelectedPatientForVitalsView] = useState<any>(null)
+ const [selectedPatientForWizard, setSelectedPatientForWizard] = useState<any>(null)
+ const {user} = useAuth()
 
-function PatientsContent() {
-  const { patients, loading, error } = usePatients()
-  const [filter, setFilter] = useState<'all' | 'human' | 'pet'>('all')
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-  const [selectedPatientForVitalsView, setSelectedPatientForVitalsView] = useState<any>(null)
-  const [selectedPatientForWizard, setSelectedPatientForWizard] = useState<any>(null)
-  const { user } = useAuth()
+ // Ensure patients is always an array
+ const safePatients = patients || []
 
-  // Ensure patients is always an array
-  const safePatients = patients || []
+ // Debug logging
+ console.log('[PatientsPage] Patients loaded:', {count: safePatients.length,
+ loading,
+ error,
+ patients: safePatients.map(p => ({id: p.id, name: p.name, _source: (p as any)._source}))})
 
-  // Debug logging
-  console.log('[PatientsPage] Patients loaded:', {
-    count: safePatients.length,
-    loading,
-    error,
-    patients: safePatients.map(p => ({ id: p.id, name: p.name, _source: (p as any)._source }))
-  })
+ const {subscription, isAdmin} = useSubscription()
+ const {current, max, canAdd, percentage} = usePatientLimit(safePatients.length)
+ const {profile: userProfile} = useUserProfile()
 
-  const { subscription, isAdmin } = useSubscription()
-  const { current, max, canAdd, percentage } = usePatientLimit(safePatients.length)
-  const { profile: userProfile } = useUserProfile()
+ // Load vitals for the selected patient (for quick view modal)
+ const {vitals, loading: vitalsLoading} = useVitals({patientId: selectedPatientForVitalsView?.id})
 
-  // Load vitals for the selected patient (for quick view modal)
-  const { vitals, loading: vitalsLoading } = useVitals({
-    patientId: selectedPatientForVitalsView?.id
-  })
+ // Determine if this is account selection mode (caregiver with 2+ patients)
+ const isAccountSelectionMode = safePatients.length >= 2
 
-  // Determine if this is account selection mode (caregiver with 2+ patients)
-  const isAccountSelectionMode = safePatients.length >= 2
+ // Get dynamic terminology based on user role
+ const pageTitle = isAccountSelectionMode
+ ?'Select Account to Manage'
+ : getTrackingPageTitle(userProfile as any)
+ const pageSubtitle = isAccountSelectionMode
+ ?'Choose which account you want to view and manage'
+ : getTrackingPageSubtitle(userProfile as any)
+ const addButtonText = getAddButtonText(userProfile as any)
+ const terminology = getTrackingTerminology(userProfile as any)
 
-  // Get dynamic terminology based on user role
-  const pageTitle = isAccountSelectionMode
-    ? 'Select Account to Manage'
-    : getTrackingPageTitle(userProfile as any)
-  const pageSubtitle = isAccountSelectionMode
-    ? 'Choose which account you want to view and manage'
-    : getTrackingPageSubtitle(userProfile as any)
-  const addButtonText = getAddButtonText(userProfile as any)
-  const terminology = getTrackingTerminology(userProfile as any)
+ const filteredPatients = safePatients.filter(p => {if (filter ==='all') return true
+ return p.type === filter})
 
-  const filteredPatients = safePatients.filter(p => {
-    if (filter === 'all') return true
-    return p.type === filter
-  })
+ return (<div className="min-h-screen bg-background">
+ <PageHeader
+ title={pageTitle}
+ subtitle={pageSubtitle}
+ actions={canAdd ? (<Link
+ href="/patients/new"className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium">
+ <PlusIcon className="w-5 h-5"/>
+ {addButtonText}
+ </Link>) : (<button
+ onClick={() => setShowUpgradeModal(true)}
+ className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium">
+ <span>🔒</span>
+ Upgrade to Add More
+ </button>)}
+ />
 
-  return (
-    <div className="min-h-screen bg-background">
-      <PageHeader
-        title={pageTitle}
-        subtitle={pageSubtitle}
-        actions={
-          canAdd ? (
-            <Link
-              href="/patients/new"
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-            >
-              <PlusIcon className="w-5 h-5" />
-              {addButtonText}
-            </Link>
-          ) : (
-            <button
-              onClick={() => setShowUpgradeModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium"
-            >
-              <span>🔒</span>
-              Upgrade to Add More
-            </button>
-          )
-        }
-      />
+ <main className="container mx-auto px-4 py-8 max-w-7xl">
+ {/* Family Admin Dashboard Link - Prominent placement for caregivers with 2+ patients */}
+ {safePatients.length >= 2 && (<div className="mb-6">
+ <DashboardSelectorCompact />
+ </div>)}
 
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Family Admin Dashboard Link - Prominent placement for caregivers with 2+ patients */}
-        {safePatients.length >= 2 && (
-          <div className="mb-6">
-            <DashboardSelectorCompact />
-          </div>
-        )}
+ {/* Member Limit Indicator */}
+ {subscription && (<div className="mb-6 bg-card rounded-lg shadow-sm border border-border p-4">
+ <div className="flex items-center gap-3 mb-2">
+ <p className="text-sm font-medium text-foreground">
+ {terminology}: {current} of {max}
+ </p>
+ <PlanBadge
+ plan={subscription.plan}
+ addons={subscription.addons}
+ status={subscription.status}
+ size="sm"/>
+ </div>
+ <div className="h-2 bg-muted rounded-full overflow-hidden w-48">
+ <div
+ className={`h-full rounded-full transition-all ${percentage >= 100 ?'bg-error' : percentage >= 80 ?'bg-warning-dark' :'bg-success'}`}
+ style={{width:`${Math.min(percentage, 100)}%`}}
+ />
+ </div>
+ </div>)}
 
-        {/* Member Limit Indicator */}
-        {subscription && (
-          <div className="mb-6 bg-card rounded-lg shadow-sm border border-border p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <p className="text-sm font-medium text-foreground">
-                {terminology}: {current} of {max}
-              </p>
-              <PlanBadge
-                plan={subscription.plan}
-                addons={subscription.addons}
-                status={subscription.status}
-                size="sm"
-              />
-            </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden w-48">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  percentage >= 100 ? 'bg-error' : percentage >= 80 ? 'bg-warning-dark' : 'bg-success'
-                }`}
-                style={{ width: `${Math.min(percentage, 100)}%` }}
-              />
-            </div>
-          </div>
-        )}
+ {/* Filter Tabs */}
+ <div className="flex items-center gap-2 mb-6">
+ <button
+ onClick={() => setFilter('all')}
+ className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter ==='all'
+ ?'bg-primary text-white'
+ :'bg-card text-foreground hover:bg-muted'}`}
+ >
+ All ({safePatients.length})
+ </button>
+ <button
+ onClick={() => setFilter('human')}
+ className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter ==='human'
+ ?'bg-primary text-white'
+ :'bg-card text-foreground hover:bg-muted'}`}
+ >
+ Humans ({safePatients.filter(p => p.type ==='human').length})
+ </button>
+ <button
+ onClick={() => setFilter('pet')}
+ className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter ==='pet'
+ ?'bg-primary text-white'
+ :'bg-card text-foreground hover:bg-muted'}`}
+ >
+ Pets ({safePatients.filter(p => p.type ==='pet').length})
+ </button>
+ </div>
 
-        {/* Filter Tabs */}
-        <div className="flex items-center gap-2 mb-6">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filter === 'all'
-                ? 'bg-primary text-white'
-                : 'bg-card text-foreground hover:bg-muted'
-            }`}
-          >
-            All ({safePatients.length})
-          </button>
-          <button
-            onClick={() => setFilter('human')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filter === 'human'
-                ? 'bg-primary text-white'
-                : 'bg-card text-foreground hover:bg-muted'
-            }`}
-          >
-            Humans ({safePatients.filter(p => p.type === 'human').length})
-          </button>
-          <button
-            onClick={() => setFilter('pet')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filter === 'pet'
-                ? 'bg-primary text-white'
-                : 'bg-card text-foreground hover:bg-muted'
-            }`}
-          >
-            Pets ({safePatients.filter(p => p.type === 'pet').length})
-          </button>
-        </div>
+ {/* Loading State */}
+ {loading && (<div className="flex items-center justify-center py-12">
+ <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+ </div>)}
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          </div>
-        )}
+ {/* Error State */}
+ {error && (<div className="bg-error-light /20 border-2 border-red-200 rounded-lg p-4 text-error-dark">
+ <p className="font-medium">Error loading family members</p>
+ <p className="text-sm mt-1">{error}</p>
+ </div>)}
 
-        {/* Error State */}
-        {error && (
-          <div className="bg-error-light dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg p-4 text-error-dark">
-            <p className="font-medium">Error loading family members</p>
-            <p className="text-sm mt-1">{error}</p>
-          </div>
-        )}
+ {/* Empty State */}
+ {!loading && !error && filteredPatients.length === 0 && (<div className="bg-card rounded-lg shadow-sm p-12 text-center">
+ <div className="text-6xl mb-4">👥</div>
+ <p className="text-xl font-bold text-foreground mb-2">
+ {filter ==='all' ?`No ${terminology} Yet`:`No ${filter}s Found`}
+ </p>
+ <p className="text-muted-foreground mb-6">
+ Start tracking health records by adding your first {getTrackingTerminology(userProfile as any, {singular: true, lowercase: true})}
+ </p>
+ <Link
+ href="/patients/new"className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium">
+ <PlusIcon className="w-5 h-5"/>
+ {addButtonText}
+ </Link>
+ </div>)}
 
-        {/* Empty State */}
-        {!loading && !error && filteredPatients.length === 0 && (
-          <div className="bg-card rounded-lg shadow-sm p-12 text-center">
-            <div className="text-6xl mb-4">👥</div>
-            <p className="text-xl font-bold text-foreground mb-2">
-              {filter === 'all' ? `No ${terminology} Yet` : `No ${filter}s Found`}
-            </p>
-            <p className="text-muted-foreground mb-6">
-              Start tracking health records by adding your first {getTrackingTerminology(userProfile as any, { singular: true, lowercase: true })}
-            </p>
-            <Link
-              href="/patients/new"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-            >
-              <PlusIcon className="w-5 h-5" />
-              {addButtonText}
-            </Link>
-          </div>
-        )}
+ {/* Family Member Grid */}
+ {!loading && !error && filteredPatients.length > 0 && (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+ {filteredPatients.map(patient => (<PatientCard
+ key={patient.id}
+ patient={patient}
+ mode={isAccountSelectionMode ?'select' :'view'}
+ onQuickLogVitals={() => setSelectedPatientForVitalsView(patient)}
+ />))}
+ </div>)}
+ </main>
 
-        {/* Family Member Grid */}
-        {!loading && !error && filteredPatients.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPatients.map(patient => (
-              <PatientCard
-                key={patient.id}
-                patient={patient}
-                mode={isAccountSelectionMode ? 'select' : 'view'}
-                onQuickLogVitals={() => setSelectedPatientForVitalsView(patient)}
-              />
-            ))}
-          </div>
-        )}
-      </main>
+ {/* Subscription Simulator (Dev Tool) */}
+ <SubscriptionSimulator />
 
-      {/* Subscription Simulator (Dev Tool) */}
-      <SubscriptionSimulator />
+ {/* Upgrade Modal */}
+ <UpgradeModal
+ isOpen={showUpgradeModal}
+ onClose={() => setShowUpgradeModal(false)}
+ currentPlan={subscription?.plan}
+ />
 
-      {/* Upgrade Modal */}
-      <UpgradeModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        currentPlan={subscription?.plan}
-      />
+ {/* Vitals Quick View Modal */}
+ {selectedPatientForVitalsView && (<VitalsQuickViewModal
+ isOpen={true}
+ onClose={() => setSelectedPatientForVitalsView(null)}
+ vitals={vitals || []}
+ patientName={selectedPatientForVitalsView.name}
+ onOpenWizard={() => {setSelectedPatientForWizard(selectedPatientForVitalsView)
+ setSelectedPatientForVitalsView(null)}}
+ loading={vitalsLoading}
+ />)}
 
-      {/* Vitals Quick View Modal */}
-      {selectedPatientForVitalsView && (
-        <VitalsQuickViewModal
-          isOpen={true}
-          onClose={() => setSelectedPatientForVitalsView(null)}
-          vitals={vitals || []}
-          patientName={selectedPatientForVitalsView.name}
-          onOpenWizard={() => {
-            setSelectedPatientForWizard(selectedPatientForVitalsView)
-            setSelectedPatientForVitalsView(null)
-          }}
-          loading={vitalsLoading}
-        />
-      )}
+ {/* AI Supervisor - Vitals Wizard */}
+ {selectedPatientForWizard && (<SupervisedVitalsWizard
+ isOpen={true}
+ onClose={() => setSelectedPatientForWizard(null)}
+ familyMember={{id: selectedPatientForWizard.id,
+ name: selectedPatientForWizard.name,
+ age: selectedPatientForWizard.age,
+ conditions: selectedPatientForWizard.conditions || []}}
+ onSubmit={async (vitals) => {try {logger.info('[PatientsPage] Submitting vitals', {patientId: selectedPatientForWizard.id, vitals})
 
-      {/* AI Supervisor - Vitals Wizard */}
-      {selectedPatientForWizard && (
-        <SupervisedVitalsWizard
-          isOpen={true}
-          onClose={() => setSelectedPatientForWizard(null)}
-          familyMember={{
-            id: selectedPatientForWizard.id,
-            name: selectedPatientForWizard.name,
-            age: selectedPatientForWizard.age,
-            conditions: selectedPatientForWizard.conditions || []
-          }}
-          onSubmit={async (vitals) => {
-            try {
-              logger.info('[PatientsPage] Submitting vitals', { patientId: selectedPatientForWizard.id, vitals })
+ // Use shared transformation utility (DRY principle)
+ const vitalInputs = transformWizardDataToVitals(vitals)
 
-              // Use shared transformation utility (DRY principle)
-              const vitalInputs = transformWizardDataToVitals(vitals)
+ // Validate at least one vital was recorded
+ if (!hasAnyVitalMeasurement(vitals)) {alert('Please record at least one vital sign measurement.')
+ return}
 
-              // Validate at least one vital was recorded
-              if (!hasAnyVitalMeasurement(vitals)) {
-                alert('Please record at least one vital sign measurement.')
-                return
-              }
+ // Save all vitals
+ const vitalPromises = vitalInputs.map(vitalInput =>
+ medicalOperations.vitals.logVital(selectedPatientForWizard.id, vitalInput))
 
-              // Save all vitals
-              const vitalPromises = vitalInputs.map(vitalInput =>
-                medicalOperations.vitals.logVital(selectedPatientForWizard.id, vitalInput)
-              )
+ await Promise.all(vitalPromises)
 
-              await Promise.all(vitalPromises)
+ logger.info('[PatientsPage] Vitals saved successfully', {count: vitalInputs.length})
 
-              logger.info('[PatientsPage] Vitals saved successfully', { count: vitalInputs.length })
+ // TODO: Trigger notification to other caregivers
+ // await sendNotificationToFamilyMembers({...})
 
-              // TODO: Trigger notification to other caregivers
-              // await sendNotificationToFamilyMembers({ ... })
-
-              setSelectedPatientForWizard(null)
-            } catch (error) {
-              logger.error('[PatientsPage] Failed to save vitals', error)
-              alert(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
-              throw error
-            }
-          }}
-        />
-      )}
-    </div>
-  )
-}
+ setSelectedPatientForWizard(null)} catch (error) {logger.error('[PatientsPage] Failed to save vitals', error)
+ alert(`Failed to save vitals: ${error instanceof Error ? error.message :'Unknown error'}`)
+ throw error}}}
+ />)}
+ </div>)}
