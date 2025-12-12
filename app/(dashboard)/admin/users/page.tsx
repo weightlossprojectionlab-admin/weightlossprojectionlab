@@ -172,10 +172,17 @@ export default function AdminUsersPage() {const router = useRouter()
  const url = window.URL.createObjectURL(blob)
  const a = document.createElement('a')
  a.href = url
- a.download =`user-data-${email}-${new Date().toISOString().split('T')[0]}.json`document.body.appendChild(a)
+ a.download = `user-data-${email}-${new Date().toISOString().split('T')[0]}.json`
+ document.body.appendChild(a)
  a.click()
  window.URL.revokeObjectURL(url)
- document.body.removeChild(a)} catch (err) {alert(err instanceof Error ? err.message :'Failed to export user data')} finally {setActionLoading(false)}}
+ document.body.removeChild(a)
+ } catch (err) {
+   alert(err instanceof Error ? err.message : 'Failed to export user data')
+ } finally {
+   setActionLoading(false)
+ }
+}
 
  const handleDelete = async (uid: string, email: string) => {if (!permissions.canDeleteUsers) return
  if (!confirm(`Are you sure you want to DELETE user ${email}? This action cannot be undone!`)) return

@@ -5,11 +5,13 @@ import {Html5Qrcode, Html5QrcodeSupportedFormats} from'html5-qrcode'
 import toast from'react-hot-toast'
 import {logger} from'@/lib/logger'
 
-export interface BarcodeScannerProps {onScan: (barcode: string) => void
- onClose: () => void
- isOpen: boolean
- context?:'meal' |'purchase' |'consume' |'inventory' // Scan purpose
- title?: string // Override default title}
+export interface BarcodeScannerProps {
+  onScan: (barcode: string) => void
+  onClose: () => void
+  isOpen: boolean
+  context?: 'meal' | 'purchase' | 'consume' | 'inventory' // Scan purpose
+  title?: string // Override default title
+}
 
 /**
  * Check if camera API is supported

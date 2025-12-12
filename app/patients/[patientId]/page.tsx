@@ -136,8 +136,12 @@ function PatientDetailContent() {const params = useParams()
  loading: healthDataLoading} = useDashboardData(patientId, patient?.userId)
 
  // Calculate statistics from raw data using patient's goals
- const patientProfileForStats = patient ? {goals: patient.goals,
- profile: {currentWeight: patient.goals?.startWeight // Fallback if no weight logs}} : null
+ const patientProfileForStats = patient ? {
+   goals: patient.goals,
+   profile: {
+     currentWeight: patient.goals?.startWeight // Fallback if no weight logs
+   }
+ } : null
 
  const {nutritionSummary,
  weightTrend,
