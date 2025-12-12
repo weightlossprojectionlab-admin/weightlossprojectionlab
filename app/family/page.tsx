@@ -155,7 +155,7 @@ function FamilyContent() {
               onClick={() => setShowInviteModal(true)}
               className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
             >
-              + Invite Family Member
+              + Invite Caregiver
             </button>
           </div>
         }
@@ -166,7 +166,7 @@ function FamilyContent() {
         <div className="mb-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold mb-1">Family Dashboard</h3>
+              <h3 className="text-lg font-bold mb-1">Caregivers</h3>
               <p className="text-sm text-purple-100">
                 View all family members, manage roles, and track patient access in one place
               </p>

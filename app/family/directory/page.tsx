@@ -155,7 +155,7 @@ function DirectoryContent() {
   return (
     <div className="min-h-screen bg-background">
       <PageHeader
-        title="Family Directory"
+        title="Caregivers"
         subtitle="View and connect with all family members and caregivers"
       />
 
@@ -352,7 +352,7 @@ function DirectoryContent() {
               onClick={() => router.push('/family')}
               className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
             >
-              Invite Family Member
+              Invite Caregiver
             </button>
           </div>
         ) : (

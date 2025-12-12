@@ -98,7 +98,7 @@ function FamilyDashboardContent() {
   return (
     <div className="min-h-screen bg-background">
       <PageHeader
-        title="Family Dashboard"
+        title="Caregivers"
         subtitle="Manage family members, invitations, and patient access"
         actions={
           <div className="flex gap-2 flex-wrap">
@@ -106,7 +106,7 @@ function FamilyDashboardContent() {
               onClick={() => setShowInviteModal(true)}
               className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
             >
-              + Invite Family Member
+              + Invite Caregiver
             </button>
             <Link
               href="/family/manage-roles"
@@ -191,7 +191,7 @@ function FamilyDashboardContent() {
                       onClick={() => setShowInviteModal(true)}
                       className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
                     >
-                      Invite Your First Family Member
+                      Invite Your First Caregiver
                     </button>
                   </div>
                 ) : (
@@ -253,7 +253,7 @@ function FamilyDashboardContent() {
                         onClick={() => setShowInviteModal(true)}
                         className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
                       >
-                        Send Your First Invitation
+                        Invite Your First Caregiver
                       </button>
                     </div>
                   ) : (
@@ -297,7 +297,7 @@ function FamilyDashboardContent() {
                         onClick={() => setShowInviteModal(true)}
                         className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
                       >
-                        Invite Family Member
+                        Invite Caregiver
                       </button>
                     )}
                   </div>

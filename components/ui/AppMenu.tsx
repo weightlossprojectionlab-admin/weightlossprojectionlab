@@ -63,8 +63,8 @@ export function AppMenu() {
     {
       title: 'Health',
       items: [
-        { name: 'Family Health', href: '/patients', icon: UserGroupIcon },
-        { name: 'Family Dashboard', href: '/family/dashboard', icon: ShieldCheckIcon },
+        { name: 'Family Members', href: '/patients', icon: UserGroupIcon },
+        { name: 'Caregivers', href: '/family/dashboard', icon: ShieldCheckIcon },
       ],
     },
     {

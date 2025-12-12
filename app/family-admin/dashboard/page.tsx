@@ -327,7 +327,7 @@ function FamilyAdminDashboardContent() {
                       title="Family Member Profiles"
                       description="View and manage health records for your family"
                       icon={<UserGroupIcon className="w-6 h-6" />}
-                      href="/patients"
+                      href="/profile"
                       color="blue"
                     />
                     <ToolCard
@@ -345,7 +345,7 @@ function FamilyAdminDashboardContent() {
                       color="green"
                     />
                     <ToolCard
-                      title="Family Directory"
+                      title="Caregivers"
                       description="Manage family members and access permissions"
                       icon={<UserGroupIcon className="w-6 h-6" />}
                       href="/family/dashboard"
