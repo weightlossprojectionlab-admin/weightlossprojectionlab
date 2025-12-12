@@ -1399,11 +1399,14 @@ function PatientDetailContent() {const params = useParams()
  frequency: frequency as any,
  specificTimes: times,
  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, // User's timezone
- notificationChannels: {...notificationChannels,
- voice: [] // Voice assistants not configured yet},
+ notificationChannels: {
+   ...notificationChannels,
+   voice: [] // Voice assistants not configured yet
+ },
  advanceReminderMinutes: 15,
  complianceTarget: 90,
- complianceWindow: 2})
+ complianceWindow: 2
+})
 
  logger.info('[PatientDetail] Schedule created', {vitalType})} catch (scheduleError) {logger.error('[PatientDetail] Failed to create schedule', {vitalType,
  error: scheduleError})

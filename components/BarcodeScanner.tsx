@@ -116,14 +116,22 @@ export function BarcodeScanner({onScan, onClose, isOpen, context ='meal', title}
  await scannerRef.current.start(cameraId,
  {fps: 10,
  qrbox: {width: 250, height: 250},
- aspectRatio: 1.0},
- (decodedText) => {// Success callback
- handleScanSuccess(decodedText)},
- (errorMessage) => {// Error callback (fires frequently, ignore)
- // Only log actual errors, not"No code found"})
+ aspectRatio: 1.0
+ },
+ (decodedText) => {
+   // Success callback
+   handleScanSuccess(decodedText)
+ },
+ (errorMessage) => {
+   // Error callback (fires frequently, ignore)
+   // Only log actual errors, not "No code found"
+ }
+)
 
  setIsScanning(true)
- setPermissionState('granted')} catch (err: any) {// Log detailed error info for debugging
+ setPermissionState('granted')
+ } catch (err: any) {
+   // Log detailed error info for debugging
  console.error('[BarcodeScanner] Scanner error details:', {name: err?.name,
  message: err?.message,
  code: err?.code,
