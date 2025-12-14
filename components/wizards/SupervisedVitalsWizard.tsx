@@ -1486,6 +1486,8 @@ function MoodStep({
   const [speechSupported, setSpeechSupported] = useState(false)
   const [permissionError, setPermissionError] = useState<string | null>(null)
   const [isRequestingPermission, setIsRequestingPermission] = useState(false)
+  const [countdown, setCountdown] = useState<number | null>(null)
+  const countdownIntervalRef = React.useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     // Check if speech recognition is supported
@@ -1553,25 +1555,40 @@ function MoodStep({
 
       // Stop the stream immediately - we just needed permission
       stream.getTracks().forEach(track => track.stop())
+      setIsRequestingPermission(false)
 
       if (recognition) {
-        console.log('Starting speech recognition...')
-        setIsRecording(true)
-        setIsRequestingPermission(false)
-        try {
-          recognition.start()
-        } catch (e: any) {
-          console.error('Recognition start error:', e)
-          if (e.message.includes('already started')) {
-            // Recognition is already running, just set state
-            setIsRecording(true)
-          } else {
-            throw e
-          }
-        }
+        // Start countdown from 3
+        setCountdown(3)
+        countdownIntervalRef.current = setInterval(() => {
+          setCountdown(prev => {
+            if (prev === null || prev <= 1) {
+              if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current)
+                countdownIntervalRef.current = null
+              }
+              // Start recording after countdown
+              setCountdown(null)
+              console.log('Starting speech recognition...')
+              setIsRecording(true)
+              try {
+                recognition.start()
+              } catch (e: any) {
+                console.error('Recognition start error:', e)
+                if (e.message.includes('already started')) {
+                  setIsRecording(true)
+                } else {
+                  setIsRecording(false)
+                  setPermissionError(`Error starting recording: ${e.message}`)
+                }
+              }
+              return null
+            }
+            return prev - 1
+          })
+        }, 1000)
       } else {
         setPermissionError('Speech recognition is not initialized. Please refresh the page.')
-        setIsRequestingPermission(false)
       }
     } catch (error: any) {
       console.error('Microphone access error:', error)
@@ -1589,11 +1606,27 @@ function MoodStep({
   }
 
   const stopRecording = () => {
+    // Clear countdown if it's running
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current)
+      countdownIntervalRef.current = null
+      setCountdown(null)
+    }
+
     if (recognition) {
       recognition.stop()
       setIsRecording(false)
     }
   }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current)
+      }
+    }
+  }, [])
 
   const moods = [
     { emoji: '😊', label: 'Happy', value: 'happy', color: 'bg-success-light border-success text-success-dark' },
@@ -1644,16 +1677,18 @@ function MoodStep({
                 <button
                   type="button"
                   onClick={isRecording ? stopRecording : startRecording}
-                  disabled={isSubmitting || isRequestingPermission}
+                  disabled={isSubmitting || isRequestingPermission || countdown !== null}
                   className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 ${
                     isRecording
                       ? 'bg-error text-white animate-pulse'
-                      : isRequestingPermission
+                      : isRequestingPermission || countdown !== null
                       ? 'bg-warning text-white'
                       : 'bg-accent text-accent-foreground hover:bg-accent-dark'
                   }`}
                 >
-                  {isRequestingPermission ? (
+                  {countdown !== null ? (
+                    <span className="text-2xl font-bold animate-pulse">{countdown}</span>
+                  ) : isRequestingPermission ? (
                     <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                   ) : (
                     <svg
@@ -1668,13 +1703,43 @@ function MoodStep({
                       />
                     </svg>
                   )}
-                  {isRequestingPermission
+                  {countdown !== null
+                    ? 'Get Ready...'
+                    : isRequestingPermission
                     ? 'Requesting Permission...'
                     : isRecording
                     ? 'Stop Recording'
                     : 'Start Voice Recording'}
                 </button>
-                {moodNotes && !isRecording && (
+                {countdown !== null && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (countdownIntervalRef.current) {
+                        clearInterval(countdownIntervalRef.current)
+                        countdownIntervalRef.current = null
+                      }
+                      setCountdown(null)
+                    }}
+                    className="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 bg-muted text-foreground hover:bg-muted/80"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                    Cancel
+                  </button>
+                )}
+                {moodNotes && !isRecording && !countdown && (
                   <button
                     type="button"
                     onClick={() => onNotesChange('')}
@@ -1697,6 +1762,12 @@ function MoodStep({
                     </svg>
                     Clear & Retry
                   </button>
+                )}
+                {countdown !== null && (
+                  <span className="text-sm text-warning-dark font-medium flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 bg-warning rounded-full animate-pulse"></span>
+                    Starting in {countdown}...
+                  </span>
                 )}
                 {isRecording && (
                   <span className="text-sm text-error font-medium flex items-center gap-2">
