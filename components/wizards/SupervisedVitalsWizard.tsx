@@ -1487,6 +1487,7 @@ function MoodStep({
   const [permissionError, setPermissionError] = useState<string | null>(null)
   const [isRequestingPermission, setIsRequestingPermission] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
@@ -1503,17 +1504,24 @@ function MoodStep({
         recognitionInstance.onresult = (event: any) => {
           let interimTranscript = ''
           let finalTranscript = moodNotes || ''
+          let hasFinal = false
 
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript
             if (event.results[i].isFinal) {
               finalTranscript += transcript + ' '
+              hasFinal = true
             } else {
               interimTranscript += transcript
             }
           }
 
           onNotesChange(finalTranscript.trim())
+
+          // Clear processing state when we get final results
+          if (hasFinal) {
+            setIsProcessing(false)
+          }
         }
 
         recognitionInstance.onerror = (event: any) => {
@@ -1525,10 +1533,15 @@ function MoodStep({
             setPermissionError(`Error: ${event.error}`)
           }
           setIsRecording(false)
+          setIsProcessing(false)
         }
 
         recognitionInstance.onend = () => {
           setIsRecording(false)
+          // Give a small delay before clearing processing to allow final results to come through
+          setTimeout(() => {
+            setIsProcessing(false)
+          }, 500)
         }
 
         setRecognition(recognitionInstance)
@@ -1613,7 +1626,8 @@ function MoodStep({
       setCountdown(null)
     }
 
-    if (recognition) {
+    if (recognition && isRecording) {
+      setIsProcessing(true)
       recognition.stop()
       setIsRecording(false)
     }
@@ -1677,17 +1691,19 @@ function MoodStep({
                 <button
                   type="button"
                   onClick={isRecording ? stopRecording : startRecording}
-                  disabled={isSubmitting || isRequestingPermission || countdown !== null}
+                  disabled={isSubmitting || isRequestingPermission || countdown !== null || isProcessing}
                   className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 ${
                     isRecording
                       ? 'bg-error text-white animate-pulse'
-                      : isRequestingPermission || countdown !== null
+                      : isRequestingPermission || countdown !== null || isProcessing
                       ? 'bg-warning text-white'
                       : 'bg-accent text-accent-foreground hover:bg-accent-dark'
                   }`}
                 >
                   {countdown !== null ? (
                     <span className="text-2xl font-bold animate-pulse">{countdown}</span>
+                  ) : isProcessing ? (
+                    <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                   ) : isRequestingPermission ? (
                     <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                   ) : (
@@ -1705,6 +1721,8 @@ function MoodStep({
                   )}
                   {countdown !== null
                     ? 'Get Ready...'
+                    : isProcessing
+                    ? 'Processing...'
                     : isRequestingPermission
                     ? 'Requesting Permission...'
                     : isRecording
@@ -1739,7 +1757,7 @@ function MoodStep({
                     Cancel
                   </button>
                 )}
-                {moodNotes && !isRecording && !countdown && (
+                {moodNotes && !isRecording && !countdown && !isProcessing && (
                   <button
                     type="button"
                     onClick={() => onNotesChange('')}
@@ -1775,6 +1793,12 @@ function MoodStep({
                     Recording...
                   </span>
                 )}
+                {isProcessing && (
+                  <span className="text-sm text-accent-dark font-medium flex items-center gap-2">
+                    <div className="animate-spin w-3 h-3 border-2 border-accent-dark border-t-transparent rounded-full"></div>
+                    Processing transcription...
+                  </span>
+                )}
                 {isRequestingPermission && (
                   <span className="text-sm text-warning-dark font-medium flex items-center gap-2">
                     <span className="inline-block w-2 h-2 bg-warning rounded-full animate-pulse"></span>
@@ -1797,7 +1821,7 @@ function MoodStep({
             onChange={(e) => onNotesChange(e.target.value)}
             placeholder="Example: My back is hurting today, took pain medication at 8am..."
             className="w-full px-3 py-2 bg-card border border-border rounded-lg focus:border-primary focus:outline-none min-h-[100px] text-foreground"
-            disabled={isRecording}
+            disabled={isRecording || isProcessing}
           />
 
           {!speechSupported && (
