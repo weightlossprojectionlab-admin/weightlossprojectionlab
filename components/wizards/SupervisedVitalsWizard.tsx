@@ -8,7 +8,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Dialog } from '@headlessui/react'
 import {
   XMarkIcon,
@@ -1487,7 +1487,7 @@ function MoodStep({
   const [permissionError, setPermissionError] = useState<string | null>(null)
   const [isRequestingPermission, setIsRequestingPermission] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
-  const countdownIntervalRef = React.useRef<NodeJS.Timeout | null>(null)
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     // Check if speech recognition is supported
