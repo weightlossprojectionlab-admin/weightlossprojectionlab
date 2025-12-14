@@ -1485,6 +1485,7 @@ function MoodStep({
   const [recognition, setRecognition] = useState<any>(null)
   const [speechSupported, setSpeechSupported] = useState(false)
   const [permissionError, setPermissionError] = useState<string | null>(null)
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false)
 
   useEffect(() => {
     // Check if speech recognition is supported
@@ -1535,19 +1536,54 @@ function MoodStep({
 
   const startRecording = async () => {
     setPermissionError(null)
+    setIsRequestingPermission(true)
+
+    // Check if navigator.mediaDevices is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setPermissionError('Your browser does not support microphone access. Please use Chrome, Edge, or Safari.')
+      setIsRequestingPermission(false)
+      return
+    }
 
     // Request microphone permission first
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true })
+      console.log('Requesting microphone permission...')
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      console.log('Microphone permission granted')
+
+      // Stop the stream immediately - we just needed permission
+      stream.getTracks().forEach(track => track.stop())
+
       if (recognition) {
+        console.log('Starting speech recognition...')
         setIsRecording(true)
-        recognition.start()
+        setIsRequestingPermission(false)
+        try {
+          recognition.start()
+        } catch (e: any) {
+          console.error('Recognition start error:', e)
+          if (e.message.includes('already started')) {
+            // Recognition is already running, just set state
+            setIsRecording(true)
+          } else {
+            throw e
+          }
+        }
+      } else {
+        setPermissionError('Speech recognition is not initialized. Please refresh the page.')
+        setIsRequestingPermission(false)
       }
     } catch (error: any) {
-      if (error.name === 'NotAllowedError') {
+      console.error('Microphone access error:', error)
+      setIsRequestingPermission(false)
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         setPermissionError('Microphone access denied. Please click the microphone icon in your browser address bar and allow access.')
+      } else if (error.name === 'NotFoundError') {
+        setPermissionError('No microphone found. Please connect a microphone and try again.')
+      } else if (error.name === 'NotReadableError') {
+        setPermissionError('Microphone is already in use by another application.')
       } else {
-        setPermissionError('Could not access microphone. Please check your browser settings.')
+        setPermissionError(`Could not access microphone: ${error.message || error.name}`)
       }
     }
   }
@@ -1608,30 +1644,46 @@ function MoodStep({
                 <button
                   type="button"
                   onClick={isRecording ? stopRecording : startRecording}
-                  disabled={isSubmitting}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                  disabled={isSubmitting || isRequestingPermission}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 ${
                     isRecording
                       ? 'bg-error text-white animate-pulse'
+                      : isRequestingPermission
+                      ? 'bg-warning text-white'
                       : 'bg-accent text-accent-foreground hover:bg-accent-dark'
                   }`}
                 >
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  {isRecording ? 'Stop Recording' : 'Start Voice Recording'}
+                  {isRequestingPermission ? (
+                    <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                  ) : (
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  )}
+                  {isRequestingPermission
+                    ? 'Requesting Permission...'
+                    : isRecording
+                    ? 'Stop Recording'
+                    : 'Start Voice Recording'}
                 </button>
                 {isRecording && (
                   <span className="text-sm text-error font-medium flex items-center gap-2">
                     <span className="inline-block w-2 h-2 bg-error rounded-full animate-pulse"></span>
                     Recording...
+                  </span>
+                )}
+                {isRequestingPermission && (
+                  <span className="text-sm text-warning-dark font-medium flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 bg-warning rounded-full animate-pulse"></span>
+                    Check your browser for permission prompt
                   </span>
                 )}
               </div>
