@@ -633,17 +633,15 @@ function IntroStep({
 }) {
   const guidance = getTaskGuidance('blood_pressure')
 
-  // Build list of available caregivers including the current user
+  // Build list of available caregivers including the patient and caregivers
   const availableCaregivers = [
-    ...(currentUser
-      ? [
-          {
-            userId: currentUser.uid,
-            name: currentUser.displayName || currentUser.email || 'Me',
-            relationship: 'owner'
-          }
-        ]
-      : []),
+    // Include the patient themselves as an option
+    {
+      userId: familyMember.id, // Use patient ID
+      name: `${familyMember.name} (Self)`,
+      relationship: 'self'
+    },
+    // Include all caregivers
     ...caregivers
       .filter(c => c.userId) // Only include caregivers with userId
       .map(c => ({
@@ -653,10 +651,10 @@ function IntroStep({
       }))
   ]
 
-  // Auto-select current user if no caregiver selected yet
+  // Auto-select patient (self) if no caregiver selected yet
   useEffect(() => {
     if (!selectedCaregiver && availableCaregivers.length > 0) {
-      onCaregiverSelect(availableCaregivers[0])
+      onCaregiverSelect(availableCaregivers[0]) // Default to patient (self)
     }
   }, [selectedCaregiver, availableCaregivers.length, onCaregiverSelect])
 
@@ -693,7 +691,7 @@ function IntroStep({
             {availableCaregivers.map((caregiver) => (
               <option key={caregiver.userId} value={caregiver.userId}>
                 {caregiver.name}
-                {caregiver.relationship && caregiver.relationship !== 'owner'
+                {caregiver.relationship && caregiver.relationship !== 'self'
                   ? ` (${caregiver.relationship})`
                   : ''}
               </option>
