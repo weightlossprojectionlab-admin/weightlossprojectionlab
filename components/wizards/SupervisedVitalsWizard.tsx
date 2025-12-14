@@ -1702,9 +1702,7 @@ function MoodStep({
                 >
                   {countdown !== null ? (
                     <span className="text-2xl font-bold animate-pulse">{countdown}</span>
-                  ) : isProcessing ? (
-                    <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                  ) : isRequestingPermission ? (
+                  ) : (isProcessing || isRequestingPermission) ? (
                     <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                   ) : (
                     <svg
