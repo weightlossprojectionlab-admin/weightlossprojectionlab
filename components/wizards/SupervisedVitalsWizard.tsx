@@ -44,6 +44,12 @@ interface SupervisedVitalsWizardProps {
   recentReadings?: VitalReading[]
   onSubmit: (vitals: any) => Promise<void>
   onComplete?: (savedVitals: VitalSign[]) => void  // Callback with saved vitals for summary display
+  caregivers?: Array<{
+    id: string
+    name: string
+    relationship?: string
+    userId?: string
+  }>
 }
 
 type WizardStep = 'intro' | 'blood_pressure' | 'temperature' | 'heart_rate' | 'oxygen' | 'blood_sugar' | 'review' | 'mood' | 'schedule' | 'confirmation'
@@ -71,6 +77,11 @@ interface VitalData {
   notes?: string
   timestamp: Date
   schedulePreferences?: SchedulePreferences
+  loggedBy?: {
+    userId: string
+    name: string
+    relationship?: string
+  }
 }
 
 export default function SupervisedVitalsWizard({
@@ -79,7 +90,8 @@ export default function SupervisedVitalsWizard({
   familyMember,
   recentReadings = [],
   onSubmit,
-  onComplete
+  onComplete,
+  caregivers = []
 }: SupervisedVitalsWizardProps) {
   const [currentStep, setCurrentStep] = useState<WizardStep>('intro')
   const [vitalData, setVitalData] = useState<VitalData>({ timestamp: new Date() })
@@ -348,7 +360,18 @@ export default function SupervisedVitalsWizard({
   const renderStepContent = () => {
     switch (currentStep) {
       case 'intro':
-        return <IntroStep familyMember={familyMember} onNext={handleNext} />
+        return (
+          <IntroStep
+            familyMember={familyMember}
+            caregivers={caregivers}
+            currentUser={user}
+            selectedCaregiver={vitalData.loggedBy}
+            onCaregiverSelect={(caregiver) => {
+              setVitalData({ ...vitalData, loggedBy: caregiver })
+            }}
+            onNext={handleNext}
+          />
+        )
 
       case 'blood_pressure':
         return (
@@ -584,8 +607,58 @@ export default function SupervisedVitalsWizard({
 // STEP COMPONENTS
 // ============================================================================
 
-function IntroStep({ familyMember, onNext }: { familyMember: any; onNext: () => void }) {
+function IntroStep({
+  familyMember,
+  caregivers,
+  currentUser,
+  selectedCaregiver,
+  onCaregiverSelect,
+  onNext
+}: {
+  familyMember: any
+  caregivers: Array<{
+    id: string
+    name: string
+    relationship?: string
+    userId?: string
+  }>
+  currentUser: any
+  selectedCaregiver?: {
+    userId: string
+    name: string
+    relationship?: string
+  }
+  onCaregiverSelect: (caregiver: { userId: string; name: string; relationship?: string }) => void
+  onNext: () => void
+}) {
   const guidance = getTaskGuidance('blood_pressure')
+
+  // Build list of available caregivers including the current user
+  const availableCaregivers = [
+    ...(currentUser
+      ? [
+          {
+            userId: currentUser.uid,
+            name: currentUser.displayName || currentUser.email || 'Me',
+            relationship: 'owner'
+          }
+        ]
+      : []),
+    ...caregivers
+      .filter(c => c.userId) // Only include caregivers with userId
+      .map(c => ({
+        userId: c.userId!,
+        name: c.name,
+        relationship: c.relationship
+      }))
+  ]
+
+  // Auto-select current user if no caregiver selected yet
+  useEffect(() => {
+    if (!selectedCaregiver && availableCaregivers.length > 0) {
+      onCaregiverSelect(availableCaregivers[0])
+    }
+  }, [selectedCaregiver, availableCaregivers.length, onCaregiverSelect])
 
   return (
     <div className="space-y-6">
@@ -600,6 +673,34 @@ function IntroStep({ familyMember, onNext }: { familyMember: any; onNext: () => 
           I'll guide you through each measurement step-by-step
         </p>
       </div>
+
+      {/* Caregiver Selection */}
+      {availableCaregivers.length > 0 && (
+        <div className="bg-muted rounded-lg p-4 border border-border">
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Who is performing this vitals check?
+          </label>
+          <select
+            value={selectedCaregiver?.userId || ''}
+            onChange={(e) => {
+              const caregiver = availableCaregivers.find(c => c.userId === e.target.value)
+              if (caregiver) {
+                onCaregiverSelect(caregiver)
+              }
+            }}
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg focus:border-primary focus:outline-none text-foreground"
+          >
+            {availableCaregivers.map((caregiver) => (
+              <option key={caregiver.userId} value={caregiver.userId}>
+                {caregiver.name}
+                {caregiver.relationship && caregiver.relationship !== 'owner'
+                  ? ` (${caregiver.relationship})`
+                  : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="bg-accent-light rounded-lg p-4 border border-accent/30">
         <div className="flex items-start gap-3">

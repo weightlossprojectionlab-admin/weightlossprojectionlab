@@ -1834,6 +1834,12 @@ function PatientDetailContent() {
             age: patient.age,
             conditions: patient.conditions || []
           }}
+          caregivers={familyMembers.map(member => ({
+            id: member.id,
+            name: member.name,
+            relationship: member.relationship,
+            userId: member.userId
+          }))}
           onSubmit={async (vitals) => {
             try {
               logger.info('[PatientDetail] Submitting vitals from wizard', { patientId: patient.id, vitals })

@@ -20,6 +20,11 @@ export interface WizardVitalData {
   bloodSugar?: number
   timestamp: Date
   notes?: string
+  loggedBy?: {
+    userId: string
+    name: string
+    relationship?: string
+  }
 }
 
 export interface VitalSignInput {
@@ -29,6 +34,7 @@ export interface VitalSignInput {
   recordedAt: string
   notes: string
   method: 'manual' | 'device'
+  takenBy?: string // userId of the person who recorded the vital
 }
 
 /**
@@ -53,6 +59,7 @@ export function transformWizardDataToVitals(
   const vitals: VitalSignInput[] = []
   const recordedAt = wizardData.timestamp.toISOString()
   const notes = wizardData.notes || ''
+  const takenBy = wizardData.loggedBy?.userId
 
   // Blood Pressure
   if (wizardData.bloodPressure) {
@@ -65,7 +72,8 @@ export function transformWizardDataToVitals(
       unit: 'mmHg',
       recordedAt,
       notes,
-      method: 'manual'
+      method: 'manual',
+      ...(takenBy && { takenBy })
     })
   }
 
@@ -77,7 +85,8 @@ export function transformWizardDataToVitals(
       unit: '°F',
       recordedAt,
       notes,
-      method: 'manual'
+      method: 'manual',
+      ...(takenBy && { takenBy })
     })
   }
 
@@ -93,7 +102,8 @@ export function transformWizardDataToVitals(
       unit: 'SpO₂% / bpm',
       recordedAt,
       notes,
-      method: 'manual'
+      method: 'manual',
+      ...(takenBy && { takenBy })
     })
   }
 
@@ -105,7 +115,8 @@ export function transformWizardDataToVitals(
       unit: 'mg/dL',
       recordedAt,
       notes,
-      method: 'manual'
+      method: 'manual',
+      ...(takenBy && { takenBy })
     })
   }
 
