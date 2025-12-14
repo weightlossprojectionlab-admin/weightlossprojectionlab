@@ -1824,22 +1824,27 @@ function PatientDetailContent() {
       />
 
       {/* Vitals Wizard Integration */}
-      {patient && showVitalsWizard && (
-        <SupervisedVitalsWizard
-          isOpen={showVitalsWizard}
-          onClose={() => setShowVitalsWizard(false)}
-          familyMember={{
-            id: patient.id,
-            name: patient.name,
-            age: patient.age,
-            conditions: patient.conditions || []
-          }}
-          caregivers={familyMembers.map(member => ({
-            id: member.id,
-            name: member.name,
-            relationship: member.relationship,
-            userId: member.userId
-          }))}
+      {patient && showVitalsWizard && (() => {
+        console.log('[PatientDetail] Opening vitals wizard with familyMembers:', familyMembers)
+        const caregivers = familyMembers.map(member => ({
+          id: member.id,
+          name: member.name,
+          relationship: member.relationship,
+          userId: member.userId
+        }))
+        console.log('[PatientDetail] Mapped caregivers:', caregivers)
+
+        return (
+          <SupervisedVitalsWizard
+            isOpen={showVitalsWizard}
+            onClose={() => setShowVitalsWizard(false)}
+            familyMember={{
+              id: patient.id,
+              name: patient.name,
+              age: patient.age,
+              conditions: patient.conditions || []
+            }}
+            caregivers={caregivers}
           onSubmit={async (vitals) => {
             try {
               logger.info('[PatientDetail] Submitting vitals from wizard', { patientId: patient.id, vitals })
@@ -1927,8 +1932,9 @@ function PatientDetailContent() {
               throw error
             }
           }}
-        />
-      )}
+          />
+        )
+      })()}
 
       {/* Vitals Summary Modal */}
       {patient && (

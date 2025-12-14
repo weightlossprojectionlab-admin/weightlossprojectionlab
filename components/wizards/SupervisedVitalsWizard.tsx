@@ -634,6 +634,8 @@ function IntroStep({
   const guidance = getTaskGuidance('blood_pressure')
 
   // Build list of available caregivers including the patient and caregivers
+  console.log('IntroStep - Available caregivers prop:', caregivers)
+
   const availableCaregivers = [
     // Include the patient themselves as an option
     {
@@ -643,13 +645,21 @@ function IntroStep({
     },
     // Include all caregivers
     ...caregivers
-      .filter(c => c.userId) // Only include caregivers with userId
+      .filter(c => {
+        const hasUserId = !!c.userId
+        if (!hasUserId) {
+          console.log('Caregiver filtered out (no userId):', c)
+        }
+        return hasUserId
+      })
       .map(c => ({
         userId: c.userId!,
         name: c.name,
         relationship: c.relationship
       }))
   ]
+
+  console.log('IntroStep - Final available caregivers:', availableCaregivers)
 
   // Auto-select patient (self) if no caregiver selected yet
   useEffect(() => {
