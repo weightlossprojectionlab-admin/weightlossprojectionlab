@@ -46,7 +46,7 @@ interface SupervisedVitalsWizardProps {
   onComplete?: (savedVitals: VitalSign[]) => void  // Callback with saved vitals for summary display
 }
 
-type WizardStep = 'intro' | 'blood_pressure' | 'temperature' | 'heart_rate' | 'oxygen' | 'blood_sugar' | 'review' | 'schedule' | 'confirmation'
+type WizardStep = 'intro' | 'blood_pressure' | 'temperature' | 'heart_rate' | 'oxygen' | 'blood_sugar' | 'review' | 'mood' | 'schedule' | 'confirmation'
 
 interface SchedulePreferences {
   enabled: boolean
@@ -66,6 +66,8 @@ interface VitalData {
   heartRate?: number
   oxygenSaturation?: number
   bloodSugar?: number
+  mood?: string
+  moodNotes?: string
   notes?: string
   timestamp: Date
   schedulePreferences?: SchedulePreferences
@@ -159,7 +161,7 @@ export default function SupervisedVitalsWizard({
   }
 
   const handleNext = () => {
-    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'review', 'schedule', 'confirmation']
+    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'review', 'mood', 'schedule', 'confirmation']
     const currentIndex = stepOrder.indexOf(currentStep)
     if (currentIndex < stepOrder.length - 1) {
       setCurrentStep(stepOrder[currentIndex + 1])
@@ -167,7 +169,7 @@ export default function SupervisedVitalsWizard({
   }
 
   const handleBack = () => {
-    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'review', 'schedule', 'confirmation']
+    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'review', 'mood', 'schedule', 'confirmation']
     const currentIndex = stepOrder.indexOf(currentStep)
     if (currentIndex > 0) {
       setCurrentStep(stepOrder[currentIndex - 1])
@@ -424,6 +426,20 @@ export default function SupervisedVitalsWizard({
           />
         )
 
+      case 'mood':
+        return (
+          <MoodStep
+            value={vitalData.mood}
+            moodNotes={vitalData.moodNotes}
+            onChange={(mood) => setVitalData(prev => ({ ...prev, mood }))}
+            onNotesChange={(moodNotes) => setVitalData(prev => ({ ...prev, moodNotes }))}
+            familyMember={familyMember}
+            onNext={handleNext}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+          />
+        )
+
       case 'schedule':
         return (
           <ScheduleStep
@@ -445,7 +461,7 @@ export default function SupervisedVitalsWizard({
   }
 
   // Progress indicator
-  const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'review']
+  const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'review', 'mood']
   const currentStepIndex = stepOrder.indexOf(currentStep)
   const progress = ((currentStepIndex + 1) / stepOrder.length) * 100
 
@@ -454,20 +470,20 @@ export default function SupervisedVitalsWizard({
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
 
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="mx-auto max-w-2xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl overflow-hidden">
+        <Dialog.Panel className="mx-auto max-w-2xl w-full bg-card rounded-lg shadow-xl overflow-hidden">
           {/* Header */}
           <div className="bg-primary px-6 py-4 flex items-center justify-between">
             <div>
-              <Dialog.Title className="text-xl font-bold text-white">
+              <Dialog.Title className="text-xl font-bold text-primary-foreground">
                 Vitals Check - {familyMember.name}
               </Dialog.Title>
-              <p className="text-sm text-primary-light">
+              <p className="text-sm text-primary-foreground/90">
                 AI-guided vital signs logging
               </p>
             </div>
             <button
               onClick={onClose}
-              className="text-white hover:text-gray-200 transition-colors"
+              className="text-primary-foreground hover:text-primary-foreground/80 transition-colors"
             >
               <XMarkIcon className="w-6 h-6" />
             </button>
@@ -475,7 +491,7 @@ export default function SupervisedVitalsWizard({
 
           {/* Progress Bar */}
           {currentStep !== 'confirmation' && (
-            <div className="bg-gray-200 dark:bg-gray-700 h-2">
+            <div className="bg-muted h-2">
               <div
                 className="bg-primary h-2 transition-all duration-300"
                 style={{ width: `${progress}%` }}
@@ -485,18 +501,18 @@ export default function SupervisedVitalsWizard({
 
           {/* Training Mode Toggle */}
           {currentStep !== 'intro' && currentStep !== 'confirmation' && (
-            <div className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+            <div className="px-6 py-3 bg-accent-light border-b border-accent/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <AcademicCapIcon className="w-5 h-5 text-blue-700 dark:text-blue-300" />
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  <AcademicCapIcon className="w-5 h-5 text-accent-dark" />
+                  <span className="text-sm font-medium text-accent-dark">
                     Training Guidance
                   </span>
                 </div>
                 <button
                   onClick={() => setShowGuidance(!showGuidance)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    showGuidance ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 ${
+                    showGuidance ? 'bg-accent' : 'bg-muted-dark'
                   }`}
                   role="switch"
                   aria-checked={showGuidance}
@@ -517,12 +533,12 @@ export default function SupervisedVitalsWizard({
             {renderStepContent()}
           </div>
 
-          {/* Footer Navigation - Hidden on intro, schedule, and confirmation steps */}
-          {currentStep !== 'confirmation' && currentStep !== 'intro' && currentStep !== 'schedule' && (
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-border flex items-center justify-between">
+          {/* Footer Navigation - Hidden on intro, mood, schedule, and confirmation steps */}
+          {currentStep !== 'confirmation' && currentStep !== 'intro' && currentStep !== 'mood' && currentStep !== 'schedule' && (
+            <div className="px-6 py-4 bg-muted border-t border-border flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center gap-2"
+                className="px-4 py-2 text-sm font-medium text-foreground hover:text-foreground/80 flex items-center gap-2"
               >
                 <ArrowLeftIcon className="w-4 h-4" />
                 Back
@@ -532,7 +548,7 @@ export default function SupervisedVitalsWizard({
                 {currentStep !== 'review' && (
                   <button
                     onClick={handleSkipStep}
-                    className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                    className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
                   >
                     Skip
                   </button>
@@ -540,21 +556,11 @@ export default function SupervisedVitalsWizard({
 
                 {currentStep === 'review' ? (
                   <button
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    className="px-6 py-2 bg-success text-white rounded-lg hover:bg-success-dark transition-colors font-medium disabled:opacity-50 flex items-center gap-2"
+                    onClick={handleNext}
+                    className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center gap-2"
                   >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircleIcon className="w-5 h-5" />
-                        Submit Vitals
-                      </>
-                    )}
+                    Continue
+                    <ArrowRightIcon className="w-4 h-4" />
                   </button>
                 ) : (
                   <button
@@ -595,14 +601,14 @@ function IntroStep({ familyMember, onNext }: { familyMember: any; onNext: () => 
         </p>
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+      <div className="bg-accent-light rounded-lg p-4 border border-accent/30">
         <div className="flex items-start gap-3">
-          <InformationCircleIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+          <InformationCircleIcon className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+            <h4 className="font-semibold text-accent-dark mb-2">
               Before We Start
             </h4>
-            <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+            <ul className="space-y-1 text-sm text-foreground">
               {guidance.map((step, index) => (
                 <li key={index} className="flex items-start gap-2">
                   <span className="font-medium">{index + 1}.</span>
@@ -683,20 +689,20 @@ function BloodPressureStep({ value, onChange, validation, showGuidance, familyMe
     <div className="space-y-6">
       <div>
         <h3 className="text-xl font-bold text-foreground mb-2">Blood Pressure</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-700 font-medium">
           Enter the systolic (top) and diastolic (bottom) readings
         </p>
       </div>
 
       {showGuidance && trainingPrompt && (
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+        <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-400">
           <div className="flex items-start gap-3">
-            <AcademicCapIcon className="w-5 h-5 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+            <AcademicCapIcon className="w-5 h-5 text-purple-800 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-1">
+              <h4 className="font-semibold text-purple-900 mb-1">
                 {trainingPrompt.topic}
               </h4>
-              <p className="text-sm text-purple-800 dark:text-purple-200">
+              <p className="text-sm text-purple-900 font-medium">
                 {trainingPrompt.message}
               </p>
             </div>
@@ -717,9 +723,9 @@ function BloodPressureStep({ value, onChange, validation, showGuidance, familyMe
               handleUpdate(e.target.value, diastolic)
             }}
             placeholder="120"
-            className="w-full px-4 py-3 text-2xl font-bold text-center bg-white dark:bg-gray-900 border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+            className="w-full px-4 py-3 text-2xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
           />
-          <p className="text-xs text-muted-foreground mt-1 text-center">mmHg</p>
+          <p className="text-xs text-gray-700 mt-1 text-center font-medium">mmHg</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
@@ -733,17 +739,17 @@ function BloodPressureStep({ value, onChange, validation, showGuidance, familyMe
               handleUpdate(systolic, e.target.value)
             }}
             placeholder="80"
-            className="w-full px-4 py-3 text-2xl font-bold text-center bg-white dark:bg-gray-900 border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+            className="w-full px-4 py-3 text-2xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
           />
-          <p className="text-xs text-muted-foreground mt-1 text-center">mmHg</p>
+          <p className="text-xs text-gray-700 mt-1 text-center font-medium">mmHg</p>
         </div>
       </div>
 
       {/* Inline validation warning for swapped values */}
       {showSwapWarning && (
-        <div className="rounded-lg p-4 border-2 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-800">
+        <div className="rounded-lg p-4 border-2 bg-yellow-50 border-yellow-500">
           <div className="flex items-start gap-3">
-            <ExclamationTriangleIcon className="w-5 h-5 text-warning-dark flex-shrink-0 mt-0.5" />
+            <ExclamationTriangleIcon className="w-5 h-5 text-yellow-800 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="font-semibold text-warning-dark mb-1">Values May Be Swapped</p>
               <p className="text-sm text-foreground">
@@ -778,7 +784,7 @@ function TemperatureStep({ value, onChange, validation, showGuidance }: StepProp
     <div className="space-y-6">
       <div>
         <h3 className="text-xl font-bold text-foreground mb-2">Temperature</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-700 font-medium">
           Enter temperature in Fahrenheit
         </p>
       </div>
@@ -790,9 +796,9 @@ function TemperatureStep({ value, onChange, validation, showGuidance }: StepProp
           value={temp}
           onChange={(e) => handleChange(e.target.value)}
           placeholder="98.6"
-          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white dark:bg-gray-900 border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
         />
-        <p className="text-sm text-muted-foreground mt-2 text-center">°F (Fahrenheit)</p>
+        <p className="text-sm text-gray-700 mt-2 text-center font-medium">°F (Fahrenheit)</p>
       </div>
 
       {validation && (
@@ -800,8 +806,8 @@ function TemperatureStep({ value, onChange, validation, showGuidance }: StepProp
       )}
 
       {showGuidance && (
-        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-muted-foreground">
+        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-400">
+          <p className="text-sm text-gray-800 font-medium">
             💡 <strong>Normal range:</strong> 97°F - 99°F<br />
             🌡️ <strong>Fever:</strong> 100.4°F or higher
           </p>
@@ -826,7 +832,7 @@ function HeartRateStep({ value, onChange, validation, showGuidance }: StepProps)
     <div className="space-y-6">
       <div>
         <h3 className="text-xl font-bold text-foreground mb-2">Heart Rate</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-700 font-medium">
           Enter pulse in beats per minute
         </p>
       </div>
@@ -837,9 +843,9 @@ function HeartRateStep({ value, onChange, validation, showGuidance }: StepProps)
           value={hr}
           onChange={(e) => handleChange(e.target.value)}
           placeholder="72"
-          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white dark:bg-gray-900 border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
         />
-        <p className="text-sm text-muted-foreground mt-2 text-center">bpm (beats per minute)</p>
+        <p className="text-sm text-gray-700 mt-2 text-center font-medium">bpm (beats per minute)</p>
       </div>
 
       {validation && (
@@ -847,8 +853,8 @@ function HeartRateStep({ value, onChange, validation, showGuidance }: StepProps)
       )}
 
       {showGuidance && (
-        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-muted-foreground">
+        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-400">
+          <p className="text-sm text-gray-800 font-medium">
             💡 <strong>Normal range:</strong> 60-100 bpm at rest<br />
             ❤️ <strong>Tip:</strong> Count for 30 seconds and multiply by 2
           </p>
@@ -873,7 +879,7 @@ function OxygenStep({ value, onChange, validation, showGuidance }: StepProps) {
     <div className="space-y-6">
       <div>
         <h3 className="text-xl font-bold text-foreground mb-2">Oxygen Saturation</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-700 font-medium">
           Enter SpO2 percentage from pulse oximeter
         </p>
       </div>
@@ -885,9 +891,9 @@ function OxygenStep({ value, onChange, validation, showGuidance }: StepProps) {
           onChange={(e) => handleChange(e.target.value)}
           placeholder="98"
           max="100"
-          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white dark:bg-gray-900 border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
         />
-        <p className="text-sm text-muted-foreground mt-2 text-center">% SpO2</p>
+        <p className="text-sm text-gray-700 mt-2 text-center font-medium">% SpO2</p>
       </div>
 
       {validation && (
@@ -895,8 +901,8 @@ function OxygenStep({ value, onChange, validation, showGuidance }: StepProps) {
       )}
 
       {showGuidance && (
-        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-muted-foreground">
+        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-400">
+          <p className="text-sm text-gray-800 font-medium">
             💡 <strong>Normal range:</strong> 95-100%<br />
             🫁 <strong>Low oxygen:</strong> Below 90% requires medical attention
           </p>
@@ -921,7 +927,7 @@ function BloodSugarStep({ value, onChange, validation, showGuidance }: StepProps
     <div className="space-y-6">
       <div>
         <h3 className="text-xl font-bold text-foreground mb-2">Blood Sugar</h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-700 font-medium">
           Enter glucose reading from glucometer
         </p>
       </div>
@@ -932,9 +938,9 @@ function BloodSugarStep({ value, onChange, validation, showGuidance }: StepProps
           value={glucose}
           onChange={(e) => handleChange(e.target.value)}
           placeholder="120"
-          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white dark:bg-gray-900 border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
         />
-        <p className="text-sm text-muted-foreground mt-2 text-center">mg/dL</p>
+        <p className="text-sm text-gray-700 mt-2 text-center font-medium">mg/dL</p>
       </div>
 
       {validation && (
@@ -942,8 +948,8 @@ function BloodSugarStep({ value, onChange, validation, showGuidance }: StepProps
       )}
 
       {showGuidance && (
-        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-muted-foreground">
+        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-400">
+          <p className="text-sm text-gray-800 font-medium">
             💡 <strong>Target range:</strong> 80-130 mg/dL (fasting)<br />
             🩸 <strong>Critical:</strong> Below 70 or above 300 requires immediate action
           </p>
@@ -1031,12 +1037,12 @@ function ReviewStep({
       {hasAbnormalReadings && (
         <div className={`rounded-lg p-4 border-2 ${
           hasCriticalReadings
-            ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-800'
-            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-800'
+            ? 'bg-error-light border-error'
+            : 'bg-warning-light border-warning'
         }`}>
           <div className="flex items-start gap-3">
             <ExclamationTriangleIcon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-              hasCriticalReadings ? 'text-error' : 'text-warning-dark'
+              hasCriticalReadings ? 'text-error' : 'text-warning'
             }`} />
             <div>
               <h4 className={`font-semibold mb-2 ${
@@ -1049,7 +1055,7 @@ function ReviewStep({
               </p>
               <textarea
                 placeholder="Example: Patient reports feeling dizzy. Gave water and had them sit down. Will monitor for 30 minutes."
-                className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-primary focus:outline-none min-h-[100px]"
+                className="w-full px-3 py-2 bg-card border border-border rounded-lg focus:border-primary focus:outline-none min-h-[100px]"
                 onChange={(e) => onNotesChange(e.target.value)}
                 required={hasCriticalReadings}
               />
@@ -1064,7 +1070,7 @@ function ReviewStep({
         </label>
         <textarea
           placeholder="Any additional observations or notes..."
-          className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-border rounded-lg focus:border-primary focus:outline-none min-h-[80px]"
+          className="w-full px-3 py-2 bg-card border border-border rounded-lg focus:border-primary focus:outline-none min-h-[80px]"
           onChange={(e) => onNotesChange(e.target.value)}
         />
       </div>
@@ -1243,13 +1249,13 @@ function ScheduleStep({
       </div>
 
       {/* Enable/Disable Toggle */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <div className="bg-accent-light border border-accent/30 rounded-lg p-4">
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
             checked={enabled}
             onChange={(e) => setEnabled(e.target.checked)}
-            className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+            className="w-5 h-5 text-accent rounded focus:ring-2 focus:ring-accent"
           />
           <div className="flex-1">
             <span className="font-medium text-foreground">Yes, set up regular vital check reminders</span>
@@ -1305,13 +1311,13 @@ function ScheduleStep({
                   onClick={() => handleFrequencyChange(option.value)}
                   className={`relative p-3 rounded-lg border-2 transition-all ${
                     frequency === option.value
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-border hover:border-blue-300'
+                      ? 'border-accent bg-accent-light'
+                      : 'border-border hover:border-accent/50'
                   }`}
                 >
                   <div className="text-sm font-medium text-foreground">{option.label}</div>
                   {option.recommended && (
-                    <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    <div className="absolute -top-2 -right-2 bg-success text-white text-xs px-2 py-0.5 rounded-full">
                       Recommended
                     </div>
                   )}
@@ -1409,7 +1415,7 @@ function ScheduleStep({
             setEnabled(false)
             onNext()
           }}
-          className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+          className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           Skip for Now
         </button>
@@ -1426,14 +1432,14 @@ function ScheduleStep({
 
 function ValidationAlert({ validation }: { validation: ValidationResult }) {
   const severityStyles = {
-    normal: 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-800 text-green-800 dark:text-green-200',
-    warning: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200',
-    critical: 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-800 text-red-800 dark:text-red-200'
+    normal: 'bg-success-light border-success text-success-dark',
+    warning: 'bg-warning-light border-warning text-warning-dark',
+    critical: 'bg-error-light border-error text-error-dark'
   }
 
   const icons = {
     normal: <CheckCircleIcon className="w-5 h-5 text-success" />,
-    warning: <ExclamationTriangleIcon className="w-5 h-5 text-warning-dark" />,
+    warning: <ExclamationTriangleIcon className="w-5 h-5 text-warning" />,
     critical: <ExclamationTriangleIcon className="w-5 h-5 text-error" />
   }
 
@@ -1451,6 +1457,235 @@ function ValidationAlert({ validation }: { validation: ValidationResult }) {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function MoodStep({
+  value,
+  moodNotes,
+  onChange,
+  onNotesChange,
+  familyMember,
+  onNext,
+  onSubmit,
+  isSubmitting
+}: {
+  value?: string
+  moodNotes?: string
+  onChange: (mood: string) => void
+  onNotesChange: (notes: string) => void
+  familyMember: { name: string }
+  onNext: () => void
+  onSubmit: () => void
+  isSubmitting: boolean
+}) {
+  const [isRecording, setIsRecording] = useState(false)
+  const [recognition, setRecognition] = useState<any>(null)
+  const [speechSupported, setSpeechSupported] = useState(false)
+  const [permissionError, setPermissionError] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Check if speech recognition is supported
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (SpeechRecognition) {
+        setSpeechSupported(true)
+        const recognitionInstance = new SpeechRecognition()
+        recognitionInstance.continuous = true
+        recognitionInstance.interimResults = true
+        recognitionInstance.lang = 'en-US'
+
+        recognitionInstance.onresult = (event: any) => {
+          let interimTranscript = ''
+          let finalTranscript = moodNotes || ''
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' '
+            } else {
+              interimTranscript += transcript
+            }
+          }
+
+          onNotesChange(finalTranscript.trim())
+        }
+
+        recognitionInstance.onerror = (event: any) => {
+          if (event.error === 'not-allowed') {
+            setPermissionError('Microphone access denied. Please allow microphone access in your browser settings.')
+          } else if (event.error === 'no-speech') {
+            setPermissionError('No speech detected. Please try again.')
+          } else {
+            setPermissionError(`Error: ${event.error}`)
+          }
+          setIsRecording(false)
+        }
+
+        recognitionInstance.onend = () => {
+          setIsRecording(false)
+        }
+
+        setRecognition(recognitionInstance)
+      }
+    }
+  }, [])
+
+  const startRecording = async () => {
+    setPermissionError(null)
+
+    // Request microphone permission first
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true })
+      if (recognition) {
+        setIsRecording(true)
+        recognition.start()
+      }
+    } catch (error: any) {
+      if (error.name === 'NotAllowedError') {
+        setPermissionError('Microphone access denied. Please click the microphone icon in your browser address bar and allow access.')
+      } else {
+        setPermissionError('Could not access microphone. Please check your browser settings.')
+      }
+    }
+  }
+
+  const stopRecording = () => {
+    if (recognition) {
+      recognition.stop()
+      setIsRecording(false)
+    }
+  }
+
+  const moods = [
+    { emoji: '😊', label: 'Happy', value: 'happy', color: 'bg-success-light border-success text-success-dark' },
+    { emoji: '😌', label: 'Calm', value: 'calm', color: 'bg-accent-light border-accent text-accent-dark' },
+    { emoji: '😐', label: 'Okay', value: 'okay', color: 'bg-muted border-border text-foreground' },
+    { emoji: '😟', label: 'Worried', value: 'worried', color: 'bg-warning-light border-warning text-warning-dark' },
+    { emoji: '😢', label: 'Sad', value: 'sad', color: 'bg-error-light border-error text-error-dark' },
+    { emoji: '😫', label: 'Pain', value: 'pain', color: 'bg-error-light border-error text-error-dark' }
+  ]
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-bold text-foreground mb-2">
+          How is {familyMember.name} feeling today?
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Select the face that best describes their current mood
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {moods.map((mood) => (
+          <button
+            key={mood.value}
+            onClick={() => onChange(mood.value)}
+            className={`p-6 rounded-lg border-2 transition-all ${
+              value === mood.value
+                ? mood.color
+                : 'bg-card border-border hover:border-accent/50'
+            }`}
+          >
+            <div className="text-5xl mb-2">{mood.emoji}</div>
+            <div className="text-sm font-medium">{mood.label}</div>
+          </button>
+        ))}
+      </div>
+
+      {value && (
+        <div className="space-y-3 animate-fadeIn">
+          <label className="block text-sm font-medium text-foreground">
+            Tell us more about how {familyMember.name} is feeling (optional)
+          </label>
+
+          {speechSupported && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={isSubmitting}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                    isRecording
+                      ? 'bg-error text-white animate-pulse'
+                      : 'bg-accent text-accent-foreground hover:bg-accent-dark'
+                  }`}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  {isRecording ? 'Stop Recording' : 'Start Voice Recording'}
+                </button>
+                {isRecording && (
+                  <span className="text-sm text-error font-medium flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 bg-error rounded-full animate-pulse"></span>
+                    Recording...
+                  </span>
+                )}
+              </div>
+              {permissionError && (
+                <div className="bg-warning-light border border-warning rounded-lg p-3">
+                  <p className="text-sm text-warning-dark font-medium">
+                    {permissionError}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <textarea
+            value={moodNotes || ''}
+            onChange={(e) => onNotesChange(e.target.value)}
+            placeholder="Example: My back is hurting today, took pain medication at 8am..."
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg focus:border-primary focus:outline-none min-h-[100px] text-foreground"
+            disabled={isRecording}
+          />
+
+          {!speechSupported && (
+            <p className="text-xs text-muted-foreground">
+              💡 Tip: Voice recording is not supported in your browser. Please type your notes above.
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between pt-6 border-t border-border">
+        <button
+          onClick={onSubmit}
+          disabled={isSubmitting}
+          className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+        >
+          {isSubmitting ? 'Saving...' : 'Skip'}
+        </button>
+        <button
+          onClick={onSubmit}
+          disabled={isSubmitting}
+          className="px-6 py-3 bg-success text-white rounded-lg hover:bg-success-dark transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {isSubmitting ? (
+            <>
+              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <CheckCircleIcon className="w-5 h-5" />
+              Submit Vitals
+            </>
+          )}
+        </button>
       </div>
     </div>
   )

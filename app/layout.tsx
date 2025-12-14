@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import Script from 'next/script'
 import { ConditionalProviders } from '@/components/ConditionalProviders'
 import './globals.css'
 
@@ -24,8 +23,11 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'default', // Light status bar for light mode
     title: 'WLPL',
+  },
+  other: {
+    'color-scheme': 'light only',
   },
 }
 
@@ -34,7 +36,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5, // Allow zooming up to 5x for accessibility
   userScalable: true, // Enable user scaling for accessibility
-  themeColor: '#4F46E5',
+  themeColor: '#ffffff', // Light mode - white background
+  colorScheme: 'light', // Force light mode on all devices
   viewportFit: 'cover', // Enable safe area insets for notched devices
 }
 
@@ -44,9 +47,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="h-full" suppressHydrationWarning>
+    <html lang="en" className="h-full light" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
+        <meta name="color-scheme" content="light only" />
         {/* Resource hints for third-party origins */}
         <link rel="preconnect" href="https://apis.google.com" />
         <link rel="preconnect" href="https://weightlossprojectionlab-8b284.firebaseapp.com" />
@@ -54,21 +58,6 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://weightlossprojectionlab-8b284.firebaseapp.com" />
       </head>
       <body className="h-full font-sans antialiased">
-        <Script id="theme-script" strategy="beforeInteractive">
-          {`(function() {
-            try {
-              const theme = localStorage.getItem('wlpl-theme') || 'system';
-              const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-              const resolvedTheme = theme === 'system' ? systemTheme : theme;
-              document.documentElement.classList.add(resolvedTheme);
-              const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-              if (metaThemeColor) {
-                metaThemeColor.setAttribute('content', resolvedTheme === 'dark' ? '#111827' : '#ffffff');
-              }
-            } catch (e) {}
-          })();`}
-        </Script>
-
         <ConditionalProviders>{children}</ConditionalProviders>
       </body>
     </html>

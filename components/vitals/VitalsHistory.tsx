@@ -94,14 +94,14 @@ export default function VitalsHistory({
   return (
     <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
       {/* Header with Filters */}
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 px-6 py-4 border-b border-border">
+      <div className="bg-muted px-6 py-4 border-b border-border">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <ClockIcon className="h-5 w-5 text-primary" />
+              <ClockIcon className="h-5 w-5 text-foreground" />
               Vitals History
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-foreground/70 mt-1">
               {filteredVitals.length} record{filteredVitals.length !== 1 ? 's' : ''}
             </p>
           </div>

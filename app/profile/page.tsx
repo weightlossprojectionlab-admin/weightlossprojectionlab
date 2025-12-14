@@ -22,7 +22,6 @@ import { Spinner } from '@/components/ui/Spinner'
 import { HealthSyncCard } from '@/components/health/HealthSyncCard'
 import { HealthConnectModal } from '@/components/health/HealthConnectModal'
 import { detectPlatform, getHealthAppForPlatform } from '@/lib/health-sync-utils'
-import { useTheme } from '@/hooks/useTheme'
 import { logger } from '@/lib/logger'
 import { useSubscription } from '@/hooks/useSubscription'
 import { usePatientLimit } from '@/hooks/usePatientLimit'
@@ -44,7 +43,6 @@ function ProfileContent() {
   const { current, max, percentage } = usePatientLimit(patients.length)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const { isEnabled: stepTrackingEnabled, enableTracking, disableTracking, isTracking } = useStepTracking()
-  const { theme, setTheme } = useTheme()
   const [biometricSupported, setBiometricSupported] = useState(false)
   const [biometricEnabled, setBiometricEnabled] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -402,7 +400,7 @@ function ProfileContent() {
 
       <div className="mx-auto max-w-2xl px-4 py-6 space-y-6">
         {/* Family Member Selector - ALWAYS SHOW */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 shadow-lg border-2 border-blue-300">
+        <div className="bg-gradient-to-r from-primary-light to-accent-light rounded-lg p-6 shadow-lg border-2 border-primary/30">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-3xl">
@@ -425,7 +423,7 @@ function ProfileContent() {
             </div>
             {currentlyViewingMember && (
               <div className="flex flex-col items-end gap-2">
-                <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full uppercase">
+                <span className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full uppercase">
                   Family Member
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -557,8 +555,8 @@ function ProfileContent() {
 
               {/* Trial Info */}
               {subscription.trialEndsAt && subscription.status === 'trialing' && (
-                <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 rounded-lg p-3">
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                <div className="bg-warning-light border border-warning rounded-lg p-3">
+                  <p className="text-sm text-warning-dark">
                     <strong>Trial ends:</strong> {new Date(subscription.trialEndsAt).toLocaleDateString()}
                   </p>
                 </div>
@@ -652,7 +650,7 @@ function ProfileContent() {
                 </div>
 
                 {biometricSupported && (
-                  <div className="bg-indigo-100 dark:bg-indigo-900/20 rounded-lg p-3">
+                  <div className="bg-accent-light rounded-lg p-3">
                     <p className="text-xs text-accent-dark">
                       <strong>Compatible devices:</strong> iPhone with Touch/Face ID,
                       Android with fingerprint, Windows with Windows Hello
@@ -679,12 +677,12 @@ function ProfileContent() {
             </div>
 
             <div className="border-t border-border pt-4">
-              <div className="bg-error-light dark:bg-red-900/20 border-2 border-error dark:border-red-800 rounded-lg p-4 mb-3">
+              <div className="bg-error-light border-2 border-error rounded-lg p-4 mb-3">
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">⚠️</span>
                   <div>
-                    <p className="font-medium text-error-dark dark:text-red-200 mb-1">Reset All Data & Start Over</p>
-                    <p className="text-sm text-error-dark dark:text-red-300">
+                    <p className="font-semibold text-error-dark mb-1">Reset All Data & Start Over</p>
+                    <p className="text-sm text-error-dark">
                       If you entered false information during onboarding and want to start fresh with accurate data, use this option.
                       This will permanently delete ALL your data including meals, weight logs, and progress.
                     </p>
@@ -694,11 +692,11 @@ function ProfileContent() {
               <button
                 onClick={handleResetAllData}
                 disabled={resetLoading}
-                className="btn btn-secondary w-full text-error border-error dark:border-error hover:bg-error-light dark:hover:bg-red-900/20 font-medium"
+                className="btn btn-secondary w-full text-error border-error hover:bg-error-light font-semibold"
               >
                 {resetLoading ? (
                   <span className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin w-5 h-5 border-2 border-error dark:border-error border-t-transparent rounded-full" />
+                    <div className="animate-spin w-5 h-5 border-2 border-error border-t-transparent rounded-full" />
                     <span>Resetting...</span>
                   </span>
                 ) : (
@@ -740,54 +738,6 @@ function ProfileContent() {
               </label>
             </div>
 
-            {/* Theme Preference */}
-            <div className="border-t border-border pt-4">
-              <div className="mb-3">
-                <p className="font-medium text-foreground">Theme</p>
-                <p className="text-sm text-muted-foreground">Choose your preferred color scheme</p>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <button
-                  onClick={() => setTheme('light')}
-                  className={`
-                    flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all
-                    ${theme === 'light'
-                      ? 'border-primary bg-primary-light'
-                      : 'border-border hover:border-primary/50'
-                    }
-                  `}
-                >
-                  <span className="text-2xl mb-2">☀️</span>
-                  <span className="text-sm font-medium text-foreground">Light</span>
-                </button>
-                <button
-                  onClick={() => setTheme('dark')}
-                  className={`
-                    flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all
-                    ${theme === 'dark'
-                      ? 'border-primary bg-primary-light'
-                      : 'border-border hover:border-primary/50'
-                    }
-                  `}
-                >
-                  <span className="text-2xl mb-2">🌙</span>
-                  <span className="text-sm font-medium text-foreground">Dark</span>
-                </button>
-                <button
-                  onClick={() => setTheme('system')}
-                  className={`
-                    flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all
-                    ${theme === 'system'
-                      ? 'border-primary bg-primary-light'
-                      : 'border-border hover:border-primary/50'
-                    }
-                  `}
-                >
-                  <span className="text-2xl mb-2">🔄</span>
-                  <span className="text-sm font-medium text-foreground">System</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -800,7 +750,7 @@ function ProfileContent() {
           <button
             onClick={handleSendTestNotification}
             disabled={sendingTestNotif}
-            className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            className="btn btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {sendingTestNotif ? 'Sending Test...' : '📬 Send Test Notification'}
           </button>
@@ -812,22 +762,6 @@ function ProfileContent() {
         {/* Legacy Notification Settings */}
         <NotificationSettings userId={user?.uid} />
 
-        <div className="bg-card rounded-lg p-6 shadow-sm">
-          <h3 className="text-lg font-bold mb-4">Other Preferences</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Weight Units</p>
-                <p className="text-sm text-muted-foreground">Pounds or kilograms</p>
-              </div>
-              <select className="form-input text-sm">
-                <option value="lbs">Pounds (lbs)</option>
-                <option value="kg">Kilograms (kg)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
         {/* Health Sync */}
         <div className="bg-card rounded-lg shadow-sm">
           <HealthSyncCard onSetupClick={() => setShowHealthModal(true)} />
@@ -838,7 +772,7 @@ function ProfileContent() {
           <button
             onClick={handleSignOut}
             disabled={signOutLoading}
-            className={`btn btn-secondary w-full text-error border-error dark:border-error hover:bg-error-light dark:hover:bg-red-900/20 inline-flex items-center justify-center space-x-2 ${signOutLoading ? 'cursor-wait' : ''}`}
+            className={`btn btn-secondary w-full text-error border-error hover:bg-error-light inline-flex items-center justify-center space-x-2 ${signOutLoading ? 'cursor-wait' : ''}`}
             aria-label="Sign out of account"
           >
             {signOutLoading && <Spinner size="sm" className="text-error" />}

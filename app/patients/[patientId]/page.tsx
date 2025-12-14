@@ -24,7 +24,6 @@ import VitalsHistory from '@/components/vitals/VitalsHistory'
 import { FamilyMemberCard } from '@/components/family/FamilyMemberCard'
 import { PermissionsMatrix } from '@/components/family/PermissionsMatrix'
 import { InviteModal } from '@/components/family/InviteModal'
-import { WeightLogForm } from '@/components/patients/WeightLogForm'
 import { MealLogForm } from '@/components/patients/MealLogForm'
 import { StepLogForm } from '@/components/patients/StepLogForm'
 import { MedicationForm } from '@/components/patients/MedicationForm'
@@ -69,7 +68,7 @@ function PatientDetailContent() {
   const patientId = params.patientId as string
 
   // Get tab from query parameter, default to 'vitals'
-  const tabParam = searchParams.get('tab') as 'vitals' | 'weight' | 'meals' | 'steps' | 'medications' | null
+  const tabParam = searchParams.get('tab') as 'vitals' | 'meals' | 'steps' | 'medications' | null
 
   const [patient, setPatient] = useState<PatientProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -91,7 +90,7 @@ function PatientDetailContent() {
   const [medications, setMedications] = useState<PatientMedication[]>([])
   const [loadingMedications, setLoadingMedications] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
-  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'weight' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments'>(tabParam || 'vitals')
+  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments'>(tabParam || 'vitals')
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
   const [showVitalsWizard, setShowVitalsWizard] = useState(false)
   const [showVitalsSummary, setShowVitalsSummary] = useState(false)
@@ -452,123 +451,146 @@ function PatientDetailContent() {
             <div className="lg:sticky lg:top-4">
               <div className="bg-card rounded-lg shadow-sm border border-border p-4">
                 <h3 className="font-semibold text-foreground mb-3">Quick Actions</h3>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-col lg:gap-2">
                   <button
                     onClick={() => {
                       setActiveTab('info')
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      // Scroll to content on mobile, do nothing on desktop
+                      setTimeout(() => {
+                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
                     }}
-                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
                       activeTab === 'info'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
+                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span>ℹ️</span>
-                    <span>Patient Info</span>
+                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">ℹ️</span>
+                    <span className="text-center lg:text-left leading-tight font-medium">Patient Info</span>
                   </button>
                   <button
                     onClick={() => {
                       setActiveTab('meals')
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      setTimeout(() => {
+                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
                     }}
-                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
                       activeTab === 'meals'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
+                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span>📸</span>
-                    <span>Log Meal</span>
+                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">📸</span>
+                    <span className="text-center lg:text-left leading-tight font-medium">Log Meal</span>
                   </button>
                   <button
                     onClick={() => {
                       setActiveTab('medications')
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      setTimeout(() => {
+                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
                     }}
-                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
                       activeTab === 'medications'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
+                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span>💊</span>
-                    <span>Medications</span>
+                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">💊</span>
+                    <span className="text-center lg:text-left leading-tight font-medium">Medications</span>
                   </button>
                   <button
                     onClick={() => {
                       setShowVitalsWizard(true)
                     }}
-                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground`}
+                    className="w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 bg-muted hover:bg-muted/80 text-foreground"
+                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span>🩺</span>
-                    <span>Vitals</span>
+                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">🩺</span>
+                    <span className="text-center lg:text-left leading-tight font-medium">Vitals</span>
                   </button>
                   <button
                     onClick={() => {
                       setShowAppointmentWizard(true)
                     }}
-                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground`}
+                    className="w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 bg-muted hover:bg-muted/80 text-foreground"
+                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span>📅</span>
-                    <span>Schedule Appointment</span>
+                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">➕</span>
+                    <span className="text-center lg:text-left leading-tight font-medium">Schedule Appointment</span>
                   </button>
                   <button
                     onClick={() => {
                       setActiveTab('steps')
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      setTimeout(() => {
+                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
                     }}
-                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
                       activeTab === 'steps'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
+                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span>🚶</span>
-                    <span>Log Steps</span>
+                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">🚶</span>
+                    <span className="text-center lg:text-left leading-tight font-medium">Log Steps</span>
                   </button>
                   <button
                     onClick={() => {
                       setActiveTab('appointments')
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      setTimeout(() => {
+                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
                     }}
-                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
                       activeTab === 'appointments'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
+                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span>📅</span>
-                    <span>Appointments</span>
+                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">📅</span>
+                    <span className="text-center lg:text-left leading-tight font-medium">Appointments</span>
                   </button>
                   <Link
                     href={`/shopping?memberId=${patientId}`}
-                    className="w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground"
+                    className="w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 bg-muted hover:bg-muted/80 text-foreground"
+                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span>🛒</span>
-                    <span>Shopping List</span>
+                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">🛒</span>
+                    <span className="text-center lg:text-left leading-tight font-medium">Shopping List</span>
                   </Link>
                   <button
                     onClick={() => {
                       setActiveTab('recipes')
-                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      setTimeout(() => {
+                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
                     }}
-                    className={`w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
                       activeTab === 'recipes'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
+                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span>🍽️</span>
-                    <span>Recipes for {patient.name}</span>
+                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">🍽️</span>
+                    <span className="text-center lg:text-left leading-tight font-medium">Recipes for {patient.name}</span>
                   </button>
                   {canUploadDocuments && (
                     <button
                       onClick={() => setShowDocumentUpload(!showDocumentUpload)}
-                      className="w-full text-left text-sm px-3 py-2 rounded transition-colors flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground"
+                      className="w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 bg-muted hover:bg-muted/80 text-foreground"
+                      style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                     >
-                      <DocumentTextIcon className="w-4 h-4" />
-                      <span>Upload Documents</span>
+                      <DocumentTextIcon style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="w-8 h-8 lg:w-5 lg:h-5" />
+                      <span className="text-center lg:text-left leading-tight font-medium">Upload Documents</span>
                     </button>
                   )}
                 </div>
@@ -592,7 +614,7 @@ function PatientDetailContent() {
           </aside>
 
           {/* Main Content Area */}
-          <div className="flex-1 min-w-0">
+          <div id="main-content" className="flex-1 min-w-0">
             {/* Mobile Tab Navigation - Only visible on small screens */}
             <div className="lg:hidden mb-6 overflow-x-auto pb-2 -mx-4 px-4">
               <div className="flex gap-2 min-w-max">
@@ -615,16 +637,6 @@ function PatientDetailContent() {
                   }`}
                 >
                   🩺 Vitals
-                </button>
-                <button
-                  onClick={() => setActiveTab('weight')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeTab === 'weight'
-                      ? 'bg-primary text-white'
-                      : 'bg-card border border-border text-foreground'
-                  }`}
-                >
-                  ⚖️ Weight
                 </button>
                 <button
                   onClick={() => setActiveTab('meals')}
