@@ -1489,6 +1489,7 @@ function MoodStep({
   const [countdown, setCountdown] = useState<number | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const transcriptRef = useRef<string>('')
 
   useEffect(() => {
     // Check if speech recognition is supported
@@ -1502,41 +1503,42 @@ function MoodStep({
         recognitionInstance.lang = 'en-US'
 
         recognitionInstance.onresult = (event: any) => {
-          let interimTranscript = ''
-          let finalTranscript = moodNotes || ''
-          let hasFinal = false
+          console.log('Speech recognition result:', event)
+          let finalTranscript = transcriptRef.current
 
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript
             if (event.results[i].isFinal) {
+              console.log('Final transcript segment:', transcript)
               finalTranscript += transcript + ' '
-              hasFinal = true
+              transcriptRef.current = finalTranscript
+              onNotesChange(finalTranscript.trim())
+              setIsProcessing(false)
             } else {
-              interimTranscript += transcript
+              console.log('Interim transcript:', transcript)
             }
-          }
-
-          onNotesChange(finalTranscript.trim())
-
-          // Clear processing state when we get final results
-          if (hasFinal) {
-            setIsProcessing(false)
           }
         }
 
         recognitionInstance.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error)
           if (event.error === 'not-allowed') {
             setPermissionError('Microphone access denied. Please allow microphone access in your browser settings.')
           } else if (event.error === 'no-speech') {
             setPermissionError('No speech detected. Please try again.')
-          } else {
+          } else if (event.error !== 'aborted') {
             setPermissionError(`Error: ${event.error}`)
           }
           setIsRecording(false)
           setIsProcessing(false)
         }
 
+        recognitionInstance.onstart = () => {
+          console.log('Speech recognition started')
+        }
+
         recognitionInstance.onend = () => {
+          console.log('Speech recognition ended')
           setIsRecording(false)
           // Give a small delay before clearing processing to allow final results to come through
           setTimeout(() => {
@@ -1552,6 +1554,9 @@ function MoodStep({
   const startRecording = async () => {
     setPermissionError(null)
     setIsRequestingPermission(true)
+
+    // Sync the transcript ref with current notes
+    transcriptRef.current = moodNotes || ''
 
     // Check if navigator.mediaDevices is available
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1582,13 +1587,15 @@ function MoodStep({
               }
               // Start recording after countdown
               setCountdown(null)
-              console.log('Starting speech recognition...')
+              console.log('Starting speech recognition...', 'Current transcript:', transcriptRef.current)
               setIsRecording(true)
               try {
                 recognition.start()
+                console.log('Speech recognition start() called successfully')
               } catch (e: any) {
                 console.error('Recognition start error:', e)
                 if (e.message.includes('already started')) {
+                  console.log('Recognition already started, continuing...')
                   setIsRecording(true)
                 } else {
                   setIsRecording(false)
@@ -1758,7 +1765,10 @@ function MoodStep({
                 {moodNotes && !isRecording && !countdown && !isProcessing && (
                   <button
                     type="button"
-                    onClick={() => onNotesChange('')}
+                    onClick={() => {
+                      transcriptRef.current = ''
+                      onNotesChange('')
+                    }}
                     disabled={isSubmitting}
                     className="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 bg-muted text-foreground hover:bg-muted/80 disabled:opacity-50"
                     title="Clear recording and start over"
