@@ -1825,13 +1825,23 @@ function PatientDetailContent() {
 
       {/* Vitals Wizard Integration */}
       {patient && showVitalsWizard && (() => {
-        console.log('[PatientDetail] Opening vitals wizard with familyMembers:', familyMembers)
-        const caregivers = familyMembers.map(member => ({
-          id: member.id,
-          name: member.name,
-          relationship: member.relationship,
-          userId: member.userId
-        }))
+        console.log('[PatientDetail] Opening vitals wizard with familyMembers:', JSON.stringify(familyMembers, null, 2))
+        const caregivers = familyMembers.map(member => {
+          console.log('[PatientDetail] Mapping family member:', {
+            id: member.id,
+            name: member.name,
+            relationship: member.relationship,
+            userId: member.userId,
+            status: member.status,
+            hasUserId: !!member.userId
+          })
+          return {
+            id: member.id,
+            name: member.name,
+            relationship: member.relationship,
+            userId: member.userId
+          }
+        })
         console.log('[PatientDetail] Mapped caregivers:', caregivers)
 
         return (
