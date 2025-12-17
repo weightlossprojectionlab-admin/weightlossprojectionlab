@@ -1,5 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
-import { getAuth, type Auth } from 'firebase/auth'
+import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'firebase/auth'
 import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'firebase/firestore'
 import { getStorage, type FirebaseStorage } from 'firebase/storage'
 import { getMessaging, type Messaging, isSupported } from 'firebase/messaging'
@@ -36,8 +36,17 @@ try {
   db = getFirestore(app)
   storage = getStorage(app)
 
-  // Enable offline persistence
+  // Enable auth persistence (keep user signed in across browser sessions)
   if (typeof window !== 'undefined') {
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        logger.info('Firebase Auth persistence enabled (browserLocalPersistence)')
+      })
+      .catch((err) => {
+        logger.error('Failed to set auth persistence', err as Error)
+      })
+
+    // Enable offline persistence for Firestore
     enableIndexedDbPersistence(db).catch((err) => {
       if (err.code === 'failed-precondition') {
         logger.warn('Firestore persistence failed: Multiple tabs open')
