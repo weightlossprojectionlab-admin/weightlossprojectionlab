@@ -85,6 +85,11 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
+    // Skip headers for static export (Capacitor builds)
+    if (process.env.CAPACITOR_BUILD === 'true') {
+      return []
+    }
+
     return [
       {
         source: '/:path*',
