@@ -8,7 +8,7 @@
  * This adapter enables secure biometric authentication across all platforms.
  */
 
-import { NativeBiometric, BiometryType, BiometricOptions } from '@aparajita/capacitor-biometric-auth'
+import { BiometricAuth as NativeBiometric, BiometryType, BiometricOptions } from '@aparajita/capacitor-biometric-auth'
 import { isNative, isServer, isPluginAvailable } from '@/lib/platform'
 
 export type BiometricType = 'faceId' | 'touchId' | 'fingerprint' | 'iris' | 'none'

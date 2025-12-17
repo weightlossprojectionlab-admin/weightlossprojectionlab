@@ -9,7 +9,7 @@
  * This adapter enables reading step count, heart rate, calories, and other health metrics.
  */
 
-import { Health, HealthDataType } from 'capacitor-health'
+import { Health } from 'capacitor-health'
 import { isNative, isServer, isIOS, isAndroid, isPluginAvailable } from '@/lib/platform'
 
 export interface HealthDataQuery {
