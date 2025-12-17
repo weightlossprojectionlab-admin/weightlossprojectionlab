@@ -2,16 +2,16 @@
 
 import { useState } from 'react'
 import { PlusIcon, CameraIcon } from '@heroicons/react/24/outline'
-import MedicationScanner from './MedicationScanner'
 import { MedicationCard } from './MedicationCard'
-import { ScannedMedication } from '@/lib/medication-lookup'
+import { PatientMedication } from '@/types/medical'
 
 interface MedicationListProps {
-  medications: ScannedMedication[]
-  onChange: (medications: ScannedMedication[]) => void
+  medications: PatientMedication[]
+  onChange: (medications: PatientMedication[]) => void
   prescribedFor?: string // Condition name
   label?: string
   description?: string
+  onAddClick?: () => void
 }
 
 export default function MedicationList({
@@ -19,32 +19,12 @@ export default function MedicationList({
   onChange,
   prescribedFor,
   label = 'Medications',
-  description = 'Scan or add your medications'
+  description = 'Add your medications',
+  onAddClick
 }: MedicationListProps) {
-  const [scannerOpen, setScannerOpen] = useState(false)
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
-
-  const handleAddMedication = (medication: ScannedMedication) => {
-    if (editingIndex !== null) {
-      // Editing existing medication
-      const updated = [...medications]
-      updated[editingIndex] = medication
-      onChange(updated)
-      setEditingIndex(null)
-    } else {
-      // Adding new medication
-      onChange([...medications, medication])
-    }
-  }
-
   const handleRemoveMedication = (index: number) => {
     const updated = medications.filter((_, i) => i !== index)
     onChange(updated)
-  }
-
-  const handleEditMedication = (index: number) => {
-    setEditingIndex(index)
-    setScannerOpen(true)
   }
 
   return (
@@ -64,9 +44,8 @@ export default function MedicationList({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {medications.map((med, index) => (
             <MedicationCard
-              key={index}
+              key={med.id || index}
               medication={med}
-              onEdit={() => handleEditMedication(index)}
               onDelete={() => handleRemoveMedication(index)}
               showActions={true}
             />
@@ -85,29 +64,17 @@ export default function MedicationList({
       )}
 
       {/* Add medication button */}
-      <button
-        onClick={() => {
-          setEditingIndex(null)
-          setScannerOpen(true)
-        }}
-        className="w-full flex items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed border-primary hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
-      >
-        <PlusIcon className="w-5 h-5 text-primary" />
-        <span className="text-primary font-medium">
-          {medications.length === 0 ? 'Scan or Add Medication' : 'Add Another Medication'}
-        </span>
-      </button>
-
-      {/* Medication Scanner Modal */}
-      <MedicationScanner
-        isOpen={scannerOpen}
-        onClose={() => {
-          setScannerOpen(false)
-          setEditingIndex(null)
-        }}
-        onMedicationScanned={handleAddMedication}
-        prescribedFor={prescribedFor}
-      />
+      {onAddClick && (
+        <button
+          onClick={onAddClick}
+          className="w-full flex items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed border-primary hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
+        >
+          <PlusIcon className="w-5 h-5 text-primary" />
+          <span className="text-primary font-medium">
+            {medications.length === 0 ? 'Add Medication' : 'Add Another Medication'}
+          </span>
+        </button>
+      )}
     </div>
   )
 }

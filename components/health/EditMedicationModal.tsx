@@ -23,8 +23,17 @@ export default function EditMedicationModal({
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    console.log('[EditMedicationModal] useEffect triggered with medication:', {
+      name: medication.name,
+      rxNumber: medication.rxNumber,
+      quantity: medication.quantity,
+      pharmacyName: medication.pharmacyName,
+      pharmacyPhone: medication.pharmacyPhone
+    })
+
     // Pre-fill form with current medication data
-    setFormData({
+    // This runs whenever medication prop changes (including when extracted data is added)
+    const newFormData = {
       name: medication.name,
       brandName: medication.brandName,
       strength: medication.strength,
@@ -41,7 +50,28 @@ export default function EditMedicationModal({
       pharmacyPhone: medication.pharmacyPhone,
       notes: medication.notes,
       images: medication.images || []
-    })
+    }
+
+    console.log('[EditMedicationModal] Setting form data:', newFormData)
+    setFormData(newFormData)
+
+    // Log what was populated
+    const populatedFields = Object.entries({
+      name: medication.name,
+      brandName: medication.brandName,
+      strength: medication.strength,
+      dosageForm: medication.dosageForm,
+      frequency: medication.frequency,
+      prescribedFor: medication.prescribedFor,
+      prescribingDoctor: medication.prescribingDoctor,
+      rxNumber: medication.rxNumber,
+      quantity: medication.quantity,
+      refills: medication.refills,
+      pharmacyName: medication.pharmacyName,
+      pharmacyPhone: medication.pharmacyPhone
+    }).filter(([_, value]) => value)
+
+    console.log('[EditMedicationModal] Form populated with fields:', populatedFields)
   }, [medication])
 
   // Auto-populate form fields from OCR results

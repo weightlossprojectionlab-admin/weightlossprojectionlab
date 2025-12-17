@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { scanDriversLicenseFront, type LicenseData } from '@/lib/drivers-license-ocr'
+import { scanDriversLicenseFront, type LicenseData } from '@/lib/drivers-license-gemini'
 import { CameraIcon, XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { AlertModal } from '@/components/ui/AlertModal'
 import { logger } from '@/lib/logger'

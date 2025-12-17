@@ -57,7 +57,11 @@ export default function MedicationAdherenceHistory({ patientId, medication }: Me
         logger.debug('[MedicationAdherenceHistory] Logs updated', { count: adherenceLogs.length })
       },
       (error) => {
-        logger.error('[MedicationAdherenceHistory] Error loading logs', error)
+        // Ignore permission-denied errors (collection might not exist yet)
+        if (error.code !== 'permission-denied') {
+          logger.error('[MedicationAdherenceHistory] Error loading logs', error)
+        }
+        setLogs([])
         setLoading(false)
       }
     )

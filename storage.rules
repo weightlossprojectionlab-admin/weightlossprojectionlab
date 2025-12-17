@@ -57,7 +57,7 @@ service firebase.storage {
     }
 
     // Medication images (scanned medication bottles)
-    match /medications/{userId}/{imageId} {
+    match /medications/{userId}/{patientId}/{imageId} {
       allow read: if isAuthenticated();
       allow write: if isOwner(userId) && isValidImage() && isValidImageSize();
       allow delete: if isOwner(userId);

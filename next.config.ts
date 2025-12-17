@@ -115,7 +115,7 @@ const nextConfig: NextConfig = {
             value: process.env.NODE_ENV === 'production'
               ? [
                   "default-src 'self'",
-                  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://apis.google.com https://accounts.google.com",
+                  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://cdn.jsdelivr.net https://unpkg.com",
                   "style-src 'self' 'unsafe-inline'",
                   "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com",
                   "font-src 'self' data:",
@@ -128,7 +128,7 @@ const nextConfig: NextConfig = {
               : [
                   // Development: More permissive but still structured
                   "default-src 'self'",
-                  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://apis.google.com https://accounts.google.com",
+                  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://cdn.jsdelivr.net https://unpkg.com",
                   "style-src 'self' 'unsafe-inline'",
                   "img-src * data: blob:",
                   "font-src 'self' data:",

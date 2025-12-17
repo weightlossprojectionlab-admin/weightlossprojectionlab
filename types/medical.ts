@@ -854,6 +854,7 @@ export interface PatientMedication {
   imageUrl?: string // @deprecated Use images array - kept for backward compatibility
   photoUrl?: string // @deprecated Alternative field name - kept for backward compatibility
   images?: MedicationImage[] // Multiple prescription images for OCR and analysis
+  extractedText?: string // Raw OCR text extracted from medication label
 
   // Family Member Assignment
   assignedToMemberId?: string // PatientProfile.id - which family member this medication is for

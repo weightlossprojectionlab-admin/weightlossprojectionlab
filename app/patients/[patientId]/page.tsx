@@ -98,6 +98,7 @@ function PatientDetailContent() {
   const [summaryMood, setSummaryMood] = useState<string | undefined>(undefined)
   const [summaryMoodNotes, setSummaryMoodNotes] = useState<string | undefined>(undefined)
   const [showAppointmentWizard, setShowAppointmentWizard] = useState(false)
+  const [showAllMedications, setShowAllMedications] = useState(false)
 
   const { user } = useAuth()
   const { vitals, loading: vitalsLoading, logVital, updateVital, deleteVital, refetch } = useVitals({
@@ -1030,40 +1031,43 @@ function PatientDetailContent() {
           )}
 
           {activeTab === 'medications' && (
-            <div className="bg-card rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-bold text-foreground mb-4">
-                Medications
-              </h2>
-              {canEditMedications ? (
-                <>
-                  <MedicationForm
-                    patientId={patientId}
-                    onSuccess={() => {
-                      fetchMedications()
-                      toast.success('Medication added successfully')
-                    }}
-                  />
-                  <div className="mt-6 pt-6 border-t border-border">
-                    <h3 className="font-semibold text-foreground mb-4">Current Medications</h3>
-                    <MedicationList
+            <div className="space-y-6">
+              {/* Medication Management */}
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-bold text-foreground mb-4">
+                  Medications
+                </h2>
+                {canEditMedications ? (
+                  <>
+                    <MedicationForm
                       patientId={patientId}
-                      patientOwnerId={patient?.userId}
-                      medications={medications}
-                      loading={loadingMedications}
-                      onMedicationUpdated={fetchMedications}
+                      onSuccess={() => {
+                        fetchMedications()
+                        toast.success('Medication added successfully')
+                      }}
                     />
+                    <div className="mt-6 pt-6 border-t border-border">
+                      <h3 className="font-semibold text-foreground mb-4">Current Medications</h3>
+                      <MedicationList
+                        patientId={patientId}
+                        patientOwnerId={patient?.userId}
+                        medications={medications}
+                        loading={loadingMedications}
+                        onMedicationUpdated={fetchMedications}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-2">
+                      You don't have permission to manage medications for this patient.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Contact the account owner to request access.
+                    </p>
                   </div>
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-2">
-                    You don't have permission to manage medications for this patient.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Contact the account owner to request access.
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
@@ -1391,7 +1395,7 @@ function PatientDetailContent() {
                 <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
               ) : medications && medications.length > 0 ? (
                 <div className="space-y-2">
-                  {medications.slice(0, 5).map((med) => (
+                  {(showAllMedications ? medications : medications.slice(0, 5)).map((med) => (
                     <button
                       key={med.id}
                       onClick={() => setSelectedMedication(med)}
@@ -1426,9 +1430,12 @@ function PatientDetailContent() {
                     </button>
                   ))}
                   {medications.length > 5 && (
-                    <p className="text-xs text-center text-muted-foreground pt-1">
-                      +{medications.length - 5} more medications
-                    </p>
+                    <button
+                      onClick={() => setShowAllMedications(!showAllMedications)}
+                      className="w-full text-xs text-center text-primary hover:text-primary-hover font-medium pt-2 transition-colors"
+                    >
+                      {showAllMedications ? 'Show less' : `+${medications.length - 5} more medications`}
+                    </button>
                   )}
                 </div>
               ) : (
@@ -1836,6 +1843,8 @@ function PatientDetailContent() {
         <MedicationDetailModal
           medication={selectedMedication}
           onClose={() => setSelectedMedication(null)}
+          patientId={params.patientId}
+          onMedicationUpdated={fetchMedications}
         />
       )}
 

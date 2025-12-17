@@ -1,17 +1,31 @@
 'use client'
 
+import { useState } from 'react'
 import { PatientMedication } from '@/types/medical'
 import { ScannedMedication } from '@/lib/medication-lookup'
-import { XMarkIcon, ClockIcon, CalendarIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, ClockIcon, CalendarIcon, ExclamationTriangleIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import MedicationAdherenceHistory from '@/components/patients/MedicationAdherenceHistory'
+import { DocumentReader } from '@/components/medications/DocumentReader'
+import { ParsedMedicationData } from '@/lib/medication-parser'
+import MedicationDataReviewModal from '@/components/medications/MedicationDataReviewModal'
+import { medicalOperations } from '@/lib/medical-operations'
+import { logger } from '@/lib/logger'
+import toast from 'react-hot-toast'
 
 interface MedicationDetailModalProps {
   medication: PatientMedication | ScannedMedication
   onClose: () => void
   patientId?: string // Optional - needed for adherence history
+  onMedicationUpdated?: () => void // Optional - callback when medication is updated
 }
 
-export default function MedicationDetailModal({ medication, onClose, patientId }: MedicationDetailModalProps) {
+export default function MedicationDetailModal({ medication, onClose, patientId, onMedicationUpdated }: MedicationDetailModalProps) {
+  const [showDocumentReader, setShowDocumentReader] = useState(false)
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [extractedData, setExtractedData] = useState<ParsedMedicationData | null>(null)
+  const [applying, setApplying] = useState(false)
+  const [isExtracting, setIsExtracting] = useState(false)
+
   // Type guard to check if medication is ScannedMedication
   const isScannedMedication = (med: PatientMedication | ScannedMedication): med is ScannedMedication => {
     return 'patientName' in med
@@ -42,7 +56,143 @@ export default function MedicationDetailModal({ medication, onClose, patientId }
 
   const expirationStatus = getExpirationStatus(medication.expirationDate)
 
+  // Handle "Read Label" button click - start OCR directly
+  const handleReadLabel = async () => {
+    console.log('[MedicationDetailModal] ===== READ LABEL CLICKED =====')
+    const imageUrl = medication.imageUrl || medication.photoUrl
+    console.log('[MedicationDetailModal] Image URL:', imageUrl)
+
+    if (!imageUrl) {
+      toast.error('No medication image available')
+      return
+    }
+
+    // Open review modal immediately with extracting state
+    console.log('[MedicationDetailModal] Opening review modal with extracting state')
+    setIsExtracting(true)
+    setShowReviewModal(true)
+
+    try {
+      // Import OCR functions
+      console.log('[MedicationDetailModal] Importing OCR functions...')
+      const { extractTextFromImage } = await import('@/lib/ocr-gemini-client')
+      const { parseMedicationLabel } = await import('@/lib/medication-parser')
+
+      // Extract text from image
+      console.log('[MedicationDetailModal] Starting OCR extraction...')
+      const ocrResult = await extractTextFromImage(imageUrl)
+      console.log('[MedicationDetailModal] OCR Result:', ocrResult)
+
+      if (!ocrResult.text || ocrResult.text.trim() === '') {
+        console.error('[MedicationDetailModal] OCR failed - no text extracted:', ocrResult)
+        toast.error('Failed to read label. Please try again.')
+        setIsExtracting(false)
+        setShowReviewModal(false)
+        return
+      }
+
+      // Parse medication data
+      console.log('[MedicationDetailModal] Parsing medication data...')
+      const parsedData = await parseMedicationLabel(ocrResult.text)
+      console.log('[MedicationDetailModal] Parsed data:', parsedData)
+
+      if (Object.keys(parsedData).length === 0) {
+        console.error('[MedicationDetailModal] No data extracted')
+        toast.error('No medication data could be extracted from the label')
+        setIsExtracting(false)
+        setShowReviewModal(false)
+        return
+      }
+
+      // Update modal with extracted data
+      console.log('[MedicationDetailModal] Setting extracted data and stopping extraction')
+      setExtractedData(parsedData)
+      setIsExtracting(false)
+      console.log('[MedicationDetailModal] ===== EXTRACTION COMPLETE =====')
+
+    } catch (error) {
+      console.error('[MedicationDetailModal] OCR extraction failed:', error)
+      toast.error(`Failed to extract medication data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setIsExtracting(false)
+      setShowReviewModal(false)
+    }
+  }
+
+  // Handle extracted medication data (from DocumentReader - legacy)
+  const handleMedicationDataExtracted = async (data: ParsedMedicationData) => {
+    console.log('[MedicationDetailModal] Extracted medication data:', data)
+
+    // Show review modal with extracted data
+    setExtractedData(data)
+    setShowDocumentReader(false)
+    setShowReviewModal(true)
+  }
+
+  // Handle applying the extracted data after review
+  const handleApplyExtractedData = async () => {
+    if (!patientId || !extractedData) return
+
+    setApplying(true)
+    try {
+      const updates: Partial<PatientMedication> = {}
+
+      // Only update fields that were extracted (don't overwrite with undefined)
+      if (extractedData.name) updates.name = extractedData.name
+      if (extractedData.brandName) updates.brandName = extractedData.brandName
+      if (extractedData.strength) updates.strength = extractedData.strength
+      if (extractedData.dosageForm) updates.dosageForm = extractedData.dosageForm
+      if (extractedData.frequency) updates.frequency = extractedData.frequency
+      if (extractedData.prescribedFor) updates.prescribedFor = extractedData.prescribedFor
+      if (extractedData.prescribingDoctor) updates.prescribingDoctor = extractedData.prescribingDoctor
+      if (extractedData.rxNumber) updates.rxNumber = extractedData.rxNumber
+      if (extractedData.ndc) updates.ndc = extractedData.ndc
+      if (extractedData.quantity) updates.quantity = extractedData.quantity
+      if (extractedData.refills) updates.refills = extractedData.refills
+      if (extractedData.fillDate) updates.fillDate = extractedData.fillDate
+      if (extractedData.expirationDate) updates.expirationDate = extractedData.expirationDate
+      if (extractedData.pharmacyName) updates.pharmacyName = extractedData.pharmacyName
+      if (extractedData.pharmacyPhone) updates.pharmacyPhone = extractedData.pharmacyPhone
+      if (extractedData.warnings) updates.warnings = extractedData.warnings
+
+      const currentMed = medication as PatientMedication
+
+      logger.info('[MedicationDetailModal] Applying extracted medication data', {
+        medicationId: currentMed.id,
+        extractedFields: Object.keys(updates)
+      })
+
+      await medicalOperations.medications.updateMedication(
+        patientId,
+        currentMed.id,
+        updates
+      )
+
+      toast.success(`Medication updated! ${Object.keys(updates).length} field${Object.keys(updates).length !== 1 ? 's' : ''} applied.`)
+
+      logger.info('[MedicationDetailModal] Medication updated successfully', {
+        updatedFields: Object.keys(updates)
+      })
+
+      // Call callback to refresh medication list
+      if (onMedicationUpdated) {
+        onMedicationUpdated()
+      }
+
+      setShowReviewModal(false)
+      setExtractedData(null)
+      onClose() // Close the detail modal
+    } catch (error) {
+      logger.error('[MedicationDetailModal] Failed to update medication', error as Error)
+      toast.error('Failed to update medication. Please try again.')
+    } finally {
+      setApplying(false)
+    }
+  }
+
   return (
+    <>
+    {/* Main Detail Modal - hide when review modal is open */}
+    {!showReviewModal && (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
         className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
@@ -79,7 +229,26 @@ export default function MedicationDetailModal({ medication, onClose, patientId }
           {/* Medication Image */}
           {(medication.imageUrl || medication.photoUrl) && (
             <div>
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Medication Bottle Image</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Medication Bottle Image</h3>
+                <button
+                  onClick={handleReadLabel}
+                  disabled={isExtracting}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isExtracting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Extracting...
+                    </>
+                  ) : (
+                    <>
+                      <DocumentTextIcon className="w-4 h-4" />
+                      Read Label
+                    </>
+                  )}
+                </button>
+              </div>
               <div className="bg-muted rounded-lg p-4">
                 <img
                   src={medication.imageUrl || medication.photoUrl}
@@ -290,5 +459,24 @@ export default function MedicationDetailModal({ medication, onClose, patientId }
         </div>
       </div>
     </div>
+    )}
+
+      {/* Review Modal for Extracted Data */}
+      {showReviewModal && (
+        <MedicationDataReviewModal
+          isOpen={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false)
+            setExtractedData(null)
+            setIsExtracting(false)
+          }}
+          onApply={handleApplyExtractedData}
+          extractedData={extractedData}
+          currentMedication={medication as PatientMedication}
+          applying={applying}
+          isExtracting={isExtracting}
+        />
+      )}
+    </>
   )
 }

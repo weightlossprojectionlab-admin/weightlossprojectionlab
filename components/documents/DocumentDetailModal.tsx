@@ -9,6 +9,7 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import { extractTextFromImage, extractTextFromMultipleImages, extractTextFromPDF, type OCRProgress } from '@/lib/ocr-gemini-client'
 
 interface DocumentDetailModalProps {
   document: PatientDocument
@@ -29,6 +30,8 @@ export default function DocumentDetailModal({ document: initialDocument, onClose
   const [emailRecipient, setEmailRecipient] = useState('')
   const [emailMessage, setEmailMessage] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [ocrProgress, setOcrProgress] = useState<OCRProgress | null>(null)
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false)
 
   // Real-time listener for document updates (especially OCR status)
   useEffect(() => {
@@ -228,9 +231,26 @@ export default function DocumentDetailModal({ document: initialDocument, onClose
               <h2 className="text-xl font-semibold text-foreground">
                 {document.name}
               </h2>
-              <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                {document.category}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                  {document.category}
+                </p>
+                {document.ocrStatus && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    document.ocrStatus === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                    document.ocrStatus === 'processing' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                    document.ocrStatus === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                    document.ocrStatus === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                    'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                  }`}>
+                    {document.ocrStatus === 'completed' ? '✓ Text Extracted' :
+                     document.ocrStatus === 'processing' ? '⏳ Reading...' :
+                     document.ocrStatus === 'pending' ? '⏱ Queued' :
+                     document.ocrStatus === 'failed' ? '✗ Failed' :
+                     'Not Processed'}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -536,9 +556,103 @@ export default function DocumentDetailModal({ document: initialDocument, onClose
 
           {/* Document Viewer - Always show regardless of OCR status */}
           <div className="py-6 border-t border-border">
-            <h3 className="text-lg font-medium text-foreground mb-4 text-center">
-              Document Viewer
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-foreground">
+                Document Viewer
+              </h3>
+              {!hasOcrData && !isProcessingOCR && (
+                <button
+                  onClick={async () => {
+                    try {
+                      setIsProcessingOCR(true)
+                      setOcrProgress({ status: 'loading', progress: 0, message: 'Initializing...' })
+
+                      let extractedText = ''
+                      let totalConfidence = 0
+
+                      // Handle PDF documents
+                      if (document.fileType === 'pdf') {
+                        if (!document.originalUrl) {
+                          throw new Error('PDF URL not found')
+                        }
+
+                        const results = await extractTextFromPDF(document.originalUrl, setOcrProgress)
+                        extractedText = results.map((r, i) => `--- Page ${i + 1} ---\n${r.text}`).join('\n\n')
+                        totalConfidence = results.reduce((sum, r) => sum + r.confidence, 0) / results.length
+                      }
+                      // Handle image documents
+                      else if (document.fileType === 'image') {
+                        const imageUrls = document.images?.map(img => img.url) || []
+
+                        if (imageUrls.length === 0) {
+                          throw new Error('No images found in document')
+                        }
+
+                        // Process all images
+                        if (imageUrls.length === 1) {
+                          const result = await extractTextFromImage(imageUrls[0], setOcrProgress)
+                          extractedText = result.text
+                          totalConfidence = result.confidence
+                        } else {
+                          const results = await extractTextFromMultipleImages(imageUrls, (index, progress) => {
+                            setOcrProgress({
+                              ...progress,
+                              message: `Processing image ${index + 1} of ${imageUrls.length}...`
+                            })
+                          })
+                          extractedText = results.map((r, i) => `--- Page ${i + 1} ---\n${r.text}`).join('\n\n')
+                          totalConfidence = results.reduce((sum, r) => sum + r.confidence, 0) / results.length
+                        }
+                      } else {
+                        throw new Error(`Unsupported file type: ${document.fileType}`)
+                      }
+
+                      // Save extracted text to document
+                      await medicalOperations.documents.updateDocument(document.patientId, document.id, {
+                        extractedText,
+                        ocrStatus: 'completed',
+                        metadata: {
+                          ...document.metadata,
+                          confidenceScore: totalConfidence / 100
+                        }
+                      })
+
+                      toast.success('Text extracted successfully!')
+                      setOcrProgress({ status: 'completed', progress: 100 })
+                    } catch (error) {
+                      console.error('OCR error:', error)
+                      toast.error('Failed to extract text from document')
+                      setOcrProgress({ status: 'error', progress: 0, message: 'Extraction failed' })
+
+                      // Update document status to failed
+                      await medicalOperations.documents.updateDocument(document.patientId, document.id, {
+                        ocrStatus: 'failed'
+                      })
+                    } finally {
+                      setIsProcessingOCR(false)
+                    }
+                  }}
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Try to Read Document
+                </button>
+              )}
+
+              {/* OCR Progress Indicator */}
+              {isProcessingOCR && ocrProgress && (
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                  <div>
+                    <div className="text-foreground font-medium">{ocrProgress.message || 'Processing...'}</div>
+                    <div className="text-muted-foreground text-xs">{ocrProgress.progress}% complete</div>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="bg-muted rounded-lg overflow-hidden max-w-4xl mx-auto">
                 {document.fileType === 'image' ? (
                   hasFrontAndBack ? (
