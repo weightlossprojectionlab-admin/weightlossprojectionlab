@@ -45,5 +45,48 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+
+	<!-- Motion & Fitness Permissions -->
+	<key>NSMotionUsageDescription</key>
+	<string>Weight Loss Lab uses motion sensors to count your steps and track your daily activity automatically.</string>
+
+	<!-- HealthKit Permissions -->
+	<key>NSHealthShareUsageDescription</key>
+	<string>Weight Loss Lab needs to read your health data (steps, weight, heart rate) to track your weight loss progress.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Weight Loss Lab needs to write your health data to keep your weight loss metrics in sync with Apple Health.</string>
+
+	<!-- Camera Permissions (for medication scanning) -->
+	<key>NSCameraUsageDescription</key>
+	<string>Weight Loss Lab needs camera access to scan medication labels and barcodes for easy tracking.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Weight Loss Lab needs photo library access to save and manage your progress photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Weight Loss Lab needs permission to save your progress photos to your photo library.</string>
+
+	<!-- Location Permissions (optional - for location-based reminders) -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Weight Loss Lab can use your location to provide location-based reminders and insights.</string>
+
+	<!-- FaceID Permission (for biometric authentication) -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Weight Loss Lab uses Face ID to securely authenticate and protect your health data.</string>
+
+	<!-- Microphone (if using voice notes in future) -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Weight Loss Lab can use your microphone to record voice notes for your health journal.</string>
+
+	<!-- Background Modes (for step tracking) -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+
+	<!-- Required for HealthKit -->
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>healthkit</string>
+	</array>
 </dict>
 </plist>
