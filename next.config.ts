@@ -1,6 +1,9 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  // Enable static export for Capacitor native builds
+  output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : undefined,
+
   // Configure webpack to handle pdfjs-dist and pdf-parse properly
   webpack: (config, { isServer }) => {
     // Fix canvas issues for both client and server builds
@@ -61,6 +64,8 @@ const nextConfig: NextConfig = {
   //   }
   // },
   images: {
+    // Disable image optimization for Capacitor static export
+    unoptimized: process.env.CAPACITOR_BUILD === 'true',
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
