@@ -58,8 +58,12 @@ export function WeightReminderModal({
   onDismiss
 }: WeightReminderModalProps) {
   const [isVisible, setIsVisible] = useState(false)
+  const [hasChecked, setHasChecked] = useState(false)
 
   useEffect(() => {
+    // Only check once per component mount to prevent re-showing
+    if (hasChecked) return
+
     // Check if we should show the reminder
     const reminderStatus = shouldShowWeightReminder(lastWeightLog, frequency, lastMealLogDate)
 
@@ -69,7 +73,9 @@ export function WeightReminderModal({
     if (reminderStatus.shouldShow && !wasDismissedToday()) {
       setIsVisible(true)
     }
-  }, [lastWeightLog, frequency, lastMealLogDate])
+
+    setHasChecked(true)
+  }, [lastWeightLog, frequency, lastMealLogDate, hasChecked])
 
   const reminderStatus = shouldShowWeightReminder(lastWeightLog, frequency, lastMealLogDate)
   const colors = getWeightReminderColor(reminderStatus.status)
