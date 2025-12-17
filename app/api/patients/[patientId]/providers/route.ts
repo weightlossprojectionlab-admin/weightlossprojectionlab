@@ -174,28 +174,30 @@ export async function POST(
 
     // Create provider document
     const now = new Date()
-    const providerData: Omit<HealthcareProvider, 'id'> = {
+    const providerData: any = {
       userId: ownerUserId, // Store the account owner's ID
       patientIds, // New multi-member field
       patientId, // Legacy field for backward compatibility
       name: body.name,
-      title: body.title,
       specialty: body.specialty,
-      email: body.email,
-      phone: body.phone,
-      fax: body.fax,
-      facility: body.facility,
-      address: body.address,
       addedBy: userId,
       addedAt: now,
       updatedAt: now,
       source: body.source || 'manual',
-      sourceId: body.sourceId,
-      lastContactDate: body.lastContactDate,
-      lastContactType: body.lastContactType,
-      notes: body.notes,
       patientNotes: body.patientNotes || {}
     }
+
+    // Only add optional fields if they exist and are not undefined
+    if (body.title !== undefined) providerData.title = body.title
+    if (body.email !== undefined) providerData.email = body.email
+    if (body.phone !== undefined) providerData.phone = body.phone
+    if (body.fax !== undefined) providerData.fax = body.fax
+    if (body.facility !== undefined) providerData.facility = body.facility
+    if (body.address !== undefined) providerData.address = body.address
+    if (body.sourceId !== undefined) providerData.sourceId = body.sourceId
+    if (body.lastContactDate !== undefined) providerData.lastContactDate = body.lastContactDate
+    if (body.lastContactType !== undefined) providerData.lastContactType = body.lastContactType
+    if (body.notes !== undefined) providerData.notes = body.notes
 
     const providerRef = await adminDb
       .collection('healthcareProviders')

@@ -10,10 +10,10 @@ import { sendEmail } from '@/lib/email-service'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { patientId: string; documentId: string } }
+  { params }: { params: Promise<{ patientId: string; documentId: string }> }
 ) {
   try {
-    const { patientId, documentId } = params
+    const { patientId, documentId } = await params
     const body = await request.json()
     const { email } = body
 

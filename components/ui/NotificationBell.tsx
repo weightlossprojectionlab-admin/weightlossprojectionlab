@@ -205,7 +205,19 @@ export function NotificationBell() {
 
                         <div className="flex items-center justify-between mt-2">
                           <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                            {notification.type === 'appointment_scheduled' && notification.metadata?.dateTime ? (
+                              // For appointments, show the appointment date
+                              new Date(notification.metadata.dateTime).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit'
+                              })
+                            ) : (
+                              // For other notifications, show relative time
+                              formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })
+                            )}
                           </p>
 
                           {notification.actionLabel && (

@@ -13,10 +13,15 @@ import {
   UserIcon,
   TruckIcon,
   DocumentTextIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline'
 import { logger } from '@/lib/logger'
 import LocationMap from '@/components/maps/LocationMap'
+import { PROVIDER_TITLES, PROVIDER_SPECIALTIES } from '@/types/providers'
+import toast from 'react-hot-toast'
+import { getCSRFToken } from '@/lib/csrf'
+import { getAuth } from 'firebase/auth'
 
 interface AppointmentWizardProps {
   isOpen: boolean
@@ -41,6 +46,7 @@ interface AppointmentWizardProps {
     email: string
   }>
   onSubmit: (appointmentData: AppointmentData) => Promise<void>
+  onProviderAdded?: () => void // Callback to refresh providers list
 }
 
 export interface AppointmentData {
@@ -72,10 +78,12 @@ export default function AppointmentWizard({
   familyMember,
   providers,
   familyMembers,
-  onSubmit
+  onSubmit,
+  onProviderAdded
 }: AppointmentWizardProps) {
   const [currentStep, setCurrentStep] = useState<WizardStep>('intro')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showAddProviderForm, setShowAddProviderForm] = useState(false)
 
   const [appointmentData, setAppointmentData] = useState<Partial<AppointmentData>>({
     type: 'routine-checkup',
@@ -119,7 +127,13 @@ export default function AppointmentWizard({
         return
       }
 
-      await onSubmit(appointmentData as AppointmentData)
+      // Ensure reason has a value (use type name if empty)
+      const dataToSubmit = {
+        ...appointmentData,
+        reason: appointmentData.reason?.trim() || appointmentData.type || 'Appointment scheduled'
+      }
+
+      await onSubmit(dataToSubmit as AppointmentData)
       setCurrentStep('confirmation')
     } catch (error) {
       logger.error('[AppointmentWizard] Submit failed', error)
@@ -156,6 +170,16 @@ export default function AppointmentWizard({
                 providerId,
                 location: location || prev.location
               }))
+            }}
+            patientId={familyMember.id}
+            familyMembers={familyMembers}
+            showAddProviderForm={showAddProviderForm}
+            onToggleAddProviderForm={(show) => setShowAddProviderForm(show)}
+            onProviderAdded={async () => {
+              setShowAddProviderForm(false)
+              if (onProviderAdded) {
+                await onProviderAdded()
+              }
             }}
           />
         )
@@ -238,11 +262,12 @@ export default function AppointmentWizard({
   }
 
   return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-      <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+    <>
+      <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
 
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="mx-auto max-w-3xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-3xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
             <div>
@@ -321,6 +346,7 @@ export default function AppointmentWizard({
         </Dialog.Panel>
       </div>
     </Dialog>
+    </>
   )
 }
 
@@ -381,12 +407,31 @@ function IntroStep({
 function ProviderStep({
   providers,
   selectedProviderId,
-  onChange
+  onChange,
+  patientId,
+  familyMembers,
+  showAddProviderForm,
+  onToggleAddProviderForm,
+  onProviderAdded
 }: {
   providers: Array<{ id: string; name: string; specialty?: string }>
   selectedProviderId?: string
   onChange: (providerId: string) => void
+  patientId: string
+  familyMembers: Array<{ userId: string; name: string; email: string }>
+  showAddProviderForm: boolean
+  onToggleAddProviderForm: (show: boolean) => void
+  onProviderAdded: () => void
 }) {
+  const [loading, setLoading] = useState(false)
+  const [title, setTitle] = useState('')
+  const [name, setName] = useState('')
+  const [specialty, setSpecialty] = useState('')
+  const [customSpecialty, setCustomSpecialty] = useState('')
+  const [phone, setPhone] = useState('')
+  const [facility, setFacility] = useState('')
+  const [linkToAllFamily, setLinkToAllFamily] = useState(false)
+
   // Deduplicate providers by ID (DRY - prevent showing duplicates)
   const uniqueProviders = providers.reduce((acc, provider) => {
     if (!acc.find(p => p.id === provider.id)) {
@@ -398,12 +443,278 @@ function ProviderStep({
   // Sort alphabetically by name for better UX
   const sortedProviders = [...uniqueProviders].sort((a, b) => a.name.localeCompare(b.name))
 
+  const handleSubmitProvider = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!name.trim() || !specialty) {
+      toast.error('Name and specialty are required')
+      return
+    }
+
+    if (specialty === 'Other' && !customSpecialty.trim()) {
+      toast.error('Please specify the specialty')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      // Get Firebase auth token
+      const auth = getAuth()
+      const user = auth.currentUser
+      if (!user) {
+        throw new Error('You must be logged in to add a provider')
+      }
+
+      const authToken = await user.getIdToken()
+      const csrfToken = getCSRFToken()
+
+      const finalSpecialty = specialty === 'Other' ? customSpecialty.trim() : specialty
+
+      // Prepare provider payload (without patientIds - will link separately)
+      const providerName = title ? `${title} ${name.trim()}` : name.trim()
+
+      const payload: Record<string, any> = {
+        name: providerName,
+        specialty: finalSpecialty,
+        type: 'physician' // Required by schema
+      }
+
+      // Only add optional fields if they have values
+      if (phone) payload.phone = phone
+      if (facility.trim()) payload.organization = facility.trim()
+
+      // Step 1: Create the provider
+      const response = await fetch(`/api/providers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+          'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        const errorMessage = errorData.error || errorData.message || 'Failed to add provider'
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+      console.log('[ProviderStep] Provider created successfully:', result)
+
+      // Step 2: Link provider to patient(s)
+      const providerId = result.data.id
+      const patientIdsToLink = linkToAllFamily
+        ? familyMembers.map(fm => fm.userId)
+        : [patientId]
+
+      console.log('[ProviderStep] Linking provider to patients:', patientIdsToLink)
+
+      // Link to each patient
+      for (const pid of patientIdsToLink) {
+        const linkResponse = await fetch(`/api/providers/${providerId}/patients`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+            'X-CSRF-Token': csrfToken
+          },
+          body: JSON.stringify({ patientId: pid })
+        })
+
+        if (!linkResponse.ok) {
+          console.warn(`[ProviderStep] Failed to link provider to patient ${pid}`)
+        }
+      }
+
+      console.log('[ProviderStep] Provider linked to all patients')
+
+      toast.success('Provider added successfully')
+
+      // Reset form
+      setTitle('')
+      setName('')
+      setSpecialty('')
+      setCustomSpecialty('')
+      setPhone('')
+      setFacility('')
+      setLinkToAllFamily(false)
+
+      console.log('[ProviderStep] Calling onProviderAdded to refresh list...')
+      await onProviderAdded()
+      console.log('[ProviderStep] onProviderAdded completed')
+    } catch (error: any) {
+      console.error('[ProviderStep] Full error details:', {
+        message: error?.message,
+        error: error,
+        stack: error?.stack
+      })
+
+      const errorMessage = error.message || 'Failed to add provider'
+      logger.error('[ProviderStep] Error adding provider', {
+        error: errorMessage,
+        errorObject: error,
+        stack: error.stack
+      })
+      toast.error(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (showAddProviderForm) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold text-foreground">Add New Provider</h3>
+          <button
+            onClick={() => onToggleAddProviderForm(false)}
+            className="text-muted-foreground hover:text-foreground text-sm"
+          >
+            ← Back to provider list
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmitProvider} className="space-y-4">
+          <div className="grid grid-cols-4 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Title</label>
+              <select
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">None</option>
+                {PROVIDER_TITLES.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="col-span-3">
+              <label className="block text-sm font-medium text-foreground mb-1">Name *</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., John Smith"
+                required
+                className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Specialty *</label>
+            <select
+              value={specialty}
+              onChange={(e) => setSpecialty(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select specialty...</option>
+              {PROVIDER_SPECIALTIES.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          {specialty === 'Other' && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Specify Specialty *</label>
+              <input
+                type="text"
+                value={customSpecialty}
+                onChange={(e) => setCustomSpecialty(e.target.value)}
+                placeholder="e.g., Sports Medicine"
+                required
+                className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="(555) 123-4567"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Facility</label>
+              <input
+                type="text"
+                value={facility}
+                onChange={(e) => setFacility(e.target.value)}
+                placeholder="e.g., City Medical Center"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-4 mt-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={linkToAllFamily}
+                onChange={(e) => setLinkToAllFamily(e.target.checked)}
+                className="w-4 h-4 rounded border-border text-blue-600 focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-foreground">
+                Make this provider available for all family members
+              </span>
+            </label>
+            <p className="text-xs text-muted-foreground mt-1 ml-6">
+              {linkToAllFamily
+                ? 'This provider will be added to all family members in your household'
+                : 'This provider will only be linked to the current family member'}
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+            >
+              {loading ? 'Adding...' : 'Add Provider'}
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleAddProviderForm(false)}
+              disabled={loading}
+              className="px-4 py-2 text-muted-foreground hover:bg-muted rounded-lg"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <h3 className="text-xl font-bold text-foreground">Select Healthcare Provider</h3>
       <p className="text-sm text-muted-foreground">
         Choose the provider for this appointment
       </p>
+
+      {/* Add Provider Button */}
+      <button
+        onClick={() => onToggleAddProviderForm(true)}
+        className="w-full p-4 rounded-lg border-2 border-dashed border-blue-400 hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-blue-600 dark:text-blue-400 font-medium flex items-center justify-center gap-2"
+      >
+        <PlusIcon className="w-5 h-5" />
+        Add New Provider
+      </button>
 
       <div className="space-y-3 max-h-96 overflow-y-auto">
         {sortedProviders.map((provider) => (
@@ -436,7 +747,7 @@ function ProviderStep({
         <div className="text-center py-8">
           <p className="text-muted-foreground">No providers found</p>
           <p className="text-sm text-muted-foreground mt-2">
-            Add providers in the Providers section first
+            Click "Add New Provider" above to get started
           </p>
         </div>
       )}

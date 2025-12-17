@@ -35,6 +35,7 @@ import Image from 'next/image'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 import { shouldShowWeightReminder, getWeightReminderMessage, getWeightReminderColor } from '@/lib/weight-reminder-logic'
+import { useFeatureGate } from '@/hooks/useFeatureGate'
 
 // Dynamic imports for heavy components (lazy loaded on demand)
 const GoalsEditor = dynamic(() => import('@/components/ui/GoalsEditor').then(mod => ({ default: mod.GoalsEditor })), {
@@ -85,6 +86,9 @@ function DashboardContent() {
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [showReminderModal, setShowReminderModal] = useState(false)
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+
+  // Check if user has family plan features
+  const { canAccess: hasFamilyFeatures } = useFeatureGate('multiple-patients')
 
   // Fetch all dashboard data for current user (no family member selection)
   const {
@@ -294,23 +298,25 @@ function DashboardContent() {
           </div>
         ) : (
           <>
-            {/* Quick Access to Family Health Tracking */}
-            <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-primary">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-foreground">Family Health Tracking</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Track weight, meals, steps, and vitals for family members
-                  </p>
+            {/* Quick Access to Family Health Tracking - Only for family plans */}
+            {hasFamilyFeatures && (
+              <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-primary">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-foreground">Family Health Tracking</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Track weight, meals, steps, and vitals for family members
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => router.push('/patients')}
+                    className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
+                  >
+                    View Family →
+                  </button>
                 </div>
-                <button
-                  onClick={() => router.push('/patients')}
-                  className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
-                >
-                  View Family →
-                </button>
               </div>
-            </div>
+            )}
 
             {/* Urgent AI Recommendations Widget */}
             <UrgentRecommendationsWidget />

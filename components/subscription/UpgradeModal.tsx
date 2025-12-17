@@ -9,6 +9,8 @@
 
 import { useState } from 'react'
 import { SubscriptionPlan, BillingInterval, SUBSCRIPTION_PRICING, SEAT_LIMITS, EXTERNAL_CAREGIVER_LIMITS } from '@/types'
+import { createCheckoutSession } from '@/lib/stripe-client'
+import toast from 'react-hot-toast'
 
 interface UpgradeModalProps {
   isOpen: boolean
@@ -26,6 +28,73 @@ export function UpgradeModal({
   suggestedPlan
 }: UpgradeModalProps) {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>(currentBillingInterval)
+  const [loading, setLoading] = useState<string | null>(null) // Track which plan is loading
+
+  const handleUpgrade = async (planId: SubscriptionPlan) => {
+    if (currentPlan === planId) {
+      toast.info('You are already on this plan')
+      return
+    }
+
+    setLoading(planId)
+
+    try {
+      // Map plan ID and billing interval to Stripe price IDs
+      // You'll need to create these products in Stripe Dashboard and add the price IDs to .env.local
+      let priceId = ''
+
+      // Map based on plan and billing interval
+      if (billingInterval === 'monthly') {
+        switch (planId) {
+          case 'single':
+            priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SINGLE_MONTHLY || ''
+            break
+          case 'family_basic':
+            priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_FAMILY_BASIC_MONTHLY || ''
+            break
+          case 'family_plus':
+            priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_FAMILY_PLUS_MONTHLY || ''
+            break
+          case 'family_premium':
+            priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_FAMILY_PREMIUM_MONTHLY || ''
+            break
+        }
+      } else {
+        // Yearly pricing
+        switch (planId) {
+          case 'single':
+            priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SINGLE_YEARLY || ''
+            break
+          case 'family_basic':
+            priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_FAMILY_BASIC_YEARLY || ''
+            break
+          case 'family_plus':
+            priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_FAMILY_PLUS_YEARLY || ''
+            break
+          case 'family_premium':
+            priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_FAMILY_PREMIUM_YEARLY || ''
+            break
+        }
+      }
+
+      if (!priceId || priceId === 'price_xxx') {
+        toast.error('Stripe is not fully configured yet. Please add product price IDs to .env.local')
+        setLoading(null)
+        return
+      }
+
+      await createCheckoutSession(
+        priceId,
+        `${window.location.origin}/profile?upgrade=success`,
+        `${window.location.origin}/profile?upgrade=cancel`
+      )
+      // Redirect happens in createCheckoutSession
+    } catch (error: any) {
+      console.error('Error creating checkout session:', error)
+      toast.error(error.message || 'Failed to start checkout')
+      setLoading(null)
+    }
+  }
 
   if (!isOpen) return null
 
@@ -218,24 +287,27 @@ export function UpgradeModal({
                 </ul>
 
                 <button
-                  className={`w-full py-3 rounded-lg font-medium transition-colors ${
+                  className={`w-full py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     plan.highlighted
                       ? 'bg-primary text-white hover:bg-primary-hover'
                       : 'bg-muted text-foreground hover:bg-gray-300 dark:hover:bg-gray-700'
                   }`}
-                  onClick={() => {
-                    // Close modal and show a toast notification
-                    onClose()
-                    // TODO: Implement actual payment/upgrade flow
-                    if (typeof window !== 'undefined') {
-                      const toast = (window as any).toast
-                      if (toast) {
-                        toast.success(`Upgrade to ${plan.name} coming soon!`)
-                      }
-                    }
-                  }}
+                  onClick={() => handleUpgrade(plan.id)}
+                  disabled={loading === plan.id || currentPlan === plan.id}
                 >
-                  {currentPlan === plan.id ? 'Current Plan' : 'Select Plan'}
+                  {loading === plan.id ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Loading...
+                    </span>
+                  ) : currentPlan === plan.id ? (
+                    'Current Plan'
+                  ) : (
+                    'Select Plan'
+                  )}
                 </button>
               </div>
             ))}

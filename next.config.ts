@@ -125,7 +125,18 @@ const nextConfig: NextConfig = {
                   "base-uri 'self'",
                   "form-action 'self'",
                 ].join('; ')
-              : "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://accounts.google.com https://www.gstatic.com https://js.stripe.com; connect-src *; frame-src *; img-src * data: blob:;", // Permissive in dev
+              : [
+                  // Development: More permissive but still structured
+                  "default-src 'self'",
+                  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://apis.google.com https://accounts.google.com",
+                  "style-src 'self' 'unsafe-inline'",
+                  "img-src * data: blob:",
+                  "font-src 'self' data:",
+                  "connect-src 'self' https: wss: http://localhost:* ws://localhost:*", // Permissive for dev
+                  "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://firebasestorage.googleapis.com https://accounts.google.com https://weightlossprojectionlab-8b284.firebaseapp.com",
+                  "worker-src 'self' blob:",
+                  "frame-ancestors 'none'",
+                ].join('; '),
           },
         ],
       },

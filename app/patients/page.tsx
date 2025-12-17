@@ -14,7 +14,6 @@ import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { usePatientLimit } from '@/hooks/usePatientLimit'
 import { useSubscription } from '@/hooks/useSubscription'
-import { SubscriptionSimulator } from '@/components/dev/SubscriptionSimulator'
 import { UpgradeModal } from '@/components/subscription/UpgradeModal'
 import { PlanBadge } from '@/components/subscription/PlanBadge'
 import { useUserProfile } from '@/hooks/useUserProfile'
@@ -233,9 +232,6 @@ function PatientsContent() {
           </div>
         )}
       </main>
-
-      {/* Subscription Simulator (Dev Tool) */}
-      <SubscriptionSimulator />
 
       {/* Upgrade Modal */}
       <UpgradeModal

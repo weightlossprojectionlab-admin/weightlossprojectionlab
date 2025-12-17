@@ -95,6 +95,8 @@ function PatientDetailContent() {
   const [showVitalsWizard, setShowVitalsWizard] = useState(false)
   const [showVitalsSummary, setShowVitalsSummary] = useState(false)
   const [summaryVitals, setSummaryVitals] = useState<VitalSign[]>([])
+  const [summaryMood, setSummaryMood] = useState<string | undefined>(undefined)
+  const [summaryMoodNotes, setSummaryMoodNotes] = useState<string | undefined>(undefined)
   const [showAppointmentWizard, setShowAppointmentWizard] = useState(false)
 
   const { user } = useAuth()
@@ -103,7 +105,7 @@ function PatientDetailContent() {
     autoFetch: true
   })
   const { createAppointment } = useAppointments()
-  const { providers } = useProviders()
+  const { providers, refetch: refetchProviders } = useProviders()
   const { createSchedule } = useVitalSchedules({ patientId, autoFetch: false })
 
   const {
@@ -908,7 +910,17 @@ function PatientDetailContent() {
 
               {/* Daily Vitals Summary Report */}
               {patient && vitals.length > 0 && (
-                <DailyVitalsSummary vitals={vitals} patientName={patient.name} />
+                <DailyVitalsSummary
+                  vitals={vitals}
+                  patientName={patient.name}
+                  patientId={patient.id}
+                  caregivers={familyMembers.map(member => ({
+                    id: member.id,
+                    name: member.name,
+                    relationship: member.relationship,
+                    userId: member.userId
+                  }))}
+                />
               )}
 
               {/* Chart */}
@@ -1453,9 +1465,27 @@ function PatientDetailContent() {
                       {/* OCR Status & Extracted Text */}
                       <div className="p-3 bg-background">
                         {doc.ocrStatus === 'processing' && (
-                          <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 mb-2">
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                            <span>Processing document...</span>
+                          <div className="flex items-center justify-between gap-2 text-xs mb-2">
+                            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                              <span>Processing document...</span>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await medicalOperations.documents.updateDocument(patientId, doc.id, {
+                                    ocrStatus: 'not_started'
+                                  })
+                                  toast.success('Document status reset')
+                                  fetchDocuments()
+                                } catch (error) {
+                                  toast.error('Failed to reset document')
+                                }
+                              }}
+                              className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                            >
+                              Stop
+                            </button>
                           </div>
                         )}
 
@@ -1490,10 +1520,20 @@ function PatientDetailContent() {
 
                         {/* Document Actions */}
                         <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => setSelectedDocument(doc)}
+                            className="flex-1 min-w-[100px] text-xs px-3 py-2 bg-primary text-white rounded hover:bg-primary-hover transition-colors text-center font-medium flex items-center justify-center gap-1"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            View
+                          </button>
                           <a
                             href={doc.originalUrl}
                             download={doc.fileName || doc.name}
-                            className="flex-1 min-w-[80px] text-xs px-2 py-1.5 bg-primary text-white rounded hover:bg-primary-hover transition-colors text-center"
+                            className="flex-1 min-w-[80px] text-xs px-2 py-1.5 bg-muted hover:bg-muted/80 transition-colors rounded text-foreground text-center"
                             onClick={(e) => {
                               // For Firebase Storage URLs, open in new tab instead of download
                               if (doc.originalUrl.includes('firebasestorage')) {
@@ -1504,18 +1544,6 @@ function PatientDetailContent() {
                           >
                             Download
                           </a>
-                          <button
-                            onClick={() => window.open(doc.originalUrl, '_blank')}
-                            className="flex-1 min-w-[80px] text-xs px-2 py-1.5 bg-muted hover:bg-muted/80 transition-colors rounded text-foreground text-center"
-                          >
-                            View Original
-                          </button>
-                          <button
-                            onClick={() => setSelectedDocument(doc)}
-                            className="flex-1 min-w-[80px] text-xs px-2 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 transition-colors rounded text-center"
-                          >
-                            Details
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -1857,10 +1885,20 @@ function PatientDetailContent() {
             caregivers={caregivers}
           onSubmit={async (vitals) => {
             try {
-              logger.info('[PatientDetail] Submitting vitals from wizard', { patientId: patient.id, vitals })
+              logger.info('[PatientDetail] Submitting vitals from wizard', {
+                patientId: patient.id,
+                vitals,
+                loggedBy: vitals.loggedBy,
+                loggedByUserId: vitals.loggedBy?.userId
+              })
 
               // Use shared transformation utility (DRY principle)
               const vitalInputs = transformWizardDataToVitals(vitals)
+
+              logger.info('[PatientDetail] Transformed vitals', {
+                vitalInputs,
+                takenByValues: vitalInputs.map(v => ({ type: v.type, takenBy: v.takenBy }))
+              })
 
               // Validate at least one vital was recorded
               if (!hasAnyVitalMeasurement(vitals)) {
@@ -1868,9 +1906,29 @@ function PatientDetailContent() {
                 return
               }
 
+              // Append mood data to notes if mood was recorded
+              let enhancedNotes = vitals.notes || ''
+              if (vitals.mood) {
+                const moodEmoji = vitals.mood === 'happy' ? '😊' :
+                                 vitals.mood === 'calm' ? '😌' :
+                                 vitals.mood === 'okay' ? '😐' :
+                                 vitals.mood === 'worried' ? '😟' :
+                                 vitals.mood === 'sad' ? '😢' :
+                                 vitals.mood === 'pain' ? '😫' : '😐'
+
+                const moodSection = `[MOOD: ${moodEmoji} ${vitals.mood}]${vitals.moodNotes ? `\n${vitals.moodNotes}` : ''}`
+                enhancedNotes = enhancedNotes ? `${moodSection}\n\n${enhancedNotes}` : moodSection
+              }
+
+              // Add enhanced notes to all vitals
+              const vitalInputsWithMood = vitalInputs.map(input => ({
+                ...input,
+                notes: enhancedNotes
+              }))
+
               // Save all vitals
               const savedVitals: VitalSign[] = []
-              for (const vitalInput of vitalInputs) {
+              for (const vitalInput of vitalInputsWithMood) {
                 const saved = await medicalOperations.vitals.logVital(patient.id, vitalInput)
                 savedVitals.push(saved)
               }
@@ -1923,8 +1981,10 @@ function PatientDetailContent() {
                 })
               }
 
-              // Store saved vitals for summary
+              // Store saved vitals and mood data for summary
               setSummaryVitals(savedVitals)
+              setSummaryMood(vitals.mood)
+              setSummaryMoodNotes(vitals.moodNotes)
 
               // Refresh vitals data in real-time
               await refetch()
@@ -1951,17 +2011,30 @@ function PatientDetailContent() {
         <VitalsSummaryModal
           vitals={summaryVitals}
           patientName={patient.name}
+          patientId={patient.id}
+          mood={summaryMood}
+          moodNotes={summaryMoodNotes}
           isOpen={showVitalsSummary}
           onClose={() => {
             setShowVitalsSummary(false)
             setSummaryVitals([])
+            setSummaryMood(undefined)
+            setSummaryMoodNotes(undefined)
           }}
           onViewDashboard={() => {
             setShowVitalsSummary(false)
             setSummaryVitals([])
+            setSummaryMood(undefined)
+            setSummaryMoodNotes(undefined)
             setActiveTab('vitals')
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
+          caregivers={familyMembers.map(member => ({
+            id: member.id,
+            name: member.name,
+            relationship: member.relationship,
+            userId: member.userId
+          }))}
         />
       )}
 
@@ -1976,6 +2049,7 @@ function PatientDetailContent() {
           }}
           providers={providers}
           familyMembers={familyMembers}
+          onProviderAdded={refetchProviders}
           onSubmit={async (appointmentData) => {
             try {
               logger.info('[PatientDetail] Creating appointment from wizard', {
@@ -1986,7 +2060,11 @@ function PatientDetailContent() {
               const appointmentId = await createAppointment({
                 patientId: patient.id,
                 ...appointmentData,
-                status: 'scheduled'
+                status: 'scheduled',
+                createdFrom: 'manual',
+                driverStatus: appointmentData.requiresDriver
+                  ? (appointmentData.assignedDriverId ? 'pending' : 'pending')
+                  : 'not-needed'
               })
 
               logger.info('[PatientDetail] Appointment created successfully', { appointmentId })

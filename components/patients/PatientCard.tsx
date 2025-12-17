@@ -36,6 +36,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
 
   // State for tracking overdue actions
   const [overdueActions, setOverdueActions] = useState<string[]>([])
+  const [hasUpcomingAppointment, setHasUpcomingAppointment] = useState(false)
   const [loading, setLoading] = useState(true)
 
   // Calculate age from date of birth
@@ -73,10 +74,33 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
           }
         }
 
+        // Check for upcoming appointments
+        const appointments = await medicalOperations.appointments.getAppointments({ patientId: patient.id })
+        const now = new Date()
+        const upcomingAppointments = appointments.filter(apt => {
+          const aptDate = new Date(apt.dateTime)
+          const hoursUntil = (aptDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+          return apt.status === 'scheduled' && hoursUntil > 0 && hoursUntil <= 24
+        })
+
+        if (upcomingAppointments.length > 0) {
+          setHasUpcomingAppointment(true)
+          upcomingAppointments.forEach(apt => {
+            const aptDate = new Date(apt.dateTime)
+            const hoursUntil = Math.round((aptDate.getTime() - now.getTime()) / (1000 * 60 * 60))
+            if (hoursUntil <= 2) {
+              actions.push(`Appointment with ${apt.providerName} in ${hoursUntil}h`)
+            } else {
+              actions.push(`Appointment with ${apt.providerName} today at ${aptDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`)
+            }
+          })
+        } else {
+          setHasUpcomingAppointment(false)
+        }
+
         // TODO: Add more checks here:
         // - Medication reminders (if patient has medications scheduled)
         // - Vital sign checks (if patient has other vitals tracking enabled)
-        // - Appointment reminders
 
         setOverdueActions(actions)
       } catch (error) {
@@ -131,13 +155,31 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
         <Link href={`/patients/${patient.id}`} className="block">
         {/* Overdue Actions Alert */}
         {overdueActions.length > 0 && (
-          <div className="mb-3 bg-warning-light dark:bg-yellow-900/20 border-2 border-warning-dark dark:border-yellow-600 rounded-lg p-3">
+          <div
+            onClick={(e) => {
+              if (hasUpcomingAppointment) {
+                e.preventDefault()
+                e.stopPropagation()
+                router.push('/calendar')
+              }
+            }}
+            className={`mb-3 bg-warning-light dark:bg-yellow-900/20 border-2 border-warning-dark dark:border-yellow-600 rounded-lg p-3 ${
+              hasUpcomingAppointment ? 'cursor-pointer hover:bg-warning-light/80 dark:hover:bg-yellow-900/30 transition-colors' : ''
+            }`}
+          >
             <div className="flex items-start gap-2">
               <BellAlertIcon className="w-5 h-5 text-warning-dark dark:text-yellow-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-semibold text-warning-dark dark:text-yellow-500 mb-1">
-                  Action Needed
-                </p>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-semibold text-warning-dark dark:text-yellow-500">
+                    Action Needed
+                  </p>
+                  {hasUpcomingAppointment && (
+                    <span className="text-xs font-medium text-primary hover:text-primary-dark">
+                      View Calendar →
+                    </span>
+                  )}
+                </div>
                 <ul className="text-xs text-foreground space-y-1">
                   {overdueActions.map((action, index) => (
                     <li key={index} className="flex items-center gap-1">
@@ -233,13 +275,31 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
         <div>
         {/* Overdue Actions Alert */}
         {overdueActions.length > 0 && (
-          <div className="mb-3 bg-warning-light dark:bg-yellow-900/20 border-2 border-warning-dark dark:border-yellow-600 rounded-lg p-3">
+          <div
+            onClick={(e) => {
+              if (hasUpcomingAppointment) {
+                e.preventDefault()
+                e.stopPropagation()
+                router.push('/calendar')
+              }
+            }}
+            className={`mb-3 bg-warning-light dark:bg-yellow-900/20 border-2 border-warning-dark dark:border-yellow-600 rounded-lg p-3 ${
+              hasUpcomingAppointment ? 'cursor-pointer hover:bg-warning-light/80 dark:hover:bg-yellow-900/30 transition-colors' : ''
+            }`}
+          >
             <div className="flex items-start gap-2">
               <BellAlertIcon className="w-5 h-5 text-warning-dark dark:text-yellow-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-semibold text-warning-dark dark:text-yellow-500 mb-1">
-                  Action Needed
-                </p>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-semibold text-warning-dark dark:text-yellow-500">
+                    Action Needed
+                  </p>
+                  {hasUpcomingAppointment && (
+                    <span className="text-xs font-medium text-primary hover:text-primary-dark">
+                      View Calendar →
+                    </span>
+                  )}
+                </div>
                 <ul className="text-xs text-foreground space-y-1">
                   {overdueActions.map((action, index) => (
                     <li key={index} className="flex items-center gap-1">

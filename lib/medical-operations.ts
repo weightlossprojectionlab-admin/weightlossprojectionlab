@@ -1380,6 +1380,26 @@ export const documentOperations = {
   },
 
   /**
+   * Update a document
+   */
+  async updateDocument(patientId: string, documentId: string, updates: Partial<PatientDocument>): Promise<PatientDocument> {
+    try {
+      logger.debug('[MedicalOps] Updating document', { patientId, documentId, updates })
+
+      const document = await makeAuthenticatedRequest<PatientDocument>(`/patients/${patientId}/documents/${documentId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      })
+
+      logger.info('[MedicalOps] Document updated successfully', { patientId, documentId })
+      return document
+    } catch (error) {
+      logger.error('[MedicalOps] Error updating document', error as Error, { patientId, documentId })
+      throw error
+    }
+  },
+
+  /**
    * Delete a document
    */
   async deleteDocument(patientId: string, documentId: string): Promise<void> {

@@ -1,20 +1,30 @@
 'use client'
 
-import React from 'react'
-import { VitalSign } from '@/types/medical'
+import React, { useState, useEffect } from 'react'
+import { VitalSign, Appointment } from '@/types/medical'
 import {
   HeartIcon,
   BeakerIcon,
   FireIcon,
   ClockIcon,
   CheckCircleIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  CalendarIcon
 } from '@heroicons/react/24/outline'
 import { formatVitalForDisplay, getVitalTypeLabel } from '@/lib/vitals-wizard-transform'
+import { medicalOperations } from '@/lib/medical-operations'
+import { useRouter } from 'next/navigation'
 
 interface DailyVitalsSummaryProps {
   vitals: VitalSign[]
   patientName: string
+  patientId: string
+  caregivers?: Array<{
+    id: string
+    name: string
+    relationship?: string
+    userId?: string
+  }>
 }
 
 /**
@@ -25,7 +35,55 @@ interface DailyVitalsSummaryProps {
  *
  * DRY principle: Reuses formatVitalForDisplay and getVitalTypeLabel utilities
  */
-export default function DailyVitalsSummary({ vitals, patientName }: DailyVitalsSummaryProps) {
+export default function DailyVitalsSummary({ vitals, patientName, patientId, caregivers = [] }: DailyVitalsSummaryProps) {
+  const router = useRouter()
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([])
+  const [loadingAppointments, setLoadingAppointments] = useState(true)
+
+  // Fetch upcoming appointments (next 7 days)
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        setLoadingAppointments(true)
+        const appointments = await medicalOperations.appointments.getAppointments({ patientId })
+
+        const now = new Date()
+        const sevenDaysFromNow = new Date()
+        sevenDaysFromNow.setDate(now.getDate() + 7)
+
+        const upcoming = appointments.filter(apt => {
+          const aptDate = new Date(apt.dateTime)
+          return apt.status === 'scheduled' && aptDate >= now && aptDate <= sevenDaysFromNow
+        }).sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
+
+        setUpcomingAppointments(upcoming)
+      } catch (error) {
+        console.error('Error fetching appointments:', error)
+      } finally {
+        setLoadingAppointments(false)
+      }
+    }
+
+    fetchAppointments()
+  }, [patientId])
+
+  // Get display name for the person who logged the vitals
+  const getDisplayName = (userId?: string): string => {
+    if (!userId) return 'Unknown'
+
+    // Check if it's the patient themselves
+    if (userId === patientId) {
+      return `${patientName} (Self)`
+    }
+
+    // Check if it's a caregiver
+    const caregiver = caregivers.find(c => c.userId === userId)
+    if (caregiver) {
+      return caregiver.relationship ? `${caregiver.name} (${caregiver.relationship})` : caregiver.name
+    }
+
+    return 'Unknown User'
+  }
   // Filter vitals from today
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -51,6 +109,27 @@ export default function DailyVitalsSummary({ vitals, patientName }: DailyVitalsS
   if (totalReadingsToday === 0) {
     return null // Don't show if no vitals today
   }
+
+  // Extract mood from notes (format: [MOOD: emoji mood])
+  const extractMood = (notes?: string): { mood: string; emoji: string; moodNotes?: string; otherNotes?: string } | null => {
+    if (!notes) return null
+
+    const moodMatch = notes.match(/^\[MOOD: (.+?) (.+?)\]/)
+    if (!moodMatch) return null
+
+    const [fullMatch, emoji, mood] = moodMatch
+    const remainingText = notes.substring(fullMatch.length).trim()
+
+    // Split remaining text into mood notes and other notes
+    const parts = remainingText.split('\n\n')
+    const moodNotes = parts[0] || undefined
+    const otherNotes = parts.slice(1).join('\n\n') || undefined
+
+    return { mood, emoji, moodNotes, otherNotes }
+  }
+
+  // Get mood from any of today's vitals (they all have the same notes)
+  const moodData = todayReadings.length > 0 ? extractMood(todayReadings[0].notes) : null
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg border-2 border-blue-200 dark:border-blue-800 overflow-hidden">
@@ -87,31 +166,140 @@ export default function DailyVitalsSummary({ vitals, patientName }: DailyVitalsS
       <div className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {todayReadings.map((vital) => (
-            <VitalSummaryCard key={vital.id} vital={vital} />
+            <VitalSummaryCard key={vital.id} vital={vital} getDisplayName={getDisplayName} />
           ))}
         </div>
 
-        {/* Footer Notes */}
-        {todayReadings.some(v => v.notes) && (
+        {/* Upcoming Appointments Section */}
+        {upcomingAppointments.length > 0 && (
           <div className="mt-6 pt-4 border-t border-blue-200 dark:border-blue-800">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-              <ExclamationTriangleIcon className="h-4 w-4" />
-              Notes
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                Upcoming Appointments
+              </h3>
+              <button
+                onClick={() => router.push('/calendar')}
+                className="text-xs font-medium text-primary hover:text-primary-dark transition-colors"
+              >
+                View Calendar →
+              </button>
+            </div>
             <div className="space-y-2">
-              {todayReadings
-                .filter(v => v.notes)
-                .map(vital => (
-                  <div key={vital.id} className="text-sm">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
-                      {getVitalTypeLabel(vital.type)}:
-                    </span>{' '}
-                    <span className="text-gray-600 dark:text-gray-400">{vital.notes}</span>
-                  </div>
-                ))}
+              {upcomingAppointments.map((apt) => {
+                const aptDate = new Date(apt.dateTime)
+                const now = new Date()
+                const hoursUntil = Math.round((aptDate.getTime() - now.getTime()) / (1000 * 60 * 60))
+                const daysUntil = Math.floor(hoursUntil / 24)
+
+                let timeUntil = ''
+                if (hoursUntil < 24) {
+                  if (hoursUntil <= 2) {
+                    timeUntil = `in ${hoursUntil}h`
+                  } else {
+                    timeUntil = 'today'
+                  }
+                } else if (daysUntil === 1) {
+                  timeUntil = 'tomorrow'
+                } else {
+                  timeUntil = `in ${daysUntil} days`
+                }
+
+                return (
+                  <button
+                    key={apt.id}
+                    onClick={() => router.push('/calendar')}
+                    className="w-full bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800 p-3 hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors text-left"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-semibold text-green-900 dark:text-green-100">
+                            {apt.providerName || 'Appointment'}
+                          </span>
+                          {hoursUntil <= 24 && (
+                            <span className="px-2 py-0.5 bg-green-200 dark:bg-green-800 text-green-900 dark:text-green-100 rounded-full text-xs font-medium">
+                              {timeUntil}
+                            </span>
+                          )}
+                        </div>
+                        {apt.specialty && (
+                          <p className="text-xs text-green-700 dark:text-green-300 mb-1">
+                            {apt.specialty}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
+                          <ClockIcon className="h-3.5 w-3.5" />
+                          <span>
+                            {aptDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            {' at '}
+                            {aptDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                      {daysUntil > 0 && hoursUntil > 24 && (
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-lg font-bold text-green-700 dark:text-green-300">
+                            {daysUntil}
+                          </div>
+                          <div className="text-xs text-green-600 dark:text-green-400">
+                            day{daysUntil !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}
+
+        {/* Mood Section */}
+        {moodData && (
+          <div className="mt-6 pt-4 border-t border-blue-200 dark:border-blue-800">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+              Mood
+            </h3>
+            <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800 p-4">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-3xl">{moodData.emoji}</span>
+                <span className="text-lg font-medium text-purple-900 dark:text-purple-100 capitalize">
+                  {moodData.mood}
+                </span>
+              </div>
+              {moodData.moodNotes && (
+                <p className="text-sm text-purple-800 dark:text-purple-200 whitespace-pre-wrap mt-2">
+                  {moodData.moodNotes}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Footer Notes */}
+        {(() => {
+          // Since all vitals share the same notes, only display once
+          const firstVital = todayReadings[0]
+          if (!firstVital) return null
+
+          const extracted = extractMood(firstVital.notes)
+          const displayNotes = extracted ? extracted.otherNotes : firstVital.notes
+
+          if (!displayNotes) return null
+
+          return (
+            <div className="mt-6 pt-4 border-t border-blue-200 dark:border-blue-800">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                <ExclamationTriangleIcon className="h-4 w-4" />
+                Notes
+              </h3>
+              <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                {displayNotes}
+              </div>
+            </div>
+          )
+        })()}
       </div>
     </div>
   )
@@ -120,7 +308,7 @@ export default function DailyVitalsSummary({ vitals, patientName }: DailyVitalsS
 /**
  * VitalSummaryCard - Individual vital reading card for daily summary
  */
-function VitalSummaryCard({ vital }: { vital: VitalSign }) {
+function VitalSummaryCard({ vital, getDisplayName }: { vital: VitalSign; getDisplayName: (userId?: string) => string }) {
   const time = new Date(vital.recordedAt).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
@@ -198,7 +386,7 @@ function VitalSummaryCard({ vital }: { vital: VitalSign }) {
         {vital.takenBy && (
           <>
             <span>•</span>
-            <span>{vital.takenBy}</span>
+            <span>{getDisplayName(vital.takenBy)}</span>
           </>
         )}
       </div>

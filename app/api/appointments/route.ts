@@ -207,6 +207,39 @@ export async function POST(request: NextRequest) {
 
     console.log(`Appointment created: ${appointmentId} for patient ${validatedData.patientId}`)
 
+    // Create notification for appointment
+    try {
+      const notificationRef = adminDb.collection('notifications').doc()
+      const appointmentDate = new Date(validatedData.dateTime)
+
+      await notificationRef.set({
+        id: notificationRef.id,
+        userId: ownerUserId, // Notify the account owner
+        type: 'appointment_scheduled',
+        title: 'Appointment Scheduled',
+        message: `${patient.name} has an appointment${provider?.name ? ` with ${provider.name}` : ''} on ${appointmentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at ${appointmentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
+        priority: 'normal',
+        read: false,
+        actionUrl: `/calendar`,
+        actionLabel: 'View Calendar',
+        metadata: {
+          appointmentId,
+          patientId: validatedData.patientId,
+          patientName: patient.name,
+          providerId: validatedData.providerId,
+          providerName: provider?.name,
+          dateTime: validatedData.dateTime
+        },
+        createdAt: now,
+        updatedAt: now
+      })
+
+      logger.info('[API /appointments POST] Notification created', { notificationId: notificationRef.id, appointmentId })
+    } catch (notifError) {
+      logger.error('[API /appointments POST] Failed to create notification', notifError as Error)
+      // Don't fail the appointment creation if notification fails
+    }
+
     return NextResponse.json({
       success: true,
       data: appointment,

@@ -95,10 +95,10 @@ export function AdvancedHealthProfile({
   isPatientProfile = false,
   patientId
 }: AdvancedHealthProfileProps) {
-  // Section open/close state (dietary section starts OPEN for safety)
+  // Section open/close state - all closed by default
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     summary: false, // Profile summary overview
-    dietary: true, // Always start open - critical safety information
+    dietary: false, // Dietary preferences and allergies
     medications: false,
     lifestyle: false,
     bodyMeasurements: false,

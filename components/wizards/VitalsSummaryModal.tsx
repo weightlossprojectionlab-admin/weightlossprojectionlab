@@ -8,9 +8,18 @@ import { formatVitalForDisplay, getVitalTypeLabel } from '@/lib/vitals-wizard-tr
 interface VitalsSummaryModalProps {
   vitals: VitalSign[]
   patientName: string
+  patientId: string
+  mood?: string
+  moodNotes?: string
   isOpen: boolean
   onClose: () => void
   onViewDashboard?: () => void
+  caregivers?: Array<{
+    id: string
+    name: string
+    relationship?: string
+    userId?: string
+  }>
 }
 
 /**
@@ -24,14 +33,48 @@ interface VitalsSummaryModalProps {
 export default function VitalsSummaryModal({
   vitals,
   patientName,
+  patientId,
+  mood,
+  moodNotes,
   isOpen,
   onClose,
-  onViewDashboard
+  onViewDashboard,
+  caregivers = []
 }: VitalsSummaryModalProps) {
   if (!isOpen) return null
 
   const timestamp = vitals[0]?.recordedAt ? new Date(vitals[0].recordedAt) : new Date()
-  const takenBy = vitals[0]?.takenBy || 'Current User'
+
+  // Get display name for the person who logged the vitals
+  const getDisplayName = (userId?: string): string => {
+    console.log('[VitalsSummaryModal] getDisplayName called with userId:', userId)
+    console.log('[VitalsSummaryModal] patientId:', patientId)
+    console.log('[VitalsSummaryModal] caregivers:', caregivers)
+
+    if (!userId) {
+      console.log('[VitalsSummaryModal] No userId provided, returning Unknown')
+      return 'Unknown'
+    }
+
+    // Check if it's the patient themselves
+    if (userId === patientId) {
+      console.log('[VitalsSummaryModal] Matched patient ID, returning Self')
+      return `${patientName} (Self)`
+    }
+
+    // Check if it's a caregiver
+    const caregiver = caregivers.find(c => c.userId === userId)
+    console.log('[VitalsSummaryModal] Found caregiver:', caregiver)
+    if (caregiver) {
+      return caregiver.relationship ? `${caregiver.name} (${caregiver.relationship})` : caregiver.name
+    }
+
+    console.log('[VitalsSummaryModal] No match found, returning Unknown User')
+    return 'Unknown User'
+  }
+
+  console.log('[VitalsSummaryModal] vitals[0]?.takenBy:', vitals[0]?.takenBy)
+  const takenBy = getDisplayName(vitals[0]?.takenBy)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -73,6 +116,38 @@ export default function VitalsSummaryModal({
               <VitalCard key={`${vital.type}-${index}`} vital={vital} />
             ))}
           </div>
+
+          {/* Mood Display */}
+          {mood && (
+            <div className="mt-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+              <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-2">
+                Mood
+              </h4>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-3xl">
+                  {mood === 'happy' ? '😊' :
+                   mood === 'calm' ? '😌' :
+                   mood === 'okay' ? '😐' :
+                   mood === 'worried' ? '😟' :
+                   mood === 'sad' ? '😢' :
+                   mood === 'pain' ? '😫' : '😐'}
+                </span>
+                <span className="text-lg font-medium text-purple-900 dark:text-purple-100 capitalize">
+                  {mood}
+                </span>
+              </div>
+              {moodNotes && (
+                <>
+                  <h5 className="text-xs font-semibold text-purple-800 dark:text-purple-200 mb-1 mt-3">
+                    Notes:
+                  </h5>
+                  <p className="text-sm text-purple-800 dark:text-purple-200 whitespace-pre-wrap">
+                    {moodNotes}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Notes */}
           {vitals[0]?.notes && (

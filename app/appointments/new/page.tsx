@@ -1,6 +1,7 @@
 /**
  * New Appointment Page
  * Schedule a new medical appointment using AI-guided wizard
+ * Now with feature gating for appointments
  */
 
 'use client'
@@ -15,12 +16,18 @@ import { usePatients } from '@/hooks/usePatients'
 import { useProviders } from '@/hooks/useProviders'
 import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import { useAppointments } from '@/hooks/useAppointments'
+import { FeatureGate } from '@/components/subscription'
 import toast from 'react-hot-toast'
 
 export default function NewAppointmentPage() {
   return (
     <AuthGuard>
-      <NewAppointmentContent />
+      <FeatureGate
+        feature="appointments"
+        featureName="Medical Appointments"
+      >
+        <NewAppointmentContent />
+      </FeatureGate>
     </AuthGuard>
   )
 }

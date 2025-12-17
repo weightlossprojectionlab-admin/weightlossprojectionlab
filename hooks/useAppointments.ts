@@ -37,14 +37,13 @@ export function useAppointments({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Polling interval for real-time-like updates (DRY - uses CRUD operations)
+  // Fetch appointments on mount and when filters change
   useEffect(() => {
     if (!autoFetch || !user) {
       setLoading(false)
       return
     }
 
-    // Initial fetch
     const fetchData = async () => {
       try {
         setLoading(true)
@@ -63,12 +62,6 @@ export function useAppointments({
     }
 
     fetchData()
-
-    // Poll every 5 seconds for updates
-    const interval = setInterval(fetchData, 5000)
-
-    // Cleanup
-    return () => clearInterval(interval)
   }, [autoFetch, user, patientId, providerId])
 
   const fetchAppointments = useCallback(async () => {

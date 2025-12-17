@@ -352,8 +352,7 @@ export function useNotifications(userId: string | undefined) {
       const notificationRef = doc(db, 'notifications', notificationId)
       await updateDoc(notificationRef, {
         read: true,
-        readAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        readAt: new Date().toISOString()
       })
 
       // Update local state

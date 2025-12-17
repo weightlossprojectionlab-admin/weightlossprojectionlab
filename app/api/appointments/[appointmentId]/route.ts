@@ -176,9 +176,49 @@ export async function DELETE(
       )
     }
 
+    // Delete the appointment
     await appointmentRef.delete()
+    console.log(`[DELETE] Appointment deleted: ${appointmentId}`)
 
-    console.log(`Appointment deleted: ${appointmentId}`)
+    // Delete associated notification (if it exists)
+    // Query notifications with this appointmentId in metadata
+    console.log(`[DELETE] Querying notifications for userId=${userId}, appointmentId=${appointmentId}`)
+
+    const notificationsSnapshot = await adminDb
+      .collection('notifications')
+      .where('userId', '==', userId)
+      .where('metadata.appointmentId', '==', appointmentId)
+      .get()
+
+    console.log(`[DELETE] Found ${notificationsSnapshot.size} notification(s) to delete for appointment ${appointmentId}`)
+
+    if (notificationsSnapshot.size === 0) {
+      // Try alternate query - get all notifications for this user and filter manually
+      console.log(`[DELETE] No notifications found with direct query, trying manual filter...`)
+      const allUserNotifications = await adminDb
+        .collection('notifications')
+        .where('userId', '==', userId)
+        .get()
+
+      console.log(`[DELETE] User has ${allUserNotifications.size} total notifications`)
+      allUserNotifications.docs.forEach(doc => {
+        const data = doc.data()
+        console.log(`[DELETE] Notification ${doc.id}: type=${data.type}, appointmentId=${data.metadata?.appointmentId}`)
+      })
+    }
+
+    // Delete all matching notifications
+    if (!notificationsSnapshot.empty) {
+      const batch = adminDb.batch()
+      notificationsSnapshot.docs.forEach(doc => {
+        console.log(`[DELETE] Deleting notification ${doc.id}`)
+        batch.delete(doc.ref)
+      })
+      await batch.commit()
+      console.log(`[DELETE] Successfully deleted ${notificationsSnapshot.size} notification(s)`)
+    }
+
+    console.log(`[DELETE] Appointment ${appointmentId} and associated notifications removed successfully`)
 
     return NextResponse.json({
       success: true,

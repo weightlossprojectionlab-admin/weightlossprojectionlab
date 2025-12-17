@@ -103,6 +103,19 @@ export default function DocumentDetailModal({ document: initialDocument, onClose
       return
     }
 
+    // Validate document has required fields
+    if (!document.id) {
+      toast.error('Document ID is missing')
+      console.error('Document missing ID:', document)
+      return
+    }
+
+    if (!document.patientId) {
+      toast.error('Patient ID is missing')
+      console.error('Document missing patientId:', document)
+      return
+    }
+
     try {
       setSendingEmail(true)
 
@@ -113,38 +126,16 @@ export default function DocumentDetailModal({ document: initialDocument, onClose
 
       const token = await user.getIdToken()
 
-      // For simplicity, we'll create a basic text document with the extracted text
-      // and send it via the send-report endpoint
-      const today = new Date().toISOString().split('T')[0]
-
-      // Create a simple body that includes the document information
-      const emailBody = `Document: ${document.name}
-Category: ${document.category}
-Upload Date: ${new Date(document.uploadedAt).toLocaleDateString()}
-
-${emailMessage ? `Message:\n${emailMessage}\n\n` : ''}
-${document.extractedText ? `Extracted Text:\n${document.extractedText}\n\n` : ''}
-
-Original Document URL: ${document.originalUrl}
-
-This document was sent from Weight Loss Projection Lab.`
-
-      // Note: This is a simplified version. In production, you might want to create
-      // a dedicated endpoint for emailing individual documents
-      const response = await fetch(`/api/patients/${document.patientId}/send-report`, {
+      // Use the dedicated document email endpoint
+      const response = await fetch(`/api/patients/${document.patientId}/documents/${document.id}/email`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          recipientEmail: emailRecipient,
-          reportDate: today,
-          template: 'records_request',
-          customMessage: emailBody,
-          patientName: 'Patient',
-          senderName: user.displayName || user.email || 'User',
-          attachments: []
+          email: emailRecipient,
+          message: emailMessage
         })
       })
 
@@ -541,38 +532,14 @@ This document was sent from Weight Loss Projection Lab.`
                 )}
               </div>
             </div>
-          ) : (
-            <div className="text-center py-12">
-              {document.ocrStatus === 'processing' ? (
-                <>
-                  {/* Animated spinner */}
-                  <div className="relative w-16 h-16 mx-auto mb-4">
-                    <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
-                    <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                  <h3 className="text-lg font-medium text-foreground mb-2">
-                    Processing Document...
-                  </h3>
-                  <p className="text-muted-foreground mb-6">
-                    Extracting text from your {document.fileType === 'pdf' ? 'PDF' : 'document'}. This usually takes 5-10 seconds.
-                    <br />
-                    <span className="text-sm">Please wait, this page will update automatically...</span>
-                  </p>
-                </>
-              ) : (
-                <>
-                  <DocumentTextIcon className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">
-                    No OCR Data Available
-                  </h3>
-                  <p className="text-muted-foreground mb-6">
-                    {document.fileType === 'pdf'
-                      ? 'PDF text extraction failed or did not complete. You can download the original PDF below to view it.'
-                      : 'OCR processing has not been completed for this document.'}
-                  </p>
-                </>
-              )}
-              <div className="bg-muted rounded-lg overflow-hidden max-w-2xl mx-auto">
+          ) : null}
+
+          {/* Document Viewer - Always show regardless of OCR status */}
+          <div className="py-6 border-t border-border">
+            <h3 className="text-lg font-medium text-foreground mb-4 text-center">
+              Document Viewer
+            </h3>
+            <div className="bg-muted rounded-lg overflow-hidden max-w-4xl mx-auto">
                 {document.fileType === 'image' ? (
                   hasFrontAndBack ? (
                     /* 3D Flip Animation for Front/Back Cards */
@@ -589,7 +556,11 @@ This document was sent from Weight Loss Projection Lab.`
                           <img
                             src={images[0].url}
                             alt={images[0].label || 'Front'}
-                            className="w-full h-auto"
+                            className="w-full h-auto cursor-pointer hover:opacity-95 transition-opacity"
+                            onClick={() => {
+                              setLightboxImageUrl(images[0].url)
+                              setShowLightbox(true)
+                            }}
                           />
                         </div>
 
@@ -604,7 +575,11 @@ This document was sent from Weight Loss Projection Lab.`
                           <img
                             src={images[1].url}
                             alt={images[1].label || 'Back'}
-                            className="w-full h-auto"
+                            className="w-full h-auto cursor-pointer hover:opacity-95 transition-opacity"
+                            onClick={() => {
+                              setLightboxImageUrl(images[1].url)
+                              setShowLightbox(true)
+                            }}
                           />
                         </div>
                       </div>
@@ -679,6 +654,27 @@ This document was sent from Weight Loss Projection Lab.`
                       )}
                     </div>
                   )
+                ) : document.fileType === 'pdf' ? (
+                  <div className="w-full">
+                    <iframe
+                      src={document.originalUrl}
+                      className="w-full h-[600px] border-0"
+                      title={document.name}
+                    />
+                    <div className="p-4 bg-background text-center border-t border-border">
+                      <a
+                        href={document.originalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:text-primary-dark font-medium inline-flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        Open in new tab
+                      </a>
+                    </div>
+                  </div>
                 ) : (
                   <div className="p-8">
                     <a
@@ -691,9 +687,8 @@ This document was sent from Weight Loss Projection Lab.`
                     </a>
                   </div>
                 )}
-              </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Footer */}

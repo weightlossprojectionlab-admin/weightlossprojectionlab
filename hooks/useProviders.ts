@@ -37,6 +37,7 @@ export function useProviders({
 
   const fetchProviders = useCallback(async () => {
     try {
+      console.log('[useProviders] Fetching providers...', { patientId })
       setLoading(true)
       setError(null)
 
@@ -44,6 +45,7 @@ export function useProviders({
         ? await medicalOperations.providers.getProvidersByPatient(patientId)
         : await medicalOperations.providers.getProviders()
 
+      console.log('[useProviders] Providers fetched:', { count: data.length })
       setProviders(data)
     } catch (err: any) {
       const errorMsg = err.message || 'Failed to fetch providers'

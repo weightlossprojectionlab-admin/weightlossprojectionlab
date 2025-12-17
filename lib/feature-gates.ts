@@ -27,29 +27,80 @@ export const FULL_ACCESS_SUBSCRIPTION: UserSubscription = {
 
 // Features gated by base plan (require specific plan tier)
 export const PLAN_FEATURES: Record<string, SubscriptionPlan[]> = {
+  // Family & Patient Management
   'multiple-patients': ['family_basic', 'family_plus', 'family_premium'],
-  'patient-management': ['family_basic', 'family_plus', 'family_premium']
+  'patient-management': ['family_basic', 'family_plus', 'family_premium'],
+  'family-directory': ['family_basic', 'family_plus', 'family_premium'],
+  'household-management': ['family_basic', 'family_plus', 'family_premium'],
+  'pet-tracking': ['family_basic', 'family_plus', 'family_premium'],
+
+  // Medical Features
+  'appointments': ['single', 'family_basic', 'family_plus', 'family_premium'],
+  'medications': ['single', 'family_basic', 'family_plus', 'family_premium'],
+  'vitals-tracking': ['single', 'family_basic', 'family_plus', 'family_premium'],
+  'providers': ['single', 'family_basic', 'family_plus', 'family_premium'],
+  'medical-records': ['single', 'family_basic', 'family_plus', 'family_premium'],
+
+  // Advanced Analytics (Family Plus & Premium only)
+  'advanced-analytics': ['family_plus', 'family_premium'],
+  'health-insights': ['family_plus', 'family_premium'],
+  'trend-analysis': ['family_plus', 'family_premium'],
+  'predictive-ai': ['family_plus', 'family_premium'],
+
+  // Premium Features (Premium only)
+  'priority-support': ['family_premium'],
+  'white-glove-service': ['family_premium'],
+  'early-access': ['family_premium'],
+  'custom-reports': ['family_premium'],
+  'data-export': ['family_premium'],
+  'api-access': ['family_premium'],
+
+  // Caregiver Features
+  'external-caregivers': ['single', 'family_basic', 'family_plus', 'family_premium'],
+  'caregiver-invites': ['single', 'family_basic', 'family_plus', 'family_premium'],
+  'role-management': ['family_basic', 'family_plus', 'family_premium'],
+
+  // Shopping & Meal Planning
+  'shared-shopping': ['family_basic', 'family_plus', 'family_premium'],
+  'family-meal-planning': ['family_basic', 'family_plus', 'family_premium'],
 }
 
-// Features gated by add-on (require specific addon enabled)
+// Features gated by add-on (legacy - now mostly included in tiers)
 export const ADDON_FEATURES: Record<string, keyof NonNullable<UserSubscription['addons']>> = {
-  'advanced-analytics': 'familyFeatures',
-  'family-sharing': 'familyFeatures',
-  'enhanced-ai-coaching': 'familyFeatures',
-  'health-insights': 'familyFeatures',
-  'data-export': 'familyFeatures',
-  'advanced-reports': 'familyFeatures'
+  'legacy-family-features': 'familyFeatures',
 }
 
-// Basic features available to all paid/trial plans
+// Basic features available to all paid/trial plans (including free tier)
 export const BASIC_FEATURES = [
+  // Core Tracking
   'meal-logging',
   'weight-tracking',
   'step-tracking',
+  'photo-logging',
+
+  // Basic Content
   'basic-recipes',
+  'recipe-search',
+  'meal-gallery',
+
+  // Basic AI
   'basic-ai-coaching',
+  'meal-recognition',
+
+  // Inventory
   'inventory-management',
-  'barcode-scanning'
+  'barcode-scanning',
+  'pantry-tracking',
+
+  // Progress
+  'weight-history',
+  'progress-charts',
+  'basic-dashboard',
+
+  // Profile
+  'profile-settings',
+  'preferences',
+  'notifications',
 ]
 
 /**

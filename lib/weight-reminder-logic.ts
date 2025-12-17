@@ -25,14 +25,15 @@ export function shouldShowWeightReminder(
   frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' = 'weekly',
   lastMealLogDate?: Date | null
 ): WeightReminderResult {
-  // If no weight logs exist, always show reminder
+  // If no weight logs exist, DON'T show reminder - let users discover it naturally
+  // Only nag users who have established a logging habit
   if (!lastWeightLog) {
     return {
-      shouldShow: true,
+      shouldShow: false,
       daysSince: 0,
       nextDueDate: new Date(), // Due now
-      isOverdue: true,
-      status: 'overdue'
+      isOverdue: false,
+      status: 'on-track'
     }
   }
 
