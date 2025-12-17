@@ -1232,7 +1232,8 @@ function ProgressContent() {
 
       {/* Weight Reminder Modal (auto-shows on mount if due) - only after weight data loads */}
       {/* Only show for current user's own progress, not for family members */}
-      {weightDataLoaded && !selectedPatientId && (
+      {/* Respect user preference to disable reminders */}
+      {weightDataLoaded && !selectedPatientId && !profile?.preferences?.disableWeightReminders && (
         <WeightReminderModal
           lastWeightLog={mostRecentWeightLog}
           frequency={profile?.preferences?.weightCheckInFrequency || 'weekly'}

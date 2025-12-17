@@ -80,6 +80,7 @@ export interface PatientProfile {
 
   // Check-in preferences (set during onboarding)
   weightCheckInFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+  disableWeightReminders?: boolean // User can opt-out of weight check-in reminders
 
   // Health Goals (patient-specific)
   goals?: {
