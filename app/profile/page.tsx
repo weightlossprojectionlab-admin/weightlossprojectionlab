@@ -741,6 +741,105 @@ function ProfileContent() {
           </div>
         </div>
 
+        {/* Reminders Settings */}
+        <div className="bg-card rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-medium text-foreground mb-4">⏰ Reminders</h2>
+          <div className="space-y-4">
+            {/* Weight Check-in Reminders */}
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-medium text-foreground">Weight Check-in Reminders</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Get reminded to log your weight based on your check-in frequency
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    const currentValue = profileData?.preferences?.disableWeightReminders || false
+                    await userProfileOperations.updateUserProfile(user!.uid, {
+                      preferences: {
+                        ...profileData?.preferences,
+                        disableWeightReminders: !currentValue
+                      }
+                    })
+                    setProfileData({
+                      ...profileData,
+                      preferences: {
+                        ...profileData?.preferences,
+                        disableWeightReminders: !currentValue
+                      }
+                    })
+                    toast.success(
+                      !currentValue
+                        ? 'Weight reminders disabled'
+                        : 'Weight reminders enabled'
+                    )
+                  } catch (error) {
+                    toast.error('Failed to update reminder settings')
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                  !(profileData?.preferences?.disableWeightReminders || false)
+                    ? 'bg-primary'
+                    : 'bg-gray-200 dark:bg-gray-700'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    !(profileData?.preferences?.disableWeightReminders || false)
+                      ? 'translate-x-6'
+                      : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Weight Check-in Frequency */}
+            {!(profileData?.preferences?.disableWeightReminders || false) && (
+              <div className="pl-4 border-l-2 border-border">
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Check-in Frequency
+                </label>
+                <select
+                  value={profileData?.preferences?.weightCheckInFrequency || 'weekly'}
+                  onChange={async (e) => {
+                    try {
+                      await userProfileOperations.updateUserProfile(user!.uid, {
+                        preferences: {
+                          ...profileData?.preferences,
+                          weightCheckInFrequency: e.target.value as 'daily' | 'weekly' | 'biweekly' | 'monthly'
+                        }
+                      })
+                      setProfileData({
+                        ...profileData,
+                        preferences: {
+                          ...profileData?.preferences,
+                          weightCheckInFrequency: e.target.value
+                        }
+                      })
+                      toast.success('Check-in frequency updated')
+                    } catch (error) {
+                      toast.error('Failed to update frequency')
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Bi-weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  You'll be reminded to log your weight when it's due
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Test Notification */}
         <div className="bg-card rounded-lg p-6 shadow-sm">
           <h3 className="text-lg font-bold mb-4">🔔 Test Notifications</h3>
