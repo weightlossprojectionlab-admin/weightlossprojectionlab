@@ -5,6 +5,7 @@ import { useLazyAuth } from '@/hooks/useLazyAuth'
 import { useStepCounter } from '@/hooks/useStepCounter'
 import { logger } from '@/lib/logger'
 import { userProfileOperations } from '@/lib/firebase-operations'
+import { storage, getJSON, setJSON } from '@/lib/adapters'
 
 /**
  * Step Tracking Context
@@ -57,7 +58,7 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
   } = useStepCounter()
 
   /**
-   * Load step tracking preference from Firestore, fallback to localStorage
+   * Load step tracking preference from Firestore, fallback to storage
    */
   useEffect(() => {
     const loadPreference = async () => {
@@ -70,21 +71,21 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
 
             if (typeof firestoreEnabled === 'boolean') {
               setIsEnabled(firestoreEnabled)
-              // Sync to localStorage
-              localStorage.setItem('step-tracking-enabled', firestoreEnabled.toString())
+              // Sync to storage
+              await storage.setItem('step-tracking-enabled', firestoreEnabled.toString())
               logger.debug('📍 Step tracking loaded from Firestore:', firestoreEnabled)
               return
             }
           } catch (err) {
-            logger.error('Failed to load from Firestore, using localStorage fallback:', err as Error)
+            logger.error('Failed to load from Firestore, using storage fallback:', err as Error)
           }
         }
 
-        // Fallback to localStorage
-        const enabled = localStorage.getItem('step-tracking-enabled')
+        // Fallback to storage
+        const enabled = await storage.getItem('step-tracking-enabled')
         if (enabled === 'true') {
           setIsEnabled(true)
-          logger.debug('📍 Step tracking enabled from localStorage')
+          logger.debug('📍 Step tracking enabled from storage')
         }
       } catch (err) {
         logger.error('Failed to load step tracking preference:', err as Error)
@@ -166,26 +167,12 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
         const today = new Date().toISOString().split('T')[0]
         logger.debug('👋 App closing - saving steps:', { stepCount })
 
-        // Use navigator.sendBeacon for reliable unload saves (synchronous)
-        // This API is specifically designed for analytics/tracking on page unload
+        // Save to storage before unload
+        // Note: Can't use async/await in beforeunload, so we use fire-and-forget
         try {
-          const data = JSON.stringify({
-            steps: stepCount,
-            date: today,
-            source: 'device',
-            notes: `Auto-saved on unload - ${stepCount} steps`,
-            loggedAt: new Date().toISOString()
-          })
-
-          // Try sendBeacon first (most reliable)
-          if ('sendBeacon' in navigator && typeof navigator.sendBeacon === 'function') {
-            // We'll need to get the auth token synchronously
-            // For now, fallback to localStorage save and rely on periodic saves
-            logger.debug('📡 Using periodic saves (sendBeacon needs auth token)')
-          }
-
-          // Ensure localStorage is updated
-          localStorage.setItem('step-count-last-save', stepCount.toString())
+          // Ensure storage is updated (fire and forget - can't await in beforeunload)
+          storage.setItem('step-count-last-save', stepCount.toString())
+          logger.debug('📡 Step count saved to storage on unload')
         } catch (err) {
           logger.error('Failed to save on unload:', err as Error)
         }
@@ -204,7 +191,7 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
    */
   const enableTracking = async () => {
     setIsEnabled(true)
-    localStorage.setItem('step-tracking-enabled', 'true')
+    await storage.setItem('step-tracking-enabled', 'true')
 
     // Save to Firestore if authenticated
     if (user) {
@@ -217,7 +204,7 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
         logger.error('Failed to save step tracking preference to Firestore:', err as Error)
       }
     } else {
-      logger.debug('✅ Step tracking enabled (localStorage only)')
+      logger.debug('✅ Step tracking enabled (storage only)')
     }
 
     // Start counting immediately
@@ -231,7 +218,7 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
    */
   const disableTracking = async () => {
     setIsEnabled(false)
-    localStorage.setItem('step-tracking-enabled', 'false')
+    await storage.setItem('step-tracking-enabled', 'false')
     stopCounting()
 
     // Save to Firestore if authenticated
@@ -245,7 +232,7 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
         logger.error('Failed to save step tracking preference to Firestore:', err as Error)
       }
     } else {
-      logger.debug('⏸️ Step tracking disabled (localStorage only)')
+      logger.debug('⏸️ Step tracking disabled (storage only)')
     }
   }
 

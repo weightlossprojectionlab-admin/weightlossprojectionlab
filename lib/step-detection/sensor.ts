@@ -5,13 +5,19 @@
  * permission handling and fallbacks.
  *
  * Platform Support:
- * - iOS 13+: Requires DeviceMotionEvent.requestPermission()
- * - Android: No permission required
+ * - Web: DeviceMotionEvent API (~60-70% accuracy)
+ * - iOS Native: Capacitor Motion with HealthKit (~90-95% accuracy)
+ * - Android Native: Capacitor Motion with Google Fit (~90-95% accuracy)
  * - Desktop: Limited/no support (graceful degradation)
+ *
+ * This module now uses the motion adapter to automatically select the
+ * best implementation based on the current platform.
  */
 
 import { AccelerometerData, SensorStatus } from './types'
 import { logger } from '@/lib/logger'
+import { motion, MotionData } from '@/lib/adapters/motion'
+import { isNative } from '@/lib/adapters'
 
 /**
  * Target sample rate for accelerometer data (Hz)
@@ -25,53 +31,51 @@ const TARGET_SAMPLE_RATE = 15 // Hz
 const MIN_SAMPLE_INTERVAL = 1000 / TARGET_SAMPLE_RATE // ~67ms
 
 /**
- * Global reference to event listener for cleanup
+ * Global reference to callback and state
  */
-let motionListener: ((event: DeviceMotionEvent) => void) | null = null
+let isListening = false
 let lastSampleTime = 0
+let currentCallback: ((data: AccelerometerData) => void) | null = null
 
 /**
  * Check if DeviceMotionEvent API is available
  *
  * @returns True if device supports motion sensors
  */
-export function isSensorAvailable(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    'DeviceMotionEvent' in window
-  )
+export async function isSensorAvailable(): Promise<boolean> {
+  return await motion.isAvailable()
 }
 
 /**
- * Check if device requires permission (iOS 13+)
+ * Check if device requires permission (iOS 13+ web only)
  *
  * @returns True if permission request is needed
  */
 export function needsPermission(): boolean {
-  if (!isSensorAvailable()) return false
+  // Native platforms handle permissions automatically
+  if (isNative()) {
+    return false
+  }
 
-  // iOS 13+ requires permission
+  // Web: iOS 13+ requires permission
+  if (typeof window === 'undefined') return false
+
   return (
-    typeof (DeviceMotionEvent as any).requestPermission === 'function'
+    typeof (DeviceMotionEvent as any)?.requestPermission === 'function'
   )
 }
 
 /**
- * Request permission to access motion sensors (iOS 13+)
+ * Request permission to access motion sensors
  *
- * Must be called from user gesture (button click, etc.)
+ * Must be called from user gesture (button click, etc.) on iOS 13+ web.
+ * Native platforms handle this automatically.
  *
  * @returns Promise resolving to true if granted
  */
 export async function requestMotionPermission(): Promise<boolean> {
-  if (!needsPermission()) {
-    // Android or older iOS - no permission needed
-    return true
-  }
-
   try {
-    const permission = await (DeviceMotionEvent as any).requestPermission()
-    return permission === 'granted'
+    return await motion.requestPermission()
   } catch (error) {
     logger.error('[Sensor] Permission request failed', error as Error)
     return false
@@ -84,27 +88,15 @@ export async function requestMotionPermission(): Promise<boolean> {
  * @returns Sensor availability and permission info
  */
 export async function getSensorStatus(): Promise<SensorStatus> {
-  const isAvailable = isSensorAvailable()
+  const available = await motion.isAvailable()
   const needsPerm = needsPermission()
 
-  let hasPermission = false
-
-  if (isAvailable && needsPerm) {
-    // Try to check existing permission (iOS 13+)
-    try {
-      // There's no way to check permission without requesting,
-      // so we'll assume false until explicitly granted
-      hasPermission = false
-    } catch {
-      hasPermission = false
-    }
-  } else if (isAvailable) {
-    // Android or older iOS - assume granted
-    hasPermission = true
-  }
+  // On native, permission is handled automatically
+  // On web, we can't reliably check permission status without requesting
+  let hasPermission = isNative() || !needsPerm
 
   return {
-    isAvailable,
+    isAvailable: available,
     hasPermission,
     needsPermission: needsPerm,
     sampleRate: TARGET_SAMPLE_RATE
@@ -124,27 +116,29 @@ export function getSampleRate(): number {
  * Start listening to device motion events
  *
  * Throttles samples to target rate and extracts accelerometer data.
- * Uses accelerationIncludingGravity (more widely supported) as fallback.
+ * Uses the motion adapter to automatically select web or native implementation.
  *
  * @param callback Function to call with each sample
  * @returns True if started successfully
  */
-export function startSensor(
+export async function startSensor(
   callback: (data: AccelerometerData) => void
-): boolean {
-  if (!isSensorAvailable()) {
-    logger.error('[Sensor] DeviceMotionEvent not available', new Error('DeviceMotionEvent not available'))
+): Promise<boolean> {
+  const available = await motion.isAvailable()
+  if (!available) {
+    logger.error('[Sensor] Motion sensors not available', new Error('Motion sensors not available'))
     return false
   }
 
   // Stop any existing listener
-  stopSensor()
+  await stopSensor()
 
   // Reset throttle timer
   lastSampleTime = 0
+  currentCallback = callback
 
-  // Create motion event listener with throttling
-  motionListener = (event: DeviceMotionEvent) => {
+  // Create motion data handler with throttling
+  const handleMotionData = (motionData: MotionData) => {
     const now = Date.now()
 
     // Throttle to target sample rate
@@ -156,7 +150,7 @@ export function startSensor(
 
     // Extract acceleration data
     // Prefer accelerationIncludingGravity (more widely supported)
-    const accel = event.accelerationIncludingGravity || event.acceleration
+    const accel = motionData.accelerationIncludingGravity
 
     if (!accel || accel.x === null || accel.y === null || accel.z === null) {
       // Debug log only - this is expected on desktop/unsupported devices
@@ -167,20 +161,23 @@ export function startSensor(
     }
 
     // Create accelerometer data object
-    const data: AccelerometerData = {
+    const accelerometerData: AccelerometerData = {
       x: accel.x,
       y: accel.y,
       z: accel.z,
       timestamp: now
     }
 
-    callback(data)
+    if (currentCallback) {
+      currentCallback(accelerometerData)
+    }
   }
 
-  // Add event listener
+  // Start listening via adapter
   try {
-    window.addEventListener('devicemotion', motionListener)
-    logger.info('[Sensor] Started listening to device motion')
+    await motion.startListening(handleMotionData)
+    isListening = true
+    logger.info('[Sensor] Started listening to device motion via adapter')
     return true
   } catch (error) {
     logger.error('[Sensor] Failed to start listening', error as Error)
@@ -191,10 +188,11 @@ export function startSensor(
 /**
  * Stop listening to device motion events
  */
-export function stopSensor(): void {
-  if (motionListener) {
-    window.removeEventListener('devicemotion', motionListener)
-    motionListener = null
+export async function stopSensor(): Promise<void> {
+  if (isListening) {
+    await motion.stopListening()
+    isListening = false
+    currentCallback = null
     logger.info('[Sensor] Stopped listening to device motion')
   }
 }
@@ -203,7 +201,7 @@ export function stopSensor(): void {
  * Complete sensor initialization flow
  *
  * Handles permission request and sensor startup in one call.
- * Must be called from user gesture if permission is needed.
+ * Must be called from user gesture if permission is needed (web only).
  *
  * @param callback Function to call with each sample
  * @returns Object with success status and error message if failed
@@ -212,14 +210,15 @@ export async function initializeSensor(
   callback: (data: AccelerometerData) => void
 ): Promise<{ success: boolean; error?: string }> {
   // Check availability
-  if (!isSensorAvailable()) {
+  const available = await isSensorAvailable()
+  if (!available) {
     return {
       success: false,
       error: 'Motion sensors not available on this device'
     }
   }
 
-  // Request permission if needed
+  // Request permission if needed (web only)
   if (needsPermission()) {
     const granted = await requestMotionPermission()
 
@@ -232,7 +231,7 @@ export async function initializeSensor(
   }
 
   // Start sensor
-  const started = startSensor(callback)
+  const started = await startSensor(callback)
 
   if (!started) {
     return {
@@ -255,21 +254,21 @@ export async function initializeSensor(
 export async function testSensor(duration = 2000): Promise<AccelerometerData[]> {
   const samples: AccelerometerData[] = []
 
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const callback = (data: AccelerometerData) => {
       samples.push(data)
     }
 
-    initializeSensor(callback).then(result => {
-      if (!result.success) {
-        reject(new Error(result.error))
-        return
-      }
+    const result = await initializeSensor(callback)
 
-      setTimeout(() => {
-        stopSensor()
-        resolve(samples)
-      }, duration)
-    })
+    if (!result.success) {
+      reject(new Error(result.error))
+      return
+    }
+
+    setTimeout(async () => {
+      await stopSensor()
+      resolve(samples)
+    }, duration)
   })
 }

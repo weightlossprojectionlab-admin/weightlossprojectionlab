@@ -4,6 +4,7 @@ import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'fireba
 import { getStorage, type FirebaseStorage } from 'firebase/storage'
 import { getMessaging, type Messaging, isSupported } from 'firebase/messaging'
 import { logger } from '@/lib/logger'
+import { isServer } from '@/lib/adapters'
 
 // Firebase configuration (requires environment variables)
 const firebaseConfig = {
@@ -37,7 +38,8 @@ try {
   storage = getStorage(app)
 
   // Enable auth persistence (keep user signed in across browser sessions)
-  if (typeof window !== 'undefined') {
+  // Skip on server-side rendering to prevent crashes
+  if (!isServer()) {
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
         logger.info('Firebase Auth persistence enabled (browserLocalPersistence)')
@@ -66,7 +68,7 @@ try {
 
 // Initialize Firebase Cloud Messaging (client-side only)
 export async function initializeMessaging(): Promise<Messaging | null> {
-  if (typeof window === 'undefined') {
+  if (isServer()) {
     // Server-side, messaging not available
     return null
   }

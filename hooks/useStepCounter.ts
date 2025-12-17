@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLazyAuth } from '@/hooks/useLazyAuth'
 import { stepLogOperations } from '@/lib/firebase-operations'
 import { logger } from '@/lib/logger'
+import { storage, getJSON, setJSON } from '@/lib/adapters'
 import {
   AccelerometerData,
   StepDetectionConfig,
@@ -36,7 +37,7 @@ import {
 } from '@/lib/step-detection/calibration'
 
 /**
- * localStorage key for persisting step count
+ * Storage key for persisting step count
  */
 const STEP_COUNT_STORAGE_KEY = 'step-count-session'
 
@@ -98,15 +99,17 @@ export function useStepCounter(
   }, [state])
 
   /**
-   * Load saved step count from localStorage on mount
+   * Load saved step count from storage on mount
    */
   useEffect(() => {
-    const loadSavedState = () => {
+    const loadSavedState = async () => {
       try {
-        const saved = localStorage.getItem(STEP_COUNT_STORAGE_KEY)
-        if (saved) {
-          const data = JSON.parse(saved)
+        const data = await getJSON<{ totalSteps: number; sessionSteps: number; timestamp: number } | null>(
+          STEP_COUNT_STORAGE_KEY,
+          null
+        )
 
+        if (data) {
           // Only restore if from today
           const today = new Date().toDateString()
           const savedDate = new Date(data.timestamp).toDateString()
@@ -117,7 +120,7 @@ export function useStepCounter(
               totalSteps: data.totalSteps || 0,
               sessionSteps: data.sessionSteps || 0
             }))
-            logger.debug('[Step Counter] Restored from localStorage:', data.totalSteps)
+            logger.debug('[Step Counter] Restored from storage:', data.totalSteps)
           }
         }
       } catch (err) {
@@ -157,18 +160,18 @@ export function useStepCounter(
   }, [])
 
   /**
-   * Save to localStorage periodically
+   * Save to storage periodically
    */
-  const saveToLocalStorage = useCallback(() => {
+  const saveToStorage = useCallback(async () => {
     try {
       const data = {
         totalSteps: stateRef.current.totalSteps,
         sessionSteps: stateRef.current.sessionSteps,
         timestamp: Date.now()
       }
-      localStorage.setItem(STEP_COUNT_STORAGE_KEY, JSON.stringify(data))
+      await setJSON(STEP_COUNT_STORAGE_KEY, data)
     } catch (err) {
-      logger.error('[Step Counter] Failed to save to localStorage:', err as Error)
+      logger.error('[Step Counter] Failed to save to storage:', err as Error)
     }
   }, [])
 
@@ -191,11 +194,12 @@ export function useStepCounter(
     if (stepDetected) {
       const stepsSinceSave = newState.totalSteps - lastSaveRef.current
       if (stepsSinceSave >= AUTO_SAVE_INTERVAL) {
-        saveToLocalStorage()
+        // Don't await - fire and forget for performance
+        saveToStorage()
         lastSaveRef.current = newState.totalSteps
       }
     }
-  }, [saveToLocalStorage])
+  }, [saveToStorage])
 
   /**
    * Start step counting
@@ -223,22 +227,22 @@ export function useStepCounter(
   /**
    * Stop step counting
    */
-  const stopCounting = useCallback(() => {
-    stopSensor()
+  const stopCounting = useCallback(async () => {
+    await stopSensor()
     setState(prev => ({ ...prev, isActive: false }))
-    saveToLocalStorage()
+    await saveToStorage()
     logger.debug('[Step Counter] Stopped counting')
-  }, [saveToLocalStorage])
+  }, [saveToStorage])
 
   /**
    * Pause counting (keeps count)
    */
-  const pauseCounting = useCallback(() => {
-    stopSensor()
+  const pauseCounting = useCallback(async () => {
+    await stopSensor()
     setState(prev => ({ ...prev, isActive: false }))
-    saveToLocalStorage()
+    await saveToStorage()
     logger.debug('[Step Counter] Paused')
-  }, [saveToLocalStorage])
+  }, [saveToStorage])
 
   /**
    * Resume counting
@@ -250,15 +254,15 @@ export function useStepCounter(
   /**
    * Reset step count
    */
-  const resetCount = useCallback(() => {
+  const resetCount = useCallback(async () => {
     const newState = resetAll()
     setState(newState)
     lastSaveRef.current = 0
 
     try {
-      localStorage.removeItem(STEP_COUNT_STORAGE_KEY)
+      await storage.removeItem(STEP_COUNT_STORAGE_KEY)
     } catch (err) {
-      logger.error('[Step Counter] Failed to clear localStorage:', err as Error)
+      logger.error('[Step Counter] Failed to clear storage:', err as Error)
     }
 
     logger.debug('[Step Counter] Reset')
@@ -310,10 +314,12 @@ export function useStepCounter(
    */
   useEffect(() => {
     return () => {
+      // Cleanup is async but can't await in cleanup function
+      // Fire stopSensor and saveToStorage without waiting
       stopSensor()
-      saveToLocalStorage()
+      saveToStorage()
     }
-  }, [saveToLocalStorage])
+  }, [saveToStorage])
 
   return {
     // State
