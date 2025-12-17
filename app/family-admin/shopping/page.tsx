@@ -115,7 +115,9 @@ function ShoppingContent() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-foreground mb-1">{household.name}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {household.address || 'No address set'}
+                        {household.address
+                          ? `${household.address.street || ''}, ${household.address.city || ''}, ${household.address.state || ''} ${household.address.zipCode || ''}`.trim()
+                          : 'No address set'}
                       </p>
                       <p className="text-sm text-primary mt-2">
                         View Shopping List →
