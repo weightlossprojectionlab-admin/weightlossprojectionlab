@@ -175,6 +175,22 @@ export async function determineUserDestination(
   } catch (error: any) {
     logger.error('[AuthRouter] Error determining user destination', error as Error)
 
+    // Check if error is due to authentication issues (401, 403, etc.)
+    const isAuthError = error.status === 401 ||
+                        error.status === 403 ||
+                        error.message?.includes('401') ||
+                        error.message?.includes('403') ||
+                        error.message?.includes('Unauthorized') ||
+                        error.message?.includes('unauthenticated')
+
+    if (isAuthError) {
+      logger.warn('[AuthRouter] Authentication error - redirect to /auth', { error: error.message })
+      return {
+        type: 'auth',
+        reason: 'Authentication required'
+      }
+    }
+
     // Profile fetch failed (404 or other error) → Create profile and start onboarding
     if (error.message?.includes('404') ||
         error.message?.includes('not found') ||
