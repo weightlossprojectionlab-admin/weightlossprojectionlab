@@ -8,7 +8,7 @@
 import { User, UserSubscription, SubscriptionPlan } from '@/types'
 
 // Admin users with full access to all features
-export const ADMIN_EMAILS = ['admin:weightlossprojectionlab@gmail.com']
+export const ADMIN_EMAILS = ['weightlossprojectionlab@gmail.com', 'admin:weightlossprojectionlab@gmail.com']
 
 // Full access subscription for admins
 export const FULL_ACCESS_SUBSCRIPTION: UserSubscription = {
@@ -63,6 +63,10 @@ export const PLAN_FEATURES: Record<string, SubscriptionPlan[]> = {
   // Shopping & Meal Planning
   'shared-shopping': ['family_basic', 'family_plus', 'family_premium'],
   'family-meal-planning': ['family_basic', 'family_plus', 'family_premium'],
+
+  // Family Dashboard & Enhanced AI (NEW)
+  'family-health-dashboard': ['family_basic', 'family_plus', 'family_premium'],
+  'enhanced-ai-coaching': ['family_plus', 'family_premium'],
 }
 
 // Features gated by add-on (legacy - now mostly included in tiers)
@@ -371,5 +375,75 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
       currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
     },
     'Admin (Full Access)': FULL_ACCESS_SUBSCRIPTION
+  }
+}
+
+/**
+ * Check if user can add an external caregiver
+ * External caregivers are non-billable professional caregivers (not family members)
+ *
+ * @param user - Current user
+ * @param currentCaregiverCount - Number of external caregivers already added
+ * @returns true if user can add another external caregiver
+ *
+ * @example
+ * canAddExternalCaregiver(user, 1)  // true if limit allows
+ */
+export function canAddExternalCaregiver(user: User | null, currentCaregiverCount: number): boolean {
+  if (!user) return false
+
+  const subscription = getUserSubscription(user)
+  if (!subscription) return false
+
+  // Can't add caregivers if subscription expired/canceled
+  if (subscription.status === 'expired' || subscription.status === 'canceled') {
+    return false
+  }
+
+  const maxCaregivers = subscription.maxExternalCaregivers
+  return currentCaregiverCount < maxCaregivers
+}
+
+/**
+ * Get caregiver limit information for display and validation
+ *
+ * @param user - Current user
+ * @param currentCaregiverCount - Number of external caregivers already added
+ * @returns Object with current, max, availability, and percentage usage
+ *
+ * @example
+ * getCaregiverLimitInfo(user, 3)
+ * // { current: 3, max: 5, canAdd: true, percentage: 60, remaining: 2 }
+ */
+export function getCaregiverLimitInfo(user: User | null, currentCaregiverCount: number) {
+  const subscription = getUserSubscription(user)
+
+  if (!subscription) {
+    return {
+      current: 0,
+      max: 0,
+      canAdd: false,
+      percentage: 0,
+      remaining: 0,
+      isUnlimited: false
+    }
+  }
+
+  const maxCaregivers = subscription.maxExternalCaregivers
+  const isUnlimited = maxCaregivers >= 999
+  const remaining = Math.max(0, maxCaregivers - currentCaregiverCount)
+
+  // For unlimited plans, show utilization based on 50 as a reasonable cap for display
+  const displayMax = isUnlimited ? 50 : maxCaregivers
+  const percentage = displayMax > 0 ? Math.round((currentCaregiverCount / displayMax) * 100) : 0
+
+  return {
+    current: currentCaregiverCount,
+    max: maxCaregivers,
+    canAdd: currentCaregiverCount < maxCaregivers &&
+            (subscription.status === 'active' || subscription.status === 'trialing'),
+    percentage: Math.min(100, percentage),
+    remaining: isUnlimited ? 999 : remaining,
+    isUnlimited
   }
 }

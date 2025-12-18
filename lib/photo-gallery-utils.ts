@@ -1,7 +1,10 @@
 'use client'
 
 import { mealLogOperations } from './firebase-operations'
+import { medicalOperations } from './medical-operations'
 import type { MealLog } from '@/types'
+import type { MealLog as MedicalMealLog } from '@/types/medical'
+import type { PatientProfile } from '@/types/medical'
 import { logger } from '@/lib/logger'
 
 /**
@@ -19,6 +22,8 @@ export interface PhotoGalleryItem {
   foodItems: string[]
   notes?: string
   title?: string
+  patientId?: string // For family plan filtering
+  patientName?: string // Display name of family member
   macros?: {
     protein: number
     carbs: number
@@ -100,17 +105,115 @@ export async function fetchGalleryPhotos(filters?: GalleryFilters): Promise<Phot
 }
 
 /**
- * Fetch photos from last N days
+ * Fetch gallery photos for Family plan subscriptions
+ * Aggregates meal photos from all patients in parallel
  */
-export async function fetchRecentPhotos(days: number = 30): Promise<PhotoGalleryItem[]> {
+export async function fetchGalleryPhotosForFamily(
+  patients: PatientProfile[],
+  filters?: GalleryFilters
+): Promise<PhotoGalleryItem[]> {
+  try {
+    const params: any = {
+      limit: filters?.limit || 100,
+    }
+
+    // Add date range if specified
+    if (filters?.dateRange) {
+      params.startDate = filters.dateRange.startDate.toISOString()
+      params.endDate = filters.dateRange.endDate.toISOString()
+    }
+
+    // Add meal type filter if specified and not 'all'
+    if (filters?.mealType && filters.mealType !== 'all') {
+      params.mealType = filters.mealType
+    }
+
+    console.log('[Gallery] Fetching for', patients.length, 'patients with params:', params)
+
+    // Fetch meal logs for all patients in parallel
+    const patientMealPromises = patients.map(async (patient) => {
+      try {
+        const meals = await medicalOperations.mealLogs.getMealLogs(patient.id, params)
+        // Attach patient metadata to each meal
+        return meals.map((meal: MedicalMealLog) => ({
+          meal,
+          patientId: patient.id,
+          patientName: patient.name
+        }))
+      } catch (error) {
+        console.error(`[Gallery] Error fetching meals for patient ${patient.name}:`, error)
+        return []
+      }
+    })
+
+    const allPatientMeals = await Promise.all(patientMealPromises)
+    const flattenedMeals = allPatientMeals.flat()
+
+    console.log('[Gallery] Fetched', flattenedMeals.length, 'meals across all patients')
+
+    // Filter to only meals with photos and transform to gallery items
+    const galleryItems: PhotoGalleryItem[] = flattenedMeals
+      .filter(({ meal }) => meal.photoUrl && meal.photoUrl.length > 0)
+      .map(({ meal, patientId, patientName }) => {
+        const item: PhotoGalleryItem = {
+          id: meal.id,
+          photoUrl: meal.photoUrl!,
+          mealType: meal.mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+          loggedAt: new Date(meal.loggedAt),
+          calories: meal.calories || 0,
+          foodItems: meal.foodItems || [],
+          notes: meal.notes,
+          patientId,
+          patientName
+        }
+
+        // Add macros if available
+        if (meal.protein !== undefined && meal.carbs !== undefined && meal.fat !== undefined) {
+          item.macros = {
+            protein: meal.protein || 0,
+            carbs: meal.carbs || 0,
+            fat: meal.fat || 0
+          }
+        }
+
+        return item
+      })
+
+    // Sort by date descending (most recent first)
+    galleryItems.sort((a, b) => b.loggedAt.getTime() - a.loggedAt.getTime())
+
+    return galleryItems
+  } catch (error) {
+    console.error('[Gallery] Error fetching family photos:', error)
+    logger.error('Error fetching family gallery photos', error as Error)
+    return []
+  }
+}
+
+/**
+ * Fetch photos from last N days
+ * Auto-detects if user has patients (family plan) or not
+ */
+export async function fetchRecentPhotos(
+  days: number = 30,
+  patients?: PatientProfile[]
+): Promise<PhotoGalleryItem[]> {
   const endDate = new Date()
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - days)
 
-  return fetchGalleryPhotos({
+  const filters: GalleryFilters = {
     dateRange: { startDate, endDate },
     limit: 100
-  })
+  }
+
+  // If patients provided, use family-aware fetching
+  if (patients && patients.length > 0) {
+    return fetchGalleryPhotosForFamily(patients, filters)
+  }
+
+  // Otherwise, fall back to user-level fetching (backward compatibility)
+  return fetchGalleryPhotos(filters)
 }
 
 /**

@@ -53,6 +53,9 @@ export function AppMenu() {
   const pathname = usePathname()
   const router = useRouter()
 
+  // Check if user has a family plan
+  const isFamilyPlan = subscription?.plan && ['family_basic', 'family_plus', 'family_premium'].includes(subscription.plan)
+
   const menuSections: MenuSection[] = [
     {
       title: 'Main',
@@ -64,8 +67,10 @@ export function AppMenu() {
     {
       title: 'Health',
       items: [
-        { name: 'Family Members', href: '/patients', icon: UserGroupIcon },
-        { name: 'Caregivers', href: '/family/dashboard', icon: ShieldCheckIcon },
+        ...(isFamilyPlan ? [
+          { name: 'Family Members', href: '/patients', icon: UserGroupIcon },
+          { name: 'Family Dashboard', href: '/family-admin/dashboard', icon: ShieldCheckIcon },
+        ] : []),
       ],
     },
     {

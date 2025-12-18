@@ -119,35 +119,43 @@ export function useDashboard(): UseDashboardReturn {
       logger.debug('[useDashboard] Fetching dashboard data')
 
       // Fetch stats and activity in parallel
-      const [statsResponse, activityResponse] = await Promise.all([
+      const [statsData, activityData] = await Promise.all([
         apiClient.get<{
-          success: boolean
           stats: DashboardStats
           patientSnapshots: PatientSnapshot[]
           upcomingAppointments: UpcomingAppointment[]
           actionItems: ActionItem[]
         }>('/dashboard/stats'),
         apiClient.get<{
-          success: boolean
           activity: ActivityItem[]
         }>('/dashboard/activity?limit=15')
       ])
 
-      if (statsResponse?.success) {
-        setStats(statsResponse.stats)
-        setPatientSnapshots(statsResponse.patientSnapshots || [])
-        setUpcomingAppointments(statsResponse.upcomingAppointments || [])
-        setActionItems(statsResponse.actionItems || [])
+      logger.debug('[useDashboard] Raw statsData:', statsData)
+
+      if (statsData) {
+        logger.debug('[useDashboard] Stats:', statsData.stats)
+        setStats(statsData.stats)
+        setPatientSnapshots(statsData.patientSnapshots || [])
+        setUpcomingAppointments(statsData.upcomingAppointments || [])
+        setActionItems(statsData.actionItems || [])
+      } else {
+        logger.error('[useDashboard] statsData is undefined/null')
       }
 
-      if (activityResponse?.success) {
-        setActivity(activityResponse.activity || [])
+      if (activityData) {
+        setActivity(activityData.activity || [])
       }
 
       logger.info('[useDashboard] Dashboard data fetched successfully')
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to fetch dashboard data'
-      logger.error('[useDashboard] Error fetching dashboard data', err)
+      logger.error('[useDashboard] Error fetching dashboard data', {
+        message: err.message,
+        status: err.status,
+        details: err.details,
+        stack: err.stack
+      })
       setError(errorMessage)
     } finally {
       setLoading(false)

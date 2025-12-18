@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useUserProfile'
+import { useSubscription } from '@/hooks/useSubscription'
+import { canAccessFeature } from '@/lib/feature-gates'
 import { medicalOperations } from '@/lib/medical-operations'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -89,6 +91,7 @@ function ProgressContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   const { profile, refetch: refetchProfile } = useUserProfile()
+  const { subscription } = useSubscription()
 
   // Get patientId from URL query parameter (for family member view)
   const patientIdParam = searchParams.get('patientId')
@@ -426,6 +429,11 @@ function ProgressContent() {
   // Show dropdown only if: family mode AND no patientId in URL (no context established)
   const showPatientSelector = isFamilyMode && !patientIdParam
 
+  // Feature access checks
+  const hasAdvancedAnalytics = canAccessFeature(user, 'advanced-analytics')
+  const hasHealthInsights = canAccessFeature(user, 'health-insights')
+  const hasTrendAnalysis = canAccessFeature(user, 'trend-analysis')
+
   // Calculate goal progress metrics
   const goalProgress = useMemo(() => {
     if (!activeProfile?.goals || weightData.length === 0) return null
@@ -556,11 +564,33 @@ function ProgressContent() {
               />
             </div>
 
-            {/* Data Completeness Tracker */}
-            <DataCompletenessTracker
-              patientId={selectedPatientId}
-              className="mb-6"
-            />
+            {/* Data Completeness Tracker - Advanced Analytics Feature */}
+            {hasAdvancedAnalytics ? (
+              <DataCompletenessTracker
+                patientId={selectedPatientId}
+                className="mb-6"
+              />
+            ) : (
+              <div className="bg-card rounded-lg shadow-sm p-6 mb-6 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-50/80 to-blue-50/80 dark:from-purple-900/20 dark:to-blue-900/20 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <div className="bg-card rounded-lg shadow-xl p-8 max-w-md text-center border-2 border-primary">
+                    <div className="text-5xl mb-4">✅</div>
+                    <h3 className="text-xl font-bold text-foreground mb-2">Data Completeness Tracker</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Monitor your health data quality with Family Plus or Premium
+                    </p>
+                    <Link
+                      href="/profile?tab=subscription"
+                      className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+                    >
+                      Upgrade to Family Plus
+                    </Link>
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold text-foreground mb-2">Data Quality</h3>
+                <div className="h-32 bg-muted rounded-lg opacity-30" />
+              </div>
+            )}
           </>
         )}
 
@@ -984,8 +1014,8 @@ function ProgressContent() {
               </div>
             </div>
 
-            {/* Pace Warnings */}
-            {goalProgress.isPaceTooFast && (
+            {/* Pace Warnings - Advanced Analytics Feature */}
+            {hasAdvancedAnalytics && goalProgress.isPaceTooFast && (
               <div className="bg-error-light dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">⚠️</span>
@@ -999,7 +1029,7 @@ function ProgressContent() {
               </div>
             )}
 
-            {goalProgress.isPaceTooSlow && (
+            {hasAdvancedAnalytics && goalProgress.isPaceTooSlow && (
               <div className="bg-warning-light border-2 border-warning-light rounded-lg p-4 mb-4">
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">🐌</span>
@@ -1014,8 +1044,8 @@ function ProgressContent() {
               </div>
             )}
 
-            {/* Schedule Comparison */}
-            {goalProgress.daysAheadOrBehind !== null && goalProgress.targetCompletionDate && (
+            {/* Schedule Comparison - Advanced Analytics Feature */}
+            {hasAdvancedAnalytics && goalProgress.daysAheadOrBehind !== null && goalProgress.targetCompletionDate && (
               <div className={`rounded-lg p-4 ${
                 goalProgress.daysAheadOrBehind >= 0
                   ? 'bg-success-light dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800'
@@ -1144,37 +1174,103 @@ function ProgressContent() {
               />
             </div>
 
-            {/* Macro Distribution Chart */}
-            <div className="bg-card rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-foreground mb-4">Macronutrient Distribution</h2>
-              <MacroDistributionChart
-                data={macroData}
-                loading={loading}
-              />
-            </div>
+            {/* Macro Distribution Chart - Advanced Analytics Feature */}
+            {hasAdvancedAnalytics ? (
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <h2 className="text-xl font-bold text-foreground mb-4">Macronutrient Distribution</h2>
+                <MacroDistributionChart
+                  data={macroData}
+                  loading={loading}
+                />
+              </div>
+            ) : (
+              <div className="bg-card rounded-lg shadow-sm p-6 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-50/80 to-blue-50/80 dark:from-purple-900/20 dark:to-blue-900/20 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <div className="bg-card rounded-lg shadow-xl p-8 max-w-md text-center border-2 border-primary">
+                    <div className="text-5xl mb-4">📊</div>
+                    <h3 className="text-xl font-bold text-foreground mb-2">Advanced Analytics</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Unlock macro distribution tracking with Family Plus or Premium
+                    </p>
+                    <Link
+                      href="/profile?tab=subscription"
+                      className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+                    >
+                      Upgrade to Family Plus
+                    </Link>
+                  </div>
+                </div>
+                <h2 className="text-xl font-bold text-foreground mb-4">Macronutrient Distribution</h2>
+                <div className="h-80 bg-muted rounded-lg opacity-30" />
+              </div>
+            )}
 
-            {/* Step Count Chart */}
-            <div className="bg-card rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-foreground mb-4">Daily Step Count</h2>
-              <StepCountChart
-                data={stepData}
-                loading={loading}
-                isTrackingEnabled={isStepTrackingEnabled}
-                todaysSteps={todaysSteps}
-              />
-            </div>
+            {/* Step Count Chart - Trend Analysis Feature */}
+            {hasTrendAnalysis ? (
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <h2 className="text-xl font-bold text-foreground mb-4">Daily Step Count</h2>
+                <StepCountChart
+                  data={stepData}
+                  loading={loading}
+                  isTrackingEnabled={isStepTrackingEnabled}
+                  todaysSteps={todaysSteps}
+                />
+              </div>
+            ) : (
+              <div className="bg-card rounded-lg shadow-sm p-6 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-50/80 to-blue-50/80 dark:from-purple-900/20 dark:to-blue-900/20 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <div className="bg-card rounded-lg shadow-xl p-8 max-w-md text-center border-2 border-primary">
+                    <div className="text-5xl mb-4">👟</div>
+                    <h3 className="text-xl font-bold text-foreground mb-2">Trend Analysis</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Track step count trends with Family Plus or Premium
+                    </p>
+                    <Link
+                      href="/profile?tab=subscription"
+                      className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+                    >
+                      Upgrade to Family Plus
+                    </Link>
+                  </div>
+                </div>
+                <h2 className="text-xl font-bold text-foreground mb-4">Daily Step Count</h2>
+                <div className="h-80 bg-muted rounded-lg opacity-30" />
+              </div>
+            )}
           </div>
         )}
 
-        {/* AI Health Insights - Full recommendations (non-urgent) */}
+        {/* AI Health Insights - Full recommendations (non-urgent) - Health Insights Feature */}
         {!loading && hasCompletedOnboarding && (
-          <div id="recommendations">
-            <RecommendationsSection
-              className="mb-6"
-              patientId={selectedPatientId}
-              showOnlyUrgent={false}
-            />
-          </div>
+          hasHealthInsights ? (
+            <div id="recommendations">
+              <RecommendationsSection
+                className="mb-6"
+                patientId={selectedPatientId}
+                showOnlyUrgent={false}
+              />
+            </div>
+          ) : (
+            <div className="bg-card rounded-lg shadow-sm p-6 mb-6 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50/80 to-blue-50/80 dark:from-purple-900/20 dark:to-blue-900/20 backdrop-blur-sm z-10 flex items-center justify-center">
+                <div className="bg-card rounded-lg shadow-xl p-8 max-w-md text-center border-2 border-primary">
+                  <div className="text-5xl mb-4">🤖</div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">AI Health Insights</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Get personalized AI recommendations with Family Plus or Premium
+                  </p>
+                  <Link
+                    href="/profile?tab=subscription"
+                    className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+                  >
+                    Upgrade to Family Plus
+                  </Link>
+                </div>
+              </div>
+              <h2 className="text-xl font-bold text-foreground mb-4">AI Health Recommendations</h2>
+              <div className="h-32 bg-muted rounded-lg opacity-30" />
+            </div>
+          )
         )}
 
         {/* Empty State */}
@@ -1205,18 +1301,6 @@ function ProgressContent() {
         )}
       </main>
 
-      {/* Floating Action Button - Log Weight */}
-      <button
-        onClick={() => setShowWeightModal(true)}
-        className="fixed bottom-6 right-6 bg-primary hover:bg-primary-hover text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all z-50 flex items-center gap-2 group"
-        aria-label="Log weight"
-      >
-        <span className="text-2xl">⚖️</span>
-        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap text-sm font-medium">
-          Log Weight
-        </span>
-      </button>
-
       {/* Share Modal */}
       <ShareModal
         isOpen={showShareModal}
@@ -1233,10 +1317,10 @@ function ProgressContent() {
       {/* Weight Reminder Modal (auto-shows on mount if due) - only after weight data loads */}
       {/* Only show for current user's own progress, not for family members */}
       {/* Respect user preference to disable reminders */}
-      {weightDataLoaded && !selectedPatientId && !profile?.preferences?.disableWeightReminders && (
+      {weightDataLoaded && !selectedPatientId && profile?.reminders?.weight?.enabled && (
         <WeightReminderModal
           lastWeightLog={mostRecentWeightLog}
-          frequency={profile?.preferences?.weightCheckInFrequency || 'weekly'}
+          frequency={profile?.reminders?.weight?.frequency || profile?.preferences?.weightCheckInFrequency || 'weekly'}
           lastMealLogDate={lastMealLogDate}
           onLogWeight={() => setShowWeightModal(true)}
           onDismiss={() => {

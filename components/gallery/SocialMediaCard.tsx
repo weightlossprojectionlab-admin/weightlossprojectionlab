@@ -160,9 +160,17 @@ export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false }
         {/* Meal Type & Emoji - Prominent */}
         <div className="flex items-center gap-3 mb-4">
           <span className="text-4xl">{emoji}</span>
-          <span className="font-bold text-foreground text-xl">
-            {mealTypeDisplay}
-          </span>
+          <div className="flex flex-col">
+            <span className="font-bold text-foreground text-xl">
+              {mealTypeDisplay}
+            </span>
+            {/* Patient Name Badge (for family plans) */}
+            {photo.patientName && (
+              <span className="text-xs text-muted-foreground font-medium mt-1">
+                {photo.patientName}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Calories - HUGE and Eye-Catching (Hero Element) */}

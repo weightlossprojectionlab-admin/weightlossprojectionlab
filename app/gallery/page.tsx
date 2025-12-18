@@ -18,6 +18,8 @@ import {
 } from '@/lib/photo-gallery-utils'
 import { PhotoGridSkeleton } from '@/components/ui/skeleton'
 import toast from 'react-hot-toast'
+import { usePatients } from '@/hooks/usePatients'
+import { useSubscription } from '@/hooks/useSubscription'
 
 export default function GalleryPage() {
   const router = useRouter()
@@ -31,6 +33,14 @@ export default function GalleryPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'grouped'>('grouped')
   const [timeRange, setTimeRange] = useState(30) // days
   const [showShareModal, setShowShareModal] = useState(false)
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('all')
+
+  // Check subscription plan to determine if family features are available
+  const { subscription } = useSubscription()
+  const isFamilyPlan = subscription?.plan?.startsWith('family') || false
+
+  // Fetch patients (actual family members being tracked)
+  const { patients, loading: patientsLoading } = usePatients()
 
   // Auth check
   useEffect(() => {
@@ -42,18 +52,24 @@ export default function GalleryPage() {
     return () => unsubscribe()
   }, [router])
 
-  // Load photos
+  // Load photos when timeRange or patients change
   useEffect(() => {
-    console.log('[Gallery] useEffect triggered, timeRange:', timeRange)
-    loadPhotos()
+    console.log('[Gallery] useEffect triggered, timeRange:', timeRange, 'patients:', patients?.length)
+    // Only load if patients have been loaded (or if still loading patients)
+    if (!patientsLoading) {
+      loadPhotos()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRange])
+  }, [timeRange, patients, patientsLoading])
 
   const loadPhotos = async () => {
     setLoading(true)
     try {
       console.log('[Gallery] Starting to fetch photos, timeRange:', timeRange)
-      const fetchedPhotos = await fetchRecentPhotos(timeRange)
+      console.log('[Gallery] Patients available:', patients?.length || 0)
+
+      // Pass patients to enable family-aware fetching
+      const fetchedPhotos = await fetchRecentPhotos(timeRange, patients)
       console.log('[Gallery] Fetched photos:', fetchedPhotos.length)
       setPhotos(fetchedPhotos)
       setFilteredPhotos(fetchedPhotos)
@@ -70,6 +86,11 @@ export default function GalleryPage() {
   useEffect(() => {
     let filtered = photos
 
+    // Apply family member filter
+    if (selectedMemberId !== 'all') {
+      filtered = filtered.filter(photo => photo.patientId === selectedMemberId)
+    }
+
     // Apply meal type filter
     if (mealTypeFilter !== 'all') {
       filtered = filtered.filter(photo => photo.mealType === mealTypeFilter)
@@ -81,7 +102,7 @@ export default function GalleryPage() {
     }
 
     setFilteredPhotos(filtered)
-  }, [photos, mealTypeFilter, searchTerm])
+  }, [photos, selectedMemberId, mealTypeFilter, searchTerm])
 
   // Modal handlers
   const handlePhotoClick = (photo: PhotoGalleryItem, index: number) => {
@@ -172,7 +193,24 @@ export default function GalleryPage() {
       {/* Controls */}
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="bg-card rounded-lg shadow-lg p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${isFamilyPlan && patients.length > 1 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
+            {/* Patient Filter - Only show if multiple patients */}
+            {patients.length > 1 && (
+              <select
+                value={selectedMemberId}
+                onChange={(e) => setSelectedMemberId(e.target.value)}
+                className="px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                disabled={patientsLoading}
+              >
+                <option value="all">👨‍👩‍👧‍👦 All Family Members</option>
+                {patients.map(patient => (
+                  <option key={patient.id} value={patient.id}>
+                    {patient.name}
+                  </option>
+                ))}
+              </select>
+            )}
+
             {/* Search */}
             <div className="relative">
               <input
@@ -245,9 +283,20 @@ export default function GalleryPage() {
           </div>
 
           {/* Active Filters Display */}
-          {(searchTerm || mealTypeFilter !== 'all') && (
+          {(searchTerm || mealTypeFilter !== 'all' || selectedMemberId !== 'all') && (
             <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
               <span className="text-sm text-muted-foreground">Active filters:</span>
+              {selectedMemberId !== 'all' && (
+                <span className="inline-flex items-center px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                  {patients.find(p => p.id === selectedMemberId)?.name || 'Family Member'}
+                  <button
+                    onClick={() => setSelectedMemberId('all')}
+                    className="ml-2 hover:text-primary-hover"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
               {searchTerm && (
                 <span className="inline-flex items-center px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                   Search: "{searchTerm}"
