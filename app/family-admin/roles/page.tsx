@@ -192,7 +192,7 @@ function ManageRolesContent() {
                   patients={patients || []}
                   onRoleChange={handleRoleChange}
                   onEdit={handleEditMember}
-                  canEdit={canUserEditMember(user?.uid || '', accountOwner.userId)}
+                  canEdit={canUserEditMember(accountOwner, currentUserRole)}
                   isExpanded={expandedMemberId === accountOwner.userId}
                   onToggleExpand={() => toggleExpanded(accountOwner.userId)}
                 />
@@ -215,7 +215,7 @@ function ManageRolesContent() {
                       patients={patients || []}
                       onRoleChange={handleRoleChange}
                       onEdit={handleEditMember}
-                      canEdit={canUserEditMember(user?.uid || '', member.userId)}
+                      canEdit={canUserEditMember(member, currentUserRole)}
                       isExpanded={expandedMemberId === member.userId}
                       onToggleExpand={() => toggleExpanded(member.userId)}
                     />
@@ -240,7 +240,7 @@ function ManageRolesContent() {
                       patients={patients || []}
                       onRoleChange={handleRoleChange}
                       onEdit={handleEditMember}
-                      canEdit={canUserEditMember(user?.uid || '', member.userId)}
+                      canEdit={canUserEditMember(member, currentUserRole)}
                       isExpanded={expandedMemberId === member.userId}
                       onToggleExpand={() => toggleExpanded(member.userId)}
                     />
@@ -265,7 +265,7 @@ function ManageRolesContent() {
                       patients={patients || []}
                       onRoleChange={handleRoleChange}
                       onEdit={handleEditMember}
-                      canEdit={canUserEditMember(user?.uid || '', member.userId)}
+                      canEdit={canUserEditMember(member, currentUserRole)}
                       isExpanded={expandedMemberId === member.userId}
                       onToggleExpand={() => toggleExpanded(member.userId)}
                     />
