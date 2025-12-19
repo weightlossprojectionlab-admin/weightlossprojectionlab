@@ -169,7 +169,7 @@ export async function PATCH(
         {
           success: false,
           error: 'Validation failed',
-          details: validationResult.error.errors
+          details: validationResult.error.issues
         },
         { status: 400 }
       )

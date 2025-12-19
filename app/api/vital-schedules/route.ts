@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    logger.error('[API] Failed to create vital schedule', error)
+    logger.error('[API] Failed to create vital schedule', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { error: 'Failed to create schedule', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('[API] Failed to get vital schedules', error)
+    logger.error('[API] Failed to get vital schedules', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { error: 'Failed to get schedules', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

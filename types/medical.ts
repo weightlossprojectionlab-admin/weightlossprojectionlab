@@ -82,6 +82,10 @@ export interface PatientProfile {
   weightCheckInFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
   disableWeightReminders?: boolean // User can opt-out of weight check-in reminders
 
+  // Health conditions and dietary needs
+  healthConditions?: string[] // e.g., ['diabetes', 'hypertension', 'celiac']
+  foodAllergies?: string[] // e.g., ['peanuts', 'shellfish', 'dairy']
+
   // Patient-specific preferences (for vital reminders, etc.)
   preferences?: {
     vitalReminders?: {

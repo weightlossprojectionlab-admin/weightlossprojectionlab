@@ -16,7 +16,7 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import type { CaregiverContext } from '@/types'
-import type { Patient } from '@/types/medical'
+import type { PatientProfile } from '@/types/medical'
 
 interface CaregiverDashboardPageProps {
   params: Promise<{
@@ -39,7 +39,7 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
   const router = useRouter()
 
   const [caregiverContext, setCaregiverContext] = useState<CaregiverContext | null>(null)
-  const [patients, setPatients] = useState<Patient[]>([])
+  const [patients, setPatients] = useState<PatientProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [hasOwnAccount, setHasOwnAccount] = useState(false)
 
@@ -83,9 +83,9 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
           collection(db, 'users', accountOwnerId, 'patients')
         )
 
-        const allPatients: Patient[] = []
+        const allPatients: PatientProfile[] = []
         patientsSnapshot.forEach((doc) => {
-          const patientData = doc.data() as Patient
+          const patientData = doc.data() as PatientProfile
           // Only include patients this caregiver has access to
           if (context.patientsAccess.includes(doc.id)) {
             allPatients.push({ ...patientData, id: doc.id })
@@ -102,6 +102,18 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
 
     loadCaregiverData()
   }, [user, accountOwnerId, router])
+
+  // Helper function to calculate age
+  const calculateAge = (dateOfBirth: string): number => {
+    const today = new Date()
+    const birthDate = new Date(dateOfBirth)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }
 
   if (loading) {
     return (
@@ -234,8 +246,10 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-foreground truncate">{patient.name}</h3>
                       <p className="text-sm text-muted-foreground capitalize">{patient.relationship}</p>
-                      {patient.age && (
-                        <p className="text-sm text-muted-foreground mt-1">{patient.age} years old</p>
+                      {patient.dateOfBirth && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {calculateAge(patient.dateOfBirth)} years old
+                        </p>
                       )}
                     </div>
                   </div>
@@ -243,9 +257,9 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
                   {/* Quick Stats */}
                   <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <span className="text-muted-foreground">Medications:</span>
-                      <span className="ml-1 font-medium text-foreground">
-                        {patient.medications?.length || 0}
+                      <span className="text-muted-foreground">Type:</span>
+                      <span className="ml-1 font-medium text-foreground capitalize">
+                        {patient.type || 'human'}
                       </span>
                     </div>
                     <div>

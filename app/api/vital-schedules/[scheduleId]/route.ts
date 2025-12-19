@@ -68,7 +68,7 @@ export async function GET(
     })
 
   } catch (error) {
-    logger.error('[API] Failed to get vital schedule', error)
+    logger.error('[API] Failed to get vital schedule', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { error: 'Failed to get schedule', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -174,7 +174,7 @@ export async function PATCH(
     })
 
   } catch (error) {
-    logger.error('[API] Failed to update vital schedule', error)
+    logger.error('[API] Failed to update vital schedule', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { error: 'Failed to update schedule', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -239,7 +239,7 @@ export async function DELETE(
     })
 
   } catch (error) {
-    logger.error('[API] Failed to delete vital schedule', error)
+    logger.error('[API] Failed to delete vital schedule', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { error: 'Failed to delete schedule', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

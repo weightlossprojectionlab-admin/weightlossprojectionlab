@@ -144,8 +144,8 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     stripeCustomerId: subscription.customer as string,
     stripeSubscriptionId: subscription.id,
     stripePriceId: priceId,
-    currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
-    currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+    currentPeriodStart: new Date((subscription as any).current_period_start * 1000).toISOString(),
+    currentPeriodEnd: new Date((subscription as any).current_period_end * 1000).toISOString(),
     cancelAtPeriodEnd: subscription.cancel_at_period_end,
     updatedAt: new Date().toISOString()
   }
@@ -210,7 +210,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
  * Handle successful payment
  */
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-  const subscriptionId = invoice.subscription as string
+  const subscriptionId = (invoice as any).subscription as string | undefined
 
   if (!subscriptionId) {
     return
@@ -228,7 +228,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
  * Handle failed payment
  */
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  const subscriptionId = invoice.subscription as string
+  const subscriptionId = (invoice as any).subscription as string | undefined
 
   if (!subscriptionId) {
     return

@@ -127,7 +127,7 @@ export async function GET(
     })
 
   } catch (error) {
-    logger.error('[API] Failed to get schedule instances', error)
+    logger.error('[API] Failed to get schedule instances', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { error: 'Failed to get instances', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
