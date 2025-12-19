@@ -234,7 +234,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     return
   }
 
-  logger.error('[Stripe Webhook] Payment failed', {
+  logger.error('[Stripe Webhook] Payment failed', undefined, {
     invoiceId: invoice.id,
     subscriptionId
   })
