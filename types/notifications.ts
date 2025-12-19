@@ -63,8 +63,8 @@ export interface MedicationMetadata {
  */
 export interface VitalMetadata {
   vitalId: string
-  vitalType: 'blood_sugar' | 'blood_pressure' | 'pulse_oximeter' | 'temperature' | 'weight'
-  value: string // Human-readable value (e.g., "120/80 mmHg", "98.6°F")
+  vitalType: 'blood_sugar' | 'blood_pressure' | 'pulse_oximeter' | 'temperature' | 'weight' | 'mood'
+  value: string // Human-readable value (e.g., "120/80 mmHg", "98.6°F", "7/10")
   unit: string
   patientName: string
   isAbnormal?: boolean
