@@ -228,6 +228,8 @@ export type VitalUnit =
   | '°C'
   | 'lbs'
   | 'kg'
+  | 'SpO₂% / bpm'
+  | 'scale'
 
 export interface BloodPressureValue {
   systolic: number
