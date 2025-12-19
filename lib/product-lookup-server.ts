@@ -21,7 +21,7 @@ export interface ProductData {
     'energy-kcal_100g'?: number
     'energy-kcal_serving'?: number
     proteins?: number
-    proteins_100g'?: number
+    proteins_100g?: number
     proteins_serving?: number
     carbohydrates?: number
     carbohydrates_100g?: number

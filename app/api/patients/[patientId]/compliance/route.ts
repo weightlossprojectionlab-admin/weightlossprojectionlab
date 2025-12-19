@@ -15,7 +15,7 @@ import { logger } from '@/lib/logger'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { patientId: string } }
+  { params }: { params: Promise<{ patientId: string }> }
 ) {
   try {
     // Verify authentication
@@ -31,7 +31,7 @@ export async function GET(
     const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
-    const { patientId } = params
+    const { patientId } = await params
 
     // Get query parameters
     const { searchParams } = new URL(request.url)

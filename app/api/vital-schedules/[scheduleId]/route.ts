@@ -16,18 +16,12 @@ import {
 import { UpdateScheduleParams } from '@/types/vital-schedules'
 import { logger } from '@/lib/logger'
 
-interface RouteParams {
-  params: {
-    scheduleId: string
-  }
-}
-
 /**
  * Get schedule details
  */
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ scheduleId: string }> }
 ) {
   try {
     // Verify authentication
@@ -43,7 +37,7 @@ export async function GET(
     const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
-    const { scheduleId } = params
+    const { scheduleId } = await params
 
     // Get schedule
     const schedule = await getSchedule(scheduleId)
@@ -87,7 +81,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ scheduleId: string }> }
 ) {
   try {
     // Verify authentication
@@ -103,7 +97,7 @@ export async function PATCH(
     const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
-    const { scheduleId } = params
+    const { scheduleId } = await params
 
     // Get existing schedule
     const schedule = await getSchedule(scheduleId)
@@ -193,7 +187,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ scheduleId: string }> }
 ) {
   try {
     // Verify authentication
@@ -209,7 +203,7 @@ export async function DELETE(
     const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
-    const { scheduleId } = params
+    const { scheduleId } = await params
 
     // Get schedule
     const schedule = await getSchedule(scheduleId)
