@@ -227,19 +227,21 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    logger.error('[GET /api/dashboard/stats] Error fetching dashboard stats', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code
-    })
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch dashboard statistics',
-        details: error.message,
-        code: error.code
-      },
-      { status: 500 }
-    )
+    const errorContext: Record<string, any> = {}
+    if (error.code) {
+      errorContext.code = error.code
+    }
+    logger.error('[GET /api/dashboard/stats] Error fetching dashboard stats', error instanceof Error ? error : undefined, errorContext)
+
+    const responsePayload: Record<string, any> = {
+      success: false,
+      error: 'Failed to fetch dashboard statistics',
+      details: error?.message || 'Unknown error'
+    }
+    if (error.code) {
+      responsePayload.code = error.code
+    }
+
+    return NextResponse.json(responsePayload, { status: 500 })
   }
 }

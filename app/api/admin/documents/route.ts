@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 
       const docsSnapshot = await query.limit(limit).get()
 
-      docsSnapshot.docs.forEach(doc => {
+      docsSnapshot.docs.forEach((doc: any) => {
         const docData = doc.data()
 
         // Skip deleted documents

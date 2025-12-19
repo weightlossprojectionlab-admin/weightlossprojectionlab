@@ -113,7 +113,7 @@ export async function GET(
     })
 
   } catch (error) {
-    logger.error('[API] Failed to get compliance report', error)
+    logger.error('[API] Failed to get compliance report', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { error: 'Failed to get compliance', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
