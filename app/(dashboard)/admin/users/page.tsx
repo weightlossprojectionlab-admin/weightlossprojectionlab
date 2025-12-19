@@ -494,7 +494,7 @@ export default function AdminUsersPage() {
                           <span className="text-xs text-muted-foreground">
                             👥 {user.familyMembersCount || 0} caregivers
                           </span>
-                          {user.patientsCount > 0 && (
+                          {(user.patientsCount ?? 0) > 0 && (
                             <span className="text-xs text-muted-foreground">
                               • {user.patientsCount} patients
                             </span>
@@ -677,8 +677,8 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
   }
 
   const loadPatients = async () => {
+    const token = await getAuthToken()
     try {
-      const token = await getAuthToken()
       // Use admin API to get patients
       const response = await fetch(`/api/admin/users/${user.uid}/patients`, {
         headers: { 'Authorization': `Bearer ${token}` }
