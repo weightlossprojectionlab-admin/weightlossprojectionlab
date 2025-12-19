@@ -22,7 +22,7 @@ const linkPatientSchema = z.object({
 const updatePatientsSchema = z.object({
   action: z.enum(['add', 'remove']),
   patientIds: z.array(z.string()).min(1),
-  patientNotes: z.record(z.string()).optional()
+  patientNotes: z.record(z.string(), z.string()).optional()
 })
 
 export async function POST(
