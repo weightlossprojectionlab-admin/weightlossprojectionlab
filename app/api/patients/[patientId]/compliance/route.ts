@@ -10,18 +10,12 @@ import { calculateCompliance, getComplianceTrends } from '@/lib/vital-schedule-s
 import { VitalType } from '@/types/medical'
 import { logger } from '@/lib/logger'
 
-interface RouteParams {
-  params: {
-    patientId: string
-  }
-}
-
 /**
  * Get compliance reports for a patient
  */
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: { patientId: string } }
 ) {
   try {
     // Verify authentication
