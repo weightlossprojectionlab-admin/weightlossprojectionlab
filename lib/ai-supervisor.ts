@@ -46,6 +46,17 @@ export function validateVitalReading(reading: VitalReading): ValidationResult {
     case 'blood_pressure':
       const bp = value as { systolic: number; diastolic: number }
 
+      // Check if bp values exist
+      if (!bp || typeof bp.systolic !== 'number' || typeof bp.diastolic !== 'number') {
+        return {
+          isValid: false,
+          severity: 'info',
+          message: 'Please enter both systolic and diastolic values',
+          guidance: 'Enter the top number (systolic) and bottom number (diastolic) from the blood pressure reading',
+          requiresConfirmation: false
+        }
+      }
+
       // Critical ranges
       if (bp.systolic > 180 || bp.diastolic > 120) {
         return {

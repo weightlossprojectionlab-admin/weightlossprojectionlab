@@ -361,19 +361,32 @@ function AppointmentDetailContent() {
           )}
 
           {/* Action Buttons */}
-          <div className="border-t border-border pt-6 flex gap-3">
-            <button
-              onClick={() => router.push(`/patients/${appointment.patientId}`)}
-              className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-            >
-              View Family Member
-            </button>
-            <button
-              onClick={() => router.push(`/providers/${appointment.providerId}`)}
-              className="px-6 py-3 bg-muted text-foreground rounded-lg hover:bg-gray-200 transition-colors font-medium"
-            >
-              View Provider
-            </button>
+          <div className="border-t border-border pt-6 flex flex-wrap gap-3">
+            {[
+              {
+                label: 'View Family Member',
+                href: `/patients/${appointment.patientId}`,
+                className: 'bg-primary text-white hover:bg-primary-hover'
+              },
+              {
+                label: 'View Calendar',
+                href: `/calendar?patientId=${appointment.patientId}`,
+                className: 'bg-purple-600 text-white hover:bg-purple-700'
+              },
+              appointment.providerId && {
+                label: 'View Provider',
+                href: `/providers/${appointment.providerId}`,
+                className: 'bg-muted text-foreground hover:bg-gray-200 dark:hover:bg-gray-700'
+              }
+            ].filter(Boolean).map((button: any) => (
+              <button
+                key={button.label}
+                onClick={() => router.push(button.href)}
+                className={`px-6 py-3 rounded-lg transition-colors font-medium ${button.className}`}
+              >
+                {button.label}
+              </button>
+            ))}
           </div>
         </div>
       </main>

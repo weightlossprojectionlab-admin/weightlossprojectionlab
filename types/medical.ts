@@ -82,6 +82,32 @@ export interface PatientProfile {
   weightCheckInFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
   disableWeightReminders?: boolean // User can opt-out of weight check-in reminders
 
+  // Patient-specific preferences (for vital reminders, etc.)
+  preferences?: {
+    vitalReminders?: {
+      blood_pressure?: {
+        enabled: boolean
+        frequency: 'daily' | 'twice-daily' | 'weekly' | 'monthly'
+      }
+      blood_sugar?: {
+        enabled: boolean
+        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily'
+      }
+      temperature?: {
+        enabled: boolean
+        frequency: 'daily' | 'weekly' | 'biweekly'
+      }
+      pulse_oximeter?: {
+        enabled: boolean
+        frequency: 'daily' | 'twice-daily' | 'weekly'
+      }
+      weight?: {
+        enabled: boolean
+        frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+      }
+    }
+  }
+
   // Health Goals (patient-specific)
   goals?: {
     targetWeight?: number // Target weight goal
@@ -121,6 +147,7 @@ export type VitalType =
   | 'pulse_oximeter'
   | 'temperature'
   | 'weight'
+  | 'mood'
 
 // ==================== WEIGHT LOGS ====================
 
@@ -631,6 +658,7 @@ export interface FamilyInvitationForm {
   recipientPhone?: string
   patientsShared: string[]
   permissions: Partial<FamilyMemberPermissions>
+  familyRole?: FamilyRole // Role to assign (defaults to 'caregiver' if not provided)
   message?: string
 }
 

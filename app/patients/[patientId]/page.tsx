@@ -21,6 +21,8 @@ import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
 import DailyVitalsSummary from '@/components/vitals/DailyVitalsSummary'
 import VitalsHistory from '@/components/vitals/VitalsHistory'
+import VitalReminderPrompt from '@/components/vitals/VitalReminderPrompt'
+import VitalQuickLogModal from '@/components/vitals/VitalQuickLogModal'
 import { FamilyMemberCard } from '@/components/family/FamilyMemberCard'
 import { PermissionsMatrix } from '@/components/family/PermissionsMatrix'
 import { InviteModal } from '@/components/family/InviteModal'
@@ -99,6 +101,8 @@ function PatientDetailContent() {
   const [summaryMoodNotes, setSummaryMoodNotes] = useState<string | undefined>(undefined)
   const [showAppointmentWizard, setShowAppointmentWizard] = useState(false)
   const [showAllMedications, setShowAllMedications] = useState(false)
+  const [showQuickLogModal, setShowQuickLogModal] = useState(false)
+  const [quickLogVitalType, setQuickLogVitalType] = useState<VitalType | null>(null)
 
   const { user } = useAuth()
   const { vitals, loading: vitalsLoading, logVital, updateVital, deleteVital, refetch } = useVitals({
@@ -246,6 +250,12 @@ function PatientDetailContent() {
       try {
         setLoading(true)
         const data = await medicalOperations.patients.getPatient(patientId)
+        console.log('[PatientDetail] Fetched patient data:', {
+          patientId,
+          patientName: data?.name,
+          hasPreferences: !!data?.preferences,
+          vitalReminders: data?.preferences?.vitalReminders
+        })
         setPatient(data)
       } catch (error: any) {
         logger.error('[PatientDetail] Error fetching patient', error)
@@ -693,6 +703,33 @@ function PatientDetailContent() {
                 </button>
               </div>
             </div>
+
+        {/* Vital Reminder Prompt - Shows when vitals are due today */}
+        {canLogVitals && user && patient && (() => {
+          // DEBUG: Log what we're passing to VitalReminderPrompt
+          console.log('[PatientPage] VitalReminderPrompt data:', {
+            patientId,
+            patientName: patient.name,
+            vitalsCount: vitals.length,
+            userProfile: userProfile,
+            userPreferences: userProfile?.preferences,
+            vitalReminders: userProfile?.preferences?.vitalReminders
+          })
+
+          return (
+            <VitalReminderPrompt
+              patientId={patientId}
+              patientName={patient.name}
+              vitals={vitals}
+              userPreferences={userProfile?.preferences}
+              onLogVitalsClick={() => setShowVitalsWizard(true)}
+              onLogSpecificVital={(vitalType) => {
+                setQuickLogVitalType(vitalType)
+                setShowQuickLogModal(true)
+              }}
+            />
+          )
+        })()}
 
         {/* Health Overview Cards - Desktop only, always visible */}
         {canViewVitals && (
@@ -2087,6 +2124,24 @@ function PatientDetailContent() {
               logger.error('[PatientDetail] Failed to create appointment', error)
               throw error
             }
+          }}
+        />
+      )}
+
+      {/* Quick Vital Log Modal */}
+      {patient && quickLogVitalType && (
+        <VitalQuickLogModal
+          isOpen={showQuickLogModal}
+          onClose={() => {
+            setShowQuickLogModal(false)
+            setQuickLogVitalType(null)
+          }}
+          vitalType={quickLogVitalType}
+          patientName={patient.name}
+          onSubmit={async (vitalData) => {
+            await handleLogVital(vitalData)
+            setShowQuickLogModal(false)
+            setQuickLogVitalType(null)
           }}
         />
       )}

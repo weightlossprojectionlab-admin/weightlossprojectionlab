@@ -349,6 +349,12 @@ function VitalSummaryCard({ vital, getDisplayName }: { vital: VitalSign; getDisp
       border: 'border-blue-200 dark:border-blue-800',
       icon: 'text-blue-600 dark:text-blue-400',
       text: 'text-blue-900 dark:text-blue-100'
+    },
+    mood: {
+      bg: 'bg-yellow-50 dark:bg-yellow-950/30',
+      border: 'border-yellow-200 dark:border-yellow-800',
+      icon: 'text-yellow-600 dark:text-yellow-400',
+      text: 'text-yellow-900 dark:text-yellow-100'
     }
   }
 

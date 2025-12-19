@@ -1,4 +1,58 @@
-import { Timestamp, type FieldValue } from 'firebase/firestore';
+import { Timestamp, type FieldValue, serverTimestamp } from 'firebase/firestore';
+
+/**
+ * Server Timestamp Utilities
+ *
+ * Centralized timestamp management using Firebase serverTimestamp
+ * to ensure consistency and avoid client-side clock skew issues.
+ */
+
+/**
+ * Get a server-side timestamp for Firestore documents
+ *
+ * Use this instead of new Date().toISOString() to ensure:
+ * - Consistent timestamps across different client time zones
+ * - No clock skew issues
+ * - Proper ordering in Firestore queries
+ *
+ * @example
+ * await setDoc(docRef, {
+ *   ...data,
+ *   createdAt: timestamp(),
+ *   updatedAt: timestamp()
+ * })
+ */
+export function timestamp(): FieldValue {
+  return serverTimestamp()
+}
+
+/**
+ * Get current ISO timestamp (for non-Firestore use cases)
+ * Use sparingly - prefer timestamp() for Firestore operations
+ */
+export function now(): string {
+  return new Date().toISOString()
+}
+
+/**
+ * Create timestamps object for new documents
+ */
+export function createTimestamps() {
+  const ts = timestamp()
+  return {
+    createdAt: ts,
+    updatedAt: ts
+  }
+}
+
+/**
+ * Create update timestamp for existing documents
+ */
+export function updateTimestamp() {
+  return {
+    updatedAt: timestamp()
+  }
+}
 
 /**
  * Convert Firestore Timestamp to JavaScript Date

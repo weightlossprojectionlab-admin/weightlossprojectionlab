@@ -44,9 +44,8 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['recharts', 'react-hot-toast', '@heroicons/react'],
   },
   typescript: {
-    // TEMPORARILY: Skip type checking during build to isolate the hang issue
-    // Type errors should be caught in development and CI
-    ignoreBuildErrors: true,
+    // Type checking enabled - all type errors must be fixed before build
+    ignoreBuildErrors: false,
   },
   // Removed standalone output - Netlify handles deployment packaging
   // Skip static page generation for pages that depend on runtime data

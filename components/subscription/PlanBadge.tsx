@@ -22,6 +22,8 @@ export function PlanBadge({ plan, addons, status, size = 'md' }: PlanBadgeProps)
         return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
       case 'single':
         return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-600'
+      case 'single_plus':
+        return 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-600'
       case 'family_basic':
       case 'family_plus':
       case 'family_premium':
@@ -50,6 +52,8 @@ export function PlanBadge({ plan, addons, status, size = 'md' }: PlanBadgeProps)
         return '🆓'
       case 'single':
         return '👤'
+      case 'single_plus':
+        return '👤⚕️'
       case 'family_basic':
       case 'family_plus':
       case 'family_premium':
@@ -65,6 +69,8 @@ export function PlanBadge({ plan, addons, status, size = 'md' }: PlanBadgeProps)
         return status === 'trialing' ? 'Free Trial' : 'Free'
       case 'single':
         return 'Single User'
+      case 'single_plus':
+        return 'Single User Plus'
       case 'family_basic':
         return 'Family Basic'
       case 'family_plus':

@@ -73,12 +73,14 @@ export async function GET(request: NextRequest) {
 
     const userData = userDoc.data()
 
-    // DEBUG: Log medications to see what's in Firestore
-    console.log('[GET Profile] Medications in Firestore:', {
+    // DEBUG: Log medications and preferences to see what's in Firestore
+    console.log('[GET Profile] Data in Firestore:', {
       'profile.medications': userData?.profile?.medications,
       'medications': userData?.medications,
+      'preferences.vitalReminders': userData?.preferences?.vitalReminders,
       'hasProfile': !!userData?.profile,
-      'profileKeys': userData?.profile ? Object.keys(userData.profile) : []
+      'profileKeys': userData?.profile ? Object.keys(userData.profile) : [],
+      'preferencesKeys': userData?.preferences ? Object.keys(userData.preferences) : []
     })
 
     const userProfile = {
@@ -283,10 +285,14 @@ export async function PUT(request: NextRequest) {
         const value = obj[key]
         const newKey = prefix ? `${prefix}.${key}` : key
 
+        // DEBUG: Log each key being processed
+        console.log(`[flattenObject] Processing key: ${newKey}, type: ${typeof value}, isArray: ${Array.isArray(value)}, isNull: ${value === null}, isDate: ${value instanceof Date}, prototype: ${value !== null && typeof value === 'object' ? Object.getPrototypeOf(value)?.constructor?.name : 'N/A'}`)
+
         // Arrays should be set as complete values, not flattened
         // This is critical for fields like medications, healthConditions, etc.
         if (Array.isArray(value)) {
           flattened[newKey] = value
+          console.log(`[flattenObject] Set array: ${newKey}`)
         }
         // If value is a plain object (not Date, not Array, not null), recurse
         else if (
@@ -295,11 +301,13 @@ export async function PUT(request: NextRequest) {
           !(value instanceof Date) &&
           Object.getPrototypeOf(value) === Object.prototype
         ) {
+          console.log(`[flattenObject] Recursing into object: ${newKey}`)
           Object.assign(flattened, flattenObject(value, newKey))
         }
         // Primitive values, Dates, null, etc.
         else {
           flattened[newKey] = value
+          console.log(`[flattenObject] Set primitive/Date: ${newKey} = ${value}`)
         }
       })
 
@@ -325,7 +333,12 @@ export async function PUT(request: NextRequest) {
 
     // Handle preferences object with recursive flattening
     if (updateData.preferences) {
-      Object.assign(flattenedUpdate, flattenObject(updateData.preferences, 'preferences'))
+      console.log('[PUT Profile] ========== About to flatten preferences ==========')
+      console.log('[PUT Profile] Preferences object:', JSON.stringify(updateData.preferences, null, 2))
+      const preferencesFlattened = flattenObject(updateData.preferences, 'preferences')
+      console.log('[PUT Profile] ========== Preferences after flattening ==========')
+      console.log('[PUT Profile] Flattened result:', JSON.stringify(preferencesFlattened, null, 2))
+      Object.assign(flattenedUpdate, preferencesFlattened)
     }
 
     // Add top-level fields
@@ -343,6 +356,12 @@ export async function PUT(request: NextRequest) {
     try {
       await adminDb.collection('users').doc(userId).update(flattenedUpdate)
       console.log('[PUT Profile] update() succeeded')
+
+      // Return success response
+      return NextResponse.json({
+        success: true,
+        message: 'User profile updated successfully'
+      })
     } catch (updateError: any) {
       logger.error('[API /user-profile PUT] Error updating user profile', updateError)
       return NextResponse.json(

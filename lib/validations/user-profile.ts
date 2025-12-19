@@ -29,7 +29,14 @@ export const UserPreferencesSchema = z.object({
     snackWindows: z.array(z.string().regex(/^\d{2}:\d{2}$/)).optional(),
   }).optional(),
   weightCheckInFrequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly']).optional(),
-})
+  vitalReminders: z.record(
+    z.string(),
+    z.object({
+      enabled: z.boolean(),
+      frequency: z.string(),
+    }).optional()
+  ).optional(),
+}).passthrough() // Allow additional fields that might be added in the future
 
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>
 

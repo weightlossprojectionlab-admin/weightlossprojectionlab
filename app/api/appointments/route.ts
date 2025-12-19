@@ -169,7 +169,6 @@ export async function POST(request: NextRequest) {
       userId,
       patientId: validatedData.patientId,
       patientName: patient.name,
-      providerId: validatedData.providerId,
       dateTime: validatedData.dateTime,
       type: validatedData.type,
       status: validatedData.status || 'scheduled',
@@ -179,6 +178,11 @@ export async function POST(request: NextRequest) {
       createdBy: userId,
       updatedAt: now,
       updatedBy: userId
+    }
+
+    // Add providerId only if it has a value
+    if (validatedData.providerId) {
+      appointment.providerId = validatedData.providerId
     }
 
     // Add optional fields only if they have values
@@ -209,12 +213,35 @@ export async function POST(request: NextRequest) {
 
     // Create notification for appointment
     try {
-      const notificationRef = adminDb.collection('notifications').doc()
+      // Get creator's name from Firebase Auth
+      let creatorName = 'Unknown'
+      try {
+        const creatorUser = await adminAuth.getUser(userId)
+        creatorName = creatorUser.displayName || creatorUser.email || 'Unknown'
+      } catch (error) {
+        logger.warn('[API /appointments POST] Could not fetch creator name', { userId })
+      }
+
       const appointmentDate = new Date(validatedData.dateTime)
 
-      await notificationRef.set({
-        id: notificationRef.id,
-        userId: ownerUserId, // Notify the account owner
+      // Build metadata, only including fields that have values
+      const metadata: any = {
+        appointmentId,
+        patientId: validatedData.patientId,
+        patientName: patient.name,
+        dateTime: validatedData.dateTime,
+        createdBy: userId,
+        createdByName: creatorName
+      }
+
+      if (validatedData.providerId) {
+        metadata.providerId = validatedData.providerId
+      }
+      if (provider?.name) {
+        metadata.providerName = provider.name
+      }
+
+      const notificationData = {
         type: 'appointment_scheduled',
         title: 'Appointment Scheduled',
         message: `${patient.name} has an appointment${provider?.name ? ` with ${provider.name}` : ''} on ${appointmentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at ${appointmentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
@@ -222,19 +249,30 @@ export async function POST(request: NextRequest) {
         read: false,
         actionUrl: `/calendar`,
         actionLabel: 'View Calendar',
-        metadata: {
-          appointmentId,
-          patientId: validatedData.patientId,
-          patientName: patient.name,
-          providerId: validatedData.providerId,
-          providerName: provider?.name,
-          dateTime: validatedData.dateTime
-        },
+        metadata,
         createdAt: now,
         updatedAt: now
-      })
+      }
 
-      logger.info('[API /appointments POST] Notification created', { notificationId: notificationRef.id, appointmentId })
+      // Helper function to create notification for a user
+      const createNotificationForUser = async (targetUserId: string, userType: string) => {
+        const notificationRef = adminDb.collection('notifications').doc()
+        await notificationRef.set({
+          id: notificationRef.id,
+          userId: targetUserId,
+          ...notificationData
+        })
+        logger.info(`[API /appointments POST] ${userType} notification created`, {
+          notificationId: notificationRef.id,
+          appointmentId
+        })
+      }
+
+      // Create notifications for relevant users
+      await createNotificationForUser(ownerUserId, 'Owner')
+      if (userId !== ownerUserId) {
+        await createNotificationForUser(userId, 'Acting user')
+      }
     } catch (notifError) {
       logger.error('[API /appointments POST] Failed to create notification', notifError as Error)
       // Don't fail the appointment creation if notification fails

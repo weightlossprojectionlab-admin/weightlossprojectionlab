@@ -7,7 +7,7 @@ import toast from 'react-hot-toast'
 import { signOut } from '@/lib/auth'
 import { useAuth } from '@/hooks/useAuth'
 import AuthGuard from '@/components/auth/AuthGuard'
-import { getAuth } from 'firebase/auth'
+import { getAuth, getIdToken } from 'firebase/auth'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useStepTracking, StepTrackingProvider } from '@/components/StepTrackingProvider'
 import { userProfileOperations } from '@/lib/firebase-operations'
@@ -31,6 +31,17 @@ import { usePatients } from '@/hooks/usePatients'
 import { NotificationSettings } from '@/components/ui/NotificationPrompt'
 import { NotificationPreferences } from '@/components/settings/NotificationPreferences'
 import { AdvancedHealthProfile } from '@/components/profile/AdvancedHealthProfile'
+import { VitalType } from '@/types/medical'
+import {
+  getAllVitalTypes,
+  VITAL_DISPLAY_NAMES,
+  VITAL_ICONS,
+  DEFAULT_FREQUENCIES,
+  FREQUENCY_OPTIONS,
+  FREQUENCY_LABELS,
+  VitalFrequency,
+  migrateLegacyWeightReminders
+} from '@/lib/vital-reminder-logic'
 
 function ProfileContent() {
   const { user } = useAuth()
@@ -82,6 +93,14 @@ function ProfileContent() {
     setMounted(true)
     checkBiometricStatus()
   }, [user])
+
+  // Set default to first family member when family members load
+  useEffect(() => {
+    // Only set default if not already selected and family members exist
+    if (!selectedMemberId && familyMembers.length > 0 && !patientsLoading) {
+      setSelectedMemberId(familyMembers[0].id)
+    }
+  }, [familyMembers, selectedMemberId, patientsLoading])
 
   // Fetch user profile data (or selected member profile)
   useEffect(() => {
@@ -662,6 +681,216 @@ function ProfileContent() {
           </div>
         )}
 
+        {/* App Settings */}
+        <div className="bg-card rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-medium text-foreground mb-4">App Settings</h2>
+          <div className="space-y-4">
+            {/* Automatic Step Tracking */}
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center space-x-2">
+                  <p className="font-medium">Automatic Step Tracking</p>
+                  {isTracking && (
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {stepTrackingEnabled ? 'Counting steps in background' : 'Count steps automatically using device sensors'}
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={stepTrackingEnabled}
+                  onChange={handleToggleStepTracking}
+                />
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Reminders Settings */}
+        <div className="bg-card rounded-lg p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-foreground">⏰ Vital Sign Reminders</h2>
+            <span className="text-xs text-muted-foreground">Applies to all family members</span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-6">
+            Configure reminders to log vital signs at regular intervals for ALL family members. These account-level settings apply platform-wide based on your subscription plan. For advanced schedules with specific times, use the Vitals Wizard in the patient detail page.
+          </p>
+
+          <div className="space-y-6">
+            {getAllVitalTypes().map((vitalType) => {
+              // Get current settings (migrate legacy weight settings if needed)
+              const vitalReminders = profileData?.preferences?.vitalReminders || {}
+              let vitalConfig = vitalReminders[vitalType]
+
+              // Auto-migrate legacy weight reminder settings
+              if (vitalType === 'weight' && !vitalConfig) {
+                vitalConfig = migrateLegacyWeightReminders(
+                  profileData?.preferences?.disableWeightReminders,
+                  profileData?.preferences?.weightCheckInFrequency
+                )
+              }
+
+              const isEnabled = vitalConfig?.enabled ?? (vitalType === 'weight') // Weight enabled by default
+              const currentFrequency = vitalConfig?.frequency || DEFAULT_FREQUENCIES[vitalType]
+              const availableFrequencies = FREQUENCY_OPTIONS[vitalType]
+
+              // DRY: Shared function to save vital reminder settings
+              const saveVitalReminders = async (updatedVitalReminders: any) => {
+                await userProfileOperations.updateUserProfile({
+                  preferences: {
+                    ...profileData?.preferences,
+                    vitalReminders: updatedVitalReminders
+                  }
+                })
+
+                // Use functional update to avoid stale closure issues
+                setProfileData((prevData: any) => ({
+                  ...prevData,
+                  preferences: {
+                    ...prevData?.preferences,
+                    vitalReminders: updatedVitalReminders
+                  }
+                }))
+              }
+
+              return (
+                <div key={vitalType} className="border-b border-border last:border-0 pb-6 last:pb-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xl">{VITAL_ICONS[vitalType]}</span>
+                        <h3 className="font-medium text-foreground">
+                          {VITAL_DISPLAY_NAMES[vitalType]} Reminders
+                        </h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Get reminded to log your {VITAL_DISPLAY_NAMES[vitalType].toLowerCase()} based on your check-in frequency
+                      </p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const updatedVitalReminders = {
+                            ...vitalReminders,
+                            [vitalType]: {
+                              enabled: !isEnabled,
+                              frequency: currentFrequency
+                            }
+                          }
+
+                          await saveVitalReminders(updatedVitalReminders)
+
+                          toast.success(
+                            !isEnabled
+                              ? `${VITAL_DISPLAY_NAMES[vitalType]} reminders enabled`
+                              : `${VITAL_DISPLAY_NAMES[vitalType]} reminders disabled`
+                          )
+                        } catch (error) {
+                          toast.error('Failed to update reminder settings')
+                        }
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                        isEnabled
+                          ? 'bg-primary'
+                          : 'bg-gray-200 dark:bg-gray-700'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          isEnabled
+                            ? 'translate-x-6'
+                            : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Frequency Selector */}
+                  {isEnabled && (
+                    <div className="mt-4 pl-4 border-l-2 border-primary/30">
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Check-in Frequency
+                      </label>
+                      <select
+                        value={currentFrequency}
+                        onChange={async (e) => {
+                          try {
+                            const newFrequency = e.target.value as VitalFrequency
+                            const updatedVitalReminders = {
+                              ...vitalReminders,
+                              [vitalType]: {
+                                enabled: true,
+                                frequency: newFrequency
+                              }
+                            }
+
+                            await saveVitalReminders(updatedVitalReminders)
+                            toast.success('Check-in frequency updated')
+                          } catch (error) {
+                            toast.error('Failed to update frequency')
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+                      >
+                        {availableFrequencies.map((freq) => (
+                          <option key={freq} value={freq}>
+                            {FREQUENCY_LABELS[freq]}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        You'll be reminded to log your {VITAL_DISPLAY_NAMES[vitalType].toLowerCase()} when it's due
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              <strong>💡 Tip:</strong> Need specific times (e.g., "8am, 12pm, 4pm, 8pm")?
+              Use the <strong>Vitals Wizard</strong> in the patient detail page for advanced scheduling with compliance tracking.
+            </p>
+          </div>
+        </div>
+
+        {/* Test Notification */}
+        <div className="bg-card rounded-lg p-6 shadow-sm">
+          <h3 className="text-lg font-bold mb-4">🔔 Test Notifications</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Send a test notification to verify your notification setup is working correctly.
+          </p>
+          <button
+            onClick={handleSendTestNotification}
+            disabled={sendingTestNotif}
+            className="btn btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {sendingTestNotif ? 'Sending Test...' : '📬 Send Test Notification'}
+          </button>
+        </div>
+
+        {/* Notification Preferences */}
+        {user?.uid && <NotificationPreferences userId={user.uid} />}
+
+        {/* Legacy Notification Settings */}
+        <NotificationSettings userId={user?.uid} />
+
+        {/* Health Sync */}
+        <div className="bg-card rounded-lg shadow-sm">
+          <HealthSyncCard onSetupClick={() => setShowHealthModal(true)} />
+        </div>
+
         {/* Privacy & Data Settings */}
         <div className="bg-card rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground mb-4">Privacy & Data</h2>
@@ -705,165 +934,6 @@ function ProfileContent() {
               </button>
             </div>
           </div>
-        </div>
-
-        {/* App Settings */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-foreground mb-4">App Settings</h2>
-          <div className="space-y-4">
-            {/* Automatic Step Tracking */}
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <p className="font-medium">Automatic Step Tracking</p>
-                  {isTracking && (
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {stepTrackingEnabled ? 'Counting steps in background' : 'Count steps automatically using device sensors'}
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={stepTrackingEnabled}
-                  onChange={handleToggleStepTracking}
-                />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Reminders Settings */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-foreground mb-4">⏰ Reminders</h2>
-          <div className="space-y-4">
-            {/* Weight Check-in Reminders */}
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <h3 className="font-medium text-foreground">Weight Check-in Reminders</h3>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Get reminded to log your weight based on your check-in frequency
-                </p>
-              </div>
-              <button
-                onClick={async () => {
-                  try {
-                    const currentValue = profileData?.preferences?.disableWeightReminders || false
-                    await userProfileOperations.updateUserProfile(user!.uid, {
-                      preferences: {
-                        ...profileData?.preferences,
-                        disableWeightReminders: !currentValue
-                      }
-                    })
-                    setProfileData({
-                      ...profileData,
-                      preferences: {
-                        ...profileData?.preferences,
-                        disableWeightReminders: !currentValue
-                      }
-                    })
-                    toast.success(
-                      !currentValue
-                        ? 'Weight reminders disabled'
-                        : 'Weight reminders enabled'
-                    )
-                  } catch (error) {
-                    toast.error('Failed to update reminder settings')
-                  }
-                }}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-                  !(profileData?.preferences?.disableWeightReminders || false)
-                    ? 'bg-primary'
-                    : 'bg-gray-200 dark:bg-gray-700'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    !(profileData?.preferences?.disableWeightReminders || false)
-                      ? 'translate-x-6'
-                      : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Weight Check-in Frequency */}
-            {!(profileData?.preferences?.disableWeightReminders || false) && (
-              <div className="pl-4 border-l-2 border-border">
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Check-in Frequency
-                </label>
-                <select
-                  value={profileData?.preferences?.weightCheckInFrequency || 'weekly'}
-                  onChange={async (e) => {
-                    try {
-                      await userProfileOperations.updateUserProfile(user!.uid, {
-                        preferences: {
-                          ...profileData?.preferences,
-                          weightCheckInFrequency: e.target.value as 'daily' | 'weekly' | 'biweekly' | 'monthly'
-                        }
-                      })
-                      setProfileData({
-                        ...profileData,
-                        preferences: {
-                          ...profileData?.preferences,
-                          weightCheckInFrequency: e.target.value
-                        }
-                      })
-                      toast.success('Check-in frequency updated')
-                    } catch (error) {
-                      toast.error('Failed to update frequency')
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="biweekly">Bi-weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-                <p className="text-xs text-muted-foreground mt-2">
-                  You'll be reminded to log your weight when it's due
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Test Notification */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
-          <h3 className="text-lg font-bold mb-4">🔔 Test Notifications</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Send a test notification to verify your notification setup is working correctly.
-          </p>
-          <button
-            onClick={handleSendTestNotification}
-            disabled={sendingTestNotif}
-            className="btn btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {sendingTestNotif ? 'Sending Test...' : '📬 Send Test Notification'}
-          </button>
-        </div>
-
-        {/* Notification Preferences */}
-        {user?.uid && <NotificationPreferences userId={user.uid} />}
-
-        {/* Legacy Notification Settings */}
-        <NotificationSettings userId={user?.uid} />
-
-        {/* Health Sync */}
-        <div className="bg-card rounded-lg shadow-sm">
-          <HealthSyncCard onSetupClick={() => setShowHealthModal(true)} />
         </div>
 
         {/* Sign Out */}

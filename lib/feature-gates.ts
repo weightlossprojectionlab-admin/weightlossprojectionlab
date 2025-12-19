@@ -34,12 +34,12 @@ export const PLAN_FEATURES: Record<string, SubscriptionPlan[]> = {
   'household-management': ['family_basic', 'family_plus', 'family_premium'],
   'pet-tracking': ['family_basic', 'family_plus', 'family_premium'],
 
-  // Medical Features
-  'appointments': ['single', 'family_basic', 'family_plus', 'family_premium'],
-  'medications': ['single', 'family_basic', 'family_plus', 'family_premium'],
-  'vitals-tracking': ['single', 'family_basic', 'family_plus', 'family_premium'],
-  'providers': ['single', 'family_basic', 'family_plus', 'family_premium'],
-  'medical-records': ['single', 'family_basic', 'family_plus', 'family_premium'],
+  // Medical Features - Single Plus and all Family plans
+  'appointments': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'medications': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'vitals-tracking': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'providers': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'medical-records': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
 
   // Advanced Analytics (Family Plus & Premium only)
   'advanced-analytics': ['family_plus', 'family_premium'],
@@ -56,8 +56,8 @@ export const PLAN_FEATURES: Record<string, SubscriptionPlan[]> = {
   'api-access': ['family_premium'],
 
   // Caregiver Features
-  'external-caregivers': ['single', 'family_basic', 'family_plus', 'family_premium'],
-  'caregiver-invites': ['single', 'family_basic', 'family_plus', 'family_premium'],
+  'external-caregivers': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'caregiver-invites': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
   'role-management': ['family_basic', 'family_plus', 'family_premium'],
 
   // Shopping & Meal Planning
@@ -329,7 +329,20 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
       status: 'active',
       maxSeats: 1,
       currentSeats: 0,
-      maxExternalCaregivers: 2,
+      maxExternalCaregivers: 0,
+      currentExternalCaregivers: 0,
+      maxPatients: 1,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    },
+    'Single User Plus': {
+      plan: 'single_plus',
+      billingInterval: 'monthly',
+      addons: { familyFeatures: false },
+      status: 'active',
+      maxSeats: 1,
+      currentSeats: 0,
+      maxExternalCaregivers: 3,
       currentExternalCaregivers: 0,
       maxPatients: 1,
       currentPeriodStart: new Date(),

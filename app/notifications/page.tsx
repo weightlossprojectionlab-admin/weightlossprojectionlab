@@ -261,9 +261,16 @@ export default function NotificationsPage() {
                   </p>
 
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                    </p>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                      </p>
+                      {notification.metadata?.createdByName && (
+                        <p className="text-xs text-muted-foreground">
+                          Created by <span className="font-medium text-foreground">{notification.metadata.createdByName}</span>
+                        </p>
+                      )}
+                    </div>
 
                     {notification.actionLabel && (
                       <span className="text-sm font-medium text-primary">

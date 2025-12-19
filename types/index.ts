@@ -163,6 +163,36 @@ export interface UserPreferences {
   weightCheckInFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
   primaryPatientId?: string // Default patient to show in dashboard (handles non-self accounts)
 
+  // VITAL REMINDERS - Simple frequency-based reminders for all vital types
+  // NOTE: This is separate from VitalMonitoringSchedule (advanced wizard schedules)
+  // Profile reminders = simple frequency for casual monitoring
+  // Wizard schedules = advanced multi-time schedules for medical compliance
+  vitalReminders?: {
+    blood_pressure?: {
+      enabled: boolean
+      frequency: 'daily' | 'twice-daily' | 'weekly' | 'monthly'
+    }
+    blood_sugar?: {
+      enabled: boolean
+      frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily'
+    }
+    temperature?: {
+      enabled: boolean
+      frequency: 'daily' | 'weekly' | 'biweekly'
+    }
+    pulse_oximeter?: {
+      enabled: boolean
+      frequency: 'daily' | 'twice-daily' | 'weekly'
+    }
+    weight?: {
+      enabled: boolean
+      frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+    }
+  }
+
+  // Legacy weight reminder fields (kept for backward compatibility)
+  disableWeightReminders?: boolean
+
   // UNIFIED PRD - Onboarding V2
   onboardingAnswers?: OnboardingAnswers
   userMode?: UserMode  // Cached for quick access
@@ -176,7 +206,8 @@ export interface UserPreferences {
 // Subscription Plan Tiers
 export type SubscriptionPlan =
   | 'free'             // Free trial: 1 seat, 14 days, basic features
-  | 'single'           // Single User: 1 seat, core features
+  | 'single'           // Single User: 1 seat, weight loss only, 0 caregivers
+  | 'single_plus'      // Single User Plus: 1 seat, weight loss + medical + 3 caregivers
   | 'family_basic'     // Family Basic: 5 seats, family features
   | 'family_plus'      // Family Plus: 10 seats, premium features (POPULAR)
   | 'family_premium'   // Family Premium: Unlimited seats, all features
@@ -188,6 +219,7 @@ export type BillingInterval = 'monthly' | 'yearly'
 export const SUBSCRIPTION_PRICING = {
   free: { monthly: 0, yearly: 0 },
   single: { monthly: 999, yearly: 9900 },           // $9.99/mo or $99/yr (17% off)
+  single_plus: { monthly: 1499, yearly: 14900 },    // $14.99/mo or $149/yr (17% off)
   family_basic: { monthly: 1999, yearly: 19900 },   // $19.99/mo or $199/yr (17% off)
   family_plus: { monthly: 2999, yearly: 29900 },    // $29.99/mo or $299/yr (17% off) ⭐
   family_premium: { monthly: 3999, yearly: 39900 }, // $39.99/mo or $399/yr (17% off)
@@ -197,6 +229,7 @@ export const SUBSCRIPTION_PRICING = {
 export const SEAT_LIMITS = {
   free: 1,
   single: 1,
+  single_plus: 1,
   family_basic: 5,
   family_plus: 10,
   family_premium: 999, // Unlimited (using 999 as max)
@@ -205,7 +238,8 @@ export const SEAT_LIMITS = {
 // External Caregiver Limits per Plan
 export const EXTERNAL_CAREGIVER_LIMITS = {
   free: 0,
-  single: 2,
+  single: 0,
+  single_plus: 3,
   family_basic: 5,
   family_plus: 10,
   family_premium: 999, // Unlimited

@@ -49,6 +49,9 @@ export function UpgradeModal({
           case 'single':
             priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SINGLE_MONTHLY || ''
             break
+          case 'single_plus':
+            priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SINGLE_PLUS_MONTHLY || ''
+            break
           case 'family_basic':
             priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_FAMILY_BASIC_MONTHLY || ''
             break
@@ -64,6 +67,9 @@ export function UpgradeModal({
         switch (planId) {
           case 'single':
             priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SINGLE_YEARLY || ''
+            break
+          case 'single_plus':
+            priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SINGLE_PLUS_YEARLY || ''
             break
           case 'family_basic':
             priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_FAMILY_BASIC_YEARLY || ''
@@ -119,12 +125,30 @@ export function UpgradeModal({
       externalCaregivers: EXTERNAL_CAREGIVER_LIMITS.single,
       features: [
         '1 family member seat',
-        '2 external caregivers',
-        'Basic health tracking',
+        '0 caregivers',
+        'Weight & step tracking',
         'Meal logging & recipes',
-        'Weight & step tracking'
+        'Photo gallery & AI analysis'
       ],
       highlighted: suggestedPlan === 'single'
+    },
+    {
+      id: 'single_plus' as SubscriptionPlan,
+      name: 'Single User Plus',
+      icon: '👤⚕️',
+      monthlyPrice: SUBSCRIPTION_PRICING.single_plus.monthly,
+      yearlyPrice: SUBSCRIPTION_PRICING.single_plus.yearly,
+      seats: SEAT_LIMITS.single_plus,
+      externalCaregivers: EXTERNAL_CAREGIVER_LIMITS.single_plus,
+      features: [
+        '1 family member seat',
+        '3 external caregivers',
+        'Everything in Single User',
+        'Medical tracking (appointments, meds, vitals)',
+        'Invite nurses, doctors, or family to help'
+      ],
+      highlighted: suggestedPlan === 'single_plus',
+      badge: 'Popular for Medical Users'
     },
     {
       id: 'family_basic' as SubscriptionPlan,
@@ -233,7 +257,7 @@ export function UpgradeModal({
 
         {/* Plans Grid */}
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {plans.map((plan) => (
               <div
                 key={plan.id}
