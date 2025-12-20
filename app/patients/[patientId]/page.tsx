@@ -2115,6 +2115,7 @@ function PatientDetailContent() {
                 providerName: provider?.name || 'Unknown Provider',
                 updatedAt: new Date().toISOString(),
                 ...appointmentData,
+                providerId: appointmentData.providerId || '', // Ensure providerId is always a string
                 status: 'scheduled',
                 createdFrom: 'manual',
                 driverStatus: appointmentData.requiresDriver
