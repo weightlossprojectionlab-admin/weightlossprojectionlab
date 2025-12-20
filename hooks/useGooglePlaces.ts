@@ -14,6 +14,42 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 
+// Google Maps types (declare globally if @types/google.maps not installed)
+declare global {
+  interface Window {
+    google: any
+  }
+  namespace google {
+    namespace maps {
+      namespace places {
+        interface PlaceResult {
+          address_components?: any[]
+          geometry?: {
+            location: {
+              lat(): number
+              lng(): number
+            }
+          }
+          formatted_address?: string
+        }
+        class AutocompleteService {
+          constructor()
+          getPlacePredictions(request: any, callback: any): void
+        }
+        class PlacesService {
+          constructor(el: HTMLDivElement)
+          getDetails(request: any, callback: any): void
+        }
+      }
+      interface GeocoderAddressComponent {
+        long_name: string
+        short_name: string
+        types: string[]
+      }
+    }
+  }
+}
+
 // Note: Add your Google API key to .env.local
 // NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_key_here
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''

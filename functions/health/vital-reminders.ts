@@ -185,9 +185,8 @@ export async function sendVitalReminders(): Promise<void> {
         })
 
       } catch (error) {
-        logger.error('[VitalReminders] Failed to send reminder', {
-          instanceId: instance.id,
-          error: error instanceof Error ? error.message : 'Unknown error'
+        logger.error('[VitalReminders] Failed to send reminder', error instanceof Error ? error : undefined, {
+          instanceId: instance.id
         })
       }
     }
@@ -204,9 +203,7 @@ export async function sendVitalReminders(): Promise<void> {
     })
 
   } catch (error) {
-    logger.error('[VitalReminders] Failed to process reminders', {
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
+    logger.error('[VitalReminders] Failed to process reminders', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -262,9 +259,7 @@ export async function checkMissedVitals(): Promise<void> {
     })
 
   } catch (error) {
-    logger.error('[VitalReminders] Failed to check missed vitals', {
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
+    logger.error('[VitalReminders] Failed to check missed vitals', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -355,9 +350,8 @@ export async function generateDailyComplianceReports(): Promise<void> {
         reportsGenerated++
 
       } catch (error) {
-        logger.error('[VitalReminders] Failed to generate compliance report', {
-          scheduleId: schedule.id,
-          error: error instanceof Error ? error.message : 'Unknown error'
+        logger.error('[VitalReminders] Failed to generate compliance report', error instanceof Error ? error : undefined, {
+          scheduleId: schedule.id
         })
       }
     }
@@ -367,9 +361,7 @@ export async function generateDailyComplianceReports(): Promise<void> {
     })
 
   } catch (error) {
-    logger.error('[VitalReminders] Failed to generate compliance reports', {
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
+    logger.error('[VitalReminders] Failed to generate compliance reports', error instanceof Error ? error : undefined)
     throw error
   }
 }

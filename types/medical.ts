@@ -248,7 +248,17 @@ export interface PulseOximeterValue {
   perfusionIndex?: number // Optional perfusion index (%)
 }
 
-export type VitalValue = number | BloodPressureValue | PulseOximeterValue
+export type VitalValue = number | BloodPressureValue | PulseOximeterValue | {
+  energy: number
+  appetite: number
+  pain: number
+  overall: number
+  behavior?: string
+  mobility?: string
+  vocalizations?: string
+  speciesNotes?: string
+  symptoms?: string[]
+}
 
 /**
  * VitalModification - Audit trail entry for vital sign changes

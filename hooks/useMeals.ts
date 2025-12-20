@@ -53,7 +53,7 @@ export function useMeals({
       setError(null)
       logger.debug('[useMeals] Fetching meals', { patientId, limit })
 
-      const data = await medicalOperations.meals.getMealLogs(patientId, { limit })
+      const data = await medicalOperations.mealLogs.getMealLogs(patientId, { limit })
       setMeals(data)
 
       logger.info('[useMeals] Meals fetched successfully', {
@@ -83,7 +83,7 @@ export function useMeals({
     try {
       logger.info('[useMeals] Logging meal', { patientId, mealType: data.mealType })
 
-      const newMeal = await medicalOperations.meals.logMeal(patientId, data)
+      const newMeal = await medicalOperations.mealLogs.logMeal(patientId, data)
 
       // Add to local state (prepend to maintain chronological order)
       setMeals(prev => [newMeal, ...prev])

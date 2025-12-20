@@ -66,6 +66,11 @@ export function useMedications({
 
   // Fetch medications (one-time, used for manual refetch)
   const fetchMedications = useCallback(async () => {
+    if (!patientId) {
+      logger.error('[useMedications] No patientId provided')
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
@@ -146,6 +151,10 @@ export function useMedications({
   const logMedication = useCallback(async (
     data: Omit<MedicationLog, 'id' | 'patientId' | 'createdAt'>
   ): Promise<MedicationLog> => {
+    if (!patientId) {
+      throw new Error('No patientId provided')
+    }
+
     try {
       logger.info('[useMedications] Logging medication', { patientId, medicationId: data.medicationId })
 

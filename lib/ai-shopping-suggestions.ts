@@ -546,8 +546,8 @@ function generateFirebaseBasedSuggestions(
 
   // Fallback: if zero suggestions were generated, ensure we return at least general health suggestions
   if (suggestions.length === 0) {
-    logger.error('[AI Shopping] Zero suggestions generated from all needs', {
-      needs: analysis.needs,
+    logger.error('[AI Shopping] Zero suggestions generated from all needs', undefined, {
+      needs: analysis.needs ? String(analysis.needs) : 'none',
       patientId: patient.userId
     })
 

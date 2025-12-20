@@ -148,7 +148,7 @@ export default function AppointmentWizard({
       await onSubmit(dataToSubmit as AppointmentData)
       setCurrentStep('confirmation')
     } catch (error) {
-      logger.error('[AppointmentWizard] Submit failed', error)
+      logger.error('[AppointmentWizard] Submit failed', error instanceof Error ? error : undefined)
       alert(`Failed to schedule appointment: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsSubmitting(false)
@@ -576,10 +576,8 @@ function ProviderStep({
       })
 
       const errorMessage = error.message || 'Failed to add provider'
-      logger.error('[ProviderStep] Error adding provider', {
-        error: errorMessage,
-        errorObject: error,
-        stack: error.stack
+      logger.error('[ProviderStep] Error adding provider', error instanceof Error ? error : undefined, {
+        errorMessage
       })
       toast.error(errorMessage)
     } finally {
@@ -994,7 +992,7 @@ function TypeStep({
           </label>
           <textarea
             value={reason || ''}
-            onChange={(e) => onChange(type, e.target.value)}
+            onChange={(e) => onChange(type as "other" | "specialist" | "lab" | "routine-checkup" | "follow-up", e.target.value)}
             placeholder={selectedType?.placeholder || 'Provide specific details about this appointment...'}
             rows={3}
             className="w-full px-4 py-3 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"

@@ -247,6 +247,7 @@ function PatientsContent() {
           onClose={() => setSelectedPatientForVitalsView(null)}
           vitals={vitals || []}
           patientName={selectedPatientForVitalsView.name}
+          patientId={selectedPatientForVitalsView.id}
           onOpenWizard={() => {
             setSelectedPatientForWizard(selectedPatientForVitalsView)
             setSelectedPatientForVitalsView(null)

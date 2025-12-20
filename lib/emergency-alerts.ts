@@ -169,9 +169,8 @@ export async function sendEmergencyAlert(alert: EmergencyAlert): Promise<{
             }
           })
         } catch (error: any) {
-          logger.error('[EmergencyAlerts] Failed to send notification', {
-            recipient: recipient.name,
-            error: error.message
+          logger.error('[EmergencyAlerts] Failed to send notification', error instanceof Error ? error : undefined, {
+            recipient: recipient.name
           })
           errors.push(`Failed to notify ${recipient.name}: ${error.message}`)
         }
@@ -340,7 +339,7 @@ async function getUserNotificationPreferences(userId: string): Promise<{
       }
     }
   } catch (error) {
-    logger.error('[EmergencyAlerts] Failed to get user preferences', { userId, error })
+    logger.error('[EmergencyAlerts] Failed to get user preferences', error instanceof Error ? error : undefined, { userId })
     return null
   }
 }
@@ -428,7 +427,7 @@ async function sendPushNotification(
       status: 'pending'
     })
   } catch (error) {
-    logger.error('[EmergencyAlerts] Failed to send push notification', { userId, error })
+    logger.error('[EmergencyAlerts] Failed to send push notification', error instanceof Error ? error : undefined, { userId })
     throw error
   }
 }
@@ -456,7 +455,7 @@ async function sendSMS(
       status: 'pending'
     })
   } catch (error) {
-    logger.error('[EmergencyAlerts] Failed to send SMS', error)
+    logger.error('[EmergencyAlerts] Failed to send SMS', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -490,7 +489,7 @@ async function sendEmailAlert(
       status: 'pending'
     })
   } catch (error) {
-    logger.error('[EmergencyAlerts] Failed to send email', error)
+    logger.error('[EmergencyAlerts] Failed to send email', error instanceof Error ? error : undefined)
     throw error
   }
 }

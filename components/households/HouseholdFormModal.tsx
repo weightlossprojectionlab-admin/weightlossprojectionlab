@@ -124,13 +124,12 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
         ? `/households/${household.id}`
         : '/households'
 
-      const method = household ? 'PUT' : 'POST'
-
       // Use apiClient which handles CSRF tokens automatically
-      await apiClient.request(endpoint, {
-        method,
-        body: JSON.stringify(formData)
-      })
+      if (household) {
+        await apiClient.put(endpoint, formData)
+      } else {
+        await apiClient.post(endpoint, formData)
+      }
 
       toast.success(household ? 'Household updated successfully' : 'Household created successfully')
       onSuccess()

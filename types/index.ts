@@ -145,6 +145,7 @@ export interface UserPreferences {
   notifications: boolean
   biometricEnabled: boolean
   themePreference: 'light' | 'dark' | 'system' // Theme setting synced to Firestore
+  stepTrackingEnabled?: boolean
   dietaryPreferences?: string[]
   mealReminderTimes?: {
     breakfast?: string

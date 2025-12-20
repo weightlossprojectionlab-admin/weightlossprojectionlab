@@ -74,7 +74,7 @@ export function useVitalSchedules(
     try {
       return await user.getIdToken()
     } catch (error) {
-      logger.error('[useVitalSchedules] Failed to get auth token', error)
+      logger.error('[useVitalSchedules] Failed to get auth token', error instanceof Error ? error : undefined)
       return null
     }
   }, [user])
@@ -118,7 +118,7 @@ export function useVitalSchedules(
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       setError(errorMessage)
-      logger.error('[useVitalSchedules] Failed to fetch schedules', err)
+      logger.error('[useVitalSchedules] Failed to fetch schedules', err instanceof Error ? err : undefined)
       toast.error(`Failed to load schedules: ${errorMessage}`)
     } finally {
       setLoading(false)
@@ -167,7 +167,7 @@ export function useVitalSchedules(
         return newSchedule
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        logger.error('[useVitalSchedules] Failed to create schedule', err)
+        logger.error('[useVitalSchedules] Failed to create schedule', err instanceof Error ? err : undefined)
         toast.error(`Failed to create schedule: ${errorMessage}`)
         throw err
       }
@@ -216,7 +216,7 @@ export function useVitalSchedules(
         toast.success('Schedule updated successfully!')
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        logger.error('[useVitalSchedules] Failed to update schedule', err)
+        logger.error('[useVitalSchedules] Failed to update schedule', err instanceof Error ? err : undefined)
         toast.error(`Failed to update schedule: ${errorMessage}`)
         throw err
       }
@@ -255,7 +255,7 @@ export function useVitalSchedules(
         toast.success('Schedule deleted successfully!')
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        logger.error('[useVitalSchedules] Failed to delete schedule', err)
+        logger.error('[useVitalSchedules] Failed to delete schedule', err instanceof Error ? err : undefined)
         toast.error(`Failed to delete schedule: ${errorMessage}`)
         throw err
       }
@@ -307,7 +307,7 @@ export function useVitalSchedules(
         return data.instances || []
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        logger.error('[useVitalSchedules] Failed to fetch instances', err)
+        logger.error('[useVitalSchedules] Failed to fetch instances', err instanceof Error ? err : undefined)
         toast.error(`Failed to load schedule instances: ${errorMessage}`)
         return []
       }
@@ -352,7 +352,7 @@ export function useVitalSchedules(
         return data.report
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        logger.error('[useVitalSchedules] Failed to fetch compliance', err)
+        logger.error('[useVitalSchedules] Failed to fetch compliance', err instanceof Error ? err : undefined)
         toast.error(`Failed to load compliance report: ${errorMessage}`)
         return null
       }
@@ -393,7 +393,7 @@ export function useVitalSchedules(
         return data.trends || []
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        logger.error('[useVitalSchedules] Failed to fetch trends', err)
+        logger.error('[useVitalSchedules] Failed to fetch trends', err instanceof Error ? err : undefined)
         toast.error(`Failed to load compliance trends: ${errorMessage}`)
         return []
       }

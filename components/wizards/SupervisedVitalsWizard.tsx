@@ -290,7 +290,7 @@ export default function SupervisedVitalsWizard({
       // Go to schedule step instead of directly to confirmation
       setCurrentStep('schedule')
     } catch (error) {
-      logger.error('[Wizard] Failed to submit vitals', error)
+      logger.error('[Wizard] Failed to submit vitals', error instanceof Error ? error : undefined)
       alert(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsSubmitting(false)
@@ -359,7 +359,7 @@ export default function SupervisedVitalsWizard({
         alert('❌ Failed to send alert. Please call family members directly.')
       }
     } catch (error) {
-      logger.error('[Wizard] Error sending emergency alert', error)
+      logger.error('[Wizard] Error sending emergency alert', error instanceof Error ? error : undefined)
       alert('❌ Error sending alert. Please call family members directly.')
     } finally {
       setSendingAlert(false)

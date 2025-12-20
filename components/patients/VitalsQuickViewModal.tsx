@@ -17,6 +17,7 @@ interface VitalsQuickViewModalProps {
   onClose: () => void
   vitals: VitalSign[]
   patientName: string
+  patientId: string
   onOpenWizard: () => void
   loading?: boolean
 }
@@ -26,6 +27,7 @@ export default function VitalsQuickViewModal({
   onClose,
   vitals,
   patientName,
+  patientId,
   onOpenWizard,
   loading = false
 }: VitalsQuickViewModalProps) {
@@ -77,7 +79,7 @@ export default function VitalsQuickViewModal({
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
               </div>
             ) : todayVitals.length > 0 ? (
-              <DailyVitalsSummary vitals={vitals} patientName={patientName} />
+              <DailyVitalsSummary vitals={vitals} patientName={patientName} patientId={patientId} />
             ) : (
               <div className="text-center py-12">
                 <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
