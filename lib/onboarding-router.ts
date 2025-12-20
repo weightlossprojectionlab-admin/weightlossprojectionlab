@@ -286,7 +286,6 @@ export function canAdvanceFromState(
  */
 export function filterAccessibleGoals(
   selectedGoals: string[],
-  user: FirebaseUser | null,
   subscription: UserSubscription | null
 ): string[] {
   if (!subscription || subscription.status === 'expired' || subscription.status === 'canceled') {
