@@ -16,7 +16,7 @@ import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { useInvitations } from '@/hooks/useInvitations'
 import { useUserProfile } from '@/hooks/useUserProfile'
-import { PatientProfile, VitalType, VitalSign, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication } from '@/types/medical'
+import { PatientProfile, VitalType, VitalSign, VitalUnit, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication } from '@/types/medical'
 import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
 import DailyVitalsSummary from '@/components/vitals/DailyVitalsSummary'
@@ -1976,7 +1976,10 @@ function PatientDetailContent() {
               // Save all vitals
               const savedVitals: VitalSign[] = []
               for (const vitalInput of vitalInputsWithMood) {
-                const saved = await medicalOperations.vitals.logVital(patient.id, vitalInput)
+                const saved = await medicalOperations.vitals.logVital(patient.id, {
+                  ...vitalInput,
+                  unit: vitalInput.unit as VitalUnit
+                })
                 savedVitals.push(saved)
               }
 
