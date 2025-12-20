@@ -75,10 +75,6 @@ function ManageRolesContent() {
   const caregivers = hierarchicalMembers.filter(m => m.familyRole === 'caregiver')
   const viewers = hierarchicalMembers.filter(m => m.familyRole === 'viewer')
 
-  // Eligible members for ownership transfer (exclude current owner)
-  const eligibleForTransfer = familyMembers.filter(
-    m => m.familyRole !== 'account_owner'
-  )
 
   const handleRoleChange = async (memberId: string, newRole: FamilyRole) => {
     try {
@@ -106,10 +102,8 @@ function ManageRolesContent() {
   }
 
   const handleSaveMemberEdit = async (data: MemberUpdateData) => {
-    if (!editingMember) return
-
     try {
-      await updateMember(editingMember.userId, data)
+      await updateMember(data.memberId, data)
       await refetch()
       setShowEditModal(false)
       setEditingMember(null)
@@ -278,16 +272,17 @@ function ManageRolesContent() {
       </main>
 
       {/* Modals */}
-      {showTransferModal && (
+      {showTransferModal && accountOwner && (
         <TransferOwnershipModal
           isOpen={showTransferModal}
           onClose={() => setShowTransferModal(false)}
-          eligibleMembers={eligibleForTransfer}
+          currentOwner={accountOwner}
+          familyMembers={familyMembers}
           onTransfer={handleTransferOwnership}
         />
       )}
 
-      {showEditModal && editingMember && (
+      {showEditModal && editingMember && currentUserRole && (
         <EditMemberModal
           isOpen={showEditModal}
           onClose={() => {
@@ -295,6 +290,8 @@ function ManageRolesContent() {
             setEditingMember(null)
           }}
           member={editingMember}
+          currentUserRole={currentUserRole}
+          patients={patients || []}
           onSave={handleSaveMemberEdit}
         />
       )}
@@ -343,11 +340,7 @@ function MemberCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-2">
             <h3 className="font-bold text-foreground truncate">{member.name}</h3>
-            {member.familyRole === 'account_owner' ? (
-              <AccountOwnerBadge />
-            ) : (
-              <RoleBadge role={member.familyRole} />
-            )}
+            <RoleBadge role={member.familyRole} />
           </div>
           <p className="text-sm text-muted-foreground">{member.email}</p>
 
