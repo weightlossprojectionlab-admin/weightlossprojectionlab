@@ -8,7 +8,6 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Card } from '@/components/ui/Card'
 import { logger } from '@/lib/logger'
 import type { NutritionVitalsCorrelation } from '@/types/health-outcomes'
 import type { VitalType } from '@/types/medical'
@@ -80,44 +79,44 @@ export function NutritionImpactInsights({
 
   if (loading) {
     return (
-      <Card className="p-6">
+      <div className="p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-6 bg-gray-200 rounded w-1/3"></div>
           <div className="h-4 bg-gray-200 rounded w-2/3"></div>
           <div className="h-24 bg-gray-200 rounded"></div>
         </div>
-      </Card>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Card className="p-6">
+      <div className="p-6">
         <div className="text-center text-red-600">
           <p className="font-semibold">Error Loading Insights</p>
           <p className="text-sm mt-2">{error}</p>
         </div>
-      </Card>
+      </div>
     )
   }
 
   if (!correlation) {
     return (
-      <Card className="p-6">
+      <div className="p-6">
         <div className="text-center text-gray-500">
           <p className="font-semibold">No Correlation Data Available</p>
           <p className="text-sm mt-2">
             Keep logging your meals and vitals to see how your food choices impact your health!
           </p>
         </div>
-      </Card>
+      </div>
     )
   }
 
   return (
     <div className="space-y-6">
       {/* Correlation Summary */}
-      <Card className="p-6">
+      <div className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-semibold text-gray-900">
             Nutrition Impact Analysis
@@ -184,11 +183,11 @@ export function NutritionImpactInsights({
             </p>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Foods That Helped */}
       {correlation.nutritionChanges.increasedFoods.length > 0 && (
-        <Card className="p-6">
+        <div className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Foods You Ate More
           </h3>
@@ -215,12 +214,12 @@ export function NutritionImpactInsights({
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Insights */}
       {correlation.insights.length > 0 && (
-        <Card className="p-6">
+        <div className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Insights</h3>
           <div className="space-y-3">
             {correlation.insights.map((insight, index) => (
@@ -232,12 +231,12 @@ export function NutritionImpactInsights({
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Recommendations */}
       {correlation.recommendations.length > 0 && (
-        <Card className="p-6">
+        <div className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Recommendations</h3>
           <ul className="space-y-2">
             {correlation.recommendations.map((rec, index) => (
@@ -247,12 +246,12 @@ export function NutritionImpactInsights({
               </li>
             ))}
           </ul>
-        </Card>
+        </div>
       )}
 
       {/* Prediction (if available) */}
       {showPrediction && prediction && (
-        <Card className="p-6 bg-gradient-to-br from-purple-50 to-blue-50">
+        <div className="p-6 bg-gradient-to-br from-purple-50 to-blue-50">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             30-Day Prediction
           </h3>
@@ -300,11 +299,11 @@ export function NutritionImpactInsights({
               Confidence: {prediction.confidence} ({prediction.confidenceScore}%)
             </div>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Medical Disclaimer */}
-      <Card className="p-6 bg-yellow-50 border-yellow-200">
+      <div className="p-6 bg-yellow-50 border-yellow-200">
         <h3 className="text-sm font-semibold text-yellow-900 mb-2">
           Medical Disclaimer
         </h3>
@@ -315,7 +314,7 @@ export function NutritionImpactInsights({
             </p>
           ))}
         </div>
-      </Card>
+      </div>
     </div>
   )
 }

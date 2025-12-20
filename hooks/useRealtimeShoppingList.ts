@@ -108,7 +108,7 @@ export function useRealtimeShoppingList(options?: UseRealtimeShoppingListOptions
           // New item added to shopping list
           if (item.requestedBy && item.requestedBy !== currentUser) {
             if (shouldShowNotification('shopping', 'addedToList')) {
-              toast.info(
+              toast(
                 `${getMemberName(item.requestedBy)} added ${item.productName} to shopping list`,
                 {
                   icon: '📝',
@@ -133,7 +133,7 @@ export function useRealtimeShoppingList(options?: UseRealtimeShoppingListOptions
             }
           } else if (!item.needed && item.lastModifiedBy !== currentUser) {
             if (shouldShowNotification('shopping', 'addedToList')) {
-              toast.info(
+              toast(
                 `${getMemberName(item.lastModifiedBy)} removed ${item.productName} from list`,
                 {
                   icon: '✓',
@@ -159,7 +159,7 @@ export function useRealtimeShoppingList(options?: UseRealtimeShoppingListOptions
           // Item was deleted from shopping list
           if (item.lastModifiedBy && item.lastModifiedBy !== currentUser) {
             if (shouldShowNotification('shopping', 'addedToList')) {
-              toast.info(
+              toast(
                 `${getMemberName(item.lastModifiedBy)} deleted ${item.productName}`,
                 {
                   icon: '🗑️',

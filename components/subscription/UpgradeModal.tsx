@@ -32,7 +32,7 @@ export function UpgradeModal({
 
   const handleUpgrade = async (planId: SubscriptionPlan) => {
     if (currentPlan === planId) {
-      toast.info('You are already on this plan')
+      toast('You are already on this plan')
       return
     }
 

@@ -22,8 +22,24 @@ import type {
   HealthSuggestionReason,
   ProductCategory
 } from '@/types/shopping'
-import type { PatientProfile, VitalSign, AIHealthProfile } from '@/types/medical'
+import type { PatientProfile, VitalSign } from '@/types/medical'
 import { patientOperations, vitalOperations } from '@/lib/medical-operations'
+
+// Extended patient profile with AI health properties (not yet in main type)
+interface ExtendedPatientProfile extends PatientProfile {
+  age?: number
+  conditions?: string[]
+  dietaryPreferences?: {
+    type?: string
+    restrictions?: string[]
+    allergies?: string[]
+  }
+  dietaryRestrictions?: string[]
+  allergies?: string[]
+  healthGoals?: {
+    weightGoal?: string
+  }
+}
 
 // Cache for suggestions (5 minutes TTL)
 const CACHE_TTL = 5 * 60 * 1000
@@ -193,7 +209,7 @@ export async function generateHealthSuggestions(
     logger.info('[AI Shopping] Generating health-based suggestions', { patientId: request.patientId })
 
     // Fetch patient data
-    const patient = await patientOperations.getPatient(request.patientId)
+    const patient = await patientOperations.getPatient(request.patientId) as ExtendedPatientProfile
 
     logger.info('[AI Shopping] Fetched patient data', {
       patientId: patient.userId,
@@ -310,7 +326,7 @@ async function fetchLatestVitals(patientId: string): Promise<any> {
 /**
  * Analyze patient health data to determine needs
  */
-function analyzePatientHealth(patient: PatientProfile, vitals: any): {
+function analyzePatientHealth(patient: ExtendedPatientProfile, vitals: any): {
   needs: HealthSuggestionReason[]
   priorities: Map<HealthSuggestionReason, 'high' | 'medium' | 'low'>
 } {
@@ -419,7 +435,7 @@ function analyzePatientHealth(patient: PatientProfile, vitals: any): {
  * No external AI dependencies - uses rule-based logic with patient context
  */
 async function generateAISuggestions(
-  patient: PatientProfile,
+  patient: ExtendedPatientProfile,
   vitals: any,
   analysis: { needs: HealthSuggestionReason[]; priorities: Map<HealthSuggestionReason, 'high' | 'medium' | 'low'> }
 ): Promise<HealthBasedSuggestion[]> {
@@ -449,7 +465,7 @@ async function generateAISuggestions(
  * Build comprehensive Gemini prompt combining Firebase health data
  */
 function buildGeminiPrompt(
-  patient: PatientProfile,
+  patient: ExtendedPatientProfile,
   vitals: any,
   analysis: { needs: HealthSuggestionReason[]; priorities: Map<HealthSuggestionReason, 'high' | 'medium' | 'low'> }
 ): string {
@@ -499,7 +515,7 @@ Return structured JSON with suggestions and itemsToAvoid arrays.`
  * Uses patient vitals, conditions, dietary preferences, and goals
  */
 function generateFirebaseBasedSuggestions(
-  patient: PatientProfile,
+  patient: ExtendedPatientProfile,
   vitals: any,
   analysis: { needs: HealthSuggestionReason[]; priorities: Map<HealthSuggestionReason, 'high' | 'medium' | 'low'> }
 ): HealthBasedSuggestion[] {
@@ -559,7 +575,7 @@ function generateFirebaseBasedSuggestions(
  */
 function getSuggestionsForNeed(
   need: HealthSuggestionReason,
-  patient: PatientProfile,
+  patient: ExtendedPatientProfile,
   vitals: any,
   priority: 'high' | 'medium' | 'low'
 ): HealthBasedSuggestion[] {
@@ -905,7 +921,7 @@ function groupSuggestionsByCategory(suggestions: HealthBasedSuggestion[]): Healt
  * Generate warnings for items to avoid
  */
 function generateAvoidanceWarnings(
-  patient: PatientProfile,
+  patient: ExtendedPatientProfile,
   vitals: any,
   analysis: { needs: HealthSuggestionReason[] }
 ): Array<{ productName: string; reason: string; severity: 'critical' | 'warning' | 'info' }> {

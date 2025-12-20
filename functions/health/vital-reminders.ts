@@ -6,7 +6,7 @@
  */
 
 import * as admin from 'firebase-admin'
-import { logger } from 'firebase-functions'
+import { logger } from '@/lib/logger'
 import { addHours, parseISO, isWithinInterval } from 'date-fns'
 
 interface ScheduledVitalInstance {
