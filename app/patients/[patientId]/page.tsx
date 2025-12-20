@@ -2017,9 +2017,8 @@ function PatientDetailContent() {
 
                     logger.info('[PatientDetail] Schedule created', { vitalType })
                   } catch (scheduleError) {
-                    logger.error('[PatientDetail] Failed to create schedule', {
-                      vitalType,
-                      error: scheduleError
+                    logger.error('[PatientDetail] Failed to create schedule', scheduleError as Error, {
+                      vitalType
                     })
                     // Don't fail the whole operation if schedule creation fails
                     toast.error(`Warning: Could not set up reminder for ${vitalType}`)
