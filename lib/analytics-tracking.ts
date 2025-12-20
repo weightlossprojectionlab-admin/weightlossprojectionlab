@@ -6,7 +6,8 @@
  * or any analytics service.
  */
 
-import { User, SubscriptionPlan } from '@/types'
+import { SubscriptionPlan } from '@/types'
+import type { User as FirebaseUser } from 'firebase/auth'
 
 export type OnboardingStep =
   | 'role_selection'
@@ -224,7 +225,7 @@ async function sendToAnalyticsEndpoint(event: AnalyticsEvent): Promise<void> {
 /**
  * Identify user for analytics
  */
-export function identifyUser(user: User): void {
+export function identifyUser(user: FirebaseUser): void {
   if (typeof window === 'undefined') return
 
   const userProperties = {

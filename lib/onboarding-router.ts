@@ -7,8 +7,9 @@
  * - Upgrade recommendations
  */
 
-import { SubscriptionPlan, UserSubscription, User, FeaturePreference } from '@/types'
-import { canAccessFeature } from './feature-gates'
+import { SubscriptionPlan, UserSubscription, FeaturePreference } from '@/types'
+import type { User as FirebaseUser } from 'firebase/auth'
+import { PLAN_FEATURES, ADDON_FEATURES, BASIC_FEATURES } from './feature-gates'
 
 export type OnboardingState =
   | 'role_selection'
@@ -24,7 +25,7 @@ export interface OnboardingContext {
   currentState: OnboardingState
   answers: Record<string, any>
   subscription: UserSubscription | null
-  user: User | null
+  user: FirebaseUser | null
   needsUpgrade: boolean
   recommendedPlan: SubscriptionPlan | null
   blockedFeatures: string[]
@@ -43,18 +44,43 @@ const GOAL_TO_FEATURE_MAP: Record<string, string[]> = {
  */
 export function shouldShowUpgradePrompt(
   selectedGoals: string[],
-  user: User | null,
+  user: FirebaseUser | null,
   subscription: UserSubscription | null
 ): { needsUpgrade: boolean; blockedFeatures: string[] } {
   const blockedFeatures: string[] = []
+
+  if (!subscription || subscription.status === 'expired' || subscription.status === 'canceled') {
+    // No valid subscription - all premium features are blocked
+    return {
+      needsUpgrade: true,
+      blockedFeatures: selectedGoals.filter(goal => GOAL_TO_FEATURE_MAP[goal]?.length > 0)
+    }
+  }
 
   for (const goal of selectedGoals) {
     const requiredFeatures = GOAL_TO_FEATURE_MAP[goal]
 
     if (requiredFeatures && requiredFeatures.length > 0) {
-      const hasAccess = requiredFeatures.some(feature =>
-        canAccessFeature(feature, user, subscription || undefined)
-      )
+      const hasAccess = requiredFeatures.some(feature => {
+        // Check basic features (available to all active/trialing plans)
+        if (BASIC_FEATURES.includes(feature)) {
+          return subscription.status === 'active' || subscription.status === 'trialing'
+        }
+
+        // Check plan-gated features
+        if (PLAN_FEATURES[feature]) {
+          return PLAN_FEATURES[feature].includes(subscription.plan)
+        }
+
+        // Check addon-gated features
+        if (ADDON_FEATURES[feature]) {
+          const requiredAddon = ADDON_FEATURES[feature]
+          return subscription.addons?.[requiredAddon] === true
+        }
+
+        // Feature not recognized - default to denied
+        return false
+      })
 
       if (!hasAccess) {
         blockedFeatures.push(goal)

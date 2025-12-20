@@ -38,6 +38,7 @@ import {
 } from '@/lib/age-utils'
 import { Spinner } from '@/components/ui/Spinner'
 import type { UserProfile, UserGoals, UserPreferences } from '@/types'
+import type { PatientMedication } from '@/types/medical'
 import { logger } from '@/lib/logger'
 
 interface OnboardingData {
@@ -1880,8 +1881,8 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
         </div>
 
         <MedicationList
-          medications={data.medications || []}
-          onChange={(medications) => updateData({ medications })}
+          medications={(data.medications || []) as PatientMedication[]}
+          onChange={(medications) => updateData({ medications: medications as any })}
           label="Your Medications"
           description="Scan prescription labels with NDC barcode or OCR. WLPL will auto-suggest health conditions based on your medications."
         />
