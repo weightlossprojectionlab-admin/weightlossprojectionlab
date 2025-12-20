@@ -7,7 +7,7 @@
  * DRY principle: Single source of truth for vitals data transformation.
  */
 
-import type { VitalSign } from '@/types/medical'
+import type { VitalSign, VitalUnit } from '@/types/medical'
 
 export interface WizardVitalData {
   bloodPressure?: {
@@ -31,7 +31,7 @@ export interface WizardVitalData {
 export interface VitalSignInput {
   type: 'blood_pressure' | 'temperature' | 'pulse_oximeter' | 'blood_sugar' | 'weight'
   value: number | { systolic: number; diastolic: number } | { spo2: number; pulseRate: number }
-  unit: string
+  unit: VitalUnit
   recordedAt: string
   notes: string
   method: 'manual' | 'device'

@@ -77,7 +77,8 @@ export function VitalLogForm({ patientId, onSubmit, onCancel, defaultType, onTyp
       'blood_pressure': 'mmHg',
       'pulse_oximeter': 'SpO₂% / bpm',
       'temperature': '°F',
-      'weight': 'lbs'
+      'weight': 'lbs',
+      'mood': 'scale'
     }
     return units[vitalType]
   }

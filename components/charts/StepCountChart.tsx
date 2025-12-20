@@ -111,8 +111,8 @@ export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }
   // Calculate average goal
   const avgGoal = data.length > 0 ? data[0].goal : 10000
 
-  // Theme-aware colors
-  const isDark = resolvedTheme === 'dark'
+  // Theme-aware colors (always light mode)
+  const isDark = false
   const gridColor = 'hsl(var(--border))'
   const axisColor = 'hsl(var(--muted-foreground))'
   const tooltipBg = 'hsl(var(--card))'

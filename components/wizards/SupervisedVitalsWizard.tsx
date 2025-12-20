@@ -28,6 +28,7 @@ import {
   type VitalReading,
   type ValidationResult
 } from '@/lib/ai-supervisor'
+import type { VitalSign } from '@/types/medical'
 import { logger } from '@/lib/logger'
 import { sendCriticalVitalAlert } from '@/lib/emergency-alerts'
 import { useAuth } from '@/hooks/useAuth'

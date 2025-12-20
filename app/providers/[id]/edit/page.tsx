@@ -50,11 +50,11 @@ function ProviderEditContent() {
   useEffect(() => {
     if (provider) {
       setFormData({
-        title: provider.title || '',
+        title: '', // Title field not in Provider type, leaving empty
         name: provider.name,
         specialty: provider.specialty || '',
-        customSpecialty: PROVIDER_SPECIALTIES.includes(provider.specialty || '') ? '' : provider.specialty || '',
-        facility: provider.facility || '',
+        customSpecialty: PROVIDER_SPECIALTIES.includes(provider.specialty as any || '') ? '' : provider.specialty || '',
+        facility: provider.organization || '',
         phone: provider.phone || '',
         fax: provider.fax || '',
         email: provider.email || '',

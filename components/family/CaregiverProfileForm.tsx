@@ -12,6 +12,8 @@ import { AvailabilityCalendar } from './AvailabilityCalendar'
 import type {
   CaregiverProfileFormData,
   AvailabilityStatus,
+} from '@/types/caregiver'
+import {
   DEFAULT_WEEKLY_AVAILABILITY,
   DEFAULT_CAREGIVER_PREFERENCES
 } from '@/types/caregiver'

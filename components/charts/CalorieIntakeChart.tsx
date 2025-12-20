@@ -43,8 +43,8 @@ export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
   // Calculate average goal (they should all be the same, but just in case)
   const avgGoal = data.length > 0 ? data[0].goal : 2000
 
-  // Theme-aware colors
-  const isDark = resolvedTheme === 'dark'
+  // Theme-aware colors (always light mode)
+  const isDark = false
   const gridColor = 'hsl(var(--border))'
   const axisColor = 'hsl(var(--muted-foreground))'
   const tooltipBg = 'hsl(var(--card))'

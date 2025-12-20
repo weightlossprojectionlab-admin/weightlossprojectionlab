@@ -393,7 +393,8 @@ export function getUpgradeRecommendation(
 function getNextPlan(currentPlan: SubscriptionPlan): SubscriptionPlan | null {
   const upgradeMap: Record<SubscriptionPlan, SubscriptionPlan | null> = {
     free: 'single',
-    single: 'family_basic',
+    single: 'single_plus',
+    single_plus: 'family_basic',
     family_basic: 'family_plus',
     family_plus: 'family_premium',
     family_premium: null,
@@ -412,6 +413,7 @@ function getPlanDisplayName(plan: SubscriptionPlan): string {
   const names: Record<SubscriptionPlan, string> = {
     free: 'Free Trial',
     single: 'Single User',
+    single_plus: 'Single User Plus',
     family_basic: 'Family Basic',
     family_plus: 'Family Plus',
     family_premium: 'Family Premium',

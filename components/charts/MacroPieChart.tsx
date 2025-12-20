@@ -54,8 +54,8 @@ export function MacroPieChart({ protein, carbs, fat, loading }: MacroPieChartPro
     { name: 'Fat', value: percentages.fat, grams: Math.round(fat), color: COLORS.fat }
   ]
 
-  // Theme-aware colors
-  const isDark = resolvedTheme === 'dark'
+  // Theme-aware colors (always light mode)
+  const isDark = false
   const tooltipBg = 'hsl(var(--card))'
   const tooltipBorder = 'hsl(var(--border))'
   const tooltipText = 'hsl(var(--card-foreground))'

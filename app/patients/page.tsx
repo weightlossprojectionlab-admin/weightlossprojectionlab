@@ -293,7 +293,7 @@ function PatientsContent() {
 
               setSelectedPatientForWizard(null)
             } catch (error) {
-              logger.error('[PatientsPage] Failed to save vitals', error)
+              logger.error('[PatientsPage] Failed to save vitals', error instanceof Error ? error : undefined)
               alert(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
               throw error
             }

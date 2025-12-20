@@ -2046,7 +2046,7 @@ function PatientDetailContent() {
 
               toast.success(`${savedVitals.length} vital sign${savedVitals.length !== 1 ? 's' : ''} logged successfully!`)
             } catch (error) {
-              logger.error('[PatientDetail] Failed to save vitals', error)
+              logger.error('[PatientDetail] Failed to save vitals', error instanceof Error ? error : undefined)
               toast.error(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
               throw error
             }
@@ -2106,8 +2106,14 @@ function PatientDetailContent() {
                 appointmentData
               })
 
+              const provider = providers.find(p => p.id === appointmentData.providerId)
+
               const appointmentId = await createAppointment({
+                userId: user?.uid || '',
                 patientId: patient.id,
+                patientName: patient.name,
+                providerName: provider?.name || 'Unknown Provider',
+                updatedAt: new Date().toISOString(),
                 ...appointmentData,
                 status: 'scheduled',
                 createdFrom: 'manual',
@@ -2124,7 +2130,7 @@ function PatientDetailContent() {
               // Redirect to calendar view
               router.push('/calendar')
             } catch (error) {
-              logger.error('[PatientDetail] Failed to create appointment', error)
+              logger.error('[PatientDetail] Failed to create appointment', error instanceof Error ? error : undefined)
               throw error
             }
           }}
