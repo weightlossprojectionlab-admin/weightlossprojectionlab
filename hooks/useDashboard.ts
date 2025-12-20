@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { apiClient } from '@/lib/api-client'
-import { logger } from '@/lib/logger'
+import { logger, toLogContext } from '@/lib/logger'
 
 export interface DashboardStats {
   patients: {
@@ -134,7 +134,7 @@ export function useDashboard(): UseDashboardReturn {
       logger.debug('[useDashboard] Raw statsData:', statsData)
 
       if (statsData) {
-        logger.debug('[useDashboard] Stats:', statsData.stats)
+        logger.debug('[useDashboard] Stats:', toLogContext(statsData.stats))
         setStats(statsData.stats)
         setPatientSnapshots(statsData.patientSnapshots || [])
         setUpcomingAppointments(statsData.upcomingAppointments || [])

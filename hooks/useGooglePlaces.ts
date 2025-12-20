@@ -144,7 +144,7 @@ export function useGooglePlaces(): UseGooglePlacesReturn {
 
       // Cleanup function
       return () => {
-        if (listener) {
+        if (listener && window.google?.maps) {
           window.google.maps.event.removeListener(listener)
         }
       }
@@ -166,12 +166,12 @@ function extractPlaceDetails(place: google.maps.places.PlaceResult): PlaceResult
   const components = place.address_components || []
 
   const getComponent = (type: string): string => {
-    const component = components.find((c) => c.types.includes(type))
+    const component = components.find((c: google.maps.GeocoderAddressComponent) => c.types.includes(type))
     return component?.long_name || ''
   }
 
   const getShortComponent = (type: string): string => {
-    const component = components.find((c) => c.types.includes(type))
+    const component = components.find((c: google.maps.GeocoderAddressComponent) => c.types.includes(type))
     return component?.short_name || ''
   }
 

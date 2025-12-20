@@ -4,10 +4,11 @@ import { useState } from 'react'
 import { PlusIcon, CameraIcon } from '@heroicons/react/24/outline'
 import { MedicationCard } from './MedicationCard'
 import { PatientMedication } from '@/types/medical'
+import { ScannedMedication } from '@/lib/medication-lookup'
 
 interface MedicationListProps {
-  medications: PatientMedication[]
-  onChange: (medications: PatientMedication[]) => void
+  medications: (PatientMedication | ScannedMedication)[]
+  onChange: (medications: (PatientMedication | ScannedMedication)[]) => void
   prescribedFor?: string // Condition name
   label?: string
   description?: string
@@ -44,7 +45,7 @@ export default function MedicationList({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {medications.map((med, index) => (
             <MedicationCard
-              key={med.id || index}
+              key={('id' in med ? med.id : undefined) || index}
               medication={med}
               onDelete={() => handleRemoveMedication(index)}
               showActions={true}

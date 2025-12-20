@@ -16,7 +16,7 @@
 
 import { useState } from 'react'
 import { XMarkIcon, BellIcon, ClockIcon } from '@heroicons/react/24/outline'
-import { VitalSign } from '@/types/medical'
+import { VitalSign, VitalType } from '@/types/medical'
 import { shouldShowVitalReminder, getVitalReminderMessage, getVitalReminderColor, VitalFrequency } from '@/lib/vital-reminder-logic'
 import { userProfileOperations } from '@/lib/firebase-operations'
 import toast from 'react-hot-toast'
@@ -27,26 +27,30 @@ interface VitalReminderPromptProps {
   vitals: VitalSign[]
   userPreferences?: {
     vitalReminders?: {
-      blood_pressure?: { enabled: boolean; frequency: string }
-      blood_sugar?: { enabled: boolean; frequency: string }
-      temperature?: { enabled: boolean; frequency: string }
-      pulse_oximeter?: { enabled: boolean; frequency: string }
-      weight?: { enabled: boolean; frequency: string }
+      blood_pressure?: { enabled: boolean; frequency: 'daily' | 'twice-daily' | 'weekly' | 'monthly' }
+      blood_sugar?: { enabled: boolean; frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' }
+      temperature?: { enabled: boolean; frequency: 'daily' | 'weekly' | 'biweekly' }
+      pulse_oximeter?: { enabled: boolean; frequency: 'daily' | 'twice-daily' | 'weekly' }
+      weight?: { enabled: boolean; frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' }
+      mood?: { enabled: boolean; frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' }
     }
   }
   onLogVitalsClick: () => void
   onLogSpecificVital?: (vitalType: VitalType) => void
 }
 
-type VitalType = 'blood_pressure' | 'blood_sugar' | 'temperature' | 'pulse_oximeter' | 'weight'
-
 interface VitalReminderInfo {
   type: VitalType
   label: string
   icon: string
   message: string
-  status: 'due_soon' | 'overdue' | 'on_track'
-  color: string
+  status: 'on-track' | 'due-soon' | 'overdue' | 'inactive'
+  color: {
+    border: string
+    bg: string
+    text: string
+    badge: string
+  }
 }
 
 export default function VitalReminderPrompt({

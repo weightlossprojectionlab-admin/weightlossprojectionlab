@@ -178,7 +178,7 @@ export default function VitalQuickLogModal({
   }
 
   const handleFieldChange = (fieldName: string, value: string) => {
-    setFormData(prev => ({ ...prev, [fieldName]: value }))
+    setFormData((prev: typeof formData) => ({ ...prev, [fieldName]: value }))
   }
 
   return (

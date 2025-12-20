@@ -1408,7 +1408,7 @@ function ScheduleStep({
   const [smsNotifications, setSmsNotifications] = useState(false)
 
   // Get vitals that were logged
-  const loggedVitals = []
+  const loggedVitals: Array<{ type: string; label: string }> = []
   if (vitalData.bloodPressure) loggedVitals.push({ type: 'blood_pressure', label: 'Blood Pressure' })
   if (vitalData.temperature) loggedVitals.push({ type: 'temperature', label: 'Temperature' })
   if (vitalData.heartRate || vitalData.oxygenSaturation) loggedVitals.push({ type: 'pulse_ox', label: 'Pulse Oximeter' })

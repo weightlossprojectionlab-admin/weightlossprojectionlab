@@ -35,8 +35,10 @@ export interface PatientProfile {
   userId: string // Owner's Firebase Auth UID
   type: 'human' | 'pet'
   name: string
+  nickname?: string // Optional nickname/preferred name
   photo?: string
   dateOfBirth: string // ISO 8601
+  age?: number // Computed age in years
   relationship: 'self' | 'spouse' | 'parent' | 'child' | 'sibling' | 'grandparent' | 'pet'
 
   // Pet-specific fields

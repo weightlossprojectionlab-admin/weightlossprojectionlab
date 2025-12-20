@@ -2116,6 +2116,7 @@ function PatientDetailContent() {
                 updatedAt: new Date().toISOString(),
                 ...appointmentData,
                 dateTime: appointmentData.dateTime.toISOString(),
+                pickupTime: appointmentData.pickupTime instanceof Date ? appointmentData.pickupTime.toISOString() : appointmentData.pickupTime,
                 providerId: appointmentData.providerId || '', // Ensure providerId is always a string
                 status: 'scheduled',
                 createdFrom: 'manual',
