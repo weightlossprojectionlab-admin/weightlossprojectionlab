@@ -44,6 +44,7 @@ import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import AuthGuard from '@/components/auth/AuthGuard'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
+import { calculateAge } from '@/lib/age-utils'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import SupervisedVitalsWizard from '@/components/wizards/SupervisedVitalsWizard'
@@ -1518,7 +1519,7 @@ function PatientDetailContent() {
                               onClick={async () => {
                                 try {
                                   await medicalOperations.documents.updateDocument(patientId, doc.id, {
-                                    ocrStatus: 'not_started'
+                                    ocrStatus: 'pending'
                                   })
                                   toast.success('Document status reset')
                                   fetchDocuments()
@@ -1880,7 +1881,7 @@ function PatientDetailContent() {
         <MedicationDetailModal
           medication={selectedMedication}
           onClose={() => setSelectedMedication(null)}
-          patientId={params.patientId}
+          patientId={patientId}
           onMedicationUpdated={fetchMedications}
         />
       )}
@@ -1925,8 +1926,8 @@ function PatientDetailContent() {
             familyMember={{
               id: patient.id,
               name: patient.name,
-              age: patient.age,
-              conditions: patient.conditions || []
+              age: calculateAge(patient.dateOfBirth),
+              conditions: patient.healthConditions || []
             }}
             caregivers={caregivers}
           onSubmit={async (vitals) => {
