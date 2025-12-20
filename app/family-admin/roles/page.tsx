@@ -345,10 +345,10 @@ function MemberCard({
           <p className="text-sm text-muted-foreground">{member.email}</p>
 
           {/* Patient Access */}
-          {member.patientIds && member.patientIds.length > 0 && (
+          {member.patientsAccess && member.patientsAccess.length > 0 && (
             <div className="mt-3">
               <p className="text-xs text-muted-foreground mb-1">
-                Access to {member.patientIds.length} family member(s)
+                Access to {member.patientsAccess.length} family member(s)
               </p>
             </div>
           )}
@@ -388,10 +388,9 @@ function MemberCard({
                 Change Role
               </label>
               <RoleSelector
-                currentRole={member.familyRole}
-                userRole={currentUserRole}
-                memberId={member.userId}
-                onRoleChange={onRoleChange}
+                value={member.familyRole}
+                onChange={(newRole) => onRoleChange(member.userId, newRole)}
+                currentUserRole={currentUserRole}
               />
             </div>
           )}

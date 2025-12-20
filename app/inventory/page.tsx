@@ -47,8 +47,7 @@ function KitchenInventoryContent() {
     pantryItems,
     counterItems,
     loading: inventoryLoading,
-    getSummary,
-    refresh
+    getSummary
   } = useRealtimeInventory()
 
   // Real-time expired items hook
@@ -56,7 +55,6 @@ function KitchenInventoryContent() {
     totalExpired,
     criticalItems,
     highRiskItems,
-    expirationAlerts,
     loading: expiredLoading
   } = useRealtimeExpiredItems()
 
@@ -169,7 +167,6 @@ function KitchenInventoryContent() {
         if (existing) {
           await consumeItem(existing.id)
           toast.success(`Marked as used. Added ${product.name} to shopping list`)
-          refresh()
         } else {
           toast.error('Item not found in inventory')
         }
@@ -194,7 +191,6 @@ function KitchenInventoryContent() {
           })
           toast.success(`➕ Added ${product.name} to inventory`)
         }
-        refresh()
       } else {
         // Just show info (meal context)
         toast(`${product.name} - ${product.calories} cal`)
@@ -331,8 +327,19 @@ function KitchenInventoryContent() {
             <div className="space-y-3">
               {items.map(item => {
                 const categoryMeta = getCategoryMetadata(item.category)
-                const expirationAlert = expirationAlerts?.find((a: any) => a.itemId === item.id)
-                const expirationColors = expirationAlert ? getExpirationColor(expirationAlert.severity) : null
+
+                // Calculate expiration severity from item's expiresAt date
+                let expirationSeverity: 'expired' | 'critical' | 'warning' | 'normal' = 'normal'
+                if (item.expiresAt) {
+                  const daysUntil = Math.ceil(
+                    (item.expiresAt.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                  )
+                  if (daysUntil < 0) expirationSeverity = 'expired'
+                  else if (daysUntil <= 1) expirationSeverity = 'critical'
+                  else if (daysUntil <= 3) expirationSeverity = 'warning'
+                }
+
+                const expirationColors = expirationSeverity !== 'normal' ? getExpirationColor(expirationSeverity) : null
 
                 return (
                   <div

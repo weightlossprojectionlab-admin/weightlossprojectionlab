@@ -265,9 +265,9 @@ export default function NotificationsPage() {
                       <p className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                       </p>
-                      {notification.metadata?.createdByName && (
+                      {'actionBy' in notification.metadata && notification.metadata.actionBy && (
                         <p className="text-xs text-muted-foreground">
-                          Created by <span className="font-medium text-foreground">{notification.metadata.createdByName}</span>
+                          Created by <span className="font-medium text-foreground">{notification.metadata.actionBy}</span>
                         </p>
                       )}
                     </div>
