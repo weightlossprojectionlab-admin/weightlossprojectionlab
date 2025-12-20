@@ -190,6 +190,29 @@ export function canAccessFeature(user: User | null, feature: string): boolean {
   const subscription = getUserSubscription(user)
   if (!subscription) return false
 
+  // Grandfathered users get full access to their plan's features forever
+  if (subscription.isGrandfathered) {
+    // Check basic features (available to all plans)
+    if (BASIC_FEATURES.includes(feature)) {
+      return true
+    }
+
+    // Check plan-gated features based on their grandfathered plan
+    if (PLAN_FEATURES[feature]) {
+      return PLAN_FEATURES[feature].includes(subscription.plan)
+    }
+
+    // Check addon-gated features
+    if (ADDON_FEATURES[feature]) {
+      const requiredAddon = ADDON_FEATURES[feature]
+      return subscription.addons?.[requiredAddon] === true
+    }
+
+    // Feature not recognized but grandfathered - allow basic access
+    return BASIC_FEATURES.includes(feature)
+  }
+
+  // Non-grandfathered users: Check subscription status
   // Expired or canceled subscriptions can't access features
   if (subscription.status === 'expired' || subscription.status === 'canceled') {
     return false
@@ -223,6 +246,12 @@ export function canAddPatient(user: User | null, currentPatientCount: number): b
 
   const subscription = getUserSubscription(user)
   if (!subscription) return false
+
+  // Grandfathered users bypass expiration checks
+  if (subscription.isGrandfathered) {
+    const maxPatients = subscription.maxPatients ?? subscription.maxSeats ?? 1
+    return currentPatientCount < maxPatients
+  }
 
   // Can't add patients if subscription expired/canceled
   if (subscription.status === 'expired' || subscription.status === 'canceled') {

@@ -120,7 +120,7 @@ export function useStepCounter(
               totalSteps: data.totalSteps || 0,
               sessionSteps: data.sessionSteps || 0
             }))
-            logger.debug('[Step Counter] Restored from storage:', data.totalSteps)
+            logger.debug('[Step Counter] Restored from storage', { totalSteps: data.totalSteps })
           }
         }
       } catch (err) {

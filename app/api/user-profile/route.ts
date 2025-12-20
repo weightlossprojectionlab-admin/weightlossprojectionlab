@@ -189,16 +189,42 @@ export async function POST(request: NextRequest) {
       lastActiveAt: new Date()
     }
 
+    // Create trial subscription for new users (30-day free trial)
+    const now = new Date()
+    const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+
+    const trialSubscription = {
+      plan: 'single',
+      billingInterval: 'monthly',
+      currentPeriodStart: now,
+      currentPeriodEnd: trialEnd,
+      status: 'trialing',
+      trialEndsAt: trialEnd,
+
+      // Seat limits (Single User plan)
+      maxSeats: 1,
+      currentSeats: 0,
+      maxExternalCaregivers: 0,
+      currentExternalCaregivers: 0,
+      maxPatients: 1,
+
+      // No grandfathering for new users
+      isGrandfathered: false,
+
+      // No payment info yet (will be added when trial converts)
+    }
+
     // Add onboarding tracking fields to profile object
     const profileWithOnboarding = {
       ...userProfileData,
       profile: {
         onboardingCompleted: false,
         currentOnboardingStep: 1
-      }
+      },
+      subscription: trialSubscription  // Add trial subscription
     }
 
-    // Save to Firestore with onboarding fields
+    // Save to Firestore with onboarding fields and trial subscription
     await adminDb.collection('users').doc(userId).set(profileWithOnboarding)
 
     // Return the created profile

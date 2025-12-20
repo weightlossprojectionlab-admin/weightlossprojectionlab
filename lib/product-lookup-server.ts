@@ -62,7 +62,7 @@ export async function lookupProductByBarcode(barcode: string): Promise<ProductDa
       } as ProductData
     }
   } catch (error) {
-    logger.warn('[Product Lookup] USDA lookup failed, trying OpenFoodFacts', error as Error, { barcode })
+    logger.warn('[Product Lookup] USDA lookup failed, trying OpenFoodFacts', { error: (error as Error).message, barcode })
   }
 
   // Fallback to OpenFoodFacts

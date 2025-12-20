@@ -164,7 +164,7 @@ export function hasAnyVitalMeasurement(wizardData: WizardVitalData): boolean {
  */
 export function formatVitalForDisplay(
   type: string,
-  value: number | { systolic: number; diastolic: number } | { spo2: number; pulseRate: number },
+  value: number | { systolic: number; diastolic: number } | { spo2: number; pulseRate: number } | { energy: number; appetite: number; pain: number; overall: number; behavior?: string; mobility?: string; vocalizations?: string; speciesNotes?: string; symptoms?: string[] },
   unit: string
 ): string {
   switch (type) {
@@ -186,6 +186,13 @@ export function formatVitalForDisplay(
       const moodEmojis = ['😢', '😟', '😕', '😐', '🙂', '😊', '😄', '😁', '🤩', '😍']
       const emoji = moodEmojis[Math.min(Math.max(Math.floor(moodValue) - 1, 0), 9)]
       return `${emoji} ${moodValue}/10`
+
+    case 'pet_vital':
+      // Handle pet vitals (energy, appetite, pain, overall)
+      if (typeof value === 'object' && 'overall' in value) {
+        return `Overall: ${value.overall}/10`
+      }
+      return `${value} ${unit}`
 
     default:
       return `${value} ${unit}`

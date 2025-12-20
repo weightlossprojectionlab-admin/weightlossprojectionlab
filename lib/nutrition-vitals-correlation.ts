@@ -997,7 +997,8 @@ function identifyConcerningPatterns(changes: any[], foodFrequency: any[]): strin
     f.category === 'frozen' || f.category === 'pantry'
   ).length
 
-  if (processedCount > vegetables) {
+  const vegetableCount = foodFrequency.filter(f => f.category === 'produce').length
+  if (processedCount > vegetableCount) {
     patterns.push('High proportion of processed foods')
   }
 

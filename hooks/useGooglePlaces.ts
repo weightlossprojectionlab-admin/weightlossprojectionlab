@@ -305,14 +305,3 @@ export function getStaticMapUrl({
   return `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${width}x${height}&markers=color:red%7C${marker}&key=${GOOGLE_MAPS_API_KEY}`
 }
 
-// Type definitions for Google Maps API (if not using @types/google.maps)
-declare global {
-  interface Window {
-    google?: {
-      maps?: {
-        places?: any
-        event?: any
-      }
-    }
-  }
-}

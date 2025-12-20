@@ -470,7 +470,7 @@ function buildGeminiPrompt(
   analysis: { needs: HealthSuggestionReason[]; priorities: Map<HealthSuggestionReason, 'high' | 'medium' | 'low'> }
 ): string {
   const age = patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : null
-  const ageCategory = age ? getAgeCategory(age) : 'adult'
+  const ageCategory = age ? (age < 13 ? 'child' : age < 18 ? 'teen' : age < 65 ? 'adult' : 'senior') : 'adult'
 
   return `You are a personalized nutrition AI assistant helping a family member with their grocery shopping.
 
@@ -480,7 +480,7 @@ function buildGeminiPrompt(
 - Medical Conditions: ${patient.conditions?.join(', ') || 'None reported'}
 - Dietary Restrictions: ${patient.dietaryRestrictions?.join(', ') || 'None'}
 - Allergies: ${patient.allergies?.join(', ') || 'None'}
-- Health Goals: ${patient.goals?.join(', ') || 'General health'}
+- Health Goals: ${(Array.isArray(patient.goals) ? patient.goals.join(', ') : '') || 'General health'}
 
 **Current Health Vitals:**
 ${vitals.bloodPressure ? `- Blood Pressure: ${vitals.bloodPressure.systolic}/${vitals.bloodPressure.diastolic} mmHg ${vitals.bloodPressure.isAbnormal ? '(ABNORMAL)' : '(Normal)'}` : ''}

@@ -240,17 +240,17 @@ export function useExperiment(
     }
   }
 
-  const variant = getOrAssignVariant(experimentId, user.uid)
+  const variant = getOrAssignVariant(experimentId, (user as any).uid)
 
   return {
     variant,
     isTest: variant === 'test',
     isControl: variant === 'control',
     logImpression: (metadata) => {
-      logExperimentImpression(experimentId, variant, user.uid, metadata)
+      logExperimentImpression(experimentId, variant, (user as any).uid, metadata)
     },
     logConversion: (conversionType, metadata) => {
-      logExperimentConversion(experimentId, variant, user.uid, conversionType, metadata)
+      logExperimentConversion(experimentId, variant, (user as any).uid, conversionType, metadata)
     },
   }
 }

@@ -50,7 +50,7 @@ export function validateVitalReading(reading: VitalReading): ValidationResult {
       if (!bp || typeof bp.systolic !== 'number' || typeof bp.diastolic !== 'number') {
         return {
           isValid: false,
-          severity: 'info',
+          severity: 'normal',
           message: 'Please enter both systolic and diastolic values',
           guidance: 'Enter the top number (systolic) and bottom number (diastolic) from the blood pressure reading',
           requiresConfirmation: false
@@ -338,7 +338,7 @@ export function getTrainingPrompt(action: string, context: any = {}): TrainingPr
 export interface QualityCheck {
   passed: boolean
   message: string
-  severity: 'info' | 'warning' | 'error'
+  severity: 'normal' | 'warning' | 'error'
   suggestion?: string
 }
 
@@ -393,7 +393,7 @@ export function runQualityChecks(logData: any): QualityCheck[] {
     checks.push({
       passed: true,
       message: 'Consider taking a photo for documentation',
-      severity: 'info',
+      severity: 'normal',
       suggestion: 'Photos help track healing progress and are valuable for healthcare providers.'
     })
   }

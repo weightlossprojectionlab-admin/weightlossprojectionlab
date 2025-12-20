@@ -160,7 +160,7 @@ export function shouldShowVitalReminder(
   }
 
   const now = new Date()
-  const lastLogDate = new Date(lastVitalLog.recordedAt)
+  const lastLogDate = lastVitalLog ? new Date(lastVitalLog.recordedAt) : new Date()
 
   // Compare calendar dates, not time differences
   const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -235,7 +235,7 @@ export function shouldShowVitalReminder(
   }
 
   // For multiple-times-daily frequencies (twice-daily, 3x, 4x)
-  if (frequency.includes('daily') && frequency !== 'daily') {
+  if (['twice-daily', 'three-times-daily', 'four-times-daily'].includes(frequency)) {
     // For multi-daily frequencies, check if logged today
     if (loggedToday) {
       // Already logged today - show reminder based on time since last log

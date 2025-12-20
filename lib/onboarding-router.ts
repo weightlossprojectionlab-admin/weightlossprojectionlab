@@ -9,6 +9,7 @@
 
 import { SubscriptionPlan, UserSubscription, FeaturePreference } from '@/types'
 import type { User as FirebaseUser } from 'firebase/auth'
+import { canAccessFeature } from './feature-gates'
 import { PLAN_FEATURES, ADDON_FEATURES, BASIC_FEATURES } from './feature-gates'
 
 export type OnboardingState =
@@ -285,9 +286,14 @@ export function canAdvanceFromState(
  */
 export function filterAccessibleGoals(
   selectedGoals: string[],
-  user: User | null,
+  user: FirebaseUser | null,
   subscription: UserSubscription | null
 ): string[] {
+  if (!subscription || subscription.status === 'expired' || subscription.status === 'canceled') {
+    // No valid subscription - only allow goals that don't require features
+    return selectedGoals.filter(goal => !GOAL_TO_FEATURE_MAP[goal] || GOAL_TO_FEATURE_MAP[goal].length === 0)
+  }
+
   return selectedGoals.filter(goal => {
     const requiredFeatures = GOAL_TO_FEATURE_MAP[goal]
 
@@ -296,9 +302,26 @@ export function filterAccessibleGoals(
       return true
     }
 
-    // Only include goals user has subscription access to
-    return requiredFeatures.some(feature =>
-      canAccessFeature(feature, user, subscription || undefined)
-    )
+    // Check if user has access to at least one required feature
+    return requiredFeatures.some(feature => {
+      // Check basic features (available to all active/trialing plans)
+      if (BASIC_FEATURES.includes(feature)) {
+        return subscription.status === 'active' || subscription.status === 'trialing'
+      }
+
+      // Check plan-gated features
+      if (PLAN_FEATURES[feature]) {
+        return PLAN_FEATURES[feature].includes(subscription.plan)
+      }
+
+      // Check addon-gated features
+      if (ADDON_FEATURES[feature]) {
+        const requiredAddon = ADDON_FEATURES[feature]
+        return subscription.addons?.[requiredAddon] === true
+      }
+
+      // Feature not recognized - default to denied
+      return false
+    })
   })
 }

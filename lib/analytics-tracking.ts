@@ -232,7 +232,7 @@ export function identifyUser(user: FirebaseUser): void {
     userId: user.uid,
     email: user.email,
     displayName: user.displayName,
-    createdAt: user.createdAt,
+    createdAt: (user as any).metadata?.creationTime || new Date().toISOString(),
   }
 
   console.log('[Analytics] Identify User', userProperties)

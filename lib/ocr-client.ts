@@ -103,7 +103,7 @@ async function tryExtractNativeTextFromPDF(pdfUrl: string): Promise<{ text: stri
 
     return { text: fullText, hasText }
   } catch (error) {
-    logger.warn('[OCR Client] Failed to extract native text from PDF', error as Error)
+    logger.warn('[OCR Client] Failed to extract native text from PDF', { error: (error as Error).message })
     return { text: '', hasText: false }
   }
 }

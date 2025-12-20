@@ -31,7 +31,7 @@ interface UseMealsReturn {
   loading: boolean
   error: string | null
   refetch: () => Promise<void>
-  logMeal: (data: Omit<MealLog, 'id' | 'patientId' | 'userId' | 'loggedAt' | 'loggedBy'>) => Promise<MealLog>
+  logMeal: (data: Omit<MealLog, 'id' | 'patientId' | 'userId' | 'loggedBy'>) => Promise<MealLog>
   checkDuplicateToday: (mealType: MealType) => Promise<DuplicateCheckResult>
   getLatestMeal: (mealType: MealType) => MealLog | null
   getTodayMeals: () => MealLog[]
@@ -78,7 +78,7 @@ export function useMeals({
 
   // Log meal
   const logMeal = useCallback(async (
-    data: Omit<MealLog, 'id' | 'patientId' | 'userId' | 'loggedAt' | 'loggedBy'>
+    data: Omit<MealLog, 'id' | 'patientId' | 'userId' | 'loggedBy'>
   ): Promise<MealLog> => {
     try {
       logger.info('[useMeals] Logging meal', { patientId, mealType: data.mealType })

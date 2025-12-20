@@ -85,7 +85,7 @@ export async function verifyAdminAuth(
         await adminAuth.setCustomUserClaims(uid, { role: 'admin' })
         logger.info('[Admin Auth] Set custom claims for super admin', { uid, email })
       } catch (claimError) {
-        logger.warn('[Admin Auth] Failed to set custom claims', claimError as Error)
+        logger.warn('[Admin Auth] Failed to set custom claims', { error: (claimError as Error).message })
       }
 
       return {
@@ -109,7 +109,7 @@ export async function verifyAdminAuth(
         await adminAuth.setCustomUserClaims(uid, { role: 'admin' })
         logger.info('[Admin Auth] Migrated admin to custom claims', { uid, email })
       } catch (claimError) {
-        logger.warn('[Admin Auth] Failed to migrate to custom claims', claimError as Error)
+        logger.warn('[Admin Auth] Failed to migrate to custom claims', { error: (claimError as Error).message })
       }
 
       return {

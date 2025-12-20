@@ -259,6 +259,11 @@ export interface UserSubscription {
   status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'expired'
   trialEndsAt?: Date
 
+  // Grandfathering (for early adopters)
+  isGrandfathered?: boolean  // True if user gets permanent free access
+  grandfatheredAt?: Date     // When user was grandfathered
+  grandfatheredReason?: string // Why they were grandfathered (e.g., 'founding_member')
+
   // Seat Management
   maxSeats: number // Family members (billable)
   currentSeats: number // Current family member count

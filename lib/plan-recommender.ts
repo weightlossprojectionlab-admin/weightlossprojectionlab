@@ -114,10 +114,11 @@ export function recommendPlan(needs: UserNeeds): PlanRecommendation {
   })
 
   // Exclude free plan from recommendations
-  delete scores.free
+  const { free, ...otherScores } = scores
+  const filteredScores = otherScores
 
   // Find highest scoring plan
-  const sortedPlans = Object.entries(scores).sort((a, b) => b[1] - a[1])
+  const sortedPlans = Object.entries(filteredScores).sort((a, b) => b[1] - a[1])
   const recommendedPlan = sortedPlans[0][0] as SubscriptionPlan
   const alternativePlan = sortedPlans[1]?.[0] as SubscriptionPlan
 
