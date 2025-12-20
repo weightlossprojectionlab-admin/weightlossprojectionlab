@@ -9,7 +9,7 @@ import { adminAuth as auth, adminDb as db } from '@/lib/firebase-admin'
 import { SubscriptionPlan } from '@/types'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2025-11-17.clover',
 })
 
 // Stripe Price IDs - Using your existing configuration from .env.local

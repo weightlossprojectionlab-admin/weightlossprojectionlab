@@ -9,7 +9,7 @@ import { adminDb as db } from '@/lib/firebase-admin'
 import { SubscriptionPlan } from '@/types'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2025-11-17.clover',
 })
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -161,7 +161,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   // Mark subscription as canceled
   await db.collection('users').doc(userId).update({
     'subscription.status': 'canceled',
-    'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+    'subscription.currentPeriodEnd': subscription.current_period_end ? new Date((subscription.current_period_end as number) * 1000) : null,
     updatedAt: new Date(),
   })
 }
@@ -171,7 +171,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
  * Payment was successful - renew subscription
  */
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-  const userId = invoice.subscription_details?.metadata?.firebaseUID || invoice.metadata?.firebaseUID
+  const userId = (invoice as any).subscription_details?.metadata?.firebaseUID || invoice.metadata?.firebaseUID
 
   if (!userId) {
     console.log('No firebaseUID in invoice metadata, skipping')
@@ -192,7 +192,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
  * Payment failed - mark subscription as past_due
  */
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  const userId = invoice.subscription_details?.metadata?.firebaseUID || invoice.metadata?.firebaseUID
+  const userId = (invoice as any).subscription_details?.metadata?.firebaseUID || invoice.metadata?.firebaseUID
 
   if (!userId) {
     console.log('No firebaseUID in invoice metadata, skipping')
@@ -257,8 +257,8 @@ async function updateUserSubscription(
     'subscription.plan': plan,
     'subscription.billingInterval': billingInterval,
     'subscription.status': status,
-    'subscription.currentPeriodStart': new Date(subscription.current_period_start * 1000),
-    'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000),
+    'subscription.currentPeriodStart': (subscription as any).current_period_start ? new Date(((subscription as any).current_period_start as number) * 1000) : new Date(),
+    'subscription.currentPeriodEnd': (subscription as any).current_period_end ? new Date(((subscription as any).current_period_end as number) * 1000) : null,
     'subscription.stripeCustomerId': subscription.customer as string,
     'subscription.stripeSubscriptionId': subscription.id,
     'subscription.stripePriceId': subscription.items.data[0]?.price?.id || null,
