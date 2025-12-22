@@ -190,9 +190,9 @@ export async function POST(request: NextRequest) {
       lastActiveAt: new Date()
     }
 
-    // Create trial subscription for new users (30-day free trial)
+    // Create trial subscription for new users (7-day free trial)
     const now = new Date()
-    const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+    const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
 
     const trialSubscription = {
       plan: 'single',

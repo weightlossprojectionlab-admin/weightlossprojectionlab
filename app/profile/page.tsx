@@ -592,12 +592,33 @@ function ProfileContent() {
                 </p>
               </div>
 
-              {/* Trial Info */}
+              {/* Trial Info with Upgrade CTA */}
               {subscription.trialEndsAt && subscription.status === 'trialing' && (
-                <div className="bg-warning-light border border-warning rounded-lg p-3">
-                  <p className="text-sm text-warning-dark">
-                    <strong>Trial ends:</strong> {new Date(subscription.trialEndsAt).toLocaleDateString()}
-                  </p>
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-blue-900 mb-1">
+                        🎁 Free Trial Active
+                      </p>
+                      <p className="text-sm text-blue-800">
+                        Trial ends:{' '}
+                        <strong>
+                          {typeof subscription.trialEndsAt === 'object' && 'toDate' in subscription.trialEndsAt
+                            ? subscription.trialEndsAt.toDate().toLocaleDateString()
+                            : new Date(subscription.trialEndsAt).toLocaleDateString()}
+                        </strong>
+                      </p>
+                      <p className="text-xs text-blue-700 mt-2">
+                        Unlock all features and never lose access to your health data
+                      </p>
+                    </div>
+                    <a
+                      href="/pricing"
+                      className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all whitespace-nowrap"
+                    >
+                      Upgrade Now
+                    </a>
+                  </div>
                 </div>
               )}
 

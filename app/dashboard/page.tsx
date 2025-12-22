@@ -291,6 +291,37 @@ function DashboardContent() {
       />
 
       <div className="container-narrow py-6 space-y-6">
+        {/* Trial Upgrade Banner */}
+        {userProfile?.subscription?.status === 'trialing' && userProfile?.subscription?.trialEndsAt && (
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-2xl p-6 text-white">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🎁</span>
+                  <h3 className="text-xl font-bold">You're on a Free Trial!</h3>
+                </div>
+                <p className="text-blue-100 text-sm mb-1">
+                  Trial ends:{' '}
+                  <strong className="text-white">
+                    {typeof userProfile.subscription.trialEndsAt === 'object' && 'toDate' in userProfile.subscription.trialEndsAt
+                      ? userProfile.subscription.trialEndsAt.toDate().toLocaleDateString()
+                      : new Date(userProfile.subscription.trialEndsAt).toLocaleDateString()}
+                  </strong>
+                </p>
+                <p className="text-blue-50 text-xs">
+                  Upgrade now to keep tracking your progress and never lose access to your health data
+                </p>
+              </div>
+              <Link
+                href="/pricing"
+                className="px-6 py-3 bg-white text-blue-600 hover:bg-blue-50 rounded-lg font-bold shadow-lg hover:shadow-xl transition-all whitespace-nowrap"
+              >
+                Upgrade Now
+              </Link>
+            </div>
+          </div>
+        )}
+
         {loading || loadingMeals ? (
           <div className="text-center py-12">
             <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>

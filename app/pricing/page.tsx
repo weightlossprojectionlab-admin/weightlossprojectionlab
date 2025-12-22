@@ -201,7 +201,7 @@ export default function PricingPage() {
             Choose Your Plan
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Start your weight loss journey with a 30-day free trial. No credit card required for the first 14 days.
+            Start your weight loss journey with a 7-day free trial. No credit card required.
           </p>
 
           {/* Billing Toggle */}
@@ -340,10 +340,10 @@ export default function PricingPage() {
           <div className="space-y-4">
             <details className="bg-card rounded-lg p-4 border border-border">
               <summary className="font-medium text-foreground cursor-pointer">
-                How does the 30-day trial work?
+                How does the 7-day trial work?
               </summary>
               <p className="mt-2 text-muted-foreground text-sm">
-                You get full access to all features of your selected plan for 30 days. No credit card required for the first 14 days. After your trial ends, you'll be charged for your subscription.
+                You get full access to all features of your selected plan for 7 days. No credit card required. After your trial ends, you'll be prompted to add payment to continue.
               </p>
             </details>
             <details className="bg-card rounded-lg p-4 border border-border">
@@ -359,7 +359,7 @@ export default function PricingPage() {
                 What happens after my trial ends?
               </summary>
               <p className="mt-2 text-muted-foreground text-sm">
-                After 30 days, your trial converts to a paid subscription automatically. We'll send you reminders before charging your card.
+                After 7 days, you'll need to add payment to continue using the platform. We'll send you reminders before your trial ends.
               </p>
             </details>
             <details className="bg-card rounded-lg p-4 border border-border">
