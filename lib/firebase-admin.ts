@@ -35,33 +35,24 @@ const initializeFirebaseAdmin = (): App => {
       privateKey = privateKey.slice(1, -1)
     }
 
-    // Replace escaped newlines with actual newlines
-    // Try both literal string "\n" and escaped "\\n"
-    privateKey = privateKey.split('\\n').join('\n')
-
-    // Handle Netlify's space-separated format (spaces instead of newlines)
-    // If there are no newlines but there are multiple consecutive spaces, it's space-separated
-    if (!privateKey.includes('\n') && /\s{2,}/.test(privateKey)) {
-      logger.debug('Detected space-separated private key format, converting to newline format')
-      // Replace 2+ consecutive spaces with newlines
-      privateKey = privateKey.replace(/\s{2,}/g, '\n')
+    if (privateKey.startsWith("'") && privateKey.endsWith("'")) {
+      privateKey = privateKey.slice(1, -1)
     }
 
-    // Split by newlines, trim each line, and rejoin
-    // This handles any extra whitespace on individual lines
-    const lines = privateKey.split('\n').map(line => line.trim()).filter(line => line.length > 0)
-    privateKey = lines.join('\n')
+    // Replace escaped newlines with actual newlines
+    privateKey = privateKey.replace(/\\n/g, '\n')
 
     // Validate that we have the required markers
     if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') || !privateKey.includes('-----END PRIVATE KEY-----')) {
       const error = new Error('Invalid private key format: Missing BEGIN or END markers')
       logger.error('Invalid private key format: Missing BEGIN or END marker', error, {
-        keyLength: privateKey.length
+        keyLength: privateKey.length,
+        preview: privateKey.substring(0, 100)
       })
       throw error
     }
 
-    // Ensure trailing newline
+    // Ensure proper PEM format with trailing newline
     if (!privateKey.endsWith('\n')) {
       privateKey += '\n'
     }
