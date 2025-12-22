@@ -303,9 +303,9 @@ function DashboardContent() {
                 <p className="text-blue-100 text-sm mb-1">
                   Trial ends:{' '}
                   <strong className="text-white">
-                    {typeof userProfile.subscription.trialEndsAt === 'object' && 'toDate' in userProfile.subscription.trialEndsAt
-                      ? userProfile.subscription.trialEndsAt.toDate().toLocaleDateString()
-                      : new Date(userProfile.subscription.trialEndsAt).toLocaleDateString()}
+                    {typeof userProfile.subscription.trialEndsAt === 'object' && userProfile.subscription.trialEndsAt && 'toDate' in userProfile.subscription.trialEndsAt && typeof (userProfile.subscription.trialEndsAt as any).toDate === 'function'
+                      ? (userProfile.subscription.trialEndsAt as any).toDate().toLocaleDateString()
+                      : new Date(userProfile.subscription.trialEndsAt as any).toLocaleDateString()}
                   </strong>
                 </p>
                 <p className="text-blue-50 text-xs">

@@ -603,9 +603,9 @@ function ProfileContent() {
                       <p className="text-sm text-blue-800">
                         Trial ends:{' '}
                         <strong>
-                          {typeof subscription.trialEndsAt === 'object' && 'toDate' in subscription.trialEndsAt
-                            ? subscription.trialEndsAt.toDate().toLocaleDateString()
-                            : new Date(subscription.trialEndsAt).toLocaleDateString()}
+                          {typeof subscription.trialEndsAt === 'object' && subscription.trialEndsAt && 'toDate' in subscription.trialEndsAt && typeof (subscription.trialEndsAt as any).toDate === 'function'
+                            ? (subscription.trialEndsAt as any).toDate().toLocaleDateString()
+                            : new Date(subscription.trialEndsAt as any).toLocaleDateString()}
                         </strong>
                       </p>
                       <p className="text-xs text-blue-700 mt-2">
