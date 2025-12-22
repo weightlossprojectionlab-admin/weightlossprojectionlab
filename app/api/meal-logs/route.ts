@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 
     // Execute query
     const snapshot = await queryRef.get()
-    const mealLogs = snapshot.docs.map(doc => {
+    const mealLogs = snapshot.docs.map((doc: any) => {
       const data = doc.data()
       logger.debug('[GET /api/meal-logs] Meal log data:', { id: doc.id, hasPhotoUrl: !!data.photoUrl, photoUrl: data.photoUrl })
       return {

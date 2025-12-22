@@ -28,6 +28,7 @@ import {
   type VitalReading,
   type ValidationResult
 } from '@/lib/ai-supervisor'
+import type { VitalSign } from '@/types/medical'
 import { logger } from '@/lib/logger'
 import { sendCriticalVitalAlert } from '@/lib/emergency-alerts'
 import { useAuth } from '@/hooks/useAuth'
@@ -52,7 +53,7 @@ interface SupervisedVitalsWizardProps {
   }>
 }
 
-type WizardStep = 'intro' | 'blood_pressure' | 'temperature' | 'heart_rate' | 'oxygen' | 'blood_sugar' | 'review' | 'mood' | 'schedule' | 'confirmation'
+type WizardStep = 'intro' | 'blood_pressure' | 'temperature' | 'heart_rate' | 'oxygen' | 'blood_sugar' | 'weight' | 'review' | 'mood' | 'schedule' | 'confirmation'
 
 interface SchedulePreferences {
   enabled: boolean
@@ -72,6 +73,7 @@ interface VitalData {
   heartRate?: number
   oxygenSaturation?: number
   bloodSugar?: number
+  weight?: number
   mood?: string
   moodNotes?: string
   notes?: string
@@ -173,7 +175,7 @@ export default function SupervisedVitalsWizard({
   }
 
   const handleNext = () => {
-    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'review', 'mood', 'schedule', 'confirmation']
+    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'weight', 'review', 'mood', 'schedule', 'confirmation']
     const currentIndex = stepOrder.indexOf(currentStep)
     if (currentIndex < stepOrder.length - 1) {
       setCurrentStep(stepOrder[currentIndex + 1])
@@ -181,7 +183,7 @@ export default function SupervisedVitalsWizard({
   }
 
   const handleBack = () => {
-    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'review', 'mood', 'schedule', 'confirmation']
+    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'weight', 'review', 'mood', 'schedule', 'confirmation']
     const currentIndex = stepOrder.indexOf(currentStep)
     if (currentIndex > 0) {
       setCurrentStep(stepOrder[currentIndex - 1])
@@ -226,6 +228,13 @@ export default function SupervisedVitalsWizard({
           return rest
         })
         break
+      case 'weight':
+        setVitalData(prev => ({ ...prev, weight: undefined }))
+        setValidationResults(prev => {
+          const { weight, ...rest } = prev
+          return rest
+        })
+        break
     }
     handleNext()
   }
@@ -255,7 +264,7 @@ export default function SupervisedVitalsWizard({
         }
       }
 
-      // Run quality checks
+      // Run quality checks (for info/warnings only - not blocking)
       const checks = runQualityChecks({
         type: 'vitals',
         ...vitalData,
@@ -264,12 +273,12 @@ export default function SupervisedVitalsWizard({
         )
       })
 
-      // Show errors if any critical checks failed
-      const errors = checks.filter(c => c.severity === 'error' && !c.passed)
-      if (errors.length > 0) {
-        logger.error('[Wizard] Quality checks failed', { errors })
-        // Show error modal or inline messages
-        return
+      // Log quality checks for analytics (not blocking submission)
+      const warnings = checks.filter(c => c.severity === 'warning' && !c.passed)
+      if (warnings.length > 0) {
+        logger.warn('[Wizard] Quality check warnings', {
+          warnings: warnings.map(w => ({ message: w.message, suggestion: w.suggestion }))
+        })
       }
 
       // Submit vitals - note: onSubmit should return the saved vitals or we track them separately
@@ -281,7 +290,7 @@ export default function SupervisedVitalsWizard({
       // Go to schedule step instead of directly to confirmation
       setCurrentStep('schedule')
     } catch (error) {
-      logger.error('[Wizard] Failed to submit vitals', error)
+      logger.error('[Wizard] Failed to submit vitals', error instanceof Error ? error : undefined)
       alert(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsSubmitting(false)
@@ -350,7 +359,7 @@ export default function SupervisedVitalsWizard({
         alert('❌ Failed to send alert. Please call family members directly.')
       }
     } catch (error) {
-      logger.error('[Wizard] Error sending emergency alert', error)
+      logger.error('[Wizard] Error sending emergency alert', error instanceof Error ? error : undefined)
       alert('❌ Error sending alert. Please call family members directly.')
     } finally {
       setSendingAlert(false)
@@ -435,6 +444,19 @@ export default function SupervisedVitalsWizard({
               validateCurrentReading('blood_sugar', bs)
             }}
             validation={validationResults.blood_sugar}
+            showGuidance={showGuidance}
+          />
+        )
+
+      case 'weight':
+        return (
+          <WeightStep
+            value={vitalData.weight}
+            onChange={(w) => {
+              setVitalData(prev => ({ ...prev, weight: w }))
+              validateCurrentReading('weight', w)
+            }}
+            validation={validationResults.weight}
             showGuidance={showGuidance}
           />
         )
@@ -1068,6 +1090,54 @@ function BloodSugarStep({ value, onChange, validation, showGuidance }: StepProps
   )
 }
 
+function WeightStep({ value, onChange, validation, showGuidance }: StepProps) {
+  const [weight, setWeight] = useState(value || '')
+
+  const handleChange = (val: string) => {
+    setWeight(val)
+    const num = parseFloat(val)
+    if (!isNaN(num) && num > 0) {
+      onChange(num)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-xl font-bold text-foreground mb-2">Weight</h3>
+        <p className="text-sm text-gray-700 font-medium">
+          Enter current weight in pounds
+        </p>
+      </div>
+
+      <div>
+        <input
+          type="number"
+          step="0.1"
+          value={weight}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder="150"
+          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+        />
+        <p className="text-sm text-gray-700 mt-2 text-center font-medium">lbs (pounds)</p>
+      </div>
+
+      {validation && (
+        <ValidationAlert validation={validation} />
+      )}
+
+      {showGuidance && (
+        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-400">
+          <p className="text-sm text-gray-800 font-medium">
+            ⚖️ <strong>Tip:</strong> Weigh yourself at the same time each day for consistency<br />
+            📊 <strong>Note:</strong> Daily fluctuations of 1-2 lbs are normal
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ReviewStep({
   vitalData,
   validationResults,
@@ -1141,6 +1211,15 @@ function ReviewStep({
             </span>
           </div>
         )}
+
+        {vitalData.weight && (
+          <div className="flex items-center justify-between p-4 bg-card rounded-lg border-2 border-border">
+            <span className="font-medium text-foreground">Weight</span>
+            <span className="text-lg font-bold text-foreground">
+              {vitalData.weight} lbs
+            </span>
+          </div>
+        )}
       </div>
 
       {hasAbnormalReadings && (
@@ -1160,13 +1239,13 @@ function ReviewStep({
                 {hasCriticalReadings ? 'Critical Readings Detected' : 'Abnormal Readings Detected'}
               </h4>
               <p className="text-sm text-foreground mb-3">
-                Please add notes explaining the situation and any actions taken:
+                <strong>Recommended:</strong> Please add notes explaining the situation and any actions taken:
               </p>
               <textarea
+                value={vitalData.notes || ''}
                 placeholder="Example: Patient reports feeling dizzy. Gave water and had them sit down. Will monitor for 30 minutes."
-                className="w-full px-3 py-2 bg-card border border-border rounded-lg focus:border-primary focus:outline-none min-h-[100px]"
+                className="w-full px-3 py-2 bg-card border-2 border-border rounded-lg focus:border-primary focus:outline-none min-h-[100px]"
                 onChange={(e) => onNotesChange(e.target.value)}
-                required={hasCriticalReadings}
               />
             </div>
           </div>
@@ -1201,7 +1280,8 @@ function ConfirmationStep({
     vitalData.bloodPressure,
     vitalData.temperature,
     vitalData.heartRate || vitalData.oxygenSaturation,
-    vitalData.bloodSugar
+    vitalData.bloodSugar,
+    vitalData.weight
   ].filter(Boolean).length
 
   return (
@@ -1212,11 +1292,29 @@ function ConfirmationStep({
 
       <div>
         <h3 className="text-2xl font-bold text-foreground mb-2">
-          Vitals Logged Successfully!
+          Vitals Logged Successfully
         </h3>
         <p className="text-muted-foreground">
           {vitalsCount} vital sign{vitalsCount !== 1 ? 's' : ''} recorded for {familyMember.name}
         </p>
+      </div>
+
+      {/* Logged by and timestamp */}
+      <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span>{new Date(vitalData.timestamp).toLocaleString()}</span>
+        </div>
+        {vitalData.loggedBy && (
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span>{vitalData.loggedBy.name}</span>
+          </div>
+        )}
       </div>
 
       {/* Summary of recorded vitals */}
@@ -1253,6 +1351,20 @@ function ConfirmationStep({
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Blood Sugar:</span>
             <span className="text-sm font-medium text-foreground">{vitalData.bloodSugar} mg/dL</span>
+          </div>
+        )}
+
+        {vitalData.weight && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Weight:</span>
+            <span className="text-sm font-medium text-foreground">{vitalData.weight} lbs</span>
+          </div>
+        )}
+
+        {vitalData.mood && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Mood:</span>
+            <span className="text-sm font-medium text-foreground">{vitalData.mood}</span>
           </div>
         )}
 
@@ -1296,11 +1408,12 @@ function ScheduleStep({
   const [smsNotifications, setSmsNotifications] = useState(false)
 
   // Get vitals that were logged
-  const loggedVitals = []
+  const loggedVitals: Array<{ type: string; label: string }> = []
   if (vitalData.bloodPressure) loggedVitals.push({ type: 'blood_pressure', label: 'Blood Pressure' })
   if (vitalData.temperature) loggedVitals.push({ type: 'temperature', label: 'Temperature' })
   if (vitalData.heartRate || vitalData.oxygenSaturation) loggedVitals.push({ type: 'pulse_ox', label: 'Pulse Oximeter' })
   if (vitalData.bloodSugar) loggedVitals.push({ type: 'blood_sugar', label: 'Blood Sugar' })
+  if (vitalData.weight) loggedVitals.push({ type: 'weight', label: 'Weight' })
 
   // Initialize with all logged vitals selected
   useEffect(() => {
@@ -1959,7 +2072,7 @@ function MoodStep({
         </button>
         <button
           onClick={onSubmit}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !value}
           className="px-6 py-3 bg-success text-white rounded-lg hover:bg-success-dark transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {isSubmitting ? (

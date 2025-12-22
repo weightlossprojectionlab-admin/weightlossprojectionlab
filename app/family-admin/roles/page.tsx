@@ -75,10 +75,6 @@ function ManageRolesContent() {
   const caregivers = hierarchicalMembers.filter(m => m.familyRole === 'caregiver')
   const viewers = hierarchicalMembers.filter(m => m.familyRole === 'viewer')
 
-  // Eligible members for ownership transfer (exclude current owner)
-  const eligibleForTransfer = familyMembers.filter(
-    m => m.familyRole !== 'account_owner'
-  )
 
   const handleRoleChange = async (memberId: string, newRole: FamilyRole) => {
     try {
@@ -106,10 +102,8 @@ function ManageRolesContent() {
   }
 
   const handleSaveMemberEdit = async (data: MemberUpdateData) => {
-    if (!editingMember) return
-
     try {
-      await updateMember(editingMember.userId, data)
+      await updateMember(data.memberId, data)
       await refetch()
       setShowEditModal(false)
       setEditingMember(null)
@@ -192,7 +186,7 @@ function ManageRolesContent() {
                   patients={patients || []}
                   onRoleChange={handleRoleChange}
                   onEdit={handleEditMember}
-                  canEdit={canUserEditMember(user?.uid || '', accountOwner.userId)}
+                  canEdit={canUserEditMember(accountOwner, currentUserRole ?? undefined)}
                   isExpanded={expandedMemberId === accountOwner.userId}
                   onToggleExpand={() => toggleExpanded(accountOwner.userId)}
                 />
@@ -215,7 +209,7 @@ function ManageRolesContent() {
                       patients={patients || []}
                       onRoleChange={handleRoleChange}
                       onEdit={handleEditMember}
-                      canEdit={canUserEditMember(user?.uid || '', member.userId)}
+                      canEdit={canUserEditMember(member, currentUserRole ?? undefined)}
                       isExpanded={expandedMemberId === member.userId}
                       onToggleExpand={() => toggleExpanded(member.userId)}
                     />
@@ -240,7 +234,7 @@ function ManageRolesContent() {
                       patients={patients || []}
                       onRoleChange={handleRoleChange}
                       onEdit={handleEditMember}
-                      canEdit={canUserEditMember(user?.uid || '', member.userId)}
+                      canEdit={canUserEditMember(member, currentUserRole ?? undefined)}
                       isExpanded={expandedMemberId === member.userId}
                       onToggleExpand={() => toggleExpanded(member.userId)}
                     />
@@ -265,7 +259,7 @@ function ManageRolesContent() {
                       patients={patients || []}
                       onRoleChange={handleRoleChange}
                       onEdit={handleEditMember}
-                      canEdit={canUserEditMember(user?.uid || '', member.userId)}
+                      canEdit={canUserEditMember(member, currentUserRole ?? undefined)}
                       isExpanded={expandedMemberId === member.userId}
                       onToggleExpand={() => toggleExpanded(member.userId)}
                     />
@@ -278,16 +272,17 @@ function ManageRolesContent() {
       </main>
 
       {/* Modals */}
-      {showTransferModal && (
+      {showTransferModal && accountOwner && (
         <TransferOwnershipModal
           isOpen={showTransferModal}
           onClose={() => setShowTransferModal(false)}
-          eligibleMembers={eligibleForTransfer}
+          currentOwner={accountOwner}
+          familyMembers={familyMembers}
           onTransfer={handleTransferOwnership}
         />
       )}
 
-      {showEditModal && editingMember && (
+      {showEditModal && editingMember && currentUserRole && (
         <EditMemberModal
           isOpen={showEditModal}
           onClose={() => {
@@ -295,6 +290,8 @@ function ManageRolesContent() {
             setEditingMember(null)
           }}
           member={editingMember}
+          currentUserRole={currentUserRole}
+          patients={patients || []}
           onSave={handleSaveMemberEdit}
         />
       )}
@@ -343,19 +340,15 @@ function MemberCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-2">
             <h3 className="font-bold text-foreground truncate">{member.name}</h3>
-            {member.familyRole === 'account_owner' ? (
-              <AccountOwnerBadge />
-            ) : (
-              <RoleBadge role={member.familyRole} />
-            )}
+            <RoleBadge role={member.familyRole} />
           </div>
           <p className="text-sm text-muted-foreground">{member.email}</p>
 
           {/* Patient Access */}
-          {member.patientIds && member.patientIds.length > 0 && (
+          {member.patientsAccess && member.patientsAccess.length > 0 && (
             <div className="mt-3">
               <p className="text-xs text-muted-foreground mb-1">
-                Access to {member.patientIds.length} family member(s)
+                Access to {member.patientsAccess.length} family member(s)
               </p>
             </div>
           )}
@@ -395,10 +388,9 @@ function MemberCard({
                 Change Role
               </label>
               <RoleSelector
-                currentRole={member.familyRole}
-                userRole={currentUserRole}
-                memberId={member.userId}
-                onRoleChange={onRoleChange}
+                value={member.familyRole}
+                onChange={(newRole) => onRoleChange(member.userId, newRole)}
+                currentUserRole={currentUserRole}
               />
             </div>
           )}

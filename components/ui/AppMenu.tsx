@@ -56,6 +56,9 @@ export function AppMenu() {
   // Check if user has a family plan
   const isFamilyPlan = subscription?.plan && ['family_basic', 'family_plus', 'family_premium'].includes(subscription.plan)
 
+  // Check if user has access to medical features (Single Plus or Family plans)
+  const hasMedicalAccess = subscription?.plan && ['single_plus', 'family_basic', 'family_plus', 'family_premium'].includes(subscription.plan)
+
   const menuSections: MenuSection[] = [
     {
       title: 'Main',
@@ -67,6 +70,9 @@ export function AppMenu() {
     {
       title: 'Health',
       items: [
+        ...(hasMedicalAccess ? [
+          { name: 'Medical Info', href: '/medical', icon: HeartIcon },
+        ] : []),
         ...(isFamilyPlan ? [
           { name: 'Family Members', href: '/patients', icon: UserGroupIcon },
           { name: 'Family Dashboard', href: '/family-admin/dashboard', icon: ShieldCheckIcon },

@@ -91,7 +91,7 @@ export async function createSchedule(params: CreateScheduleParams): Promise<Vita
 
     return createdSchedule
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to create schedule', error)
+    logger.error('[VitalScheduleService] Failed to create schedule', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -120,7 +120,7 @@ export async function getPatientSchedules(patientId: string): Promise<VitalMonit
 
     return schedules
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to get patient schedules', error)
+    logger.error('[VitalScheduleService] Failed to get patient schedules', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -150,7 +150,7 @@ export async function getActiveSchedules(patientId: string): Promise<VitalMonito
 
     return schedules
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to get active schedules', error)
+    logger.error('[VitalScheduleService] Failed to get active schedules', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -172,7 +172,7 @@ export async function getSchedule(scheduleId: string): Promise<VitalMonitoringSc
       ...snapshot.data()
     } as VitalMonitoringSchedule
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to get schedule', error)
+    logger.error('[VitalScheduleService] Failed to get schedule', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -204,7 +204,7 @@ export async function updateSchedule(
       await recreateInstances(scheduleId)
     }
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to update schedule', error)
+    logger.error('[VitalScheduleService] Failed to update schedule', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -232,7 +232,7 @@ export async function deleteSchedule(scheduleId: string): Promise<void> {
 
     logger.info('[VitalScheduleService] Schedule deleted', { scheduleId })
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to delete schedule', error)
+    logger.error('[VitalScheduleService] Failed to delete schedule', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -310,7 +310,7 @@ export async function createScheduleInstances(scheduleId: string, days: number):
       days
     })
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to create instances', error)
+    logger.error('[VitalScheduleService] Failed to create instances', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -343,7 +343,7 @@ async function recreateInstances(scheduleId: string): Promise<void> {
 
     logger.info('[VitalScheduleService] Recreated instances', { scheduleId })
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to recreate instances', error)
+    logger.error('[VitalScheduleService] Failed to recreate instances', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -391,7 +391,7 @@ export async function getUpcomingReminders(userId: string, nextHours: number): P
 
     return reminders
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to get upcoming reminders', error)
+    logger.error('[VitalScheduleService] Failed to get upcoming reminders', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -419,7 +419,7 @@ export async function markInstanceReminded(
       channels
     })
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to mark instance reminded', error)
+    logger.error('[VitalScheduleService] Failed to mark instance reminded', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -483,7 +483,7 @@ export async function recordVitalForSchedule(
       status
     })
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to record vital for schedule', error)
+    logger.error('[VitalScheduleService] Failed to record vital for schedule', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -510,7 +510,7 @@ export async function markInstanceMissed(
       reason
     })
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to mark instance missed', error)
+    logger.error('[VitalScheduleService] Failed to mark instance missed', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -662,7 +662,7 @@ export async function calculateCompliance(
 
     return report
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to calculate compliance', error)
+    logger.error('[VitalScheduleService] Failed to calculate compliance', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -716,7 +716,7 @@ export async function getScheduleStatistics(userId: string): Promise<ScheduleSta
       vitalTypeBreakdown
     }
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to get schedule statistics', error)
+    logger.error('[VitalScheduleService] Failed to get schedule statistics', error instanceof Error ? error : undefined)
     throw error
   }
 }
@@ -752,7 +752,7 @@ export async function getComplianceTrends(
 
     return trends
   } catch (error) {
-    logger.error('[VitalScheduleService] Failed to get compliance trends', error)
+    logger.error('[VitalScheduleService] Failed to get compliance trends', error instanceof Error ? error : undefined)
     throw error
   }
 }

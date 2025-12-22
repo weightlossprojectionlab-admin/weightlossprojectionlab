@@ -106,10 +106,11 @@ export function useRealtimeShoppingList(options?: UseRealtimeShoppingListOptions
       switch (change.type) {
         case 'added':
           // New item added to shopping list
-          if (item.requestedBy && item.requestedBy !== currentUser) {
+          const requestedBy = Array.isArray(item.requestedBy) ? item.requestedBy[0] : item.requestedBy
+          if (requestedBy && requestedBy !== currentUser) {
             if (shouldShowNotification('shopping', 'addedToList')) {
-              toast.info(
-                `${getMemberName(item.requestedBy)} added ${item.productName} to shopping list`,
+              toast(
+                `${getMemberName(requestedBy)} added ${item.productName} to shopping list`,
                 {
                   icon: '📝',
                   duration: 3000
@@ -133,7 +134,7 @@ export function useRealtimeShoppingList(options?: UseRealtimeShoppingListOptions
             }
           } else if (!item.needed && item.lastModifiedBy !== currentUser) {
             if (shouldShowNotification('shopping', 'addedToList')) {
-              toast.info(
+              toast(
                 `${getMemberName(item.lastModifiedBy)} removed ${item.productName} from list`,
                 {
                   icon: '✓',
@@ -159,7 +160,7 @@ export function useRealtimeShoppingList(options?: UseRealtimeShoppingListOptions
           // Item was deleted from shopping list
           if (item.lastModifiedBy && item.lastModifiedBy !== currentUser) {
             if (shouldShowNotification('shopping', 'addedToList')) {
-              toast.info(
+              toast(
                 `${getMemberName(item.lastModifiedBy)} deleted ${item.productName}`,
                 {
                   icon: '🗑️',

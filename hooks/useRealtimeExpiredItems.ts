@@ -103,7 +103,7 @@ export function useRealtimeExpiredItems() {
         .map(item => {
           if (!item.expiresAt) return null
 
-          const expiresAt = item.expiresAt instanceof Date ? item.expiresAt : item.expiresAt.toDate()
+          const expiresAt = item.expiresAt instanceof Date ? item.expiresAt : (item.expiresAt as any)?.toDate?.() || new Date(item.expiresAt as any)
           const daysExpired = Math.floor(
             (now.getTime() - expiresAt.getTime()) / (1000 * 60 * 60 * 24)
           )

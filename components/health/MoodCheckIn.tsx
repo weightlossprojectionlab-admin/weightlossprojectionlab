@@ -23,9 +23,16 @@
 
 import { useState } from 'react'
 import { FaceSmileIcon, HeartIcon } from '@heroicons/react/24/outline'
-import type { MoodValue, PetBehaviorValue } from '@/types/medical'
 import { medicalOperations } from '@/lib/medical-operations'
-import { detectIllnessSignals } from '@/lib/illness-detection-engine'
+import { detectIllnessSignals, type MoodValue } from '@/lib/illness-detection-engine'
+
+// PetBehaviorValue type definition - extends MoodValue with pet-specific fields
+interface PetBehaviorValue extends MoodValue {
+  behavior: string
+  mobility?: string
+  vocalizations?: string
+  speciesNotes?: string
+}
 import toast from 'react-hot-toast'
 
 interface MoodCheckInProps {

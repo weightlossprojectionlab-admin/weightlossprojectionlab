@@ -33,21 +33,27 @@ export interface MemberUpdateData {
   }
 }
 
+/**
+ * Default permissions when adding patient access to a family member
+ * Uses CAREGIVER preset as sensible default for family caregiving use cases
+ *
+ * IMPORTANT: Caregivers need logVitals: true by default for basic caregiving functions
+ */
 const DEFAULT_PERMISSIONS: FamilyMemberPermissions = {
-  viewPatientProfile: false,
-  viewMedicalRecords: false,
-  editMedications: false,
-  scheduleAppointments: false,
-  editAppointments: false,
-  deleteAppointments: false,
-  uploadDocuments: false,
-  deleteDocuments: false,
-  logVitals: false,
-  viewVitals: false,
-  chatAccess: false,
+  viewPatientProfile: true,
+  viewMedicalRecords: true,
+  editMedications: true,
+  scheduleAppointments: true,
+  editAppointments: true,
+  deleteAppointments: true,
+  uploadDocuments: true,
+  deleteDocuments: true,
+  logVitals: true, // CRITICAL: Caregivers must be able to log vitals by default
+  viewVitals: true,
+  chatAccess: true,
   inviteOthers: false,
-  viewSensitiveInfo: false,
-  editPatientProfile: false,
+  viewSensitiveInfo: false, // No sensitive info access by default
+  editPatientProfile: true,
   deletePatient: false
 }
 

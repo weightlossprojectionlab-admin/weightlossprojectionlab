@@ -10,18 +10,12 @@ import { calculateCompliance, getComplianceTrends } from '@/lib/vital-schedule-s
 import { VitalType } from '@/types/medical'
 import { logger } from '@/lib/logger'
 
-interface RouteParams {
-  params: {
-    patientId: string
-  }
-}
-
 /**
  * Get compliance reports for a patient
  */
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ patientId: string }> }
 ) {
   try {
     // Verify authentication
@@ -37,7 +31,7 @@ export async function GET(
     const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
-    const { patientId } = params
+    const { patientId } = await params
 
     // Get query parameters
     const { searchParams } = new URL(request.url)
@@ -119,7 +113,7 @@ export async function GET(
     })
 
   } catch (error) {
-    logger.error('[API] Failed to get compliance report', error)
+    logger.error('[API] Failed to get compliance report', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { error: 'Failed to get compliance', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

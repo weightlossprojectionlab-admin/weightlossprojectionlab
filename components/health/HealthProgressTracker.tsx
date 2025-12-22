@@ -11,7 +11,6 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Card } from '@/components/ui/Card'
 import { logger } from '@/lib/logger'
 import type { HealthProgressReport } from '@/types/health-outcomes'
 
@@ -65,19 +64,19 @@ export function HealthProgressTracker({
 
   if (loading) {
     return (
-      <Card className="p-6">
+      <div className="p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-6 bg-gray-200 rounded w-1/3"></div>
           <div className="h-4 bg-gray-200 rounded w-1/2"></div>
           <div className="h-32 bg-gray-200 rounded"></div>
         </div>
-      </Card>
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Card className="p-6">
+      <div className="p-6">
         <div className="text-center text-red-600">
           <p className="font-semibold">Error Loading Report</p>
           <p className="text-sm mt-2">{error}</p>
@@ -88,22 +87,22 @@ export function HealthProgressTracker({
             Retry
           </button>
         </div>
-      </Card>
+      </div>
     )
   }
 
   if (!report) {
     return (
-      <Card className="p-6">
+      <div className="p-6">
         <p className="text-gray-500 text-center">No health data available yet.</p>
-      </Card>
+      </div>
     )
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="p-6">
+      <div className="p-6">
         <h2 className="text-2xl font-bold text-gray-900">
           Health Progress - {report.period.label}
         </h2>
@@ -111,11 +110,11 @@ export function HealthProgressTracker({
           {new Date(report.period.start).toLocaleDateString()} -{' '}
           {new Date(report.period.end).toLocaleDateString()}
         </p>
-      </Card>
+      </div>
 
       {/* Vital Progress */}
       {report.vitalProgress.length > 0 && (
-        <Card className="p-6">
+        <div className="p-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">Vital Signs</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {report.vitalProgress.map((vital, index) => (
@@ -172,12 +171,12 @@ export function HealthProgressTracker({
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Insights */}
       {report.insights.length > 0 && (
-        <Card className="p-6">
+        <div className="p-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">Insights</h3>
           <div className="space-y-3">
             {report.insights.map((insight, index) => (
@@ -210,12 +209,12 @@ export function HealthProgressTracker({
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Achievements */}
       {report.nutritionAchievements.length > 0 && (
-        <Card className="p-6">
+        <div className="p-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">Achievements</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {report.nutritionAchievements.map((achievement, index) => (
@@ -236,12 +235,12 @@ export function HealthProgressTracker({
               </div>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Badges & Streaks */}
       {(report.badges.length > 0 || report.streaks) && (
-        <Card className="p-6">
+        <div className="p-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">Badges & Streaks</h3>
 
           {/* Badges */}
@@ -296,12 +295,12 @@ export function HealthProgressTracker({
               </div>
             </div>
           )}
-        </Card>
+        </div>
       )}
 
       {/* Recommendations */}
       {report.recommendations.length > 0 && (
-        <Card className="p-6">
+        <div className="p-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4">Recommendations</h3>
           <ul className="space-y-2">
             {report.recommendations.map((rec, index) => (
@@ -311,12 +310,12 @@ export function HealthProgressTracker({
               </li>
             ))}
           </ul>
-        </Card>
+        </div>
       )}
 
       {/* Medical Disclaimer */}
       {report.warnings.length > 0 && (
-        <Card className="p-6 bg-yellow-50 border-yellow-200">
+        <div className="p-6 bg-yellow-50 border-yellow-200">
           <h3 className="text-sm font-semibold text-yellow-900 mb-2">
             Important Information
           </h3>
@@ -327,7 +326,7 @@ export function HealthProgressTracker({
               </li>
             ))}
           </ul>
-        </Card>
+        </div>
       )}
 
       {/* Refresh Button */}

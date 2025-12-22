@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { apiClient } from '@/lib/api-client'
-import { logger } from '@/lib/logger'
+import { logger, toLogContext } from '@/lib/logger'
 
 export interface DashboardStats {
   patients: {
@@ -134,7 +134,7 @@ export function useDashboard(): UseDashboardReturn {
       logger.debug('[useDashboard] Raw statsData:', statsData)
 
       if (statsData) {
-        logger.debug('[useDashboard] Stats:', statsData.stats)
+        logger.debug('[useDashboard] Stats:', toLogContext(statsData.stats))
         setStats(statsData.stats)
         setPatientSnapshots(statsData.patientSnapshots || [])
         setUpcomingAppointments(statsData.upcomingAppointments || [])
@@ -150,11 +150,9 @@ export function useDashboard(): UseDashboardReturn {
       logger.info('[useDashboard] Dashboard data fetched successfully')
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to fetch dashboard data'
-      logger.error('[useDashboard] Error fetching dashboard data', {
-        message: err.message,
+      logger.error('[useDashboard] Error fetching dashboard data', err instanceof Error ? err : undefined, {
         status: err.status,
-        details: err.details,
-        stack: err.stack
+        details: err.details
       })
       setError(errorMessage)
     } finally {

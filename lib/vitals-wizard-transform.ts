@@ -7,7 +7,7 @@
  * DRY principle: Single source of truth for vitals data transformation.
  */
 
-import type { VitalSign } from '@/types/medical'
+import type { VitalSign, VitalUnit } from '@/types/medical'
 
 export interface WizardVitalData {
   bloodPressure?: {
@@ -18,6 +18,7 @@ export interface WizardVitalData {
   heartRate?: number
   oxygenSaturation?: number
   bloodSugar?: number
+  weight?: number
   timestamp: Date
   notes?: string
   loggedBy?: {
@@ -28,9 +29,9 @@ export interface WizardVitalData {
 }
 
 export interface VitalSignInput {
-  type: 'blood_pressure' | 'temperature' | 'pulse_oximeter' | 'blood_sugar'
+  type: 'blood_pressure' | 'temperature' | 'pulse_oximeter' | 'blood_sugar' | 'weight'
   value: number | { systolic: number; diastolic: number } | { spo2: number; pulseRate: number }
-  unit: string
+  unit: VitalUnit
   recordedAt: string
   notes: string
   method: 'manual' | 'device'
@@ -120,6 +121,19 @@ export function transformWizardDataToVitals(
     })
   }
 
+  // Weight
+  if (wizardData.weight) {
+    vitals.push({
+      type: 'weight',
+      value: wizardData.weight,
+      unit: 'lbs',
+      recordedAt,
+      notes,
+      method: 'manual',
+      ...(takenBy && { takenBy })
+    })
+  }
+
   return vitals
 }
 
@@ -135,7 +149,8 @@ export function hasAnyVitalMeasurement(wizardData: WizardVitalData): boolean {
     wizardData.temperature ||
     wizardData.heartRate ||
     wizardData.oxygenSaturation ||
-    wizardData.bloodSugar
+    wizardData.bloodSugar ||
+    wizardData.weight
   )
 }
 
@@ -149,7 +164,7 @@ export function hasAnyVitalMeasurement(wizardData: WizardVitalData): boolean {
  */
 export function formatVitalForDisplay(
   type: string,
-  value: number | { systolic: number; diastolic: number } | { spo2: number; pulseRate: number },
+  value: number | { systolic: number; diastolic: number } | { spo2: number; pulseRate: number } | { energy: number; appetite: number; pain: number; overall: number; behavior?: string; mobility?: string; vocalizations?: string; speciesNotes?: string; symptoms?: string[] },
   unit: string
 ): string {
   switch (type) {
@@ -162,6 +177,20 @@ export function formatVitalForDisplay(
     case 'pulse_oximeter':
       if (typeof value === 'object' && 'spo2' in value) {
         return `SpO₂: ${value.spo2}%, HR: ${value.pulseRate} bpm`
+      }
+      return `${value} ${unit}`
+
+    case 'mood':
+      // Mood is on a 1-10 scale, display with emoji
+      const moodValue = typeof value === 'number' ? value : 5
+      const moodEmojis = ['😢', '😟', '😕', '😐', '🙂', '😊', '😄', '😁', '🤩', '😍']
+      const emoji = moodEmojis[Math.min(Math.max(Math.floor(moodValue) - 1, 0), 9)]
+      return `${emoji} ${moodValue}/10`
+
+    case 'pet_vital':
+      // Handle pet vitals (energy, appetite, pain, overall)
+      if (typeof value === 'object' && 'overall' in value) {
+        return `Overall: ${value.overall}/10`
       }
       return `${value} ${unit}`
 
@@ -184,7 +213,8 @@ export function getVitalTypeLabel(type: string): string {
     blood_sugar: 'Blood Sugar',
     weight: 'Weight',
     height: 'Height',
-    bmi: 'BMI'
+    bmi: 'BMI',
+    mood: 'Mood'
   }
 
   return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())

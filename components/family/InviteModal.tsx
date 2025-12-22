@@ -40,9 +40,11 @@ export function InviteModal({
   const [selectedPatients, setSelectedPatients] = useState<string[]>(
     preSelectedPatientId ? [preSelectedPatientId] : []
   )
-  const [permissionPreset, setPermissionPreset] = useState<PermissionPreset>('VIEW_ONLY')
+  // CRITICAL: Default to CAREGIVER role and permissions (not VIEW_ONLY)
+  // Most family invitations are for caregivers who need logVitals permission
+  const [permissionPreset, setPermissionPreset] = useState<PermissionPreset>('CAREGIVER')
   const [customPermissions, setCustomPermissions] = useState<FamilyMemberPermissions>(
-    PERMISSION_PRESETS.VIEW_ONLY
+    PERMISSION_PRESETS.CAREGIVER
   )
   const [selectedRole, setSelectedRole] = useState<FamilyRole>('caregiver')
   const [message, setMessage] = useState('')
@@ -118,6 +120,7 @@ export function InviteModal({
         ...(recipientPhone && { recipientPhone }),
         patientsShared: selectedPatients,
         permissions: customPermissions,
+        familyRole: selectedRole, // CRITICAL: Include role so permissions match on acceptance
         ...(message && { message })
       })
 
@@ -125,8 +128,9 @@ export function InviteModal({
       setRecipientEmail('')
       setRecipientPhone('')
       setSelectedPatients([])
-      setPermissionPreset('VIEW_ONLY')
-      setCustomPermissions(PERMISSION_PRESETS.VIEW_ONLY)
+      setPermissionPreset('CAREGIVER') // Reset to caregiver default
+      setCustomPermissions(PERMISSION_PRESETS.CAREGIVER)
+      setSelectedRole('caregiver')
       setMessage('')
       setExistingInvitationId(null)
       onClose()
@@ -155,6 +159,7 @@ export function InviteModal({
         ...(recipientPhone && { recipientPhone }),
         patientsShared: selectedPatients,
         permissions: customPermissions,
+        familyRole: selectedRole, // CRITICAL: Include role so permissions match on acceptance
         ...(message && { message })
       })
 
@@ -162,8 +167,9 @@ export function InviteModal({
       setRecipientEmail('')
       setRecipientPhone('')
       setSelectedPatients([])
-      setPermissionPreset('VIEW_ONLY')
-      setCustomPermissions(PERMISSION_PRESETS.VIEW_ONLY)
+      setPermissionPreset('CAREGIVER') // Reset to caregiver default
+      setCustomPermissions(PERMISSION_PRESETS.CAREGIVER)
+      setSelectedRole('caregiver')
       setMessage('')
       setExistingInvitationId(null)
       onClose()

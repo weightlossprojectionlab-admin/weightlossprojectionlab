@@ -21,7 +21,7 @@ export interface ProductData {
     'energy-kcal_100g'?: number
     'energy-kcal_serving'?: number
     proteins?: number
-    proteins_100g'?: number
+    proteins_100g?: number
     proteins_serving?: number
     carbohydrates?: number
     carbohydrates_100g?: number
@@ -62,7 +62,7 @@ export async function lookupProductByBarcode(barcode: string): Promise<ProductDa
       } as ProductData
     }
   } catch (error) {
-    logger.warn('[Product Lookup] USDA lookup failed, trying OpenFoodFacts', error as Error, { barcode })
+    logger.warn('[Product Lookup] USDA lookup failed, trying OpenFoodFacts', { error: (error as Error).message, barcode })
   }
 
   // Fallback to OpenFoodFacts

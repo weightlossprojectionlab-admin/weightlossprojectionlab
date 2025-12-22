@@ -7,11 +7,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from './useAuth'
+import { useUser } from './useUser'
 import { getPatientLimitInfo, canAddPatient } from '@/lib/feature-gates'
 
 export function usePatientLimit(currentPatientCount: number) {
-  const { user } = useAuth()
+  const { user, loading: userLoading } = useUser()
   const [limitInfo, setLimitInfo] = useState<{
     current: number
     max: number | undefined

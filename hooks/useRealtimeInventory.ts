@@ -102,7 +102,7 @@ export function useRealtimeInventory(options?: UseRealtimeInventoryOptions) {
         // Item was discarded or removed
         if (item.discardedBy) {
           if (shouldShowNotification('inventory', 'discarded')) {
-            toast.info(
+            toast(
               `${getMemberName(item.discardedBy)} discarded ${item.productName}`,
               {
                 icon: '🗑️',
@@ -119,7 +119,7 @@ export function useRealtimeInventory(options?: UseRealtimeInventoryOptions) {
           // Only notify for significant changes
           if (item.quantity === 0 && item.needed) {
             if (shouldShowNotification('inventory', 'lowStock')) {
-              toast.info(
+              toast(
                 `${getMemberName(item.lastModifiedBy)} marked ${item.productName} as used up`,
                 {
                   icon: '✓',

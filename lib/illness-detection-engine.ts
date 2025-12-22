@@ -11,10 +11,18 @@
  */
 
 import { logger } from '@/lib/logger'
-import { PatientProfile, VitalSign, VitalType, MoodValue, PetBehaviorValue } from '@/types/medical'
+import { PatientProfile, VitalSign, VitalType,  } from '@/types/medical'
 import { medicalOperations } from '@/lib/medical-operations'
 
 // ==================== TYPES ====================
+
+export interface MoodValue {
+  energy: number
+  appetite: number
+  pain: number
+  overall: number
+  symptoms?: string[]
+}
 
 export type IllnessSignalType = 'vital_abnormal' | 'mood_decline' | 'pattern_change' | 'symptom_report'
 
@@ -267,7 +275,7 @@ async function analyzeMoodChanges(
     if (moodVitals.length < 2) return null // Need at least 2 data points
 
     // Most recent mood
-    const currentMood = moodVitals[0].value as MoodValue | PetBehaviorValue
+    const currentMood = moodVitals[0].value as MoodValue
 
     // Baseline (average of previous 7 days, excluding today)
     const oneWeekAgo = new Date()
@@ -534,7 +542,7 @@ function getSuggestedIllnesses(vitalType: VitalType, patientType: 'human' | 'pet
 }
 
 function calculateMoodBaseline(vitals: VitalSign[]): MoodValue {
-  const values = vitals.map(v => v.value as MoodValue | PetBehaviorValue)
+  const values = vitals.map(v => v.value as MoodValue)
 
   return {
     energy: Math.round(values.reduce((sum, v) => sum + v.energy, 0) / values.length),
@@ -572,7 +580,7 @@ function buildMoodReasoningText(changes: any, pain: number, patientType: 'human'
   return parts.join('. ') + '.'
 }
 
-function getMoodBasedSuggestions(patientType: 'human' | 'pet', mood: MoodValue | PetBehaviorValue): string[] {
+function getMoodBasedSuggestions(patientType: 'human' | 'pet', mood: any): string[] {
   if (patientType === 'human') {
     const humanMood = mood as MoodValue
     if (humanMood.symptoms && humanMood.symptoms.length > 0) {
@@ -581,7 +589,7 @@ function getMoodBasedSuggestions(patientType: 'human' | 'pet', mood: MoodValue |
     }
     return ['General illness', 'Flu', 'Cold', 'Fatigue']
   } else {
-    const petBehavior = mood as PetBehaviorValue
+    const petBehavior = mood as any
     const suggestions: string[] = []
 
     if (petBehavior.behavior === 'hiding' || petBehavior.behavior === 'withdrawn') {

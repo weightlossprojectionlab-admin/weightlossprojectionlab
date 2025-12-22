@@ -12,6 +12,20 @@
 import { Health } from 'capacitor-health'
 import { isNative, isServer, isIOS, isAndroid, isPluginAvailable } from '@/lib/platform'
 
+// Type definitions for capacitor-health plugin (not properly exported by the package)
+const HealthDataType = {
+  STEPS: 'steps' as const,
+  HEART_RATE: 'heart_rate' as const,
+  CALORIES: 'calories' as const,
+  DISTANCE: 'distance' as const,
+  WEIGHT: 'weight' as const,
+  BLOOD_PRESSURE: 'blood_pressure' as const,
+  BLOOD_GLUCOSE: 'blood_glucose' as const,
+  SLEEP: 'sleep' as const,
+  EXERCISE: 'exercise' as const,
+}
+type HealthDataType = typeof HealthDataType[keyof typeof HealthDataType]
+
 export interface HealthDataQuery {
   startDate: Date
   endDate: Date
@@ -111,7 +125,7 @@ class NativeHealthAdapter implements HealthAdapter {
         return false
       }
 
-      const result = await Health.isAvailable()
+      const result = await (Health as any).isAvailable()
       return result.available
     } catch (error) {
       console.error('Failed to check health availability:', error)
@@ -128,7 +142,7 @@ class NativeHealthAdapter implements HealthAdapter {
       const readPermissions = healthDataTypes
       const writePermissions = healthDataTypes
 
-      const result = await Health.requestAuthorization({
+      const result = await (Health as any).requestAuthorization({
         read: readPermissions,
         write: writePermissions,
       })
@@ -150,18 +164,19 @@ class NativeHealthAdapter implements HealthAdapter {
     try {
       const dataType = mapToHealthDataType(query.dataType)
 
-      const result = await Health.queryAggregated({
+      const result = await (Health as any).queryAggregated({
         dataType,
         startDate: query.startDate.toISOString(),
         endDate: query.endDate.toISOString(),
+        bucket: 'day', // Required by QueryAggregatedRequest
       })
 
       // Transform result to HealthDataPoint[]
-      if (!result.data || result.data.length === 0) {
+      if (!(result as any).data || (result as any).data.length === 0) {
         return []
       }
 
-      return result.data.map((item: any) => ({
+      return (result as any).data.map((item: any) => ({
         value: item.value || 0,
         unit: item.unit || '',
         date: new Date(item.startDate || query.startDate),
@@ -177,7 +192,7 @@ class NativeHealthAdapter implements HealthAdapter {
     try {
       const healthDataType = mapToHealthDataType(dataType)
 
-      await Health.addSample({
+      await (Health as any).addSample({
         dataType: healthDataType,
         value,
         startDate: date.toISOString(),

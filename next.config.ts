@@ -44,9 +44,8 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['recharts', 'react-hot-toast', '@heroicons/react'],
   },
   typescript: {
-    // TEMPORARILY: Skip type checking during build to isolate the hang issue
-    // Type errors should be caught in development and CI
-    ignoreBuildErrors: true,
+    // Type checking enabled - all type errors must be fixed before build
+    ignoreBuildErrors: false,
   },
   // Removed standalone output - Netlify handles deployment packaging
   // Skip static page generation for pages that depend on runtime data
@@ -129,7 +128,7 @@ const nextConfig: NextConfig = {
                   "style-src 'self' 'unsafe-inline'",
                   "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com",
                   "font-src 'self' data:",
-                  "connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://api.stripe.com https://generativelanguage.googleapis.com https://accounts.google.com https://oauth2.googleapis.com",
+                  "connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://api.stripe.com https://generativelanguage.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://lh3.googleusercontent.com",
                   "frame-src https://js.stripe.com https://firebasestorage.googleapis.com https://accounts.google.com https://weightlossprojectionlab-8b284.firebaseapp.com https://app.netlify.com",
                   "frame-ancestors 'none'",
                   "base-uri 'self'",

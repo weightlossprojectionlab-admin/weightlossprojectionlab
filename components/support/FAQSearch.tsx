@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import DOMPurify from 'dompurify'
 import { FAQItem, FAQSearchResult, FAQCategory, FAQSection } from '@/types/support'
 import { searchFAQs, recordFAQFeedback, getSectionDisplayName } from '@/lib/faq-operations'
 import { useAuth } from '@/hooks/useAuth'
@@ -235,13 +236,13 @@ function FAQResultCard({
           <h3
             className="text-base font-semibold text-foreground mb-1"
             dangerouslySetInnerHTML={{
-              __html: highlightedQuestion || item.question
+              __html: DOMPurify.sanitize(highlightedQuestion || item.question)
             }}
           />
           {!isExpanded && highlightedAnswer && (
             <p
               className="text-sm text-muted-foreground line-clamp-2"
-              dangerouslySetInnerHTML={{ __html: highlightedAnswer }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(highlightedAnswer) }}
             />
           )}
           <div className="flex items-center gap-3 mt-2">
@@ -273,7 +274,7 @@ function FAQResultCard({
           <div className="prose prose-sm max-w-none mt-4 text-foreground">
             <div
               className="whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{ __html: formatMarkdown(item.answer) }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatMarkdown(item.answer)) }}
             />
           </div>
 

@@ -17,6 +17,7 @@ import { useProviders } from '@/hooks/useProviders'
 import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import { useAppointments } from '@/hooks/useAppointments'
 import { FeatureGate } from '@/components/subscription'
+import type { AppointmentSource } from '@/types/medical'
 import toast from 'react-hot-toast'
 
 export default function NewAppointmentPage() {
@@ -73,7 +74,7 @@ function NewAppointmentContent() {
       notes: appointmentData.notes,
       location: appointmentData.location,
       status: 'scheduled' as const,
-      createdFrom: 'manual' as const,
+      createdFrom: 'manual' as AppointmentSource,
       requiresDriver: appointmentData.requiresDriver,
       assignedDriverId: driver?.userId,
       assignedDriverName: driver?.name,
@@ -81,10 +82,12 @@ function NewAppointmentContent() {
         ? (appointmentData.assignedDriverId ? 'pending' as const : 'not-needed' as const)
         : 'not-needed' as const,
       pickupTime: appointmentData.pickupTime?.toISOString(),
+      createdAt: new Date().toISOString(),
+      createdBy: user?.uid || '',
       updatedAt: new Date().toISOString()
     }
 
-    const newAppointment = await createAppointment(data)
+    const newAppointment = await createAppointment(data as any)
 
     if (appointmentData.requiresDriver && driver) {
       toast.success(`Driver request sent to ${driver.name}`)

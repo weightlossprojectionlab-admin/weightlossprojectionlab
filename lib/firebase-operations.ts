@@ -2,6 +2,7 @@
 
 import { logger } from '@/lib/logger'
 import { auth, db } from './firebase'
+import { getCSRFToken } from '@/lib/csrf'
 import {
   collection,
   doc,
@@ -58,14 +59,29 @@ const getAuthToken = async () => {
 // Helper function to make authenticated API calls
 const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
   const token = await getAuthToken()
+  const csrfToken = getCSRFToken()
+
+  // DEBUG: Log CSRF token retrieval
+  console.log('[FirebaseOps] Making authenticated request', {
+    url,
+    method: options.method || 'GET',
+    hasCsrfToken: !!csrfToken,
+    csrfTokenLength: csrfToken?.length,
+    csrfTokenPreview: csrfToken?.substring(0, 10) + '...'
+  })
+
+  // Build headers carefully to ensure CSRF token isn't overridden
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+    ...(options.headers as Record<string, string> || {}),
+    // ALWAYS include CSRF token last so it can't be overridden
+    'X-CSRF-Token': csrfToken,
+  }
 
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers,
-    },
+    headers,
   })
 
   // AGGRESSIVE DEBUG: Log response status IMMEDIATELY

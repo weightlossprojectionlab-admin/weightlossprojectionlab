@@ -17,6 +17,10 @@ export type AdminAction =
   | 'user_delete'
   | 'user_export'
   | 'user_edit'
+  // Caregiver actions
+  | 'add_caregiver_manual'
+  | 'remove_caregiver'
+  | 'update_caregiver_permissions'
   // Recipe actions
   | 'recipe_approve'
   | 'recipe_reject'

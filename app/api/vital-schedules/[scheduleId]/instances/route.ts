@@ -13,18 +13,12 @@ import { ScheduledVitalInstance } from '@/types/vital-schedules'
 import { logger } from '@/lib/logger'
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns'
 
-interface RouteParams {
-  params: {
-    scheduleId: string
-  }
-}
-
 /**
  * Get schedule instances with optional filters
  */
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  { params }: { params: Promise<{ scheduleId: string }> }
 ) {
   try {
     // Verify authentication
@@ -40,7 +34,7 @@ export async function GET(
     const decodedToken = await verifyIdToken(token)
     const userId = decodedToken.uid
 
-    const { scheduleId } = params
+    const { scheduleId } = await params
 
     // Get schedule to verify ownership
     const schedule = await getSchedule(scheduleId)
@@ -133,7 +127,7 @@ export async function GET(
     })
 
   } catch (error) {
-    logger.error('[API] Failed to get schedule instances', error)
+    logger.error('[API] Failed to get schedule instances', error instanceof Error ? error : undefined)
     return NextResponse.json(
       { error: 'Failed to get instances', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

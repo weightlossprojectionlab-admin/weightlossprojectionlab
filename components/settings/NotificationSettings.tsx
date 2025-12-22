@@ -187,7 +187,7 @@ export function NotificationSettings() {
                       }
                     }}
                     className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      preferences.silentModeSchedule.days.includes(index)
+                      preferences.silentModeSchedule?.days.includes(index)
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                     }`}

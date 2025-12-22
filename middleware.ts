@@ -101,14 +101,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Bypass CSRF for requests with Firebase Authorization bearer tokens
-  // These are already authenticated via Firebase Admin SDK in the API routes
-  const authHeader = request.headers.get('Authorization')
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return NextResponse.next()
-  }
-
   // For unsafe methods, validate CSRF token
+  // Note: Bearer token authentication does NOT bypass CSRF protection
+  // CSRF protection is independent of authentication and protects against
+  // cross-site request forgery attacks even with valid credentials
   if (UNSAFE_METHODS.includes(method)) {
     // Support both csrf_token (underscore) and csrf-token (hyphen) for compatibility
     const cookieToken = request.cookies.get('csrf_token')?.value || request.cookies.get('csrf-token')?.value

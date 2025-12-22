@@ -16,11 +16,13 @@ import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { useInvitations } from '@/hooks/useInvitations'
 import { useUserProfile } from '@/hooks/useUserProfile'
-import { PatientProfile, VitalType, VitalSign, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication } from '@/types/medical'
+import { PatientProfile, VitalType, VitalSign, VitalUnit, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication } from '@/types/medical'
 import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
 import DailyVitalsSummary from '@/components/vitals/DailyVitalsSummary'
 import VitalsHistory from '@/components/vitals/VitalsHistory'
+import VitalReminderPrompt from '@/components/vitals/VitalReminderPrompt'
+import VitalQuickLogModal from '@/components/vitals/VitalQuickLogModal'
 import { FamilyMemberCard } from '@/components/family/FamilyMemberCard'
 import { PermissionsMatrix } from '@/components/family/PermissionsMatrix'
 import { InviteModal } from '@/components/family/InviteModal'
@@ -42,6 +44,7 @@ import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import AuthGuard from '@/components/auth/AuthGuard'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
+import { calculateAge } from '@/lib/age-utils'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import SupervisedVitalsWizard from '@/components/wizards/SupervisedVitalsWizard'
@@ -99,6 +102,8 @@ function PatientDetailContent() {
   const [summaryMoodNotes, setSummaryMoodNotes] = useState<string | undefined>(undefined)
   const [showAppointmentWizard, setShowAppointmentWizard] = useState(false)
   const [showAllMedications, setShowAllMedications] = useState(false)
+  const [showQuickLogModal, setShowQuickLogModal] = useState(false)
+  const [quickLogVitalType, setQuickLogVitalType] = useState<VitalType | null>(null)
 
   const { user } = useAuth()
   const { vitals, loading: vitalsLoading, logVital, updateVital, deleteVital, refetch } = useVitals({
@@ -246,6 +251,12 @@ function PatientDetailContent() {
       try {
         setLoading(true)
         const data = await medicalOperations.patients.getPatient(patientId)
+        console.log('[PatientDetail] Fetched patient data:', {
+          patientId,
+          patientName: data?.name,
+          hasPreferences: !!data?.preferences,
+          vitalReminders: data?.preferences?.vitalReminders
+        })
         setPatient(data)
       } catch (error: any) {
         logger.error('[PatientDetail] Error fetching patient', error)
@@ -693,6 +704,72 @@ function PatientDetailContent() {
                 </button>
               </div>
             </div>
+
+        {/* Vital Reminder Prompt - Shows when vitals are due today */}
+        {canLogVitals && user && patient && (() => {
+          // DEBUG: Log what we're passing to VitalReminderPrompt
+          console.log('[PatientPage] ==== VitalReminderPrompt Debug ====')
+          console.log('[PatientPage] Patient object:', patient)
+          console.log('[PatientPage] Patient preferences:', patient.preferences)
+          console.log('[PatientPage] Vital reminders:', patient.preferences?.vitalReminders)
+          console.log('[PatientPage] Vital reminders stringified:', JSON.stringify(patient.preferences?.vitalReminders, null, 2))
+          console.log('[PatientPage] Vitals count:', vitals.length)
+          console.log('[PatientPage] ===============================')
+
+          // Check if any reminders are enabled
+          const enabledReminders = Object.entries(patient.preferences?.vitalReminders || {})
+            .filter(([_, config]) => (config as any)?.enabled)
+          console.log('[PatientPage] Enabled reminders:', enabledReminders)
+
+          return (
+            <VitalReminderPrompt
+              patientId={patientId}
+              patientName={patient.name}
+              vitals={vitals}
+              userPreferences={patient.preferences}
+              onLogVitalsClick={() => setShowVitalsWizard(true)}
+              onLogSpecificVital={(vitalType) => {
+                setQuickLogVitalType(vitalType)
+                setShowQuickLogModal(true)
+              }}
+              onDisableReminder={async (vitalType) => {
+                // Update patient's vital reminders
+                const currentReminders = patient.preferences?.vitalReminders as any
+                const updatedReminders = {
+                  ...currentReminders,
+                  [vitalType]: {
+                    enabled: false,
+                    frequency: currentReminders?.[vitalType]?.frequency || 'daily'
+                  }
+                }
+
+                const authToken = await auth.currentUser?.getIdToken()
+                const response = await fetch(`/api/patients/${patientId}`, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                  },
+                  body: JSON.stringify({
+                    ...patient,
+                    preferences: {
+                      ...patient.preferences,
+                      vitalReminders: updatedReminders
+                    }
+                  })
+                })
+
+                if (!response.ok) {
+                  throw new Error('Failed to update patient vital reminders')
+                }
+
+                // Refresh patient data
+                const result = await response.json()
+                setPatient(result.data)
+              }}
+            />
+          )
+        })()}
 
         {/* Health Overview Cards - Desktop only, always visible */}
         {canViewVitals && (
@@ -1481,7 +1558,7 @@ function PatientDetailContent() {
                               onClick={async () => {
                                 try {
                                   await medicalOperations.documents.updateDocument(patientId, doc.id, {
-                                    ocrStatus: 'not_started'
+                                    ocrStatus: 'pending'
                                   })
                                   toast.success('Document status reset')
                                   fetchDocuments()
@@ -1843,7 +1920,7 @@ function PatientDetailContent() {
         <MedicationDetailModal
           medication={selectedMedication}
           onClose={() => setSelectedMedication(null)}
-          patientId={params.patientId}
+          patientId={patientId}
           onMedicationUpdated={fetchMedications}
         />
       )}
@@ -1888,8 +1965,8 @@ function PatientDetailContent() {
             familyMember={{
               id: patient.id,
               name: patient.name,
-              age: patient.age,
-              conditions: patient.conditions || []
+              age: calculateAge(patient.dateOfBirth),
+              conditions: patient.healthConditions || []
             }}
             caregivers={caregivers}
           onSubmit={async (vitals) => {
@@ -1938,7 +2015,10 @@ function PatientDetailContent() {
               // Save all vitals
               const savedVitals: VitalSign[] = []
               for (const vitalInput of vitalInputsWithMood) {
-                const saved = await medicalOperations.vitals.logVital(patient.id, vitalInput)
+                const saved = await medicalOperations.vitals.logVital(patient.id, {
+                  ...vitalInput,
+                  unit: vitalInput.unit as VitalUnit
+                })
                 savedVitals.push(saved)
               }
 
@@ -1976,9 +2056,8 @@ function PatientDetailContent() {
 
                     logger.info('[PatientDetail] Schedule created', { vitalType })
                   } catch (scheduleError) {
-                    logger.error('[PatientDetail] Failed to create schedule', {
-                      vitalType,
-                      error: scheduleError
+                    logger.error('[PatientDetail] Failed to create schedule', scheduleError as Error, {
+                      vitalType
                     })
                     // Don't fail the whole operation if schedule creation fails
                     toast.error(`Warning: Could not set up reminder for ${vitalType}`)
@@ -2006,7 +2085,7 @@ function PatientDetailContent() {
 
               toast.success(`${savedVitals.length} vital sign${savedVitals.length !== 1 ? 's' : ''} logged successfully!`)
             } catch (error) {
-              logger.error('[PatientDetail] Failed to save vitals', error)
+              logger.error('[PatientDetail] Failed to save vitals', error instanceof Error ? error : undefined)
               toast.error(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
               throw error
             }
@@ -2066,9 +2145,18 @@ function PatientDetailContent() {
                 appointmentData
               })
 
+              const provider = providers.find(p => p.id === appointmentData.providerId)
+
               const appointmentId = await createAppointment({
+                userId: user?.uid || '',
                 patientId: patient.id,
+                patientName: patient.name,
+                providerName: provider?.name || 'Unknown Provider',
+                updatedAt: new Date().toISOString(),
                 ...appointmentData,
+                dateTime: appointmentData.dateTime.toISOString(),
+                pickupTime: appointmentData.pickupTime instanceof Date ? appointmentData.pickupTime.toISOString() : appointmentData.pickupTime,
+                providerId: appointmentData.providerId || '', // Ensure providerId is always a string
                 status: 'scheduled',
                 createdFrom: 'manual',
                 driverStatus: appointmentData.requiresDriver
@@ -2084,9 +2172,27 @@ function PatientDetailContent() {
               // Redirect to calendar view
               router.push('/calendar')
             } catch (error) {
-              logger.error('[PatientDetail] Failed to create appointment', error)
+              logger.error('[PatientDetail] Failed to create appointment', error instanceof Error ? error : undefined)
               throw error
             }
+          }}
+        />
+      )}
+
+      {/* Quick Vital Log Modal */}
+      {patient && quickLogVitalType && (
+        <VitalQuickLogModal
+          isOpen={showQuickLogModal}
+          onClose={() => {
+            setShowQuickLogModal(false)
+            setQuickLogVitalType(null)
+          }}
+          vitalType={quickLogVitalType}
+          patientName={patient.name}
+          onSubmit={async (vitalData) => {
+            await handleLogVital(vitalData)
+            setShowQuickLogModal(false)
+            setQuickLogVitalType(null)
           }}
         />
       )}

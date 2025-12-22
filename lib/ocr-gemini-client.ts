@@ -37,10 +37,10 @@ async function getAuthToken(): Promise<string | null> {
       await new Promise(resolve => setTimeout(resolve, 200))
       const retryUser = auth.currentUser
       if (!retryUser) return null
-      return await retryUser.getIdToken()
+      return await (retryUser as any).getIdToken()
     }
 
-    return await user.getIdToken()
+    return await (user as any).getIdToken()
   } catch (error) {
     logger.error('[Gemini OCR Client] Failed to get auth token', error as Error)
     return null

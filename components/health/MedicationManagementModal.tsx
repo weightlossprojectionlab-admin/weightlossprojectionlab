@@ -101,7 +101,7 @@ export function MedicationManagementModal({
         <div className="flex-1 overflow-y-auto p-6">
           <MedicationList
             medications={medications}
-            onChange={setMedications}
+            onChange={setMedications as (medications: (import('@/types/medical').PatientMedication | import('@/lib/medication-lookup').ScannedMedication)[]) => void}
             prescribedFor={prescribedFor}
             label={prescribedFor ? `Medications for ${prescribedFor}` : "Your Medications"}
             description={prescribedFor

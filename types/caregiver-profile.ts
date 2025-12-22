@@ -178,7 +178,7 @@ export interface Availability {
 /**
  * Emergency contact information
  */
-export interface EmergencyContact {
+export interface CaregiverEmergencyContact {
   /** Full name of emergency contact */
   name: string
   /** Relationship to caregiver */
@@ -313,7 +313,7 @@ export interface CaregiverProfile {
   availability?: Availability
 
   /** Emergency contact */
-  emergencyContact?: EmergencyContact
+  emergencyContact?: CaregiverEmergencyContact
 
   /** Physical address */
   address?: Address
@@ -481,7 +481,7 @@ export const AvailabilitySchema = z.object({
 /**
  * Emergency contact validation schema
  */
-export const EmergencyContactSchema = z.object({
+export const CaregiverEmergencyContactSchema = z.object({
   name: z.string().min(1).max(200),
   relationship: z.string().min(1).max(100),
   phoneNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/), // E.164 format
@@ -567,7 +567,7 @@ export const CaregiverProfileSchema = z.object({
   relationshipToPatients: z.record(z.string(), z.string()),
   professionalInfo: ProfessionalInfoSchema.optional(),
   availability: AvailabilitySchema.optional(),
-  emergencyContact: EmergencyContactSchema.optional(),
+  emergencyContact: CaregiverEmergencyContactSchema.optional(),
   address: AddressSchema.optional(),
   preferences: CaregiverPreferencesSchema,
   duties: CaregiverDutiesSchema.optional(),

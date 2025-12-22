@@ -73,7 +73,7 @@ export function StepTrackingProvider({ children }: StepTrackingProviderProps) {
               setIsEnabled(firestoreEnabled)
               // Sync to storage
               await storage.setItem('step-tracking-enabled', firestoreEnabled.toString())
-              logger.debug('📍 Step tracking loaded from Firestore:', firestoreEnabled)
+              logger.debug('📍 Step tracking loaded from Firestore:', { enabled: firestoreEnabled })
               return
             }
           } catch (err) {

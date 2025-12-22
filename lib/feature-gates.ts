@@ -34,12 +34,12 @@ export const PLAN_FEATURES: Record<string, SubscriptionPlan[]> = {
   'household-management': ['family_basic', 'family_plus', 'family_premium'],
   'pet-tracking': ['family_basic', 'family_plus', 'family_premium'],
 
-  // Medical Features
-  'appointments': ['single', 'family_basic', 'family_plus', 'family_premium'],
-  'medications': ['single', 'family_basic', 'family_plus', 'family_premium'],
-  'vitals-tracking': ['single', 'family_basic', 'family_plus', 'family_premium'],
-  'providers': ['single', 'family_basic', 'family_plus', 'family_premium'],
-  'medical-records': ['single', 'family_basic', 'family_plus', 'family_premium'],
+  // Medical Features - Single Plus and all Family plans
+  'appointments': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'medications': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'vitals-tracking': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'providers': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'medical-records': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
 
   // Advanced Analytics (Family Plus & Premium only)
   'advanced-analytics': ['family_plus', 'family_premium'],
@@ -56,8 +56,8 @@ export const PLAN_FEATURES: Record<string, SubscriptionPlan[]> = {
   'api-access': ['family_premium'],
 
   // Caregiver Features
-  'external-caregivers': ['single', 'family_basic', 'family_plus', 'family_premium'],
-  'caregiver-invites': ['single', 'family_basic', 'family_plus', 'family_premium'],
+  'external-caregivers': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'caregiver-invites': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
   'role-management': ['family_basic', 'family_plus', 'family_premium'],
 
   // Shopping & Meal Planning
@@ -190,6 +190,29 @@ export function canAccessFeature(user: User | null, feature: string): boolean {
   const subscription = getUserSubscription(user)
   if (!subscription) return false
 
+  // Grandfathered users get full access to their plan's features forever
+  if (subscription.isGrandfathered) {
+    // Check basic features (available to all plans)
+    if (BASIC_FEATURES.includes(feature)) {
+      return true
+    }
+
+    // Check plan-gated features based on their grandfathered plan
+    if (PLAN_FEATURES[feature]) {
+      return PLAN_FEATURES[feature].includes(subscription.plan)
+    }
+
+    // Check addon-gated features
+    if (ADDON_FEATURES[feature]) {
+      const requiredAddon = ADDON_FEATURES[feature]
+      return subscription.addons?.[requiredAddon] === true
+    }
+
+    // Feature not recognized but grandfathered - allow basic access
+    return BASIC_FEATURES.includes(feature)
+  }
+
+  // Non-grandfathered users: Check subscription status
   // Expired or canceled subscriptions can't access features
   if (subscription.status === 'expired' || subscription.status === 'canceled') {
     return false
@@ -223,6 +246,12 @@ export function canAddPatient(user: User | null, currentPatientCount: number): b
 
   const subscription = getUserSubscription(user)
   if (!subscription) return false
+
+  // Grandfathered users bypass expiration checks
+  if (subscription.isGrandfathered) {
+    const maxPatients = subscription.maxPatients ?? subscription.maxSeats ?? 1
+    return currentPatientCount < maxPatients
+  }
 
   // Can't add patients if subscription expired/canceled
   if (subscription.status === 'expired' || subscription.status === 'canceled') {
@@ -329,7 +358,20 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
       status: 'active',
       maxSeats: 1,
       currentSeats: 0,
-      maxExternalCaregivers: 2,
+      maxExternalCaregivers: 0,
+      currentExternalCaregivers: 0,
+      maxPatients: 1,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    },
+    'Single User Plus': {
+      plan: 'single_plus',
+      billingInterval: 'monthly',
+      addons: { familyFeatures: false },
+      status: 'active',
+      maxSeats: 1,
+      currentSeats: 0,
+      maxExternalCaregivers: 3,
       currentExternalCaregivers: 0,
       maxPatients: 1,
       currentPeriodStart: new Date(),

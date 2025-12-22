@@ -213,7 +213,7 @@ export function useNotificationPreferences() {
         if (snapshot.exists()) {
           const data = snapshot.data() as NotificationPreferences
           setPreferences(prev => ({ ...DEFAULT_PREFERENCES, ...data }))
-          logger.info('[NotificationPreferences] Preferences loaded', data)
+          logger.info('[NotificationPreferences] Preferences loaded', { loaded: true })
         } else {
           // No preferences yet, use defaults
           setPreferences(DEFAULT_PREFERENCES)

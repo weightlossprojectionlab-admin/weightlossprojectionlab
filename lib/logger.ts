@@ -144,3 +144,33 @@ export const logger = new Logger()
 
 // Export type for external use
 export type { LogLevel, LogContext }
+
+// Helper function to convert any object to LogContext safely
+export function toLogContext(obj: unknown): LogContext {
+  if (!obj || typeof obj !== 'object') {
+    return { value: obj }
+  }
+
+  // If it's already a plain object with index signature, return as is
+  if (obj.constructor === Object) {
+    return obj as LogContext
+  }
+
+  // Convert Error to LogContext
+  if (obj instanceof Error) {
+    return {
+      message: obj.message,
+      name: obj.name,
+      stack: obj.stack
+    }
+  }
+
+  // For other objects, extract enumerable properties
+  const context: LogContext = {}
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined && value !== null) {
+      context[key] = value
+    }
+  }
+  return context
+}

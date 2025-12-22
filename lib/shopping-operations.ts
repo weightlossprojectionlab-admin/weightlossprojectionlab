@@ -1297,3 +1297,86 @@ export async function markItemAsExpired(
     throw error
   }
 }
+
+/**
+ * Clear all shopping items for a user
+ * Deletes all items from the shopping list (both needed and in-stock)
+ *
+ * @param userId - User ID whose shopping list to clear
+ * @returns Object with count of deleted items and any errors
+ */
+export async function clearAllShoppingItems(
+  userId: string
+): Promise<{ deleted: number; errors: Array<{ itemId: string; error: string }> }> {
+  try {
+    logger.info('[Shopping] Clearing all shopping items', { userId })
+
+    // Get all user's shopping items
+    const q = query(
+      collection(db, SHOPPING_ITEMS_COLLECTION),
+      where('userId', '==', userId)
+    )
+
+    const snapshot = await getDocs(q)
+    const itemIds = snapshot.docs.map(doc => doc.id)
+
+    logger.info('[Shopping] Found items to delete', { userId, count: itemIds.length })
+
+    if (itemIds.length === 0) {
+      return { deleted: 0, errors: [] }
+    }
+
+    const results = {
+      deleted: 0,
+      errors: [] as Array<{ itemId: string; error: string }>
+    }
+
+    // Process in batches of 500 (Firestore limit)
+    const batchSize = 500
+    for (let i = 0; i < itemIds.length; i += batchSize) {
+      const batchItemIds = itemIds.slice(i, i + batchSize)
+
+      try {
+        const batch = writeBatch(db)
+
+        for (const itemId of batchItemIds) {
+          const itemRef = doc(db, SHOPPING_ITEMS_COLLECTION, itemId)
+          batch.delete(itemRef)
+        }
+
+        await batch.commit()
+        results.deleted += batchItemIds.length
+
+        logger.info('[Shopping] Batch delete successful', {
+          userId,
+          batchNumber: Math.floor(i / batchSize) + 1,
+          itemsDeleted: batchItemIds.length
+        })
+      } catch (error) {
+        logger.error('[Shopping] Batch delete failed', error as Error, {
+          userId,
+          batchNumber: Math.floor(i / batchSize) + 1
+        })
+
+        // Track individual failures
+        batchItemIds.forEach(itemId => {
+          results.errors.push({
+            itemId,
+            error: (error as Error).message || 'Unknown error'
+          })
+        })
+      }
+    }
+
+    logger.info('[Shopping] Clear all complete', {
+      userId,
+      deleted: results.deleted,
+      errors: results.errors.length
+    })
+
+    return results
+  } catch (error) {
+    logger.error('[Shopping] Failed to clear shopping items', error as Error, { userId })
+    throw error
+  }
+}

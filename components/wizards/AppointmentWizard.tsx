@@ -50,7 +50,7 @@ interface AppointmentWizardProps {
 }
 
 export interface AppointmentData {
-  providerId: string
+  providerId?: string
   dateTime: Date
   type: 'routine-checkup' | 'follow-up' | 'specialist' | 'lab' | 'other'
   reason: string
@@ -69,6 +69,7 @@ type WizardStep =
   | 'location'
   | 'transportation'
   | 'notes'
+  | 'familyConfirmation'
   | 'review'
   | 'confirmation'
 
@@ -89,6 +90,7 @@ export default function AppointmentWizard({
     type: 'routine-checkup',
     requiresDriver: false
   })
+  const [familyConfirmed, setFamilyConfirmed] = useState(false)
 
   const stepOrder: WizardStep[] = [
     'intro',
@@ -98,6 +100,7 @@ export default function AppointmentWizard({
     'location',
     'transportation',
     'notes',
+    'familyConfirmation',
     'review'
   ]
 
@@ -121,9 +124,18 @@ export default function AppointmentWizard({
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      // Validate required fields
-      if (!appointmentData.providerId || !appointmentData.dateTime || !appointmentData.location) {
-        alert('Please fill in all required fields')
+      // Validate required fields and navigate to missing field
+      if (!appointmentData.dateTime) {
+        alert('Date and time are required. Please select an appointment date and time.')
+        setCurrentStep('datetime')
+        setIsSubmitting(false)
+        return
+      }
+
+      if (!appointmentData.location) {
+        alert('Location is required. Please enter the appointment location.')
+        setCurrentStep('location')
+        setIsSubmitting(false)
         return
       }
 
@@ -136,7 +148,7 @@ export default function AppointmentWizard({
       await onSubmit(dataToSubmit as AppointmentData)
       setCurrentStep('confirmation')
     } catch (error) {
-      logger.error('[AppointmentWizard] Submit failed', error)
+      logger.error('[AppointmentWizard] Submit failed', error instanceof Error ? error : undefined)
       alert(`Failed to schedule appointment: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsSubmitting(false)
@@ -243,6 +255,16 @@ export default function AppointmentWizard({
           />
         )
 
+      case 'familyConfirmation':
+        return (
+          <FamilyConfirmationStep
+            familyMember={familyMember}
+            appointmentData={appointmentData}
+            confirmed={familyConfirmed}
+            onChange={setFamilyConfirmed}
+          />
+        )
+
       case 'review':
         return (
           <ReviewStep
@@ -334,7 +356,8 @@ export default function AppointmentWizard({
                 ) : (
                   <button
                     onClick={handleNext}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+                    disabled={currentStep === 'familyConfirmation' && !familyConfirmed}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                     <ArrowRightIcon className="w-4 h-4" />
@@ -553,10 +576,8 @@ function ProviderStep({
       })
 
       const errorMessage = error.message || 'Failed to add provider'
-      logger.error('[ProviderStep] Error adding provider', {
-        error: errorMessage,
-        errorObject: error,
-        stack: error.stack
+      logger.error('[ProviderStep] Error adding provider', error instanceof Error ? error : undefined, {
+        errorMessage
       })
       toast.error(errorMessage)
     } finally {
@@ -704,7 +725,7 @@ function ProviderStep({
     <div className="space-y-4">
       <h3 className="text-xl font-bold text-foreground">Select Healthcare Provider</h3>
       <p className="text-sm text-muted-foreground">
-        Choose the provider for this appointment
+        Choose the provider for this appointment (optional - you can skip if not applicable)
       </p>
 
       {/* Add Provider Button */}
@@ -971,7 +992,7 @@ function TypeStep({
           </label>
           <textarea
             value={reason || ''}
-            onChange={(e) => onChange(type, e.target.value)}
+            onChange={(e) => onChange(type as "other" | "specialist" | "lab" | "routine-checkup" | "follow-up", e.target.value)}
             placeholder={selectedType?.placeholder || 'Provide specific details about this appointment...'}
             rows={3}
             className="w-full px-4 py-3 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
@@ -1161,6 +1182,100 @@ function NotesStep({
   )
 }
 
+function FamilyConfirmationStep({
+  familyMember,
+  appointmentData,
+  confirmed,
+  onChange
+}: {
+  familyMember: { name: string }
+  appointmentData: Partial<AppointmentData>
+  confirmed: boolean
+  onChange: (confirmed: boolean) => void
+}) {
+  const appointmentDate = appointmentData.dateTime
+    ? appointmentData.dateTime.toLocaleString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      })
+    : 'Not set'
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-xl font-bold text-foreground">Confirm with Family Member</h3>
+        <p className="text-sm text-muted-foreground mt-2">
+          Before scheduling, please confirm this appointment works for {familyMember.name}
+        </p>
+      </div>
+
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
+        <div className="flex items-start gap-3 mb-4">
+          <InformationCircleIcon className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+              Appointment Summary
+            </h4>
+            <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+              <div>
+                <span className="font-medium">Family Member:</span> {familyMember.name}
+              </div>
+              <div>
+                <span className="font-medium">Date & Time:</span> {appointmentDate}
+              </div>
+              {appointmentData.location && (
+                <div>
+                  <span className="font-medium">Location:</span> {appointmentData.location.split('\n')[0]}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-blue-200 dark:border-blue-700 pt-4">
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => onChange(e.target.checked)}
+              className="mt-1 w-5 h-5 rounded border-blue-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            />
+            <span className="text-sm text-blue-900 dark:text-blue-100 group-hover:text-blue-700 dark:group-hover:text-blue-200">
+              I have confirmed that this appointment time and details work for{' '}
+              <span className="font-semibold">{familyMember.name}</span> and they are aware of this appointment.
+            </span>
+          </label>
+        </div>
+      </div>
+
+      {!confirmed && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+          <div className="flex items-start gap-3">
+            <InformationCircleIcon className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-yellow-800 dark:text-yellow-200">
+              <span className="font-semibold">Important:</span> Please confirm with {familyMember.name} before proceeding to ensure they are available and prepared for this appointment.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmed && (
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+          <div className="flex items-start gap-3">
+            <CheckCircleIcon className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-green-800 dark:text-green-200">
+              <span className="font-semibold">Great!</span> You can now proceed to review and schedule the appointment.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ReviewStep({
   appointmentData,
   familyMember,
@@ -1198,15 +1313,17 @@ function ReviewStep({
           <div className="font-semibold text-foreground">{familyMember.name}</div>
         </div>
 
-        <div>
-          <div className="text-xs text-muted-foreground uppercase mb-1">Provider</div>
-          <div className="font-semibold text-foreground">
-            {provider?.name || 'Not selected'}
+        {appointmentData.providerId && (
+          <div>
+            <div className="text-xs text-muted-foreground uppercase mb-1">Provider</div>
+            <div className="font-semibold text-foreground">
+              {provider?.name || 'Not selected'}
+            </div>
+            {provider?.specialty && (
+              <div className="text-sm text-muted-foreground">{provider.specialty}</div>
+            )}
           </div>
-          {provider?.specialty && (
-            <div className="text-sm text-muted-foreground">{provider.specialty}</div>
-          )}
-        </div>
+        )}
 
         <div>
           <div className="text-xs text-muted-foreground uppercase mb-1">Date & Time</div>

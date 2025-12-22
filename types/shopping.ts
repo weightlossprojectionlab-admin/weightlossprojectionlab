@@ -128,6 +128,8 @@ export interface ShoppingItem {
   requestedBy?: string[] // NEW: Array of userIds who currently need this item
   lastModifiedBy?: string // NEW: userId of last person to update this item
   purchasedBy?: string // NEW: userId of person who purchased this item
+  discardedBy?: string // NEW: userId of person who discarded/threw away this item
+  foundInStore?: boolean // NEW: Whether this item was found in the store during shopping
 
   // History & Learning
   purchaseHistory: PurchaseHistoryEntry[]

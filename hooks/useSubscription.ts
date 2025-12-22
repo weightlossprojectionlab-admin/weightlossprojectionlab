@@ -2,6 +2,7 @@
  * useSubscription Hook
  *
  * Provides access to the user's subscription with admin override and dev simulation support
+ * Includes real-time Firestore listener for webhook updates
  */
 
 'use client'
@@ -10,6 +11,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from './useAuth'
 import { UserSubscription } from '@/types'
 import { getUserSubscription, isAdmin } from '@/lib/feature-gates'
+import { db } from '@/lib/firebase'
+import { doc, onSnapshot } from 'firebase/firestore'
 
 export function useSubscription() {
   const { user } = useAuth()
@@ -31,6 +34,23 @@ export function useSubscription() {
     setIsAdminUser(isAdmin(user as any))
     setLoading(false)
 
+    // Real-time listener for subscription changes from Firestore
+    // This catches webhook updates from Stripe
+    console.log('[useSubscription] Setting up real-time Firestore listener for user:', user.uid)
+    const userDocRef = doc(db, 'users', user.uid)
+    const unsubscribeFirestore = onSnapshot(userDocRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const userData = docSnapshot.data()
+        const updatedSubscription = userData?.subscription as UserSubscription | undefined
+        console.log('[useSubscription] Firestore subscription updated:', updatedSubscription)
+        if (updatedSubscription) {
+          setSubscription(updatedSubscription)
+        }
+      }
+    }, (error) => {
+      console.error('[useSubscription] Firestore listener error:', error)
+    })
+
     // Listen for simulation changes (works in dev mode and for admin users)
     const handleSimulationChange = () => {
       console.log('[useSubscription] Received subscription-simulation-changed event')
@@ -41,7 +61,10 @@ export function useSubscription() {
 
     console.log('[useSubscription] Adding event listener for subscription-simulation-changed')
     window.addEventListener('subscription-simulation-changed', handleSimulationChange)
+
     return () => {
+      console.log('[useSubscription] Cleaning up Firestore listener')
+      unsubscribeFirestore()
       console.log('[useSubscription] Removing event listener for subscription-simulation-changed')
       window.removeEventListener('subscription-simulation-changed', handleSimulationChange)
     }

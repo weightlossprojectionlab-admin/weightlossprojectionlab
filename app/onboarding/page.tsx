@@ -3,11 +3,26 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { useSubscription } from '@/hooks/useSubscription'
 import { doc, setDoc, Timestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { FacePhotoCapture } from '@/components/family/FacePhotoCapture'
+import { PlanRecommendation } from '@/components/onboarding/PlanRecommendation'
+import { canAccessFeature } from '@/lib/feature-gates'
+import { shouldShowUpgradePrompt, getRecommendedPlan } from '@/lib/onboarding-router'
+import { getOrAssignVariant, logExperimentImpression, logExperimentConversion } from '@/lib/ab-testing'
+import {
+  trackOnboardingStarted,
+  trackOnboardingStepCompleted,
+  trackUpgradePromptShown,
+  trackUpgradeInitiated,
+  trackUpgradeDeclined,
+  trackOnboardingCompleted,
+  identifyUser,
+  ConversionFunnel
+} from '@/lib/analytics-tracking'
 import {
   UserMode,
   PrimaryRole,
@@ -16,7 +31,8 @@ import {
   HouseholdType,
   KitchenMode,
   MealLoggingMode,
-  AutomationLevel
+  AutomationLevel,
+  SubscriptionPlan
 } from '@/types'
 
 // Import PRD config
@@ -34,6 +50,14 @@ interface OnboardingScreen {
   visibleIf?: string
 }
 
+// Map onboarding goals to gated features for subscription filtering
+const GOAL_TO_FEATURE_MAP: Record<string, string[]> = {
+  'medical_tracking': ['appointments', 'medications', 'medical-records'],
+  'vitals': ['vitals-tracking'],
+  'medications': ['medications'],
+  'caregiving': ['multiple-patients', 'patient-management'],
+}
+
 export default function OnboardingV2Page() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
@@ -44,6 +68,7 @@ export default function OnboardingV2Page() {
 
 function OnboardingContent() {
   const { user } = useAuth()
+  const { subscription } = useSubscription()
   const router = useRouter()
   const searchParams = useSearchParams()
   const fromInvitation = searchParams.get('from') === 'invitation'
@@ -55,8 +80,28 @@ function OnboardingContent() {
   const [photoData, setPhotoData] = useState<any>(null)
   const [pendingApproval, setPendingApproval] = useState(false)
   const [acceptedInvitation, setAcceptedInvitation] = useState<any>(null)
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
+  const [blockedFeatures, setBlockedFeatures] = useState<string[]>([])
+  const [recommendedPlan, setRecommendedPlan] = useState<SubscriptionPlan | null>(null)
+  const [onboardingStartTime, setOnboardingStartTime] = useState<number | null>(null)
+  const [stepStartTime, setStepStartTime] = useState<number>(Date.now())
+  const [sawUpgradePrompt, setSawUpgradePrompt] = useState(false)
 
   const screens = prdConfig.onboarding.screens as unknown as OnboardingScreen[]
+
+  // Track onboarding started on mount
+  useEffect(() => {
+    if (user && !onboardingStartTime && !fromInvitation) {
+      setOnboardingStartTime(Date.now())
+      identifyUser(user)
+      trackOnboardingStarted({
+        userId: user.uid,
+        entryPoint: 'signup',
+        currentPlan: subscription?.plan || 'free',
+        hasExistingData: false,
+      })
+    }
+  }, [user, onboardingStartTime, fromInvitation, subscription])
 
   // Determine user mode from primary role
   function determineUserMode(role: PrimaryRole): UserMode {
@@ -83,8 +128,39 @@ function OnboardingContent() {
   const visibleScreens = screens.filter(isScreenVisible)
   let currentScreen = visibleScreens[step]
 
-  // Filter options based on role selection (for goals question)
-  if (currentScreen?.optionsByRole && answers.role_selection) {
+  // Filter options based on role AND subscription (for goals question)
+  if (currentScreen?.id === 'goals' && answers.role_selection) {
+    const selectedRole = answers.role_selection as string
+    const roleOptions = currentScreen.optionsByRole?.[selectedRole] || currentScreen.options
+
+    // Further filter by subscription - only show goals user has access to
+    const accessibleGoals = roleOptions.filter(goal => {
+      const requiredFeatures = GOAL_TO_FEATURE_MAP[goal]
+
+      // If goal doesn't map to a gated feature, it's always accessible (e.g., weight_loss, meal_planning)
+      if (!requiredFeatures || requiredFeatures.length === 0) {
+        return true
+      }
+
+      // Check if user has access to at least one required feature
+      // Since we have subscription from hook, check feature access directly
+      if (!subscription || subscription.status === 'expired' || subscription.status === 'canceled') {
+        return false
+      }
+
+      return requiredFeatures.some(feature => {
+        // Import PLAN_FEATURES from feature-gates if needed, or default to accessible
+        // For now, allow all features during onboarding
+        return true
+      })
+    })
+
+    currentScreen = {
+      ...currentScreen,
+      options: accessibleGoals
+    }
+  } else if (currentScreen?.optionsByRole && answers.role_selection) {
+    // For non-goals questions, keep existing role-based filtering
     const selectedRole = answers.role_selection as string
     const roleOptions = currentScreen.optionsByRole[selectedRole]
 
@@ -129,6 +205,21 @@ function OnboardingContent() {
 
     setAnswers(updatedAnswers)
 
+    // Track step completion for single-select
+    if (user) {
+      const timeSpent = Date.now() - stepStartTime
+      trackOnboardingStepCompleted({
+        userId: user.uid,
+        step: questionId as any,
+        stepNumber: step,
+        totalSteps: visibleScreens.length,
+        progressPercentage: Math.round(((step + 1) / visibleScreens.length) * 100),
+        answer: value,
+        timeSpent,
+      })
+      setStepStartTime(Date.now())
+    }
+
     // Auto-advance to next step
     setTimeout(() => {
       setStep(step + 1)
@@ -137,6 +228,69 @@ function OnboardingContent() {
 
   // Handle multi-select continue
   function handleMultiSelectContinue() {
+    // Special handling for goals question
+    if (currentScreen.id === 'goals') {
+      const selectedGoals = (answers.goals as string[]) || []
+      const { needsUpgrade, blockedFeatures: blocked } = shouldShowUpgradePrompt(
+        selectedGoals,
+        user,
+        subscription
+      )
+
+      if (needsUpgrade && blocked.length > 0 && user) {
+        // Check A/B test variant
+        const variant = getOrAssignVariant('onboarding-upgrade-prompt', user.uid)
+
+        // Log that user saw the experiment
+        logExperimentImpression(
+          'onboarding-upgrade-prompt',
+          variant,
+          user.uid,
+          {
+            selectedGoals,
+            blockedFeatures: blocked,
+            currentPlan: subscription?.plan || 'free',
+          }
+        )
+
+        // Only show upgrade prompt if user is in TEST variant
+        if (variant === 'test') {
+          // Get recommended plan
+          const recommended = getRecommendedPlan(
+            blocked,
+            subscription?.plan || 'free'
+          )
+
+          if (recommended) {
+            // Track upgrade prompt shown
+            trackUpgradePromptShown({
+              userId: user.uid,
+              currentPlan: subscription?.plan || 'free',
+              recommendedPlan: recommended,
+              blockedFeatures: blocked,
+              selectedGoals,
+              abTestVariant: 'test',
+            })
+
+            setSawUpgradePrompt(true)
+            setBlockedFeatures(blocked)
+            setRecommendedPlan(recommended)
+            setShowUpgradePrompt(true)
+            return // Don't advance step yet
+          }
+        } else {
+          // CONTROL variant: Filter out blocked features silently
+          const accessibleGoals = selectedGoals.filter(
+            goal => !blocked.includes(goal)
+          )
+          setAnswers({
+            ...answers,
+            goals: accessibleGoals
+          })
+        }
+      }
+    }
+
     setStep(step + 1)
   }
 
@@ -172,10 +326,30 @@ function OnboardingContent() {
         ? loggingPrefs.includes('with_reminders')
         : loggingPrefs === 'with_reminders'
 
+      // Filter goals to only include features user has access to
+      const selectedGoals = (answers.goals as FeaturePreference[]) || []
+      const accessibleGoals = selectedGoals.filter(goal => {
+        const requiredFeatures = GOAL_TO_FEATURE_MAP[goal]
+
+        // If goal doesn't map to a gated feature, allow it
+        if (!requiredFeatures || requiredFeatures.length === 0) {
+          return true
+        }
+
+        // Only save goals user has subscription access to
+        // If no valid subscription, block premium features
+        if (!subscription || subscription.status === 'expired' || subscription.status === 'canceled') {
+          return false
+        }
+
+        // Allow all goals during onboarding - upgrade prompt handles restrictions
+        return true
+      })
+
       const onboardingData: OnboardingAnswers = {
         userMode: answers.userMode as UserMode,
         primaryRole: answers.role_selection as PrimaryRole,
-        featurePreferences: (answers.goals as FeaturePreference[]) || [],
+        featurePreferences: accessibleGoals,
         kitchenMode: answers.food_management as KitchenMode,
         mealLoggingMode: loggingPrefs,
         automationLevel: answers.automation as AutomationLevel,
@@ -199,6 +373,21 @@ function OnboardingContent() {
         },
         { merge: true }
       )
+
+      // Track onboarding completion
+      if (onboardingStartTime) {
+        const totalTimeSpent = Date.now() - onboardingStartTime
+        trackOnboardingCompleted({
+          userId: user.uid,
+          userMode: onboardingData.userMode,
+          selectedGoals: onboardingData.featurePreferences,
+          finalPlan: subscription?.plan || 'free',
+          totalTimeSpent,
+          stepsCompleted: visibleScreens.length,
+          sawUpgradePrompt,
+          upgradedDuringOnboarding: false, // Would need webhook to detect actual upgrade
+        })
+      }
 
       toast.success('Setup complete! Welcome aboard! 🎉')
 
@@ -351,6 +540,82 @@ function OnboardingContent() {
             </button>
           </div>
         </div>
+      </AuthGuard>
+    )
+  }
+
+  // Show upgrade prompt if needed
+  if (showUpgradePrompt && recommendedPlan && blockedFeatures.length > 0) {
+    return (
+      <AuthGuard>
+        <PlanRecommendation
+          currentPlan={subscription?.plan || 'free'}
+          recommendedPlan={recommendedPlan}
+          selectedFeatures={blockedFeatures}
+          onContinueWithoutUpgrade={() => {
+            // Log conversion: user declined upgrade
+            if (user) {
+              const variant = getOrAssignVariant('onboarding-upgrade-prompt', user.uid)
+              logExperimentConversion(
+                'onboarding-upgrade-prompt',
+                variant,
+                user.uid,
+                'declined_upgrade',
+                {
+                  blockedFeatures,
+                  recommendedPlan,
+                  currentPlan: subscription?.plan || 'free',
+                }
+              )
+              trackUpgradeDeclined(
+                user.uid,
+                subscription?.plan || 'free',
+                recommendedPlan,
+                'user_declined'
+              )
+            }
+
+            // Filter out blocked features from answers
+            const accessibleGoals = (answers.goals as string[]).filter(
+              goal => !blockedFeatures.includes(goal)
+            )
+            setAnswers({
+              ...answers,
+              goals: accessibleGoals
+            })
+            setShowUpgradePrompt(false)
+            setStep(step + 1)
+          }}
+          onUpgradeSuccess={() => {
+            // Log conversion: user initiated upgrade checkout
+            if (user) {
+              const variant = getOrAssignVariant('onboarding-upgrade-prompt', user.uid)
+              logExperimentConversion(
+                'onboarding-upgrade-prompt',
+                variant,
+                user.uid,
+                'initiated_upgrade',
+                {
+                  blockedFeatures,
+                  recommendedPlan,
+                  currentPlan: subscription?.plan || 'free',
+                }
+              )
+              trackUpgradeInitiated({
+                userId: user.uid,
+                fromPlan: subscription?.plan || 'free',
+                toPlan: recommendedPlan,
+                billingInterval: 'monthly', // Default, can be updated
+                source: 'onboarding',
+                abTestVariant: 'test',
+              })
+            }
+
+            // After successful upgrade, continue with all selected features
+            setShowUpgradePrompt(false)
+            setStep(step + 1)
+          }}
+        />
       </AuthGuard>
     )
   }

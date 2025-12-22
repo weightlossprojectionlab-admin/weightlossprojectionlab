@@ -66,14 +66,12 @@ export function useInvitations(autoFetch = true): UseInvitationsReturn {
 
         // Show appropriate message based on email delivery status
         if (emailSent === false) {
+          // Copy invite code to clipboard automatically
+          navigator.clipboard.writeText(inviteCode)
           toast.error(
-            `Email delivery failed. Invitation created.\nShare this code: ${inviteCode}\n\nClick to copy the code.`,
+            `Email delivery failed. Invitation created.\nInvite code copied to clipboard: ${inviteCode}`,
             {
-              duration: 10000,
-              onClick: () => {
-                navigator.clipboard.writeText(inviteCode)
-                toast.success('Invite code copied to clipboard!')
-              }
+              duration: 10000
             }
           )
         } else {

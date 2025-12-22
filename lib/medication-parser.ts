@@ -49,9 +49,9 @@ async function getAuthToken(): Promise<string | null> {
         logger.warn('[Medication Parser] No authenticated user')
         return null
       }
-      return await retryUser.getIdToken()
+      return await (retryUser as any).getIdToken()
     }
-    return await user.getIdToken()
+    return await (user as any).getIdToken()
   } catch (error) {
     logger.error('[Medication Parser] Failed to get auth token', error as Error)
     return null

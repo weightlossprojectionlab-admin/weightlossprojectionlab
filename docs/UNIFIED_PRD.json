@@ -36,6 +36,17 @@
           "vitals": "Monitor blood pressure, glucose, and other vitals",
           "medications": "Track medication schedules and refills"
         },
+        "planRequirements": {
+          "weight_loss": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
+          "meal_planning": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
+          "medical_tracking": ["single_plus", "family_basic", "family_plus", "family_premium"],
+          "caregiving": ["family_basic", "family_plus", "family_premium"],
+          "shopping_automation": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
+          "recipes": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
+          "fitness": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
+          "vitals": ["single_plus", "family_basic", "family_plus", "family_premium"],
+          "medications": ["single_plus", "family_basic", "family_plus", "family_premium"]
+        },
         "sets": "featurePreferences"
       },
       {

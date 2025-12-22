@@ -14,6 +14,42 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 
+// Google Maps types (declare globally if @types/google.maps not installed)
+declare global {
+  interface Window {
+    google: any
+  }
+  namespace google {
+    namespace maps {
+      namespace places {
+        interface PlaceResult {
+          address_components?: any[]
+          geometry?: {
+            location: {
+              lat(): number
+              lng(): number
+            }
+          }
+          formatted_address?: string
+        }
+        class AutocompleteService {
+          constructor()
+          getPlacePredictions(request: any, callback: any): void
+        }
+        class PlacesService {
+          constructor(el: HTMLDivElement)
+          getDetails(request: any, callback: any): void
+        }
+      }
+      interface GeocoderAddressComponent {
+        long_name: string
+        short_name: string
+        types: string[]
+      }
+    }
+  }
+}
+
 // Note: Add your Google API key to .env.local
 // NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_key_here
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
@@ -144,7 +180,7 @@ export function useGooglePlaces(): UseGooglePlacesReturn {
 
       // Cleanup function
       return () => {
-        if (listener) {
+        if (listener && window.google?.maps) {
           window.google.maps.event.removeListener(listener)
         }
       }
@@ -166,12 +202,12 @@ function extractPlaceDetails(place: google.maps.places.PlaceResult): PlaceResult
   const components = place.address_components || []
 
   const getComponent = (type: string): string => {
-    const component = components.find((c) => c.types.includes(type))
+    const component = components.find((c: google.maps.GeocoderAddressComponent) => c.types.includes(type))
     return component?.long_name || ''
   }
 
   const getShortComponent = (type: string): string => {
-    const component = components.find((c) => c.types.includes(type))
+    const component = components.find((c: google.maps.GeocoderAddressComponent) => c.types.includes(type))
     return component?.short_name || ''
   }
 
@@ -269,14 +305,3 @@ export function getStaticMapUrl({
   return `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${width}x${height}&markers=color:red%7C${marker}&key=${GOOGLE_MAPS_API_KEY}`
 }
 
-// Type definitions for Google Maps API (if not using @types/google.maps)
-declare global {
-  interface Window {
-    google?: {
-      maps?: {
-        places?: any
-        event?: any
-      }
-    }
-  }
-}

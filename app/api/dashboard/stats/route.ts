@@ -158,28 +158,27 @@ export async function GET(request: NextRequest) {
         const patientData = patientDoc.data()
         const patientId = patientDoc.id
 
-        // Get latest vitals for this patient - Fetch without orderBy to avoid index requirement
-        const latestVitalsSnapshot = await adminDb.collection('vitals')
-          .where('patientId', '==', patientId)
+        // Get patient reference
+        const patientRef = adminDb.collection('users').doc(userId).collection('patients').doc(patientId)
+
+        // Get latest vitals for this patient from the subcollection
+        const latestVitalsSnapshot = await patientRef.collection('vitals')
           .limit(50)
           .get()
 
-        // Get medication count
-        const medicationsSnapshot = await adminDb.collection('medications')
-          .where('patientId', '==', patientId)
-          .where('status', '==', 'active')
+        // Get medication count from subcollection
+        const medicationsSnapshot = await patientRef.collection('medications')
           .get()
 
-        // Get latest weight - Fetch without orderBy to avoid index requirement
-        const latestWeightSnapshot = await adminDb.collection('weight_logs')
-          .where('patientId', '==', patientId)
+        // Get latest weight from subcollection
+        const latestWeightSnapshot = await patientRef.collection('weight_logs')
           .limit(50)
           .get()
 
-        // Sort vitals in memory to get latest
+        // Sort vitals in memory to get latest (using recordedAt field)
         const sortedVitals = latestVitalsSnapshot.docs.sort((a, b) => {
-          const aTime = new Date(a.data().timestamp).getTime()
-          const bTime = new Date(b.data().timestamp).getTime()
+          const aTime = new Date(a.data().recordedAt || a.data().timestamp).getTime()
+          const bTime = new Date(b.data().recordedAt || b.data().timestamp).getTime()
           return bTime - aTime
         })
         const latestVital = sortedVitals[0]
@@ -199,7 +198,7 @@ export async function GET(request: NextRequest) {
           type: patientData.type,
           relationship: patientData.relationship,
           activeMedications: medicationsSnapshot.size,
-          lastVitalCheck: latestVital ? latestVital.data().timestamp : null,
+          lastVitalCheck: latestVital ? (latestVital.data().recordedAt || latestVital.data().timestamp) : null,
           latestWeight: latestWeight ? {
             weight: latestWeight.data().weight,
             unit: latestWeight.data().unit,
@@ -228,19 +227,21 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    logger.error('[GET /api/dashboard/stats] Error fetching dashboard stats', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code
-    })
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch dashboard statistics',
-        details: error.message,
-        code: error.code
-      },
-      { status: 500 }
-    )
+    const errorContext: Record<string, any> = {}
+    if (error.code) {
+      errorContext.code = error.code
+    }
+    logger.error('[GET /api/dashboard/stats] Error fetching dashboard stats', error instanceof Error ? error : undefined, errorContext)
+
+    const responsePayload: Record<string, any> = {
+      success: false,
+      error: 'Failed to fetch dashboard statistics',
+      details: error?.message || 'Unknown error'
+    }
+    if (error.code) {
+      responsePayload.code = error.code
+    }
+
+    return NextResponse.json(responsePayload, { status: 500 })
   }
 }

@@ -978,8 +978,8 @@ function identifyHealthyPatterns(changes: any[], foodFrequency: any[]): string[]
   const patterns: string[] = []
 
   // Check if eating more fruits/vegetables
-  const produceCount = foodFrequency.filter(f => f.category === 'produce').length
-  if (produceCount > 5) {
+  const vegetables = foodFrequency.filter(f => f.category === 'produce').length
+  if (vegetables > 5) {
     patterns.push('Eating a variety of fruits and vegetables')
   }
 
@@ -997,7 +997,8 @@ function identifyConcerningPatterns(changes: any[], foodFrequency: any[]): strin
     f.category === 'frozen' || f.category === 'pantry'
   ).length
 
-  if (processedCount > produceCount) {
+  const vegetableCount = foodFrequency.filter(f => f.category === 'produce').length
+  if (processedCount > vegetableCount) {
     patterns.push('High proportion of processed foods')
   }
 

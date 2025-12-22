@@ -45,7 +45,7 @@ export const patientProfileSchema = z.object({
   // Metadata
   createdAt: z.string().datetime(),
   lastModified: z.string().datetime()
-}).refine(
+}).passthrough().refine(
   (data) => {
     // If type is 'pet', species is required
     if (data.type === 'pet') {
@@ -89,7 +89,8 @@ export const vitalTypeSchema = z.enum([
   'blood_pressure',
   'pulse_oximeter',
   'temperature',
-  'weight'
+  'weight',
+  'mood'
 ])
 
 export const vitalUnitSchema = z.enum([
@@ -102,7 +103,8 @@ export const vitalUnitSchema = z.enum([
   '°C',
   'lbs',
   'kg',
-  'SpO₂% / bpm'  // For pulse oximeter readings (combines SpO2 and pulse rate)
+  'SpO₂% / bpm',  // For pulse oximeter readings (combines SpO2 and pulse rate)
+  'scale'  // For mood tracking (1-10 scale)
 ])
 
 export const bloodPressureValueSchema = z.object({
@@ -164,7 +166,8 @@ export const vitalSignSchema = z.object({
       'blood_pressure': ['mmHg'],
       'pulse_oximeter': ['SpO₂% / bpm'],
       'temperature': ['°F', '°C'],
-      'weight': ['lbs', 'kg']
+      'weight': ['lbs', 'kg'],
+      'mood': ['scale']
     }
     return validUnits[data.type]?.includes(data.unit) ?? false
   },
@@ -470,22 +473,29 @@ export const appointmentFormSchema = appointmentSchema.omit({
 
 // ==================== FAMILY COLLABORATION SCHEMAS ====================
 
+/**
+ * IMPORTANT: Schema defaults should match role-based presets from lib/family-permissions.ts
+ * Default to "Viewer" role permissions (read-only) for safety.
+ * Actual permissions will be set based on FamilyRole when invitation is created.
+ *
+ * DO NOT use these defaults directly - always use getDefaultPermissionsForRole() from lib/family-roles.ts
+ */
 export const familyMemberPermissionsSchema = z.object({
-  viewPatientProfile: z.boolean().default(true), // Allow viewing basic patient info
-  viewMedicalRecords: z.boolean().default(false),
+  viewPatientProfile: z.boolean().default(true), // VIEW_ONLY preset
+  viewMedicalRecords: z.boolean().default(true), // VIEW_ONLY preset
   editMedications: z.boolean().default(false),
   scheduleAppointments: z.boolean().default(false),
   editAppointments: z.boolean().default(false),
   deleteAppointments: z.boolean().default(false),
   uploadDocuments: z.boolean().default(false),
   deleteDocuments: z.boolean().default(false),
-  logVitals: z.boolean().default(false),
-  viewVitals: z.boolean().default(false),
-  chatAccess: z.boolean().default(false),
+  logVitals: z.boolean().default(false), // VIEW_ONLY preset (read-only by default)
+  viewVitals: z.boolean().default(true), // VIEW_ONLY preset
+  chatAccess: z.boolean().default(true), // VIEW_ONLY preset
   inviteOthers: z.boolean().default(false),
   viewSensitiveInfo: z.boolean().default(false),
   editPatientProfile: z.boolean().default(false),
-  deletePatient: z.boolean().default(false) // Allow deleting patient records
+  deletePatient: z.boolean().default(false)
 })
 
 export const notificationPreferencesSchema = z.object({

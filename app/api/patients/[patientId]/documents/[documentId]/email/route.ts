@@ -56,6 +56,13 @@ export async function POST(
 
     const documentData = docSnap.data()
 
+    if (!documentData) {
+      return NextResponse.json(
+        { success: false, error: 'Document data not found' },
+        { status: 404 }
+      )
+    }
+
     // Get patient info
     const patientSnap = await adminDb
       .collection('users')

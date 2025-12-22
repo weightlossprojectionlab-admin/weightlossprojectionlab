@@ -72,18 +72,14 @@ function PatientsContent() {
     patientId: selectedPatientForVitalsView?.id
   })
 
-  // Determine if this is account selection mode (caregiver with 2+ patients)
-  const isAccountSelectionMode = safePatients.length >= 2
-
-  // Get dynamic terminology based on user role
-  const pageTitle = isAccountSelectionMode
-    ? 'Select Account to Manage'
-    : getTrackingPageTitle(userProfile as any)
-  const pageSubtitle = isAccountSelectionMode
-    ? 'Choose which account you want to view and manage'
-    : getTrackingPageSubtitle(userProfile as any)
+  // Get dynamic terminology based on user role (consistent for all users on same plan)
+  const pageTitle = getTrackingPageTitle(userProfile as any)
+  const pageSubtitle = getTrackingPageSubtitle(userProfile as any)
   const addButtonText = getAddButtonText(userProfile as any)
   const terminology = getTrackingTerminology(userProfile as any)
+
+  // Account selection mode for card display (informational only, doesn't change UI)
+  const isAccountSelectionMode = safePatients.length >= 2
 
   const filteredPatients = safePatients.filter(p => {
     if (filter === 'all') return true
@@ -117,19 +113,20 @@ function PatientsContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Family Admin Dashboard Link - Prominent placement for caregivers with 2+ patients */}
-        {safePatients.length >= 2 && (
-          <div className="mb-6">
-            <DashboardSelectorCompact />
-          </div>
-        )}
+        {/* Family Admin Dashboard Link - Always show for consistency across same plan */}
+        <div className="mb-6">
+          <DashboardSelectorCompact />
+        </div>
 
         {/* Member Limit Indicator */}
         {subscription && (
           <div className="mb-6 bg-card rounded-lg shadow-sm border border-border p-4">
             <div className="flex items-center gap-3 mb-2">
-              <p className="text-sm font-medium text-foreground">
-                {terminology}: {current} of {max}
+              <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                {terminology}: {current} of {(max ?? 0) >= 999 ? <span className="text-xl">∞</span> : max}
+                {(max ?? 0) >= 999 && (
+                  <span className="text-xs text-success font-medium ml-2">Unlimited</span>
+                )}
               </p>
               <PlanBadge
                 plan={subscription.plan}
@@ -138,14 +135,21 @@ function PatientsContent() {
                 size="sm"
               />
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden w-48">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  percentage >= 100 ? 'bg-error' : percentage >= 80 ? 'bg-warning-dark' : 'bg-success'
-                }`}
-                style={{ width: `${Math.min(percentage, 100)}%` }}
-              />
-            </div>
+            {(max ?? 0) < 999 && (
+              <div className="h-2 bg-muted rounded-full overflow-hidden w-48">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    percentage >= 100 ? 'bg-error' : percentage >= 80 ? 'bg-warning-dark' : 'bg-success'
+                  }`}
+                  style={{ width: `${Math.min(percentage, 100)}%` }}
+                />
+              </div>
+            )}
+            {(max ?? 0) >= 999 && (
+              <div className="h-2 bg-success rounded-full overflow-hidden w-48">
+                <div className="h-full bg-success rounded-full w-full" />
+              </div>
+            )}
           </div>
         )}
 
@@ -225,7 +229,7 @@ function PatientsContent() {
               <PatientCard
                 key={patient.id}
                 patient={patient}
-                mode={isAccountSelectionMode ? 'select' : 'view'}
+                mode="select"
                 onQuickLogVitals={() => setSelectedPatientForVitalsView(patient)}
               />
             ))}
@@ -247,6 +251,7 @@ function PatientsContent() {
           onClose={() => setSelectedPatientForVitalsView(null)}
           vitals={vitals || []}
           patientName={selectedPatientForVitalsView.name}
+          patientId={selectedPatientForVitalsView.id}
           onOpenWizard={() => {
             setSelectedPatientForWizard(selectedPatientForVitalsView)
             setSelectedPatientForVitalsView(null)
@@ -293,7 +298,7 @@ function PatientsContent() {
 
               setSelectedPatientForWizard(null)
             } catch (error) {
-              logger.error('[PatientsPage] Failed to save vitals', error)
+              logger.error('[PatientsPage] Failed to save vitals', error instanceof Error ? error : undefined)
               alert(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
               throw error
             }

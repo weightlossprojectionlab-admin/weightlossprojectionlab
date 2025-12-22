@@ -78,7 +78,7 @@ export function RecommendationModal({
       userId: user?.uid || '',
       patientId: patientId,
       patientName: patient.name,
-      providerId: appointmentData.providerId,
+      providerId: provider.id,
       providerName: provider.name,
       specialty: provider.specialty,
       dateTime: appointmentData.dateTime.toISOString(),

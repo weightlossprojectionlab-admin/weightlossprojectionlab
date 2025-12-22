@@ -16,7 +16,8 @@ export const runtime = 'nodejs'
  */
 export async function POST(request: NextRequest) {
   // Dynamic import to avoid loading native dependencies at build time
-  const { PDFParse: pdf } = await import('pdf-parse')
+  const pdfParse = await import('pdf-parse')
+  const pdf = pdfParse.PDFParse || pdfParse
   console.log('[PDF OCR] ========== NEW REQUEST ==========')
   try {
     const body = await request.json()
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Extract text using pdf-parse (industry standard)
-    const data = await pdf(pdfBuffer)
+    const data = await (pdf as any)(pdfBuffer)
     const extractedText = data.text.trim()
 
     console.log('[PDF Extract] Text extracted successfully:', {
@@ -122,8 +123,7 @@ export async function POST(request: NextRequest) {
         ocrProcessedAt: new Date().toISOString(),
         ocrMethod: 'pdf-parse',
         textLength: extractedText.length,
-        numPages: data.numpages,
-        pdfInfo: data.info
+        numPages: data.numpages
       }
     })
 

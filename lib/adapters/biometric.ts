@@ -8,7 +8,7 @@
  * This adapter enables secure biometric authentication across all platforms.
  */
 
-import { BiometricAuth as NativeBiometric, BiometryType, BiometricOptions } from '@aparajita/capacitor-biometric-auth'
+import { BiometricAuth as NativeBiometric, BiometryType, AuthenticateOptions } from '@aparajita/capacitor-biometric-auth'
 import { isNative, isServer, isPluginAvailable } from '@/lib/platform'
 
 export type BiometricType = 'faceId' | 'touchId' | 'fingerprint' | 'iris' | 'none'
@@ -128,7 +128,7 @@ class NativeBiometricAdapter implements BiometricAdapter {
       }
 
       // Perform biometric authentication
-      const options: BiometricOptions = {
+      const options: AuthenticateOptions = {
         reason,
         cancelTitle: 'Cancel',
         iosFallbackTitle: 'Use Passcode',
@@ -138,7 +138,7 @@ class NativeBiometricAdapter implements BiometricAdapter {
         allowDeviceCredential: true, // Allow PIN/pattern/password fallback
       }
 
-      await NativeBiometric.verify(options)
+      await NativeBiometric.authenticate(options)
       return true
     } catch (error: any) {
       console.error('Biometric authentication failed:', error)

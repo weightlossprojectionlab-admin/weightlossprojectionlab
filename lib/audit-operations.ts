@@ -38,7 +38,8 @@
  * ```
  */
 
-import { adminDb, FieldValue } from './firebase-admin'
+import { adminDb } from './firebase-admin'
+import * as admin from 'firebase-admin'
 import { logger } from './logger'
 import type {
   AuditLog,

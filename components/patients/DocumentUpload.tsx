@@ -113,7 +113,7 @@ export default function DocumentUpload({ patientId, onSuccess, onCancel }: Docum
         fileSize: selectedFiles.reduce((sum, f) => sum + f.size, 0),
         originalUrl: uploadedImages[0].url,
         images: fileType === 'image' ? uploadedImages : undefined,
-        ocrStatus: 'not_started', // Don't run OCR automatically - let user trigger it manually
+        ocrStatus: 'pending', // Don't run OCR automatically - let user trigger it manually
         notes
       })
 

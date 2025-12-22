@@ -54,8 +54,8 @@ export function MacroDistributionChart({ data, loading }: MacroDistributionChart
     fat: Math.round((totals.fat / grandTotal) * 100)
   } : { protein: 0, carbs: 0, fat: 0 }
 
-  // Theme-aware colors
-  const isDark = resolvedTheme === 'dark'
+  // Theme-aware colors (always light mode)
+  const isDark = false
   const gridColor = 'hsl(var(--border))'
   const axisColor = 'hsl(var(--muted-foreground))'
   const tooltipBg = 'hsl(var(--card))'

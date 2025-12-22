@@ -205,9 +205,9 @@ export function NotificationBell() {
 
                         <div className="flex items-center justify-between mt-2">
                           <p className="text-xs text-muted-foreground">
-                            {notification.type === 'appointment_scheduled' && notification.metadata?.dateTime ? (
+                            {notification.type === 'appointment_scheduled' && 'appointmentDateTime' in notification.metadata && notification.metadata.appointmentDateTime ? (
                               // For appointments, show the appointment date
-                              new Date(notification.metadata.dateTime).toLocaleDateString('en-US', {
+                              new Date(notification.metadata.appointmentDateTime).toLocaleDateString('en-US', {
                                 weekday: 'short',
                                 month: 'short',
                                 day: 'numeric',

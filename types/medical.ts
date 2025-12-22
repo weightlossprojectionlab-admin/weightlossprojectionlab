@@ -35,8 +35,10 @@ export interface PatientProfile {
   userId: string // Owner's Firebase Auth UID
   type: 'human' | 'pet'
   name: string
+  nickname?: string // Optional nickname/preferred name
   photo?: string
   dateOfBirth: string // ISO 8601
+  age?: number // Computed age in years
   relationship: 'self' | 'spouse' | 'parent' | 'child' | 'sibling' | 'grandparent' | 'pet'
 
   // Pet-specific fields
@@ -82,6 +84,36 @@ export interface PatientProfile {
   weightCheckInFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'
   disableWeightReminders?: boolean // User can opt-out of weight check-in reminders
 
+  // Health conditions and dietary needs
+  healthConditions?: string[] // e.g., ['diabetes', 'hypertension', 'celiac']
+  foodAllergies?: string[] // e.g., ['peanuts', 'shellfish', 'dairy']
+
+  // Patient-specific preferences (for vital reminders, etc.)
+  preferences?: {
+    vitalReminders?: {
+      blood_pressure?: {
+        enabled: boolean
+        frequency: 'daily' | 'twice-daily' | 'weekly' | 'monthly'
+      }
+      blood_sugar?: {
+        enabled: boolean
+        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily'
+      }
+      temperature?: {
+        enabled: boolean
+        frequency: 'daily' | 'weekly' | 'biweekly'
+      }
+      pulse_oximeter?: {
+        enabled: boolean
+        frequency: 'daily' | 'twice-daily' | 'weekly'
+      }
+      weight?: {
+        enabled: boolean
+        frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+      }
+    }
+  }
+
   // Health Goals (patient-specific)
   goals?: {
     targetWeight?: number // Target weight goal
@@ -121,6 +153,7 @@ export type VitalType =
   | 'pulse_oximeter'
   | 'temperature'
   | 'weight'
+  | 'mood'
 
 // ==================== WEIGHT LOGS ====================
 
@@ -201,6 +234,8 @@ export type VitalUnit =
   | '°C'
   | 'lbs'
   | 'kg'
+  | 'SpO₂% / bpm'
+  | 'scale'
 
 export interface BloodPressureValue {
   systolic: number
@@ -213,7 +248,17 @@ export interface PulseOximeterValue {
   perfusionIndex?: number // Optional perfusion index (%)
 }
 
-export type VitalValue = number | BloodPressureValue | PulseOximeterValue
+export type VitalValue = number | BloodPressureValue | PulseOximeterValue | {
+  energy: number
+  appetite: number
+  pain: number
+  overall: number
+  behavior?: string
+  mobility?: string
+  vocalizations?: string
+  speciesNotes?: string
+  symptoms?: string[]
+}
 
 /**
  * VitalModification - Audit trail entry for vital sign changes
@@ -631,6 +676,7 @@ export interface FamilyInvitationForm {
   recipientPhone?: string
   patientsShared: string[]
   permissions: Partial<FamilyMemberPermissions>
+  familyRole?: FamilyRole // Role to assign (defaults to 'caregiver' if not provided)
   message?: string
 }
 

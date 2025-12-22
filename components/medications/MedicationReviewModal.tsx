@@ -97,7 +97,7 @@ export function MedicationReviewModal({
     }
 
     if (!selectedPatientId || selectedPatientId.trim() === '') {
-      logger.error('[MedicationReviewModal] Invalid patient ID', {
+      logger.error('[MedicationReviewModal] Invalid patient ID', undefined, {
         selectedPatientId
       })
       toast.error('Please select a family member')

@@ -8,8 +8,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from './useAuth'
-import { useSubscription } from './useSubscription'
+import { useUser } from './useUser'
 import { canAccessFeature, getRequiredUpgrade } from '@/lib/feature-gates'
 import { SubscriptionPlan } from '@/types'
 
@@ -60,8 +59,7 @@ export interface FeatureGateResult {
  * ```
  */
 export function useFeatureGate(feature: string): FeatureGateResult {
-  const { user } = useAuth()
-  const { subscription, loading: subLoading, plan } = useSubscription()
+  const { user, loading: userLoading, plan } = useUser()
   const [hasFeature, setHasFeature] = useState(false)
   const [loading, setLoading] = useState(true)
   const [requiredUpgrade, setRequiredUpgrade] = useState<{
@@ -82,7 +80,7 @@ export function useFeatureGate(feature: string): FeatureGateResult {
 
     const hasAccess = canAccessFeature(user as any, feature)
     setHasFeature(hasAccess)
-    setLoading(subLoading)
+    setLoading(userLoading)
 
     if (!hasAccess) {
       const upgrade = getRequiredUpgrade(feature)
@@ -126,7 +124,7 @@ export function useFeatureGate(feature: string): FeatureGateResult {
         window.removeEventListener('subscription-simulation-changed', handleSimulationChange)
       }
     }
-  }, [user, feature, subLoading])
+  }, [user, feature, userLoading])
 
   return {
     canAccess: hasFeature,
@@ -155,8 +153,7 @@ export function useFeatureGate(feature: string): FeatureGateResult {
  * ```
  */
 export function useFeatureGates(features: string[]): Record<string, FeatureGateResult> {
-  const { user } = useAuth()
-  const { subscription, loading: subLoading, plan } = useSubscription()
+  const { user, loading: userLoading, plan } = useUser()
   const [results, setResults] = useState<Record<string, FeatureGateResult>>({})
 
   useEffect(() => {
@@ -193,7 +190,7 @@ export function useFeatureGates(features: string[]): Record<string, FeatureGateR
       newResults[feature] = {
         canAccess,
         hasFeature: canAccess,
-        loading: subLoading,
+        loading: userLoading,
         requiresUpgrade,
         requiredUpgrade: requiresUpgrade,
         currentPlan: plan,
@@ -202,7 +199,7 @@ export function useFeatureGates(features: string[]): Record<string, FeatureGateR
     })
 
     setResults(newResults)
-  }, [user, features, subLoading, plan])
+  }, [user, features, userLoading, plan])
 
   return results
 }

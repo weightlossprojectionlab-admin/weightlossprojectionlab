@@ -217,7 +217,7 @@ export async function determineUserDestination(
 
     // Server error (500) → Likely a temporary API issue, allow dashboard access
     if (error.status === 500 || error.message?.includes('500')) {
-      logger.error('[AuthRouter] Server error (500) - allowing access to dashboard', { error: error.message })
+      logger.error('[AuthRouter] Server error (500) - allowing access to dashboard', error instanceof Error ? error : undefined)
       return {
         type: 'dashboard',
         reason: 'Server error - temporarily allowing access'

@@ -430,9 +430,9 @@ function ProgressContent() {
   const showPatientSelector = isFamilyMode && !patientIdParam
 
   // Feature access checks
-  const hasAdvancedAnalytics = canAccessFeature(user, 'advanced-analytics')
-  const hasHealthInsights = canAccessFeature(user, 'health-insights')
-  const hasTrendAnalysis = canAccessFeature(user, 'trend-analysis')
+  const hasAdvancedAnalytics = canAccessFeature(user as any, 'advanced-analytics')
+  const hasHealthInsights = canAccessFeature(user as any, 'health-insights')
+  const hasTrendAnalysis = canAccessFeature(user as any, 'trend-analysis')
 
   // Calculate goal progress metrics
   const goalProgress = useMemo(() => {

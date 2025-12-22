@@ -484,6 +484,7 @@ function formatVitalName(vitalType: VitalType): string {
     pulse_oximeter: 'Oxygen Level',
     temperature: 'Temperature',
     weight: 'Weight',
+    mood: 'Mood',
   }
   return names[vitalType] || vitalType
 }
