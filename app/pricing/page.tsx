@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { SubscriptionPlan } from '@/types'
 import { CheckIcon } from '@heroicons/react/24/solid'
 import { auth } from '@/lib/firebase'
+import { getCSRFToken } from '@/lib/csrf'
 
 interface PlanFeature {
   name: string
@@ -140,11 +141,13 @@ export default function PricingPage() {
       }
 
       // Call checkout API
+      const csrfToken = getCSRFToken()
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           plan,
