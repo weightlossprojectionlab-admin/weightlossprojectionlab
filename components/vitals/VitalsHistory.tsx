@@ -283,7 +283,7 @@ function VitalRow({
             {onEdit && (
               <button
                 onClick={() => onEdit(vital)}
-                className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
                 title="Edit"
               >
                 <PencilIcon className="h-3.5 w-3.5" />
@@ -292,7 +292,7 @@ function VitalRow({
             {onDelete && (
               <button
                 onClick={() => onDelete(vital.id, vital.type)}
-                className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
                 title="Delete"
               >
                 <TrashIcon className="h-3.5 w-3.5" />
@@ -310,15 +310,15 @@ function VitalRow({
  */
 function getTypeColor(type: string): string {
   const colors: Record<string, string> = {
-    blood_pressure: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-    temperature: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-    pulse_oximeter: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-    blood_sugar: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    weight: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-    bmi: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+    blood_pressure: 'bg-red-100 text-red-900 border-red-400 font-bold',
+    temperature: 'bg-orange-100 text-orange-900 border-orange-400 font-bold',
+    pulse_oximeter: 'bg-purple-100 text-purple-900 border-purple-400 font-bold',
+    blood_sugar: 'bg-green-100 text-green-900 border-green-400 font-bold',
+    weight: 'bg-blue-100 text-blue-900 border-blue-400 font-bold',
+    bmi: 'bg-indigo-100 text-indigo-900 border-indigo-400 font-bold'
   }
 
-  return colors[type] || 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
+  return colors[type] || 'bg-gray-100 text-gray-900 border-gray-400 font-bold'
 }
 
 /**
@@ -328,31 +328,31 @@ function getVitalStatus(vital: VitalSign): { label: string; className: string } 
   if (vital.type === 'blood_pressure' && typeof vital.value === 'object' && 'systolic' in vital.value) {
     const { systolic, diastolic } = vital.value
     if (systolic > 140 || diastolic > 90) {
-      return { label: 'High', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' }
+      return { label: 'High', className: 'bg-red-100 text-red-900 border-red-400 font-bold' }
     }
     if (systolic < 90 || diastolic < 60) {
-      return { label: 'Low', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' }
+      return { label: 'Low', className: 'bg-yellow-100 text-yellow-900 border-yellow-400 font-bold' }
     }
-    return { label: 'Normal', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' }
+    return { label: 'Normal', className: 'bg-green-100 text-green-900 border-green-400 font-bold' }
   }
 
   if (vital.type === 'temperature') {
     const temp = vital.value as number
     if (temp > 100.4) {
-      return { label: 'Fever', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' }
+      return { label: 'Fever', className: 'bg-red-100 text-red-900 border-red-400 font-bold' }
     }
     if (temp < 97) {
-      return { label: 'Low', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' }
+      return { label: 'Low', className: 'bg-yellow-100 text-yellow-900 border-yellow-400 font-bold' }
     }
-    return { label: 'Normal', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' }
+    return { label: 'Normal', className: 'bg-green-100 text-green-900 border-green-400 font-bold' }
   }
 
   if (vital.type === 'pulse_oximeter' && typeof vital.value === 'object' && 'spo2' in vital.value) {
     const { spo2 } = vital.value
     if (spo2 < 90) {
-      return { label: 'Low', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' }
+      return { label: 'Low', className: 'bg-red-100 text-red-900 border-red-400 font-bold' }
     }
-    return { label: 'Normal', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' }
+    return { label: 'Normal', className: 'bg-green-100 text-green-900 border-green-400 font-bold' }
   }
 
   return null

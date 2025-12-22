@@ -408,7 +408,7 @@ function ProfileContent() {
                 }
               </h1>
               {currentlyViewingMember && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-description-sm">
                   Managing {currentlyViewingMember.relationship}&apos;s health information
                 </p>
               )}
@@ -426,13 +426,13 @@ function ProfileContent() {
                 {currentlyViewingMember ? '👥' : '🙋'}
               </div>
               <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+                <div className="text-label-sm uppercase tracking-wide mb-1">
                   ⭐ Currently Viewing
                 </div>
                 <h2 className="text-2xl font-bold text-foreground">
                   {currentlyViewingMember ? currentlyViewingMember.name : (user?.displayName || 'You')}
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-description mt-1">
                   {currentlyViewingMember
                     ? `${currentlyViewingMember.relationship}'s Health Profile`
                     : 'Your Personal Health Profile'
@@ -445,7 +445,7 @@ function ProfileContent() {
                 <span className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full uppercase">
                   Family Member
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-description-sm">
                   {currentlyViewingMember.relationship}
                 </span>
               </div>
@@ -454,7 +454,7 @@ function ProfileContent() {
 
           {patientsLoading ? (
             <div className="border-t border-gray-300 pt-4">
-              <p className="text-sm text-muted-foreground">Loading family members...</p>
+              <p className="text-description">Loading family members...</p>
             </div>
           ) : familyMembers.length > 0 ? (
             <div className="border-t border-gray-300 pt-4">
@@ -464,7 +464,7 @@ function ProfileContent() {
               <select
                 value={selectedMemberId || user?.uid || ''}
                 onChange={(e) => setSelectedMemberId(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 font-medium text-base"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 font-semibold text-base"
               >
                 <option value={user?.uid || ''}>🙋 {user?.displayName || 'Me'} (My Profile)</option>
                 {familyMembers.map(member => (
@@ -473,13 +473,13 @@ function ProfileContent() {
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-description-sm mt-2">
                 Select a family member to view and manage their health information
               </p>
             </div>
           ) : (
             <div className="border-t border-gray-300 pt-4">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-description">
                 No family members in household yet. Add family members from the dashboard to manage their health profiles.
               </p>
             </div>
@@ -501,11 +501,11 @@ function ProfileContent() {
           <h2 className="text-lg font-medium text-foreground mb-4">Account Information</h2>
           <div className="space-y-3">
             <div>
-              <label className="text-sm text-muted-foreground">Email</label>
+              <label className="text-label mb-1">Email</label>
               <p className="font-medium">{user?.email}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Account Created</label>
+              <label className="text-label mb-1">Account Created</label>
               <p className="font-medium">
                 {user?.metadata?.creationTime ?
                   new Date(user.metadata.creationTime).toLocaleDateString() :
@@ -524,7 +524,7 @@ function ProfileContent() {
             <div className="space-y-4">
               {/* Current Plan */}
               <div>
-                <label className="text-sm text-muted-foreground">Current Plan</label>
+                <label className="text-label mb-2">Current Plan</label>
                 <div className="mt-2">
                   <PlanBadge
                     plan={subscription.plan}
@@ -537,7 +537,7 @@ function ProfileContent() {
 
               {/* Usage Stats */}
               <div>
-                <label className="text-sm text-muted-foreground">Family Members</label>
+                <label className="text-label mb-2">Family Members</label>
                 <div className="mt-2">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -550,7 +550,7 @@ function ProfileContent() {
                       )}
                     </span>
                     {(max ?? 0) < 999 && (
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-description">
                         {percentage}% used
                       </span>
                     )}
@@ -582,7 +582,7 @@ function ProfileContent() {
 
               {/* Status */}
               <div>
-                <label className="text-sm text-muted-foreground">Status</label>
+                <label className="text-label mb-1">Status</label>
                 <p className={`font-medium capitalize ${
                   subscription.status === 'active' ? 'text-success' :
                   subscription.status === 'trialing' ? 'text-warning-dark' :
@@ -662,7 +662,7 @@ function ProfileContent() {
                       <p className="font-medium">
                         Touch ID / Face ID
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-description">
                         {biometricEnabled ? 'Enabled' : 'Disabled'}
                       </p>
                     </div>
@@ -670,7 +670,7 @@ function ProfileContent() {
                   <div className={`w-3 h-3 rounded-full ${biometricEnabled ? 'bg-success' : 'bg-muted'}`} />
                 </div>
 
-                <p className="text-sm text-muted-foreground">
+                <p className="text-description">
                   {biometricEnabled ?
                     'You can sign in using your fingerprint or face recognition.' :
                     'Use your fingerprint or face recognition for quick and secure sign-in.'
@@ -737,7 +737,7 @@ function ProfileContent() {
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-description">
                   {stepTrackingEnabled ? 'Counting steps in background' : 'Count steps automatically using device sensors'}
                 </p>
               </div>
@@ -763,7 +763,7 @@ function ProfileContent() {
               {currentlyViewingMember ? currentlyViewingMember.name : 'You'}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground mb-6">
+          <p className="text-description mb-6">
             Configure reminders to log vital signs at regular intervals for <strong>{currentlyViewingMember ? currentlyViewingMember.name : 'yourself'}</strong>. Each family member has their own reminder settings. For advanced schedules with specific times, use the Vitals Wizard in the patient detail page.
           </p>
 
@@ -852,7 +852,7 @@ function ProfileContent() {
                           {VITAL_DISPLAY_NAMES[vitalType]} Reminders
                         </h3>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-description mt-1">
                         Get reminded to log your {VITAL_DISPLAY_NAMES[vitalType].toLowerCase()} based on your check-in frequency
                       </p>
                     </div>
@@ -881,7 +881,7 @@ function ProfileContent() {
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                         isEnabled
                           ? 'bg-primary'
-                          : 'bg-gray-200 dark:bg-gray-700'
+                          : 'bg-gray-300'
                       }`}
                     >
                       <span
@@ -919,7 +919,7 @@ function ProfileContent() {
                             toast.error('Failed to update frequency')
                           }
                         }}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 font-semibold focus:ring-2 focus:ring-primary focus:border-transparent"
                       >
                         {availableFrequencies.map((freq) => (
                           <option key={freq} value={freq}>
@@ -927,7 +927,7 @@ function ProfileContent() {
                           </option>
                         ))}
                       </select>
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="text-description-sm mt-2">
                         You'll be reminded to log your {VITAL_DISPLAY_NAMES[vitalType].toLowerCase()} when it's due
                       </p>
                     </div>
@@ -937,8 +937,8 @@ function ProfileContent() {
             })}
           </div>
 
-          <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-description">
               <strong>💡 Tip:</strong> Need specific times (e.g., "8am, 12pm, 4pm, 8pm")?
               Use the <strong>Vitals Wizard</strong> in the patient detail page for advanced scheduling with compliance tracking.
             </p>
@@ -948,7 +948,7 @@ function ProfileContent() {
         {/* Test Notification */}
         <div className="bg-card rounded-lg p-6 shadow-sm">
           <h3 className="text-lg font-bold mb-4">🔔 Test Notifications</h3>
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-description mb-4">
             Send a test notification to verify your notification setup is working correctly.
           </p>
           <button
@@ -978,7 +978,7 @@ function ProfileContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Data Export</p>
-                <p className="text-sm text-muted-foreground">Download your personal data</p>
+                <p className="text-description">Download your personal data</p>
               </div>
               <button className="btn btn-secondary">
                 📥 Export
@@ -1030,7 +1030,7 @@ function ProfileContent() {
         </div>
 
         {/* App Info */}
-        <div className="text-center text-sm text-muted-foreground space-y-1">
+        <div className="text-center text-description space-y-1">
           <p>WLPL - Weight Loss Progress Lab</p>
           <p>Version 1.0.0</p>
           <p>Privacy-focused • Secure • Accessible</p>

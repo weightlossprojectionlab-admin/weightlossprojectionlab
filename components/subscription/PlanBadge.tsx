@@ -19,17 +19,17 @@ export function PlanBadge({ plan, addons, status, size = 'md' }: PlanBadgeProps)
   const getPlanColor = () => {
     switch (plan) {
       case 'free':
-        return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+        return 'bg-gray-100 text-gray-900 border-gray-400 font-bold'
       case 'single':
-        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-600'
+        return 'bg-blue-100 text-blue-900 border-blue-400 font-bold'
       case 'single_plus':
-        return 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-600'
+        return 'bg-teal-100 text-teal-900 border-teal-400 font-bold'
       case 'family_basic':
       case 'family_plus':
       case 'family_premium':
-        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-600'
+        return 'bg-purple-100 text-purple-900 border-purple-400 font-bold'
       default:
-        return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+        return 'bg-gray-100 text-gray-900 border-gray-400 font-bold'
     }
   }
 
@@ -86,20 +86,20 @@ export function PlanBadge({ plan, addons, status, size = 'md' }: PlanBadgeProps)
 
   return (
     <div className="inline-flex items-center gap-2 flex-wrap">
-      <span className={`inline-flex items-center gap-1.5 border rounded-full font-medium ${getPlanColor()} ${getSizeClasses()}`}>
+      <span className={`inline-flex items-center gap-1.5 border rounded-full font-bold ${getPlanColor()} ${getSizeClasses()}`}>
         <span>{getPlanIcon()}</span>
         <span>{getPlanLabel()}</span>
       </span>
 
       {hasFamilyFeatures && (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-600 rounded-full text-xs font-medium">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-900 border border-green-400 rounded-full text-xs font-bold">
           <span>✨</span>
           <span>Family Features</span>
         </span>
       )}
 
       {status === 'trialing' && (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-600 rounded-full text-xs font-medium">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-900 border border-yellow-400 rounded-full text-xs font-bold">
           <span>⏰</span>
           <span>Trial</span>
         </span>

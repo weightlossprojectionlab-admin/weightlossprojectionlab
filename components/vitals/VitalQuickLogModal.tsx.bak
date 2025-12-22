@@ -228,15 +228,15 @@ export default function VitalQuickLogModal({
                     key={mood.value}
                     type="button"
                     onClick={() => handleFieldChange('mood', mood.value)}
-                    className={`p-6 rounded-xl border-2 transition-all bg-gray-800 hover:shadow-lg ${
+                    className={`p-6 rounded-xl border-2 transition-all bg-white dark:bg-gray-800 hover:shadow-lg ${
                       formData.mood === mood.value
-                        ? 'border-blue-500 ring-4 ring-blue-900 shadow-lg scale-105'
-                        : 'border-gray-700 hover:border-gray-600'
+                        ? 'border-blue-500 ring-4 ring-blue-200 dark:ring-blue-900 shadow-lg scale-105'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                     }`}
                     disabled={isSubmitting}
                   >
                     <div className="text-5xl mb-2">{mood.emoji}</div>
-                    <div className="text-sm font-bold text-white">{mood.label}</div>
+                    <div className="text-sm font-medium text-foreground">{mood.label}</div>
                   </button>
                 ))}
               </div>
@@ -246,9 +246,9 @@ export default function VitalQuickLogModal({
           {/* Regular input fields for other vitals */}
           {config.fields.map(field => (
             <div key={field.name}>
-              <label className="block text-sm font-bold text-white mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 {field.label}
-                {field.unit && <span className="font-medium text-white ml-1">({field.unit})</span>}
+                {field.unit && <span className="text-muted-foreground ml-1">({field.unit})</span>}
               </label>
               <input
                 type={field.type}
@@ -258,7 +258,7 @@ export default function VitalQuickLogModal({
                 min={field.min}
                 max={field.max}
                 step={field.type === 'number' ? '0.1' : undefined}
-                className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-800 text-white font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={isSubmitting}
                 required
               />
@@ -267,7 +267,7 @@ export default function VitalQuickLogModal({
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-bold text-white mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Notes (optional)
             </label>
             <textarea
@@ -275,7 +275,7 @@ export default function VitalQuickLogModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add any notes about this reading..."
               rows={3}
-              className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-800 text-white font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               disabled={isSubmitting}
             />
           </div>
@@ -285,7 +285,7 @@ export default function VitalQuickLogModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-600 text-white rounded-lg hover:bg-gray-800 transition-colors font-bold"
+              className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-foreground rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors font-medium"
               disabled={isSubmitting}
             >
               Cancel

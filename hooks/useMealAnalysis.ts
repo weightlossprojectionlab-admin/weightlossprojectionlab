@@ -95,6 +95,21 @@ export function useMealAnalysis(): UseMealAnalysisReturn {
 
       if (result.success && result.data) {
         logger.debug('✅ Analysis successful:', result.data)
+
+        // Check provider and warn if using mock data
+        if (result._diagnostics) {
+          const provider = result._diagnostics.provider
+          if (provider === 'mock') {
+            const reason = result._diagnostics.error || 'AI providers unavailable'
+            console.warn('⚠️ Using mock data:', reason)
+            toast.error(`⚠️ AI Analysis unavailable. Using sample data.`, { duration: 5000 })
+          } else if (provider === 'openai') {
+            toast.success(`✅ Analyzed with OpenAI (Gemini unavailable)`, { duration: 3000 })
+          } else {
+            toast.success(`✅ Meal analyzed successfully`, { duration: 2000 })
+          }
+        }
+
         setAiAnalysis(result.data)
         logger.debug('✅ State updated with aiAnalysis:', result.data)
 

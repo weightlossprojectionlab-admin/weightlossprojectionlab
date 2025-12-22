@@ -61,6 +61,17 @@ function NewAppointmentContent() {
 
     if (!patient) throw new Error('Patient not found')
 
+    // Format datetime as local ISO string (YYYY-MM-DDTHH:mm:ss) to avoid timezone issues
+    const formatLocalDateTime = (date: Date) => {
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      const seconds = String(date.getSeconds()).padStart(2, '0')
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+    }
+
     const data = {
       userId: user?.uid || '',
       patientId: selectedPatient,
@@ -68,7 +79,7 @@ function NewAppointmentContent() {
       providerId: appointmentData.providerId,
       providerName: provider?.name || '',
       specialty: provider?.specialty,
-      dateTime: appointmentData.dateTime.toISOString(),
+      dateTime: formatLocalDateTime(appointmentData.dateTime),
       type: appointmentData.type,
       reason: appointmentData.reason,
       notes: appointmentData.notes,
@@ -81,10 +92,10 @@ function NewAppointmentContent() {
       driverStatus: appointmentData.requiresDriver
         ? (appointmentData.assignedDriverId ? 'pending' as const : 'not-needed' as const)
         : 'not-needed' as const,
-      pickupTime: appointmentData.pickupTime?.toISOString(),
-      createdAt: new Date().toISOString(),
+      pickupTime: appointmentData.pickupTime ? formatLocalDateTime(appointmentData.pickupTime) : undefined,
+      createdAt: formatLocalDateTime(new Date()),
       createdBy: user?.uid || '',
-      updatedAt: new Date().toISOString()
+      updatedAt: formatLocalDateTime(new Date())
     }
 
     const newAppointment = await createAppointment(data as any)

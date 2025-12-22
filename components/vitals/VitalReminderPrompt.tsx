@@ -229,9 +229,9 @@ export default function VitalReminderPrompt({
         }}
       >
         {/* Modal Content */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="bg-white  rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 p-6 text-white">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600   p-6 text-white">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 p-3 bg-white/20 rounded-full">
                 <BellIcon className="h-8 w-8" />
@@ -255,15 +255,15 @@ export default function VitalReminderPrompt({
               {vitalsNeedingReminders.map((vital) => (
                 <div
                   key={vital.type}
-                  className={`bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border-l-4 ${vital.color.border}`}
+                  className={`bg-gray-800 rounded-lg p-4 border-l-4 ${vital.color.border}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     {/* Vital Info */}
                     <div className="flex items-center gap-3 flex-1">
                       <span className="text-3xl">{vital.icon}</span>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-foreground text-lg">{vital.label}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">{vital.message}</p>
+                        <h4 className="font-bold text-white text-lg">{vital.label}</h4>
+                        <p className="text-sm font-medium text-white mt-1">{vital.message}</p>
                       </div>
                     </div>
 
@@ -286,7 +286,7 @@ export default function VitalReminderPrompt({
                       {/* Remind Later */}
                       <button
                         onClick={() => handleRemindLater(vital.type)}
-                        className="w-full sm:w-auto p-2.5 sm:p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                        className="w-full sm:w-auto p-2.5 sm:p-2 text-gray-300 hover:text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
                         aria-label={`Remind me later about ${vital.label}`}
                         title="Remind me later"
                       >
@@ -297,7 +297,7 @@ export default function VitalReminderPrompt({
                       {/* Don't Remind Again */}
                       <button
                         onClick={() => confirmDisableReminder(vital.type)}
-                        className="w-full sm:w-auto p-2.5 sm:p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                        className="w-full sm:w-auto p-2.5 sm:p-2 text-gray-300 hover:text-red-400 rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
                         aria-label={`Disable ${vital.label} reminders`}
                         title="Don't remind me again"
                       >
@@ -312,7 +312,7 @@ export default function VitalReminderPrompt({
           </div>
 
           {/* Footer - Action Buttons */}
-          <div className="border-t border-gray-200 dark:border-gray-700 p-6 bg-gray-50 dark:bg-gray-800/50">
+          <div className="border-t border-gray-200  p-6 bg-gray-50 ">
             {onLogSpecificVital && vitalsNeedingReminders.length === 1 ? (
               // If only one vital is due AND quick log is available, hide the bottom button (use individual "Log Now" instead)
               <button
@@ -322,7 +322,7 @@ export default function VitalReminderPrompt({
                     setDismissedVitals(prev => new Set(prev).add(v.type))
                   })
                 }}
-                className="w-full px-6 py-4 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
+                className="w-full px-6 py-4 text-gray-600  hover:text-gray-900  hover:bg-gray-200  rounded-lg transition-colors font-medium"
               >
                 Maybe Later
               </button>
@@ -344,7 +344,7 @@ export default function VitalReminderPrompt({
                       setDismissedVitals(prev => new Set(prev).add(v.type))
                     })
                   }}
-                  className="px-6 py-4 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium"
+                  className="px-6 py-4 text-gray-600  hover:text-gray-900  hover:bg-gray-200  rounded-lg transition-colors font-medium"
                 >
                   Maybe Later
                 </button>
@@ -352,7 +352,7 @@ export default function VitalReminderPrompt({
             )}
 
             {/* Footer Help Text */}
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-4 pt-4 border-t border-gray-200 ">
               <p className="text-xs text-center text-muted-foreground">
                 💡 <strong>Tip:</strong> {onLogSpecificVital
                   ? 'Click "Log Now" on any vital for quick entry, or use the wizard to log multiple vitals with guided questions.'
@@ -367,7 +367,7 @@ export default function VitalReminderPrompt({
       {/* Confirmation Modal for Disabling Reminder */}
       {confirmDisable && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-6">
+          <div className="bg-white  rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-foreground mb-2">
               Disable {confirmDisable.label} Reminders?
             </h3>
@@ -377,7 +377,7 @@ export default function VitalReminderPrompt({
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDisable(null)}
-                className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-foreground rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors font-medium"
+                className="flex-1 px-4 py-2.5 border border-gray-300  text-foreground rounded-lg hover:bg-gray-100  transition-colors font-medium"
               >
                 Cancel
               </button>

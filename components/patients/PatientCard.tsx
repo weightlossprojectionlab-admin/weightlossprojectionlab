@@ -88,10 +88,21 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
           upcomingAppointments.forEach(apt => {
             const aptDate = new Date(apt.dateTime)
             const hoursUntil = Math.round((aptDate.getTime() - now.getTime()) / (1000 * 60 * 60))
+
+            // Check if appointment is today or tomorrow
+            const isToday = aptDate.toDateString() === now.toDateString()
+            const tomorrow = new Date(now)
+            tomorrow.setDate(tomorrow.getDate() + 1)
+            const isTomorrow = aptDate.toDateString() === tomorrow.toDateString()
+
             if (hoursUntil <= 2) {
               actions.push(`Appointment with ${apt.providerName} in ${hoursUntil}h`)
-            } else {
+            } else if (isToday) {
               actions.push(`Appointment with ${apt.providerName} today at ${aptDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`)
+            } else if (isTomorrow) {
+              actions.push(`Appointment with ${apt.providerName} tomorrow at ${aptDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`)
+            } else {
+              actions.push(`Appointment with ${apt.providerName} on ${aptDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${aptDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`)
             }
           })
         } else {
@@ -116,15 +127,15 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
   // Get relationship badge color
   const getRelationshipColor = (relationship: string): string => {
     const colors: Record<string, string> = {
-      'self': 'bg-primary-light text-primary-dark',
-      'spouse': 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
-      'parent': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-      'child': 'bg-green-100 text-success-dark dark:bg-green-900/30 dark:text-green-300',
-      'sibling': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-      'grandparent': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-      'pet': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
+      'self': 'bg-primary-light text-primary-dark font-bold',
+      'spouse': 'bg-pink-100 text-pink-900 border-pink-400 font-bold',
+      'parent': 'bg-blue-100 text-blue-900 border-blue-400 font-bold',
+      'child': 'bg-green-100 text-green-900 border-green-400 font-bold',
+      'sibling': 'bg-yellow-100 text-yellow-900 border-yellow-400 font-bold',
+      'grandparent': 'bg-indigo-100 text-indigo-900 border-indigo-400 font-bold',
+      'pet': 'bg-orange-100 text-orange-900 border-orange-400 font-bold'
     }
-    return colors[relationship] || 'bg-muted text-foreground'
+    return colors[relationship] || 'bg-gray-100 text-gray-900 font-bold'
   }
 
   const handleSelectAccount = () => {
@@ -136,8 +147,8 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
   return (
     <div className={`bg-card rounded-lg border-2 p-6 hover:shadow-md transition-all relative ${
       overdueActions.length > 0
-        ? 'border-warning-dark dark:border-yellow-600 hover:border-warning-dark dark:hover:border-yellow-500'
-        : 'border-border hover:border-purple-300 dark:hover:border-purple-700'
+        ? 'border-warning-dark hover:border-warning-dark'
+        : 'border-border hover:border-purple-300'
     }`}>
       {/* Notification Badge */}
       {overdueActions.length > 0 && (
@@ -163,15 +174,15 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                 router.push('/calendar')
               }
             }}
-            className={`mb-3 bg-warning-light dark:bg-yellow-900/20 border-2 border-warning-dark dark:border-yellow-600 rounded-lg p-3 ${
-              hasUpcomingAppointment ? 'cursor-pointer hover:bg-warning-light/80 dark:hover:bg-yellow-900/30 transition-colors' : ''
+            className={`mb-3 bg-warning-light border-2 border-warning-dark rounded-lg p-3 ${
+              hasUpcomingAppointment ? 'cursor-pointer hover:bg-warning-light/80 transition-colors' : ''
             }`}
           >
             <div className="flex items-start gap-2">
-              <BellAlertIcon className="w-5 h-5 text-warning-dark dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+              <BellAlertIcon className="w-5 h-5 text-warning-dark flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-semibold text-warning-dark dark:text-yellow-500">
+                  <p className="text-sm font-semibold text-warning-dark">
                     Action Needed
                   </p>
                   {hasUpcomingAppointment && (
@@ -183,7 +194,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                 <ul className="text-xs text-foreground space-y-1">
                   {overdueActions.map((action, index) => (
                     <li key={index} className="flex items-center gap-1">
-                      <span className="w-1 h-1 rounded-full bg-warning-dark dark:bg-yellow-500"></span>
+                      <span className="w-1 h-1 rounded-full bg-warning-dark"></span>
                       {action}
                     </li>
                   ))}
@@ -195,12 +206,12 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
 
         {/* Caregiver Access Badge */}
         {isCaregiverAccess && (
-          <div className="mb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md border border-blue-200 dark:border-blue-800">
+          <div className="mb-3 flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
             <span className="font-medium">Caregiver Access</span>
-            <span className="text-blue-500 dark:text-blue-400">({getRoleLabel(caregiverRole)})</span>
+            <span className="text-blue-500">({getRoleLabel(caregiverRole)})</span>
           </div>
         )}
 
@@ -216,7 +227,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <UserIcon className="w-8 h-8 text-primary dark:text-purple-400" />
+                <UserIcon className="w-8 h-8 text-primary" />
               )}
             </div>
 
@@ -283,15 +294,15 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                 router.push('/calendar')
               }
             }}
-            className={`mb-3 bg-warning-light dark:bg-yellow-900/20 border-2 border-warning-dark dark:border-yellow-600 rounded-lg p-3 ${
-              hasUpcomingAppointment ? 'cursor-pointer hover:bg-warning-light/80 dark:hover:bg-yellow-900/30 transition-colors' : ''
+            className={`mb-3 bg-warning-light border-2 border-warning-dark rounded-lg p-3 ${
+              hasUpcomingAppointment ? 'cursor-pointer hover:bg-warning-light/80 transition-colors' : ''
             }`}
           >
             <div className="flex items-start gap-2">
-              <BellAlertIcon className="w-5 h-5 text-warning-dark dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+              <BellAlertIcon className="w-5 h-5 text-warning-dark flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-semibold text-warning-dark dark:text-yellow-500">
+                  <p className="text-sm font-semibold text-warning-dark">
                     Action Needed
                   </p>
                   {hasUpcomingAppointment && (
@@ -303,7 +314,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                 <ul className="text-xs text-foreground space-y-1">
                   {overdueActions.map((action, index) => (
                     <li key={index} className="flex items-center gap-1">
-                      <span className="w-1 h-1 rounded-full bg-warning-dark dark:bg-yellow-500"></span>
+                      <span className="w-1 h-1 rounded-full bg-warning-dark"></span>
                       {action}
                     </li>
                   ))}
@@ -315,12 +326,12 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
 
         {/* Caregiver Access Badge */}
         {isCaregiverAccess && (
-          <div className="mb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md border border-blue-200 dark:border-blue-800">
+          <div className="mb-3 flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
             <span className="font-medium">Caregiver Access</span>
-            <span className="text-blue-500 dark:text-blue-400">({getRoleLabel(caregiverRole)})</span>
+            <span className="text-blue-500">({getRoleLabel(caregiverRole)})</span>
           </div>
         )}
 
@@ -336,7 +347,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <UserIcon className="w-8 h-8 text-primary dark:text-purple-400" />
+                <UserIcon className="w-8 h-8 text-primary" />
               )}
             </div>
 
@@ -427,7 +438,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                 e.preventDefault()
                 onEdit()
               }}
-              className="px-3 py-1.5 text-sm text-muted-foreground hover:text-primary dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
+              className="px-3 py-1.5 text-sm text-muted-foreground hover:text-primary hover:bg-purple-50 rounded-lg transition-colors"
             >
               Edit
             </button>
@@ -438,7 +449,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                 e.preventDefault()
                 onDelete()
               }}
-              className="px-3 py-1.5 text-sm text-muted-foreground hover:text-error dark:hover:text-red-400 hover:bg-error-light dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              className="px-3 py-1.5 text-sm text-muted-foreground hover:text-error hover:bg-error-light rounded-lg transition-colors"
             >
               Remove
             </button>

@@ -783,8 +783,16 @@ function DateTimeStep({
   dateTime?: Date
   onChange: (dateTime: Date) => void
 }) {
+  // Helper to get local date string (YYYY-MM-DD) without timezone issues
+  const getLocalDateString = (d: Date) => {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   const [date, setDate] = useState(
-    dateTime ? dateTime.toISOString().split('T')[0] : ''
+    dateTime ? getLocalDateString(dateTime) : ''
   )
   const [time, setTime] = useState(
     dateTime
@@ -822,7 +830,7 @@ function DateTimeStep({
                 onChange(combined)
               }
             }}
-            min={new Date().toISOString().split('T')[0]}
+            min={getLocalDateString(new Date())}
             className="w-full px-4 py-3 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
           />
         </div>
