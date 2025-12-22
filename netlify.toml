@@ -8,6 +8,12 @@
   NODE_VERSION = "20.19.0"
   NPM_VERSION = "10.8.2"
 
+# Limit which environment variables are included in functions to stay under 4KB limit
+[functions]
+  included_files = []
+  # Only include essential runtime variables (exclude large keys like OPENAI_API_KEY, GEMINI_API_KEY at function level)
+  # These will still be available at build time and via Netlify's environment
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
