@@ -6,6 +6,7 @@
 
 import { getAuth } from 'firebase/auth'
 import { logger } from '@/lib/logger'
+import { getCsrfToken } from '@/lib/csrf'
 
 /**
  * Create a Stripe checkout session and redirect to checkout
@@ -32,11 +33,13 @@ export async function createCheckoutSession(
 
     logger.info('[Stripe Client] Creating checkout session', { priceId })
 
+    const csrfToken = getCsrfToken()
     const response = await fetch('/api/stripe/create-checkout-session', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-CSRF-Token': csrfToken
       },
       body: JSON.stringify({
         priceId,
@@ -94,11 +97,13 @@ export async function createPortalSession(returnUrl?: string): Promise<void> {
 
     logger.info('[Stripe Client] Creating portal session')
 
+    const csrfToken = getCsrfToken()
     const response = await fetch('/api/stripe/create-portal-session', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-CSRF-Token': csrfToken
       },
       body: JSON.stringify({
         returnUrl

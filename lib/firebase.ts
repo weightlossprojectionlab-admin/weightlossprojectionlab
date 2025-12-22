@@ -1,6 +1,6 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
 import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'firebase/auth'
-import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, type Firestore } from 'firebase/firestore'
 import { getStorage, type FirebaseStorage } from 'firebase/storage'
 import { getMessaging, type Messaging, isSupported } from 'firebase/messaging'
 import { logger } from '@/lib/logger'
@@ -34,7 +34,25 @@ let messaging: Messaging | null = null
 
 try {
   auth = getAuth(app)
-  db = getFirestore(app)
+
+  // Initialize Firestore with modern cache API (supports multi-tab)
+  if (!isServer()) {
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
+      })
+      logger.info('Firestore initialized with multi-tab persistent cache')
+    } catch (error) {
+      // Fallback to default if already initialized
+      db = getFirestore(app)
+      logger.warn('Using default Firestore instance (already initialized)')
+    }
+  } else {
+    db = getFirestore(app)
+  }
+
   storage = getStorage(app)
 
   // Enable auth persistence (keep user signed in across browser sessions)
@@ -47,17 +65,6 @@ try {
       .catch((err) => {
         logger.error('Failed to set auth persistence', err as Error)
       })
-
-    // Enable offline persistence for Firestore
-    enableIndexedDbPersistence(db).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        logger.warn('Firestore persistence failed: Multiple tabs open')
-      } else if (err.code === 'unimplemented') {
-        logger.warn('Firestore persistence not supported in this browser')
-      } else {
-        logger.error('Firestore persistence error', err as Error)
-      }
-    })
   }
 
   logger.info('Firebase services initialized successfully')
