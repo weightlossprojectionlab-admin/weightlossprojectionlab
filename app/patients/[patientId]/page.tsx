@@ -708,25 +708,64 @@ function PatientDetailContent() {
         {/* Vital Reminder Prompt - Shows when vitals are due today */}
         {canLogVitals && user && patient && (() => {
           // DEBUG: Log what we're passing to VitalReminderPrompt
-          console.log('[PatientPage] VitalReminderPrompt data:', {
-            patientId,
-            patientName: patient.name,
-            vitalsCount: vitals.length,
-            userProfile: userProfile,
-            userPreferences: userProfile?.preferences,
-            vitalReminders: userProfile?.preferences?.vitalReminders
-          })
+          console.log('[PatientPage] ==== VitalReminderPrompt Debug ====')
+          console.log('[PatientPage] Patient object:', patient)
+          console.log('[PatientPage] Patient preferences:', patient.preferences)
+          console.log('[PatientPage] Vital reminders:', patient.preferences?.vitalReminders)
+          console.log('[PatientPage] Vital reminders stringified:', JSON.stringify(patient.preferences?.vitalReminders, null, 2))
+          console.log('[PatientPage] Vitals count:', vitals.length)
+          console.log('[PatientPage] ===============================')
+
+          // Check if any reminders are enabled
+          const enabledReminders = Object.entries(patient.preferences?.vitalReminders || {})
+            .filter(([_, config]) => (config as any)?.enabled)
+          console.log('[PatientPage] Enabled reminders:', enabledReminders)
 
           return (
             <VitalReminderPrompt
               patientId={patientId}
               patientName={patient.name}
               vitals={vitals}
-              userPreferences={userProfile?.preferences}
+              userPreferences={patient.preferences}
               onLogVitalsClick={() => setShowVitalsWizard(true)}
               onLogSpecificVital={(vitalType) => {
                 setQuickLogVitalType(vitalType)
                 setShowQuickLogModal(true)
+              }}
+              onDisableReminder={async (vitalType) => {
+                // Update patient's vital reminders
+                const currentReminders = patient.preferences?.vitalReminders as any
+                const updatedReminders = {
+                  ...currentReminders,
+                  [vitalType]: {
+                    enabled: false,
+                    frequency: currentReminders?.[vitalType]?.frequency || 'daily'
+                  }
+                }
+
+                const authToken = await auth.currentUser?.getIdToken()
+                const response = await fetch(`/api/patients/${patientId}`, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                  },
+                  body: JSON.stringify({
+                    ...patient,
+                    preferences: {
+                      ...patient.preferences,
+                      vitalReminders: updatedReminders
+                    }
+                  })
+                })
+
+                if (!response.ok) {
+                  throw new Error('Failed to update patient vital reminders')
+                }
+
+                // Refresh patient data
+                const result = await response.json()
+                setPatient(result.data)
               }}
             />
           )

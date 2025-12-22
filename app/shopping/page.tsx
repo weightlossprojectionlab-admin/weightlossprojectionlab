@@ -39,7 +39,7 @@ import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
 import { Spinner } from '@/components/ui/Spinner'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
-import { addManualShoppingItem } from '@/lib/shopping-operations'
+import { addManualShoppingItem, clearAllShoppingItems } from '@/lib/shopping-operations'
 import { patientOperations } from '@/lib/medical-operations'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 
@@ -169,6 +169,7 @@ function ShoppingListContent() {
   const [showDebugMode, setShowDebugMode] = useState(false)
   const [showImpulseConfirm, setShowImpulseConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null)
   const [scannedProduct, setScannedProduct] = useState<{
     product: OpenFoodFactsProduct
@@ -549,6 +550,30 @@ function ShoppingListContent() {
   }
 
   /**
+   * Handle delete all items
+   */
+  const handleDeleteAll = async () => {
+    try {
+      const loadingToast = toast.loading('Deleting all items...')
+      const result = await clearAllShoppingItems(userId)
+
+      toast.dismiss(loadingToast)
+
+      if (result.errors.length > 0) {
+        toast.error(`Deleted ${result.deleted} items, but ${result.errors.length} failed`)
+      } else {
+        toast.success(`Successfully deleted ${result.deleted} item${result.deleted !== 1 ? 's' : ''}`)
+      }
+
+      setShowDeleteAllConfirm(false)
+      refresh() // Refresh the list
+    } catch (error) {
+      toast.error('Failed to delete items')
+      logger.error('Delete all shopping items failed', error as Error)
+    }
+  }
+
+  /**
    * Handle item click - open sequential shopping flow
    * This opens the scanner immediately and guides user through purchase
    */
@@ -809,10 +834,20 @@ function ShoppingListContent() {
               {/* High Priority Items */}
               {filteredItems.filter(item => item.priority === 'high' && item.needed).length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-warning dark:text-orange-400 mb-3 flex items-center gap-2">
-                    <span>⚠️</span>
-                    HIGH PRIORITY
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-warning dark:text-orange-400 flex items-center gap-2">
+                      <span>⚠️</span>
+                      HIGH PRIORITY
+                    </h3>
+                    {allItems.length > 0 && (
+                      <button
+                        onClick={() => setShowDeleteAllConfirm(true)}
+                        className="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        Clear List
+                      </button>
+                    )}
+                  </div>
                   <div className="space-y-3">
                     {filteredItems
                       .filter(item => item.priority === 'high' && item.needed)
@@ -969,6 +1004,18 @@ function ShoppingListContent() {
           title="Remove Item"
           message={`Remove "${itemToDelete?.name}" from your shopping list?`}
           confirmText="Remove"
+          cancelText="Cancel"
+          variant="danger"
+        />
+
+        {/* Clear List Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showDeleteAllConfirm}
+          onClose={() => setShowDeleteAllConfirm(false)}
+          onConfirm={handleDeleteAll}
+          title="Clear Shopping List?"
+          message={`Are you sure you want to clear all ${allItems.length} item${allItems.length !== 1 ? 's' : ''} from your shopping list? This action cannot be undone.`}
+          confirmText="Clear List"
           cancelText="Cancel"
           variant="danger"
         />

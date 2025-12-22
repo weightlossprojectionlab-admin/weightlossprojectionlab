@@ -48,6 +48,18 @@ export async function createCheckoutSession(
     const data = await response.json()
 
     if (!data.success) {
+      // Check if user already has an active subscription
+      if (data.code === 'EXISTING_SUBSCRIPTION') {
+        const shouldOpenPortal = confirm(
+          `${data.error}\n\nWould you like to open the Customer Portal to manage your subscription?`
+        )
+
+        if (shouldOpenPortal) {
+          await createPortalSession(window.location.href)
+        }
+        return
+      }
+
       throw new Error(data.error || 'Failed to create checkout session')
     }
 

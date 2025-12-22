@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
       'profile.medications': userData?.profile?.medications,
       'medications': userData?.medications,
       'preferences.vitalReminders': userData?.preferences?.vitalReminders,
+      'preferences FULL': JSON.stringify(userData?.preferences, null, 2),
       'hasProfile': !!userData?.profile,
       'profileKeys': userData?.profile ? Object.keys(userData.profile) : [],
       'preferencesKeys': userData?.preferences ? Object.keys(userData.preferences) : []

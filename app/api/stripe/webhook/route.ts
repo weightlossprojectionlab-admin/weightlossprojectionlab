@@ -15,6 +15,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
 export async function POST(request: NextRequest) {
+  console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+  console.error('[STRIPE WEBHOOK] /api/stripe/webhook HIT!')
+  console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
   try {
     const body = await request.text()
     const signature = request.headers.get('stripe-signature')
@@ -159,9 +162,10 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   console.log(`Subscription deleted for user ${userId}`)
 
   // Mark subscription as canceled
+  const currentPeriodEnd = (subscription as any).current_period_end
   await db.collection('users').doc(userId).update({
     'subscription.status': 'canceled',
-    'subscription.currentPeriodEnd': subscription.current_period_end ? new Date((subscription.current_period_end as number) * 1000) : null,
+    'subscription.currentPeriodEnd': currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null,
     updatedAt: new Date(),
   })
 }

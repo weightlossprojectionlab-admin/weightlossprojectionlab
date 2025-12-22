@@ -133,22 +133,9 @@ export function shouldShowVitalReminder(
   frequency: VitalFrequency = DEFAULT_FREQUENCIES[vitalType],
   lastActivityDate?: Date | null
 ): VitalReminderResult {
-  // If no vital logs exist, DON'T show reminder - let users discover it naturally
-  // Only nag users who have established a logging habit
-  // EXCEPTION: Mood is opt-in, so show reminders even if never logged before
-  if (!lastVitalLog && vitalType !== 'mood') {
-    return {
-      shouldShow: false,
-      daysSince: 0,
-      nextDueDate: new Date(), // Due now
-      isOverdue: false,
-      status: 'on-track',
-      vitalType
-    }
-  }
-
-  // For mood with no previous logs, treat as if it's overdue and needs first entry
-  if (!lastVitalLog && vitalType === 'mood') {
+  // If no vital logs exist, show reminder since user explicitly enabled it
+  // If they enabled reminders in profile, they WANT to be reminded
+  if (!lastVitalLog) {
     return {
       shouldShow: true,
       daysSince: 999, // Large number to indicate "never logged"

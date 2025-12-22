@@ -63,10 +63,19 @@ export async function GET(
       )
     }
 
+    const patientData = patientDoc.data()
     const patient: PatientProfile = {
       id: patientDoc.id,
-      ...patientDoc.data()
+      ...patientData
     } as PatientProfile
+
+    // DEBUG: Log what we're returning
+    console.log('[API /patients/[id] GET] Returning patient data:', {
+      patientId,
+      hasPreferences: !!patientData?.preferences,
+      vitalReminders: patientData?.preferences?.vitalReminders,
+      fullPreferences: JSON.stringify(patientData?.preferences, null, 2)
+    })
 
     logger.info('[API /patients/[id] GET] Patient fetched successfully', { userId, ownerUserId, patientId })
 

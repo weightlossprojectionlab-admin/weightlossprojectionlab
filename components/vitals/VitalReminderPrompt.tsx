@@ -37,6 +37,7 @@ interface VitalReminderPromptProps {
   }
   onLogVitalsClick: () => void
   onLogSpecificVital?: (vitalType: VitalType) => void
+  onDisableReminder?: (vitalType: VitalType) => Promise<void>
 }
 
 interface VitalReminderInfo {
@@ -59,7 +60,8 @@ export default function VitalReminderPrompt({
   vitals,
   userPreferences,
   onLogVitalsClick,
-  onLogSpecificVital
+  onLogSpecificVital,
+  onDisableReminder
 }: VitalReminderPromptProps) {
   const [dismissedVitals, setDismissedVitals] = useState<Set<VitalType>>(new Set())
   const [confirmDisable, setConfirmDisable] = useState<{ type: VitalType; label: string } | null>(null)
@@ -167,19 +169,24 @@ export default function VitalReminderPrompt({
   // Handle "Don't remind me again" - permanently disable in profile
   const handleDisableReminder = async (vitalType: VitalType) => {
     try {
-      // Update user preferences to disable this vital reminder
-      await userProfileOperations.updateUserProfile({
-        preferences: {
-          ...userPreferences,
-          vitalReminders: {
-            ...userPreferences?.vitalReminders,
-            [vitalType]: {
-              enabled: false,
-              frequency: userPreferences?.vitalReminders?.[vitalType]?.frequency || 'daily'
+      // If parent component provided a custom handler, use that (for patient-specific reminders)
+      if (onDisableReminder) {
+        await onDisableReminder(vitalType)
+      } else {
+        // Fallback: Update user preferences to disable this vital reminder
+        await userProfileOperations.updateUserProfile({
+          preferences: {
+            ...userPreferences,
+            vitalReminders: {
+              ...userPreferences?.vitalReminders,
+              [vitalType]: {
+                enabled: false,
+                frequency: userPreferences?.vitalReminders?.[vitalType]?.frequency || 'daily'
+              }
             }
           }
-        }
-      })
+        })
+      }
 
       // Remove from local dismissed list
       setDismissedVitals(prev => new Set(prev).add(vitalType))

@@ -97,7 +97,28 @@ export async function POST(request: NextRequest) {
     // 5. Check if user already has a Stripe customer ID
     const userDoc = await db.collection('users').doc(userId).get()
     const userData = userDoc.data()
-    let customerId = userData?.subscription?.stripeCustomerId
+    const existingSubscription = userData?.subscription
+    let customerId = existingSubscription?.stripeCustomerId
+
+    // 5a. Enforce one subscription per account
+    // Check if user already has an active subscription
+    if (existingSubscription?.stripeSubscriptionId) {
+      const existingStatus = existingSubscription.status
+
+      // Prevent creating new subscription if user has active/trialing subscription
+      if (existingStatus === 'active' || existingStatus === 'trialing') {
+        return NextResponse.json(
+          {
+            error: 'You already have an active subscription. Please use the Customer Portal to manage or upgrade your plan.',
+            code: 'EXISTING_SUBSCRIPTION'
+          },
+          { status: 400 }
+        )
+      }
+
+      // If subscription is canceled/expired/past_due, we can allow creating a new one
+      // This handles cases where users canceled and want to re-subscribe
+    }
 
     // 6. Create or retrieve Stripe customer
     if (!customerId) {
@@ -132,13 +153,13 @@ export async function POST(request: NextRequest) {
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
-        firebaseUID: userId,
+        firebaseUid: userId,
         plan: plan,
         billingInterval: billingInterval,
       },
       subscription_data: {
         metadata: {
-          firebaseUID: userId,
+          firebaseUid: userId,
           plan: plan,
         },
       },

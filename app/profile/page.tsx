@@ -540,23 +540,43 @@ function ProfileContent() {
                 <label className="text-sm text-muted-foreground">Family Members</label>
                 <div className="mt-2">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-lg font-bold text-foreground">
-                      {current} of {max}
+                    <span className="text-lg font-bold text-foreground flex items-center gap-2">
+                      {(max ?? 0) >= 999 ? (
+                        <>
+                          {current} of <span className="text-2xl">∞</span>
+                        </>
+                      ) : (
+                        `${current} of ${max}`
+                      )}
                     </span>
-                    <span className="text-sm text-muted-foreground">
-                      {percentage}% used
-                    </span>
+                    {(max ?? 0) < 999 && (
+                      <span className="text-sm text-muted-foreground">
+                        {percentage}% used
+                      </span>
+                    )}
+                    {(max ?? 0) >= 999 && (
+                      <span className="text-sm text-success font-medium">
+                        Unlimited
+                      </span>
+                    )}
                   </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        percentage >= 100 ? 'bg-error' :
-                        percentage >= 80 ? 'bg-warning-dark' :
-                        'bg-success'
-                      }`}
-                      style={{ width: `${Math.min(percentage, 100)}%` }}
-                    />
-                  </div>
+                  {(max ?? 0) < 999 && (
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          percentage >= 100 ? 'bg-error' :
+                          percentage >= 80 ? 'bg-warning-dark' :
+                          'bg-success'
+                        }`}
+                        style={{ width: `${Math.min(percentage, 100)}%` }}
+                      />
+                    </div>
+                  )}
+                  {(max ?? 0) >= 999 && (
+                    <div className="h-2 bg-success rounded-full overflow-hidden">
+                      <div className="h-full bg-success rounded-full w-full" />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -581,13 +601,33 @@ function ProfileContent() {
                 </div>
               )}
 
-              {/* Manage Button */}
-              <button
-                onClick={() => setShowUpgradeModal(true)}
-                className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-              >
-                Manage Subscription
-              </button>
+              {/* Manage Button - Only show if user has a Stripe customer ID */}
+              {subscription.stripeCustomerId && (
+                <button
+                  onClick={async () => {
+                    try {
+                      const { createPortalSession } = await import('@/lib/stripe-client')
+                      await createPortalSession(window.location.href)
+                    } catch (error) {
+                      console.error('Failed to open customer portal:', error)
+                      alert('Failed to open subscription management. Please try again.')
+                    }
+                  }}
+                  className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+                >
+                  Manage Subscription
+                </button>
+              )}
+
+              {/* Upgrade Button - Show if no Stripe customer ID */}
+              {!subscription.stripeCustomerId && subscription.plan === 'free' && (
+                <Link
+                  href="/pricing"
+                  className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium text-center block"
+                >
+                  Upgrade Plan
+                </Link>
+              )}
             </div>
           </div>
         )}
@@ -719,10 +759,12 @@ function ProfileContent() {
         <div className="bg-card rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-foreground">⏰ Vital Sign Reminders</h2>
-            <span className="text-xs text-muted-foreground">Applies to all family members</span>
+            <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
+              {currentlyViewingMember ? currentlyViewingMember.name : 'You'}
+            </span>
           </div>
           <p className="text-sm text-muted-foreground mb-6">
-            Configure reminders to log vital signs at regular intervals for ALL family members. These account-level settings apply platform-wide based on your subscription plan. For advanced schedules with specific times, use the Vitals Wizard in the patient detail page.
+            Configure reminders to log vital signs at regular intervals for <strong>{currentlyViewingMember ? currentlyViewingMember.name : 'yourself'}</strong>. Each family member has their own reminder settings. For advanced schedules with specific times, use the Vitals Wizard in the patient detail page.
           </p>
 
           <div className="space-y-6">
@@ -745,21 +787,59 @@ function ProfileContent() {
 
               // DRY: Shared function to save vital reminder settings
               const saveVitalReminders = async (updatedVitalReminders: any) => {
-                await userProfileOperations.updateUserProfile({
-                  preferences: {
-                    ...profileData?.preferences,
-                    vitalReminders: updatedVitalReminders
-                  }
+                console.log('[Profile] Saving vital reminders:', {
+                  updatedVitalReminders,
+                  isPatient: !!currentlyViewingMember,
+                  patientId: effectivePatientId,
+                  currentPreferences: profileData?.preferences
                 })
 
-                // Use functional update to avoid stale closure issues
-                setProfileData((prevData: any) => ({
-                  ...prevData,
-                  preferences: {
-                    ...prevData?.preferences,
-                    vitalReminders: updatedVitalReminders
+                // If viewing a family member, save to their patient profile
+                if (currentlyViewingMember) {
+                  const auth = getAuth()
+                  const currentUser = auth.currentUser
+                  if (!currentUser) {
+                    throw new Error('Not authenticated')
                   }
-                }))
+                  const authToken = await currentUser.getIdToken()
+
+                  const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
+                    method: 'PUT',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${authToken}`,
+                    },
+                    body: JSON.stringify({
+                      ...currentlyViewingMember,
+                      preferences: {
+                        ...currentlyViewingMember.preferences,
+                        vitalReminders: updatedVitalReminders
+                      }
+                    })
+                  })
+
+                  if (!response.ok) {
+                    throw new Error('Failed to update patient vital reminders')
+                  }
+
+                  // Refresh patient data
+                  const result = await response.json()
+                  setProfileData(result.patient || { ...currentlyViewingMember, preferences: { ...currentlyViewingMember.preferences, vitalReminders: updatedVitalReminders } })
+                } else {
+                  // Saving own profile
+                  await userProfileOperations.updateUserProfile({
+                    preferences: {
+                      ...profileData?.preferences,
+                      vitalReminders: updatedVitalReminders
+                    }
+                  })
+
+                  // Fetch fresh profile data from server
+                  const updated = await userProfileOperations.getUserProfile()
+                  setProfileData(updated.data)
+                }
+
+                console.log('[Profile] Vital reminders saved successfully')
               }
 
               return (

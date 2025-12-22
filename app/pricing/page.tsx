@@ -154,6 +154,23 @@ export default function PricingPage() {
 
       if (!response.ok) {
         const error = await response.json()
+
+        // Check if user already has an active subscription
+        if (error.code === 'EXISTING_SUBSCRIPTION') {
+          const shouldOpenPortal = confirm(
+            `${error.error}\n\nWould you like to open the Customer Portal to manage your subscription?`
+          )
+
+          if (shouldOpenPortal) {
+            // Import and call the portal session function
+            const { createPortalSession } = await import('@/lib/stripe-client')
+            await createPortalSession(window.location.href)
+          }
+
+          setLoading(null)
+          return
+        }
+
         throw new Error(error.error || 'Failed to create checkout session')
       }
 

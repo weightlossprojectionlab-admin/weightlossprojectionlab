@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe-config'
-import { adminAuth } from '@/lib/firebase-admin'
+import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
@@ -48,6 +48,26 @@ export async function POST(request: NextRequest) {
       userEmail,
       priceId
     })
+
+    // Check if user already has an active subscription
+    const userDoc = await adminDb.collection('users').doc(userId).get()
+    const existingSubscription = userDoc.data()?.subscription
+
+    if (existingSubscription?.stripeSubscriptionId) {
+      const existingStatus = existingSubscription.status
+
+      // Prevent creating new subscription if user has active/trialing subscription
+      if (existingStatus === 'active' || existingStatus === 'trialing') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'You already have an active subscription. Please use the Customer Portal to manage or upgrade your plan.',
+            code: 'EXISTING_SUBSCRIPTION'
+          },
+          { status: 400 }
+        )
+      }
+    }
 
     // Create or retrieve Stripe customer
     const customers = await stripe.customers.list({

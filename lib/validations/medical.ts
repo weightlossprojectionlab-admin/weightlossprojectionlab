@@ -45,7 +45,7 @@ export const patientProfileSchema = z.object({
   // Metadata
   createdAt: z.string().datetime(),
   lastModified: z.string().datetime()
-}).refine(
+}).passthrough().refine(
   (data) => {
     // If type is 'pet', species is required
     if (data.type === 'pet') {
