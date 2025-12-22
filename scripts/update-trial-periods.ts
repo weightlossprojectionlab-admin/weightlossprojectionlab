@@ -7,21 +7,24 @@
 
 import { initializeApp, cert, getApps } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
+import { config } from 'dotenv'
+import { resolve } from 'path'
+
+// Load environment variables from .env.local
+config({ path: resolve(process.cwd(), '.env.local') })
 
 // Initialize Firebase Admin
 if (getApps().length === 0) {
-  const serviceAccountBase64 = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64
-
-  if (!serviceAccountBase64) {
-    throw new Error('FIREBASE_ADMIN_SERVICE_ACCOUNT_BASE64 environment variable not set')
+  if (!process.env.FIREBASE_ADMIN_PROJECT_ID || !process.env.FIREBASE_ADMIN_CLIENT_EMAIL || !process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
+    throw new Error('Missing Firebase Admin environment variables: FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, or FIREBASE_ADMIN_PRIVATE_KEY')
   }
 
-  const serviceAccount = JSON.parse(
-    Buffer.from(serviceAccountBase64, 'base64').toString('utf-8')
-  )
-
   initializeApp({
-    credential: cert(serviceAccount)
+    credential: cert({
+      projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    })
   })
 }
 
