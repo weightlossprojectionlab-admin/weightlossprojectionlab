@@ -629,9 +629,10 @@ function ProfileContent() {
                     try {
                       const { createPortalSession } = await import('@/lib/stripe-client')
                       await createPortalSession(window.location.href)
-                    } catch (error) {
+                    } catch (error: any) {
                       console.error('Failed to open customer portal:', error)
-                      alert('Failed to open subscription management. Please try again.')
+                      const errorMessage = error?.message || 'Failed to open subscription management. Please try again.'
+                      alert(errorMessage)
                     }
                   }}
                   className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"

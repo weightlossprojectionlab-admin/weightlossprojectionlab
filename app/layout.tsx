@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { ConditionalProviders } from '@/components/ConditionalProviders'
+import { CsrfInitializer } from '@/components/CsrfInitializer'
 import './globals.css'
 
 // Force dynamic rendering for all pages to skip static generation
@@ -58,6 +59,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://weightlossprojectionlab-8b284.firebaseapp.com" />
       </head>
       <body className="h-full font-sans antialiased">
+        <CsrfInitializer />
         <ConditionalProviders>{children}</ConditionalProviders>
       </body>
     </html>
