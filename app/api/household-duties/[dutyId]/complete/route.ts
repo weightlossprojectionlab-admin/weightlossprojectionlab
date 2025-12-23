@@ -7,6 +7,7 @@ import {
   CompleteDutyRequest
 } from '@/types/household-duties'
 import { logger } from '@/lib/logger'
+import { notifyDutyCompleted } from '@/lib/duty-notification-service'
 
 /**
  * POST /api/household-duties/[dutyId]/complete
@@ -96,6 +97,15 @@ export async function POST(
       dutyId,
       completedBy: authResult.userId,
       nextDueDate
+    })
+
+    // Get completedBy user name for notification
+    const completedByUser = await db.collection('users').doc(authResult.userId).get()
+    const completedByName = completedByUser.data()?.displayName || completedByUser.data()?.email || 'Someone'
+
+    // Send completion notifications (non-blocking)
+    notifyDutyCompleted(updatedDuty, completedByName).catch(error => {
+      logger.error('Failed to send duty completed notification', error as Error, { dutyId })
     })
 
     return NextResponse.json({

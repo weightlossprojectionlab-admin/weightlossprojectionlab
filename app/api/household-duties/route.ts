@@ -15,6 +15,7 @@ import {
   checkPermission
 } from '@/types/household-permissions'
 import { logger } from '@/lib/logger'
+import { notifyDutyAssigned } from '@/lib/duty-notification-service'
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -307,7 +308,7 @@ export async function POST(request: NextRequest) {
     const docRef = await db.collection('household_duties').add(duty as Omit<HouseholdDuty, 'id'>)
     const createdDuty: HouseholdDuty = {
       id: docRef.id,
-      ...duty
+      ...duty as HouseholdDuty
     }
 
     logger.info('Household duty created', {
@@ -315,6 +316,15 @@ export async function POST(request: NextRequest) {
       householdId: body.householdId,
       forPatientId: body.forPatientId,
       category: body.category
+    })
+
+    // Get assignedBy user name for notification
+    const assignedByUser = await db.collection('users').doc(authResult.userId).get()
+    const assignedByName = assignedByUser.data()?.displayName || assignedByUser.data()?.email || 'Someone'
+
+    // Send notifications to assigned caregivers (non-blocking)
+    notifyDutyAssigned(createdDuty, assignedByName).catch(error => {
+      logger.error('Failed to send duty assigned notification', error as Error, { dutyId: docRef.id })
     })
 
     return NextResponse.json(createdDuty, { status: 201 })

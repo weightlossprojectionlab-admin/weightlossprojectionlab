@@ -30,6 +30,12 @@ export type NotificationType =
   | 'vital_alert'
   | 'medication_reminder'
   | 'appointment_reminder'
+  | 'duty_assigned'
+  | 'duty_reassigned'
+  | 'duty_updated'
+  | 'duty_reminder'
+  | 'duty_overdue'
+  | 'duty_completed'
 
 /**
  * NotificationPriority - Urgency level
@@ -182,6 +188,30 @@ export interface PatientMetadata {
 }
 
 /**
+ * DutyMetadata - Context for household duty events
+ */
+export interface DutyMetadata {
+  dutyId: string
+  dutyName: string
+  dutyCategory: string
+  householdId: string
+  householdName: string
+  forPatientId?: string
+  forPatientName?: string
+  assignedTo: string[] // Caregiver userIds
+  assignedBy: string
+  assignedByName: string
+  priority: string
+  frequency: string
+  nextDueDate?: string
+  estimatedDuration?: number
+  completedBy?: string
+  completedByName?: string
+  actionBy: string // Generic action performer
+  actionByUserId: string
+}
+
+/**
  * NotificationMetadata - Union type for all metadata types
  */
 export type NotificationMetadata =
@@ -194,6 +224,7 @@ export type NotificationMetadata =
   | HealthReportMetadata
   | FamilyMetadata
   | PatientMetadata
+  | DutyMetadata
 
 // ==================== NOTIFICATION INTERFACE ====================
 
@@ -277,6 +308,14 @@ export interface NotificationPreferences {
   vital_alert: NotificationChannelPreferences
   medication_reminder: NotificationChannelPreferences
 
+  // Household duty notifications
+  duty_assigned: NotificationChannelPreferences
+  duty_reassigned: NotificationChannelPreferences
+  duty_updated: NotificationChannelPreferences
+  duty_reminder: NotificationChannelPreferences
+  duty_overdue: NotificationChannelPreferences
+  duty_completed: NotificationChannelPreferences
+
   // Quiet hours (no push notifications during these hours)
   quietHours?: {
     enabled: boolean
@@ -310,6 +349,12 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   patient_added: { email: true, push: true, inApp: true },
   vital_alert: { email: true, push: true, inApp: true },
   medication_reminder: { email: true, push: true, inApp: true },
+  duty_assigned: { email: true, push: true, inApp: true },
+  duty_reassigned: { email: true, push: true, inApp: true },
+  duty_updated: { email: true, push: false, inApp: true },
+  duty_reminder: { email: true, push: true, inApp: true },
+  duty_overdue: { email: true, push: true, inApp: true },
+  duty_completed: { email: false, push: false, inApp: true },
   quietHours: {
     enabled: true,
     startHour: 22, // 10 PM
