@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   HouseholdDuty,
   DutyStatus,
@@ -23,7 +24,8 @@ import {
   PencilIcon,
   TrashIcon,
   PlusIcon,
-  HomeIcon
+  HomeIcon,
+  ShoppingCartIcon
 } from '@heroicons/react/24/outline'
 import { DutyFormModal } from './DutyFormModal'
 import { auth } from '@/lib/firebase'
@@ -226,6 +228,19 @@ export function DutyListView({
   const getCaregiverName = (caregiverId: string) => {
     const caregiver = caregivers.find(c => c.id === caregiverId)
     return caregiver?.name || 'Unknown'
+  }
+
+  const getShoppingListUrl = (duty: HouseholdDuty): string | null => {
+    // Only grocery shopping duties link to shopping list
+    if (duty.category !== 'grocery_shopping') return null
+
+    // Patient-specific grocery shopping
+    if (duty.forPatientId) {
+      return `/shopping?memberId=${duty.forPatientId}`
+    }
+
+    // Household-level grocery shopping
+    return `/shopping?householdId=${duty.householdId}`
   }
 
   const closeFormModal = () => {
@@ -431,6 +446,17 @@ export function DutyListView({
 
                   {/* Actions */}
                   <div className="flex flex-col gap-2">
+                    {/* Shopping List Link (for grocery shopping duties only) */}
+                    {getShoppingListUrl(duty) && (
+                      <Link
+                        href={getShoppingListUrl(duty)!}
+                        className="px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                      >
+                        <ShoppingCartIcon className="w-4 h-4" />
+                        <span>View List</span>
+                      </Link>
+                    )}
+
                     {duty.status !== 'completed' && (
                       <button
                         onClick={() => handleComplete(duty.id)}
