@@ -1418,6 +1418,33 @@ export const documentOperations = {
   }
 }
 
+// ==================== AUDIT LOG OPERATIONS ====================
+
+export const auditOperations = {
+  /**
+   * Create an audit log entry
+   */
+  async createAuditLog(logData: any): Promise<void> {
+    try {
+      logger.info('[MedicalOps] Creating audit log', {
+        entityType: logData.entityType,
+        action: logData.action,
+        entityId: logData.entityId
+      })
+
+      await makeAuthenticatedRequest<void>('/audit-logs', {
+        method: 'POST',
+        body: JSON.stringify(logData)
+      })
+
+      logger.info('[MedicalOps] Audit log created successfully')
+    } catch (error) {
+      logger.error('[MedicalOps] Error creating audit log', error as Error)
+      // Don't throw - audit logs shouldn't block operations
+    }
+  }
+}
+
 export const medicalOperations = {
   patients: patientOperations,
   vitals: vitalOperations,
@@ -1428,5 +1455,6 @@ export const medicalOperations = {
   mealLogs: mealLogOperations,
   stepLogs: stepLogOperations,
   medications: medicationOperations,
-  documents: documentOperations
+  documents: documentOperations,
+  createAuditLog: auditOperations.createAuditLog
 }

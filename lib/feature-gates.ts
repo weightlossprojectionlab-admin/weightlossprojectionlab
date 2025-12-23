@@ -5,7 +5,7 @@
  * Supports admin bypass and development mode simulation for testing.
  */
 
-import { User, UserSubscription, SubscriptionPlan } from '@/types'
+import { User, UserSubscription, SubscriptionPlan, HOUSEHOLD_LIMITS, HOUSEHOLD_DUTY_LIMITS } from '@/types'
 
 // Admin users with full access to all features
 export const ADMIN_EMAILS = ['weightlossprojectionlab@gmail.com', 'admin:weightlossprojectionlab@gmail.com']
@@ -21,6 +21,9 @@ export const FULL_ACCESS_SUBSCRIPTION: UserSubscription = {
   maxExternalCaregivers: 999,
   currentExternalCaregivers: 0,
   maxPatients: 999,
+  maxHouseholds: 999,
+  currentHouseholds: 0,
+  maxDutiesPerHousehold: 999,
   currentPeriodStart: new Date(),
   currentPeriodEnd: null  // No expiration
 }
@@ -347,6 +350,9 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
       maxExternalCaregivers: 0,
       currentExternalCaregivers: 0,
       maxPatients: 1,
+      maxHouseholds: HOUSEHOLD_LIMITS.free,
+      currentHouseholds: 0,
+      maxDutiesPerHousehold: HOUSEHOLD_DUTY_LIMITS.free,
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
@@ -361,6 +367,9 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
       maxExternalCaregivers: 0,
       currentExternalCaregivers: 0,
       maxPatients: 1,
+      maxHouseholds: HOUSEHOLD_LIMITS.single,
+      currentHouseholds: 0,
+      maxDutiesPerHousehold: HOUSEHOLD_DUTY_LIMITS.single,
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     },
@@ -374,6 +383,9 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
       maxExternalCaregivers: 3,
       currentExternalCaregivers: 0,
       maxPatients: 1,
+      maxHouseholds: HOUSEHOLD_LIMITS.single_plus,
+      currentHouseholds: 0,
+      maxDutiesPerHousehold: HOUSEHOLD_DUTY_LIMITS.single_plus,
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     },
@@ -387,6 +399,9 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
       maxExternalCaregivers: 5,
       currentExternalCaregivers: 0,
       maxPatients: 5,
+      maxHouseholds: HOUSEHOLD_LIMITS.family_basic,
+      currentHouseholds: 0,
+      maxDutiesPerHousehold: HOUSEHOLD_DUTY_LIMITS.family_basic,
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     },
@@ -400,6 +415,9 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
       maxExternalCaregivers: 10,
       currentExternalCaregivers: 0,
       maxPatients: 10,
+      maxHouseholds: HOUSEHOLD_LIMITS.family_plus,
+      currentHouseholds: 0,
+      maxDutiesPerHousehold: HOUSEHOLD_DUTY_LIMITS.family_plus,
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     },
@@ -413,6 +431,9 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
       maxExternalCaregivers: 999,
       currentExternalCaregivers: 0,
       maxPatients: 999,
+      maxHouseholds: HOUSEHOLD_LIMITS.family_premium,
+      currentHouseholds: 0,
+      maxDutiesPerHousehold: HOUSEHOLD_DUTY_LIMITS.family_premium,
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
     },
@@ -488,4 +509,169 @@ export function getCaregiverLimitInfo(user: User | null, currentCaregiverCount: 
     remaining: isUnlimited ? 999 : remaining,
     isUnlimited
   }
+}
+
+/**
+ * Check if user can add another household
+ *
+ * @param user - Current user
+ * @param currentHouseholdCount - Number of households already created
+ * @returns Object with allowed flag, message, and upgrade info
+ */
+export function canAddHousehold(user: User | null, currentHouseholdCount: number): {
+  allowed: boolean
+  message: string
+  upgradeUrl?: string
+  currentUsage?: number
+  limit?: number
+} {
+  if (!user) {
+    return {
+      allowed: false,
+      message: 'You must be logged in to create households'
+    }
+  }
+
+  const subscription = getUserSubscription(user)
+  if (!subscription) {
+    return {
+      allowed: false,
+      message: 'No active subscription found'
+    }
+  }
+
+  const limit = HOUSEHOLD_LIMITS[subscription.plan]
+
+  if (currentHouseholdCount >= limit) {
+    // Find recommended upgrade plan
+    let recommendedPlan: SubscriptionPlan = 'single_plus'
+    if (subscription.plan === 'free') {
+      recommendedPlan = 'single'
+    } else if (subscription.plan === 'single') {
+      recommendedPlan = 'single_plus'
+    } else if (subscription.plan === 'single_plus') {
+      recommendedPlan = 'family_basic'
+    } else if (subscription.plan === 'family_basic') {
+      recommendedPlan = 'family_plus'
+    } else if (subscription.plan === 'family_plus') {
+      recommendedPlan = 'family_premium'
+    }
+
+    return {
+      allowed: false,
+      message: `You've reached your household limit (${limit}). Upgrade to manage more households.`,
+      upgradeUrl: `/pricing?upgrade=households&from=${subscription.plan}&to=${recommendedPlan}`,
+      currentUsage: currentHouseholdCount,
+      limit
+    }
+  }
+
+  return {
+    allowed: true,
+    message: 'You can add this household',
+    currentUsage: currentHouseholdCount,
+    limit
+  }
+}
+
+/**
+ * Check if user can add another duty to a household
+ *
+ * @param user - Current user
+ * @param currentDuties - Number of duties in the household
+ * @param householdId - ID of the household
+ * @returns Object with allowed flag and message
+ */
+export function canAddDutyToHousehold(
+  user: User | null,
+  currentDuties: number,
+  householdId: string
+): {
+  allowed: boolean
+  message: string
+  upgradeUrl?: string
+  currentUsage?: number
+  limit?: number
+} {
+  if (!user) {
+    return {
+      allowed: false,
+      message: 'You must be logged in to create duties'
+    }
+  }
+
+  const subscription = getUserSubscription(user)
+  if (!subscription) {
+    return {
+      allowed: false,
+      message: 'No active subscription found'
+    }
+  }
+
+  const limit = HOUSEHOLD_DUTY_LIMITS[subscription.plan]
+
+  if (currentDuties >= limit) {
+    return {
+      allowed: false,
+      message: `You've reached the duty limit for your ${subscription.plan} plan (${limit} duties per household). Upgrade for unlimited duties.`,
+      upgradeUrl: `/pricing?upgrade=duties&from=${subscription.plan}`,
+      currentUsage: currentDuties,
+      limit
+    }
+  }
+
+  return {
+    allowed: true,
+    message: 'You can add this duty',
+    currentUsage: currentDuties,
+    limit
+  }
+}
+
+/**
+ * Get household limit information for display and validation
+ *
+ * @param user - Current user
+ * @param currentHouseholdCount - Number of households already created
+ * @returns Object with current, max, availability, and percentage usage
+ */
+export function getHouseholdLimitInfo(user: User | null, currentHouseholdCount: number) {
+  const subscription = getUserSubscription(user)
+
+  if (!subscription) {
+    return {
+      current: 0,
+      max: 0,
+      canAdd: false,
+      percentage: 0,
+      remaining: 0,
+      isUnlimited: false
+    }
+  }
+
+  const maxHouseholds = HOUSEHOLD_LIMITS[subscription.plan]
+  const isUnlimited = maxHouseholds >= 999
+  const remaining = Math.max(0, maxHouseholds - currentHouseholdCount)
+
+  // For unlimited plans, show utilization based on 20 as a reasonable cap for display
+  const displayMax = isUnlimited ? 20 : maxHouseholds
+  const percentage = displayMax > 0 ? Math.round((currentHouseholdCount / displayMax) * 100) : 0
+
+  return {
+    current: currentHouseholdCount,
+    max: maxHouseholds,
+    canAdd: currentHouseholdCount < maxHouseholds &&
+            (subscription.status === 'active' || subscription.status === 'trialing'),
+    percentage: Math.min(100, percentage),
+    remaining: isUnlimited ? 999 : remaining,
+    isUnlimited
+  }
+}
+
+/**
+ * Check if usage is nearing limit (>80%)
+ */
+export function isNearingLimit(current: number, limit: number): boolean {
+  if (limit === 999) return false // Unlimited
+  return (current / limit) >= 0.8
 }

@@ -6,7 +6,7 @@
  * while maintaining technical consistency in the codebase.
  */
 
-import { User } from '@/types'
+import { User, HOUSEHOLD_LIMITS, HOUSEHOLD_DUTY_LIMITS } from '@/types'
 import { canAccessFeature } from './feature-gates'
 
 /**
@@ -349,6 +349,9 @@ export function getFeatureComparisonMatrix(): Record<
           currentSeats: 0,
           maxExternalCaregivers: 0,
           currentExternalCaregivers: 0,
+          maxHouseholds: HOUSEHOLD_LIMITS[plan] || 1,
+          currentHouseholds: 0,
+          maxDutiesPerHousehold: HOUSEHOLD_DUTY_LIMITS[plan] || 999,
         },
         createdAt: new Date(),
         lastActiveAt: new Date(),

@@ -246,6 +246,26 @@ export const EXTERNAL_CAREGIVER_LIMITS = {
   family_premium: 999, // Unlimited
 } as const
 
+// Household Limits by Subscription Tier
+export const HOUSEHOLD_LIMITS = {
+  free: 1,              // Free: 1 household (trial)
+  single: 1,            // Single: 1 household
+  single_plus: 2,       // Single+: 2 households (your home + parent's home)
+  family_basic: 3,      // Family Basic: 3 households
+  family_plus: 5,       // Family Plus: 5 households (complex families)
+  family_premium: 999,  // Family Premium: Unlimited households
+} as const
+
+// Household Duty Limits by Subscription Tier
+export const HOUSEHOLD_DUTY_LIMITS = {
+  free: 5,              // Free: 5 duties per household (trial)
+  single: 999,          // Single: Unlimited duties (but only 1 household)
+  single_plus: 999,     // Single+: Unlimited duties
+  family_basic: 999,    // Family Basic: Unlimited duties
+  family_plus: 999,     // Family Plus: Unlimited duties
+  family_premium: 999,  // Family Premium: Unlimited duties
+} as const
+
 export interface UserSubscription {
   // Base plan tier
   plan: SubscriptionPlan
@@ -269,6 +289,11 @@ export interface UserSubscription {
   currentSeats: number // Current family member count
   maxExternalCaregivers: number // Non-billable professional caregivers
   currentExternalCaregivers: number // Current external caregiver count
+
+  // Household Management (NEW)
+  maxHouseholds: number // Maximum households allowed
+  currentHouseholds: number // Current household count
+  maxDutiesPerHousehold: number // Maximum duties per household
 
   // Feature add-ons (deprecated - now included in tiers)
   addons?: {
@@ -731,3 +756,6 @@ export * from './medical'
 
 // Caregiver Profile Types
 export * from './caregiver-profile'
+
+// Household Duties & Task Management
+export * from './household-duties'

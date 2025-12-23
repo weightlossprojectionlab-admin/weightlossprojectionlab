@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod'
+import type { HouseholdDuty } from './household-duties'
 
 // ============================================
 // ENUMS & CONSTANTS
@@ -247,8 +248,10 @@ export interface CaregiverDuties {
 
 /**
  * Standard household duty types
+ * @deprecated Use HouseholdDuty from './household-duties' instead
+ * Kept for backward compatibility only
  */
-export interface HouseholdDuty {
+export interface LegacyHouseholdDuty {
   /** Unique duty ID */
   id: string
   /** Duty type */
@@ -273,8 +276,9 @@ export interface HouseholdDuty {
 
 /**
  * Custom duty defined on the fly
+ * @deprecated Use HouseholdDuty with category 'custom' instead
  */
-export interface CustomDuty extends Omit<HouseholdDuty, 'type'> {
+export interface CustomDuty extends Omit<LegacyHouseholdDuty, 'type'> {
   type: 'custom'
   /** Custom duty description */
   description: string
@@ -523,8 +527,9 @@ export const CaregiverPreferencesSchema = z.object({
 
 /**
  * Household duty validation schema
+ * @deprecated Use schemas from './household-duties' instead
  */
-export const HouseholdDutySchema = z.object({
+export const LegacyHouseholdDutySchema = z.object({
   id: z.string().min(1),
   type: z.enum(['laundry', 'shopping', 'cleaning_bedroom', 'cleaning_bathroom', 'cleaning_kitchen', 'meal_prep', 'medication_management', 'transportation', 'companionship', 'personal_care', 'custom']),
   name: z.string().min(1).max(200),
@@ -539,8 +544,9 @@ export const HouseholdDutySchema = z.object({
 
 /**
  * Custom duty validation schema
+ * @deprecated Use schemas from './household-duties' instead
  */
-export const CustomDutySchema = HouseholdDutySchema.extend({
+export const CustomDutySchema = LegacyHouseholdDutySchema.extend({
   type: z.literal('custom'),
   description: z.string().min(1).max(1000),
   createdBy: z.string().min(1),
@@ -551,7 +557,7 @@ export const CustomDutySchema = HouseholdDutySchema.extend({
  * Caregiver duties validation schema
  */
 export const CaregiverDutiesSchema = z.object({
-  assignedDuties: z.array(HouseholdDutySchema),
+  assignedDuties: z.array(LegacyHouseholdDutySchema),
   customDuties: z.array(CustomDutySchema).optional()
 })
 
@@ -722,7 +728,7 @@ export function getRelationshipToPatient(
 export function getTotalAssignedDuties(profile: CaregiverProfile): number {
   if (!profile.duties) return 0
 
-  const standardDuties = profile.duties.assignedDuties.filter(d => d.assigned).length
+  const standardDuties = profile.duties.assignedDuties.filter(d => d.assignedTo && d.assignedTo.length > 0).length
   const customDuties = profile.duties.customDuties?.filter(d => d.assigned).length || 0
 
   return standardDuties + customDuties

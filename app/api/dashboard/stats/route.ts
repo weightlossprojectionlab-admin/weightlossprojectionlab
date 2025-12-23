@@ -64,8 +64,9 @@ export async function GET(request: NextRequest) {
         .get(),
 
       // Upcoming appointments (next 30 days)
-      adminDb.collection('appointments')
-        .where('userId', '==', userId)
+      adminDb.collection('users')
+        .doc(userId)
+        .collection('appointments')
         .where('dateTime', '>=', new Date().toISOString())
         .where('dateTime', '<=', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString())
         .orderBy('dateTime', 'asc')
@@ -98,10 +99,14 @@ export async function GET(request: NextRequest) {
     // Get patient IDs for additional queries
     const patientIds = patientsSnapshot.docs.map(doc => doc.id)
 
-    // Filter out deleted patients
+    // Filter out deleted patients (both legacy and soft-deleted)
     const activePatients = patientsSnapshot.docs.filter(doc => {
       const data = doc.data()
-      return data.name !== '[DELETED USER]'
+      // Exclude legacy deleted users
+      if (data.name === '[DELETED USER]') return false
+      // Exclude soft-deleted patients (HIPAA-compliant)
+      if (data.status === 'deleted' || data.status === 'archived') return false
+      return true
     })
 
     logger.info('[GET /api/dashboard/stats] Patients snapshot size', {

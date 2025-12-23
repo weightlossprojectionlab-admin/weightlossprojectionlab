@@ -159,11 +159,6 @@ const ENV_VARS: EnvVarGroup[] = [
         description: 'Public app URL (optional, defaults to http://localhost:3000)'
       },
       {
-        name: 'NEXT_PUBLIC_BASE_URL',
-        required: false,
-        description: 'Base URL for metadata (optional, defaults to http://localhost:3000)'
-      },
-      {
         name: 'NODE_ENV',
         required: false,
         description: 'Node environment (development, production, test)'

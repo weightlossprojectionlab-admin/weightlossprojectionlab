@@ -114,7 +114,15 @@ export async function GET(request: NextRequest) {
 
     // 3. Combine both lists and filter deleted patients
     const allPatients = [...ownedPatients, ...caregiverPatients]
-      .filter((patient: any) => patient.name !== '[DELETED USER]')
+      .filter((patient: any) => {
+        // Exclude legacy deleted users (marked with [DELETED USER])
+        if (patient.name === '[DELETED USER]') return false
+
+        // Exclude soft-deleted patients (HIPAA-compliant deletion)
+        if (patient.status === 'deleted' || patient.status === 'archived') return false
+
+        return true
+      })
 
     logger.info('[API /patients GET] All patients fetched successfully', {
       userId,
@@ -188,7 +196,13 @@ export async function POST(request: NextRequest) {
     const currentSeats = patientsSnapshot.docs
       .filter(doc => {
         const data = doc.data()
-        return data.name !== '[DELETED USER]' && data.countsAsSeat !== false
+        // Exclude legacy deleted users
+        if (data.name === '[DELETED USER]') return false
+        // Exclude soft-deleted patients (HIPAA-compliant)
+        if (data.status === 'deleted' || data.status === 'archived') return false
+        // Exclude patients that don't count as seats
+        if (data.countsAsSeat === false) return false
+        return true
       })
       .length
 

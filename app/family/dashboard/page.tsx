@@ -14,14 +14,17 @@ import Link from 'next/link'
 import { useFamilyRoles, getCurrentUserRole, useIsAccountOwner } from '@/hooks/useFamilyRoles'
 import { useInvitations } from '@/hooks/useInvitations'
 import { usePatients } from '@/hooks/usePatients'
+import { useHouseholds } from '@/hooks/useHouseholds'
 import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { InviteModal } from '@/components/family/InviteModal'
 import { TransferOwnershipModal } from '@/components/family/TransferOwnershipModal'
 import { HouseholdManager } from '@/components/households/HouseholdManager'
+import { DutyListView } from '@/components/household/DutyListView'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { ROLE_LABELS } from '@/lib/family-roles'
 import type { FamilyMember, FamilyInvitation } from '@/types/medical'
+import type { CaregiverProfile } from '@/types/caregiver'
 
 export default function FamilyDashboardPage() {
   return (
@@ -36,10 +39,16 @@ function FamilyDashboardContent() {
   const { familyMembers, loading: familyLoading, transferOwnership } = useFamilyRoles()
   const { sentInvitations, receivedInvitations, loading: invitationsLoading, acceptInvitation, declineInvitation, revokeInvitation, resendInvitation } = useInvitations()
   const { patients, loading: patientsLoading } = usePatients()
+  const { households, loading: householdsLoading } = useHouseholds()
 
-  const [activeTab, setActiveTab] = useState<'members' | 'invitations' | 'access' | 'households'>('members')
+  // Check URL for tab parameter
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const initialTab = (searchParams?.get('tab') as 'members' | 'invitations' | 'access' | 'households' | 'duties') || 'members'
+
+  const [activeTab, setActiveTab] = useState<'members' | 'invitations' | 'access' | 'households' | 'duties'>(initialTab)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showTransferModal, setShowTransferModal] = useState(false)
+  const [selectedHouseholdForDuties, setSelectedHouseholdForDuties] = useState<string | null>(null)
 
   // Get current user's role and permissions
   const currentUserRole = getCurrentUserRole(familyMembers, user?.uid || '')
@@ -51,7 +60,7 @@ function FamilyDashboardContent() {
     return familyMembers.filter(m => m.status === 'accepted')
   }, [familyMembers])
 
-  const loading = familyLoading || invitationsLoading || patientsLoading
+  const loading = familyLoading || invitationsLoading || patientsLoading || householdsLoading
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'N/A'
@@ -168,6 +177,16 @@ function FamilyDashboardContent() {
             }`}
           >
             Households
+          </button>
+          <button
+            onClick={() => setActiveTab('duties')}
+            className={`px-4 py-3 font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === 'duties'
+                ? 'border-primary text-primary dark:text-purple-400'
+                : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-200'
+            }`}
+          >
+            🏠 Household Duties
           </button>
         </div>
 
@@ -387,6 +406,94 @@ function FamilyDashboardContent() {
             {activeTab === 'households' && (
               <div>
                 <HouseholdManager />
+              </div>
+            )}
+
+            {/* Household Duties Tab */}
+            {activeTab === 'duties' && (
+              <div className="space-y-6">
+                {/* Household Selector */}
+                {households.length === 0 ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                    <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+                      No Households Found
+                    </h3>
+                    <p className="text-yellow-800 mb-4">
+                      You need to create a household before you can assign household duties.
+                    </p>
+                    <Link
+                      href="/family-admin/households"
+                      className="inline-block px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
+                    >
+                      Create Household
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    {/* Household Selection */}
+                    <div className="bg-card rounded-lg border border-border p-6">
+                      <h3 className="text-lg font-semibold text-foreground mb-4">
+                        Select Household to Manage Duties
+                      </h3>
+                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        {households.map(household => (
+                          <button
+                            key={household.id}
+                            onClick={() => setSelectedHouseholdForDuties(household.id)}
+                            className={`p-4 rounded-lg border-2 transition-all text-left ${
+                              selectedHouseholdForDuties === household.id
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
+                            <div className="font-semibold text-foreground">{household.name}</div>
+                            {household.nickname && (
+                              <div className="text-sm text-muted-foreground mt-1">
+                                {household.nickname}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground mt-2">
+                              {household.memberIds?.length || 0} members
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Duties List */}
+                    {selectedHouseholdForDuties && (
+                      <div>
+                        <DutyListView
+                          householdId={selectedHouseholdForDuties}
+                          householdName={households.find(h => h.id === selectedHouseholdForDuties)?.name || ''}
+                          households={households}
+                          onHouseholdChange={setSelectedHouseholdForDuties}
+                          caregivers={activeMembers.map(member => ({
+                            id: member.id,
+                            userId: member.userId || member.id,
+                            name: member.name,
+                            email: member.email,
+                            familyRole: member.familyRole,
+                            patientsAccess: [],
+                            patientRelationships: {},
+                            permissions: member.permissions,
+                            availabilityStatus: 'available' as const,
+                            preferences: {
+                              notificationMethods: ['email'],
+                              language: 'en',
+                              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                            },
+                            joinedAt: member.acceptedAt || new Date().toISOString(),
+                            managedBy: user?.uid || '',
+                            profileVisibility: 'family_only' as const,
+                            shareContactInfo: true,
+                            shareAvailability: true
+                          } as CaregiverProfile))}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </>

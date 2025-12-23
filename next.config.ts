@@ -53,15 +53,8 @@ const nextConfig: NextConfig = {
     // Use timestamp to force fresh builds
     return `build-${Date.now()}`
   },
-  // Turbopack disabled due to internal error with middleware injection
-  // turbopack: {
-  //   rules: {
-  //     '*.svg': {
-  //       loaders: ['@svgr/webpack'],
-  //       as: '*.js'
-  //     }
-  //   }
-  // },
+  // Empty turbopack config to silence webpack/turbopack warning
+  turbopack: {},
   images: {
     // Disable image optimization for Capacitor static export
     unoptimized: process.env.CAPACITOR_BUILD === 'true',

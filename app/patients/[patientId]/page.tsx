@@ -93,7 +93,7 @@ function PatientDetailContent() {
   const [medications, setMedications] = useState<PatientMedication[]>([])
   const [loadingMedications, setLoadingMedications] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
-  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments'>(tabParam || 'vitals')
+  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'settings'>(tabParam || 'vitals')
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
   const [showVitalsWizard, setShowVitalsWizard] = useState(false)
   const [showVitalsSummary, setShowVitalsSummary] = useState(false)
@@ -242,6 +242,44 @@ function PatientDetailContent() {
       toast.error(error.message || 'Failed to fix starting weight')
     } finally {
       setFixingStartWeight(false)
+    }
+  }
+
+  // Handler to delete/archive patient
+  const handleDeletePatient = async () => {
+    if (!patient) return
+
+    try {
+      const user = auth.currentUser
+      if (!user) {
+        throw new Error('Not authenticated')
+      }
+
+      const token = await user.getIdToken()
+      const response = await fetch(`/api/patients/${patientId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          reason: 'User requested archival via settings page'
+        })
+      })
+
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.error || 'Failed to archive patient')
+      }
+
+      toast.success(`${patient.name} has been archived successfully`)
+      logger.info('[PatientDetail] Patient archived', { patientId, patientName: patient.name })
+
+      // Redirect to patients list after successful deletion
+      router.push('/patients')
+    } catch (error: any) {
+      logger.error('[PatientDetail] Error archiving patient', error)
+      toast.error(error.message || 'Failed to archive patient')
     }
   }
 
@@ -607,6 +645,31 @@ function PatientDetailContent() {
                       <span className="text-center lg:text-left leading-tight font-medium">Upload Documents</span>
                     </button>
                   )}
+                  <Link
+                    href={`/patients/${patientId}/duties`}
+                    className="w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
+                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
+                  >
+                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">🏠</span>
+                    <span className="text-center lg:text-left leading-tight font-medium">Household Duties</span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setActiveTab('settings')
+                      setTimeout(() => {
+                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
+                    }}
+                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
+                      activeTab === 'settings'
+                        ? 'bg-primary text-white'
+                        : 'bg-muted hover:bg-muted/80 text-foreground'
+                    }`}
+                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
+                  >
+                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">⚙️</span>
+                    <span className="text-center lg:text-left leading-tight font-medium">Settings</span>
+                  </button>
                 </div>
 
                 {/* Document Upload Form */}
@@ -701,6 +764,16 @@ function PatientDetailContent() {
                   }`}
                 >
                   🍽️ Recipes
+                </button>
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'settings'
+                      ? 'bg-primary text-white'
+                      : 'bg-card border border-border text-foreground'
+                  }`}
+                >
+                  ⚙️ Settings
                 </button>
               </div>
             </div>
@@ -1395,6 +1468,51 @@ function PatientDetailContent() {
               )}
             </div>
           </div>
+          )}
+
+          {/* Settings Tab */}
+          {activeTab === 'settings' && (
+            <div className="overflow-y-auto max-h-[calc(100vh-200px)] space-y-6">
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-bold text-foreground mb-4">
+                  Patient Settings
+                </h2>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Manage {patient.name}'s profile settings and data
+                </p>
+
+                {/* Danger Zone - Delete Patient */}
+                <div className="border-t border-border pt-6">
+                  <h3 className="text-md font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <span className="text-red-500">⚠️</span>
+                    Danger Zone
+                  </h3>
+                  <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-red-900 dark:text-red-300 mb-2">
+                      Archive Patient Profile
+                    </h4>
+                    <p className="text-sm text-red-700 dark:text-red-400 mb-4">
+                      Archiving will hide this patient from your family members list. All health data will be preserved for 30 days before permanent deletion. This action requires confirmation.
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to archive ${patient.name}?\n\nThis will:\n- Hide ${patient.name} from your family members list\n- Preserve all health data for 30 days\n- Allow you to restore the profile within 30 days\n\nType the patient's name to confirm.`)) {
+                          const confirmation = prompt(`Type "${patient.name}" to confirm deletion:`)
+                          if (confirmation === patient.name) {
+                            handleDeletePatient()
+                          } else if (confirmation !== null) {
+                            toast.error('Name did not match. Deletion cancelled.')
+                          }
+                        }
+                      }}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Archive Patient
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
           {/* End Main Content Area */}

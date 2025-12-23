@@ -414,6 +414,13 @@ function FamilyAdminDashboardContent() {
                       href="/family-admin/invites"
                       color="teal"
                     />
+                    <ToolCard
+                      title="Household Duties"
+                      description="Assign and track household tasks and responsibilities"
+                      icon={<span className="text-2xl">🏠</span>}
+                      href="/family/dashboard?tab=duties"
+                      color="violet"
+                    />
                   </div>
                 </section>
               </div>
@@ -649,7 +656,8 @@ function ToolCard({ title, description, icon, href, color }: any) {
     orange: 'bg-orange-500',
     lime: 'bg-lime-500',
     emerald: 'bg-emerald-500',
-    slate: 'bg-slate-500'
+    slate: 'bg-slate-500',
+    violet: 'bg-violet-500'
   }
 
   return (

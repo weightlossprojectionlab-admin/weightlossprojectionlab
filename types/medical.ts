@@ -125,6 +125,12 @@ export interface PatientProfile {
   // Onboarding status
   vitalsComplete?: boolean // true if height + initial weight provided
 
+  // Soft Delete / Archive Support (HIPAA compliance)
+  status?: 'active' | 'deleted' | 'archived' // Defaults to 'active'
+  deletedAt?: string // ISO 8601 - When patient was soft-deleted
+  deletedBy?: string // User ID who deleted the patient
+  deletionReason?: string // Why the patient was deleted (audit trail)
+
   // Metadata
   createdAt: string // ISO 8601
   lastModified: string // ISO 8601
@@ -719,7 +725,7 @@ export interface AppointmentForm {
 // ==================== CAREGIVER ACTION ITEMS ====================
 
 export type ActionItemPriority = 'urgent' | 'this_week' | 'this_month' | 'ongoing'
-export type ActionItemCategory = 'medication' | 'appointment' | 'shopping' | 'monitoring' | 'nutrition' | 'general'
+export type ActionItemCategory = 'medication' | 'appointment' | 'shopping' | 'monitoring' | 'nutrition' | 'household_duty' | 'general'
 
 export interface CaregiverActionItem {
   id: string
