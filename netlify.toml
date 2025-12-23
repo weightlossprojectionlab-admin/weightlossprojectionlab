@@ -41,6 +41,7 @@
 # Optional:
 # - NEXT_PUBLIC_BASE_URL
 # - USDA_API_KEY (for nutrition validation)
+# - CRON_SECRET (for scheduled functions authentication)
 
 # Cache static assets for 1 year
 [[headers]]
