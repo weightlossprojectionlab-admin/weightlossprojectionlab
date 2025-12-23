@@ -73,9 +73,9 @@ function shouldBypassCsrf(pathname: string): boolean {
 }
 
 /**
- * Main middleware function
+ * Main proxy function (Next.js 15+ pattern)
  */
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const method = request.method
 
@@ -179,7 +179,8 @@ export function middleware(request: NextRequest) {
   return NextResponse.next()
 }
 
-// Apply middleware only to API routes
+// Apply proxy only to API routes
 export const config = {
   matcher: '/api/:path*',
+  runtime: 'nodejs', // Use Node.js runtime instead of Edge to avoid env var limits
 }
