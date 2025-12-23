@@ -236,11 +236,11 @@ export function DutyListView({
 
     // Patient-specific grocery shopping
     if (duty.forPatientId) {
-      return `/shopping?memberId=${duty.forPatientId}`
+      return `/shopping?memberId=${duty.forPatientId}&dutyId=${duty.id}`
     }
 
     // Household-level grocery shopping
-    return `/shopping?householdId=${duty.householdId}`
+    return `/shopping?householdId=${duty.householdId}&dutyId=${duty.id}`
   }
 
   const closeFormModal = () => {

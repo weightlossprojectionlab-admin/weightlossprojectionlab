@@ -53,6 +53,7 @@ function ShoppingListContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const memberId = searchParams.get('memberId') // Patient/member ID from URL
+  const dutyId = searchParams.get('dutyId') // Household duty ID from URL
   const userId = auth.currentUser?.uid || ''
 
   // Use member-specific hook when viewing from patient page
@@ -703,6 +704,7 @@ function ShoppingListContent() {
             pendingItems={neededItems.filter(item => !item.inStock)}
             onConfirm={refresh}
             memberId={memberId || undefined}
+            dutyId={dutyId || undefined}
           />
 
           {/* Health-Based Suggestions (Member-Specific) */}

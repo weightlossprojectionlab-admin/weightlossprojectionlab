@@ -2,19 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
+import { completeDuty } from '@/lib/duty-completion-service'
 
 /**
  * POST /api/shopping/confirm-purchases
  *
  * Confirm purchase of shopping items (like receiving a purchase order)
  * Updates items to inStock=true and records purchase metadata
+ * Optionally completes associated household duty
  *
  * Body:
  * {
  *   itemIds: string[],        // Shopping item IDs to confirm
  *   store?: string,           // Optional: store name
  *   totalAmount?: number,     // Optional: receipt total
- *   purchaseDate?: string     // Optional: ISO date string, defaults to now
+ *   purchaseDate?: string,    // Optional: ISO date string, defaults to now
+ *   dutyId?: string           // Optional: household duty to complete
  * }
  */
 export async function POST(request: NextRequest) {
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const { itemIds, store, totalAmount, purchaseDate } = body
+    const { itemIds, store, totalAmount, purchaseDate, dutyId } = body
 
     if (!Array.isArray(itemIds) || itemIds.length === 0) {
       return NextResponse.json({ error: 'itemIds array is required' }, { status: 400 })
@@ -177,10 +180,62 @@ export async function POST(request: NextRequest) {
       store,
       totalAmount,
       successCount,
-      failedCount
+      failedCount,
+      dutyId
     })
 
-    return NextResponse.json({
+    // Complete associated household duty if provided
+    let dutyCompletion: any = null
+    if (dutyId && successCount > 0) {
+      try {
+        // Get user's name for notification
+        const userDoc = await adminDb.collection('users').doc(userId).get()
+        const userName = userDoc.data()?.displayName || userDoc.data()?.email || 'Someone'
+
+        // Complete the duty
+        const dutyResult = await completeDuty(dutyId, {
+          completedBy: userId,
+          completedByName: userName,
+          notes: `Shopping completed at ${store || 'store'}. Purchased ${successCount} item(s).`
+        })
+
+        if (dutyResult.success) {
+          logger.info('Household duty auto-completed from shopping', {
+            dutyId,
+            userId,
+            itemCount: successCount
+          })
+          dutyCompletion = {
+            success: true,
+            dutyId,
+            dutyName: dutyResult.duty?.name
+          }
+        } else {
+          logger.warn('Failed to auto-complete duty from shopping', {
+            dutyId,
+            userId,
+            error: dutyResult.error
+          })
+          dutyCompletion = {
+            success: false,
+            dutyId,
+            error: dutyResult.error
+          }
+        }
+      } catch (dutyError) {
+        logger.error('Error auto-completing duty from shopping', dutyError as Error, {
+          dutyId,
+          userId
+        })
+        dutyCompletion = {
+          success: false,
+          dutyId,
+          error: 'Failed to complete duty'
+        }
+      }
+    }
+
+    const response: any = {
       success: true,
       message: `Confirmed purchase of ${successCount} item(s)`,
       summary: {
@@ -189,7 +244,14 @@ export async function POST(request: NextRequest) {
         failed: failedCount
       },
       results
-    })
+    }
+
+    // Include duty completion result if applicable
+    if (dutyCompletion) {
+      response.dutyCompletion = dutyCompletion
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     logger.error('Error confirming purchases', error as Error)
     return NextResponse.json(

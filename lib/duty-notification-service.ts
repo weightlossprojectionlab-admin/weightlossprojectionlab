@@ -102,10 +102,10 @@ function getDutyActionUrl(duty: HouseholdDuty): string {
   if (duty.category === 'grocery_shopping' || duty.category === 'shopping') {
     // Patient-specific grocery shopping → member's shopping list
     if (duty.forPatientId) {
-      return `/shopping?memberId=${duty.forPatientId}`
+      return `/shopping?memberId=${duty.forPatientId}&dutyId=${duty.id}`
     }
     // Household-level grocery shopping → household shopping list
-    return `/shopping?householdId=${duty.householdId}`
+    return `/shopping?householdId=${duty.householdId}&dutyId=${duty.id}`
   }
 
   // Default: duty details page

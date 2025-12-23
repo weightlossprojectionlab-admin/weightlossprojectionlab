@@ -26,9 +26,10 @@ interface PurchaseConfirmationProps {
   pendingItems: ShoppingItem[]
   onConfirm: () => void // Callback to refresh the shopping list
   memberId?: string // Optional member/patient ID for recipe link
+  dutyId?: string // Optional household duty ID to complete
 }
 
-export function PurchaseConfirmation({ pendingItems, onConfirm, memberId }: PurchaseConfirmationProps) {
+export function PurchaseConfirmation({ pendingItems, onConfirm, memberId, dutyId }: PurchaseConfirmationProps) {
   const router = useRouter()
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
@@ -100,7 +101,8 @@ export function PurchaseConfirmation({ pendingItems, onConfirm, memberId }: Purc
         body: JSON.stringify({
           itemIds: Array.from(selectedItems),
           store: store || undefined,
-          purchaseDate: new Date().toISOString()
+          purchaseDate: new Date().toISOString(),
+          dutyId: dutyId || undefined
         })
       })
 
@@ -125,21 +127,41 @@ export function PurchaseConfirmation({ pendingItems, onConfirm, memberId }: Purc
         const targetId = memberId || defaultMemberId
         const recipeUrl = targetId ? `/patients/${targetId}?tab=recipes` : '/recipes'
 
-        toast.success(
-          (t) => (
-            <div className="flex flex-col gap-2">
-              <span className="font-semibold">✓ Added {result.summary.successful} item(s) to inventory!</span>
-              <a
-                href={recipeUrl}
-                className="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded font-medium inline-block text-center"
-                onClick={() => toast.dismiss(t.id)}
-              >
-                🍳 See What You Can Cook Now →
-              </a>
-            </div>
-          ),
-          { duration: 8000 }
-        )
+        // Enhanced success message with duty completion status
+        if (result.dutyCompletion?.success) {
+          toast.success(
+            (t) => (
+              <div className="flex flex-col gap-2">
+                <span className="font-semibold">✓ Added {result.summary.successful} item(s) to inventory!</span>
+                <span className="text-sm text-green-700 dark:text-green-300">✓ Duty completed: {result.dutyCompletion.dutyName}</span>
+                <a
+                  href={recipeUrl}
+                  className="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded font-medium inline-block text-center"
+                  onClick={() => toast.dismiss(t.id)}
+                >
+                  🍳 See What You Can Cook Now →
+                </a>
+              </div>
+            ),
+            { duration: 10000 }
+          )
+        } else {
+          toast.success(
+            (t) => (
+              <div className="flex flex-col gap-2">
+                <span className="font-semibold">✓ Added {result.summary.successful} item(s) to inventory!</span>
+                <a
+                  href={recipeUrl}
+                  className="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded font-medium inline-block text-center"
+                  onClick={() => toast.dismiss(t.id)}
+                >
+                  🍳 See What You Can Cook Now →
+                </a>
+              </div>
+            ),
+            { duration: 8000 }
+          )
+        }
       }
 
       if (result.summary.failed > 0) {
