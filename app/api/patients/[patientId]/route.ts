@@ -246,15 +246,83 @@ export async function DELETE(
       )
     }
 
-    // Delete patient document
-    // Note: In production, you may want to soft-delete or archive instead
-    await patientRef.delete()
+    const patientData = patientDoc.data()
+    if (!patientData) {
+      logger.error('[API /patients/[id] DELETE] Patient document exists but has no data', undefined, { userId, ownerUserId, patientId })
+      return NextResponse.json(
+        { success: false, error: 'Patient data not found' },
+        { status: 404 }
+      )
+    }
 
-    logger.info('[API /patients/[id] DELETE] Patient deleted successfully', { userId, ownerUserId, patientId })
+    // Parse request body for deletion reason (optional but recommended)
+    let deletionReason = 'No reason provided'
+    try {
+      const body = await request.json()
+      if (body.reason) {
+        deletionReason = body.reason
+      }
+    } catch {
+      // Body parsing failed - continue with default reason
+    }
+
+    // Soft delete: Update status instead of hard delete
+    // This preserves data for HIPAA 6-year retention requirement
+    const deletionData = {
+      status: 'deleted',
+      deletedAt: new Date().toISOString(),
+      deletedBy: userId,
+      deletionReason: deletionReason
+    }
+
+    await patientRef.update(deletionData)
+
+    // Create audit log for deletion (HIPAA compliance)
+    try {
+      const auditLogRef = adminDb
+        .collection('users')
+        .doc(ownerUserId)
+        .collection('auditLogs')
+        .doc()
+
+      await auditLogRef.set({
+        entityType: 'patient',
+        entityId: patientId,
+        entityName: patientData.name || 'Unknown Patient',
+        patientId: patientId,
+        userId: ownerUserId,
+        action: 'deleted',
+        performedBy: userId,
+        performedByName: patientData.name || 'Unknown',
+        performedAt: new Date().toISOString(),
+        changes: [{
+          field: 'status',
+          oldValue: patientData.status || 'active',
+          newValue: 'deleted',
+          fieldLabel: 'Patient Status',
+          dataType: 'string'
+        }],
+        metadata: {
+          deletionReason: deletionReason,
+          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+          userAgent: request.headers.get('user-agent') || 'unknown'
+        }
+      })
+    } catch (auditError: any) {
+      // Log but don't fail the operation if audit logging fails
+      logger.error('[API /patients/[id] DELETE] Failed to create audit log', auditError instanceof Error ? auditError : undefined)
+    }
+
+    logger.info('[API /patients/[id] DELETE] Patient soft-deleted successfully', {
+      userId,
+      ownerUserId,
+      patientId,
+      reason: deletionReason
+    })
 
     return NextResponse.json({
       success: true,
-      message: 'Patient deleted successfully'
+      message: 'Patient archived successfully. Data will be retained for 30 days before permanent deletion.'
     })
 
   } catch (error: any) {
