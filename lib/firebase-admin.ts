@@ -52,10 +52,33 @@ const initializeFirebaseAdmin = (): App => {
       throw error
     }
 
-    // Ensure proper PEM format with trailing newline
-    if (!privateKey.endsWith('\n')) {
-      privateKey += '\n'
+    // Clean up the private key format to ensure proper PEM structure
+    // Extract the header, body, and footer
+    const beginMarker = '-----BEGIN PRIVATE KEY-----'
+    const endMarker = '-----END PRIVATE KEY-----'
+
+    const beginIndex = privateKey.indexOf(beginMarker)
+    const endIndex = privateKey.indexOf(endMarker)
+
+    if (beginIndex === -1 || endIndex === -1) {
+      throw new Error('Invalid private key: markers not found')
     }
+
+    // Extract the base64 content between markers
+    const base64Content = privateKey
+      .substring(beginIndex + beginMarker.length, endIndex)
+      .replace(/\s/g, '') // Remove ALL whitespace (spaces, newlines, tabs)
+
+    // Reconstruct the key in proper PEM format with newlines every 64 characters
+    const formattedBase64 = base64Content.match(/.{1,64}/g)?.join('\n') || base64Content
+
+    // Rebuild the complete private key
+    privateKey = `${beginMarker}\n${formattedBase64}\n${endMarker}\n`
+
+    logger.debug('Private key formatted and validated', {
+      keyLength: privateKey.length,
+      base64Length: base64Content.length
+    })
 
     logger.debug('Private key parsed successfully', { keyLength: privateKey.length })
 
