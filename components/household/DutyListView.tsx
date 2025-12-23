@@ -31,6 +31,9 @@ import { DutyFormModal } from './DutyFormModal'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
+import { useUser } from '@/hooks/useUser'
+import { canAddDutyToHousehold } from '@/lib/feature-gates'
+import { UpgradePrompt } from '@/components/subscription'
 
 interface DutyListViewProps {
   householdId: string // PRIMARY: Which household to show duties for
@@ -53,6 +56,7 @@ export function DutyListView({
   forPatientId,
   forPatientName
 }: DutyListViewProps) {
+  const { user } = useUser()
   const [duties, setDuties] = useState<HouseholdDuty[]>([])
   const [stats, setStats] = useState<DutyStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -61,6 +65,9 @@ export function DutyListView({
   const [editingDuty, setEditingDuty] = useState<HouseholdDuty | undefined>()
   const [completingDuties, setCompletingDuties] = useState<Set<string>>(new Set())
   const [deletingDuties, setDeletingDuties] = useState<Set<string>>(new Set())
+
+  // Check duty limit for this household
+  const dutyLimitCheck = canAddDutyToHousehold(user, duties.length, householdId)
 
   useEffect(() => {
     fetchDuties()
@@ -346,14 +353,34 @@ export function DutyListView({
           </button>
         </div>
 
-        <button
-          onClick={() => setShowFormModal(true)}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 flex items-center gap-2 whitespace-nowrap"
-        >
-          <PlusIcon className="w-5 h-5" />
-          <span>Add Duty</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {!dutyLimitCheck.allowed && dutyLimitCheck.limit && dutyLimitCheck.currentUsage !== undefined && (
+            <span className="text-sm text-muted-foreground">
+              {dutyLimitCheck.currentUsage}/{dutyLimitCheck.limit} duties used
+            </span>
+          )}
+          <button
+            onClick={() => setShowFormModal(true)}
+            disabled={!dutyLimitCheck.allowed}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+            title={!dutyLimitCheck.allowed ? dutyLimitCheck.message : undefined}
+          >
+            <PlusIcon className="w-5 h-5" />
+            <span>Add Duty</span>
+          </button>
+        </div>
       </div>
+
+      {/* Upgrade Prompt */}
+      {!dutyLimitCheck.allowed && (
+        <UpgradePrompt
+          feature="household-management"
+          featureName="Household Duties"
+          message={dutyLimitCheck.message}
+          variant="banner"
+          upgradeUrl={dutyLimitCheck.upgradeUrl}
+        />
+      )}
 
       {/* Duty List */}
       {duties.length === 0 ? (
@@ -364,12 +391,14 @@ export function DutyListView({
               ? 'Create your first household duty to get started.'
               : `No ${filter} duties at this time.`}
           </p>
-          <button
-            onClick={() => setShowFormModal(true)}
-            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90"
-          >
-            Create First Duty
-          </button>
+          {dutyLimitCheck.allowed && (
+            <button
+              onClick={() => setShowFormModal(true)}
+              className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90"
+            >
+              Create First Duty
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

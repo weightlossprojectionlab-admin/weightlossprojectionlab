@@ -75,6 +75,14 @@ export const MARKETING_TO_TECHNICAL_FEATURES: Record<string, string[]> = {
     'family-meal-planning',
   ],
 
+  // Household Care Management (NEW)
+  'household-care-management': [
+    'household-management',
+    'household-duties',
+    'duty-notifications',
+    'duty-action-items',
+  ],
+
   // Family Health Dashboard
   'family-health-dashboard': [
     'family-health-dashboard',
@@ -158,6 +166,9 @@ export const MARKETING_FEATURE_DESCRIPTIONS: Record<string, string> = {
 
   'family-features':
     'Full household management with shared shopping lists, meal planning, and role-based access.',
+
+  'household-care-management':
+    'Organize household responsibilities with task tracking, reminders, and shopping integration.',
 
   'family-health-dashboard':
     'Unified dashboard to monitor health metrics across all family members in one view.',

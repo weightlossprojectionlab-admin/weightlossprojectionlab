@@ -17,6 +17,8 @@ import {
 import { logger } from '@/lib/logger'
 import { notifyDutyAssigned } from '@/lib/duty-notification-service'
 import { scheduleDutyNotifications } from '@/lib/duty-scheduler-service'
+import { canAddDutyToHousehold } from '@/lib/feature-gates'
+import { User } from '@/types'
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -243,6 +245,30 @@ export async function POST(request: NextRequest) {
     if (!permissionCheck.allowed) {
       return NextResponse.json(
         { error: permissionCheck.message },
+        { status: 403 }
+      )
+    }
+
+    // Check duty limit for this household
+    const dutiesSnapshot = await db.collection('household_duties')
+      .where('householdId', '==', body.householdId)
+      .where('isActive', '==', true)
+      .get()
+    const currentDuties = dutiesSnapshot.size
+
+    // Get user object for feature gating
+    const userDoc = await db.collection('users').doc(authResult.userId).get()
+    const user = userDoc.exists ? { id: authResult.userId, ...userDoc.data() } as User : null
+
+    const dutyLimitCheck = canAddDutyToHousehold(user, currentDuties, body.householdId)
+    if (!dutyLimitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: dutyLimitCheck.message,
+          upgradeUrl: dutyLimitCheck.upgradeUrl,
+          currentUsage: dutyLimitCheck.currentUsage,
+          limit: dutyLimitCheck.limit
+        },
         { status: 403 }
       )
     }
