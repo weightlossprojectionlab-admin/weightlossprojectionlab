@@ -322,6 +322,35 @@ export async function POST(request: NextRequest) {
     const assignedByUser = await db.collection('users').doc(authResult.userId).get()
     const assignedByName = assignedByUser.data()?.displayName || assignedByUser.data()?.email || 'Someone'
 
+    // Create action_items for each assigned caregiver (shows in Tasks tab)
+    for (const caregiverId of body.assignedTo) {
+      try {
+        await db.collection('action_items').add({
+          userId: caregiverId,
+          patientId: body.forPatientId,
+          task: body.name,
+          category: 'household' as const,
+          priority: body.priority === 'urgent' ? 'urgent' as const :
+                   body.priority === 'high' ? 'this_week' as const :
+                   body.priority === 'medium' ? 'this_month' as const : 'ongoing' as const,
+          details: body.description ? [body.description] : undefined,
+          completed: false,
+          generatedAt: now,
+          dueDate: nextDueDate,
+          reminderSent: false,
+          createdAt: now,
+          lastModified: now,
+          // Link to the duty for reference
+          sourceReportId: docRef.id // Using this field to link to duty
+        })
+      } catch (error) {
+        logger.error('Failed to create action_item for caregiver', error as Error, {
+          caregiverId,
+          dutyId: docRef.id
+        })
+      }
+    }
+
     // Send notifications to assigned caregivers (non-blocking)
     notifyDutyAssigned(createdDuty, assignedByName).catch(error => {
       logger.error('Failed to send duty assigned notification', error as Error, { dutyId: docRef.id })

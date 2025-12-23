@@ -103,6 +103,33 @@ export async function POST(
     const completedByUser = await db.collection('users').doc(authResult.userId).get()
     const completedByName = completedByUser.data()?.displayName || completedByUser.data()?.email || 'Someone'
 
+    // Mark corresponding action_item as completed
+    try {
+      const actionItemsSnapshot = await db.collection('action_items')
+        .where('sourceReportId', '==', dutyId)
+        .where('userId', '==', authResult.userId)
+        .where('completed', '==', false)
+        .get()
+
+      const batch = db.batch()
+      actionItemsSnapshot.docs.forEach(doc => {
+        batch.update(doc.ref, {
+          completed: true,
+          completedAt: now,
+          completedBy: authResult.userId,
+          lastModified: now
+        })
+      })
+      await batch.commit()
+
+      logger.info('Marked action_items as completed', {
+        dutyId,
+        actionItemCount: actionItemsSnapshot.size
+      })
+    } catch (error) {
+      logger.error('Failed to update action_items', error as Error, { dutyId })
+    }
+
     // Send completion notifications (non-blocking)
     notifyDutyCompleted(updatedDuty, completedByName).catch(error => {
       logger.error('Failed to send duty completed notification', error as Error, { dutyId })
