@@ -182,5 +182,4 @@ export default function proxy(request: NextRequest) {
 // Apply proxy only to API routes
 export const config = {
   matcher: '/api/:path*',
-  runtime: 'nodejs', // Use Node.js runtime instead of Edge to avoid env var limits
 }
