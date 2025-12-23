@@ -6,27 +6,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractTextFromImageWithGemini } from '@/lib/ocr-gemini'
 import { logger } from '@/lib/logger'
-import { initializeApp, getApps, cert } from 'firebase-admin/app'
-import { getStorage } from 'firebase-admin/storage'
+import { getAdminStorage } from '@/lib/firebase-admin'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60 // 60 seconds for complex documents
 
-// Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-  try {
-    initializeApp({
-      credential: cert({
-        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      }),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET
-    })
-  } catch (error) {
-    logger.error('[Gemini Vision API] Firebase Admin initialization failed', error as Error)
-  }
-}
+// Firebase Admin is initialized centrally in @/lib/firebase-admin
+// No need to initialize here - just import and use the getter functions
 
 /**
  * Fetch image from Firebase Storage or external URL and convert to base64
@@ -46,7 +32,8 @@ async function fetchImageAsBase64(url: string): Promise<string> {
         logger.info('[Gemini Vision API] Storage path extracted', { path: storagePath })
 
         // Get file from Firebase Storage using Admin SDK
-        const bucket = getStorage().bucket()
+        const storage = getAdminStorage()
+        const bucket = storage.bucket()
         const file = bucket.file(storagePath)
 
         const [buffer] = await file.download()
