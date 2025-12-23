@@ -52,21 +52,23 @@ export async function POST(
 
     const now = new Date().toISOString()
 
-    // Create completion record
-    const completion: Omit<DutyCompletion, 'id'> = {
+    // Create completion record (only include patientId if it exists)
+    const completion: Partial<DutyCompletion> = {
       dutyId,
-      patientId: duty.forPatientId,
       completedBy: authResult.userId,
       completedAt: now,
-      duration: body.duration,
-      rating: body.rating,
-      feedback: body.feedback,
-      issuesEncountered: body.issuesEncountered,
-      photos: body.photos,
-      subtasksCompleted: body.subtasksCompleted,
-      notes: body.notes,
       createdAt: now
     }
+
+    // Only add optional fields if they have values
+    if (duty.forPatientId) completion.patientId = duty.forPatientId
+    if (body.duration) completion.duration = body.duration
+    if (body.rating) completion.rating = body.rating
+    if (body.feedback) completion.feedback = body.feedback
+    if (body.issuesEncountered) completion.issuesEncountered = body.issuesEncountered
+    if (body.photos) completion.photos = body.photos
+    if (body.subtasksCompleted) completion.subtasksCompleted = body.subtasksCompleted
+    if (body.notes) completion.notes = body.notes
 
     await db.collection('duty_completions').add(completion)
 
