@@ -6,6 +6,7 @@ import {
   UpdateDutyRequest
 } from '@/types/household-duties'
 import { logger } from '@/lib/logger'
+import { scheduleDutyNotifications } from '@/lib/duty-scheduler-service'
 
 /**
  * GET /api/household-duties/[dutyId]
@@ -134,6 +135,16 @@ export async function PATCH(
     }
 
     logger.info('Household duty updated', { dutyId, updates })
+
+    // Reschedule notifications if due date or notification settings changed
+    if (body.nextDueDate !== undefined ||
+        body.frequency !== undefined ||
+        body.reminderEnabled !== undefined ||
+        body.notifyOnOverdue !== undefined) {
+      scheduleDutyNotifications(updatedDuty).catch(error => {
+        logger.error('Failed to reschedule duty notifications', error as Error, { dutyId })
+      })
+    }
 
     return NextResponse.json(updatedDuty)
   } catch (error) {

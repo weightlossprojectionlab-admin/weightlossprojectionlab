@@ -1,7 +1,7 @@
 /**
  * Netlify Scheduled Function: Duty Notifications
  *
- * Runs every 30 minutes to send duty reminders and overdue alerts
+ * Runs hourly to process scheduled duty notifications (optimized from 30 minutes)
  */
 
 import { Handler, schedule } from '@netlify/functions'
@@ -49,5 +49,5 @@ const handler: Handler = async () => {
   }
 }
 
-// Schedule to run every 30 minutes
-export default schedule('*/30 * * * *', handler)
+// Schedule to run hourly (every hour at minute 0)
+export default schedule('0 * * * *', handler)

@@ -506,6 +506,7 @@ export interface UpdateDutyRequest {
   assignedTo?: string[]
   frequency?: DutyFrequency
   customSchedule?: HouseholdDuty['customSchedule']
+  nextDueDate?: string // ISO 8601
   priority?: DutyPriority
   estimatedDuration?: number
   subtasks?: string[]

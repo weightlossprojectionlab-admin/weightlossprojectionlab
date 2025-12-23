@@ -46,6 +46,12 @@ export async function GET(request: NextRequest) {
         patient_added: { email: true, push: true, inApp: true },
         vital_alert: { email: true, push: true, inApp: true },
         medication_reminder: { email: true, push: true, inApp: true },
+        duty_assigned: { email: true, push: true, inApp: true },
+        duty_reassigned: { email: true, push: true, inApp: true },
+        duty_updated: { email: true, push: false, inApp: true },
+        duty_reminder: { email: true, push: true, inApp: true },
+        duty_overdue: { email: true, push: true, inApp: true },
+        duty_completed: { email: false, push: false, inApp: true },
         quietHours: {
           enabled: true,
           startHour: 22,
