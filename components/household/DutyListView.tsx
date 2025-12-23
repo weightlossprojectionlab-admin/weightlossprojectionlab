@@ -231,8 +231,8 @@ export function DutyListView({
   }
 
   const getShoppingListUrl = (duty: HouseholdDuty): string | null => {
-    // Only grocery shopping duties link to shopping list
-    if (duty.category !== 'grocery_shopping') return null
+    // Only grocery/shopping duties link to shopping list
+    if (duty.category !== 'grocery_shopping' && duty.category !== 'shopping') return null
 
     // Patient-specific grocery shopping
     if (duty.forPatientId) {

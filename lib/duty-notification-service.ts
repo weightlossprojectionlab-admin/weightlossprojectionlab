@@ -98,7 +98,8 @@ async function buildDutyMetadata(duty: HouseholdDuty, actionByName: string): Pro
  * Routes grocery shopping duties to shopping list, others to duty details
  */
 function getDutyActionUrl(duty: HouseholdDuty): string {
-  if (duty.category === 'grocery_shopping') {
+  // Handle both 'grocery_shopping' and legacy 'shopping' category
+  if (duty.category === 'grocery_shopping' || duty.category === 'shopping') {
     // Patient-specific grocery shopping → member's shopping list
     if (duty.forPatientId) {
       return `/shopping?memberId=${duty.forPatientId}`
@@ -116,7 +117,8 @@ function getDutyActionUrl(duty: HouseholdDuty): string {
  * Provides context-aware button text for notifications
  */
 async function getDutyActionLabel(duty: HouseholdDuty): Promise<string> {
-  if (duty.category === 'grocery_shopping') {
+  // Handle both 'grocery_shopping' and legacy 'shopping' category
+  if (duty.category === 'grocery_shopping' || duty.category === 'shopping') {
     if (duty.forPatientId) {
       const patientName = await getPatientName(duty.forPatientId)
       return `View ${patientName}'s Shopping List`
@@ -260,7 +262,7 @@ export async function notifyDutyOverdue(duty: HouseholdDuty): Promise<void> {
         message: `This duty was due ${getDueTimeString(duty.nextDueDate!)}`,
         metadata,
         actionUrl: getDutyActionUrl(duty),
-        actionLabel: duty.category === 'grocery_shopping'
+        actionLabel: (duty.category === 'grocery_shopping' || duty.category === 'shopping')
           ? await getDutyActionLabel(duty)
           : 'Complete Now'
       })
