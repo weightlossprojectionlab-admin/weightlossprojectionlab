@@ -23,12 +23,19 @@ const initializeFirebaseAdmin = (): App => {
   try {
     logger.info('Initializing Firebase Admin SDK')
 
-    if (!process.env.FIREBASE_ADMIN_PROJECT_ID || !process.env.FIREBASE_ADMIN_CLIENT_EMAIL || !process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
-      throw new Error('Missing Firebase Admin SDK environment variables: FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, or FIREBASE_ADMIN_PRIVATE_KEY')
+    if (!process.env.FIREBASE_ADMIN_PROJECT_ID || !process.env.FIREBASE_ADMIN_CLIENT_EMAIL) {
+      throw new Error('Missing Firebase Admin SDK environment variables: FIREBASE_ADMIN_PROJECT_ID or FIREBASE_ADMIN_CLIENT_EMAIL')
     }
 
     // Handle private key with proper formatting
-    let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY
+    // Support both direct key and base64-encoded key (for environments that corrupt the direct key)
+    let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY_BASE64
+      ? Buffer.from(process.env.FIREBASE_ADMIN_PRIVATE_KEY_BASE64, 'base64').toString('utf8')
+      : process.env.FIREBASE_ADMIN_PRIVATE_KEY
+
+    if (!privateKey) {
+      throw new Error('Missing Firebase Admin SDK private key: Set either FIREBASE_ADMIN_PRIVATE_KEY or FIREBASE_ADMIN_PRIVATE_KEY_BASE64')
+    }
 
     // Remove quotes if present
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
