@@ -93,6 +93,40 @@ async function buildDutyMetadata(duty: HouseholdDuty, actionByName: string): Pro
   }
 }
 
+/**
+ * Get action URL based on duty category
+ * Routes grocery shopping duties to shopping list, others to duty details
+ */
+function getDutyActionUrl(duty: HouseholdDuty): string {
+  if (duty.category === 'grocery_shopping') {
+    // Patient-specific grocery shopping → member's shopping list
+    if (duty.forPatientId) {
+      return `/shopping?memberId=${duty.forPatientId}`
+    }
+    // Household-level grocery shopping → household shopping list
+    return `/shopping?householdId=${duty.householdId}`
+  }
+
+  // Default: duty details page
+  return `/households/${duty.householdId}/duties`
+}
+
+/**
+ * Get action label based on duty category
+ * Provides context-aware button text for notifications
+ */
+async function getDutyActionLabel(duty: HouseholdDuty): Promise<string> {
+  if (duty.category === 'grocery_shopping') {
+    if (duty.forPatientId) {
+      const patientName = await getPatientName(duty.forPatientId)
+      return `View ${patientName}'s Shopping List`
+    }
+    return 'View Household Shopping List'
+  }
+
+  return 'View Duty'
+}
+
 // ==================== NOTIFICATION FUNCTIONS ====================
 
 /**
@@ -121,8 +155,8 @@ export async function notifyDutyAssigned(duty: HouseholdDuty, assignedByName: st
         title: `New Duty: ${duty.name}`,
         message: `${assignedByName} assigned you a ${duty.priority} priority duty${duty.forPatientId ? ` for ${metadata.forPatientName}` : ''}.`,
         metadata,
-        actionUrl: `/households/${duty.householdId}/duties`,
-        actionLabel: 'View Duty',
+        actionUrl: getDutyActionUrl(duty),
+        actionLabel: await getDutyActionLabel(duty),
         expiresInDays: 30
       })
     }
@@ -162,7 +196,7 @@ export async function notifyDutyCompleted(duty: HouseholdDuty, completedByName: 
         title: `Duty Completed: ${duty.name}`,
         message: `${completedByName} completed "${duty.name}"${duty.nextDueDate ? `. Next due: ${new Date(duty.nextDueDate).toLocaleDateString()}` : ''}.`,
         metadata,
-        actionUrl: `/households/${duty.householdId}/duties`,
+        actionUrl: getDutyActionUrl(duty),
         actionLabel: 'View Details',
         expiresInDays: 7
       })
@@ -195,8 +229,8 @@ export async function notifyDutyReminder(duty: HouseholdDuty): Promise<void> {
         title: `Reminder: ${duty.name}`,
         message: `Due ${dueTimeString}${duty.forPatientId ? ` for ${metadata.forPatientName}` : ''}`,
         metadata,
-        actionUrl: `/households/${duty.householdId}/duties`,
-        actionLabel: 'View Duty'
+        actionUrl: getDutyActionUrl(duty),
+        actionLabel: await getDutyActionLabel(duty)
       })
     }
 
@@ -225,8 +259,10 @@ export async function notifyDutyOverdue(duty: HouseholdDuty): Promise<void> {
         title: `Overdue: ${duty.name}`,
         message: `This duty was due ${getDueTimeString(duty.nextDueDate!)}`,
         metadata,
-        actionUrl: `/households/${duty.householdId}/duties`,
-        actionLabel: 'Complete Now'
+        actionUrl: getDutyActionUrl(duty),
+        actionLabel: duty.category === 'grocery_shopping'
+          ? await getDutyActionLabel(duty)
+          : 'Complete Now'
       })
     }
 
