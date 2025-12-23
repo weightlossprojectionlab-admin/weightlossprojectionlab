@@ -28,13 +28,33 @@ const initializeFirebaseAdmin = (): App => {
     }
 
     // Handle private key with proper formatting
-    // Support both direct key and base64-encoded key (for environments that corrupt the direct key)
-    let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY_BASE64
-      ? Buffer.from(process.env.FIREBASE_ADMIN_PRIVATE_KEY_BASE64, 'base64').toString('utf8')
-      : process.env.FIREBASE_ADMIN_PRIVATE_KEY
+    // Support multiple formats to work around Netlify's 4KB env var limit
+    let privateKey: string | undefined
+
+    // Option 1: Split base64 parts (Netlify production - avoids 4KB limit)
+    if (process.env.FIREBASE_ADMIN_PRIVATE_KEY_PART1 &&
+        process.env.FIREBASE_ADMIN_PRIVATE_KEY_PART2 &&
+        process.env.FIREBASE_ADMIN_PRIVATE_KEY_PART3) {
+      const base64Combined =
+        process.env.FIREBASE_ADMIN_PRIVATE_KEY_PART1 +
+        process.env.FIREBASE_ADMIN_PRIVATE_KEY_PART2 +
+        process.env.FIREBASE_ADMIN_PRIVATE_KEY_PART3
+      privateKey = Buffer.from(base64Combined, 'base64').toString('utf8')
+      logger.debug('Firebase private key reassembled from 3 parts')
+    }
+    // Option 2: Single base64-encoded key (fallback)
+    else if (process.env.FIREBASE_ADMIN_PRIVATE_KEY_BASE64) {
+      privateKey = Buffer.from(process.env.FIREBASE_ADMIN_PRIVATE_KEY_BASE64, 'base64').toString('utf8')
+      logger.debug('Firebase private key loaded from base64')
+    }
+    // Option 3: Direct key (local development)
+    else if (process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
+      privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY
+      logger.debug('Firebase private key loaded directly')
+    }
 
     if (!privateKey) {
-      throw new Error('Missing Firebase Admin SDK private key: Set either FIREBASE_ADMIN_PRIVATE_KEY or FIREBASE_ADMIN_PRIVATE_KEY_BASE64')
+      throw new Error('Missing Firebase Admin SDK private key: Set FIREBASE_ADMIN_PRIVATE_KEY_PART1/2/3, FIREBASE_ADMIN_PRIVATE_KEY_BASE64, or FIREBASE_ADMIN_PRIVATE_KEY')
     }
 
     // Remove quotes if present
