@@ -58,7 +58,19 @@ export async function GET(request: NextRequest) {
     const idToken = authHeader.split('Bearer ')[1]
 
     // Verify the token and get user info
-    const decodedToken = await verifyIdToken(idToken)
+    let decodedToken
+    try {
+      decodedToken = await verifyIdToken(idToken)
+    } catch (verifyError: any) {
+      logger.error('[API /user-profile GET] Token verification failed', verifyError)
+      console.error('[API /user-profile GET] Token verification error details:', {
+        message: verifyError.message,
+        code: verifyError.code,
+        stack: verifyError.stack
+      })
+      throw new Error(`Token verification failed: ${verifyError.message}`)
+    }
+
     const userId = decodedToken.uid
 
     // Get user profile from Firestore
@@ -102,8 +114,26 @@ export async function GET(request: NextRequest) {
 
   } catch (error: any) {
     logger.error('[API /user-profile GET] Error fetching user profile', error)
+
+    // Log detailed error information for debugging
+    console.error('[API /user-profile GET] Detailed error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code,
+      statusCode: error.statusCode
+    })
+
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch user profile' },
+      {
+        success: false,
+        error: error.message || 'Failed to fetch user profile',
+        errorDetails: {
+          name: error.name,
+          code: error.code,
+          message: error.message
+        }
+      },
       { status: 500 }
     )
   }
