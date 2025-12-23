@@ -270,39 +270,41 @@ export async function POST(request: NextRequest) {
 
     // Create duty document
     const now = new Date().toISOString()
-    const duty: Omit<HouseholdDuty, 'id'> = {
+    const duty: Partial<Omit<HouseholdDuty, 'id'>> = {
       householdId: body.householdId,
-      forPatientId: body.forPatientId, // Optional
       userId: authResult.userId,
       category: body.category,
       name: body.name,
-      description: body.description,
       isCustom: body.category === 'custom',
       assignedTo: body.assignedTo,
       assignedBy: authResult.userId,
       assignedAt: now,
       frequency: body.frequency,
-      customSchedule: body.customSchedule,
-      nextDueDate,
       priority: body.priority || 'medium',
-      estimatedDuration: body.estimatedDuration,
-      subtasks: body.subtasks,
       status: 'pending',
       completionCount: 0,
       skipCount: 0,
       notifyOnCompletion: body.notifyOnCompletion ?? true,
       notifyOnOverdue: body.notifyOnOverdue ?? true,
       reminderEnabled: body.reminderEnabled ?? true,
-      reminderTime: body.reminderTime,
       createdAt: now,
       createdBy: authResult.userId,
       lastModified: now,
-      isActive: true,
-      notes: body.notes,
-      specialInstructions: body.specialInstructions
+      isActive: true
     }
 
-    const docRef = await db.collection('household_duties').add(duty)
+    // Add optional fields only if they have values
+    if (body.forPatientId) duty.forPatientId = body.forPatientId
+    if (body.description) duty.description = body.description
+    if (body.customSchedule) duty.customSchedule = body.customSchedule
+    if (nextDueDate) duty.nextDueDate = nextDueDate
+    if (body.estimatedDuration) duty.estimatedDuration = body.estimatedDuration
+    if (body.subtasks) duty.subtasks = body.subtasks
+    if (body.reminderTime) duty.reminderTime = body.reminderTime
+    if (body.notes) duty.notes = body.notes
+    if (body.specialInstructions) duty.specialInstructions = body.specialInstructions
+
+    const docRef = await db.collection('household_duties').add(duty as Omit<HouseholdDuty, 'id'>)
     const createdDuty: HouseholdDuty = {
       id: docRef.id,
       ...duty
