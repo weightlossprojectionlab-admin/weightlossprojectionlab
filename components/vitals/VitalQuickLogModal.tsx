@@ -11,12 +11,17 @@ import { useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { VitalType } from '@/types/medical'
 import toast from 'react-hot-toast'
+import VitalDatePicker from './VitalDatePicker'
+import BackdateConfirmModal from './BackdateConfirmModal'
+import { useVitalDatePicker } from '@/hooks/useVitalDatePicker'
 
 interface VitalQuickLogModalProps {
   isOpen: boolean
   onClose: () => void
   vitalType: VitalType
   patientName: string
+  patientCreatedAt: string // ISO string for date validation
+  patientId: string // For fetching existing vitals
   onSubmit: (data: VitalLogData) => Promise<void>
 }
 
@@ -122,17 +127,34 @@ export default function VitalQuickLogModal({
   onClose,
   vitalType,
   patientName,
+  patientCreatedAt,
+  patientId,
   onSubmit
 }: VitalQuickLogModalProps) {
   const config = VITAL_CONFIG[vitalType]
   const [formData, setFormData] = useState(config.getDefaultValue())
   const [notes, setNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showBackdateConfirm, setShowBackdateConfirm] = useState(false)
+
+  // Use date picker hook with validation
+  const datePicker = useVitalDatePicker({
+    patientCreatedAt,
+    userPlanTier: 'free', // TODO: Get from user subscription
+    vitalType,
+    initialDate: new Date()
+  })
 
   if (!isOpen) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Validate date first
+    if (!datePicker.isValid) {
+      toast.error(datePicker.error || 'Please select a valid date')
+      return
+    }
 
     // Validate all required fields are filled
     const isEmpty = config.fields.some(field => !formData[field.name])
@@ -154,13 +176,24 @@ export default function VitalQuickLogModal({
       }
     }
 
+    // Check if backdated - show confirmation modal
+    if (datePicker.isBackdated && !showBackdateConfirm) {
+      setShowBackdateConfirm(true)
+      return
+    }
+
+    // Proceed with submission
+    await submitVital()
+  }
+
+  const submitVital = async () => {
     setIsSubmitting(true)
     try {
       await onSubmit({
         type: vitalType,
         value: config.formatValue(formData),
         unit: config.getDefaultUnit(),
-        recordedAt: new Date().toISOString(),
+        recordedAt: datePicker.selectedDate, // Use selected date from picker
         notes: notes || undefined
       })
 
@@ -169,6 +202,7 @@ export default function VitalQuickLogModal({
       // Reset form
       setFormData(config.getDefaultValue())
       setNotes('')
+      datePicker.reset()
       onClose()
     } catch (error: any) {
       toast.error(error.message || 'Failed to log vital')
@@ -182,8 +216,20 @@ export default function VitalQuickLogModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
+    <>
+      {/* Backdate Confirmation Modal */}
+      <BackdateConfirmModal
+        isOpen={showBackdateConfirm}
+        onClose={() => setShowBackdateConfirm(false)}
+        onConfirm={submitVital}
+        recordedDate={datePicker.selectedDate}
+        vitalType={vitalType}
+        patientName={patientName}
+        daysDifference={datePicker.daysDifference}
+      />
+
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="bg-gray-900 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
           <div className="flex items-center justify-between">
@@ -206,6 +252,18 @@ export default function VitalQuickLogModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Date Picker */}
+          <VitalDatePicker
+            value={datePicker.selectedDate}
+            onChange={datePicker.setDate}
+            patientCreatedAt={patientCreatedAt}
+            userPlanTier="free"
+            label="When was this vital taken?"
+            helperText="Select today or a previous date"
+            disabled={isSubmitting}
+            required
+          />
+
           {/* Mood emoji selector */}
           {vitalType === 'mood' && (
             <div>
@@ -280,26 +338,27 @@ export default function VitalQuickLogModal({
             />
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
+          {/* Action Buttons - Mobile optimized */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-600 text-white rounded-lg hover:bg-gray-800 transition-colors font-bold"
+              className="w-full sm:flex-1 px-4 py-3 border border-gray-600 text-white rounded-lg hover:bg-gray-800 active:bg-gray-700 transition-colors font-bold touch-manipulation"
               disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:from-blue-800 active:to-indigo-800 text-white rounded-lg transition-all font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Saving...' : 'Save Reading'}
             </button>
           </div>
         </form>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

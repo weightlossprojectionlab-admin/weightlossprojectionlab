@@ -99,7 +99,19 @@ service cloud.firestore {
         // Vital signs subcollection
         match /vitals/{vitalId} {
           allow read: if isOwner(userId);
-          allow create: if isOwner(userId);
+
+          // Create: Owner can create vitals with date validation
+          allow create: if isOwner(userId) &&
+                          request.resource.data.patientId == patientId &&
+                          // Required fields must exist
+                          request.resource.data.recordedAt is string &&
+                          request.resource.data.loggedAt is string &&
+                          request.resource.data.loggedBy is string &&
+                          // recordedAt cannot be in the future
+                          request.resource.data.recordedAt <= request.time.toMillis() &&
+                          // loggedAt should be current timestamp (within reasonable tolerance)
+                          request.resource.data.loggedAt <= request.time.toMillis();
+
           allow update: if isOwner(userId);
           allow delete: if isOwner(userId);
         }
@@ -789,6 +801,52 @@ service cloud.firestore {
         // User is a family member with access
         exists(/databases/$(database)/documents/users/$(householdId)/familyMembers/$(request.auth.uid))
       );
+    }
+
+    // ============================================
+    // SHOPPING SESSIONS (SESSION TRACKING)
+    // ============================================
+
+    // Shopping sessions - Track active shopping to prevent bulk list operations
+    match /shopping_sessions/{sessionId} {
+      // Anyone can read sessions (to check for active shopping before bulk operations)
+      allow read: if isAuthenticated();
+
+      // Users can create their own sessions
+      allow create: if isAuthenticated() &&
+                       request.resource.data.userId == request.auth.uid &&
+                       request.resource.data.householdId != null;
+
+      // Users can update their own sessions (heartbeat, item count, status)
+      allow update: if isAuthenticated() &&
+                       resource.data.userId == request.auth.uid;
+
+      // Users can delete their own sessions OR household owner can force-end any
+      allow delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.householdId == request.auth.uid
+      );
+    }
+
+    // ============================================
+    // BULK OPERATION AUDIT LOGS
+    // ============================================
+
+    // Audit logs for bulk operations (clear shopping list, batch discard)
+    match /bulk_operation_audit_logs/{logId} {
+      // Users can read their own audit logs
+      allow read: if isAuthenticated() &&
+                     resource.data.performedBy == request.auth.uid;
+
+      // Admins can read all audit logs
+      allow read: if isAdmin();
+
+      // Users can create audit logs (system-generated during bulk operations)
+      allow create: if isAuthenticated() &&
+                      request.resource.data.performedBy == request.auth.uid;
+
+      // Audit logs are immutable - no updates or deletes
+      allow update, delete: if false;
     }
 
     // Shopping items and kitchen inventory (household shared)

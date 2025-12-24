@@ -1110,6 +1110,11 @@ function PatientDetailContent() {
                 onDelete={handleDeleteVitalClick}
                 canEdit={canLogVitals || isOwner}
                 getDisplayName={getDisplayName}
+                onLogPreviousVital={() => {
+                  // Open quick log modal with yesterday as default
+                  setQuickLogVitalType('blood_pressure') // Default vital type
+                  setShowQuickLogModal(true)
+                }}
               />
             </>
           )}

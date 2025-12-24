@@ -8,7 +8,8 @@ import {
   ClockIcon,
   PencilIcon,
   TrashIcon,
-  UserIcon
+  UserIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline'
 import { formatVitalForDisplay, getVitalTypeLabel } from '@/lib/vitals-wizard-transform'
 
@@ -18,6 +19,7 @@ interface VitalsHistoryProps {
   onDelete?: (vitalId: string, vitalType: string) => void
   canEdit?: boolean
   getDisplayName?: (userId: string) => string
+  onLogPreviousVital?: () => void
 }
 
 type DateFilter = 'all' | 'today' | 'week' | 'month'
@@ -35,7 +37,8 @@ export default function VitalsHistory({
   onEdit,
   onDelete,
   canEdit = false,
-  getDisplayName
+  getDisplayName,
+  onLogPreviousVital
 }: VitalsHistoryProps) {
   const [dateFilter, setDateFilter] = useState<DateFilter>('week')
   const [typeFilter, setTypeFilter] = useState<VitalType | 'all'>('all')
@@ -106,8 +109,19 @@ export default function VitalsHistory({
             </p>
           </div>
 
-          {/* Filters */}
-          <div className="flex flex-wrap gap-3">
+          {/* Filters and Actions */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Log Previous Vital Button */}
+            {onLogPreviousVital && canEdit && (
+              <button
+                onClick={onLogPreviousVital}
+                className="px-3 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition-colors flex items-center gap-2 touch-manipulation"
+              >
+                <PlusIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Log Previous Vital</span>
+                <span className="sm:hidden">Log Previous</span>
+              </button>
+            )}
             {/* Date Range Filter */}
             <div className="flex items-center gap-2">
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
@@ -235,6 +249,14 @@ function VitalRow({
             {status && (
               <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${status.className}`}>
                 {status.label}
+              </span>
+            )}
+            {/* Backdated indicator */}
+            {vital.isBackdated && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap">
+                <ClockIcon className="h-3 w-3" />
+                Backdated
+                {vital.daysDifference && vital.daysDifference > 0 && ` ${vital.daysDifference}d`}
               </span>
             )}
           </div>

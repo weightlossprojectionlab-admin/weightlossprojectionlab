@@ -286,12 +286,17 @@ export interface VitalSign {
   type: VitalType
   value: VitalValue
   unit: VitalUnit
-  recordedAt: string // ISO 8601
+  recordedAt: string // ISO 8601 - When vital was actually taken (user-selected date)
   notes?: string
   takenBy: string // userId of family member who recorded
   method: 'manual' | 'device' | 'imported'
   deviceId?: string // For future smart device integration
   tags?: string[] // 'fasting', 'post-meal', 'morning', 'evening', 'before_medication', 'after_medication'
+
+  // Backdate tracking (HIPAA compliance)
+  loggedAt?: string // ISO 8601 - When entry was created in system (system timestamp)
+  loggedBy?: string // userId who created the entry (for caregiver logging)
+  isBackdated?: boolean // True if logged > 1 hour after recordedAt
 
   // Audit trail
   createdAt?: string // ISO 8601 - When first created
