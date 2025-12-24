@@ -51,14 +51,14 @@ export default function VitalsQuickViewModal({
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
 
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="mx-auto max-w-3xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+        <Dialog.Panel className="mx-auto max-w-3xl w-full bg-white rounded-lg shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
           {/* Header */}
           <div className="bg-primary px-6 py-4 flex items-center justify-between flex-shrink-0">
             <div>
               <Dialog.Title className="text-xl font-bold text-white">
                 Vitals - {patientName}
               </Dialog.Title>
-              <p className="text-sm text-primary-light">
+              <p className="text-sm text-white/90">
                 {todayVitals.length > 0
                   ? `${todayVitals.length} reading${todayVitals.length !== 1 ? 's' : ''} today`
                   : 'No vitals recorded today'}
@@ -73,7 +73,7 @@ export default function VitalsQuickViewModal({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-6 bg-white">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -82,13 +82,13 @@ export default function VitalsQuickViewModal({
               <DailyVitalsSummary vitals={vitals} patientName={patientName} patientId={patientId} />
             ) : (
               <div className="text-center py-12">
-                <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-4xl">📊</span>
                 </div>
-                <h3 className="text-xl font-bold text-foreground mb-2">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
                   No Vitals Recorded Today
                 </h3>
-                <p className="text-muted-foreground mb-6">
+                <p className="text-gray-700 mb-6">
                   Start tracking {patientName}'s health by logging vitals with AI guidance
                 </p>
                 <button
@@ -104,8 +104,8 @@ export default function VitalsQuickViewModal({
 
           {/* Footer - Show log vitals button if there are readings */}
           {!loading && todayVitals.length > 0 && (
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-border flex items-center justify-between flex-shrink-0">
-              <p className="text-sm text-muted-foreground">
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between flex-shrink-0">
+              <p className="text-sm text-gray-700">
                 AI-guided vital sign logging available
               </p>
               <button

@@ -2079,10 +2079,15 @@ function PatientDetailContent() {
               id: patient.id,
               name: patient.name,
               age: calculateAge(patient.dateOfBirth),
-              conditions: patient.healthConditions || []
+              conditions: patient.healthConditions || [],
+              createdAt: patient.createdAt
             }}
             caregivers={caregivers}
-          onSubmit={async (vitals) => {
+            onComplete={(savedVitals) => {
+              // Store for summary display
+              setSummaryVitals(savedVitals)
+            }}
+            onSubmit={async (vitals) => {
             try {
               logger.info('[PatientDetail] Submitting vitals from wizard', {
                 patientId: patient.id,
@@ -2197,6 +2202,9 @@ function PatientDetailContent() {
               setShowVitalsWizard(false)
 
               toast.success(`${savedVitals.length} vital sign${savedVitals.length !== 1 ? 's' : ''} logged successfully!`)
+
+              // Return saved vitals so wizard can call onComplete
+              return savedVitals
             } catch (error) {
               logger.error('[PatientDetail] Failed to save vitals', error instanceof Error ? error : undefined)
               toast.error(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
