@@ -28,13 +28,10 @@ import {
   type VitalReading,
   type ValidationResult
 } from '@/lib/ai-supervisor'
-import { LightThemeWizardWrapper } from './LightThemeWizardWrapper'
 import type { VitalSign } from '@/types/medical'
 import { logger } from '@/lib/logger'
 import { sendCriticalVitalAlert } from '@/lib/emergency-alerts'
 import { useAuth } from '@/hooks/useAuth'
-import VitalDatePicker from '../vitals/VitalDatePicker'
-import { useVitalDatePicker } from '@/hooks/useVitalDatePicker'
 
 interface SupervisedVitalsWizardProps {
   isOpen: boolean
@@ -44,7 +41,6 @@ interface SupervisedVitalsWizardProps {
     name: string
     age?: number
     conditions?: string[]
-    createdAt?: string  // For date validation
   }
   recentReadings?: VitalReading[]
   onSubmit: (vitals: any) => Promise<void>
@@ -57,7 +53,7 @@ interface SupervisedVitalsWizardProps {
   }>
 }
 
-type WizardStep = 'intro' | 'date_selection' | 'blood_pressure' | 'temperature' | 'pulse_oximeter' | 'blood_sugar' | 'weight' | 'review' | 'mood' | 'schedule' | 'confirmation'
+type WizardStep = 'intro' | 'blood_pressure' | 'temperature' | 'heart_rate' | 'oxygen' | 'blood_sugar' | 'weight' | 'review' | 'mood' | 'schedule' | 'confirmation'
 
 interface SchedulePreferences {
   enabled: boolean
@@ -74,14 +70,14 @@ interface SchedulePreferences {
 interface VitalData {
   bloodPressure?: { systolic: number; diastolic: number }
   temperature?: number
-  pulseOximeterReading?: { spo2: number; pulseRate: number; perfusionIndex?: number }
+  heartRate?: number
+  oxygenSaturation?: number
   bloodSugar?: number
   weight?: number
   mood?: string
   moodNotes?: string
   notes?: string
-  recordedDate?: Date  // User-selected date for backdate support
-  timestamp: Date       // System timestamp (now uses recordedDate if set)
+  timestamp: Date
   schedulePreferences?: SchedulePreferences
   loggedBy?: {
     userId: string
@@ -109,36 +105,15 @@ export default function SupervisedVitalsWizard({
   const [sendingAlert, setSendingAlert] = useState(false)
   const { user } = useAuth()
 
-  // Use date picker hook for backdate support
-  const datePicker = useVitalDatePicker({
-    patientCreatedAt: familyMember.createdAt || new Date().toISOString(),
-    userPlanTier: 'free', // TODO: Get from user subscription
-    initialDate: new Date()
-  })
-
   // Reset wizard when opened
   useEffect(() => {
     if (isOpen) {
       setCurrentStep('intro')
-      const now = new Date()
-      setVitalData({ recordedDate: now, timestamp: now })
+      setVitalData({ timestamp: new Date() })
       setValidationResults({})
       setShowGuidance(true)
-      datePicker.reset()
     }
   }, [isOpen])
-
-  // Sync vitalData timestamp with datePicker selectedDate whenever it changes
-  useEffect(() => {
-    if (isOpen && datePicker.selectedDate) {
-      const selectedDateTime = new Date(datePicker.selectedDate)
-      setVitalData(prev => ({
-        ...prev,
-        recordedDate: selectedDateTime,
-        timestamp: selectedDateTime
-      }))
-    }
-  }, [isOpen, datePicker.selectedDate])
 
   // Auto-save draft to localStorage
   useEffect(() => {
@@ -158,15 +133,6 @@ export default function SupervisedVitalsWizard({
         const parsed = JSON.parse(draft)
         // Show option to resume draft
         logger.info('[Wizard] Found existing draft', { step: parsed.step })
-
-        // CRITICAL: Update draft timestamp to TODAY to prevent duplicate date errors
-        // The draft may be from yesterday, but vitals should default to today's date
-        const today = new Date()
-        setVitalData(prev => ({
-          ...prev,
-          recordedDate: today,
-          timestamp: today
-        }))
       }
     }
   }, [isOpen, familyMember.id])
@@ -200,7 +166,8 @@ export default function SupervisedVitalsWizard({
     const units: Record<VitalReading['type'], string> = {
       blood_pressure: 'mmHg',
       temperature: '°F',
-      pulse_oximeter: 'SpO₂% / bpm',
+      heart_rate: 'bpm',
+      oxygen_saturation: '%',
       weight: 'lbs',
       blood_sugar: 'mg/dL'
     }
@@ -208,7 +175,7 @@ export default function SupervisedVitalsWizard({
   }
 
   const handleNext = () => {
-    const stepOrder: WizardStep[] = ['intro', 'date_selection', 'blood_pressure', 'temperature', 'pulse_oximeter', 'blood_sugar', 'weight', 'mood', 'review', 'schedule', 'confirmation']
+    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'weight', 'review', 'mood', 'schedule', 'confirmation']
     const currentIndex = stepOrder.indexOf(currentStep)
     if (currentIndex < stepOrder.length - 1) {
       setCurrentStep(stepOrder[currentIndex + 1])
@@ -216,7 +183,7 @@ export default function SupervisedVitalsWizard({
   }
 
   const handleBack = () => {
-    const stepOrder: WizardStep[] = ['intro', 'date_selection', 'blood_pressure', 'temperature', 'pulse_oximeter', 'blood_sugar', 'weight', 'mood', 'review', 'schedule', 'confirmation']
+    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'weight', 'review', 'mood', 'schedule', 'confirmation']
     const currentIndex = stepOrder.indexOf(currentStep)
     if (currentIndex > 0) {
       setCurrentStep(stepOrder[currentIndex - 1])
@@ -240,10 +207,17 @@ export default function SupervisedVitalsWizard({
           return rest
         })
         break
-      case 'pulse_oximeter':
-        setVitalData(prev => ({ ...prev, pulseOximeterReading: undefined }))
+      case 'heart_rate':
+        setVitalData(prev => ({ ...prev, heartRate: undefined }))
         setValidationResults(prev => {
-          const { pulse_oximeter, ...rest } = prev
+          const { heart_rate, ...rest } = prev
+          return rest
+        })
+        break
+      case 'oxygen':
+        setVitalData(prev => ({ ...prev, oxygenSaturation: undefined }))
+        setValidationResults(prev => {
+          const { oxygen_saturation, ...rest } = prev
           return rest
         })
         break
@@ -290,27 +264,6 @@ export default function SupervisedVitalsWizard({
         }
       }
 
-      // PRE-FLIGHT VALIDATION: Check pulse oximeter if it exists
-      if (vitalData.pulseOximeterReading) {
-        const { spo2, pulseRate } = vitalData.pulseOximeterReading
-        if (!spo2 || !pulseRate) {
-          alert('Invalid pulse oximeter reading. Both SpO₂ and pulse rate are required.')
-          setIsSubmitting(false)
-          return
-        }
-        // Range validation
-        if (spo2 < 70 || spo2 > 100) {
-          alert('SpO₂ value out of range (70-100%). Please go back and correct.')
-          setIsSubmitting(false)
-          return
-        }
-        if (pulseRate < 30 || pulseRate > 220) {
-          alert('Pulse rate out of range (30-220 bpm). Please go back and correct.')
-          setIsSubmitting(false)
-          return
-        }
-      }
-
       // Run quality checks (for info/warnings only - not blocking)
       const checks = runQualityChecks({
         type: 'vitals',
@@ -328,29 +281,8 @@ export default function SupervisedVitalsWizard({
         })
       }
 
-      // Submit vitals - use recordedDate if set, otherwise use timestamp
-      // This ensures backdated vitals are recorded with the user-selected date
-      const submissionData = {
-        ...vitalData,
-        timestamp: vitalData.recordedDate || vitalData.timestamp
-      }
-
-      // DEBUG: Log the timestamp being sent
-      logger.info('[Wizard] Submitting vitals with timestamp', {
-        recordedDate: vitalData.recordedDate?.toISOString(),
-        timestamp: vitalData.timestamp?.toISOString(),
-        finalTimestamp: submissionData.timestamp?.toISOString(),
-        datePickerSelectedDate: datePicker.selectedDate
-      })
-
-      // onSubmit returns saved vitals from parent
-      const result = await onSubmit(submissionData)
-      const submittedVitals = result as VitalSign[] | undefined
-
-      // Call onComplete callback if provided (parent will handle refetch and summary display)
-      if (onComplete && submittedVitals && submittedVitals.length > 0) {
-        onComplete(submittedVitals)
-      }
+      // Submit vitals - note: onSubmit should return the saved vitals or we track them separately
+      await onSubmit(vitalData)
 
       // Clear draft
       localStorage.removeItem(`vitals_draft_${familyMember.id}`)
@@ -377,8 +309,11 @@ export default function SupervisedVitalsWizard({
       if (vitalData.temperature) {
         criticalReadings.temperature = `${vitalData.temperature}°F`
       }
-      if (vitalData.pulseOximeterReading) {
-        criticalReadings.pulseOximeter = `${vitalData.pulseOximeterReading.spo2}% SpO₂, ${vitalData.pulseOximeterReading.pulseRate} bpm`
+      if (vitalData.heartRate) {
+        criticalReadings.heartRate = `${vitalData.heartRate} bpm`
+      }
+      if (vitalData.oxygenSaturation) {
+        criticalReadings.oxygenSaturation = `${vitalData.oxygenSaturation}%`
       }
       if (vitalData.bloodSugar) {
         criticalReadings.bloodSugar = `${vitalData.bloodSugar} mg/dL`
@@ -447,24 +382,6 @@ export default function SupervisedVitalsWizard({
           />
         )
 
-      case 'date_selection':
-        return (
-          <DateSelectionStep
-            selectedDate={datePicker.selectedDate}
-            isValid={datePicker.isValid}
-            error={datePicker.error}
-            isBackdated={datePicker.isBackdated}
-            daysDifference={datePicker.daysDifference}
-            familyMember={familyMember}
-            onDateChange={(date) => {
-              datePicker.setDate(date)
-              // date is already an ISO string from VitalDatePicker, store it directly as Date
-              setVitalData(prev => ({ ...prev, recordedDate: new Date(date), timestamp: new Date(date) }))
-            }}
-            onNext={handleNext}
-          />
-        )
-
       case 'blood_pressure':
         return (
           <BloodPressureStep
@@ -492,17 +409,28 @@ export default function SupervisedVitalsWizard({
           />
         )
 
-      case 'pulse_oximeter':
+      case 'heart_rate':
         return (
-          <PulseOximeterStep
-            value={vitalData.pulseOximeterReading}
-            onChange={(reading) => {
-              setVitalData(prev => ({ ...prev, pulseOximeterReading: reading }))
-              if (reading) {
-                validateCurrentReading('pulse_oximeter', reading)
-              }
+          <HeartRateStep
+            value={vitalData.heartRate}
+            onChange={(hr) => {
+              setVitalData(prev => ({ ...prev, heartRate: hr }))
+              validateCurrentReading('heart_rate', hr)
             }}
-            validation={validationResults.pulse_oximeter}
+            validation={validationResults.heart_rate}
+            showGuidance={showGuidance}
+          />
+        )
+
+      case 'oxygen':
+        return (
+          <OxygenStep
+            value={vitalData.oxygenSaturation}
+            onChange={(o2) => {
+              setVitalData(prev => ({ ...prev, oxygenSaturation: o2 }))
+              validateCurrentReading('oxygen_saturation', o2)
+            }}
+            validation={validationResults.oxygen_saturation}
             showGuidance={showGuidance}
           />
         )
@@ -533,6 +461,16 @@ export default function SupervisedVitalsWizard({
           />
         )
 
+      case 'review':
+        return (
+          <ReviewStep
+            vitalData={vitalData}
+            validationResults={validationResults}
+            familyMember={familyMember}
+            onNotesChange={(notes) => setVitalData(prev => ({ ...prev, notes }))}
+          />
+        )
+
       case 'mood':
         return (
           <MoodStep
@@ -543,19 +481,6 @@ export default function SupervisedVitalsWizard({
             familyMember={familyMember}
             onNext={handleNext}
             onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
-          />
-        )
-
-      case 'review':
-        return (
-          <ReviewStep
-            vitalData={vitalData}
-            validationResults={validationResults}
-            familyMember={familyMember}
-            onNotesChange={(notes) => setVitalData(prev => ({ ...prev, notes }))}
-            onSubmit={handleSubmit}
-            onBack={handleBack}
             isSubmitting={isSubmitting}
           />
         )
@@ -581,199 +506,122 @@ export default function SupervisedVitalsWizard({
   }
 
   // Progress indicator
-  const stepOrder: WizardStep[] = ['intro', 'date_selection', 'blood_pressure', 'temperature', 'pulse_oximeter', 'blood_sugar', 'weight', 'mood', 'review']
+  const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'review', 'mood']
   const currentStepIndex = stepOrder.indexOf(currentStep)
   const progress = ((currentStepIndex + 1) / stepOrder.length) * 100
 
   return (
-    <>
-      <style>{`
-        .wizard-compact-content * {
-          line-height: 1.3 !important;
-        }
-        .wizard-compact-content h1,
-        .wizard-compact-content h2,
-        .wizard-compact-content h3,
-        .wizard-compact-content h4 {
-          font-size: clamp(11px, 2.8vw, 14px) !important;
-          margin-bottom: clamp(2px, 0.5vh, 4px) !important;
-          margin-top: clamp(2px, 0.5vh, 4px) !important;
-        }
-        .wizard-compact-content p,
-        .wizard-compact-content span,
-        .wizard-compact-content label,
-        .wizard-compact-content li {
-          font-size: clamp(9px, 2.2vw, 11px) !important;
-          margin-bottom: clamp(1px, 0.3vh, 3px) !important;
-        }
-        .wizard-compact-content input,
-        .wizard-compact-content select,
-        .wizard-compact-content textarea {
-          font-size: clamp(11px, 2.8vw, 14px) !important;
-          padding: clamp(3px, 0.7vh, 6px) clamp(4px, 1vw, 8px) !important;
-          min-height: auto !important;
-        }
-        .wizard-compact-content input[type="number"],
-        .wizard-compact-content input[type="text"],
-        .wizard-compact-content input[type="date"] {
-          -webkit-appearance: none !important;
-        }
-        .wizard-compact-content button {
-          font-size: clamp(9px, 2.2vw, 11px) !important;
-          padding: clamp(3px, 0.7vh, 6px) clamp(6px, 1.5vw, 10px) !important;
-        }
-        .wizard-compact-content .space-y-6 > * + *,
-        .wizard-compact-content .space-y-4 > * + *,
-        .wizard-compact-content .space-y-3 > * + *,
-        .wizard-compact-content .space-y-2 > * + * {
-          margin-top: clamp(3px, 0.8vh, 6px) !important;
-        }
-        .wizard-compact-content .gap-6,
-        .wizard-compact-content .gap-4,
-        .wizard-compact-content .gap-3,
-        .wizard-compact-content .gap-2 {
-          gap: clamp(3px, 0.8vw, 6px) !important;
-        }
-        .wizard-compact-content svg,
-        .wizard-compact-content img {
-          width: clamp(10px, 2.5vw, 16px) !important;
-          height: clamp(10px, 2.5vw, 16px) !important;
-        }
-        .wizard-compact-content .p-6,
-        .wizard-compact-content .p-4,
-        .wizard-compact-content .p-3,
-        .wizard-compact-content .p-2 {
-          padding: clamp(3px, 0.8vh, 6px) !important;
-        }
-        .wizard-compact-content .rounded-lg,
-        .wizard-compact-content .rounded-md {
-          border-radius: clamp(3px, 0.8vw, 6px) !important;
-        }
-        .wizard-compact-content .border-2 {
-          border-width: 1px !important;
-        }
-        .wizard-compact-content .mb-6,
-        .wizard-compact-content .mb-4,
-        .wizard-compact-content .mb-3,
-        .wizard-compact-content .mb-2,
-        .wizard-compact-content .mb-1 {
-          margin-bottom: clamp(2px, 0.5vh, 4px) !important;
-        }
-        .wizard-compact-content .mt-6,
-        .wizard-compact-content .mt-4,
-        .wizard-compact-content .mt-3,
-        .wizard-compact-content .mt-2,
-        .wizard-compact-content .mt-1 {
-          margin-top: clamp(2px, 0.5vh, 4px) !important;
-        }
-      `}</style>
-      <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+      <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
 
-      <div className="fixed inset-0 flex items-start justify-center pt-4 sm:pt-8 p-0 sm:p-4 overflow-y-auto">
-        <Dialog.Panel className="mx-auto w-full bg-card rounded-t-2xl sm:rounded-xl shadow-xl overflow-hidden flex flex-col" style={{
-          maxWidth: 'clamp(320px, 95vw, 700px)',
-          maxHeight: 'calc(100vh - 60px)'
-        }}>
-          {/* Header - Compact */}
-          <div className="bg-primary flex items-center justify-between flex-shrink-0" style={{ padding: 'clamp(4px, 1vh, 8px) clamp(6px, 2vw, 12px)' }}>
-            <div className="flex-1 min-w-0">
-              <Dialog.Title className="font-bold text-primary-foreground truncate" style={{ fontSize: 'clamp(10px, 2.5vw, 14px)' }}>
-                Vitals - {familyMember.name}
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <Dialog.Panel className="mx-auto max-w-2xl w-full bg-card rounded-lg shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-primary px-6 py-4 flex items-center justify-between">
+            <div>
+              <Dialog.Title className="text-xl font-bold text-primary-foreground">
+                Vitals Check - {familyMember.name}
               </Dialog.Title>
+              <p className="text-sm text-primary-foreground/90">
+                AI-guided vital signs logging
+              </p>
             </div>
             <button
               onClick={onClose}
-              className="text-primary-foreground hover:text-primary-foreground/80 transition-colors flex-shrink-0" style={{ marginLeft: 'clamp(4px, 1vw, 8px)' }}
+              className="text-primary-foreground hover:text-primary-foreground/80 transition-colors"
             >
-              <XMarkIcon style={{ width: 'clamp(12px, 3vw, 16px)', height: 'clamp(12px, 3vw, 16px)' }} />
+              <XMarkIcon className="w-6 h-6" />
             </button>
           </div>
 
-          {/* Progress Bar - Thin */}
+          {/* Progress Bar */}
           {currentStep !== 'confirmation' && (
-            <div className="bg-muted flex-shrink-0" style={{ height: 'clamp(2px, 0.5vh, 4px)' }}>
+            <div className="bg-muted h-2">
               <div
-                className="bg-primary transition-all duration-300"
-                style={{ width: `${progress}%`, height: '100%' }}
+                className="bg-primary h-2 transition-all duration-300"
+                style={{ width: `${progress}%` }}
               />
             </div>
           )}
 
-          {/* Training Mode Toggle - Compact */}
-          {currentStep !== 'intro' && currentStep !== 'confirmation' && currentStep !== 'date_selection' && (
-            <div className="bg-accent-light border-b border-accent/20 flex-shrink-0" style={{ padding: 'clamp(4px, 1vh, 8px) clamp(6px, 2vw, 12px)' }}>
+          {/* Training Mode Toggle */}
+          {currentStep !== 'intro' && currentStep !== 'confirmation' && (
+            <div className="px-6 py-3 bg-accent-light border-b border-accent/20">
               <div className="flex items-center justify-between">
-                <div className="flex items-center" style={{ gap: 'clamp(2px, 0.5vw, 4px)' }}>
-                  <AcademicCapIcon className="text-accent-dark flex-shrink-0" style={{ width: 'clamp(10px, 2.5vw, 14px)', height: 'clamp(10px, 2.5vw, 14px)' }} />
-                  <span className="font-medium text-accent-dark" style={{ fontSize: 'clamp(8px, 2vw, 10px)' }}>
-                    Training
+                <div className="flex items-center gap-2">
+                  <AcademicCapIcon className="w-5 h-5 text-accent-dark" />
+                  <span className="text-sm font-medium text-accent-dark">
+                    Training Guidance
                   </span>
                 </div>
                 <button
                   onClick={() => setShowGuidance(!showGuidance)}
-                  className={`relative inline-flex items-center rounded-full transition-colors ${
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 ${
                     showGuidance ? 'bg-accent' : 'bg-muted-dark'
                   }`}
-                  style={{ height: 'clamp(12px, 3vw, 16px)', width: 'clamp(24px, 6vw, 32px)' }}
                   role="switch"
                   aria-checked={showGuidance}
                   aria-label="Toggle training guidance"
                 >
                   <span
-                    className={`inline-block transform rounded-full bg-white transition-transform ${
-                      showGuidance ? 'translate-x-[calc(100%-2px)]' : 'translate-x-0.5'
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      showGuidance ? 'translate-x-6' : 'translate-x-1'
                     }`}
-                    style={{ height: 'clamp(10px, 2.5vw, 12px)', width: 'clamp(10px, 2.5vw, 12px)' }}
                   />
                 </button>
               </div>
             </div>
           )}
 
-          {/* Step Content - Minimal padding */}
-          <LightThemeWizardWrapper>
-            <div className="flex-1 overflow-y-auto min-h-0 wizard-compact-content" style={{ padding: 'clamp(4px, 1vh, 8px) clamp(6px, 2vw, 12px)' }}>
-              {renderStepContent()}
-            </div>
-          </LightThemeWizardWrapper>
+          {/* Step Content */}
+          <div className="px-6 py-6 max-h-[60vh] overflow-y-auto">
+            {renderStepContent()}
+          </div>
 
-          {/* Footer Navigation - Compact */}
-          {currentStep !== 'confirmation' && currentStep !== 'intro' && currentStep !== 'review' && currentStep !== 'schedule' && currentStep !== 'date_selection' && (
-            <div className="bg-muted border-t border-border flex items-center justify-between flex-shrink-0" style={{ padding: 'clamp(4px, 1vh, 8px) clamp(6px, 2vw, 12px)' }}>
+          {/* Footer Navigation - Hidden on intro, mood, schedule, and confirmation steps */}
+          {currentStep !== 'confirmation' && currentStep !== 'intro' && currentStep !== 'mood' && currentStep !== 'schedule' && (
+            <div className="px-6 py-4 bg-muted border-t border-border flex items-center justify-between">
               <button
                 onClick={handleBack}
-                className="font-medium text-foreground hover:text-foreground/80 flex items-center touch-manipulation"
-                style={{ padding: 'clamp(3px, 0.75vh, 6px) clamp(6px, 1.5vw, 10px)', fontSize: 'clamp(10px, 2.5vw, 12px)', gap: 'clamp(2px, 0.5vw, 4px)' }}
+                className="px-4 py-2 text-sm font-medium text-foreground hover:text-foreground/80 flex items-center gap-2"
               >
-                <ArrowLeftIcon style={{ width: 'clamp(10px, 2.5vw, 12px)', height: 'clamp(10px, 2.5vw, 12px)' }} />
+                <ArrowLeftIcon className="w-4 h-4" />
                 Back
               </button>
 
-              <div className="flex items-center" style={{ gap: 'clamp(4px, 1vw, 8px)' }}>
-                <button
-                  onClick={handleSkipStep}
-                  className="font-medium text-muted-foreground hover:text-foreground touch-manipulation"
-                  style={{ padding: 'clamp(3px, 0.75vh, 6px) clamp(6px, 1.5vw, 10px)', fontSize: 'clamp(10px, 2.5vw, 12px)' }}
-                >
-                  Skip
-                </button>
+              <div className="flex items-center gap-3">
+                {currentStep !== 'review' && (
+                  <button
+                    onClick={handleSkipStep}
+                    className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    Skip
+                  </button>
+                )}
 
-                <button
-                  onClick={handleNext}
-                  className="bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center touch-manipulation"
-                  style={{ padding: 'clamp(3px, 0.75vh, 6px) clamp(8px, 2vw, 12px)', fontSize: 'clamp(10px, 2.5vw, 12px)', gap: 'clamp(2px, 0.5vw, 4px)' }}
-                >
-                  Next
-                  <ArrowRightIcon style={{ width: 'clamp(10px, 2.5vw, 12px)', height: 'clamp(10px, 2.5vw, 12px)' }} />
-                </button>
+                {currentStep === 'review' ? (
+                  <button
+                    onClick={handleNext}
+                    className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center gap-2"
+                  >
+                    Continue
+                    <ArrowRightIcon className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleNext}
+                    className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center gap-2"
+                  >
+                    Next
+                    <ArrowRightIcon className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           )}
         </Dialog.Panel>
       </div>
     </Dialog>
-    </>
   )
 }
 
@@ -843,23 +691,23 @@ function IntroStep({
   }, [selectedCaregiver, availableCaregivers.length, onCaregiverSelect])
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       <div className="text-center">
-        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-          <span className="text-base">🩺</span>
+        <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-3xl">🩺</span>
         </div>
-        <h3 className="text-base font-bold text-gray-900 mb-1">
+        <h3 className="text-2xl font-bold text-foreground mb-2">
           Let's Check Vitals for {familyMember.name}
         </h3>
-        <p className="text-gray-700 font-medium text-sm">
+        <p className="text-muted-foreground">
           I'll guide you through each measurement step-by-step
         </p>
       </div>
 
       {/* Caregiver Selection */}
       {availableCaregivers.length > 0 && (
-        <div className="bg-gray-50 rounded-md p-2 border-2 border-gray-300">
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+        <div className="bg-muted rounded-lg p-4 border border-border">
+          <label className="block text-sm font-medium text-foreground mb-2">
             Who is performing this vitals check?
           </label>
           <select
@@ -870,7 +718,7 @@ function IntroStep({
                 onCaregiverSelect(caregiver)
               }
             }}
-            className="w-full px-2 py-1.5 bg-white border-2 border-gray-300 rounded-md focus:border-primary focus:outline-none text-gray-900 text-base"
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg focus:border-primary focus:outline-none text-foreground"
           >
             {availableCaregivers.map((caregiver) => (
               <option key={caregiver.userId} value={caregiver.userId}>
@@ -884,14 +732,14 @@ function IntroStep({
         </div>
       )}
 
-      <div className="bg-blue-50 rounded-md p-2 border-2 border-blue-400">
-        <div className="flex items-start gap-2">
-          <InformationCircleIcon className="w-4 h-4 text-blue-800 flex-shrink-0 mt-0.5" />
+      <div className="bg-accent-light rounded-lg p-4 border border-accent/30">
+        <div className="flex items-start gap-3">
+          <InformationCircleIcon className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-blue-900 mb-1 text-sm">
+            <h4 className="font-semibold text-accent-dark mb-2">
               Before We Start
             </h4>
-            <ul className="space-y-1 text-sm text-gray-900">
+            <ul className="space-y-1 text-sm text-foreground">
               {guidance.map((step, index) => (
                 <li key={index} className="flex items-start gap-2">
                   <span className="font-medium">{index + 1}.</span>
@@ -903,106 +751,17 @@ function IntroStep({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         <button
           onClick={onNext}
-          className="w-full px-3 py-1.5 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors font-medium flex items-center justify-center gap-2 text-base"
+          className="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center justify-center gap-2"
         >
           Start Vitals Check
-          <ArrowRightIcon className="w-4 h-4" />
+          <ArrowRightIcon className="w-5 h-5" />
         </button>
-        <p className="text-xs text-center text-gray-700 font-medium">
+        <p className="text-xs text-center text-muted-foreground">
           You can skip any measurement you don't need to take today
         </p>
-      </div>
-    </div>
-  )
-}
-
-function DateSelectionStep({
-  selectedDate,
-  isValid,
-  error,
-  isBackdated,
-  daysDifference,
-  familyMember,
-  onDateChange,
-  onNext
-}: {
-  selectedDate: string
-  isValid: boolean
-  error: string | null
-  isBackdated: boolean
-  daysDifference: number
-  familyMember: any
-  onDateChange: (date: string) => void
-  onNext: () => void
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="text-center">
-        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-2">
-          <span className="text-base">📅</span>
-        </div>
-        <h3 className="text-base font-bold text-gray-900 mb-1">
-          When Were These Vitals Taken?
-        </h3>
-        <p className="text-gray-700 font-medium text-sm">
-          Select the date for {familyMember.name}'s vital readings
-        </p>
-      </div>
-
-      <VitalDatePicker
-        value={selectedDate}
-        onChange={onDateChange}
-        patientCreatedAt={familyMember.createdAt || new Date().toISOString()}
-        userPlanTier="free"
-        label="Recording Date"
-        helperText="Select today or a previous date"
-        required
-      />
-
-      {isBackdated && isValid && (
-        <div className="bg-amber-50 border-2 border-amber-400 rounded-md p-2">
-          <div className="flex items-start gap-2">
-            <ExclamationTriangleIcon className="w-4 h-4 text-amber-800 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-semibold text-amber-900 mb-1 text-sm">
-                Backdated Entry
-              </h4>
-              <p className="text-sm text-amber-900">
-                This entry will be marked as backdated by <strong>{daysDifference} day{daysDifference !== 1 ? 's' : ''}</strong>.
-                All backdated entries are tracked for compliance purposes.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-blue-50 rounded-md p-2 border-2 border-blue-400">
-        <div className="flex items-start gap-2">
-          <InformationCircleIcon className="w-4 h-4 text-blue-800 flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 className="font-semibold text-blue-900 mb-1 text-sm">
-              Why We Ask
-            </h4>
-            <p className="text-sm text-gray-900">
-              Recording the actual date helps track health trends accurately. If you're logging vitals from a previous day, that's okay - just select the correct date.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation Buttons */}
-      <div className="flex items-center justify-end pt-2 border-t border-gray-200">
-        <button
-          onClick={onNext}
-          disabled={!isValid}
-          className="px-3 py-1.5 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-base"
-        >
-          Next
-          <ArrowRightIcon className="w-4 h-4" />
-        </button>
       </div>
     </div>
   )
@@ -1058,20 +817,20 @@ function BloodPressureStep({ value, onChange, validation, showGuidance, familyMe
   const trainingPrompt = getTrainingPrompt('blood_pressure_first_time')
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-bold text-foreground mb-1">Blood Pressure</h3>
+        <h3 className="text-xl font-bold text-foreground mb-2">Blood Pressure</h3>
         <p className="text-sm text-gray-700 font-medium">
           Enter the systolic (top) and diastolic (bottom) readings
         </p>
       </div>
 
       {showGuidance && trainingPrompt && (
-        <div className="bg-purple-50 rounded-md p-2 border-2 border-purple-400">
-          <div className="flex items-start gap-2">
-            <AcademicCapIcon className="w-4 h-4 text-purple-800 flex-shrink-0 mt-0.5" />
+        <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-400">
+          <div className="flex items-start gap-3">
+            <AcademicCapIcon className="w-5 h-5 text-purple-800 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-purple-900 mb-1 text-sm">
+              <h4 className="font-semibold text-purple-900 mb-1">
                 {trainingPrompt.topic}
               </h4>
               <p className="text-sm text-purple-900 font-medium">
@@ -1082,9 +841,9 @@ function BloodPressureStep({ value, onChange, validation, showGuidance, familyMe
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-2">
             Systolic (top)
           </label>
           <input
@@ -1094,16 +853,13 @@ function BloodPressureStep({ value, onChange, validation, showGuidance, familyMe
               setSystolic(e.target.value)
               handleUpdate(e.target.value, diastolic)
             }}
-            placeholder=""
-            className="w-full px-2 py-1.5 text-base font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-md focus:border-primary focus:outline-none"
-            aria-describedby="systolic-hint"
-            enterKeyHint="next"
-            inputMode="numeric"
+            placeholder="120"
+            className="w-full px-4 py-3 text-2xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
           />
-          <p id="systolic-hint" className="text-xs text-gray-700 mt-1 text-center font-medium">Top number (typically 90-140 mmHg)</p>
+          <p className="text-xs text-gray-700 mt-1 text-center font-medium">mmHg</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-2">
             Diastolic (bottom)
           </label>
           <input
@@ -1113,23 +869,20 @@ function BloodPressureStep({ value, onChange, validation, showGuidance, familyMe
               setDiastolic(e.target.value)
               handleUpdate(systolic, e.target.value)
             }}
-            placeholder=""
-            className="w-full px-2 py-1.5 text-base font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-md focus:border-primary focus:outline-none"
-            aria-describedby="diastolic-hint"
-            enterKeyHint="done"
-            inputMode="numeric"
+            placeholder="80"
+            className="w-full px-4 py-3 text-2xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
           />
-          <p id="diastolic-hint" className="text-xs text-gray-700 mt-1 text-center font-medium">Bottom number (typically 60-90 mmHg)</p>
+          <p className="text-xs text-gray-700 mt-1 text-center font-medium">mmHg</p>
         </div>
       </div>
 
       {/* Inline validation warning for swapped values */}
       {showSwapWarning && (
-        <div className="rounded-md p-2 border-2 bg-yellow-50 border-yellow-500">
-          <div className="flex items-start gap-2">
-            <ExclamationTriangleIcon className="w-4 h-4 text-yellow-800 flex-shrink-0 mt-0.5" />
+        <div className="rounded-lg p-4 border-2 bg-yellow-50 border-yellow-500">
+          <div className="flex items-start gap-3">
+            <ExclamationTriangleIcon className="w-5 h-5 text-yellow-800 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-semibold text-warning-dark mb-1 text-sm">Values May Be Swapped</p>
+              <p className="font-semibold text-warning-dark mb-1">Values May Be Swapped</p>
               <p className="text-sm text-foreground">
                 Systolic (top number) should be HIGHER than diastolic (bottom number).
                 Your current values: {systolicNum}/{diastolicNum}.
@@ -1159,9 +912,9 @@ function TemperatureStep({ value, onChange, validation, showGuidance }: StepProp
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-bold text-gray-900 mb-1">Temperature</h3>
+        <h3 className="text-xl font-bold text-foreground mb-2">Temperature</h3>
         <p className="text-sm text-gray-700 font-medium">
           Enter temperature in Fahrenheit
         </p>
@@ -1173,13 +926,10 @@ function TemperatureStep({ value, onChange, validation, showGuidance }: StepProp
           step="0.1"
           value={temp}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder=""
-          className="w-full px-2 py-1.5 text-base font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-md focus:border-primary focus:outline-none"
-          aria-describedby="temp-hint"
-          enterKeyHint="done"
-          inputMode="decimal"
+          placeholder="98.6"
+          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
         />
-        <p id="temp-hint" className="text-sm text-gray-700 mt-1 text-center font-medium">Enter temperature (°F, typically 97-99°F)</p>
+        <p className="text-sm text-gray-700 mt-2 text-center font-medium">°F (Fahrenheit)</p>
       </div>
 
       {validation && (
@@ -1187,159 +937,10 @@ function TemperatureStep({ value, onChange, validation, showGuidance }: StepProp
       )}
 
       {showGuidance && (
-        <div className="bg-gray-50 rounded-md p-2 border-2 border-gray-400">
+        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-400">
           <p className="text-sm text-gray-800 font-medium">
             💡 <strong>Normal range:</strong> 97°F - 99°F<br />
             🌡️ <strong>Fever:</strong> 100.4°F or higher
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function PulseOximeterStep({ value, onChange, validation, showGuidance }: StepProps) {
-  const [spo2, setSpo2] = useState(value?.spo2?.toString() || '')
-  const [pulseRate, setPulseRate] = useState(value?.pulseRate?.toString() || '')
-  const [perfusionIndex, setPerfusionIndex] = useState(value?.perfusionIndex?.toString() || '')
-
-  const handleUpdate = (spo2Val: string, pulseVal: string, perfusionVal: string) => {
-    // If both required fields are empty, clear the data
-    if (spo2Val === '' && pulseVal === '') {
-      onChange(undefined)
-      return
-    }
-
-    const spo2Num = parseInt(spo2Val)
-    const pulseNum = parseInt(pulseVal)
-    const perfusionNum = perfusionVal ? parseFloat(perfusionVal) : undefined
-
-    // Only update if both required values are valid positive numbers
-    if (!isNaN(spo2Num) && !isNaN(pulseNum) && spo2Num > 0 && pulseNum > 0) {
-      onChange({
-        spo2: spo2Num,
-        pulseRate: pulseNum,
-        perfusionIndex: perfusionNum
-      })
-    } else {
-      // If one or both values are incomplete, clear the data
-      onChange(undefined)
-    }
-  }
-
-  const trainingPrompt = getTrainingPrompt('pulse_oximeter_first_time')
-
-  return (
-    <div className="space-y-2">
-      <div>
-        <h3 className="text-sm font-bold text-foreground mb-1">Pulse Oximeter Reading</h3>
-        <p className="text-sm text-gray-700 font-medium">
-          Enter both SpO₂ and pulse rate from your pulse oximeter
-        </p>
-      </div>
-
-      {showGuidance && trainingPrompt && (
-        <div className="bg-purple-50 rounded-md p-2 border-2 border-purple-400">
-          <div className="flex items-start gap-2">
-            <AcademicCapIcon className="w-4 h-4 text-purple-800 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-semibold text-purple-900 mb-1 text-sm">
-                {trainingPrompt.topic}
-              </h4>
-              <p className="text-sm text-purple-900 font-medium">
-                {trainingPrompt.message}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SpO2 and Pulse Rate - Side by side like Blood Pressure */}
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
-            SpO₂ (Oxygen)
-          </label>
-          <input
-            type="number"
-            value={spo2}
-            onChange={(e) => {
-              setSpo2(e.target.value)
-              handleUpdate(e.target.value, pulseRate, perfusionIndex)
-            }}
-            placeholder=""
-            min="70"
-            max="100"
-            className="w-full px-2 py-1.5 text-base font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-md focus:border-primary focus:outline-none"
-            aria-describedby="spo2-hint"
-            enterKeyHint="next"
-            inputMode="numeric"
-          />
-          <p id="spo2-hint" className="text-xs text-gray-700 mt-1 text-center font-medium">
-            Oxygen saturation (typically 95-100%)
-          </p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-900 mb-1">
-            Pulse Rate
-          </label>
-          <input
-            type="number"
-            value={pulseRate}
-            onChange={(e) => {
-              setPulseRate(e.target.value)
-              handleUpdate(spo2, e.target.value, perfusionIndex)
-            }}
-            placeholder=""
-            min="30"
-            max="220"
-            className="w-full px-2 py-1.5 text-base font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-md focus:border-primary focus:outline-none"
-            aria-describedby="pulse-hint"
-            enterKeyHint="next"
-            inputMode="numeric"
-          />
-          <p id="pulse-hint" className="text-xs text-gray-700 mt-1 text-center font-medium">
-            Heart rate (typically 60-100 bpm)
-          </p>
-        </div>
-      </div>
-
-      {/* Perfusion Index - Optional, full width */}
-      <div>
-        <label className="block text-sm font-medium text-gray-900 mb-1">
-          Perfusion Index (Optional)
-        </label>
-        <input
-          type="number"
-          step="0.1"
-          value={perfusionIndex}
-          onChange={(e) => {
-            setPerfusionIndex(e.target.value)
-            handleUpdate(spo2, pulseRate, e.target.value)
-          }}
-          placeholder=""
-          min="0"
-          max="20"
-          className="w-full px-2 py-1.5 text-base font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-md focus:border-primary focus:outline-none"
-          aria-describedby="perfusion-hint"
-          enterKeyHint="done"
-          inputMode="decimal"
-        />
-        <p id="perfusion-hint" className="text-xs text-gray-700 mt-1 text-center font-medium">
-          Perfusion strength (optional, 0-20%)
-        </p>
-      </div>
-
-      {validation && (
-        <ValidationAlert validation={validation} />
-      )}
-
-      {showGuidance && (
-        <div className="bg-gray-50 rounded-md p-2 border-2 border-gray-400">
-          <p className="text-sm text-gray-800 font-medium">
-            💡 <strong>Normal SpO₂:</strong> 95-100%<br />
-            ❤️ <strong>Normal Pulse:</strong> 60-100 bpm at rest<br />
-            🫁 <strong>Low oxygen:</strong> Below 90% requires medical attention
           </p>
         </div>
       )}
@@ -1361,7 +962,7 @@ function HeartRateStep({ value, onChange, validation, showGuidance }: StepProps)
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Heart Rate</h3>
+        <h3 className="text-xl font-bold text-foreground mb-2">Heart Rate</h3>
         <p className="text-sm text-gray-700 font-medium">
           Enter pulse in beats per minute
         </p>
@@ -1372,11 +973,10 @@ function HeartRateStep({ value, onChange, validation, showGuidance }: StepProps)
           type="number"
           value={hr}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder=""
-          className="w-full px-6 py-4 text-3xl font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:border-primary focus:outline-none"
-          aria-describedby="hr-hint"
+          placeholder="72"
+          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
         />
-        <p id="hr-hint" className="text-sm text-gray-700 mt-2 text-center font-medium">Heart rate (typically 60-100 bpm at rest)</p>
+        <p className="text-sm text-gray-700 mt-2 text-center font-medium">bpm (beats per minute)</p>
       </div>
 
       {validation && (
@@ -1420,12 +1020,11 @@ function OxygenStep({ value, onChange, validation, showGuidance }: StepProps) {
           type="number"
           value={o2}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder=""
+          placeholder="98"
           max="100"
           className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
-          aria-describedby="o2-hint"
         />
-        <p id="o2-hint" className="text-sm text-gray-700 mt-2 text-center font-medium">Oxygen saturation (typically 95-100%)</p>
+        <p className="text-sm text-gray-700 mt-2 text-center font-medium">% SpO2</p>
       </div>
 
       {validation && (
@@ -1456,9 +1055,9 @@ function BloodSugarStep({ value, onChange, validation, showGuidance }: StepProps
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-bold text-foreground mb-1">Blood Sugar</h3>
+        <h3 className="text-xl font-bold text-foreground mb-2">Blood Sugar</h3>
         <p className="text-sm text-gray-700 font-medium">
           Enter glucose reading from glucometer
         </p>
@@ -1469,13 +1068,10 @@ function BloodSugarStep({ value, onChange, validation, showGuidance }: StepProps
           type="number"
           value={glucose}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder=""
-          className="w-full px-2 py-1.5 text-base font-bold text-center bg-white border-2 border-border rounded-md focus:border-primary focus:outline-none"
-          aria-describedby="glucose-hint"
-          enterKeyHint="done"
-          inputMode="numeric"
+          placeholder="120"
+          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
         />
-        <p id="glucose-hint" className="text-sm text-gray-700 mt-1 text-center font-medium">Blood sugar (mg/dL, typically 80-130 fasting)</p>
+        <p className="text-sm text-gray-700 mt-2 text-center font-medium">mg/dL</p>
       </div>
 
       {validation && (
@@ -1483,7 +1079,7 @@ function BloodSugarStep({ value, onChange, validation, showGuidance }: StepProps
       )}
 
       {showGuidance && (
-        <div className="bg-gray-50 rounded-md p-2 border-2 border-gray-400">
+        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-400">
           <p className="text-sm text-gray-800 font-medium">
             💡 <strong>Target range:</strong> 80-130 mg/dL (fasting)<br />
             🩸 <strong>Critical:</strong> Below 70 or above 300 requires immediate action
@@ -1506,9 +1102,9 @@ function WeightStep({ value, onChange, validation, showGuidance }: StepProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-bold text-foreground mb-1">Weight</h3>
+        <h3 className="text-xl font-bold text-foreground mb-2">Weight</h3>
         <p className="text-sm text-gray-700 font-medium">
           Enter current weight in pounds
         </p>
@@ -1520,13 +1116,10 @@ function WeightStep({ value, onChange, validation, showGuidance }: StepProps) {
           step="0.1"
           value={weight}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder=""
-          className="w-full px-2 py-1.5 text-base font-bold text-center bg-white border-2 border-border rounded-md focus:border-primary focus:outline-none"
-          aria-describedby="weight-hint"
-          enterKeyHint="done"
-          inputMode="decimal"
+          placeholder="150"
+          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
         />
-        <p id="weight-hint" className="text-sm text-gray-700 mt-1 text-center font-medium">Enter weight in pounds (lbs)</p>
+        <p className="text-sm text-gray-700 mt-2 text-center font-medium">lbs (pounds)</p>
       </div>
 
       {validation && (
@@ -1534,7 +1127,7 @@ function WeightStep({ value, onChange, validation, showGuidance }: StepProps) {
       )}
 
       {showGuidance && (
-        <div className="bg-gray-50 rounded-md p-2 border-2 border-gray-400">
+        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-400">
           <p className="text-sm text-gray-800 font-medium">
             ⚖️ <strong>Tip:</strong> Weigh yourself at the same time each day for consistency<br />
             📊 <strong>Note:</strong> Daily fluctuations of 1-2 lbs are normal
@@ -1549,18 +1142,12 @@ function ReviewStep({
   vitalData,
   validationResults,
   familyMember,
-  onNotesChange,
-  onSubmit,
-  onBack,
-  isSubmitting
+  onNotesChange
 }: {
   vitalData: VitalData
   validationResults: Record<string, ValidationResult>
   familyMember: any
   onNotesChange: (notes: string) => void
-  onSubmit: () => void
-  onBack: () => void
-  isSubmitting: boolean
 }) {
   const hasAbnormalReadings = Object.values(validationResults).some(
     v => v.severity === 'warning' || v.severity === 'critical'
@@ -1571,110 +1158,93 @@ function ReviewStep({
   )
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-bold text-foreground mb-1">Review Vitals</h3>
+        <h3 className="text-xl font-bold text-foreground mb-2">Review Vitals</h3>
         <p className="text-sm text-muted-foreground">
           Confirm all readings are correct before submitting
         </p>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {vitalData.bloodPressure && (
-          <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground text-sm">Blood Pressure</span>
-            <span className="text-base font-bold text-foreground">
+          <div className="flex items-center justify-between p-4 bg-card rounded-lg border-2 border-border">
+            <span className="font-medium text-foreground">Blood Pressure</span>
+            <span className="text-lg font-bold text-foreground">
               {vitalData.bloodPressure.systolic}/{vitalData.bloodPressure.diastolic} mmHg
             </span>
           </div>
         )}
 
         {vitalData.temperature && (
-          <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground text-sm">Temperature</span>
-            <span className="text-base font-bold text-foreground">
+          <div className="flex items-center justify-between p-4 bg-card rounded-lg border-2 border-border">
+            <span className="font-medium text-foreground">Temperature</span>
+            <span className="text-lg font-bold text-foreground">
               {vitalData.temperature}°F
             </span>
           </div>
         )}
 
-        {vitalData.pulseOximeterReading && (
-          <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground text-sm">Pulse Oximeter</span>
-            <span className="text-base font-bold text-foreground">
-              {vitalData.pulseOximeterReading.spo2}% SpO₂ / {vitalData.pulseOximeterReading.pulseRate} bpm
-              {vitalData.pulseOximeterReading.perfusionIndex &&
-                ` (PI: ${vitalData.pulseOximeterReading.perfusionIndex}%)`
-              }
+        {vitalData.heartRate && (
+          <div className="flex items-center justify-between p-4 bg-card rounded-lg border-2 border-border">
+            <span className="font-medium text-foreground">Heart Rate</span>
+            <span className="text-lg font-bold text-foreground">
+              {vitalData.heartRate} bpm
+            </span>
+          </div>
+        )}
+
+        {vitalData.oxygenSaturation && (
+          <div className="flex items-center justify-between p-4 bg-card rounded-lg border-2 border-border">
+            <span className="font-medium text-foreground">Oxygen Saturation</span>
+            <span className="text-lg font-bold text-foreground">
+              {vitalData.oxygenSaturation}%
             </span>
           </div>
         )}
 
         {vitalData.bloodSugar && (
-          <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground text-sm">Blood Sugar</span>
-            <span className="text-base font-bold text-foreground">
+          <div className="flex items-center justify-between p-4 bg-card rounded-lg border-2 border-border">
+            <span className="font-medium text-foreground">Blood Sugar</span>
+            <span className="text-lg font-bold text-foreground">
               {vitalData.bloodSugar} mg/dL
             </span>
           </div>
         )}
 
         {vitalData.weight && (
-          <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground text-sm">Weight</span>
-            <span className="text-base font-bold text-foreground">
+          <div className="flex items-center justify-between p-4 bg-card rounded-lg border-2 border-border">
+            <span className="font-medium text-foreground">Weight</span>
+            <span className="text-lg font-bold text-foreground">
               {vitalData.weight} lbs
             </span>
-          </div>
-        )}
-
-        {vitalData.mood && (
-          <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground text-sm">Mood</span>
-            <span className="text-base font-bold text-foreground capitalize">
-              {vitalData.mood === 'happy' && '😊 Happy'}
-              {vitalData.mood === 'calm' && '😌 Calm'}
-              {vitalData.mood === 'okay' && '😐 Okay'}
-              {vitalData.mood === 'worried' && '😟 Worried'}
-              {vitalData.mood === 'sad' && '😢 Sad'}
-              {vitalData.mood === 'pain' && '😫 Pain'}
-            </span>
-          </div>
-        )}
-
-        {vitalData.moodNotes && (
-          <div className="p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground block mb-1 text-sm">Mood Notes</span>
-            <p className="text-sm text-foreground">
-              {vitalData.moodNotes}
-            </p>
           </div>
         )}
       </div>
 
       {hasAbnormalReadings && (
-        <div className={`rounded-md p-2 border-2 ${
+        <div className={`rounded-lg p-4 border-2 ${
           hasCriticalReadings
             ? 'bg-error-light border-error'
             : 'bg-warning-light border-warning'
         }`}>
-          <div className="flex items-start gap-2">
-            <ExclamationTriangleIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+          <div className="flex items-start gap-3">
+            <ExclamationTriangleIcon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
               hasCriticalReadings ? 'text-error' : 'text-warning'
             }`} />
             <div>
-              <h4 className={`font-semibold mb-1 text-sm ${
+              <h4 className={`font-semibold mb-2 ${
                 hasCriticalReadings ? 'text-error-dark' : 'text-warning-dark'
               }`}>
                 {hasCriticalReadings ? 'Critical Readings Detected' : 'Abnormal Readings Detected'}
               </h4>
-              <p className="text-sm text-foreground mb-2">
+              <p className="text-sm text-foreground mb-3">
                 <strong>Recommended:</strong> Please add notes explaining the situation and any actions taken:
               </p>
               <textarea
                 value={vitalData.notes || ''}
                 placeholder="Example: Patient reports feeling dizzy. Gave water and had them sit down. Will monitor for 30 minutes."
-                className="w-full px-2 py-1.5 bg-card border-2 border-border rounded-md focus:border-primary focus:outline-none min-h-[80px] text-base"
+                className="w-full px-3 py-2 bg-card border-2 border-border rounded-lg focus:border-primary focus:outline-none min-h-[100px]"
                 onChange={(e) => onNotesChange(e.target.value)}
               />
             </div>
@@ -1683,44 +1253,14 @@ function ReviewStep({
       )}
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Additional Notes (Optional)
         </label>
         <textarea
           placeholder="Any additional observations or notes..."
-          className="w-full px-2 py-1.5 bg-card border border-border rounded-md focus:border-primary focus:outline-none min-h-[60px] text-base"
+          className="w-full px-3 py-2 bg-card border border-border rounded-lg focus:border-primary focus:outline-none min-h-[80px]"
           onChange={(e) => onNotesChange(e.target.value)}
         />
-      </div>
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between pt-2 border-t border-border">
-        <button
-          onClick={onBack}
-          className="font-medium text-foreground hover:text-foreground/80 flex items-center touch-manipulation"
-          style={{ padding: 'clamp(3px, 0.75vh, 6px) clamp(6px, 1.5vw, 10px)', fontSize: 'clamp(10px, 2.5vw, 12px)', gap: 'clamp(2px, 0.5vw, 4px)' }}
-        >
-          <ArrowLeftIcon style={{ width: 'clamp(10px, 2.5vw, 12px)', height: 'clamp(10px, 2.5vw, 12px)' }} />
-          Back
-        </button>
-
-        <button
-          onClick={onSubmit}
-          disabled={isSubmitting}
-          className="px-3 py-1.5 bg-success text-white rounded-md hover:bg-success-dark transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-base"
-        >
-          {isSubmitting ? (
-            <>
-              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <CheckCircleIcon className="w-4 h-4" />
-              Submit Vitals
-            </>
-          )}
-        </button>
       </div>
     </div>
   )
@@ -1739,22 +1279,22 @@ function ConfirmationStep({
   const vitalsCount = [
     vitalData.bloodPressure,
     vitalData.temperature,
-    vitalData.pulseOximeterReading,
+    vitalData.heartRate || vitalData.oxygenSaturation,
     vitalData.bloodSugar,
     vitalData.weight
   ].filter(Boolean).length
 
   return (
-    <div className="text-center py-4 space-y-2">
-      <div className="w-8 h-8 bg-success-light rounded-full flex items-center justify-center mx-auto">
-        <CheckCircleIcon className="w-8 h-8 text-success" />
+    <div className="text-center py-8 space-y-6">
+      <div className="w-20 h-20 bg-success-light rounded-full flex items-center justify-center mx-auto">
+        <CheckCircleIcon className="w-12 h-12 text-success" />
       </div>
 
       <div>
-        <h3 className="text-base font-bold text-foreground mb-1">
+        <h3 className="text-2xl font-bold text-foreground mb-2">
           Vitals Logged Successfully
         </h3>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground">
           {vitalsCount} vital sign{vitalsCount !== 1 ? 's' : ''} recorded for {familyMember.name}
         </p>
       </div>
@@ -1778,8 +1318,8 @@ function ConfirmationStep({
       </div>
 
       {/* Summary of recorded vitals */}
-      <div className="max-w-md mx-auto bg-muted/30 rounded-md p-2 text-left space-y-1">
-        <h4 className="font-semibold text-sm text-muted-foreground mb-2">Recorded Measurements:</h4>
+      <div className="max-w-md mx-auto bg-muted/30 rounded-lg p-4 text-left space-y-2">
+        <h4 className="font-semibold text-sm text-muted-foreground mb-3">Recorded Measurements:</h4>
 
         {vitalData.bloodPressure && (
           <div className="flex justify-between items-center">
@@ -1797,11 +1337,12 @@ function ConfirmationStep({
           </div>
         )}
 
-        {vitalData.pulseOximeterReading && (
+        {(vitalData.heartRate || vitalData.oxygenSaturation) && (
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Pulse Oximeter:</span>
             <span className="text-sm font-medium text-foreground">
-              {vitalData.pulseOximeterReading.spo2}% SpO₂ / {vitalData.pulseOximeterReading.pulseRate} bpm
+              {vitalData.oxygenSaturation ? `${vitalData.oxygenSaturation}% SpO₂` : ''}
+              {vitalData.heartRate ? ` ${vitalData.heartRate} bpm` : ''}
             </span>
           </div>
         )}
@@ -1836,7 +1377,7 @@ function ConfirmationStep({
 
       <button
         onClick={onClose}
-        className="px-3 py-1.5 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors font-medium text-base"
+        className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
       >
         Done
       </button>
@@ -1870,7 +1411,7 @@ function ScheduleStep({
   const loggedVitals: Array<{ type: string; label: string }> = []
   if (vitalData.bloodPressure) loggedVitals.push({ type: 'blood_pressure', label: 'Blood Pressure' })
   if (vitalData.temperature) loggedVitals.push({ type: 'temperature', label: 'Temperature' })
-  if (vitalData.pulseOximeterReading) loggedVitals.push({ type: 'pulse_oximeter', label: 'Pulse Oximeter' })
+  if (vitalData.heartRate || vitalData.oxygenSaturation) loggedVitals.push({ type: 'pulse_ox', label: 'Pulse Oximeter' })
   if (vitalData.bloodSugar) loggedVitals.push({ type: 'blood_sugar', label: 'Blood Sugar' })
   if (vitalData.weight) loggedVitals.push({ type: 'weight', label: 'Weight' })
 
@@ -1919,27 +1460,27 @@ function ScheduleStep({
   }
 
   return (
-    <div className="space-y-2">
-      <div className="text-center mb-2">
-        <h3 className="text-base font-bold text-foreground mb-1">
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <h3 className="text-2xl font-bold text-foreground mb-2">
           Set Up Regular Reminders?
         </h3>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground">
           Would you like to receive reminders to check {familyMember.name}'s vitals regularly?
         </p>
       </div>
 
       {/* Enable/Disable Toggle */}
-      <div className="bg-accent-light border border-accent/30 rounded-md p-2">
-        <label className="flex items-center gap-2 cursor-pointer">
+      <div className="bg-accent-light border border-accent/30 rounded-lg p-4">
+        <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
             checked={enabled}
             onChange={(e) => setEnabled(e.target.checked)}
-            className="w-4 h-4 text-accent rounded focus:ring-2 focus:ring-accent"
+            className="w-5 h-5 text-accent rounded focus:ring-2 focus:ring-accent"
           />
           <div className="flex-1">
-            <span className="font-medium text-foreground text-sm">Yes, set up regular vital check reminders</span>
+            <span className="font-medium text-foreground">Yes, set up regular vital check reminders</span>
             <p className="text-sm text-muted-foreground mt-1">
               We'll send you notifications at scheduled times to help you stay on track
             </p>
@@ -1948,15 +1489,15 @@ function ScheduleStep({
       </div>
 
       {enabled && (
-        <div className="space-y-2 animate-fadeIn">
+        <div className="space-y-6 animate-fadeIn">
           {/* Select Which Vitals */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-foreground mb-3">
               Which vitals would you like to monitor regularly?
             </label>
-            <div className="space-y-1">
+            <div className="space-y-2">
               {loggedVitals.map(vital => (
-                <label key={vital.type} className="flex items-center gap-2 p-2 bg-muted/30 rounded-md cursor-pointer hover:bg-muted/50 transition-colors">
+                <label key={vital.type} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                   <input
                     type="checkbox"
                     checked={selectedVitals.includes(vital.type)}
@@ -1977,7 +1518,7 @@ function ScheduleStep({
 
           {/* Frequency Selection */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-foreground mb-3">
               How often should we remind you?
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -1990,7 +1531,7 @@ function ScheduleStep({
                 <button
                   key={option.value}
                   onClick={() => handleFrequencyChange(option.value)}
-                  className={`relative p-2 rounded-md border-2 transition-all ${
+                  className={`relative p-3 rounded-lg border-2 transition-all ${
                     frequency === option.value
                       ? 'border-accent bg-accent-light'
                       : 'border-border hover:border-accent/50'
@@ -2009,7 +1550,7 @@ function ScheduleStep({
 
           {/* Times */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-foreground mb-3">
               Reminder Times
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -2023,22 +1564,22 @@ function ScheduleStep({
                     newTimes[index] = e.target.value
                     setTimes(newTimes)
                   }}
-                  className="px-2 py-1.5 border border-border rounded-md bg-card text-foreground text-center text-base"
+                  className="px-3 py-2 border border-border rounded-lg bg-card text-foreground text-center"
                 />
               ))}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-2">
               You can adjust these times later in settings
             </p>
           </div>
 
           {/* Notification Channels */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-foreground mb-3">
               How should we remind you?
             </label>
-            <div className="space-y-1">
-              <label className="flex items-center gap-2 p-2 bg-muted/30 rounded-md cursor-pointer">
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer">
                 <input
                   type="checkbox"
                   checked={appNotifications}
@@ -2051,7 +1592,7 @@ function ScheduleStep({
                 </div>
               </label>
 
-              <label className="flex items-center gap-2 p-2 bg-muted/30 rounded-md cursor-pointer">
+              <label className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer">
                 <input
                   type="checkbox"
                   checked={emailNotifications}
@@ -2064,7 +1605,7 @@ function ScheduleStep({
                 </div>
               </label>
 
-              <label className="flex items-center gap-2 p-2 bg-muted/30 rounded-md cursor-pointer">
+              <label className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer">
                 <input
                   type="checkbox"
                   checked={smsNotifications}
@@ -2340,9 +1881,9 @@ function MoodStep({
   ]
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-bold text-foreground mb-1">
+        <h3 className="text-lg font-bold text-foreground mb-2">
           How is {familyMember.name} feeling today?
         </h3>
         <p className="text-sm text-muted-foreground">
@@ -2350,37 +1891,37 @@ function MoodStep({
         </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {moods.map((mood) => (
           <button
             key={mood.value}
             onClick={() => onChange(mood.value)}
-            className={`p-2 rounded-md border-2 transition-all ${
+            className={`p-6 rounded-lg border-2 transition-all ${
               value === mood.value
                 ? mood.color
                 : 'bg-card border-border hover:border-accent/50'
             }`}
           >
-            <div className="text-2xl mb-1">{mood.emoji}</div>
+            <div className="text-5xl mb-2">{mood.emoji}</div>
             <div className="text-sm font-medium">{mood.label}</div>
           </button>
         ))}
       </div>
 
       {value && (
-        <div className="space-y-2 animate-fadeIn">
+        <div className="space-y-3 animate-fadeIn">
           <label className="block text-sm font-medium text-foreground">
             Tell us more about how {familyMember.name} is feeling (optional)
           </label>
 
           {speechSupported && (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={isRecording ? stopRecording : startRecording}
-                  disabled={isRequestingPermission || countdown !== null || isProcessing}
-                  className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-2 disabled:opacity-50 text-base ${
+                  disabled={isSubmitting || isRequestingPermission || countdown !== null || isProcessing}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 ${
                     isRecording
                       ? 'bg-error text-white animate-pulse'
                       : isRequestingPermission || countdown !== null || isProcessing
@@ -2389,12 +1930,12 @@ function MoodStep({
                   }`}
                 >
                   {countdown !== null ? (
-                    <span className="text-base font-bold animate-pulse">{countdown}</span>
+                    <span className="text-2xl font-bold animate-pulse">{countdown}</span>
                   ) : (isProcessing || isRequestingPermission) ? (
-                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
                   ) : (
                     <svg
-                      className="w-4 h-4"
+                      className="w-5 h-5"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -2425,10 +1966,10 @@ function MoodStep({
                       }
                       setCountdown(null)
                     }}
-                    className="px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-2 bg-muted text-foreground hover:bg-muted/80 text-base"
+                    className="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 bg-muted text-foreground hover:bg-muted/80"
                   >
                     <svg
-                      className="w-4 h-4"
+                      className="w-5 h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -2451,11 +1992,11 @@ function MoodStep({
                       onNotesChange('')
                     }}
                     disabled={isSubmitting}
-                    className="px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-2 bg-muted text-foreground hover:bg-muted/80 disabled:opacity-50 text-base"
+                    className="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 bg-muted text-foreground hover:bg-muted/80 disabled:opacity-50"
                     title="Clear recording and start over"
                   >
                     <svg
-                      className="w-4 h-4"
+                      className="w-5 h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -2496,7 +2037,7 @@ function MoodStep({
                 )}
               </div>
               {permissionError && (
-                <div className="bg-warning-light border border-warning rounded-md p-2">
+                <div className="bg-warning-light border border-warning rounded-lg p-3">
                   <p className="text-sm text-warning-dark font-medium">
                     {permissionError}
                   </p>
@@ -2509,7 +2050,7 @@ function MoodStep({
             value={moodNotes || ''}
             onChange={(e) => onNotesChange(e.target.value)}
             placeholder="Example: My back is hurting today, took pain medication at 8am..."
-            className="w-full px-2 py-1.5 bg-card border border-border rounded-md focus:border-primary focus:outline-none min-h-[80px] text-foreground text-base"
+            className="w-full px-3 py-2 bg-card border border-border rounded-lg focus:border-primary focus:outline-none min-h-[100px] text-foreground"
             disabled={isRecording || isProcessing}
           />
 
@@ -2520,6 +2061,33 @@ function MoodStep({
           )}
         </div>
       )}
+
+      <div className="flex items-center justify-between pt-6 border-t border-border">
+        <button
+          onClick={onSubmit}
+          disabled={isSubmitting}
+          className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+        >
+          {isSubmitting ? 'Saving...' : 'Skip'}
+        </button>
+        <button
+          onClick={onSubmit}
+          disabled={isSubmitting || !value}
+          className="px-6 py-3 bg-success text-white rounded-lg hover:bg-success-dark transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {isSubmitting ? (
+            <>
+              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <CheckCircleIcon className="w-5 h-5" />
+              Submit Vitals
+            </>
+          )}
+        </button>
+      </div>
     </div>
   )
 }

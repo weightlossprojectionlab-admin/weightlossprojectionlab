@@ -8,14 +8,9 @@
 import { useState, useEffect } from 'react'
 import { VitalType, VitalValue, BloodPressureValue, PulseOximeterValue } from '@/types/medical'
 import toast from 'react-hot-toast'
-import VitalDatePicker from './VitalDatePicker'
-import BackdateConfirmModal from './BackdateConfirmModal'
-import { useVitalDatePicker } from '@/hooks/useVitalDatePicker'
 
 interface VitalLogFormProps {
   patientId: string
-  patientName: string
-  patientCreatedAt: string
   onSubmit: (data: {
     type: VitalType
     value: VitalValue
@@ -36,7 +31,7 @@ interface VitalLogFormProps {
   isEditing?: boolean
 }
 
-export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmit, onCancel, defaultType, onTypeChange, initialData, isEditing }: VitalLogFormProps) {
+export function VitalLogForm({ patientId, onSubmit, onCancel, defaultType, onTypeChange, initialData, isEditing }: VitalLogFormProps) {
   const [type, setType] = useState<VitalType>(initialData?.type || defaultType || 'blood_pressure')
   const [value, setValue] = useState<string>('')
   const [systolic, setSystolic] = useState<string>('')
@@ -44,17 +39,13 @@ export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmi
   const [spo2, setSpo2] = useState<string>('')
   const [pulseRate, setPulseRate] = useState<string>('')
   const [perfusionIndex, setPerfusionIndex] = useState<string>('')
+  const [recordedAt, setRecordedAt] = useState<string>(
+    initialData?.recordedAt
+      ? new Date(initialData.recordedAt).toISOString().slice(0, 16)
+      : new Date().toISOString().slice(0, 16)
+  )
   const [notes, setNotes] = useState<string>(initialData?.notes || '')
   const [loading, setLoading] = useState(false)
-  const [showBackdateConfirm, setShowBackdateConfirm] = useState(false)
-
-  // Use date picker hook with validation
-  const datePicker = useVitalDatePicker({
-    patientCreatedAt,
-    userPlanTier: 'free', // TODO: Get from user subscription
-    vitalType: type,
-    initialDate: initialData?.recordedAt || new Date()
-  })
 
   // Initialize form with existing data when editing
   useEffect(() => {
@@ -94,61 +85,43 @@ export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    // Validate date first
-    if (!datePicker.isValid) {
-      toast.error(datePicker.error || 'Please select a valid date')
-      return
-    }
-
-    // Validate vital values
-    let vitalValue: VitalValue
-
-    if (type === 'blood_pressure') {
-      if (!systolic || !diastolic) {
-        toast.error('Please enter both systolic and diastolic values')
-        return
-      }
-      vitalValue = {
-        systolic: parseInt(systolic),
-        diastolic: parseInt(diastolic)
-      } as BloodPressureValue
-    } else if (type === 'pulse_oximeter') {
-      if (!spo2 || !pulseRate) {
-        toast.error('Please enter both SpO₂ and pulse rate values')
-        return
-      }
-      vitalValue = {
-        spo2: parseInt(spo2),
-        pulseRate: parseInt(pulseRate),
-        perfusionIndex: perfusionIndex ? parseFloat(perfusionIndex) : undefined
-      } as PulseOximeterValue
-    } else {
-      if (!value) {
-        toast.error('Please enter a value')
-        return
-      }
-      vitalValue = parseFloat(value)
-    }
-
-    // Check if backdated - show confirmation modal
-    if (datePicker.isBackdated && !showBackdateConfirm) {
-      setShowBackdateConfirm(true)
-      return
-    }
-
-    // Proceed with submission
-    await submitVital(vitalValue)
-  }
-
-  const submitVital = async (vitalValue: VitalValue) => {
     setLoading(true)
+
     try {
+      let vitalValue: VitalValue
+
+      if (type === 'blood_pressure') {
+        if (!systolic || !diastolic) {
+          toast.error('Please enter both systolic and diastolic values')
+          return
+        }
+        vitalValue = {
+          systolic: parseInt(systolic),
+          diastolic: parseInt(diastolic)
+        } as BloodPressureValue
+      } else if (type === 'pulse_oximeter') {
+        if (!spo2 || !pulseRate) {
+          toast.error('Please enter both SpO₂ and pulse rate values')
+          return
+        }
+        vitalValue = {
+          spo2: parseInt(spo2),
+          pulseRate: parseInt(pulseRate),
+          perfusionIndex: perfusionIndex ? parseFloat(perfusionIndex) : undefined
+        } as PulseOximeterValue
+      } else {
+        if (!value) {
+          toast.error('Please enter a value')
+          return
+        }
+        vitalValue = parseFloat(value)
+      }
+
       await onSubmit({
         type,
         value: vitalValue,
         unit: getUnitForType(type),
-        recordedAt: new Date(datePicker.selectedDate),
+        recordedAt: new Date(recordedAt),
         notes: notes || undefined
       })
 
@@ -160,7 +133,6 @@ export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmi
       setPulseRate('')
       setPerfusionIndex('')
       setNotes('')
-      datePicker.reset()
       toast.success('Vital sign logged successfully')
     } catch (error: any) {
       toast.error(error.message || 'Failed to log vital sign')
@@ -170,62 +142,48 @@ export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmi
   }
 
   return (
-    <>
-      {/* Backdate Confirmation Modal */}
-      <BackdateConfirmModal
-        isOpen={showBackdateConfirm}
-        onClose={() => setShowBackdateConfirm(false)}
-        onConfirm={() => {
-          setShowBackdateConfirm(false)
-          const vitalValue = type === 'blood_pressure'
-            ? { systolic: parseInt(systolic), diastolic: parseInt(diastolic) } as BloodPressureValue
-            : type === 'pulse_oximeter'
-            ? { spo2: parseInt(spo2), pulseRate: parseInt(pulseRate), perfusionIndex: perfusionIndex ? parseFloat(perfusionIndex) : undefined } as PulseOximeterValue
-            : parseFloat(value)
-          submitVital(vitalValue)
-        }}
-        recordedDate={datePicker.selectedDate}
-        vitalType={type}
-        patientName={patientName}
-        daysDifference={datePicker.daysDifference}
-      />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Vital Type */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-2">
+          Vital Type
+        </label>
+        <select
+          value={type}
+          onChange={(e) => {
+            const newType = e.target.value as VitalType
+            setType(newType)
+            onTypeChange?.(newType)
+          }}
+          className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
+          required
+          disabled={isEditing} // Can't change type when editing
+        >
+          <option value="blood_pressure">Blood Pressure</option>
+          <option value="blood_sugar">Blood Sugar</option>
+          <option value="pulse_oximeter">Pulse Oximeter (SpO₂ + Heart Rate)</option>
+          <option value="temperature">Temperature</option>
+          <option value="weight">Weight</option>
+        </select>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Vital Type */}
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
-            Vital Type
-          </label>
-          <select
-            value={type}
-            onChange={(e) => {
-              const newType = e.target.value as VitalType
-              setType(newType)
-              onTypeChange?.(newType)
-            }}
-            className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
-            required
-            disabled={isEditing} // Can't change type when editing
-          >
-            <option value="blood_pressure">Blood Pressure</option>
-            <option value="blood_sugar">Blood Sugar</option>
-            <option value="pulse_oximeter">Pulse Oximeter (SpO₂ + Heart Rate)</option>
-            <option value="temperature">Temperature</option>
-            <option value="weight">Weight</option>
-          </select>
-        </div>
-
-        {/* Date Picker with Validation */}
-        <VitalDatePicker
-          value={datePicker.selectedDate}
-          onChange={datePicker.setDate}
-          patientCreatedAt={patientCreatedAt}
-          userPlanTier="free"
-          label={isEditing ? "Update Date" : "When was this vital taken?"}
-          helperText={isEditing ? "Update the date if needed" : "Select today or a previous date"}
-          disabled={loading}
+      {/* Date/Time Picker */}
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-2">
+          Date & Time {!isEditing && <span className="text-muted-foreground">(leave as now or backdate)</span>}
+        </label>
+        <input
+          type="datetime-local"
+          value={recordedAt}
+          onChange={(e) => setRecordedAt(e.target.value)}
+          max={new Date().toISOString().slice(0, 16)}
+          className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
           required
         />
+        <p className="text-xs text-muted-foreground mt-1">
+          {isEditing ? 'Update the date/time if needed' : 'Default is current time. Change to backdate entry.'}
+        </p>
+      </div>
 
       {/* Value Input */}
       {type === 'blood_pressure' ? (
@@ -238,7 +196,7 @@ export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmi
               type="number"
               value={systolic}
               onChange={(e) => setSystolic(e.target.value)}
-              placeholder=""
+              placeholder="120"
               min="40"
               max="300"
               className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
@@ -253,7 +211,7 @@ export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmi
               type="number"
               value={diastolic}
               onChange={(e) => setDiastolic(e.target.value)}
-              placeholder=""
+              placeholder="80"
               min="20"
               max="200"
               className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
@@ -272,7 +230,7 @@ export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmi
                 type="number"
                 value={spo2}
                 onChange={(e) => setSpo2(e.target.value)}
-                placeholder=""
+                placeholder="98"
                 min="70"
                 max="100"
                 className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
@@ -287,7 +245,7 @@ export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmi
                 type="number"
                 value={pulseRate}
                 onChange={(e) => setPulseRate(e.target.value)}
-                placeholder=""
+                placeholder="72"
                 min="30"
                 max="220"
                 className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
@@ -303,7 +261,7 @@ export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmi
               type="number"
               value={perfusionIndex}
               onChange={(e) => setPerfusionIndex(e.target.value)}
-              placeholder=""
+              placeholder="5.0"
               step="0.1"
               min="0"
               max="20"
@@ -368,6 +326,5 @@ export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmi
         )}
       </div>
     </form>
-    </>
   )
 }

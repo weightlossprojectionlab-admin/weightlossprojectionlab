@@ -15,11 +15,8 @@ export interface WizardVitalData {
     diastolic: number
   }
   temperature?: number
-  pulseOximeterReading?: {
-    spo2: number
-    pulseRate: number
-    perfusionIndex?: number
-  }
+  heartRate?: number
+  oxygenSaturation?: number
   bloodSugar?: number
   weight?: number
   timestamp: Date
@@ -94,16 +91,14 @@ export function transformWizardDataToVitals(
     })
   }
 
-  // Pulse Oximeter (includes spo2, pulseRate, and optional perfusionIndex)
-  if (wizardData.pulseOximeterReading) {
+  // Pulse Oximeter (combines heart rate and oxygen saturation)
+  // Only create if at least one measurement is present
+  if (wizardData.heartRate !== undefined || wizardData.oxygenSaturation !== undefined) {
     vitals.push({
       type: 'pulse_oximeter',
       value: {
-        spo2: wizardData.pulseOximeterReading.spo2,
-        pulseRate: wizardData.pulseOximeterReading.pulseRate,
-        ...(wizardData.pulseOximeterReading.perfusionIndex !== undefined && {
-          perfusionIndex: wizardData.pulseOximeterReading.perfusionIndex
-        })
+        spo2: wizardData.oxygenSaturation ?? 98,  // Default to 98% if not measured
+        pulseRate: wizardData.heartRate ?? 72     // Default to 72 bpm if not measured
       },
       unit: 'SpO₂% / bpm',
       recordedAt,
@@ -152,7 +147,8 @@ export function hasAnyVitalMeasurement(wizardData: WizardVitalData): boolean {
   return !!(
     wizardData.bloodPressure ||
     wizardData.temperature ||
-    wizardData.pulseOximeterReading ||
+    wizardData.heartRate ||
+    wizardData.oxygenSaturation ||
     wizardData.bloodSugar ||
     wizardData.weight
   )
