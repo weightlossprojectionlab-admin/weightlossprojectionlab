@@ -94,7 +94,7 @@ export default function VitalDatePicker({
   return (
     <div className="space-y-1">
       {/* Label */}
-      <label className="block text-sm font-medium text-foreground">
+      <label className="block text-sm font-medium text-gray-900">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
@@ -110,35 +110,35 @@ export default function VitalDatePicker({
           min={minDate}
           max={maxDate}
           className={`
-            w-full px-3 py-3 pl-10 border rounded-lg text-base bg-background text-foreground
+            w-full px-3 py-3 pl-10 border rounded-lg text-base bg-white text-gray-900
             focus:outline-none focus:ring-2 focus:ring-primary
-            disabled:bg-muted disabled:cursor-not-allowed
+            disabled:bg-gray-100 disabled:cursor-not-allowed
             touch-manipulation
             sm:py-2 sm:text-sm
-            ${error ? 'border-red-500 focus:ring-red-500' : 'border-border'}
+            ${error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'}
           `}
           style={{
             WebkitAppearance: 'none',
             MozAppearance: 'none'
           }}
         />
-        <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+        <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-600 pointer-events-none" />
       </div>
 
       {/* Helper Text */}
       {helperText && !error && !isBackdated && (
-        <p className="text-sm text-muted-foreground">{helperText}</p>
+        <p className="text-sm text-gray-700">{helperText}</p>
       )}
 
       {/* Backdate Warning */}
       {isBackdated && !error && (
-        <div className="flex items-start gap-2 p-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
-          <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 p-2 bg-amber-50 border-2 border-amber-400 rounded-lg">
+          <ExclamationTriangleIcon className="h-5 w-5 text-amber-800 flex-shrink-0 mt-0.5" />
           <div className="text-sm">
-            <p className="text-amber-800 dark:text-amber-300 font-medium">
+            <p className="text-amber-900 font-medium">
               Backdated Entry
             </p>
-            <p className="text-amber-700 dark:text-amber-400">
+            <p className="text-amber-900">
               This vital will be recorded as logged {daysDifference} {daysDifference === 1 ? 'day' : 'days'} after it was taken.
             </p>
           </div>
@@ -147,18 +147,18 @@ export default function VitalDatePicker({
 
       {/* Error Message */}
       {error && (
-        <div className="flex items-start gap-2 p-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
-          <ExclamationTriangleIcon className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 p-2 bg-red-50 border-2 border-red-400 rounded-lg">
+          <ExclamationTriangleIcon className="h-5 w-5 text-red-800 flex-shrink-0 mt-0.5" />
           <div className="text-sm">
-            <p className="text-red-800 dark:text-red-300 font-medium">Invalid Date</p>
-            <p className="text-red-700 dark:text-red-400">{error}</p>
+            <p className="text-red-900 font-medium">Invalid Date</p>
+            <p className="text-red-900">{error}</p>
           </div>
         </div>
       )}
 
       {/* Plan Limit Info */}
       {!disabled && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-gray-700">
           {userPlanTier === 'free' && 'Free plan: Can backdate up to 7 days'}
           {userPlanTier === 'premium' && 'Premium plan: Can backdate up to 90 days'}
           {userPlanTier === 'enterprise' && 'Enterprise plan: Can backdate up to 365 days'}
