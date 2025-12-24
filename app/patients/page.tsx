@@ -35,8 +35,6 @@ import { logger } from '@/lib/logger'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useVitals } from '@/hooks/useVitals'
 import { VitalSign } from '@/types/medical'
-import { useVitalSchedules } from '@/hooks/useVitalSchedules'
-import toast from 'react-hot-toast'
 
 export default function PatientsPage() {
   return (
@@ -53,7 +51,6 @@ function PatientsContent() {
   const [selectedPatientForVitalsView, setSelectedPatientForVitalsView] = useState<any>(null)
   const [selectedPatientForWizard, setSelectedPatientForWizard] = useState<any>(null)
   const { user } = useAuth()
-  const { createSchedule } = useVitalSchedules({ autoFetch: false })
 
   // Ensure patients is always an array
   const safePatients = patients || []
@@ -283,73 +280,26 @@ function PatientsContent() {
 
               // Validate at least one vital was recorded
               if (!hasAnyVitalMeasurement(vitals)) {
-                toast.error('Please record at least one vital sign measurement.')
+                alert('Please record at least one vital sign measurement.')
                 return
               }
 
               // Save all vitals
-              const savedVitals: VitalSign[] = []
-              for (const vitalInput of vitalInputs) {
-                const saved = await medicalOperations.vitals.logVital(selectedPatientForWizard.id, vitalInput)
-                savedVitals.push(saved)
-              }
+              const vitalPromises = vitalInputs.map(vitalInput =>
+                medicalOperations.vitals.logVital(selectedPatientForWizard.id, vitalInput)
+              )
 
-              logger.info('[PatientsPage] Vitals saved successfully', { count: savedVitals.length })
+              await Promise.all(vitalPromises)
 
-              // Create schedules if user enabled them
-              if (vitals.schedulePreferences?.enabled && user) {
-                const { vitalTypes, frequency, times, notificationChannels } = vitals.schedulePreferences
+              logger.info('[PatientsPage] Vitals saved successfully', { count: vitalInputs.length })
 
-                logger.info('[PatientsPage] Creating vital monitoring schedules', {
-                  vitalTypes,
-                  frequency,
-                  times
-                })
+              // TODO: Trigger notification to other caregivers
+              // await sendNotificationToFamilyMembers({ ... })
 
-                // Create a schedule for each selected vital type
-                for (const vitalType of vitalTypes) {
-                  try {
-                    await createSchedule({
-                      userId: user.uid,
-                      patientId: selectedPatientForWizard.id,
-                      patientName: selectedPatientForWizard.name,
-                      vitalType: vitalType as any,
-                      frequency: frequency as any,
-                      specificTimes: times,
-                      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                      notificationChannels: {
-                        ...notificationChannels,
-                        voice: []
-                      },
-                      advanceReminderMinutes: 15,
-                      complianceTarget: 90,
-                      complianceWindow: 2
-                    })
-
-                    logger.info('[PatientsPage] Schedule created', { vitalType })
-                  } catch (scheduleError) {
-                    logger.error('[PatientsPage] Failed to create schedule', scheduleError as Error, {
-                      vitalType
-                    })
-                    toast.error(`Warning: Could not set up reminder for ${vitalType}`)
-                  }
-                }
-
-                toast.success(`Reminders set up for ${vitalTypes.length} vital${vitalTypes.length !== 1 ? 's' : ''}!`, {
-                  duration: 4000
-                })
-              }
-
-              // Close wizard
               setSelectedPatientForWizard(null)
-
-              toast.success(`${savedVitals.length} vital sign${savedVitals.length !== 1 ? 's' : ''} logged successfully!`)
-
-              // Return saved vitals so wizard can call onComplete
-              return savedVitals
             } catch (error) {
               logger.error('[PatientsPage] Failed to save vitals', error instanceof Error ? error : undefined)
-              toast.error(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
+              alert(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
               throw error
             }
           }}
