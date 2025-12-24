@@ -253,7 +253,7 @@ function VitalRow({
             )}
             {/* Backdated indicator */}
             {vital.isBackdated && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
                 <ClockIcon className="h-3 w-3" />
                 Backdated
                 {vital.daysDifference && vital.daysDifference > 0 && ` ${vital.daysDifference}d`}
