@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { correlateNutritionWithVitals } from '@/lib/nutrition-vitals-correlation'
 import { logger } from '@/lib/logger'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
 import type { VitalType } from '@/types/medical'
 
 export async function GET(request: NextRequest) {
@@ -41,21 +42,27 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // TODO: Verify user authorization to access this patient's data
-    // const userId = await getUserIdFromSession(request)
-    // await verifyPatientAccess(userId, patientId)
+    // Verify user authorization
+    const authHeader = request.headers.get('Authorization')
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult || !authResult.userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     logger.info('[API /health/correlations] Fetching correlation', {
       patientId,
       vitalType,
       days,
+      userId: authResult.userId
     })
 
     // Generate correlation
-    const userId = 'temp-user-id' // TODO: Get from session
     const correlation = await correlateNutritionWithVitals(
       patientId,
-      userId,
+      authResult.userId,
       vitalType,
       days
     )
@@ -74,13 +81,13 @@ export async function GET(request: NextRequest) {
       success: true,
       data: correlation,
     })
-  } catch (error: any) {
-    logger.error('[API /health/correlations] Error', error, {
+  } catch (error) {
+    logger.error('[API /health/correlations] Error', error as Error, {
       url: request.url,
     })
 
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Failed to fetch correlation data' },
       { status: 500 }
     )
   }
@@ -99,20 +106,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Verify user authorization
-    // const userId = await getUserIdFromSession(request)
-    // await verifyPatientAccess(userId, patientId)
+    // Verify user authorization
+    const authHeader = request.headers.get('Authorization')
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult || !authResult.userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     logger.info('[API /health/correlations] Creating correlation', {
       patientId,
       vitalType,
       timeRangeDays,
+      userId: authResult.userId
     })
 
-    const userId = 'temp-user-id' // TODO: Get from session
     const correlation = await correlateNutritionWithVitals(
       patientId,
-      userId,
+      authResult.userId,
       vitalType,
       timeRangeDays
     )
@@ -131,11 +144,11 @@ export async function POST(request: NextRequest) {
       success: true,
       data: correlation,
     })
-  } catch (error: any) {
-    logger.error('[API /health/correlations] Error creating correlation', error)
+  } catch (error) {
+    logger.error('[API /health/correlations] Error creating correlation', error as Error)
 
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Failed to create correlation data' },
       { status: 500 }
     )
   }

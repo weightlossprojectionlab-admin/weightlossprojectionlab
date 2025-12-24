@@ -378,7 +378,6 @@ export function DutyListView({
           featureName="Household Duties"
           message={dutyLimitCheck.message}
           variant="banner"
-          upgradeUrl={dutyLimitCheck.upgradeUrl}
         />
       )}
 

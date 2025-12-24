@@ -5,14 +5,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Implement authentication check
-    // const session = await getServerSession()
-    // if (!session?.user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
+    // Verify authentication
+    const authHeader = request.headers.get('Authorization')
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult || !authResult.userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const searchParams = request.nextUrl.searchParams
     const patientId = searchParams.get('patientId')

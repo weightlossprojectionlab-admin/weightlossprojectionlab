@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateProgressReport } from '@/lib/health-outcomes'
 import { logger } from '@/lib/logger'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,29 +31,35 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // TODO: Verify user authorization
-    // const userId = await getUserIdFromSession(request)
-    // await verifyPatientAccess(userId, patientId)
+    // Verify user authorization
+    const authHeader = request.headers.get('Authorization')
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult || !authResult.userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     logger.info('[API /health/reports] Generating health report', {
       patientId,
       period,
+      userId: authResult.userId
     })
 
-    const userId = 'temp-user-id' // TODO: Get from session
-    const report = await generateProgressReport(patientId, userId, period)
+    const report = await generateProgressReport(patientId, authResult.userId, period)
 
     return NextResponse.json({
       success: true,
       data: report,
     })
-  } catch (error: any) {
-    logger.error('[API /health/reports] Error generating report', error, {
+  } catch (error) {
+    logger.error('[API /health/reports] Error generating report', error as Error, {
       url: request.url,
     })
 
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Failed to generate health report' },
       { status: 500 }
     )
   }

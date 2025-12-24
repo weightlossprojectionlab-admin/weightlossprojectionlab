@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { predictFutureVitals } from '@/lib/health-analytics'
 import { logger } from '@/lib/logger'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
 import type { VitalType } from '@/types/medical'
 
 export async function GET(request: NextRequest) {
@@ -48,20 +49,26 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // TODO: Verify user authorization
-    // const userId = await getUserIdFromSession(request)
-    // await verifyPatientAccess(userId, patientId)
+    // Verify user authorization
+    const authHeader = request.headers.get('Authorization')
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult || !authResult.userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
 
     logger.info('[API /health/predictions] Generating prediction', {
       patientId,
       vitalType,
       daysAhead,
+      userId: authResult.userId
     })
 
-    const userId = 'temp-user-id' // TODO: Get from session
     const prediction = await predictFutureVitals(
       patientId,
-      userId,
+      authResult.userId,
       vitalType,
       daysAhead
     )
@@ -70,13 +77,13 @@ export async function GET(request: NextRequest) {
       success: true,
       data: prediction,
     })
-  } catch (error: any) {
-    logger.error('[API /health/predictions] Error generating prediction', error, {
+  } catch (error) {
+    logger.error('[API /health/predictions] Error generating prediction', error as Error, {
       url: request.url,
     })
 
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Failed to generate prediction' },
       { status: 500 }
     )
   }
