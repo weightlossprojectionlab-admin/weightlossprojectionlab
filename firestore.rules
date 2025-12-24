@@ -47,6 +47,35 @@ service cloud.firestore {
     }
 
     // ============================================
+    // PLAN TIER & BACKDATE VALIDATION
+    // ============================================
+
+    // Get user's plan tier (defaults to 'free' if not found)
+    function getUserPlanTier(userId) {
+      let userDoc = get(/databases/$(database)/documents/users/$(userId));
+      return userDoc != null && 'planTier' in userDoc.data
+        ? userDoc.data.planTier
+        : 'free';
+    }
+
+    // Get max backdate days allowed for plan tier
+    function getBackdateLimit(tier) {
+      return tier == 'enterprise' ? 365 :
+             tier == 'premium' ? 90 :
+             7; // free tier default
+    }
+
+    // Validate backdate is within plan tier limits
+    // recordedAtMillis: Timestamp in milliseconds (from ISO string converted to timestamp)
+    // loggedAtMillis: Current request timestamp in milliseconds
+    // userTier: User's plan tier ('free', 'premium', 'enterprise')
+    function isValidBackdate(recordedAtMillis, loggedAtMillis, userTier) {
+      let daysDiff = duration.abs(duration.time(loggedAtMillis, 0) - duration.time(recordedAtMillis, 0)).hours() / 24;
+      let maxDays = getBackdateLimit(userTier);
+      return daysDiff <= maxDays;
+    }
+
+    // ============================================
     // USERS COLLECTION
     // ============================================
 
@@ -100,7 +129,7 @@ service cloud.firestore {
         match /vitals/{vitalId} {
           allow read: if isOwner(userId);
 
-          // Create: Owner can create vitals with date validation
+          // Create: Owner can create vitals with date validation and plan tier enforcement
           allow create: if isOwner(userId) &&
                           request.resource.data.patientId == patientId &&
                           // Required fields must exist
@@ -108,9 +137,15 @@ service cloud.firestore {
                           request.resource.data.loggedAt is string &&
                           request.resource.data.loggedBy is string &&
                           // recordedAt cannot be in the future
-                          request.resource.data.recordedAt <= request.time.toMillis() &&
+                          timestamp(request.resource.data.recordedAt) <= request.time &&
                           // loggedAt should be current timestamp (within reasonable tolerance)
-                          request.resource.data.loggedAt <= request.time.toMillis();
+                          timestamp(request.resource.data.loggedAt) <= request.time &&
+                          // Enforce plan tier backdate limits
+                          isValidBackdate(
+                            timestamp(request.resource.data.recordedAt).toMillis(),
+                            timestamp(request.resource.data.loggedAt).toMillis(),
+                            getUserPlanTier(userId)
+                          );
 
           allow update: if isOwner(userId);
           allow delete: if isOwner(userId);
