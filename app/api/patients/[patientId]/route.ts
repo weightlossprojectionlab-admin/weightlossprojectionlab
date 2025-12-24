@@ -176,31 +176,17 @@ export async function PUT(
       )
     }
 
-    // Update patient - merge preferences if present
-    const updateData: any = {
+    // Update patient
+    await patientRef.update({
+      ...body,
       lastModified: now
-    }
-
-    // Add only the fields from body (don't spread entire objects with Timestamps)
-    if (body.preferences) updateData.preferences = mergedPreferences
-    if (body.emergencyContacts) updateData.emergencyContacts = body.emergencyContacts
-    if (body.photo) updateData.photo = body.photo
-    if (body.healthConditions) updateData.healthConditions = body.healthConditions
-    if (body.foodAllergies) updateData.foodAllergies = body.foodAllergies
-    if (body.conditionDetails) updateData.conditionDetails = body.conditionDetails
-    if (body.medications) updateData.medications = body.medications
-    if (body.dietaryPreferences) updateData.dietaryPreferences = body.dietaryPreferences
-    if (body.lifestyle) updateData.lifestyle = body.lifestyle
-    if (body.bodyMeasurements) updateData.bodyMeasurements = body.bodyMeasurements
-
-    await patientRef.update(updateData)
+    })
 
     logger.info('[API /patients/[id] PUT] Patient updated successfully', { userId, ownerUserId, patientId })
 
-    // Return the merged patient data
     return NextResponse.json({
       success: true,
-      data: { ...existingPatient, ...updateData, id: patientId }
+      data: validationResult.data
     })
 
   } catch (error: any) {
