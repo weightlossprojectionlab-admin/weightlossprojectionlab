@@ -255,15 +255,15 @@ export default function VitalReminderPrompt({
               {vitalsNeedingReminders.map((vital) => (
                 <div
                   key={vital.type}
-                  className={`bg-gray-800 rounded-lg p-4 border-l-4 ${vital.color.border}`}
+                  className={`bg-white rounded-lg p-4 border-l-4 border-2 border-gray-200 ${vital.color.border}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     {/* Vital Info */}
                     <div className="flex items-center gap-3 flex-1">
                       <span className="text-3xl">{vital.icon}</span>
                       <div className="flex-1">
-                        <h4 className="font-bold text-white text-lg">{vital.label}</h4>
-                        <p className="text-sm font-medium text-white mt-1">{vital.message}</p>
+                        <h4 className="font-bold text-gray-900 text-lg">{vital.label}</h4>
+                        <p className="text-sm font-medium text-gray-700 mt-1">{vital.message}</p>
                       </div>
                     </div>
 
@@ -286,7 +286,7 @@ export default function VitalReminderPrompt({
                       {/* Remind Later */}
                       <button
                         onClick={() => handleRemindLater(vital.type)}
-                        className="w-full sm:w-auto p-2.5 sm:p-2 text-gray-300 hover:text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                        className="w-full sm:w-auto p-2.5 sm:p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
                         aria-label={`Remind me later about ${vital.label}`}
                         title="Remind me later"
                       >
@@ -297,7 +297,7 @@ export default function VitalReminderPrompt({
                       {/* Don't Remind Again */}
                       <button
                         onClick={() => confirmDisableReminder(vital.type)}
-                        className="w-full sm:w-auto p-2.5 sm:p-2 text-gray-300 hover:text-red-400 rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                        className="w-full sm:w-auto p-2.5 sm:p-2 text-gray-600 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
                         aria-label={`Disable ${vital.label} reminders`}
                         title="Don't remind me again"
                       >
@@ -352,12 +352,12 @@ export default function VitalReminderPrompt({
             )}
 
             {/* Footer Help Text */}
-            <div className="mt-4 pt-4 border-t border-gray-200 ">
-              <p className="text-xs text-center text-muted-foreground">
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-xs text-center text-gray-600">
                 💡 <strong>Tip:</strong> {onLogSpecificVital
                   ? 'Click "Log Now" on any vital for quick entry, or use the wizard to log multiple vitals with guided questions.'
                   : 'Use the clock icon (⏰) to snooze or X to disable a specific vital reminder.'}
-                {' '}Manage all reminders in <a href="/profile" className="text-primary hover:underline font-medium">Profile Settings</a>.
+                {' '}Manage all reminders in <a href="/profile" className="text-blue-600 hover:underline font-medium">Profile Settings</a>.
               </p>
             </div>
           </div>
@@ -367,17 +367,17 @@ export default function VitalReminderPrompt({
       {/* Confirmation Modal for Disabling Reminder */}
       {confirmDisable && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white  rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-foreground mb-2">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
               Disable {confirmDisable.label} Reminders?
             </h3>
-            <p className="text-sm text-muted-foreground mb-6">
+            <p className="text-sm text-gray-700 mb-6">
               Are you sure you want to stop receiving {confirmDisable.label} reminders? You can re-enable this in Profile Settings.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDisable(null)}
-                className="flex-1 px-4 py-2.5 border border-gray-300  text-foreground rounded-lg hover:bg-gray-100  transition-colors font-medium"
+                className="flex-1 px-4 py-2.5 border-2 border-gray-300 text-gray-900 rounded-lg hover:bg-gray-100 transition-colors font-medium"
               >
                 Cancel
               </button>

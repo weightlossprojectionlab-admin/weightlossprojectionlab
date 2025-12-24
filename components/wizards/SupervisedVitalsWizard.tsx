@@ -28,10 +28,13 @@ import {
   type VitalReading,
   type ValidationResult
 } from '@/lib/ai-supervisor'
+import { LightThemeWizardWrapper } from './LightThemeWizardWrapper'
 import type { VitalSign } from '@/types/medical'
 import { logger } from '@/lib/logger'
 import { sendCriticalVitalAlert } from '@/lib/emergency-alerts'
 import { useAuth } from '@/hooks/useAuth'
+import VitalDatePicker from '../vitals/VitalDatePicker'
+import { useVitalDatePicker } from '@/hooks/useVitalDatePicker'
 
 interface SupervisedVitalsWizardProps {
   isOpen: boolean
@@ -41,6 +44,7 @@ interface SupervisedVitalsWizardProps {
     name: string
     age?: number
     conditions?: string[]
+    createdAt?: string  // For date validation
   }
   recentReadings?: VitalReading[]
   onSubmit: (vitals: any) => Promise<void>
@@ -53,7 +57,7 @@ interface SupervisedVitalsWizardProps {
   }>
 }
 
-type WizardStep = 'intro' | 'blood_pressure' | 'temperature' | 'heart_rate' | 'oxygen' | 'blood_sugar' | 'weight' | 'review' | 'mood' | 'schedule' | 'confirmation'
+type WizardStep = 'intro' | 'date_selection' | 'blood_pressure' | 'temperature' | 'pulse_oximeter' | 'blood_sugar' | 'weight' | 'review' | 'mood' | 'schedule' | 'confirmation'
 
 interface SchedulePreferences {
   enabled: boolean
@@ -70,14 +74,14 @@ interface SchedulePreferences {
 interface VitalData {
   bloodPressure?: { systolic: number; diastolic: number }
   temperature?: number
-  heartRate?: number
-  oxygenSaturation?: number
+  pulseOximeterReading?: { spo2: number; pulseRate: number; perfusionIndex?: number }
   bloodSugar?: number
   weight?: number
   mood?: string
   moodNotes?: string
   notes?: string
-  timestamp: Date
+  recordedDate?: Date  // User-selected date for backdate support
+  timestamp: Date       // System timestamp (now uses recordedDate if set)
   schedulePreferences?: SchedulePreferences
   loggedBy?: {
     userId: string
@@ -105,13 +109,21 @@ export default function SupervisedVitalsWizard({
   const [sendingAlert, setSendingAlert] = useState(false)
   const { user } = useAuth()
 
+  // Use date picker hook for backdate support
+  const datePicker = useVitalDatePicker({
+    patientCreatedAt: familyMember.createdAt || new Date().toISOString(),
+    userPlanTier: 'free', // TODO: Get from user subscription
+    initialDate: new Date()
+  })
+
   // Reset wizard when opened
   useEffect(() => {
     if (isOpen) {
       setCurrentStep('intro')
-      setVitalData({ timestamp: new Date() })
+      setVitalData({ recordedDate: new Date(), timestamp: new Date() })
       setValidationResults({})
       setShowGuidance(true)
+      datePicker.reset()
     }
   }, [isOpen])
 
@@ -166,8 +178,7 @@ export default function SupervisedVitalsWizard({
     const units: Record<VitalReading['type'], string> = {
       blood_pressure: 'mmHg',
       temperature: '°F',
-      heart_rate: 'bpm',
-      oxygen_saturation: '%',
+      pulse_oximeter: 'SpO₂% / bpm',
       weight: 'lbs',
       blood_sugar: 'mg/dL'
     }
@@ -175,7 +186,7 @@ export default function SupervisedVitalsWizard({
   }
 
   const handleNext = () => {
-    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'weight', 'review', 'mood', 'schedule', 'confirmation']
+    const stepOrder: WizardStep[] = ['intro', 'date_selection', 'blood_pressure', 'temperature', 'pulse_oximeter', 'blood_sugar', 'weight', 'review', 'mood', 'schedule', 'confirmation']
     const currentIndex = stepOrder.indexOf(currentStep)
     if (currentIndex < stepOrder.length - 1) {
       setCurrentStep(stepOrder[currentIndex + 1])
@@ -183,7 +194,7 @@ export default function SupervisedVitalsWizard({
   }
 
   const handleBack = () => {
-    const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'weight', 'review', 'mood', 'schedule', 'confirmation']
+    const stepOrder: WizardStep[] = ['intro', 'date_selection', 'blood_pressure', 'temperature', 'pulse_oximeter', 'blood_sugar', 'weight', 'review', 'mood', 'schedule', 'confirmation']
     const currentIndex = stepOrder.indexOf(currentStep)
     if (currentIndex > 0) {
       setCurrentStep(stepOrder[currentIndex - 1])
@@ -207,17 +218,10 @@ export default function SupervisedVitalsWizard({
           return rest
         })
         break
-      case 'heart_rate':
-        setVitalData(prev => ({ ...prev, heartRate: undefined }))
+      case 'pulse_oximeter':
+        setVitalData(prev => ({ ...prev, pulseOximeterReading: undefined }))
         setValidationResults(prev => {
-          const { heart_rate, ...rest } = prev
-          return rest
-        })
-        break
-      case 'oxygen':
-        setVitalData(prev => ({ ...prev, oxygenSaturation: undefined }))
-        setValidationResults(prev => {
-          const { oxygen_saturation, ...rest } = prev
+          const { pulse_oximeter, ...rest } = prev
           return rest
         })
         break
@@ -264,6 +268,27 @@ export default function SupervisedVitalsWizard({
         }
       }
 
+      // PRE-FLIGHT VALIDATION: Check pulse oximeter if it exists
+      if (vitalData.pulseOximeterReading) {
+        const { spo2, pulseRate } = vitalData.pulseOximeterReading
+        if (!spo2 || !pulseRate) {
+          alert('Invalid pulse oximeter reading. Both SpO₂ and pulse rate are required.')
+          setIsSubmitting(false)
+          return
+        }
+        // Range validation
+        if (spo2 < 70 || spo2 > 100) {
+          alert('SpO₂ value out of range (70-100%). Please go back and correct.')
+          setIsSubmitting(false)
+          return
+        }
+        if (pulseRate < 30 || pulseRate > 220) {
+          alert('Pulse rate out of range (30-220 bpm). Please go back and correct.')
+          setIsSubmitting(false)
+          return
+        }
+      }
+
       // Run quality checks (for info/warnings only - not blocking)
       const checks = runQualityChecks({
         type: 'vitals',
@@ -281,8 +306,13 @@ export default function SupervisedVitalsWizard({
         })
       }
 
-      // Submit vitals - note: onSubmit should return the saved vitals or we track them separately
-      await onSubmit(vitalData)
+      // Submit vitals - use recordedDate if set, otherwise use timestamp
+      // This ensures backdated vitals are recorded with the user-selected date
+      const submissionData = {
+        ...vitalData,
+        timestamp: vitalData.recordedDate || vitalData.timestamp
+      }
+      await onSubmit(submissionData)
 
       // Clear draft
       localStorage.removeItem(`vitals_draft_${familyMember.id}`)
@@ -309,11 +339,8 @@ export default function SupervisedVitalsWizard({
       if (vitalData.temperature) {
         criticalReadings.temperature = `${vitalData.temperature}°F`
       }
-      if (vitalData.heartRate) {
-        criticalReadings.heartRate = `${vitalData.heartRate} bpm`
-      }
-      if (vitalData.oxygenSaturation) {
-        criticalReadings.oxygenSaturation = `${vitalData.oxygenSaturation}%`
+      if (vitalData.pulseOximeterReading) {
+        criticalReadings.pulseOximeter = `${vitalData.pulseOximeterReading.spo2}% SpO₂, ${vitalData.pulseOximeterReading.pulseRate} bpm`
       }
       if (vitalData.bloodSugar) {
         criticalReadings.bloodSugar = `${vitalData.bloodSugar} mg/dL`
@@ -382,6 +409,22 @@ export default function SupervisedVitalsWizard({
           />
         )
 
+      case 'date_selection':
+        return (
+          <DateSelectionStep
+            selectedDate={datePicker.selectedDate}
+            isValid={datePicker.isValid}
+            error={datePicker.error}
+            isBackdated={datePicker.isBackdated}
+            daysDifference={datePicker.daysDifference}
+            familyMember={familyMember}
+            onDateChange={(date) => {
+              datePicker.setDate(date)
+              setVitalData(prev => ({ ...prev, recordedDate: new Date(date) }))
+            }}
+          />
+        )
+
       case 'blood_pressure':
         return (
           <BloodPressureStep
@@ -409,28 +452,17 @@ export default function SupervisedVitalsWizard({
           />
         )
 
-      case 'heart_rate':
+      case 'pulse_oximeter':
         return (
-          <HeartRateStep
-            value={vitalData.heartRate}
-            onChange={(hr) => {
-              setVitalData(prev => ({ ...prev, heartRate: hr }))
-              validateCurrentReading('heart_rate', hr)
+          <PulseOximeterStep
+            value={vitalData.pulseOximeterReading}
+            onChange={(reading) => {
+              setVitalData(prev => ({ ...prev, pulseOximeterReading: reading }))
+              if (reading) {
+                validateCurrentReading('pulse_oximeter', reading)
+              }
             }}
-            validation={validationResults.heart_rate}
-            showGuidance={showGuidance}
-          />
-        )
-
-      case 'oxygen':
-        return (
-          <OxygenStep
-            value={vitalData.oxygenSaturation}
-            onChange={(o2) => {
-              setVitalData(prev => ({ ...prev, oxygenSaturation: o2 }))
-              validateCurrentReading('oxygen_saturation', o2)
-            }}
-            validation={validationResults.oxygen_saturation}
+            validation={validationResults.pulse_oximeter}
             showGuidance={showGuidance}
           />
         )
@@ -506,7 +538,7 @@ export default function SupervisedVitalsWizard({
   }
 
   // Progress indicator
-  const stepOrder: WizardStep[] = ['intro', 'blood_pressure', 'temperature', 'heart_rate', 'oxygen', 'blood_sugar', 'review', 'mood']
+  const stepOrder: WizardStep[] = ['intro', 'date_selection', 'blood_pressure', 'temperature', 'pulse_oximeter', 'blood_sugar', 'weight', 'review', 'mood']
   const currentStepIndex = stepOrder.indexOf(currentStep)
   const progress = ((currentStepIndex + 1) / stepOrder.length) * 100
 
@@ -574,9 +606,11 @@ export default function SupervisedVitalsWizard({
           )}
 
           {/* Step Content */}
-          <div className="px-6 py-6 max-h-[60vh] overflow-y-auto">
-            {renderStepContent()}
-          </div>
+          <LightThemeWizardWrapper>
+            <div className="px-6 py-6 max-h-[60vh] overflow-y-auto">
+              {renderStepContent()}
+            </div>
+          </LightThemeWizardWrapper>
 
           {/* Footer Navigation - Hidden on intro, mood, schedule, and confirmation steps */}
           {currentStep !== 'confirmation' && currentStep !== 'intro' && currentStep !== 'mood' && currentStep !== 'schedule' && (
@@ -693,21 +727,21 @@ function IntroStep({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <span className="text-3xl">🩺</span>
         </div>
-        <h3 className="text-2xl font-bold text-foreground mb-2">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">
           Let's Check Vitals for {familyMember.name}
         </h3>
-        <p className="text-muted-foreground">
+        <p className="text-gray-700 font-medium">
           I'll guide you through each measurement step-by-step
         </p>
       </div>
 
       {/* Caregiver Selection */}
       {availableCaregivers.length > 0 && (
-        <div className="bg-muted rounded-lg p-4 border border-border">
-          <label className="block text-sm font-medium text-foreground mb-2">
+        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-300">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Who is performing this vitals check?
           </label>
           <select
@@ -718,7 +752,7 @@ function IntroStep({
                 onCaregiverSelect(caregiver)
               }
             }}
-            className="w-full px-3 py-2 bg-card border border-border rounded-lg focus:border-primary focus:outline-none text-foreground"
+            className="w-full px-3 py-2 bg-white border-2 border-gray-300 rounded-lg focus:border-primary focus:outline-none text-gray-900"
           >
             {availableCaregivers.map((caregiver) => (
               <option key={caregiver.userId} value={caregiver.userId}>
@@ -732,14 +766,14 @@ function IntroStep({
         </div>
       )}
 
-      <div className="bg-accent-light rounded-lg p-4 border border-accent/30">
+      <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-400">
         <div className="flex items-start gap-3">
-          <InformationCircleIcon className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+          <InformationCircleIcon className="w-5 h-5 text-blue-800 flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-accent-dark mb-2">
+            <h4 className="font-semibold text-blue-900 mb-2">
               Before We Start
             </h4>
-            <ul className="space-y-1 text-sm text-foreground">
+            <ul className="space-y-1 text-sm text-gray-900">
               {guidance.map((step, index) => (
                 <li key={index} className="flex items-start gap-2">
                   <span className="font-medium">{index + 1}.</span>
@@ -759,9 +793,84 @@ function IntroStep({
           Start Vitals Check
           <ArrowRightIcon className="w-5 h-5" />
         </button>
-        <p className="text-xs text-center text-muted-foreground">
+        <p className="text-xs text-center text-gray-700 font-medium">
           You can skip any measurement you don't need to take today
         </p>
+      </div>
+    </div>
+  )
+}
+
+function DateSelectionStep({
+  selectedDate,
+  isValid,
+  error,
+  isBackdated,
+  daysDifference,
+  familyMember,
+  onDateChange
+}: {
+  selectedDate: string
+  isValid: boolean
+  error: string | null
+  isBackdated: boolean
+  daysDifference: number
+  familyMember: any
+  onDateChange: (date: string) => void
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-3xl">📅</span>
+        </div>
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+          When Were These Vitals Taken?
+        </h3>
+        <p className="text-gray-700 font-medium">
+          Select the date for {familyMember.name}'s vital readings
+        </p>
+      </div>
+
+      <VitalDatePicker
+        value={selectedDate}
+        onChange={onDateChange}
+        patientCreatedAt={familyMember.createdAt || new Date().toISOString()}
+        userPlanTier="free"
+        label="Recording Date"
+        helperText="Select today or a previous date"
+        required
+      />
+
+      {isBackdated && isValid && (
+        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <ExclamationTriangleIcon className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-amber-900 dark:text-amber-300 mb-1">
+                Backdated Entry
+              </h4>
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                This entry will be marked as backdated by <strong>{daysDifference} day{daysDifference !== 1 ? 's' : ''}</strong>.
+                All backdated entries are tracked for compliance purposes.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-400">
+        <div className="flex items-start gap-3">
+          <InformationCircleIcon className="w-5 h-5 text-blue-800 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-blue-900 mb-2">
+              Why We Ask
+            </h4>
+            <p className="text-sm text-gray-900">
+              Recording the actual date helps track health trends accurately. If you're logging vitals from a previous day, that's okay - just select the correct date.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -843,7 +952,7 @@ function BloodPressureStep({ value, onChange, validation, showGuidance, familyMe
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Systolic (top)
           </label>
           <input
@@ -853,13 +962,14 @@ function BloodPressureStep({ value, onChange, validation, showGuidance, familyMe
               setSystolic(e.target.value)
               handleUpdate(e.target.value, diastolic)
             }}
-            placeholder="120"
-            className="w-full px-4 py-3 text-2xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+            placeholder=""
+            className="w-full px-4 py-3 text-2xl font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:border-primary focus:outline-none"
+            aria-describedby="systolic-hint"
           />
-          <p className="text-xs text-gray-700 mt-1 text-center font-medium">mmHg</p>
+          <p id="systolic-hint" className="text-xs text-gray-700 mt-1 text-center font-medium">Top number (typically 90-140 mmHg)</p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Diastolic (bottom)
           </label>
           <input
@@ -869,10 +979,11 @@ function BloodPressureStep({ value, onChange, validation, showGuidance, familyMe
               setDiastolic(e.target.value)
               handleUpdate(systolic, e.target.value)
             }}
-            placeholder="80"
-            className="w-full px-4 py-3 text-2xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+            placeholder=""
+            className="w-full px-4 py-3 text-2xl font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:border-primary focus:outline-none"
+            aria-describedby="diastolic-hint"
           />
-          <p className="text-xs text-gray-700 mt-1 text-center font-medium">mmHg</p>
+          <p id="diastolic-hint" className="text-xs text-gray-700 mt-1 text-center font-medium">Bottom number (typically 60-90 mmHg)</p>
         </div>
       </div>
 
@@ -914,7 +1025,7 @@ function TemperatureStep({ value, onChange, validation, showGuidance }: StepProp
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-bold text-foreground mb-2">Temperature</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Temperature</h3>
         <p className="text-sm text-gray-700 font-medium">
           Enter temperature in Fahrenheit
         </p>
@@ -926,10 +1037,11 @@ function TemperatureStep({ value, onChange, validation, showGuidance }: StepProp
           step="0.1"
           value={temp}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder="98.6"
-          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+          placeholder=""
+          className="w-full px-6 py-4 text-3xl font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:border-primary focus:outline-none"
+          aria-describedby="temp-hint"
         />
-        <p className="text-sm text-gray-700 mt-2 text-center font-medium">°F (Fahrenheit)</p>
+        <p id="temp-hint" className="text-sm text-gray-700 mt-2 text-center font-medium">Enter temperature (°F, typically 97-99°F)</p>
       </div>
 
       {validation && (
@@ -941,6 +1053,149 @@ function TemperatureStep({ value, onChange, validation, showGuidance }: StepProp
           <p className="text-sm text-gray-800 font-medium">
             💡 <strong>Normal range:</strong> 97°F - 99°F<br />
             🌡️ <strong>Fever:</strong> 100.4°F or higher
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PulseOximeterStep({ value, onChange, validation, showGuidance }: StepProps) {
+  const [spo2, setSpo2] = useState(value?.spo2?.toString() || '')
+  const [pulseRate, setPulseRate] = useState(value?.pulseRate?.toString() || '')
+  const [perfusionIndex, setPerfusionIndex] = useState(value?.perfusionIndex?.toString() || '')
+
+  const handleUpdate = (spo2Val: string, pulseVal: string, perfusionVal: string) => {
+    // If both required fields are empty, clear the data
+    if (spo2Val === '' && pulseVal === '') {
+      onChange(undefined)
+      return
+    }
+
+    const spo2Num = parseInt(spo2Val)
+    const pulseNum = parseInt(pulseVal)
+    const perfusionNum = perfusionVal ? parseFloat(perfusionVal) : undefined
+
+    // Only update if both required values are valid positive numbers
+    if (!isNaN(spo2Num) && !isNaN(pulseNum) && spo2Num > 0 && pulseNum > 0) {
+      onChange({
+        spo2: spo2Num,
+        pulseRate: pulseNum,
+        perfusionIndex: perfusionNum
+      })
+    } else {
+      // If one or both values are incomplete, clear the data
+      onChange(undefined)
+    }
+  }
+
+  const trainingPrompt = getTrainingPrompt('pulse_oximeter_first_time')
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-xl font-bold text-foreground mb-2">Pulse Oximeter Reading</h3>
+        <p className="text-sm text-gray-700 font-medium">
+          Enter both SpO₂ and pulse rate from your pulse oximeter
+        </p>
+      </div>
+
+      {showGuidance && trainingPrompt && (
+        <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-400">
+          <div className="flex items-start gap-3">
+            <AcademicCapIcon className="w-5 h-5 text-purple-800 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-purple-900 mb-1">
+                {trainingPrompt.topic}
+              </h4>
+              <p className="text-sm text-purple-900 font-medium">
+                {trainingPrompt.message}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SpO2 and Pulse Rate - Side by side like Blood Pressure */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-2">
+            SpO₂ (Oxygen)
+          </label>
+          <input
+            type="number"
+            value={spo2}
+            onChange={(e) => {
+              setSpo2(e.target.value)
+              handleUpdate(e.target.value, pulseRate, perfusionIndex)
+            }}
+            placeholder=""
+            min="70"
+            max="100"
+            className="w-full px-4 py-3 text-2xl font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:border-primary focus:outline-none"
+            aria-describedby="spo2-hint"
+          />
+          <p id="spo2-hint" className="text-xs text-gray-700 mt-1 text-center font-medium">
+            Oxygen saturation (typically 95-100%)
+          </p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-2">
+            Pulse Rate
+          </label>
+          <input
+            type="number"
+            value={pulseRate}
+            onChange={(e) => {
+              setPulseRate(e.target.value)
+              handleUpdate(spo2, e.target.value, perfusionIndex)
+            }}
+            placeholder=""
+            min="30"
+            max="220"
+            className="w-full px-4 py-3 text-2xl font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:border-primary focus:outline-none"
+            aria-describedby="pulse-hint"
+          />
+          <p id="pulse-hint" className="text-xs text-gray-700 mt-1 text-center font-medium">
+            Heart rate (typically 60-100 bpm)
+          </p>
+        </div>
+      </div>
+
+      {/* Perfusion Index - Optional, full width */}
+      <div>
+        <label className="block text-sm font-medium text-gray-900 mb-2">
+          Perfusion Index (Optional)
+        </label>
+        <input
+          type="number"
+          step="0.1"
+          value={perfusionIndex}
+          onChange={(e) => {
+            setPerfusionIndex(e.target.value)
+            handleUpdate(spo2, pulseRate, e.target.value)
+          }}
+          placeholder=""
+          min="0"
+          max="20"
+          className="w-full px-4 py-3 text-xl font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:border-primary focus:outline-none"
+          aria-describedby="perfusion-hint"
+        />
+        <p id="perfusion-hint" className="text-xs text-gray-700 mt-1 text-center font-medium">
+          Perfusion strength (optional, 0-20%)
+        </p>
+      </div>
+
+      {validation && (
+        <ValidationAlert validation={validation} />
+      )}
+
+      {showGuidance && (
+        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-400">
+          <p className="text-sm text-gray-800 font-medium">
+            💡 <strong>Normal SpO₂:</strong> 95-100%<br />
+            ❤️ <strong>Normal Pulse:</strong> 60-100 bpm at rest<br />
+            🫁 <strong>Low oxygen:</strong> Below 90% requires medical attention
           </p>
         </div>
       )}
@@ -962,7 +1217,7 @@ function HeartRateStep({ value, onChange, validation, showGuidance }: StepProps)
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-bold text-foreground mb-2">Heart Rate</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Heart Rate</h3>
         <p className="text-sm text-gray-700 font-medium">
           Enter pulse in beats per minute
         </p>
@@ -973,10 +1228,11 @@ function HeartRateStep({ value, onChange, validation, showGuidance }: StepProps)
           type="number"
           value={hr}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder="72"
-          className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+          placeholder=""
+          className="w-full px-6 py-4 text-3xl font-bold text-center text-gray-900 bg-white border-2 border-gray-300 rounded-lg focus:border-primary focus:outline-none"
+          aria-describedby="hr-hint"
         />
-        <p className="text-sm text-gray-700 mt-2 text-center font-medium">bpm (beats per minute)</p>
+        <p id="hr-hint" className="text-sm text-gray-700 mt-2 text-center font-medium">Heart rate (typically 60-100 bpm at rest)</p>
       </div>
 
       {validation && (
@@ -1020,11 +1276,12 @@ function OxygenStep({ value, onChange, validation, showGuidance }: StepProps) {
           type="number"
           value={o2}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder="98"
+          placeholder=""
           max="100"
           className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+          aria-describedby="o2-hint"
         />
-        <p className="text-sm text-gray-700 mt-2 text-center font-medium">% SpO2</p>
+        <p id="o2-hint" className="text-sm text-gray-700 mt-2 text-center font-medium">Oxygen saturation (typically 95-100%)</p>
       </div>
 
       {validation && (
@@ -1068,10 +1325,11 @@ function BloodSugarStep({ value, onChange, validation, showGuidance }: StepProps
           type="number"
           value={glucose}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder="120"
+          placeholder=""
           className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+          aria-describedby="glucose-hint"
         />
-        <p className="text-sm text-gray-700 mt-2 text-center font-medium">mg/dL</p>
+        <p id="glucose-hint" className="text-sm text-gray-700 mt-2 text-center font-medium">Blood sugar (mg/dL, typically 80-130 fasting)</p>
       </div>
 
       {validation && (
@@ -1116,10 +1374,11 @@ function WeightStep({ value, onChange, validation, showGuidance }: StepProps) {
           step="0.1"
           value={weight}
           onChange={(e) => handleChange(e.target.value)}
-          placeholder="150"
+          placeholder=""
           className="w-full px-6 py-4 text-3xl font-bold text-center bg-white border-2 border-border rounded-lg focus:border-primary focus:outline-none"
+          aria-describedby="weight-hint"
         />
-        <p className="text-sm text-gray-700 mt-2 text-center font-medium">lbs (pounds)</p>
+        <p id="weight-hint" className="text-sm text-gray-700 mt-2 text-center font-medium">Enter weight in pounds (lbs)</p>
       </div>
 
       {validation && (
@@ -1185,20 +1444,14 @@ function ReviewStep({
           </div>
         )}
 
-        {vitalData.heartRate && (
+        {vitalData.pulseOximeterReading && (
           <div className="flex items-center justify-between p-4 bg-card rounded-lg border-2 border-border">
-            <span className="font-medium text-foreground">Heart Rate</span>
+            <span className="font-medium text-foreground">Pulse Oximeter</span>
             <span className="text-lg font-bold text-foreground">
-              {vitalData.heartRate} bpm
-            </span>
-          </div>
-        )}
-
-        {vitalData.oxygenSaturation && (
-          <div className="flex items-center justify-between p-4 bg-card rounded-lg border-2 border-border">
-            <span className="font-medium text-foreground">Oxygen Saturation</span>
-            <span className="text-lg font-bold text-foreground">
-              {vitalData.oxygenSaturation}%
+              {vitalData.pulseOximeterReading.spo2}% SpO₂ / {vitalData.pulseOximeterReading.pulseRate} bpm
+              {vitalData.pulseOximeterReading.perfusionIndex &&
+                ` (PI: ${vitalData.pulseOximeterReading.perfusionIndex}%)`
+              }
             </span>
           </div>
         )}
@@ -1279,7 +1532,7 @@ function ConfirmationStep({
   const vitalsCount = [
     vitalData.bloodPressure,
     vitalData.temperature,
-    vitalData.heartRate || vitalData.oxygenSaturation,
+    vitalData.pulseOximeterReading,
     vitalData.bloodSugar,
     vitalData.weight
   ].filter(Boolean).length
@@ -1337,12 +1590,11 @@ function ConfirmationStep({
           </div>
         )}
 
-        {(vitalData.heartRate || vitalData.oxygenSaturation) && (
+        {vitalData.pulseOximeterReading && (
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Pulse Oximeter:</span>
             <span className="text-sm font-medium text-foreground">
-              {vitalData.oxygenSaturation ? `${vitalData.oxygenSaturation}% SpO₂` : ''}
-              {vitalData.heartRate ? ` ${vitalData.heartRate} bpm` : ''}
+              {vitalData.pulseOximeterReading.spo2}% SpO₂ / {vitalData.pulseOximeterReading.pulseRate} bpm
             </span>
           </div>
         )}
@@ -1411,7 +1663,7 @@ function ScheduleStep({
   const loggedVitals: Array<{ type: string; label: string }> = []
   if (vitalData.bloodPressure) loggedVitals.push({ type: 'blood_pressure', label: 'Blood Pressure' })
   if (vitalData.temperature) loggedVitals.push({ type: 'temperature', label: 'Temperature' })
-  if (vitalData.heartRate || vitalData.oxygenSaturation) loggedVitals.push({ type: 'pulse_ox', label: 'Pulse Oximeter' })
+  if (vitalData.pulseOximeterReading) loggedVitals.push({ type: 'pulse_oximeter', label: 'Pulse Oximeter' })
   if (vitalData.bloodSugar) loggedVitals.push({ type: 'blood_sugar', label: 'Blood Sugar' })
   if (vitalData.weight) loggedVitals.push({ type: 'weight', label: 'Weight' })
 

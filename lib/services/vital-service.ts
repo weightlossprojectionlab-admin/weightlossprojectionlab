@@ -12,11 +12,11 @@
 
 import { Timestamp } from 'firebase/firestore'
 import { normalizeToUTCMidnight, calculateDaysDifference } from '@/lib/vital-date-validator'
-import type { Vital } from '@/types/medical'
+import type { VitalSign } from '@/types/medical'
 
 export interface DuplicateVitalCheckResult {
   isDuplicate: boolean
-  existingVital?: Vital
+  existingVital?: VitalSign
   message?: string
 }
 
@@ -34,7 +34,7 @@ export interface DuplicateVitalCheckResult {
  * @returns DuplicateVitalCheckResult with duplicate status and details
  */
 export function checkDuplicateVital(
-  existingVitals: Vital[],
+  existingVitals: VitalSign[],
   vitalType: string,
   recordedAt: Date
 ): DuplicateVitalCheckResult {

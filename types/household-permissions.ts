@@ -28,6 +28,10 @@ export interface HouseholdPermissions {
   canRemoveMembers: boolean
   canEditMemberRoles: boolean
 
+  // Shopping & Inventory Management
+  canClearShoppingList: boolean
+  canClearInventory: boolean
+
   // Access Control
   canViewAllDuties: boolean
   canViewHouseholdMembers: boolean
@@ -60,6 +64,8 @@ export const ROLE_PERMISSIONS: Record<HouseholdRole, HouseholdPermissions> = {
     canInviteMembers: true,
     canRemoveMembers: true,
     canEditMemberRoles: true,
+    canClearShoppingList: true,
+    canClearInventory: true,
     canViewAllDuties: true,
     canViewHouseholdMembers: true,
     canViewStats: true,
@@ -76,6 +82,8 @@ export const ROLE_PERMISSIONS: Record<HouseholdRole, HouseholdPermissions> = {
     canInviteMembers: true,
     canRemoveMembers: true,
     canEditMemberRoles: false, // Only owner can change roles
+    canClearShoppingList: true,
+    canClearInventory: true,
     canViewAllDuties: true,
     canViewHouseholdMembers: true,
     canViewStats: true,
@@ -92,6 +100,8 @@ export const ROLE_PERMISSIONS: Record<HouseholdRole, HouseholdPermissions> = {
     canInviteMembers: false,
     canRemoveMembers: false,
     canEditMemberRoles: false,
+    canClearShoppingList: false, // Cannot bulk clear
+    canClearInventory: false, // Cannot bulk clear
     canViewAllDuties: true,
     canViewHouseholdMembers: true,
     canViewStats: true,
@@ -108,6 +118,8 @@ export const ROLE_PERMISSIONS: Record<HouseholdRole, HouseholdPermissions> = {
     canInviteMembers: false,
     canRemoveMembers: false,
     canEditMemberRoles: false,
+    canClearShoppingList: false, // Cannot bulk clear
+    canClearInventory: false, // Cannot bulk clear
     canViewAllDuties: true,
     canViewHouseholdMembers: true,
     canViewStats: true,

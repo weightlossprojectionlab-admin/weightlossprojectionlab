@@ -29,6 +29,8 @@ import { ReplacementCompareModal } from './ReplacementCompareModal'
 import { ExpirationPicker } from './ExpirationPicker'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
+import { shoppingSessionManager } from '@/lib/shopping-session-manager'
+import { generateDeviceId } from '@/types/shopping-session'
 
 // Dynamic import for BarcodeScanner
 const BarcodeScanner = dynamic(
@@ -79,7 +81,7 @@ export function SequentialShoppingFlow({
   const [showFamilyChat, setShowFamilyChat] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Reset state when modal opens
+  // Reset state when modal opens and start shopping session
   useEffect(() => {
     if (isOpen) {
       setCurrentStep('SCANNING')
@@ -89,6 +91,33 @@ export function SequentialShoppingFlow({
       setSelectedCategory(item.category)
       setExpirationDate(undefined)
       setShowFamilyChat(false)
+
+      // Start shopping session
+      const startSession = async () => {
+        const user = auth.currentUser
+        if (user) {
+          try {
+            await shoppingSessionManager.startSession({
+              householdId: user.uid,
+              userId: user.uid,
+              userName: user.displayName || 'User',
+              deviceId: generateDeviceId()
+            })
+            logger.info('[SequentialShoppingFlow] Shopping session started')
+          } catch (error) {
+            logger.error('[SequentialShoppingFlow] Failed to start session', error as Error)
+          }
+        }
+      }
+      startSession()
+    }
+
+    // Cleanup: end session when modal closes
+    return () => {
+      if (!isOpen && shoppingSessionManager.hasActiveSession()) {
+        shoppingSessionManager.endSession()
+        logger.info('[SequentialShoppingFlow] Shopping session ended on close')
+      }
     }
   }, [isOpen, item])
 
@@ -109,6 +138,11 @@ export function SequentialShoppingFlow({
       }
 
       toast.success(`Found: ${product.name}`, { id: 'scan' })
+
+      // Track item scan in session
+      if (shoppingSessionManager.hasActiveSession()) {
+        await shoppingSessionManager.incrementItemsScanned()
+      }
 
       // Detect category from scanned product
       const detectedCategory = detectCategory(response.product)

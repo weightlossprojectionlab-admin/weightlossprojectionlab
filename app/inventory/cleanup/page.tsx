@@ -20,6 +20,9 @@ import { batchDiscardItems } from '@/lib/shopping-operations'
 import { Spinner } from '@/components/ui/Spinner'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
+import { BlockedOperationModal } from '@/components/shopping/BlockedOperationModal'
+import { BulkOperationBlockedError } from '@/lib/permissions-guard'
+import type { BulkOperationPermissionCheck } from '@/lib/permissions-guard'
 
 function CleanupContent() {
   const router = useRouter()
@@ -36,6 +39,8 @@ function CleanupContent() {
 
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [showBlockedModal, setShowBlockedModal] = useState(false)
+  const [blockedReason, setBlockedReason] = useState<BulkOperationPermissionCheck | null>(null)
 
   /**
    * Handle discard with confirmation modal
@@ -70,7 +75,8 @@ function CleanupContent() {
 
         const result = await batchDiscardItems(selectedItemIds, userId, {
           addToShoppingList: options.addToShoppingList,
-          reason: options.reason
+          reason: options.reason,
+          householdId: userId
         })
 
         if (result.failed.length > 0) {
@@ -97,8 +103,16 @@ function CleanupContent() {
           }, 1000)
         }
       } catch (error) {
-        logger.error('[Cleanup] Discard error', error as Error)
-        toast.error('Failed to discard items', { id: 'discard' })
+        // Handle blocked operation specifically
+        if (error instanceof BulkOperationBlockedError) {
+          setBlockedReason(error.permissionCheck)
+          setShowBlockedModal(true)
+          setShowConfirmModal(false)
+          toast.dismiss('discard')
+        } else {
+          logger.error('[Cleanup] Discard error', error as Error)
+          toast.error('Failed to discard items', { id: 'discard' })
+        }
       }
     },
     [selectedItemIds, totalExpired, router]
@@ -183,6 +197,19 @@ function CleanupContent() {
               setSelectedItemIds([])
             }}
           />
+
+          {/* Blocked Operation Modal */}
+          {blockedReason && (
+            <BlockedOperationModal
+              isOpen={showBlockedModal}
+              permissionCheck={blockedReason}
+              onClose={() => {
+                setShowBlockedModal(false)
+                setBlockedReason(null)
+              }}
+              allowOverride={false}
+            />
+          )}
         </main>
       </div>
     </AuthGuard>

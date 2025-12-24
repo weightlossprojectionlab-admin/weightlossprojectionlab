@@ -297,6 +297,7 @@ export interface VitalSign {
   loggedAt?: string // ISO 8601 - When entry was created in system (system timestamp)
   loggedBy?: string // userId who created the entry (for caregiver logging)
   isBackdated?: boolean // True if logged > 1 hour after recordedAt
+  daysDifference?: number // Days between recorded and logged (audit metric)
 
   // Audit trail
   createdAt?: string // ISO 8601 - When first created

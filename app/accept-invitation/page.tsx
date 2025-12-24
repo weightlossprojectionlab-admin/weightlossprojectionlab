@@ -35,6 +35,8 @@ function AcceptInvitationContent() {
   const [loading, setLoading] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showHipaaModal, setShowHipaaModal] = useState(false)
+  const [hipaaAcknowledged, setHipaaAcknowledged] = useState(false)
 
   // Auto-verify if code is in URL
   useEffect(() => {
@@ -97,10 +99,25 @@ function AcceptInvitationContent() {
       return
     }
 
-    // If user IS authenticated, accept invitation and redirect based on their account status
+    // If user IS authenticated, show HIPAA modal before accepting
+    setShowHipaaModal(true)
+  }
+
+  const handleHipaaAcknowledge = async () => {
+    if (!hipaaAcknowledged) {
+      toast.error('Please acknowledge HIPAA privacy requirements to continue')
+      return
+    }
+
+    if (!invitation) return
+
     setLoading(true)
     try {
-      await medicalOperations.family.acceptInvitation(invitation.id)
+      // Accept invitation with HIPAA acknowledgment
+      await medicalOperations.family.acceptInvitation(invitation.id, {
+        hipaaAcknowledged: true,
+        acknowledgedAt: new Date().toISOString()
+      })
       toast.success('Invitation accepted!')
 
       // Check if user has their own account (onboarding completed)
@@ -124,6 +141,7 @@ function AcceptInvitationContent() {
       setError(err.message || 'Failed to accept invitation')
     } finally {
       setLoading(false)
+      setShowHipaaModal(false)
     }
   }
 
@@ -301,6 +319,119 @@ function AcceptInvitationContent() {
             <p className="text-sm text-muted-foreground text-center">
               By accepting, you agree to access these health records responsibly and in accordance with privacy regulations.
             </p>
+          </div>
+        )}
+
+        {/* HIPAA Acknowledgment Modal */}
+        {showHipaaModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-card rounded-lg border-2 border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                {/* Header */}
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-12 h-12 bg-primary-light rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-foreground mb-2">
+                      HIPAA Privacy Requirements
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      As a caregiver accessing Protected Health Information (PHI), you must acknowledge these requirements
+                    </p>
+                  </div>
+                </div>
+
+                {/* HIPAA Requirements */}
+                <div className="space-y-4 mb-6">
+                  <div className="bg-background rounded-lg p-4 border-2 border-border">
+                    <h4 className="font-semibold text-foreground mb-3">You agree to:</h4>
+                    <ul className="space-y-2 text-sm text-foreground">
+                      <li className="flex items-start gap-2">
+                        <svg className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Access health information <strong>only</strong> for authorized caregiving purposes</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <svg className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Keep all health information <strong>confidential</strong> and secure</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <svg className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span><strong>Never share</strong> login credentials or patient information with unauthorized individuals</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <svg className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Report any suspected <strong>privacy breaches</strong> immediately</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <svg className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Comply with all <strong>HIPAA regulations</strong> and platform policies</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-warning-light border-2 border-warning rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-warning-dark flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div className="text-sm text-warning-dark">
+                        <p className="font-semibold mb-1">Important Notice</p>
+                        <p>Violation of HIPAA privacy requirements may result in loss of access, legal consequences, and civil/criminal penalties.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Checkbox Acknowledgment */}
+                <div className="mb-6">
+                  <label className="flex items-start gap-3 p-4 bg-background rounded-lg border-2 border-border cursor-pointer hover:bg-muted transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={hipaaAcknowledged}
+                      onChange={(e) => setHipaaAcknowledged(e.target.checked)}
+                      className="mt-1 w-5 h-5 rounded border-2 border-border text-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                    <span className="text-sm text-foreground">
+                      I acknowledge that I have read and understand the HIPAA privacy requirements above, and I agree to comply with all applicable privacy regulations when accessing Protected Health Information.
+                    </span>
+                  </label>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleHipaaAcknowledge}
+                    disabled={loading || !hipaaAcknowledged}
+                    className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
+                  >
+                    {loading ? 'Processing...' : 'Accept & Continue'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowHipaaModal(false)
+                      setHipaaAcknowledged(false)
+                    }}
+                    disabled={loading}
+                    className="px-6 py-3 border-2 border-border text-foreground rounded-lg hover:bg-muted disabled:opacity-50 transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>

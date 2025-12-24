@@ -42,6 +42,10 @@ import { auth } from '@/lib/firebase'
 import { addManualShoppingItem, clearAllShoppingItems } from '@/lib/shopping-operations'
 import { patientOperations } from '@/lib/medical-operations'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import { BlockedOperationModal } from '@/components/shopping/BlockedOperationModal'
+import { useActiveShoppingSessions } from '@/hooks/useActiveShoppingSessions'
+import { BulkOperationBlockedError } from '@/lib/permissions-guard'
+import type { BulkOperationPermissionCheck } from '@/lib/permissions-guard'
 
 // Dynamic imports
 const BarcodeScanner = dynamic(
@@ -186,6 +190,13 @@ function ShoppingListContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState<ProductCategory | 'all'>('all')
   const [members, setMembers] = useState<Record<string, PatientProfile>>({})
+
+  // Blocked operation state
+  const [showBlockedModal, setShowBlockedModal] = useState(false)
+  const [blockedReason, setBlockedReason] = useState<BulkOperationPermissionCheck | null>(null)
+
+  // Active shopping sessions monitoring
+  const { activeSessions, hasActiveSessions } = useActiveShoppingSessions(userId)
 
   const summary = getSummary()
 
@@ -556,7 +567,7 @@ function ShoppingListContent() {
   const handleDeleteAll = async () => {
     try {
       const loadingToast = toast.loading('Deleting all items...')
-      const result = await clearAllShoppingItems(userId)
+      const result = await clearAllShoppingItems(userId, userId)
 
       toast.dismiss(loadingToast)
 
@@ -569,8 +580,15 @@ function ShoppingListContent() {
       setShowDeleteAllConfirm(false)
       refresh() // Refresh the list
     } catch (error) {
-      toast.error('Failed to delete items')
-      logger.error('Delete all shopping items failed', error as Error)
+      // Handle blocked operation specifically
+      if (error instanceof BulkOperationBlockedError) {
+        setBlockedReason(error.permissionCheck)
+        setShowBlockedModal(true)
+        setShowDeleteAllConfirm(false)
+      } else {
+        toast.error('Failed to delete items')
+        logger.error('Delete all shopping items failed', error as Error)
+      }
     }
   }
 
@@ -1021,6 +1039,20 @@ function ShoppingListContent() {
           cancelText="Cancel"
           variant="danger"
         />
+
+        {/* Blocked Operation Modal */}
+        {blockedReason && (
+          <BlockedOperationModal
+            isOpen={showBlockedModal}
+            permissionCheck={blockedReason}
+            onClose={() => {
+              setShowBlockedModal(false)
+              setBlockedReason(null)
+            }}
+            onOverride={handleDeleteAll}
+            allowOverride={false}
+          />
+        )}
       </div>
     </AuthGuard>
   )

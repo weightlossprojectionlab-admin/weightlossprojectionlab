@@ -42,6 +42,7 @@ import {
   VitalFrequency,
   migrateLegacyWeightReminders
 } from '@/lib/vital-reminder-logic'
+import { updateVitalReminders } from '@/lib/services/patient-preferences'
 
 function ProfileContent() {
   const { user } = useAuth()
@@ -50,7 +51,7 @@ function ProfileContent() {
 
   // Subscription state
   const { subscription, loading: subscriptionLoading } = useSubscription()
-  const { patients, loading: patientsLoading } = usePatients()
+  const { patients, loading: patientsLoading, refetch: refetchPatients } = usePatients()
   const { current, max, percentage } = usePatientLimit(patients.length)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const { isEnabled: stepTrackingEnabled, enableTracking, disableTracking, isTracking } = useStepTracking()
@@ -102,32 +103,67 @@ function ProfileContent() {
     }
   }, [familyMembers, selectedMemberId, patientsLoading])
 
-  // Fetch user profile data (or selected member profile)
+  // Real-time listener for profile data (uses onSnapshot for live updates)
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return
+    if (!user) return
 
+    let unsubscribe: (() => void) | undefined
+
+    const setupRealtimeListener = async () => {
       try {
-        // If a family member is selected, load their profile from patients
+        // If a family member is selected, subscribe to their patient document
         if (selectedMemberId && selectedMemberId !== user.uid) {
-          const selectedMember = familyMembers.find(m => m.id === selectedMemberId)
-          if (selectedMember) {
-            setProfileData(selectedMember)
-            return
-          }
+          logger.debug('[Profile] Setting up real-time listener for patient', { selectedMemberId })
+
+          // Import Firestore client
+          const { db } = await import('@/lib/firebase')
+          const { doc, onSnapshot, collection } = await import('firebase/firestore')
+
+          // Subscribe to patient document changes
+          const patientRef = doc(collection(db, 'users', user.uid, 'patients'), selectedMemberId)
+
+          unsubscribe = onSnapshot(
+            patientRef,
+            (snapshot) => {
+              if (snapshot.exists()) {
+                const data = snapshot.data()
+                setProfileData({ id: snapshot.id, ...data })
+                logger.debug('[Profile] Patient profile updated via onSnapshot', {
+                  patientId: selectedMemberId,
+                  vitalReminders: data?.preferences?.vitalReminders
+                })
+              } else {
+                logger.warn('[Profile] Patient document not found', { selectedMemberId })
+                toast.error('Patient profile not found')
+              }
+            },
+            (error) => {
+              logger.error('[Profile] Real-time listener error', error)
+              toast.error('Failed to sync profile data')
+            }
+          )
+          return
         }
 
-        // Otherwise load own profile
+        // Otherwise load own profile (use API for user profile - no onSnapshot needed)
         const profile = await userProfileOperations.getUserProfile()
         setProfileData(profile.data)
       } catch (error) {
-        logger.error('Error fetching profile', error as Error)
+        logger.error('Error setting up profile listener', error as Error)
         toast.error('Failed to load profile data')
       }
     }
 
-    fetchProfile()
-  }, [user, selectedMemberId, familyMembers])
+    setupRealtimeListener()
+
+    // Cleanup listener on unmount or when selectedMemberId changes
+    return () => {
+      if (unsubscribe) {
+        logger.debug('[Profile] Cleaning up real-time listener')
+        unsubscribe()
+      }
+    }
+  }, [user, selectedMemberId])
 
   // Detect platform and health app
   useEffect(() => {
@@ -306,14 +342,14 @@ function ProfileContent() {
     try {
       // If viewing a family member, update their patient record
       if (currentlyViewingMember) {
-        // Merge the updates with existing patient data
+        // Merge the updates with existing patient data (use profileData for fresh data)
         const updatedPatientData = {
-          ...currentlyViewingMember,
+          ...profileData,
           ...updates,
           // Ensure required fields are present
-          name: currentlyViewingMember.name,
-          relationship: currentlyViewingMember.relationship,
-          userId: currentlyViewingMember.userId,
+          name: profileData?.name || currentlyViewingMember.name,
+          relationship: profileData?.relationship || currentlyViewingMember.relationship,
+          userId: profileData?.userId || currentlyViewingMember.userId,
         }
 
         // Get Firebase auth token (bypasses CSRF check in middleware)
@@ -342,7 +378,8 @@ function ProfileContent() {
 
         // Refresh the patient data by refetching from the updated response
         const result = await response.json()
-        setProfileData(result.patient || { ...currentlyViewingMember, ...updates })
+        // API returns data in result.data (not result.patient)
+        setProfileData(result.data || { ...currentlyViewingMember, ...updates })
       } else {
         // Saving own profile - need to structure the data correctly for user profile API
         const userProfileUpdates = {
@@ -816,6 +853,12 @@ function ProfileContent() {
                   currentPreferences: profileData?.preferences
                 })
 
+                // Use centralized service to merge preferences (DRY)
+                const mergedPreferences = updateVitalReminders(
+                  profileData?.preferences,
+                  updatedVitalReminders
+                )
+
                 // If viewing a family member, save to their patient profile
                 if (currentlyViewingMember) {
                   const auth = getAuth()
@@ -825,6 +868,7 @@ function ProfileContent() {
                   }
                   const authToken = await currentUser.getIdToken()
 
+                  // Send only the preferences field (API will deep merge)
                   const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
                     method: 'PUT',
                     headers: {
@@ -832,11 +876,7 @@ function ProfileContent() {
                       'Authorization': `Bearer ${authToken}`,
                     },
                     body: JSON.stringify({
-                      ...currentlyViewingMember,
-                      preferences: {
-                        ...currentlyViewingMember.preferences,
-                        vitalReminders: updatedVitalReminders
-                      }
+                      preferences: mergedPreferences
                     })
                   })
 
@@ -844,16 +884,14 @@ function ProfileContent() {
                     throw new Error('Failed to update patient vital reminders')
                   }
 
-                  // Refresh patient data
+                  // Refresh patient data from the API response
                   const result = await response.json()
-                  setProfileData(result.patient || { ...currentlyViewingMember, preferences: { ...currentlyViewingMember.preferences, vitalReminders: updatedVitalReminders } })
+                  // API returns data in result.data (not result.patient)
+                  setProfileData(result.data)
                 } else {
                   // Saving own profile
                   await userProfileOperations.updateUserProfile({
-                    preferences: {
-                      ...profileData?.preferences,
-                      vitalReminders: updatedVitalReminders
-                    }
+                    preferences: mergedPreferences
                   })
 
                   // Fetch fresh profile data from server

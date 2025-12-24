@@ -15,6 +15,9 @@ export async function POST(
   try {
     const { invitationId } = await params
 
+    // Parse request body (may contain HIPAA acknowledgment)
+    const body = await request.json().catch(() => ({}))
+
     // Authenticate user
     const authHeader = request.headers.get('Authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -123,6 +126,10 @@ export async function POST(
       .collection('familyMembers')
       .add(familyMember)
 
+    console.log(`✅ Family member record created: ${memberRef.id} for user ${userId} in account ${invitation.invitedByUserId}`)
+    console.log(`📋 Patients shared in invitation: ${JSON.stringify(invitation.patientsShared)}`)
+    console.log(`👤 Family member status: ${familyMember.status}, role: ${familyMember.familyRole}`)
+
     // Create family member records for each patient in patientsShared
     const batch = adminDb.batch()
 
@@ -180,6 +187,22 @@ export async function POST(
     await userRef.set({
       caregiverOf: [...existingCaregiverOf, caregiverContext]
     }, { merge: true })
+
+    // Log HIPAA acknowledgment to Firestore for compliance audit trail
+    if (body.hipaaAcknowledged) {
+      await userRef.collection('complianceAcknowledgments').add({
+        type: 'hipaa_privacy_practices',
+        acceptedAt: body.acknowledgedAt || new Date().toISOString(),
+        invitationId: invitationId,
+        accountOwnerId: invitation.invitedByUserId,
+        accountOwnerName: invitation.invitedByName,
+        patientsAccess: invitation.patientsShared,
+        userAgent: request.headers.get('user-agent') || 'unknown',
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+      })
+
+      console.log(`HIPAA acknowledgment logged for user ${userId} accepting invitation ${invitationId}`)
+    }
 
     const createdMember: FamilyMember = {
       id: memberRef.id,

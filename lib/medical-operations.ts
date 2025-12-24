@@ -330,12 +330,16 @@ export const familyOperations = {
   /**
    * Accept an invitation
    */
-  async acceptInvitation(invitationId: string): Promise<FamilyMember> {
+  async acceptInvitation(
+    invitationId: string,
+    acknowledgment?: { hipaaAcknowledged: boolean; acknowledgedAt: string }
+  ): Promise<FamilyMember> {
     try {
-      logger.info('[MedicalOps] Accepting invitation', { invitationId })
+      logger.info('[MedicalOps] Accepting invitation', { invitationId, hasAcknowledgment: !!acknowledgment })
 
       const member = await makeAuthenticatedRequest<FamilyMember>(`/invitations/${invitationId}/accept`, {
-        method: 'POST'
+        method: 'POST',
+        body: acknowledgment ? JSON.stringify(acknowledgment) : undefined
       })
 
       logger.info('[MedicalOps] Invitation accepted successfully', { invitationId })

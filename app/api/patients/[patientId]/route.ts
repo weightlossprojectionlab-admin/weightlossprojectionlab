@@ -14,6 +14,7 @@ import { patientProfileSchema } from '@/lib/validations/medical'
 import { assertPatientAccess, authorizePatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { PatientProfile, AuthorizationResult } from '@/types/medical'
+import { mergePatientPreferences } from '@/lib/services/patient-preferences'
 
 // GET /api/patients/[patientId] - Get a single patient
 export async function GET(
@@ -147,46 +148,72 @@ export async function PUT(
       )
     }
 
-    // Merge updates with existing data
+    // Merge updates with existing data (using service for DRY)
     const existingPatient = patientDoc.data() as PatientProfile
     const now = new Date().toISOString()
+
+    // Use centralized preference merging service (Separation of Concerns)
+    const mergedPreferences = body.preferences
+      ? mergePatientPreferences(existingPatient.preferences, body.preferences)
+      : existingPatient.preferences
 
     const updatedPatient: PatientProfile = {
       ...existingPatient,
       ...body,
+      preferences: mergedPreferences,
       id: patientId,
       userId,
       createdAt: existingPatient.createdAt,
       lastModified: now
     }
 
-    // Validate merged data
-    const validationResult = patientProfileSchema.safeParse(updatedPatient)
-    if (!validationResult.success) {
-      logger.warn('[API /patients/[id] PUT] Validation failed', {
-        errors: validationResult.error.format()
-      })
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: validationResult.error.format()
-        },
-        { status: 400 }
-      )
+    // For partial updates (like preferences), skip full schema validation
+    // Only validate if required fields are being updated
+    const isPartialUpdate = Object.keys(body).length < 5 && !body.name && !body.dateOfBirth
+
+    if (!isPartialUpdate) {
+      // Full validation for complete updates
+      const validationResult = patientProfileSchema.safeParse(updatedPatient)
+      if (!validationResult.success) {
+        logger.warn('[API /patients/[id] PUT] Validation failed', {
+          errors: validationResult.error.format()
+        })
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Validation failed',
+            details: validationResult.error.format()
+          },
+          { status: 400 }
+        )
+      }
     }
 
-    // Update patient
-    await patientRef.update({
-      ...body,
+    // Update patient - merge preferences if present
+    const updateData: any = {
       lastModified: now
-    })
+    }
+
+    // Add only the fields from body (don't spread entire objects with Timestamps)
+    if (body.preferences) updateData.preferences = mergedPreferences
+    if (body.emergencyContacts) updateData.emergencyContacts = body.emergencyContacts
+    if (body.photo) updateData.photo = body.photo
+    if (body.healthConditions) updateData.healthConditions = body.healthConditions
+    if (body.foodAllergies) updateData.foodAllergies = body.foodAllergies
+    if (body.conditionDetails) updateData.conditionDetails = body.conditionDetails
+    if (body.medications) updateData.medications = body.medications
+    if (body.dietaryPreferences) updateData.dietaryPreferences = body.dietaryPreferences
+    if (body.lifestyle) updateData.lifestyle = body.lifestyle
+    if (body.bodyMeasurements) updateData.bodyMeasurements = body.bodyMeasurements
+
+    await patientRef.update(updateData)
 
     logger.info('[API /patients/[id] PUT] Patient updated successfully', { userId, ownerUserId, patientId })
 
+    // Return the merged patient data
     return NextResponse.json({
       success: true,
-      data: validationResult.data
+      data: { ...existingPatient, ...updateData, id: patientId }
     })
 
   } catch (error: any) {

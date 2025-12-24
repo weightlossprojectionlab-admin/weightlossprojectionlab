@@ -1,0 +1,14 @@
+FIRESTORE COMPOSITE INDEX NAMES
+================================
+
+Collection: shopping_sessions
+------------------------------
+Index 1: householdId_ASC_status_ASC_lastActivityAt_DESC
+Index 2: userId_ASC_status_ASC_startedAt_DESC  
+Index 3: status_ASC_lastActivityAt_ASC
+
+Collection: bulk_operation_audit_logs
+--------------------------------------
+Index 4: performedBy_ASC_timestamp_DESC
+Index 5: householdId_ASC_operation_ASC_timestamp_DESC
+

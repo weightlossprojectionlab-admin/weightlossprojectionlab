@@ -53,8 +53,8 @@ const VITAL_CONFIG: Record<VitalType, {
     label: 'Blood Pressure',
     icon: '💓',
     fields: [
-      { name: 'systolic', label: 'Systolic', type: 'number', placeholder: '120', unit: 'mmHg', min: 70, max: 200 },
-      { name: 'diastolic', label: 'Diastolic', type: 'number', placeholder: '80', unit: 'mmHg', min: 40, max: 130 }
+      { name: 'systolic', label: 'Systolic', type: 'number', placeholder: '', unit: 'mmHg', min: 70, max: 200 },
+      { name: 'diastolic', label: 'Diastolic', type: 'number', placeholder: '', unit: 'mmHg', min: 40, max: 130 }
     ],
     getDefaultValue: () => ({ systolic: '', diastolic: '' }),
     formatValue: (data) => ({ systolic: Number(data.systolic), diastolic: Number(data.diastolic) }),
@@ -64,7 +64,7 @@ const VITAL_CONFIG: Record<VitalType, {
     label: 'Blood Sugar',
     icon: '🩸',
     fields: [
-      { name: 'glucose', label: 'Glucose', type: 'number', placeholder: '100', unit: 'mg/dL', min: 40, max: 400 }
+      { name: 'glucose', label: 'Glucose', type: 'number', placeholder: '', unit: 'mg/dL', min: 40, max: 400 }
     ],
     getDefaultValue: () => ({ glucose: '' }),
     formatValue: (data) => Number(data.glucose), // Blood sugar expects a number, not an object
@@ -74,7 +74,7 @@ const VITAL_CONFIG: Record<VitalType, {
     label: 'Temperature',
     icon: '🌡️',
     fields: [
-      { name: 'temp', label: 'Temperature', type: 'number', placeholder: '98.6', unit: '°F', min: 95, max: 105 }
+      { name: 'temp', label: 'Temperature', type: 'number', placeholder: '', unit: '°F', min: 95, max: 105 }
     ],
     getDefaultValue: () => ({ temp: '' }),
     formatValue: (data) => Number(data.temp), // Temperature expects a number, not an object
@@ -84,8 +84,8 @@ const VITAL_CONFIG: Record<VitalType, {
     label: 'Pulse Oximeter',
     icon: '❤️',
     fields: [
-      { name: 'spo2', label: 'SpO₂', type: 'number', placeholder: '98', unit: '%', min: 70, max: 100 },
-      { name: 'pulseRate', label: 'Pulse Rate', type: 'number', placeholder: '74', unit: 'bpm', min: 40, max: 200 }
+      { name: 'spo2', label: 'SpO₂', type: 'number', placeholder: '', unit: '%', min: 70, max: 100 },
+      { name: 'pulseRate', label: 'Pulse Rate', type: 'number', placeholder: '', unit: 'bpm', min: 40, max: 200 }
     ],
     getDefaultValue: () => ({ spo2: '', pulseRate: '' }),
     formatValue: (data) => ({ spo2: Number(data.spo2), pulseRate: Number(data.pulseRate) }), // Keep as object
@@ -95,7 +95,7 @@ const VITAL_CONFIG: Record<VitalType, {
     label: 'Weight',
     icon: '⚖️',
     fields: [
-      { name: 'weight', label: 'Weight', type: 'number', placeholder: '150', unit: 'lbs', min: 50, max: 500 }
+      { name: 'weight', label: 'Weight', type: 'number', placeholder: '', unit: 'lbs', min: 50, max: 500 }
     ],
     getDefaultValue: () => ({ weight: '' }),
     formatValue: (data) => Number(data.weight), // Weight expects a number, not an object

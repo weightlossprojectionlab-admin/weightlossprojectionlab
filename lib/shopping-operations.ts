@@ -1190,6 +1190,11 @@ export async function updateQuantitySafely(
 /**
  * Batch discard multiple items
  * More efficient than calling discardItemSafely multiple times
+ *
+ * SECURITY: Requires owner or primary_caregiver role
+ * SAFETY: Blocked if active shopping sessions detected
+ *
+ * @throws {BulkOperationBlockedError} If permission denied or active session
  */
 export async function batchDiscardItems(
   itemIds: string[],
@@ -1197,8 +1202,35 @@ export async function batchDiscardItems(
   options: {
     addToShoppingList?: boolean
     reason?: 'expired' | 'spoiled' | 'moldy' | 'other'
+    householdId?: string
   } = {}
 ): Promise<{ succeeded: string[]; failed: Array<{ itemId: string; error: string }> }> {
+  // SECURITY: Verify permission and check for active shopping sessions
+  const { verifyBulkOperationPermission, BulkOperationBlockedError } = await import('@/lib/permissions-guard')
+
+  const permissionCheck = await verifyBulkOperationPermission(
+    userId,
+    options.householdId || userId,
+    'batch_discard'
+  )
+
+  if (!permissionCheck.allowed) {
+    logger.warn('[Shopping] Batch discard blocked', {
+      userId,
+      householdId: options.householdId,
+      itemCount: itemIds.length,
+      reason: permissionCheck.reason,
+      blockedBy: permissionCheck.blockedBy
+    })
+    throw new BulkOperationBlockedError(permissionCheck)
+  }
+
+  logger.info('[Shopping] Starting batch discard', {
+    userId,
+    householdId: options.householdId,
+    itemCount: itemIds.length
+  })
+
   const results = {
     succeeded: [] as string[],
     failed: [] as Array<{ itemId: string; error: string }>
@@ -1302,14 +1334,39 @@ export async function markItemAsExpired(
  * Clear all shopping items for a user
  * Deletes all items from the shopping list (both needed and in-stock)
  *
+ * SECURITY: Requires owner or primary_caregiver role
+ * SAFETY: Blocked if active shopping sessions detected
+ *
  * @param userId - User ID whose shopping list to clear
+ * @param householdId - Optional household ID for permission checking
  * @returns Object with count of deleted items and any errors
+ * @throws {BulkOperationBlockedError} If permission denied or active session
  */
 export async function clearAllShoppingItems(
-  userId: string
+  userId: string,
+  householdId?: string
 ): Promise<{ deleted: number; errors: Array<{ itemId: string; error: string }> }> {
   try {
-    logger.info('[Shopping] Clearing all shopping items', { userId })
+    // SECURITY: Verify permission and check for active shopping sessions
+    const { verifyBulkOperationPermission, BulkOperationBlockedError } = await import('@/lib/permissions-guard')
+
+    const permissionCheck = await verifyBulkOperationPermission(
+      userId,
+      householdId || userId,
+      'clear_list'
+    )
+
+    if (!permissionCheck.allowed) {
+      logger.warn('[Shopping] Bulk clear blocked', {
+        userId,
+        householdId,
+        reason: permissionCheck.reason,
+        blockedBy: permissionCheck.blockedBy
+      })
+      throw new BulkOperationBlockedError(permissionCheck)
+    }
+
+    logger.info('[Shopping] Clearing all shopping items', { userId, householdId })
 
     // Get all user's shopping items
     const q = query(

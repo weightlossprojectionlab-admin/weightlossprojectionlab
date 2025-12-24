@@ -368,5 +368,6 @@ export function VitalLogForm({ patientId, patientName, patientCreatedAt, onSubmi
         )}
       </div>
     </form>
+    </>
   )
 }
