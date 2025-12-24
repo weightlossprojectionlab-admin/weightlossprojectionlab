@@ -272,6 +272,7 @@ export async function POST(
       loggedAt: now, // System timestamp when entry was created
       loggedBy: userId, // Who created the entry
       isBackdated, // True if logged > 1 hour after recorded
+      daysDifference: dateValidation.daysDifference || 0, // Days between recorded and logged (HIPAA audit)
       takenBy: userId,
       method: vitalData.method || 'manual',
       // Audit trail
