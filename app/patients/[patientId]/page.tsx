@@ -55,6 +55,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAppointments } from '@/hooks/useAppointments'
 import { useProviders } from '@/hooks/useProviders'
 import { useVitalSchedules } from '@/hooks/useVitalSchedules'
+import { updateVitalReminders } from '@/lib/services/patient-preferences'
 
 export default function PatientDetailPage() {
   return (
@@ -503,7 +504,7 @@ function PatientDetailContent() {
             <div className="lg:sticky lg:top-4">
               <div className="bg-card rounded-lg shadow-sm border border-border p-4">
                 <h3 className="font-semibold text-foreground mb-3">Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-col lg:gap-2">
+                <div className="grid grid-cols-4 gap-1.5 lg:flex lg:flex-col lg:gap-2">
                   <button
                     onClick={() => {
                       setActiveTab('info')
@@ -512,15 +513,14 @@ function PatientDetailContent() {
                         document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }, 100)
                     }}
-                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
                       activeTab === 'info'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
-                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">ℹ️</span>
-                    <span className="text-center lg:text-left leading-tight font-medium">Patient Info</span>
+                    <span className="text-5xl lg:text-xl">ℹ️</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Info</span>
                   </button>
                   <button
                     onClick={() => {
@@ -529,15 +529,14 @@ function PatientDetailContent() {
                         document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }, 100)
                     }}
-                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
                       activeTab === 'meals'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
-                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">📸</span>
-                    <span className="text-center lg:text-left leading-tight font-medium">Log Meal</span>
+                    <span className="text-5xl lg:text-xl">📸</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Meals</span>
                   </button>
                   <button
                     onClick={() => {
@@ -546,35 +545,32 @@ function PatientDetailContent() {
                         document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }, 100)
                     }}
-                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
                       activeTab === 'medications'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
-                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">💊</span>
-                    <span className="text-center lg:text-left leading-tight font-medium">Medications</span>
+                    <span className="text-5xl lg:text-xl">💊</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Meds</span>
                   </button>
                   <button
                     onClick={() => {
                       setShowVitalsWizard(true)
                     }}
-                    className="w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 bg-muted hover:bg-muted/80 text-foreground"
-                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
+                    className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-muted hover:bg-muted/80 text-foreground"
                   >
-                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">🩺</span>
-                    <span className="text-center lg:text-left leading-tight font-medium">Vitals</span>
+                    <span className="text-5xl lg:text-xl">🩺</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Vitals</span>
                   </button>
                   <button
                     onClick={() => {
                       setShowAppointmentWizard(true)
                     }}
-                    className="w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 bg-muted hover:bg-muted/80 text-foreground"
-                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
+                    className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-muted hover:bg-muted/80 text-foreground"
                   >
-                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">➕</span>
-                    <span className="text-center lg:text-left leading-tight font-medium">Schedule Appointment</span>
+                    <span className="text-5xl lg:text-xl">📅</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Appt</span>
                   </button>
                   <button
                     onClick={() => {
@@ -583,15 +579,14 @@ function PatientDetailContent() {
                         document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }, 100)
                     }}
-                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
                       activeTab === 'steps'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
-                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">🚶</span>
-                    <span className="text-center lg:text-left leading-tight font-medium">Log Steps</span>
+                    <span className="text-5xl lg:text-xl">🚶</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Steps</span>
                   </button>
                   <button
                     onClick={() => {
@@ -600,23 +595,21 @@ function PatientDetailContent() {
                         document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }, 100)
                     }}
-                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
                       activeTab === 'appointments'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
-                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">📅</span>
-                    <span className="text-center lg:text-left leading-tight font-medium">Appointments</span>
+                    <span className="text-5xl lg:text-xl">📋</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Appts</span>
                   </button>
                   <Link
                     href={`/shopping?memberId=${patientId}`}
-                    className="w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 bg-muted hover:bg-muted/80 text-foreground"
-                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
+                    className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-muted hover:bg-muted/80 text-foreground"
                   >
-                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">🛒</span>
-                    <span className="text-center lg:text-left leading-tight font-medium">Shopping List</span>
+                    <span className="text-5xl lg:text-xl">🛒</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Shop</span>
                   </Link>
                   <button
                     onClick={() => {
@@ -625,33 +618,30 @@ function PatientDetailContent() {
                         document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }, 100)
                     }}
-                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
                       activeTab === 'recipes'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
-                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">🍽️</span>
-                    <span className="text-center lg:text-left leading-tight font-medium">Recipes for {patient.name}</span>
+                    <span className="text-5xl lg:text-xl">🍽️</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Recipes</span>
                   </button>
                   {canUploadDocuments && (
                     <button
                       onClick={() => setShowDocumentUpload(!showDocumentUpload)}
-                      className="w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 bg-muted hover:bg-muted/80 text-foreground"
-                      style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
+                      className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-muted hover:bg-muted/80 text-foreground"
                     >
-                      <DocumentTextIcon style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="w-8 h-8 lg:w-5 lg:h-5" />
-                      <span className="text-center lg:text-left leading-tight font-medium">Upload Documents</span>
+                      <DocumentTextIcon className="w-12 h-12 lg:w-5 lg:h-5" />
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Docs</span>
                     </button>
                   )}
                   <Link
                     href={`/patients/${patientId}/duties`}
-                    className="w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
-                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
+                    className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
                   >
-                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">🏠</span>
-                    <span className="text-center lg:text-left leading-tight font-medium">Household Duties</span>
+                    <span className="text-5xl lg:text-xl">🏠</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Duties</span>
                   </Link>
                   <button
                     onClick={() => {
@@ -660,15 +650,14 @@ function PatientDetailContent() {
                         document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }, 100)
                     }}
-                    className={`w-full aspect-square lg:aspect-auto p-3 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-2 ${
+                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
                       activeTab === 'settings'
                         ? 'bg-primary text-white'
                         : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
-                    style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1rem)' }}
                   >
-                    <span style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)' }} className="lg:text-xl">⚙️</span>
-                    <span className="text-center lg:text-left leading-tight font-medium">Settings</span>
+                    <span className="text-5xl lg:text-xl">⚙️</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Settings</span>
                   </button>
                 </div>
 
@@ -779,7 +768,7 @@ function PatientDetailContent() {
             </div>
 
         {/* Vital Reminder Prompt - Shows when vitals are due today */}
-        {canLogVitals && user && patient && (() => {
+        {canLogVitals && user && patient && !vitalsLoading && (() => {
           // DEBUG: Log what we're passing to VitalReminderPrompt
           console.log('[PatientPage] ==== VitalReminderPrompt Debug ====')
           console.log('[PatientPage] Patient object:', patient)
@@ -806,15 +795,21 @@ function PatientDetailContent() {
                 setShowQuickLogModal(true)
               }}
               onDisableReminder={async (vitalType) => {
-                // Update patient's vital reminders
-                const currentReminders = patient.preferences?.vitalReminders as any
+                // Use service layer to merge preferences (DRY + Separation of Concerns)
+                const currentReminders = patient.preferences?.vitalReminders || {}
                 const updatedReminders = {
                   ...currentReminders,
                   [vitalType]: {
                     enabled: false,
-                    frequency: currentReminders?.[vitalType]?.frequency || 'daily'
+                    frequency: currentReminders[vitalType]?.frequency || 'daily'
                   }
                 }
+
+                // Use service to create merged preferences
+                const mergedPreferences = updateVitalReminders(
+                  patient.preferences,
+                  updatedReminders
+                )
 
                 const authToken = await auth.currentUser?.getIdToken()
                 const response = await fetch(`/api/patients/${patientId}`, {
@@ -824,11 +819,7 @@ function PatientDetailContent() {
                     'Authorization': `Bearer ${authToken}`,
                   },
                   body: JSON.stringify({
-                    ...patient,
-                    preferences: {
-                      ...patient.preferences,
-                      vitalReminders: updatedReminders
-                    }
+                    preferences: mergedPreferences  // Send only preferences (no Timestamps)
                   })
                 })
 
@@ -836,9 +827,8 @@ function PatientDetailContent() {
                   throw new Error('Failed to update patient vital reminders')
                 }
 
-                // Refresh patient data
-                const result = await response.json()
-                setPatient(result.data)
+                // No need to setPatient - onSnapshot will handle real-time update
+                logger.debug('[PatientPage] Vital reminder disabled, onSnapshot will sync', { vitalType })
               }}
             />
           )
@@ -2307,6 +2297,8 @@ function PatientDetailContent() {
           }}
           vitalType={quickLogVitalType}
           patientName={patient.name}
+          patientCreatedAt={patient.createdAt}
+          patientId={patient.id}
           onSubmit={async (vitalData) => {
             await handleLogVital(vitalData)
             setShowQuickLogModal(false)

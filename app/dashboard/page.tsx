@@ -414,22 +414,22 @@ function DashboardContent() {
         )}
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-4 gap-1.5">
           <button
             onClick={() => {
               setNavigatingTo('log-meal')
               router.push('/log-meal')
             }}
             disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Log meal"
           >
             {navigatingTo === 'log-meal' ? (
-              <Spinner size="md" className="text-primary" />
+              <Spinner size="sm" className="text-primary" />
             ) : (
-              <span className="text-2xl" role="img" aria-label="camera">📸</span>
+              <span className="text-5xl" role="img" aria-label="camera">📸</span>
             )}
-            <span className="text-sm font-medium">Log Meal</span>
+            <span className="text-[9px] font-medium leading-tight mt-0.5">Meal</span>
           </button>
 
           <button
@@ -438,15 +438,15 @@ function DashboardContent() {
               router.push('/medications')
             }}
             disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Manage medications"
           >
             {navigatingTo === 'medications' ? (
-              <Spinner size="md" className="text-primary" />
+              <Spinner size="sm" className="text-primary" />
             ) : (
-              <span className="text-2xl" role="img" aria-label="medications">💊</span>
+              <span className="text-5xl" role="img" aria-label="medications">💊</span>
             )}
-            <span className="text-sm font-medium">Medications</span>
+            <span className="text-[9px] font-medium leading-tight mt-0.5">Meds</span>
           </button>
 
           <button
@@ -455,15 +455,15 @@ function DashboardContent() {
               router.push('/gallery')
             }}
             disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Photo gallery with social sharing"
           >
             {navigatingTo === 'gallery' ? (
-              <Spinner size="md" className="text-primary" />
+              <Spinner size="sm" className="text-primary" />
             ) : (
-              <span className="text-2xl" role="img" aria-label="gallery">🖼️</span>
+              <span className="text-5xl" role="img" aria-label="gallery">🖼️</span>
             )}
-            <span className="text-sm font-medium">Gallery</span>
+            <span className="text-[9px] font-medium leading-tight mt-0.5">Gallery</span>
           </button>
 
           <button
@@ -472,25 +472,25 @@ function DashboardContent() {
               router.push('/shopping')
             }}
             disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Shopping list"
           >
             {navigatingTo === 'shopping' ? (
-              <Spinner size="md" className="text-primary" />
+              <Spinner size="sm" className="text-primary" />
             ) : (
-              <span className="text-2xl" role="img" aria-label="shopping">🛒</span>
+              <span className="text-5xl" role="img" aria-label="shopping">🛒</span>
             )}
-            <span className="text-sm font-medium">Shopping</span>
+            <span className="text-[9px] font-medium leading-tight mt-0.5">Shop</span>
           </button>
 
           <button
             onClick={() => setShowWeightModal(true)}
             disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Log weight"
           >
             <span className="text-2xl" role="img" aria-label="scale">⚖️</span>
-            <span className="text-sm font-medium">Log Weight</span>
+            <span className="text-[9px] font-medium leading-tight mt-0.5">Weight</span>
           </button>
 
           <button
@@ -499,15 +499,15 @@ function DashboardContent() {
               router.push('/inventory')
             }}
             disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Kitchen inventory"
           >
             {navigatingTo === 'inventory' ? (
-              <Spinner size="md" className="text-primary" />
+              <Spinner size="sm" className="text-primary" />
             ) : (
-              <span className="text-2xl" role="img" aria-label="inventory">📦</span>
+              <span className="text-5xl" role="img" aria-label="inventory">📦</span>
             )}
-            <span className="text-sm font-medium">Inventory</span>
+            <span className="text-[9px] font-medium leading-tight mt-0.5">Items</span>
           </button>
 
           <button
@@ -516,15 +516,15 @@ function DashboardContent() {
               router.push('/profile')
             }}
             disabled={!!navigatingTo}
-            className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
             aria-label="Profile settings"
           >
             {navigatingTo === 'settings' ? (
-              <Spinner size="md" className="text-primary" />
+              <Spinner size="sm" className="text-primary" />
             ) : (
-              <span className="text-2xl" role="img" aria-label="settings">⚙️</span>
+              <span className="text-5xl" role="img" aria-label="settings">⚙️</span>
             )}
-            <span className="text-sm font-medium">Settings</span>
+            <span className="text-[9px] font-medium leading-tight mt-0.5">Settings</span>
           </button>
 
           {/* PWA Install Button - Only visible if installable */}
@@ -536,11 +536,11 @@ function DashboardContent() {
                   toast.success('App installed successfully!')
                 }
               }}
-              className="bg-white dark:bg-gray-900 rounded-lg shadow hover:shadow-lg cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center space-y-2 p-6"
+              className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5"
               aria-label="Install app"
             >
-              <span className="text-2xl" role="img" aria-label="install">📱</span>
-              <span className="text-sm font-medium">Install App</span>
+              <span className="text-5xl" role="img" aria-label="install">📱</span>
+              <span className="text-[9px] font-medium leading-tight mt-0.5">Install</span>
             </button>
           )}
         </div>
