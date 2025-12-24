@@ -71,7 +71,7 @@ function PatientsContent() {
   const { profile: userProfile } = useUserProfile()
 
   // Load vitals for the selected patient (for quick view modal)
-  const { vitals, loading: vitalsLoading } = useVitals({
+  const { vitals, loading: vitalsLoading, refetch: refetchVitals } = useVitals({
     patientId: selectedPatientForVitalsView?.id
   })
 
@@ -340,10 +340,19 @@ function PatientsContent() {
                 })
               }
 
+              toast.success(`${savedVitals.length} vital sign${savedVitals.length !== 1 ? 's' : ''} logged successfully!`)
+
+              // Store the patient for reopening quick view modal
+              const patientToView = selectedPatientForWizard
+
               // Close wizard
               setSelectedPatientForWizard(null)
 
-              toast.success(`${savedVitals.length} vital sign${savedVitals.length !== 1 ? 's' : ''} logged successfully!`)
+              // Reopen quick view modal to show the newly logged vitals
+              // Use setTimeout to ensure wizard closes first
+              setTimeout(() => {
+                setSelectedPatientForVitalsView(patientToView)
+              }, 100)
 
               // Return saved vitals so wizard can call onComplete
               return savedVitals
