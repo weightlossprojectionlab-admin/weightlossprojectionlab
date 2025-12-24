@@ -14,7 +14,6 @@ import { patientProfileSchema } from '@/lib/validations/medical'
 import { assertPatientAccess, authorizePatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { PatientProfile, AuthorizationResult } from '@/types/medical'
-import { mergePatientPreferences } from '@/lib/services/patient-preferences'
 
 // GET /api/patients/[patientId] - Get a single patient
 export async function GET(
@@ -148,45 +147,33 @@ export async function PUT(
       )
     }
 
-    // Merge updates with existing data (using service for DRY)
+    // Merge updates with existing data
     const existingPatient = patientDoc.data() as PatientProfile
     const now = new Date().toISOString()
-
-    // Use centralized preference merging service (Separation of Concerns)
-    const mergedPreferences = body.preferences
-      ? mergePatientPreferences(existingPatient.preferences, body.preferences)
-      : existingPatient.preferences
 
     const updatedPatient: PatientProfile = {
       ...existingPatient,
       ...body,
-      preferences: mergedPreferences,
       id: patientId,
       userId,
       createdAt: existingPatient.createdAt,
       lastModified: now
     }
 
-    // For partial updates (like preferences), skip full schema validation
-    // Only validate if required fields are being updated
-    const isPartialUpdate = Object.keys(body).length < 5 && !body.name && !body.dateOfBirth
-
-    if (!isPartialUpdate) {
-      // Full validation for complete updates
-      const validationResult = patientProfileSchema.safeParse(updatedPatient)
-      if (!validationResult.success) {
-        logger.warn('[API /patients/[id] PUT] Validation failed', {
-          errors: validationResult.error.format()
-        })
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Validation failed',
-            details: validationResult.error.format()
-          },
-          { status: 400 }
-        )
-      }
+    // Validate merged data
+    const validationResult = patientProfileSchema.safeParse(updatedPatient)
+    if (!validationResult.success) {
+      logger.warn('[API /patients/[id] PUT] Validation failed', {
+        errors: validationResult.error.format()
+      })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validationResult.error.format()
+        },
+        { status: 400 }
+      )
     }
 
     // Update patient - merge preferences if present
