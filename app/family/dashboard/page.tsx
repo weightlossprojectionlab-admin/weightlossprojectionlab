@@ -2,9 +2,9 @@
  * Family Admin Dashboard Page
  *
  * Comprehensive family management interface with:
- * - Family Members tab (active/accepted members)
+ * - Caregivers tab (active/accepted caregivers)
  * - Invitations tab (sent and received)
- * - Patient Access Matrix (members vs patients)
+ * - Patient Access Matrix (caregivers vs patients)
  */
 
 'use client'
@@ -146,7 +146,7 @@ function FamilyDashboardContent() {
                 : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-200'
             }`}
           >
-            Family Members ({activeMembers.length})
+            Caregivers ({activeMembers.length})
           </button>
           <button
             onClick={() => setActiveTab('invitations')}
@@ -198,13 +198,13 @@ function FamilyDashboardContent() {
           </div>
         ) : (
           <>
-            {/* Family Members Tab */}
+            {/* Caregivers Tab */}
             {activeTab === 'members' && (
               <div className="space-y-4">
                 {activeMembers.length === 0 ? (
                   <div className="text-center py-12 bg-card rounded-lg border-2 border-border">
                     <p className="text-muted-foreground mb-4">
-                      No active family members yet
+                      No caregivers yet
                     </p>
                     <button
                       onClick={() => setShowInviteModal(true)}
@@ -326,7 +326,7 @@ function FamilyDashboardContent() {
                       <thead className="bg-muted">
                         <tr>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border">
-                            Family Member
+                            Caregiver
                           </th>
                           {patients.map(patient => (
                             <th
@@ -523,7 +523,7 @@ function FamilyDashboardContent() {
   )
 }
 
-// Family Member Card Component
+// Caregiver Card Component
 interface FamilyMemberCardProps {
   member: FamilyMember
   patients: any[]
