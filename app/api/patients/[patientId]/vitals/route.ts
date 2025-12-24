@@ -15,6 +15,8 @@ import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } fro
 import type { VitalSign } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
 import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
+import { validateVitalDate, isVitalBackdated } from '@/lib/vital-date-validator'
+import { checkDuplicateVital } from '@/lib/services/vital-service'
 
 // GET /api/patients/[patientId]/vitals - List vital signs with optional filtering
 export async function GET(
@@ -162,6 +164,18 @@ export async function POST(
       .collection('patients')
       .doc(patientId)
 
+    // Get patient data for date validation
+    const patientDoc = await patientRef.get()
+    if (!patientDoc.exists) {
+      return NextResponse.json(
+        { success: false, error: 'Patient not found' },
+        { status: 404 }
+      )
+    }
+
+    const patientData = patientDoc.data()
+    const patientCreatedAt = patientData?.createdAt || new Date().toISOString()
+
     // Validate vital sign data
     const validationResult = vitalSignFormSchema.safeParse(body)
     if (!validationResult.success) {
@@ -179,16 +193,99 @@ export async function POST(
     }
 
     const vitalData = validationResult.data
+    const now = new Date().toISOString()
+    const recordedAtDate = vitalData.recordedAt ? new Date(vitalData.recordedAt) : new Date()
+
+    // DEBUG: Log incoming date
+    logger.debug('[API /patients/[id]/vitals POST] Date received', {
+      recordedAtOriginal: vitalData.recordedAt,
+      recordedAtDate: recordedAtDate.toISOString(),
+      recordedAtDateLocal: recordedAtDate.toLocaleString()
+    })
+
+    // Validate recording date (DRY - use service layer)
+    // TODO: Get user's actual plan tier from subscription data
+    const userPlanTier = 'free' // Default to free tier for now
+    const dateValidation = validateVitalDate(
+      recordedAtDate,
+      new Date(patientCreatedAt),
+      userPlanTier,
+      new Date()
+    )
+
+    // DEBUG: Log normalized date
+    logger.debug('[API /patients/[id]/vitals POST] Date normalized', {
+      normalizedDate: dateValidation.normalizedDate?.toISOString(),
+      normalizedDateLocal: dateValidation.normalizedDate?.toLocaleString()
+    })
+
+    if (!dateValidation.isValid) {
+      logger.warn('[API /patients/[id]/vitals POST] Invalid recording date', {
+        userId,
+        patientId,
+        recordedAt: vitalData.recordedAt,
+        error: dateValidation.error
+      })
+      return NextResponse.json(
+        {
+          success: false,
+          error: dateValidation.error || 'Invalid recording date'
+        },
+        { status: 400 }
+      )
+    }
+
+    // Check for duplicates (DRY - use service layer)
+    const existingVitalsSnapshot = await patientRef
+      .collection('vitals')
+      .where('type', '==', vitalData.type)
+      .get()
+
+    const existingVitals: VitalSign[] = existingVitalsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      patientId,
+      ...doc.data()
+    } as VitalSign))
+
+    const duplicateCheck = checkDuplicateVital(
+      existingVitals,
+      vitalData.type,
+      recordedAtDate
+    )
+
+    if (duplicateCheck.isDuplicate) {
+      logger.warn('[API /patients/[id]/vitals POST] Duplicate vital detected', {
+        userId,
+        patientId,
+        vitalType: vitalData.type,
+        recordedAt: vitalData.recordedAt,
+        existingVitalId: duplicateCheck.existingVital?.id
+      })
+      return NextResponse.json(
+        {
+          success: false,
+          error: duplicateCheck.message || 'A vital entry already exists for this date',
+          isDuplicate: true,
+          existingVital: duplicateCheck.existingVital
+        },
+        { status: 409 }
+      )
+    }
 
     // Create vital sign document
     const vitalId = uuidv4()
-    const now = new Date().toISOString()
+    const normalizedRecordedAt = dateValidation.normalizedDate!.toISOString()
+    const isBackdated = isVitalBackdated(recordedAtDate, new Date())
 
     const newVital: VitalSign = {
       id: vitalId,
       patientId,
       ...vitalData,
-      recordedAt: vitalData.recordedAt || now,
+      recordedAt: normalizedRecordedAt, // User-selected date (normalized to UTC midnight)
+      loggedAt: now, // System timestamp when entry was created
+      loggedBy: userId, // Who created the entry
+      isBackdated, // True if logged > 1 hour after recorded
+      daysDifference: dateValidation.daysDifference || 0, // Days between recorded and logged (HIPAA audit)
       takenBy: userId,
       method: vitalData.method || 'manual',
       // Audit trail

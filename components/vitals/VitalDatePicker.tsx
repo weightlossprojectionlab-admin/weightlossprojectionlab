@@ -81,8 +81,10 @@ export default function VitalDatePicker({
       return
     }
 
-    // Convert YYYY-MM-DD to ISO string at midnight UTC
-    const selectedDate = new Date(newDate + 'T00:00:00.000Z')
+    // Convert YYYY-MM-DD to ISO string at midnight in user's local timezone
+    // This prevents timezone shift issues where selecting 12/24 creates 12/23 UTC
+    const [year, month, day] = newDate.split('-').map(Number)
+    const selectedDate = new Date(year, month - 1, day, 0, 0, 0, 0)
     onChange(selectedDate.toISOString())
   }
 
