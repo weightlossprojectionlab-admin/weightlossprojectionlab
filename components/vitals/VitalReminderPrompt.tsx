@@ -21,18 +21,20 @@ import { shouldShowVitalReminder, getVitalReminderMessage, getVitalReminderColor
 import { userProfileOperations } from '@/lib/firebase-operations'
 import toast from 'react-hot-toast'
 
+type VitalReminderFrequency = 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
+
 interface VitalReminderPromptProps {
   patientId: string
   patientName: string
   vitals: VitalSign[]
   userPreferences?: {
     vitalReminders?: {
-      blood_pressure?: { enabled: boolean; frequency: 'daily' | 'twice-daily' | 'weekly' | 'monthly' }
-      blood_sugar?: { enabled: boolean; frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' }
-      temperature?: { enabled: boolean; frequency: 'daily' | 'weekly' | 'biweekly' }
-      pulse_oximeter?: { enabled: boolean; frequency: 'daily' | 'twice-daily' | 'weekly' }
-      weight?: { enabled: boolean; frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' }
-      mood?: { enabled: boolean; frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' }
+      blood_pressure?: { enabled: boolean; frequency: VitalReminderFrequency }
+      blood_sugar?: { enabled: boolean; frequency: VitalReminderFrequency }
+      temperature?: { enabled: boolean; frequency: VitalReminderFrequency }
+      pulse_oximeter?: { enabled: boolean; frequency: VitalReminderFrequency }
+      weight?: { enabled: boolean; frequency: VitalReminderFrequency }
+      mood?: { enabled: boolean; frequency: VitalReminderFrequency }
     }
   }
   onLogVitalsClick: () => void
