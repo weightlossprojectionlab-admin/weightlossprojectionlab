@@ -111,6 +111,10 @@ export interface PatientProfile {
         enabled: boolean
         frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
       }
+      mood?: {
+        enabled: boolean
+        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
+      }
     }
   }
 
