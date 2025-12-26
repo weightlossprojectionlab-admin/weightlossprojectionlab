@@ -10,7 +10,6 @@
  * - DRY - single source of truth for vital operations
  */
 
-import { Timestamp } from 'firebase/firestore'
 import { normalizeToUTCMidnight, calculateDaysDifference } from '@/lib/vital-date-validator'
 import type { VitalSign } from '@/types/medical'
 
@@ -45,20 +44,7 @@ export function checkDuplicateVital(
 
   // Check for duplicate on the same date
   for (const vital of sameTypeVitals) {
-    const recordedAt = vital.recordedAt
-    let vitalDate: Date
-
-    if (
-      recordedAt &&
-      typeof recordedAt === 'object' &&
-      'toDate' in recordedAt &&
-      typeof recordedAt.toDate === 'function'
-    ) {
-      vitalDate = recordedAt.toDate()
-    } else {
-      vitalDate = new Date(recordedAt as string | number | Date)
-    }
-
+    const vitalDate = new Date(vital.recordedAt)
     const normalizedVitalDate = normalizeToUTCMidnight(vitalDate)
 
     // Compare normalized dates
@@ -87,30 +73,17 @@ export function checkDuplicateVital(
  * @returns Array of vitals within the time range
  */
 export function findNearbyVitals(
-  existingVitals: Vital[],
+  existingVitals: VitalSign[],
   vitalType: string,
   recordedAt: Date,
   withinDays: number = 1
-): Vital[] {
+): VitalSign[] {
   const normalizedRecorded = normalizeToUTCMidnight(recordedAt)
 
   return existingVitals.filter(v => {
     if (v.type !== vitalType) return false
 
-    const recordedAt = v.recordedAt
-    let vitalDate: Date
-
-    if (
-      recordedAt &&
-      typeof recordedAt === 'object' &&
-      'toDate' in recordedAt &&
-      typeof recordedAt.toDate === 'function'
-    ) {
-      vitalDate = recordedAt.toDate()
-    } else {
-      vitalDate = new Date(recordedAt as string | number | Date)
-    }
-
+    const vitalDate = new Date(v.recordedAt)
     const normalizedVitalDate = normalizeToUTCMidnight(vitalDate)
     const daysDiff = calculateDaysDifference(normalizedRecorded, normalizedVitalDate)
 
@@ -121,36 +94,10 @@ export function findNearbyVitals(
 /**
  * Sort vitals by recordedAt date (most recent first)
  */
-export function sortVitalsByDate(vitals: Vital[]): Vital[] {
+export function sortVitalsByDate(vitals: VitalSign[]): VitalSign[] {
   return [...vitals].sort((a, b) => {
-    const recordedAtA = a.recordedAt
-    let dateA: Date
-
-    if (
-      recordedAtA &&
-      typeof recordedAtA === 'object' &&
-      'toDate' in recordedAtA &&
-      typeof recordedAtA.toDate === 'function'
-    ) {
-      dateA = recordedAtA.toDate()
-    } else {
-      dateA = new Date(recordedAtA as string | number | Date)
-    }
-
-    const recordedAtB = b.recordedAt
-    let dateB: Date
-
-    if (
-      recordedAtB &&
-      typeof recordedAtB === 'object' &&
-      'toDate' in recordedAtB &&
-      typeof recordedAtB.toDate === 'function'
-    ) {
-      dateB = recordedAtB.toDate()
-    } else {
-      dateB = new Date(recordedAtB as string | number | Date)
-    }
-
+    const dateA = new Date(a.recordedAt)
+    const dateB = new Date(b.recordedAt)
     return dateB.getTime() - dateA.getTime()
   })
 }
@@ -159,9 +106,9 @@ export function sortVitalsByDate(vitals: Vital[]): Vital[] {
  * Get the most recent vital of a specific type
  */
 export function getMostRecentVital(
-  vitals: Vital[],
+  vitals: VitalSign[],
   vitalType: string
-): Vital | null {
+): VitalSign | null {
   const sameTypeVitals = vitals.filter(v => v.type === vitalType)
   if (sameTypeVitals.length === 0) return null
 
@@ -173,28 +120,15 @@ export function getMostRecentVital(
  * Filter vitals by date range
  */
 export function filterVitalsByDateRange(
-  vitals: Vital[],
+  vitals: VitalSign[],
   startDate: Date,
   endDate: Date
-): Vital[] {
+): VitalSign[] {
   const normalizedStart = normalizeToUTCMidnight(startDate)
   const normalizedEnd = normalizeToUTCMidnight(endDate)
 
   return vitals.filter(v => {
-    const recordedAt = v.recordedAt
-    let vitalDate: Date
-
-    if (
-      recordedAt &&
-      typeof recordedAt === 'object' &&
-      'toDate' in recordedAt &&
-      typeof recordedAt.toDate === 'function'
-    ) {
-      vitalDate = recordedAt.toDate()
-    } else {
-      vitalDate = new Date(recordedAt as string | number | Date)
-    }
-
+    const vitalDate = new Date(v.recordedAt)
     const normalizedVitalDate = normalizeToUTCMidnight(vitalDate)
 
     return normalizedVitalDate >= normalizedStart && normalizedVitalDate <= normalizedEnd
