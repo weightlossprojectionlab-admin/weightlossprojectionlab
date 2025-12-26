@@ -18,7 +18,7 @@ const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '
 // ============================================================================
 
 export interface VitalReading {
-  type: 'blood_pressure' | 'temperature' | 'heart_rate' | 'oxygen_saturation' | 'weight' | 'blood_sugar'
+  type: 'blood_pressure' | 'temperature' | 'heart_rate' | 'oxygen_saturation' | 'pulse_oximeter' | 'weight' | 'blood_sugar'
   value: number | { systolic: number; diastolic: number }
   unit: string
   timestamp: Date
