@@ -76,7 +76,10 @@ function setTokenCookie(token: string): void {
 
     // 1. Set cookie with SameSite=Lax to ensure it's sent with same-site requests
     // Using Lax instead of Strict allows the cookie to be sent on same-site navigation
-    document.cookie = `${cookieName}=${token}; path=/; SameSite=Lax`
+    // Add Secure flag in production (HTTPS)
+    const isProduction = window.location.protocol === 'https:'
+    const secureFlag = isProduction ? '; Secure' : ''
+    document.cookie = `${cookieName}=${token}; path=/; SameSite=Lax${secureFlag}`
 
     // 2. Also store in sessionStorage as backup (not sent to server, but available client-side)
     try {
