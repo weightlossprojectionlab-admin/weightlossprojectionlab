@@ -274,7 +274,7 @@ function PatientsContent() {
             age: selectedPatientForWizard.age,
             conditions: selectedPatientForWizard.conditions || []
           }}
-          onSubmit={async (vitals) => {
+          onSubmit={async (vitals): Promise<void> => {
             try {
               logger.info('[PatientsPage] Submitting vitals', { patientId: selectedPatientForWizard.id, vitals })
 
