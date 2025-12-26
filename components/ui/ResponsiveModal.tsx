@@ -206,7 +206,7 @@ export function ModalFooter({
  */
 interface ModalButtonProps {
   children: ReactNode
-  onClick: () => void
+  onClick?: () => void
   variant?: 'primary' | 'secondary' | 'danger'
   disabled?: boolean
   type?: 'button' | 'submit'
