@@ -147,6 +147,8 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
 
     if (isVertical) {
       // Vertical layout (9:16, 4:5, 2:3)
+      // Add extra top padding for breathing room
+      currentY = padding * 2
 
       // Logo (if provided)
       if (logoUrl) {
