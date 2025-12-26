@@ -678,13 +678,13 @@ function ProfileContent() {
                 </button>
               )}
 
-              {/* Upgrade Button - Show if no Stripe customer ID */}
-              {!subscription.stripeCustomerId && subscription.plan === 'free' && (
+              {/* Upgrade or Pricing Button - Show if no Stripe customer ID */}
+              {!subscription.stripeCustomerId && (
                 <Link
                   href="/pricing"
                   className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium text-center block"
                 >
-                  Upgrade Plan
+                  {subscription.plan === 'free' || subscription.plan === 'family_premium' ? 'View Plans' : 'Upgrade Plan'}
                 </Link>
               )}
             </div>
