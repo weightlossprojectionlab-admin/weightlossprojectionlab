@@ -353,9 +353,6 @@ function PatientsContent() {
               setTimeout(() => {
                 setSelectedPatientForVitalsView(patientToView)
               }, 100)
-
-              // Return saved vitals so wizard can call onComplete
-              return savedVitals
             } catch (error) {
               logger.error('[PatientsPage] Failed to save vitals', error instanceof Error ? error : undefined)
               toast.error(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
