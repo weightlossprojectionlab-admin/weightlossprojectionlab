@@ -22,6 +22,8 @@ export interface WizardVitalData {
   }
   bloodSugar?: number
   weight?: number
+  mood?: string
+  moodNotes?: string
   timestamp: Date
   notes?: string
   loggedBy?: {
@@ -32,8 +34,8 @@ export interface WizardVitalData {
 }
 
 export interface VitalSignInput {
-  type: 'blood_pressure' | 'temperature' | 'pulse_oximeter' | 'blood_sugar' | 'weight'
-  value: number | { systolic: number; diastolic: number } | { spo2: number; pulseRate: number }
+  type: 'blood_pressure' | 'temperature' | 'pulse_oximeter' | 'blood_sugar' | 'weight' | 'mood'
+  value: number | string | { systolic: number; diastolic: number } | { spo2: number; pulseRate: number }
   unit: VitalUnit
   recordedAt: string
   notes: string
@@ -139,6 +141,19 @@ export function transformWizardDataToVitals(
     })
   }
 
+  // Mood
+  if (wizardData.mood) {
+    vitals.push({
+      type: 'mood',
+      value: wizardData.mood,
+      unit: 'scale',
+      recordedAt,
+      notes: wizardData.moodNotes || notes,
+      method: 'manual',
+      ...(takenBy && { takenBy })
+    })
+  }
+
   return vitals
 }
 
@@ -154,7 +169,8 @@ export function hasAnyVitalMeasurement(wizardData: WizardVitalData): boolean {
     wizardData.temperature ||
     wizardData.pulseOximeterReading ||
     wizardData.bloodSugar ||
-    wizardData.weight
+    wizardData.weight ||
+    wizardData.mood
   )
 }
 
@@ -168,7 +184,7 @@ export function hasAnyVitalMeasurement(wizardData: WizardVitalData): boolean {
  */
 export function formatVitalForDisplay(
   type: string,
-  value: number | { systolic: number; diastolic: number } | { spo2: number; pulseRate: number } | { energy: number; appetite: number; pain: number; overall: number; behavior?: string; mobility?: string; vocalizations?: string; speciesNotes?: string; symptoms?: string[] },
+  value: number | string | { systolic: number; diastolic: number } | { spo2: number; pulseRate: number } | { energy: number; appetite: number; pain: number; overall: number; behavior?: string; mobility?: string; vocalizations?: string; speciesNotes?: string; symptoms?: string[] },
   unit: string
 ): string {
   switch (type) {
@@ -185,6 +201,19 @@ export function formatVitalForDisplay(
       return `${value} ${unit}`
 
     case 'mood':
+      // Handle string mood values
+      if (typeof value === 'string') {
+        const moodEmojis: Record<string, string> = {
+          'happy': '😊',
+          'calm': '😌',
+          'okay': '😐',
+          'worried': '😟',
+          'sad': '😢',
+          'pain': '😫'
+        }
+        const emoji = moodEmojis[value.toLowerCase()] || '😐'
+        return `${emoji} ${value.charAt(0).toUpperCase() + value.slice(1)}`
+      }
       // Mood is on a 1-10 scale, display with emoji
       const moodValue = typeof value === 'number' ? value : 5
       const moodEmojis = ['😢', '😟', '😕', '😐', '🙂', '😊', '😄', '😁', '🤩', '😍']

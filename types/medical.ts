@@ -254,7 +254,7 @@ export interface PulseOximeterValue {
   perfusionIndex?: number // Optional perfusion index (%)
 }
 
-export type VitalValue = number | BloodPressureValue | PulseOximeterValue | {
+export type VitalValue = number | string | BloodPressureValue | PulseOximeterValue | {
   energy: number
   appetite: number
   pain: number

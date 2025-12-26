@@ -126,6 +126,7 @@ export const pulseOximeterValueSchema = z.object({
 
 export const vitalValueSchema = z.union([
   z.number().positive('Value must be positive'),
+  z.string().min(1, 'Value cannot be empty'),
   bloodPressureValueSchema,
   pulseOximeterValueSchema
 ])
@@ -151,6 +152,10 @@ export const vitalSignSchema = z.object({
     // Pulse oximeter must have pulse oximeter value structure
     if (data.type === 'pulse_oximeter') {
       return typeof data.value === 'object' && 'spo2' in data.value && 'pulseRate' in data.value
+    }
+    // Mood can be string or number
+    if (data.type === 'mood') {
+      return typeof data.value === 'string' || typeof data.value === 'number'
     }
     return typeof data.value === 'number'
   },
