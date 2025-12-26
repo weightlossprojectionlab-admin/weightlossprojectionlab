@@ -26,6 +26,10 @@ import {
   getAdFilename,
   downloadAd
 } from '@/lib/ad-generator'
+import {
+  getBackgroundImage,
+  BACKGROUND_PRESETS
+} from '@/lib/ad-background-generator'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 
@@ -44,6 +48,8 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
   const [showPricing, setShowPricing] = useState(false)
   const [pricingText, setPricingText] = useState('$9.99/mo')
   const [backgroundImage, setBackgroundImage] = useState('')
+  const [backgroundMethod, setBackgroundMethod] = useState<'gradient' | 'abstract' | 'stock' | 'ai' | 'custom'>('gradient')
+  const [generatingBackground, setGeneratingBackground] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -96,6 +102,33 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
     else if (currentStep === 'platform') setCurrentStep('template')
     else if (currentStep === 'customize') setCurrentStep('platform')
     else if (currentStep === 'preview') setCurrentStep('customize')
+  }
+
+  const handleGenerateBackground = async () => {
+    if (!selectedTemplate || !selectedPersona) return
+
+    setGeneratingBackground(true)
+    try {
+      const platform = selectedPlatforms[0]
+      const spec = AD_PLATFORM_SPECS[platform]
+
+      const bgUrl = await getBackgroundImage(
+        {
+          persona: selectedPersona,
+          template: selectedTemplate
+        },
+        backgroundMethod === 'custom' ? 'gradient' : backgroundMethod,
+        { width: spec.width, height: spec.height }
+      )
+
+      setBackgroundImage(bgUrl)
+      toast.success('Background generated!')
+    } catch (error) {
+      logger.error('Failed to generate background', error as Error)
+      toast.error('Failed to generate background. Using gradient fallback.')
+    } finally {
+      setGeneratingBackground(false)
+    }
   }
 
   const generatePreview = async () => {
@@ -343,21 +376,59 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
                 </div>
               )}
 
-              {/* Background Image URL */}
+              {/* Background Type Selector */}
               <div className="p-4 border border-border rounded-lg">
-                <label className="block text-sm font-medium mb-2">
-                  Background Image URL (optional)
-                </label>
-                <input
-                  type="text"
-                  value={backgroundImage}
-                  onChange={(e) => setBackgroundImage(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Leave blank to use gradient background
-                </p>
+                <label className="block text-sm font-medium mb-3">Background Type</label>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {[
+                    { value: 'gradient', label: '🌈 Gradient', desc: 'Fast, template colors' },
+                    { value: 'abstract', label: '🎨 Abstract', desc: 'Artistic patterns' },
+                    { value: 'stock', label: '📸 Stock Photo', desc: 'Free from Unsplash' },
+                    { value: 'ai', label: '🤖 AI Generated', desc: 'DALL-E (requires API key)' },
+                    { value: 'custom', label: '🔗 Custom URL', desc: 'Your own image' }
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setBackgroundMethod(option.value as any)}
+                      className={`p-3 border-2 rounded-lg text-left transition-all ${
+                        backgroundMethod === option.value
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary hover:bg-muted'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm mb-1">{option.label}</div>
+                      <div className="text-xs text-muted-foreground">{option.desc}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom URL Input */}
+                {backgroundMethod === 'custom' && (
+                  <input
+                    type="text"
+                    value={backgroundImage}
+                    onChange={(e) => setBackgroundImage(e.target.value)}
+                    placeholder="https://example.com/image.jpg"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground mb-2"
+                  />
+                )}
+
+                {/* Generate Button for AI/Stock/Abstract */}
+                {backgroundMethod !== 'gradient' && backgroundMethod !== 'custom' && (
+                  <button
+                    onClick={handleGenerateBackground}
+                    disabled={generatingBackground}
+                    className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                  >
+                    {generatingBackground ? 'Generating...' : `Generate ${backgroundMethod === 'ai' ? 'AI' : backgroundMethod === 'stock' ? 'Stock' : 'Abstract'} Background`}
+                  </button>
+                )}
+
+                {backgroundImage && (
+                  <div className="mt-2 p-2 bg-success/10 border border-success/20 rounded text-xs text-success">
+                    ✓ Background ready
+                  </div>
+                )}
               </div>
             </div>
           </div>
