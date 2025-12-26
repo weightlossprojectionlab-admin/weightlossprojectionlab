@@ -17,6 +17,8 @@ interface VitalQuickLogModalProps {
   onClose: () => void
   vitalType: VitalType
   patientName: string
+  patientCreatedAt?: string
+  patientId?: string
   onSubmit: (data: VitalLogData) => Promise<void>
 }
 
