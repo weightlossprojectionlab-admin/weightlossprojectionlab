@@ -12,9 +12,19 @@
 
 import { deepMerge } from '@/lib/utils/deep-merge'
 
+export type VitalReminderFrequency =
+  | 'daily'
+  | 'twice-daily'
+  | 'three-times-daily'
+  | 'four-times-daily'
+  | 'weekly'
+  | 'bi-weekly'
+  | 'biweekly'
+  | 'monthly'
+
 export interface VitalReminderConfig {
   enabled: boolean
-  frequency: 'daily' | 'twice-daily' | 'weekly' | 'bi-weekly' | 'monthly'
+  frequency: VitalReminderFrequency
 }
 
 export interface PatientPreferences {

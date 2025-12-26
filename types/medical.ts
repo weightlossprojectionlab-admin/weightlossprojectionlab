@@ -93,23 +93,23 @@ export interface PatientProfile {
     vitalReminders?: {
       blood_pressure?: {
         enabled: boolean
-        frequency: 'daily' | 'twice-daily' | 'weekly' | 'monthly'
+        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
       }
       blood_sugar?: {
         enabled: boolean
-        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily'
+        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
       }
       temperature?: {
         enabled: boolean
-        frequency: 'daily' | 'weekly' | 'biweekly'
+        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
       }
       pulse_oximeter?: {
         enabled: boolean
-        frequency: 'daily' | 'twice-daily' | 'weekly'
+        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
       }
       weight?: {
         enabled: boolean
-        frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
       }
     }
   }
