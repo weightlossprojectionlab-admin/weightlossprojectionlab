@@ -18,6 +18,7 @@ interface VitalsHistoryProps {
   onDelete?: (vitalId: string, vitalType: string) => void
   canEdit?: boolean
   getDisplayName?: (userId: string) => string
+  onLogPreviousVital?: () => void
 }
 
 type DateFilter = 'all' | 'today' | 'week' | 'month'
