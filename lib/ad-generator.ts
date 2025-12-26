@@ -385,7 +385,10 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 async function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
-    img.crossOrigin = 'anonymous'
+    // Only set crossOrigin for external URLs, not data URLs
+    if (!url.startsWith('data:')) {
+      img.crossOrigin = 'anonymous'
+    }
     img.onload = () => resolve(img)
     img.onerror = () => reject(new Error(`Failed to load image: ${url}`))
     img.src = url
