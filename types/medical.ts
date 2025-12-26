@@ -5,6 +5,8 @@
  * Based on MEDICAL_RECORDS_PRD.json specification
  */
 
+import { VitalReminderConfig } from '@/lib/services/patient-preferences'
+
 // ==================== RBAC / AUTHORIZATION ====================
 
 export type UserRole = 'owner' | 'family'
@@ -91,30 +93,12 @@ export interface PatientProfile {
   // Patient-specific preferences (for vital reminders, etc.)
   preferences?: {
     vitalReminders?: {
-      blood_pressure?: {
-        enabled: boolean
-        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
-      }
-      blood_sugar?: {
-        enabled: boolean
-        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
-      }
-      temperature?: {
-        enabled: boolean
-        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
-      }
-      pulse_oximeter?: {
-        enabled: boolean
-        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
-      }
-      weight?: {
-        enabled: boolean
-        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
-      }
-      mood?: {
-        enabled: boolean
-        frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
-      }
+      blood_pressure?: VitalReminderConfig
+      blood_sugar?: VitalReminderConfig
+      temperature?: VitalReminderConfig
+      pulse_oximeter?: VitalReminderConfig
+      weight?: VitalReminderConfig
+      mood?: VitalReminderConfig
     }
   }
 

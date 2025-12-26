@@ -25,6 +25,7 @@
  */
 
 import { JsonObject } from './common'
+import { VitalReminderConfig } from '@/lib/services/patient-preferences'
 
 // Caregiver Context - When user is invited as caregiver to someone else's family plan
 export interface CaregiverContext {
@@ -169,26 +170,11 @@ export interface UserPreferences {
   // Profile reminders = simple frequency for casual monitoring
   // Wizard schedules = advanced multi-time schedules for medical compliance
   vitalReminders?: {
-    blood_pressure?: {
-      enabled: boolean
-      frequency: 'daily' | 'twice-daily' | 'weekly' | 'monthly'
-    }
-    blood_sugar?: {
-      enabled: boolean
-      frequency: 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily'
-    }
-    temperature?: {
-      enabled: boolean
-      frequency: 'daily' | 'weekly' | 'biweekly'
-    }
-    pulse_oximeter?: {
-      enabled: boolean
-      frequency: 'daily' | 'twice-daily' | 'weekly'
-    }
-    weight?: {
-      enabled: boolean
-      frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly'
-    }
+    blood_pressure?: VitalReminderConfig
+    blood_sugar?: VitalReminderConfig
+    temperature?: VitalReminderConfig
+    pulse_oximeter?: VitalReminderConfig
+    weight?: VitalReminderConfig
   }
 
   // Legacy weight reminder fields (kept for backward compatibility)

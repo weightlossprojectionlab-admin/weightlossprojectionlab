@@ -20,8 +20,7 @@ import { VitalSign, VitalType } from '@/types/medical'
 import { shouldShowVitalReminder, getVitalReminderMessage, getVitalReminderColor, VitalFrequency } from '@/lib/vital-reminder-logic'
 import { userProfileOperations } from '@/lib/firebase-operations'
 import toast from 'react-hot-toast'
-
-type VitalReminderFrequency = 'daily' | 'twice-daily' | 'three-times-daily' | 'four-times-daily' | 'weekly' | 'bi-weekly' | 'biweekly' | 'monthly'
+import { VitalReminderConfig } from '@/lib/services/patient-preferences'
 
 interface VitalReminderPromptProps {
   patientId: string
@@ -29,12 +28,12 @@ interface VitalReminderPromptProps {
   vitals: VitalSign[]
   userPreferences?: {
     vitalReminders?: {
-      blood_pressure?: { enabled: boolean; frequency: VitalReminderFrequency }
-      blood_sugar?: { enabled: boolean; frequency: VitalReminderFrequency }
-      temperature?: { enabled: boolean; frequency: VitalReminderFrequency }
-      pulse_oximeter?: { enabled: boolean; frequency: VitalReminderFrequency }
-      weight?: { enabled: boolean; frequency: VitalReminderFrequency }
-      mood?: { enabled: boolean; frequency: VitalReminderFrequency }
+      blood_pressure?: VitalReminderConfig
+      blood_sugar?: VitalReminderConfig
+      temperature?: VitalReminderConfig
+      pulse_oximeter?: VitalReminderConfig
+      weight?: VitalReminderConfig
+      mood?: VitalReminderConfig
     }
   }
   onLogVitalsClick: () => void
