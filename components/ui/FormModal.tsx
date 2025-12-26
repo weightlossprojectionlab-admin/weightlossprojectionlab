@@ -60,7 +60,6 @@ export function FormModal({
             {cancelText}
           </ModalButton>
           <ModalButton
-            onClick={handleSubmit}
             variant="primary"
             disabled={isSubmitting || submitDisabled}
             type="submit"
