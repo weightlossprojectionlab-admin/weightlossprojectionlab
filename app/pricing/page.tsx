@@ -91,7 +91,7 @@ const PLANS: Plan[] = [
       { name: 'Predictive AI coaching', included: true },
       { name: '10 external caregivers', included: true },
       { name: 'Enhanced meal suggestions', included: true },
-      { name: 'Priority support', included: false },
+      { name: 'Priority support', included: true },
     ],
   },
   {

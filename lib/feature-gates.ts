@@ -50,13 +50,15 @@ export const PLAN_FEATURES: Record<string, SubscriptionPlan[]> = {
   'trend-analysis': ['family_plus', 'family_premium'],
   'predictive-ai': ['family_plus', 'family_premium'],
 
-  // Premium Features (Premium only)
-  'priority-support': ['family_premium'],
+  // Premium Features
+  'priority-support': ['family_plus', 'family_premium'],
   'white-glove-service': ['family_premium'],
   'early-access': ['family_premium'],
   'custom-reports': ['family_premium'],
   'data-export': ['family_premium'],
   'api-access': ['family_premium'],
+  'dedicated-account-manager': ['family_premium'],
+  'enhanced-meal-suggestions': ['family_plus', 'family_premium'],
 
   // Caregiver Features
   'external-caregivers': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
