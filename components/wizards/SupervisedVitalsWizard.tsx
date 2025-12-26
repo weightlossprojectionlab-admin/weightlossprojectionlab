@@ -200,6 +200,8 @@ export default function SupervisedVitalsWizard({
     const units: Record<VitalReading['type'], string> = {
       blood_pressure: 'mmHg',
       temperature: '°F',
+      heart_rate: 'bpm',
+      oxygen_saturation: '%',
       pulse_oximeter: 'SpO₂% / bpm',
       weight: 'lbs',
       blood_sugar: 'mg/dL'
