@@ -124,16 +124,21 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
         const scaledHeight = img.height * scale
 
         // Clamp positioning to prevent awkward crops
+        // When image is larger: negative values (shift left/up)
+        // When image is smaller: positive values (center)
+        const centerX = (width - scaledWidth) / 2
+        const centerY = (height - scaledHeight) / 2
+
         const x = clamp(
-          -(scaledWidth - width) * 0.3,  // min: allow 30% overflow left
-          (width - scaledWidth) / 2,      // preferred: center
-          0                                // max: align left
+          Math.min(-(scaledWidth - width) * 0.3, 0),  // min: allow 30% overflow left (negative)
+          centerX,                                     // preferred: center
+          Math.max(0, centerX)                         // max: don't overflow right
         )
 
         const y = clamp(
-          -(scaledHeight - height) * 0.2, // min: allow 20% overflow top
-          isVertical ? 0 : (height - scaledHeight) / 2, // preferred: top for vertical, center for horizontal
-          0                                // max: align top
+          Math.min(-(scaledHeight - height) * 0.2, 0), // min: allow 20% overflow top (negative)
+          isVertical ? Math.min(0, centerY) : centerY, // preferred: top for vertical, center for horizontal
+          Math.max(0, centerY)                          // max: don't overflow bottom
         )
 
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight)
