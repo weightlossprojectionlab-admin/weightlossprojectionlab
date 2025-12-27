@@ -122,49 +122,52 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
         const clamp = (min: number, preferred: number, max: number) =>
           Math.max(min, Math.min(preferred, max))
 
-        // Calculate scale using clamp(MIN, PREFERRED, MAX) for AVAILABLE SPACE
-        const scaleToFitWidth = imageAvailableWidth / img.width
-        const scaleToFitHeight = imageAvailableHeight / img.height
+        // Calculate scale using clamp(MIN, PREFERRED, MAX)
+        // Goal: Image should be SAME SIZE across all aspect ratios, positioned in available space
+        const scaleToContainCanvas = Math.min(width / img.width, height / img.height) // entire image fits in canvas
+        const scaleToCoverCanvas = Math.max(width / img.width, height / img.height) // image fills canvas (crops)
 
-        const minScale = Math.min(scaleToFitWidth, scaleToFitHeight) // contain - entire image visible in available space
-        const maxScale = Math.max(width / img.width, height / img.height) // cover - fills entire canvas
-        const preferredScale = clamp(
-          minScale,
-          minScale * 1.2, // 20% larger than available space
-          maxScale
-        )
+        // Use consistent scale across all aspect ratios (contain mode)
+        // This ensures the image is the same size in all formats
+        const minScale = scaleToContainCanvas * 0.8 // Slightly smaller to ensure visibility
+        const maxScale = scaleToContainCanvas * 1.1 // Slightly larger for better fill
+        const preferredScale = scaleToContainCanvas
 
-        // Use clamp() to intelligently scale
-        const scale = preferredScale
+        // Use clamp() to keep scale consistent
+        const scale = clamp(minScale, preferredScale, maxScale)
 
         const scaledWidth = img.width * scale
         const scaledHeight = img.height * scale
 
-        // Position image in available space using clamp()
-        // Vertical: position in bottom portion, allow overlap into text zone
-        // Horizontal: position in right portion, allow overlap into text zone
+        // Position image using clamp() based on available space
+        // Vertical layouts: position in bottom half
+        // Horizontal layouts: position in right half
+
+        const centerX = (width - scaledWidth) / 2
+        const centerY = (height - scaledHeight) / 2
+
         const x = isVertical
           ? clamp(
-              -(scaledWidth - width) * 0.5,  // min: allow 50% overflow left
-              (width - scaledWidth) / 2,      // preferred: center horizontally
-              0                                // max: align left
+              0,                    // min: align left edge
+              centerX,              // preferred: center horizontally
+              width - scaledWidth   // max: align right edge
             )
           : clamp(
-              imageAvailableLeft,              // min: start at available zone
-              imageAvailableLeft + (imageAvailableWidth - scaledWidth) / 2, // preferred: center in available zone
-              width - scaledWidth              // max: align right
+              textZoneWidth * 0.3,  // min: start 30% into text zone
+              imageAvailableLeft + centerX, // preferred: center in available zone
+              width - scaledWidth   // max: align right
             )
 
         const y = isVertical
           ? clamp(
-              imageAvailableTop,               // min: start at available zone
-              imageAvailableTop + (imageAvailableHeight - scaledHeight) / 2, // preferred: center in available zone
-              height - scaledHeight            // max: align bottom
+              textZoneHeight * 0.4, // min: start 40% into text zone
+              imageAvailableTop + centerY, // preferred: center in available zone
+              height - scaledHeight // max: align bottom
             )
           : clamp(
-              -(scaledHeight - height) * 0.3,  // min: allow 30% overflow top
-              (height - scaledHeight) / 2,     // preferred: center vertically
-              0                                 // max: align top
+              0,                    // min: align top edge
+              centerY,              // preferred: center vertically
+              height - scaledHeight // max: align bottom edge
             )
 
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight)
