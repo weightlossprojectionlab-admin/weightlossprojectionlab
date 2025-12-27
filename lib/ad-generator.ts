@@ -105,12 +105,36 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
       try {
         const img = await loadImage(backgroundImage)
 
-        // Draw background image (cover style)
-        const scale = Math.max(width / img.width, height / img.height)
+        // Clamp utility function (CSS clamp logic)
+        const clamp = (min: number, preferred: number, max: number) =>
+          Math.max(min, Math.min(preferred, max))
+
+        // Calculate scale using clamp(MIN, PREFERRED, MAX)
+        const scaleToFitWidth = width / img.width
+        const scaleToFitHeight = height / img.height
+
+        const minScale = Math.min(scaleToFitWidth, scaleToFitHeight) // contain - entire image visible
+        const maxScale = Math.max(scaleToFitWidth, scaleToFitHeight) // cover - fills canvas
+        const preferredScale = minScale * 1.15 // 15% larger than contain for better framing
+
+        // Use clamp() to intelligently scale between min and max
+        const scale = clamp(minScale, preferredScale, maxScale)
+
         const scaledWidth = img.width * scale
         const scaledHeight = img.height * scale
-        const x = (width - scaledWidth) / 2
-        const y = (height - scaledHeight) / 2
+
+        // Clamp positioning to prevent awkward crops
+        const x = clamp(
+          -(scaledWidth - width) * 0.3,  // min: allow 30% overflow left
+          (width - scaledWidth) / 2,      // preferred: center
+          0                                // max: align left
+        )
+
+        const y = clamp(
+          -(scaledHeight - height) * 0.2, // min: allow 20% overflow top
+          isVertical ? 0 : (height - scaledHeight) / 2, // preferred: top for vertical, center for horizontal
+          0                                // max: align top
+        )
 
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight)
 
