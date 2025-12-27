@@ -249,8 +249,10 @@ export async function getBackgroundImage(
         const orientation = dimensions.height > dimensions.width ? 'portrait' :
                            dimensions.width > dimensions.height ? 'landscape' : 'squarish'
 
-        logger.info('Fetching stock photo', { query, orientation })
-        return await fetchUnsplashPhoto(query, orientation)
+        console.log('[BackgroundGenerator] Fetching stock photo', { query, orientation, persona: options.persona })
+        const url = await fetchUnsplashPhoto(query, orientation)
+        console.log('[BackgroundGenerator] Stock photo URL:', url)
+        return url
       }
 
       case 'abstract': {

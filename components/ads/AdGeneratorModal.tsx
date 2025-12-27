@@ -105,12 +105,22 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
   }
 
   const handleGenerateBackground = async () => {
-    if (!selectedTemplate || !selectedPersona) return
+    if (!selectedTemplate || !selectedPersona) {
+      toast.error('Please select a template first')
+      return
+    }
 
     setGeneratingBackground(true)
     try {
-      const platform = selectedPlatforms[0]
+      // Use first selected platform or default to Instagram Story dimensions
+      const platform = selectedPlatforms[0] || 'instagram-story'
       const spec = AD_PLATFORM_SPECS[platform]
+
+      console.log('[AdGenerator] Generating background', {
+        persona: selectedPersona,
+        method: backgroundMethod,
+        dimensions: { width: spec.width, height: spec.height }
+      })
 
       const bgUrl = await getBackgroundImage(
         {
@@ -121,11 +131,13 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
         { width: spec.width, height: spec.height }
       )
 
+      console.log('[AdGenerator] Background generated', { url: bgUrl.substring(0, 100) })
       setBackgroundImage(bgUrl)
       toast.success('Background generated!')
     } catch (error) {
+      console.error('[AdGenerator] Background generation failed', error)
       logger.error('Failed to generate background', error as Error)
-      toast.error('Failed to generate background. Using gradient fallback.')
+      toast.error(`Failed to generate background: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setGeneratingBackground(false)
     }
