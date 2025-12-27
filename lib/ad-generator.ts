@@ -100,6 +100,19 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
     const isVertical = height > width
     const isSquare = width === height
 
+    // Calculate layout zones FIRST (needed for image positioning)
+    const padding = width * 0.08
+
+    // Define content zones for text
+    // Vertical: top 60% for text, bottom 40% available for image
+    // Horizontal: left 60% for text, right 40% available for image
+    const textZoneHeight = isVertical ? height * 0.6 : height
+    const textZoneWidth = isVertical ? width : width * 0.6
+    const imageAvailableTop = isVertical ? textZoneHeight * 0.3 : 0 // Image can start 30% into text zone
+    const imageAvailableHeight = isVertical ? height - imageAvailableTop : height
+    const imageAvailableLeft = isVertical ? 0 : textZoneWidth * 0.5 // Image can start 50% into text zone
+    const imageAvailableWidth = isVertical ? width : width - imageAvailableLeft
+
     // Background - gradient or image
     if (backgroundImage) {
       try {
@@ -109,37 +122,50 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
         const clamp = (min: number, preferred: number, max: number) =>
           Math.max(min, Math.min(preferred, max))
 
-        // Calculate scale using clamp(MIN, PREFERRED, MAX)
-        const scaleToFitWidth = width / img.width
-        const scaleToFitHeight = height / img.height
+        // Calculate scale using clamp(MIN, PREFERRED, MAX) for AVAILABLE SPACE
+        const scaleToFitWidth = imageAvailableWidth / img.width
+        const scaleToFitHeight = imageAvailableHeight / img.height
 
-        const minScale = Math.min(scaleToFitWidth, scaleToFitHeight) // contain - entire image visible
-        const maxScale = Math.max(scaleToFitWidth, scaleToFitHeight) // cover - fills canvas
-        const preferredScale = minScale * 1.15 // 15% larger than contain for better framing
+        const minScale = Math.min(scaleToFitWidth, scaleToFitHeight) // contain - entire image visible in available space
+        const maxScale = Math.max(width / img.width, height / img.height) // cover - fills entire canvas
+        const preferredScale = clamp(
+          minScale,
+          minScale * 1.2, // 20% larger than available space
+          maxScale
+        )
 
-        // Use clamp() to intelligently scale between min and max
-        const scale = clamp(minScale, preferredScale, maxScale)
+        // Use clamp() to intelligently scale
+        const scale = preferredScale
 
         const scaledWidth = img.width * scale
         const scaledHeight = img.height * scale
 
-        // Clamp positioning to prevent awkward crops
-        // When image is larger: negative values (shift left/up)
-        // When image is smaller: positive values (center)
-        const centerX = (width - scaledWidth) / 2
-        const centerY = (height - scaledHeight) / 2
+        // Position image in available space using clamp()
+        // Vertical: position in bottom portion, allow overlap into text zone
+        // Horizontal: position in right portion, allow overlap into text zone
+        const x = isVertical
+          ? clamp(
+              -(scaledWidth - width) * 0.5,  // min: allow 50% overflow left
+              (width - scaledWidth) / 2,      // preferred: center horizontally
+              0                                // max: align left
+            )
+          : clamp(
+              imageAvailableLeft,              // min: start at available zone
+              imageAvailableLeft + (imageAvailableWidth - scaledWidth) / 2, // preferred: center in available zone
+              width - scaledWidth              // max: align right
+            )
 
-        const x = clamp(
-          Math.min(-(scaledWidth - width) * 0.3, 0),  // min: allow 30% overflow left (negative)
-          centerX,                                     // preferred: center
-          Math.max(0, centerX)                         // max: don't overflow right
-        )
-
-        const y = clamp(
-          Math.min(-(scaledHeight - height) * 0.2, 0), // min: allow 20% overflow top (negative)
-          isVertical ? Math.min(0, centerY) : centerY, // preferred: top for vertical, center for horizontal
-          Math.max(0, centerY)                          // max: don't overflow bottom
-        )
+        const y = isVertical
+          ? clamp(
+              imageAvailableTop,               // min: start at available zone
+              imageAvailableTop + (imageAvailableHeight - scaledHeight) / 2, // preferred: center in available zone
+              height - scaledHeight            // max: align bottom
+            )
+          : clamp(
+              -(scaledHeight - height) * 0.3,  // min: allow 30% overflow top
+              (height - scaledHeight) / 2,     // preferred: center vertically
+              0                                 // max: align top
+            )
 
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight)
 
@@ -166,8 +192,7 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
     const ctaFontSize = baseFontSize * 1
     const pricingFontSize = baseFontSize * 1.5
 
-    // Layout positioning
-    const padding = width * 0.08
+    // Layout positioning (padding already defined above for image calculations)
     const contentWidth = width - (padding * 2)
 
     // Vertical layout: top 60% for text, bottom 40% for CTA
