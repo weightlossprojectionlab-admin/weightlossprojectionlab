@@ -125,18 +125,14 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
         // Calculate scale using clamp(MIN, PREFERRED, MAX)
         // Goal: Fill background while showing consistent portion of image across all aspect ratios
 
-        // Use a reference dimension (largest common dimension)
-        // This ensures similar fill across all formats
-        const referenceDimension = Math.max(width, height)
-        const referenceScale = referenceDimension / Math.min(img.width, img.height)
-
         const scaleToContainCanvas = Math.min(width / img.width, height / img.height) // entire image visible
         const scaleToCoverCanvas = Math.max(width / img.width, height / img.height) // fills canvas completely
 
-        // Use clamp() to ensure background fills while maintaining consistency
-        const minScale = scaleToContainCanvas // min: entire image visible (too small)
-        const maxScale = scaleToCoverCanvas   // max: fills canvas (may crop heavily)
-        const preferredScale = referenceScale * 0.85 // preferred: fills most of canvas with consistent crop
+        // Use cover as preferred to ensure background always fills
+        // Clamp between contain and slightly larger than cover for safety
+        const minScale = scaleToCoverCanvas * 0.95 // min: almost fills canvas
+        const maxScale = scaleToCoverCanvas * 1.2  // max: overfills for consistency
+        const preferredScale = scaleToCoverCanvas  // preferred: fills canvas exactly
 
         const scale = clamp(minScale, preferredScale, maxScale)
 
