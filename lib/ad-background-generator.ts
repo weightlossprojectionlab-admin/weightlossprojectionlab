@@ -100,26 +100,45 @@ export async function generateWithDALLE(
 }
 
 /**
- * Fetch relevant stock photo from Unsplash
- * Uses curated photo collection - no API key required
+ * Fetch relevant stock photo
+ * Uses curated free stock photos that work reliably
  */
 export async function fetchUnsplashPhoto(
   query: string,
   orientation: 'landscape' | 'portrait' | 'squarish' = 'portrait'
 ): Promise<string> {
   try {
-    // Use Unsplash's random photo endpoint with collections
-    // This works without API key for reasonable usage
-    const width = orientation === 'portrait' ? 1080 :
-                  orientation === 'landscape' ? 1920 : 1080
-    const height = orientation === 'portrait' ? 1920 :
-                   orientation === 'landscape' ? 1080 : 1080
+    // Use curated free stock photos from CDN (CORS-friendly)
+    // These are guaranteed to work without API keys
+    const stockImages = {
+      fitness: [
+        'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1080&h=1920&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1080&h=1920&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1080&h=1920&fit=crop&q=80'
+      ],
+      'healthy meal': [
+        'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1080&h=1920&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1080&h=1920&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1080&h=1920&fit=crop&q=80'
+      ],
+      'family dinner': [
+        'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=1080&h=1920&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1475503572774-15a45e5d60b9?w=1080&h=1920&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1543353071-087092ec393a?w=1080&h=1920&fit=crop&q=80'
+      ],
+      healthcare: [
+        'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1080&h=1920&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=1080&h=1920&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1584515933487-779824d29309?w=1080&h=1920&fit=crop&q=80'
+      ]
+    }
 
-    // Use Picsum for now (reliable, no API key needed)
-    // Or use curated Unsplash collection URLs
-    const url = `https://picsum.photos/${width}/${height}?random=${Date.now()}`
+    // Get random image from matching category
+    const category = stockImages[query as keyof typeof stockImages] || stockImages.fitness
+    const randomImage = category[Math.floor(Math.random() * category.length)]
 
-    return url
+    logger.info('Selected stock photo', { query, url: randomImage })
+    return randomImage
 
   } catch (error) {
     logger.error('Failed to fetch stock photo', error as Error, { query })
