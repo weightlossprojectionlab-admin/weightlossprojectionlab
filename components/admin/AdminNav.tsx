@@ -13,7 +13,8 @@ import {
   GiftIcon,
   ChartBarIcon,
   Cog6ToothIcon,
-  SparklesIcon
+  SparklesIcon,
+  MegaphoneIcon
 } from '@heroicons/react/24/outline'
 
 interface NavItem {
@@ -40,6 +41,11 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
       name: 'Dashboard',
       href: '/admin',
       icon: HomeIcon,
+    },
+    {
+      name: 'Marketing',
+      href: '/admin/marketing',
+      icon: MegaphoneIcon,
     },
     {
       name: 'Users',

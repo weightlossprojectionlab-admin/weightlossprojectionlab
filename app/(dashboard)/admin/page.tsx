@@ -136,6 +136,13 @@ export default function AdminDashboardPage() {
         <h2 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link
+            href="/admin/marketing"
+            className="bg-gradient-to-br from-primary/10 to-purple-600/10 rounded-lg shadow p-4 hover:shadow-lg transition-shadow border border-primary/20"
+          >
+            <h3 className="font-semibold text-foreground mb-1">🎨 Marketing & Ads</h3>
+            <p className="text-sm text-muted-foreground">Generate social media ads</p>
+          </Link>
+          <Link
             href="/admin/users"
             className="bg-card rounded-lg shadow p-4 hover:shadow-lg transition-shadow"
           >
