@@ -123,52 +123,46 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
           Math.max(min, Math.min(preferred, max))
 
         // Calculate scale using clamp(MIN, PREFERRED, MAX)
-        // Goal: Image should be SAME SIZE across all aspect ratios, positioned in available space
-        const scaleToContainCanvas = Math.min(width / img.width, height / img.height) // entire image fits in canvas
-        const scaleToCoverCanvas = Math.max(width / img.width, height / img.height) // image fills canvas (crops)
+        // Goal: Fill background while showing consistent portion of image across all aspect ratios
 
-        // Use consistent scale across all aspect ratios (contain mode)
-        // This ensures the image is the same size in all formats
-        const minScale = scaleToContainCanvas * 0.8 // Slightly smaller to ensure visibility
-        const maxScale = scaleToContainCanvas * 1.1 // Slightly larger for better fill
-        const preferredScale = scaleToContainCanvas
+        // Use a reference dimension (largest common dimension)
+        // This ensures similar fill across all formats
+        const referenceDimension = Math.max(width, height)
+        const referenceScale = referenceDimension / Math.min(img.width, img.height)
 
-        // Use clamp() to keep scale consistent
+        const scaleToContainCanvas = Math.min(width / img.width, height / img.height) // entire image visible
+        const scaleToCoverCanvas = Math.max(width / img.width, height / img.height) // fills canvas completely
+
+        // Use clamp() to ensure background fills while maintaining consistency
+        const minScale = scaleToContainCanvas // min: entire image visible (too small)
+        const maxScale = scaleToCoverCanvas   // max: fills canvas (may crop heavily)
+        const preferredScale = referenceScale * 0.85 // preferred: fills most of canvas with consistent crop
+
         const scale = clamp(minScale, preferredScale, maxScale)
 
         const scaledWidth = img.width * scale
         const scaledHeight = img.height * scale
 
-        // Position image using clamp() based on available space
-        // Vertical layouts: position in bottom half
-        // Horizontal layouts: position in right half
-
+        // Position image using clamp() to fill background while maintaining focal point
+        // Allow controlled overflow to fill canvas
         const centerX = (width - scaledWidth) / 2
         const centerY = (height - scaledHeight) / 2
 
-        const x = isVertical
-          ? clamp(
-              0,                    // min: align left edge
-              centerX,              // preferred: center horizontally
-              width - scaledWidth   // max: align right edge
-            )
-          : clamp(
-              textZoneWidth * 0.3,  // min: start 30% into text zone
-              imageAvailableLeft + centerX, // preferred: center in available zone
-              width - scaledWidth   // max: align right
-            )
+        // Calculate max overflow allowed (negative values = overflow)
+        const maxOverflowX = scaledWidth > width ? -(scaledWidth - width) : 0
+        const maxOverflowY = scaledHeight > height ? -(scaledHeight - height) : 0
 
-        const y = isVertical
-          ? clamp(
-              textZoneHeight * 0.4, // min: start 40% into text zone
-              imageAvailableTop + centerY, // preferred: center in available zone
-              height - scaledHeight // max: align bottom
-            )
-          : clamp(
-              0,                    // min: align top edge
-              centerY,              // preferred: center vertically
-              height - scaledHeight // max: align bottom edge
-            )
+        const x = clamp(
+          maxOverflowX * 0.4,  // min: allow 40% overflow left (keeps focal point visible)
+          centerX,             // preferred: center horizontally
+          0                    // max: align left edge (no right overflow)
+        )
+
+        const y = clamp(
+          maxOverflowY * 0.3,  // min: allow 30% overflow top (keeps focal point visible)
+          centerY,             // preferred: center vertically
+          0                    // max: align top edge (no bottom overflow)
+        )
 
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight)
 
