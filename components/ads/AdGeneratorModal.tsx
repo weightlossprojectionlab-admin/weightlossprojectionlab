@@ -146,6 +146,26 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
   const generatePreview = async () => {
     if (!selectedTemplate) return
 
+    // Validate custom background URL if provided
+    if (backgroundMethod === 'custom' && backgroundImage) {
+      const validImageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+      const isValidUrl = validImageExtensions.some(ext =>
+        backgroundImage.toLowerCase().includes(ext)
+      )
+
+      if (!isValidUrl) {
+        toast.error('Invalid image URL. Must be a direct link ending in .jpg, .png, or .webp')
+        return
+      }
+
+      // Check if it's a stock photo search page
+      const stockPhotoSites = ['istockphoto.com', 'stock.adobe.com', 'shutterstock.com', 'gettyimages.com']
+      if (stockPhotoSites.some(site => backgroundImage.includes(site) && !backgroundImage.match(/\.(jpg|jpeg|png|webp|gif)$/i))) {
+        toast.error('This appears to be a search page. Please use "Stock Photo" option instead, or find a direct image URL.')
+        return
+      }
+    }
+
     setGenerating(true)
     try {
       // Generate preview for first selected platform
@@ -416,13 +436,22 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
 
                 {/* Custom URL Input */}
                 {backgroundMethod === 'custom' && (
-                  <input
-                    type="text"
-                    value={backgroundImage}
-                    onChange={(e) => setBackgroundImage(e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground mb-2"
-                  />
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={backgroundImage}
+                      onChange={(e) => setBackgroundImage(e.target.value)}
+                      placeholder="https://example.com/image.jpg"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                    />
+                    <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                      ⚠️ <strong>Important:</strong> Must be a direct image URL ending in .jpg, .png, or .webp
+                      <br />
+                      ❌ Stock photo search pages won't work (iStock, Adobe Stock, etc.)
+                      <br />
+                      ✅ Use "Stock Photo" option above for free Unsplash images instead
+                    </div>
+                  </div>
                 )}
 
                 {/* Generate Button for AI/Stock/Abstract */}
