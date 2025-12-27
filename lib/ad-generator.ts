@@ -139,15 +139,6 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
         const scaledWidth = img.width * scale
         const scaledHeight = img.height * scale
 
-        // Debug: ensure image fills canvas
-        console.log('[AdGenerator] Image scaling', {
-          canvas: { width, height, ratio: (width/height).toFixed(2) },
-          image: { width: img.width, height: img.height, ratio: (img.width/img.height).toFixed(2) },
-          scales: { contain: scaleToContainCanvas.toFixed(2), cover: scaleToCoverCanvas.toFixed(2), actual: scale.toFixed(2) },
-          scaled: { width: scaledWidth, height: scaledHeight },
-          fills: { width: scaledWidth >= width, height: scaledHeight >= height }
-        })
-
         // Position image using clamp() to fill background while maintaining focal point
         const centerX = (width - scaledWidth) / 2
         const centerY = (height - scaledHeight) / 2
