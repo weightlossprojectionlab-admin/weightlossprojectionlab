@@ -17,7 +17,7 @@ export default function MarketingPage() {
   const [showAdGenerator, setShowAdGenerator] = useState(false)
 
   return (
-    <AuthGuard>
+    <AuthGuard requireAdmin>
       <div className="min-h-screen bg-background py-8 px-4">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
