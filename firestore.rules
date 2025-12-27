@@ -83,6 +83,9 @@ service cloud.firestore {
       // Read: Users can read their own profile, admins can read all
       allow read: if isOwner(userId) || isAdmin();
 
+      // Allow admins to query the users collection (for admin stats)
+      allow list: if isAdmin();
+
       // Create: Users can create their own profile
       allow create: if isOwner(userId);
 
