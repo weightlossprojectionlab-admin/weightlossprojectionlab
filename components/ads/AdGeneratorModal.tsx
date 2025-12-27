@@ -51,10 +51,14 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
   const [backgroundMethod, setBackgroundMethod] = useState<'gradient' | 'abstract' | 'stock' | 'ai' | 'custom'>('gradient')
   const [generatingBackground, setGeneratingBackground] = useState(false)
   const [generating, setGenerating] = useState(false)
-  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewBlobs, setPreviewBlobs] = useState<Map<AdPlatform, Blob>>(new Map())
+  const [previewUrls, setPreviewUrls] = useState<Map<AdPlatform, string>>(new Map())
+  const [selectedPreviewPlatform, setSelectedPreviewPlatform] = useState<AdPlatform | null>(null)
 
   const handleClose = () => {
+    // Cleanup preview URLs
+    previewUrls.forEach(url => URL.revokeObjectURL(url))
+
     // Reset state
     setCurrentStep('persona')
     setSelectedPersona(null)
@@ -63,11 +67,9 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
     setShowPricing(false)
     setPricingText('$9.99/mo')
     setBackgroundImage('')
-    setPreviewBlob(null)
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl)
-      setPreviewUrl(null)
-    }
+    setPreviewBlobs(new Map())
+    setPreviewUrls(new Map())
+    setSelectedPreviewPlatform(null)
     onClose()
   }
 
@@ -168,19 +170,26 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
 
     setGenerating(true)
     try {
-      // Generate preview for first selected platform
-      const platform = selectedPlatforms[0]
-      const blob = await generateAdvertisement({
-        template: selectedTemplate,
-        platform,
-        backgroundImage: backgroundImage || undefined,
-        showPricing,
-        pricingText: showPricing ? pricingText : undefined
-      })
+      // Generate previews for all selected platforms
+      const newBlobs = new Map<AdPlatform, Blob>()
+      const newUrls = new Map<AdPlatform, string>()
 
-      setPreviewBlob(blob)
-      const url = URL.createObjectURL(blob)
-      setPreviewUrl(url)
+      for (const platform of selectedPlatforms) {
+        const blob = await generateAdvertisement({
+          template: selectedTemplate,
+          platform,
+          backgroundImage: backgroundImage || undefined,
+          showPricing,
+          pricingText: showPricing ? pricingText : undefined
+        })
+
+        newBlobs.set(platform, blob)
+        newUrls.set(platform, URL.createObjectURL(blob))
+      }
+
+      setPreviewBlobs(newBlobs)
+      setPreviewUrls(newUrls)
+      setSelectedPreviewPlatform(selectedPlatforms[0])
       setCurrentStep('preview')
     } catch (error) {
       logger.error('Failed to generate ad preview', error as Error)
@@ -476,6 +485,8 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
         )
 
       case 'preview':
+        const currentPreviewUrl = selectedPreviewPlatform ? previewUrls.get(selectedPreviewPlatform) : null
+
         return (
           <div className="space-y-4">
             <div>
@@ -487,25 +498,57 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
               </button>
               <h3 className="text-lg font-semibold mb-2">Preview & Download</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Preview for {AD_PLATFORM_SPECS[selectedPlatforms[0]].name}
+                {selectedPlatforms.length === 1
+                  ? `Preview for ${AD_PLATFORM_SPECS[selectedPlatforms[0]].name}`
+                  : `${selectedPlatforms.length} platform formats generated`
+                }
               </p>
             </div>
 
-            {previewUrl && (
-              <div className="border border-border rounded-lg overflow-hidden">
-                <img
-                  src={previewUrl}
-                  alt="Ad preview"
-                  className="w-full h-auto"
-                />
+            {/* Platform Tabs (if multiple platforms) */}
+            {selectedPlatforms.length > 1 && (
+              <div className="flex gap-2 flex-wrap">
+                {selectedPlatforms.map((platform) => (
+                  <button
+                    key={platform}
+                    onClick={() => setSelectedPreviewPlatform(platform)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      selectedPreviewPlatform === platform
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted hover:bg-muted/80'
+                    }`}
+                  >
+                    {AD_PLATFORM_SPECS[platform].name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Preview Image */}
+            {currentPreviewUrl && selectedPreviewPlatform && (
+              <div className="border border-border rounded-lg overflow-hidden bg-muted/30 p-4">
+                <div className="mb-2 text-xs text-muted-foreground text-center">
+                  {AD_PLATFORM_SPECS[selectedPreviewPlatform].aspectRatio} • {AD_PLATFORM_SPECS[selectedPreviewPlatform].width}×{AD_PLATFORM_SPECS[selectedPreviewPlatform].height}
+                </div>
+                <div className="flex justify-center">
+                  <img
+                    src={currentPreviewUrl}
+                    alt={`Ad preview for ${AD_PLATFORM_SPECS[selectedPreviewPlatform].name}`}
+                    className="max-w-full h-auto max-h-[500px] object-contain rounded"
+                  />
+                </div>
               </div>
             )}
 
             <div className="bg-muted p-4 rounded-lg">
-              <p className="text-sm font-medium mb-2">Ready to download:</p>
+              <p className="text-sm font-medium mb-2">
+                {selectedPlatforms.length === 1 ? 'Ready to download:' : `Ready to download all ${selectedPlatforms.length} formats:`}
+              </p>
               <ul className="text-sm text-muted-foreground space-y-1">
                 {selectedPlatforms.map((platform) => (
-                  <li key={platform}>• {AD_PLATFORM_SPECS[platform].name}</li>
+                  <li key={platform}>
+                    • {AD_PLATFORM_SPECS[platform].name} ({AD_PLATFORM_SPECS[platform].aspectRatio})
+                  </li>
                 ))}
               </ul>
             </div>
