@@ -74,7 +74,7 @@ export async function verifyAdminAuth(
     // Fallback check: Super admin email whitelist
     const superAdminEmails = [
       'perriceconsulting@gmail.com',
-      'weigthlossprojectionlab@gmail.com'
+      'weightlossprojectionlab@gmail.com'
     ]
 
     if (email && superAdminEmails.includes(email.toLowerCase())) {

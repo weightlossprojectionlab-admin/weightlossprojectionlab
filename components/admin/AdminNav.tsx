@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signOut } from 'firebase/auth'
+import { auth } from '@/lib/firebase'
 import {
   HomeIcon,
   UsersIcon,
@@ -14,7 +16,8 @@ import {
   ChartBarIcon,
   Cog6ToothIcon,
   SparklesIcon,
-  MegaphoneIcon
+  MegaphoneIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
 
 interface NavItem {
@@ -146,7 +149,7 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
       </ul>
 
       {/* Back to App Link */}
-      <div className="mt-8 pt-8 border-t border-border dark:border-gray-600">
+      <div className="mt-8 pt-8 border-t border-border dark:border-gray-600 space-y-2">
         <Link
           href="/dashboard"
           className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground dark:hover:text-white transition-colors"
@@ -156,6 +159,13 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
           </svg>
           <span>Back to App</span>
         </Link>
+        <button
+          onClick={() => signOut(auth)}
+          className="w-full flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground dark:hover:text-white transition-colors"
+        >
+          <ArrowRightOnRectangleIcon className="h-5 w-5" />
+          <span>Sign Out</span>
+        </button>
       </div>
     </nav>
   )

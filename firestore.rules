@@ -15,11 +15,12 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // SECURITY: Super admin check using hardcoded emails (for bootstrapping)
+    // SECURITY: Super admin check using hardcoded UIDs (for bootstrapping)
     // Once custom claims are set, prefer using isAdmin() which checks token claims
     function isSuperAdmin() {
       return isAuthenticated() &&
-             (request.auth.token.email == 'perriceconsulting@gmail.com' ||
+             (request.auth.uid == 'Y8wSTgymg3YXWU94iJVjzoGxsMI2' ||
+              request.auth.token.email == 'perriceconsulting@gmail.com' ||
               request.auth.token.email == 'weightlossprojectionlab@gmail.com');
     }
 
@@ -549,6 +550,9 @@ service cloud.firestore {
                      (request.auth.uid in resource.data.involvedUserIds ||
                       isModerator());
 
+      // Allow moderators/admins to query the collection (for admin stats)
+      allow list: if isModerator();
+
       // Create: Any authenticated user can create a case
       allow create: if isAuthenticated() &&
                       request.resource.data.reporterId == request.auth.uid;
@@ -579,6 +583,7 @@ service cloud.firestore {
     // AI decision logs (admin read-only)
     match /ai_decision_logs/{logId} {
       allow read: if isAdmin();
+      allow list: if isAdmin(); // Allow admins to query the collection
       allow write: if false;
     }
 
@@ -674,6 +679,25 @@ service cloud.firestore {
         request.resource.data.updatedAt is timestamp &&
         // Validate image limits if present
         (!('imageUrls' in request.resource.data) || request.resource.data.imageUrls.size() <= 4);
+
+      // Delete: Admin-only
+      allow delete: if isAdmin();
+    }
+
+    // Public recipes (user-submitted recipes for moderation)
+    match /publicRecipes/{recipeId} {
+      // Read: Admins and moderators only
+      allow read: if isModerator();
+
+      // List queries: Admins and moderators only (for moderation queue)
+      allow list: if isModerator();
+
+      // Create: Authenticated users can submit recipes
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid;
+
+      // Update: Moderators can update moderation status
+      allow update: if isModerator();
 
       // Delete: Admin-only
       allow delete: if isAdmin();

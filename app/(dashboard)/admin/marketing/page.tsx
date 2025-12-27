@@ -8,7 +8,6 @@
 'use client'
 
 import { useState } from 'react'
-import AuthGuard from '@/components/auth/AuthGuard'
 import { AdGeneratorModal } from '@/components/ads/AdGeneratorModal'
 import { PERSONA_INFO } from '@/lib/ad-templates'
 import { AD_PLATFORM_SPECS } from '@/lib/ad-generator'
@@ -17,9 +16,7 @@ export default function MarketingPage() {
   const [showAdGenerator, setShowAdGenerator] = useState(false)
 
   return (
-    <AuthGuard requireAdmin>
-      <div className="min-h-screen bg-background py-8 px-4">
-        <div className="max-w-6xl mx-auto">
+    <div className="p-8 max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -181,14 +178,12 @@ export default function MarketingPage() {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Ad Generator Modal */}
-        <AdGeneratorModal
-          isOpen={showAdGenerator}
-          onClose={() => setShowAdGenerator(false)}
-        />
-      </div>
-    </AuthGuard>
+      {/* Ad Generator Modal */}
+      <AdGeneratorModal
+        isOpen={showAdGenerator}
+        onClose={() => setShowAdGenerator(false)}
+      />
+    </div>
   )
 }
