@@ -139,25 +139,33 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
         const scaledWidth = img.width * scale
         const scaledHeight = img.height * scale
 
+        // Debug: ensure image fills canvas
+        console.log('[AdGenerator] Image scaling', {
+          canvas: { width, height, ratio: (width/height).toFixed(2) },
+          image: { width: img.width, height: img.height, ratio: (img.width/img.height).toFixed(2) },
+          scales: { contain: scaleToContainCanvas.toFixed(2), cover: scaleToCoverCanvas.toFixed(2), actual: scale.toFixed(2) },
+          scaled: { width: scaledWidth, height: scaledHeight },
+          fills: { width: scaledWidth >= width, height: scaledHeight >= height }
+        })
+
         // Position image using clamp() to fill background while maintaining focal point
-        // Allow controlled overflow to fill canvas
         const centerX = (width - scaledWidth) / 2
         const centerY = (height - scaledHeight) / 2
 
-        // Calculate max overflow allowed (negative values = overflow)
-        const maxOverflowX = scaledWidth > width ? -(scaledWidth - width) : 0
-        const maxOverflowY = scaledHeight > height ? -(scaledHeight - height) : 0
+        // Calculate overflow limits (negative = image larger, positive = image smaller)
+        const overflowX = width - scaledWidth
+        const overflowY = height - scaledHeight
 
         const x = clamp(
-          maxOverflowX * 0.4,  // min: allow 40% overflow left (keeps focal point visible)
-          centerX,             // preferred: center horizontally
-          0                    // max: align left edge (no right overflow)
+          overflowX < 0 ? overflowX * 0.4 : overflowX / 2,  // min: 40% overflow or center
+          centerX,                                            // preferred: center
+          overflowX < 0 ? 0 : overflowX / 2                  // max: no right overflow or center
         )
 
         const y = clamp(
-          maxOverflowY * 0.3,  // min: allow 30% overflow top (keeps focal point visible)
-          centerY,             // preferred: center vertically
-          0                    // max: align top edge (no bottom overflow)
+          overflowY < 0 ? overflowY * 0.3 : overflowY / 2,  // min: 30% overflow or center
+          centerY,                                           // preferred: center
+          overflowY < 0 ? 0 : overflowY / 2                 // max: no bottom overflow or center
         )
 
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight)
