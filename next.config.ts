@@ -1,8 +1,8 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Enable static export for Capacitor native builds
-  output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : undefined,
+  // Enable static export for Capacitor native builds, standalone for server builds
+  output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : 'standalone',
 
   // Externalize Firebase Admin packages to reduce Lambda bundle size
   serverExternalPackages: [
@@ -10,7 +10,12 @@ const nextConfig: NextConfig = {
     '@google-cloud/firestore',
     '@google-cloud/storage',
     '@google-cloud/pubsub',
-    'google-auth-library'
+    'google-auth-library',
+    'grpc',
+    'protobufjs',
+    'google-gax',
+    '@grpc/grpc-js',
+    '@grpc/proto-loader'
   ],
 
   // Configure webpack to handle pdfjs-dist and pdf-parse properly
