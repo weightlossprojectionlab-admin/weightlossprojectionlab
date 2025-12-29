@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   // Enable static export for Capacitor native builds
   output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : undefined,
 
+  // Externalize Firebase Admin packages to reduce Lambda bundle size
+  serverExternalPackages: [
+    'firebase-admin',
+    '@google-cloud/firestore',
+    '@google-cloud/storage',
+    '@google-cloud/pubsub',
+    'google-auth-library'
+  ],
 
   // Configure webpack to handle pdfjs-dist and pdf-parse properly
   webpack: (config, { isServer }) => {
@@ -53,15 +61,7 @@ const nextConfig: NextConfig = {
   // Force dynamic rendering to skip static page generation
   experimental: {
     ppr: false,
-    optimizePackageImports: ['recharts', 'react-hot-toast', '@heroicons/react'],
-    // External packages for server components - prevents bundling large Firebase packages
-    serverComponentsExternalPackages: [
-      'firebase-admin',
-      '@google-cloud/firestore',
-      '@google-cloud/storage',
-      '@google-cloud/pubsub',
-      'google-auth-library'
-    ]
+    optimizePackageImports: ['recharts', 'react-hot-toast', '@heroicons/react']
   },
   typescript: {
     // Type checking enabled - all type errors must be fixed before build
