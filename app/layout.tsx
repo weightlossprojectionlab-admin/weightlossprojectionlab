@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { ConditionalProviders } from '@/components/ConditionalProviders'
 import { CsrfInitializer } from '@/components/CsrfInitializer'
+import { ConditionalFooter } from '@/components/ConditionalFooter'
 import './globals.css'
 
 // Force dynamic rendering for all pages to skip static generation
@@ -8,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export const dynamicParams = true
 
 export const metadata: Metadata = {
-  title: 'Weight Loss Progress Lab',
+  title: 'Weight Loss Projection Lab',
   description: 'AI-powered weight loss tracking with biometric authentication and meal analysis',
   manifest: '/manifest.json',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
@@ -58,9 +59,12 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://apis.google.com" />
         <link rel="dns-prefetch" href="https://weightlossprojectionlab-8b284.firebaseapp.com" />
       </head>
-      <body className="h-full font-sans antialiased">
+      <body className="h-full font-sans antialiased flex flex-col">
         <CsrfInitializer />
-        <ConditionalProviders>{children}</ConditionalProviders>
+        <div className="flex-grow">
+          <ConditionalProviders>{children}</ConditionalProviders>
+        </div>
+        <ConditionalFooter />
       </body>
     </html>
   )

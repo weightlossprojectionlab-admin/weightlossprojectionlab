@@ -17,7 +17,10 @@ import {
   Cog6ToothIcon,
   SparklesIcon,
   MegaphoneIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  BriefcaseIcon,
+  EnvelopeIcon,
+  CalendarDaysIcon
 } from '@heroicons/react/24/outline'
 
 interface NavItem {
@@ -33,6 +36,7 @@ interface AdminNavProps {
     cases?: number
     aiDecisions?: number
     coaches?: number
+    demoRequests?: number
   }
 }
 
@@ -46,9 +50,25 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
       icon: HomeIcon,
     },
     {
+      name: 'Demo Requests',
+      href: '/admin/demo-requests',
+      icon: CalendarDaysIcon,
+      badge: pendingCounts?.demoRequests,
+    },
+    {
+      name: 'Contact Submissions',
+      href: '/admin/contact-submissions',
+      icon: EnvelopeIcon,
+    },
+    {
       name: 'Marketing',
       href: '/admin/marketing',
       icon: MegaphoneIcon,
+    },
+    {
+      name: 'Careers',
+      href: '/admin/careers',
+      icon: BriefcaseIcon,
     },
     {
       name: 'Users',

@@ -30,7 +30,9 @@
     "cap:open:ios": "npx cap open ios",
     "cap:open:android": "npx cap open android",
     "cap:run:ios": "npm run cap:sync:ios && npx cap run ios",
-    "cap:run:android": "npm run cap:sync:android && npx cap run android"
+    "cap:run:android": "npm run cap:sync:android && npx cap run android",
+    "generate-jobs": "tsx scripts/generate-jobs.ts",
+    "generate-jobs-ml": "tsx scripts/ml/generate-jobs-ml.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",

@@ -54,9 +54,16 @@ export async function POST(request: NextRequest) {
         await handleSubscriptionCreated(event.data.object as Stripe.Subscription)
         break
 
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
+      case 'customer.subscription.updated': {
+        const sub = event.data.object as Stripe.Subscription
+        await handleSubscriptionUpdated(sub)
+
+        // Also check if subscription is set to cancel at period end
+        if (sub.cancel_at_period_end) {
+          await handleSubscriptionCanceledAtPeriodEnd(sub)
+        }
         break
+      }
 
       case 'customer.subscription.deleted':
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
@@ -148,8 +155,37 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 }
 
 /**
+ * Handle when subscription is set to cancel at period end
+ * User retains access until currentPeriodEnd
+ */
+async function handleSubscriptionCanceledAtPeriodEnd(subscription: Stripe.Subscription) {
+  const userId = subscription.metadata?.firebaseUID
+
+  if (!userId) {
+    console.error('Missing firebaseUID in subscription metadata')
+    return
+  }
+
+  console.log(`Subscription set to cancel at period end for user ${userId}`)
+
+  const currentPeriodEnd = (subscription as any).current_period_end
+
+  // Update status to 'canceled' but retain access until period end
+  await db.collection('users').doc(userId).update({
+    'subscription.status': 'canceled',
+    'subscription.canceledAt': new Date(),
+    'subscription.cancelAtPeriodEnd': true,
+    'subscription.currentPeriodEnd': currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null,
+    updatedAt: new Date(),
+  })
+
+  console.log(`User ${userId} will retain access until ${new Date(currentPeriodEnd * 1000).toISOString()}`)
+}
+
+/**
  * Handle customer.subscription.deleted event
  * Subscription was canceled
+ * NOTE: This fires when subscription actually ends (after period end if cancel_at_period_end=true)
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const userId = subscription.metadata?.firebaseUID
@@ -161,13 +197,16 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   console.log(`Subscription deleted for user ${userId}`)
 
-  // Mark subscription as canceled
+  // Mark subscription as expired (not just canceled, since access should now be blocked)
   const currentPeriodEnd = (subscription as any).current_period_end
   await db.collection('users').doc(userId).update({
-    'subscription.status': 'canceled',
+    'subscription.status': 'expired',
     'subscription.currentPeriodEnd': currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null,
+    'subscription.canceledAt': new Date(),
     updatedAt: new Date(),
   })
+
+  console.log(`Subscription access ended for user ${userId}`)
 }
 
 /**

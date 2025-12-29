@@ -1091,7 +1091,7 @@ function ProfileContent() {
 
         {/* App Info */}
         <div className="text-center text-description space-y-1">
-          <p>WLPL - Weight Loss Progress Lab</p>
+          <p>WLPL - Weight Loss Projection Lab</p>
           <p>Version 1.0.0</p>
           <p>Privacy-focused • Secure • Accessible</p>
         </div>

@@ -63,6 +63,17 @@ service firebase.storage {
       allow delete: if isOwner(userId);
     }
 
+    // Job application resumes
+    match /resumes/{applicationId}/{fileName} {
+      allow read: if isAuthenticated(); // Admins and applicants can read
+      allow write: if request.resource.size < 10 * 1024 * 1024 && // Max 10MB
+                     (request.resource.contentType == 'application/pdf' ||
+                      request.resource.contentType == 'application/msword' ||
+                      request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                      request.resource.contentType == 'text/plain');
+      allow delete: if isAuthenticated(); // Admin can delete
+    }
+
     // Default deny
     match /{allPaths=**} {
       allow read, write: if false;

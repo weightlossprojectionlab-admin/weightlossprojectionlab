@@ -1,13 +1,85 @@
 /**
  * Trial Expiration Cloud Function
- * Runs daily to expire trial subscriptions that have ended
+ * Runs daily to:
+ * 1. Send reminders before trial expires (3 days, 1 day before)
+ * 2. Expire trial subscriptions that have ended
  */
 
 import * as functions from 'firebase-functions'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { logger } from 'firebase-functions'
+import { TRIAL_POLICY } from '@/lib/subscription-policies'
 
 const db = getFirestore()
+
+/**
+ * Send trial expiry reminders (3 days and 1 day before)
+ */
+export const sendTrialExpiryReminders = functions.pubsub
+  .schedule('0 9 * * *') // Run at 9 AM UTC every day
+  .timeZone('UTC')
+  .onRun(async (context) => {
+    try {
+      logger.info('Starting trial expiry reminder check...')
+
+      const now = new Date()
+      const reminders: Array<{ daysBeforeExpiry: number; users: any[] }> = []
+
+      // Check each reminder day (3 days, 1 day before)
+      for (const daysBeforeExpiry of TRIAL_POLICY.REMINDER_DAYS_BEFORE_EXPIRY) {
+        const reminderDate = new Date(now)
+        reminderDate.setDate(reminderDate.getDate() + daysBeforeExpiry)
+        reminderDate.setHours(0, 0, 0, 0)
+
+        const nextDay = new Date(reminderDate)
+        nextDay.setDate(nextDay.getDate() + 1)
+
+        // Query users whose trial ends in X days
+        const usersRef = db.collection('users')
+        const query = usersRef
+          .where('subscription.status', '==', 'trialing')
+          .where('subscription.trialEndsAt', '>=', reminderDate)
+          .where('subscription.trialEndsAt', '<', nextDay)
+
+        const snapshot = await query.get()
+
+        if (!snapshot.empty) {
+          const users: Array<{ uid: string; email: string; trialEndsAt: Date }> = []
+
+          for (const doc of snapshot.docs) {
+            const userData = doc.data()
+            users.push({
+              uid: doc.id,
+              email: userData.email || 'unknown',
+              trialEndsAt: userData.subscription?.trialEndsAt?.toDate(),
+            })
+
+            // Create notification in Firestore
+            await db.collection('notifications').add({
+              userId: doc.id,
+              type: 'trial_expiring',
+              title: `Your trial ends in ${daysBeforeExpiry} ${daysBeforeExpiry === 1 ? 'day' : 'days'}`,
+              message: `Your ${daysBeforeExpiry}-day trial ends soon. Add payment to continue using the platform.`,
+              daysRemaining: daysBeforeExpiry,
+              read: false,
+              createdAt: now,
+            })
+          }
+
+          reminders.push({ daysBeforeExpiry, users })
+          logger.info(`Sent ${users.length} reminders for trials expiring in ${daysBeforeExpiry} days`)
+        }
+      }
+
+      return {
+        success: true,
+        reminders,
+      }
+    } catch (error) {
+      logger.error('Error sending trial expiry reminders:', error)
+      throw error
+    }
+  })
 
 /**
  * Scheduled function that runs daily at midnight UTC
@@ -60,10 +132,21 @@ export const expireTrialSubscriptions = functions.pubsub
           updatedAt: now.toDate(),
         })
 
+        // Create expiration notification
+        const notificationRef = db.collection('notifications').doc()
+        batch.set(notificationRef, {
+          userId,
+          type: 'trial_expired',
+          title: 'Your trial has ended',
+          message: 'Your trial has ended. Add payment to continue using the platform.',
+          read: false,
+          createdAt: now.toDate(),
+        })
+
         batchCount++
 
-        // Commit batch if we hit the limit
-        if (batchCount === batchSize) {
+        // Commit batch if we hit the limit (accounting for 2 writes per user)
+        if (batchCount >= batchSize / 2) {
           await batch.commit()
           logger.info(`Committed batch of ${batchCount} updates`)
           batch = db.batch()
@@ -79,9 +162,6 @@ export const expireTrialSubscriptions = functions.pubsub
 
       logger.info(`Expired ${expiredUsers.length} trial subscriptions`)
       logger.info('Expired users:', expiredUsers)
-
-      // TODO: Send email notifications to expired users
-      // TODO: Log to analytics for monitoring conversion rates
 
       return {
         success: true,

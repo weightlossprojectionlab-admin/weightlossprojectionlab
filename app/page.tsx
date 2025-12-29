@@ -7,7 +7,7 @@ export const revalidate = false
 
 // Override metadata for home page with optimized title
 export const metadata: Metadata = {
-  title: 'Weight Loss Progress Lab - AI-Powered Meal Tracking',
+  title: 'Weight Loss Projection Lab - AI-Powered Meal Tracking',
   description: 'Stop guessing, start losing. Track meals in 30 seconds with AI-powered photo analysis. No tedious logging required.',
 }
 

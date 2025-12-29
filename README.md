@@ -1,4 +1,4 @@
-# Weight Loss Progress Lab (WLPL) v2
+# Weight Loss Projection Lab (WLPL) v2
 
 An AI-powered weight loss tracking application built with Next.js 15, featuring biometric authentication and meal image analysis.
 

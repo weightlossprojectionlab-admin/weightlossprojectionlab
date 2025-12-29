@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { db } from '@/lib/firebase'
+import { db, auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import {
   collection,
@@ -43,10 +43,22 @@ export function useAdminStats() {
         setLoading(true)
         setError(null)
 
+        logger.debug('Fetching admin stats...')
+        logger.debug(`Current auth user: ${auth.currentUser?.uid} ${auth.currentUser?.email}`)
+
+        if (!auth.currentUser) {
+          logger.error('No authenticated user found!')
+          setError('Not authenticated')
+          setLoading(false)
+          return
+        }
+
         // Calculate timestamp for "today" (last 24 hours)
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         const todayTimestamp = Timestamp.fromDate(today)
+
+        logger.debug('Attempting to fetch users collection...')
 
         // Fetch all stats in parallel
         const [
@@ -58,7 +70,13 @@ export function useAdminStats() {
           lowConfidenceAISnapshot,
         ] = await Promise.all([
           // Total users
-          getDocs(collection(db, 'users')),
+          getDocs(collection(db, 'users')).then(snap => {
+            logger.debug(`Successfully fetched ${snap.size} users`)
+            return snap
+          }).catch(err => {
+            logger.error('Error fetching users collection:', err)
+            throw err
+          }),
 
           // Active users today (users with lastActiveAt >= today)
           getDocs(
@@ -66,10 +84,22 @@ export function useAdminStats() {
               collection(db, 'users'),
               where('lastActiveAt', '>=', todayTimestamp)
             )
-          ),
+          ).then(snap => {
+            logger.debug(`Successfully fetched ${snap.size} active users`)
+            return snap
+          }).catch(err => {
+            logger.error('Error fetching active users:', err)
+            throw err
+          }),
 
           // Total recipes (from recipes collection - media metadata)
-          getDocs(collection(db, 'recipes')),
+          getDocs(collection(db, 'recipes')).then(snap => {
+            logger.debug(`Successfully fetched ${snap.size} recipes`)
+            return snap
+          }).catch(err => {
+            logger.error('Error fetching recipes:', err)
+            throw err
+          }),
 
           // Pending recipes (from publicRecipes collection if it exists, otherwise 0)
           // Note: This collection may not exist yet, so we'll catch the error
@@ -78,7 +108,13 @@ export function useAdminStats() {
               collection(db, 'publicRecipes'),
               where('moderationStatus', '==', 'pending')
             )
-          ).catch(() => ({ size: 0 })),
+          ).then(snap => {
+            logger.debug(`Successfully fetched ${snap.size} pending recipes`)
+            return snap
+          }).catch((err) => {
+            logger.warn('Error fetching pending recipes (may not exist):', err)
+            return { size: 0 }
+          }),
 
           // Open cases (from dispute_cases with status != 'resolved')
           getDocs(
@@ -86,7 +122,13 @@ export function useAdminStats() {
               collection(db, 'dispute_cases'),
               where('status', '!=', 'resolved')
             )
-          ).catch(() => ({ size: 0 })),
+          ).then(snap => {
+            logger.debug(`Successfully fetched ${snap.size} open cases`)
+            return snap
+          }).catch((err) => {
+            logger.warn('Error fetching open cases:', err)
+            return { size: 0 }
+          }),
 
           // Low confidence AI decisions (from ai_decision_logs with confidence < 0.8)
           getDocs(
@@ -95,7 +137,13 @@ export function useAdminStats() {
               where('confidence', '<', 0.8),
               where('reviewed', '==', false)
             )
-          ).catch(() => ({ size: 0 })),
+          ).then(snap => {
+            logger.debug(`Successfully fetched ${snap.size} low confidence AI decisions`)
+            return snap
+          }).catch((err) => {
+            logger.warn('Error fetching AI decisions:', err)
+            return { size: 0 }
+          }),
         ])
 
         setStats({

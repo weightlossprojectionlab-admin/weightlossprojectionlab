@@ -3,40 +3,80 @@
  *
  * Generate marketing materials and social media ads
  * for different personas and platforms
+ * Now integrated with all 30 landing pages!
  */
 
 'use client'
 
 import { useState } from 'react'
 import { AdGeneratorModal } from '@/components/ads/AdGeneratorModal'
+import { LandingPageManager } from '@/components/admin/LandingPageManager'
 import { PERSONA_INFO } from '@/lib/ad-templates'
 import { AD_PLATFORM_SPECS } from '@/lib/ad-generator'
+import { getAllLandingPagePersonas } from '@/lib/landing-page-personas'
 
 export default function MarketingPage() {
   const [showAdGenerator, setShowAdGenerator] = useState(false)
+  const [activeTab, setActiveTab] = useState<'overview' | 'landing-pages'>('overview')
+
+  const landingPagePersonas = getAllLandingPagePersonas()
+  const liveCount = landingPagePersonas.filter(p => p.status === 'live').length
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">
               Marketing & Advertising
             </h1>
             <p className="text-muted-foreground">
-              Generate persona-driven ads for multiple platforms
+              Generate persona-driven ads for multiple platforms from {landingPagePersonas.length} landing pages
             </p>
           </div>
 
+          {/* Tab Navigation */}
+          <div className="flex gap-2 mb-8 border-b border-border">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`px-6 py-3 font-medium transition-all ${
+                activeTab === 'overview'
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              📊 Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('landing-pages')}
+              className={`px-6 py-3 font-medium transition-all ${
+                activeTab === 'landing-pages'
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              📄 Landing Pages ({landingPagePersonas.length})
+            </button>
+          </div>
+
+          {/* Overview Tab */}
+          {activeTab === 'overview' && (
+            <div>
+
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-card p-6 rounded-lg border border-border">
-              <div className="text-4xl mb-2">👥</div>
-              <h3 className="text-2xl font-bold text-foreground mb-1">3</h3>
-              <p className="text-sm text-muted-foreground">Target Personas</p>
+              <div className="text-4xl mb-2">📄</div>
+              <h3 className="text-2xl font-bold text-foreground mb-1">{landingPagePersonas.length}</h3>
+              <p className="text-sm text-muted-foreground">Landing Pages</p>
+            </div>
+            <div className="bg-card p-6 rounded-lg border border-border">
+              <div className="text-4xl mb-2">✅</div>
+              <h3 className="text-2xl font-bold text-green-600 mb-1">{liveCount}</h3>
+              <p className="text-sm text-muted-foreground">Live Pages</p>
             </div>
             <div className="bg-card p-6 rounded-lg border border-border">
               <div className="text-4xl mb-2">📝</div>
-              <h3 className="text-2xl font-bold text-foreground mb-1">13</h3>
+              <h3 className="text-2xl font-bold text-foreground mb-1">{landingPagePersonas.length * 3}</h3>
               <p className="text-sm text-muted-foreground">Ad Templates</p>
             </div>
             <div className="bg-card p-6 rounded-lg border border-border">
@@ -46,13 +86,19 @@ export default function MarketingPage() {
             </div>
           </div>
 
-          {/* Generate Ad Button */}
-          <div className="mb-8">
+          {/* Action Buttons */}
+          <div className="flex gap-4 mb-8 flex-wrap">
             <button
               onClick={() => setShowAdGenerator(true)}
-              className="w-full md:w-auto px-8 py-4 bg-gradient-to-r from-primary to-purple-600 text-white rounded-lg font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+              className="flex-1 md:flex-none px-8 py-4 bg-gradient-to-r from-primary to-purple-600 text-white rounded-lg font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
             >
               🎨 Generate New Ad Campaign
+            </button>
+            <button
+              onClick={() => setActiveTab('landing-pages')}
+              className="flex-1 md:flex-none px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+            >
+              📄 Browse Landing Pages
             </button>
           </div>
 
@@ -178,6 +224,13 @@ export default function MarketingPage() {
               </div>
             </div>
           </div>
+            </div>
+          )}
+
+          {/* Landing Pages Tab */}
+          {activeTab === 'landing-pages' && (
+            <LandingPageManager />
+          )}
 
       {/* Ad Generator Modal */}
       <AdGeneratorModal
