@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
 
   // Externalize Firebase Admin and Google Cloud packages to reduce bundle size
   // This prevents these large packages from being bundled into the server build
-  serverComponentsExternalPackages: [
+  serverExternalPackages: [
     'firebase-admin',
     '@google-cloud/firestore',
     '@google-cloud/storage',
