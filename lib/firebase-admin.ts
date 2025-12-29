@@ -20,6 +20,12 @@ const initializeFirebaseAdmin = (): App => {
     return adminApp
   }
 
+  // Prevent initialization during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    logger.warn('Skipping Firebase Admin initialization during build phase')
+    throw new Error('Firebase Admin cannot be initialized during build time')
+  }
+
   try {
     logger.info('Initializing Firebase Admin SDK')
 
