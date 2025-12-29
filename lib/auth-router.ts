@@ -221,17 +221,39 @@ export async function determineUserDestination(
       }
     }
 
-    // Server error (500) → Likely a temporary API issue, allow dashboard access
-    if (error.status === 500 || error.message?.includes('500')) {
-      logger.error('[AuthRouter] Server error (500) - allowing access to dashboard', error instanceof Error ? error : undefined)
+    // Server error (500) or Internal Server Error
+    if (error.status === 500 ||
+        error.message?.includes('500') ||
+        error.message?.includes('Internal Server Error')) {
+      logger.error('[AuthRouter] Server error (500) - checking current path', error instanceof Error ? error : undefined)
+
+      // If already on onboarding, let them stay to avoid loop
+      if (currentPath === '/onboarding') {
+        return {
+          type: 'stay',
+          reason: 'Server error - staying on onboarding to avoid loop'
+        }
+      }
+
+      // Otherwise redirect to onboarding (safe fallback)
       return {
-        type: 'dashboard',
-        reason: 'Server error - temporarily allowing access'
+        type: 'onboarding',
+        resumeStep: 1,
+        reason: 'Server error - defaulting to onboarding'
       }
     }
 
-    // Other error (network, etc.) → Assume needs onboarding to be safe
-    logger.warn('[AuthRouter] Unknown error - defaulting to onboarding', { error: error.message })
+    // Other error (network, etc.) → Check if already on onboarding first
+    logger.warn('[AuthRouter] Unknown error - checking current path', { error: error.message })
+
+    // If already on onboarding, let them stay to avoid loop
+    if (currentPath === '/onboarding') {
+      return {
+        type: 'stay',
+        reason: 'Error loading profile - staying on onboarding to avoid loop'
+      }
+    }
+
     return {
       type: 'onboarding',
       resumeStep: 1,
