@@ -16,6 +16,18 @@ const nextConfig: NextConfig = {
     'protobufjs'
   ],
 
+  // Exclude Firebase packages from Next.js file tracing
+  // This prevents them from being included in the function bundle
+  outputFileTracingExcludes: {
+    '*': [
+      'node_modules/firebase-admin/**/*',
+      'node_modules/@google-cloud/**/*',
+      'node_modules/google-auth-library/**/*',
+      'node_modules/grpc/**/*',
+      'node_modules/protobufjs/**/*'
+    ]
+  },
+
   // Configure webpack to handle pdfjs-dist and pdf-parse properly
   webpack: (config, { isServer }) => {
     // Fix canvas issues for both client and server builds
