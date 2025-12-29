@@ -10,16 +10,32 @@
 
 # Functions configuration - exclude large packages from Lambda bundle
 [functions]
-  # Do not bundle these large packages - Netlify will install them alongside the function
+  # Exclude large Firebase and Google Cloud packages
   external_node_modules = [
     "firebase-admin",
     "@google-cloud/firestore",
     "@google-cloud/storage",
     "@google-cloud/pubsub",
-    "google-auth-library"
+    "google-auth-library",
+    "grpc",
+    "protobufjs"
   ]
-  # Do not include .env files - they're provided via Netlify environment variables
-  included_files = []
+  # Explicitly ignore .env files - use Netlify environment variables instead
+  ignored_node_modules = ["**/.env*"]
+  node_bundler = "esbuild"
+
+# Specific configuration for Next.js server handler
+[functions."___netlify-server-handler"]
+  external_node_modules = [
+    "firebase-admin",
+    "@google-cloud/firestore",
+    "@google-cloud/storage",
+    "@google-cloud/pubsub",
+    "google-auth-library",
+    "grpc",
+    "protobufjs"
+  ]
+  node_bundler = "esbuild"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

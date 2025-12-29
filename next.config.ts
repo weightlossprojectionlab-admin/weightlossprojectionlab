@@ -13,11 +13,22 @@ const nextConfig: NextConfig = {
       config.resolve.alias.canvas = false
       config.resolve.alias.encoding = false
     } else {
-      // Server-side: Mark canvas as external to prevent webpack from bundling it
-      // This allows pdf-parse to use its native dependencies at runtime
+      // Server-side: Mark canvas and Firebase Admin packages as external
+      // This prevents webpack from bundling large packages that should be installed separately
       config.externals = config.externals || []
       if (Array.isArray(config.externals)) {
-        config.externals.push('canvas', '@napi-rs/canvas')
+        config.externals.push(
+          'canvas',
+          '@napi-rs/canvas',
+          // Externalize Firebase Admin and Google Cloud packages to reduce bundle size
+          'firebase-admin',
+          '@google-cloud/firestore',
+          '@google-cloud/storage',
+          '@google-cloud/pubsub',
+          'google-auth-library',
+          'grpc',
+          'protobufjs'
+        )
       }
     }
 
