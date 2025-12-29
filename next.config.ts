@@ -4,29 +4,6 @@ const nextConfig: NextConfig = {
   // Enable static export for Capacitor native builds
   output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : undefined,
 
-  // Externalize Firebase Admin and Google Cloud packages to reduce bundle size
-  // This prevents these large packages from being bundled into the server build
-  serverExternalPackages: [
-    'firebase-admin',
-    '@google-cloud/firestore',
-    '@google-cloud/storage',
-    '@google-cloud/pubsub',
-    'google-auth-library',
-    'grpc',
-    'protobufjs'
-  ],
-
-  // Exclude Firebase packages from Next.js file tracing
-  // This prevents them from being included in the function bundle
-  outputFileTracingExcludes: {
-    '*': [
-      'node_modules/firebase-admin/**/*',
-      'node_modules/@google-cloud/**/*',
-      'node_modules/google-auth-library/**/*',
-      'node_modules/grpc/**/*',
-      'node_modules/protobufjs/**/*'
-    ]
-  },
 
   // Configure webpack to handle pdfjs-dist and pdf-parse properly
   webpack: (config, { isServer }) => {
@@ -77,6 +54,14 @@ const nextConfig: NextConfig = {
   experimental: {
     ppr: false,
     optimizePackageImports: ['recharts', 'react-hot-toast', '@heroicons/react'],
+    // External packages for server components - prevents bundling large Firebase packages
+    serverComponentsExternalPackages: [
+      'firebase-admin',
+      '@google-cloud/firestore',
+      '@google-cloud/storage',
+      '@google-cloud/pubsub',
+      'google-auth-library'
+    ]
   },
   typescript: {
     // Type checking enabled - all type errors must be fixed before build
