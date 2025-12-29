@@ -360,22 +360,25 @@ export async function generateJob(input: {
   // Use template generator to create job posting
   const jobPosting = await generateJobPosting(classification, features)
 
-  return {
-    title: jobPosting.title || 'Engineering Position',
-    salaryMin: jobPosting.salaryMin || 120000,
-    salaryMax: jobPosting.salaryMax || 180000,
-    equity: jobPosting.equity || '0.1% - 0.5%',
-    location: jobPosting.location || 'Remote',
-    about: jobPosting.about || '',
-    whyCritical: jobPosting.whyCritical || '',
-    responsibilities: jobPosting.responsibilities || [],
-    requiredQualifications: jobPosting.requiredQualifications || [],
-    niceToHave: jobPosting.niceToHave || [],
-    successMetrics: jobPosting.successMetrics || { month1: [], month2: [], month3: [] },
-    whyJoin: jobPosting.whyJoin || [],
+  // Ensure all required fields have values
+  const result = {
+    title: (jobPosting.title ?? 'Engineering Position') as string,
+    salaryMin: (jobPosting.salaryMin ?? 120000) as number,
+    salaryMax: (jobPosting.salaryMax ?? 180000) as number,
+    equity: (jobPosting.equity ?? '0.1% - 0.5%') as string,
+    location: (jobPosting.location ?? 'Remote') as string,
+    about: (jobPosting.about ?? '') as string,
+    whyCritical: (jobPosting.whyCritical ?? '') as string,
+    responsibilities: (jobPosting.responsibilities ?? []) as string[],
+    requiredQualifications: (jobPosting.requiredQualifications ?? []) as string[],
+    niceToHave: (jobPosting.niceToHave ?? []) as string[],
+    successMetrics: (jobPosting.successMetrics ?? { month1: [], month2: [], month3: [] }) as { month1: string[]; month2: string[]; month3: string[] },
+    whyJoin: (jobPosting.whyJoin ?? []) as string[],
     confidence: classification.confidence,
     rationale: classification.reasoning.join('; '),
   }
+
+  return result
 }
 
 /**
