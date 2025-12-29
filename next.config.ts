@@ -1,8 +1,9 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Enable static export for Capacitor native builds, standalone for server builds
-  output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : 'standalone',
+  // Enable static export for Capacitor native builds
+  // Vercel handles standalone mode automatically, Netlify needs it explicit
+  output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : (process.env.VERCEL ? undefined : 'standalone'),
 
   // Externalize Firebase Admin packages to reduce Lambda bundle size
   serverExternalPackages: [
