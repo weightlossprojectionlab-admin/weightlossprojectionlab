@@ -31,12 +31,19 @@ const nextConfig: NextConfig = {
           '@napi-rs/canvas',
           // Externalize Firebase Admin and Google Cloud packages to reduce bundle size
           'firebase-admin',
+          'firebase-admin/app',
+          'firebase-admin/auth',
+          'firebase-admin/firestore',
+          'firebase-admin/storage',
           '@google-cloud/firestore',
           '@google-cloud/storage',
           '@google-cloud/pubsub',
           'google-auth-library',
           'grpc',
-          'protobufjs'
+          'protobufjs',
+          'google-gax',
+          '@grpc/grpc-js',
+          '@grpc/proto-loader'
         )
       }
     }

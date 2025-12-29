@@ -18,7 +18,10 @@
     "@google-cloud/pubsub",
     "google-auth-library",
     "grpc",
-    "protobufjs"
+    "protobufjs",
+    "google-gax",
+    "@grpc/grpc-js",
+    "@grpc/proto-loader"
   ]
   # Explicitly ignore .env files - use Netlify environment variables instead
   ignored_node_modules = ["**/.env*"]
@@ -33,7 +36,10 @@
     "@google-cloud/pubsub",
     "google-auth-library",
     "grpc",
-    "protobufjs"
+    "protobufjs",
+    "google-gax",
+    "@grpc/grpc-js",
+    "@grpc/proto-loader"
   ]
   node_bundler = "esbuild"
 
