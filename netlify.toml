@@ -10,11 +10,19 @@
 
 # Functions configuration - exclude large packages from Lambda bundle
 [functions]
-  # Use newer runtime with better external handling
   node_bundler = "esbuild"
-  # Increase memory and timeout for large apps
-  [[functions.node_compat]]
-    mode = "bundled"
+  external_node_modules = [
+    "firebase-admin",
+    "@google-cloud/firestore",
+    "@google-cloud/storage",
+    "@google-cloud/pubsub",
+    "google-auth-library",
+    "grpc",
+    "protobufjs",
+    "google-gax",
+    "@grpc/grpc-js",
+    "@grpc/proto-loader"
+  ]
 
 # Specific configuration for Next.js server handler
 [functions."___netlify-server-handler"]
@@ -36,15 +44,10 @@
     "protobufjs/minimal"
   ]
   node_bundler = "esbuild"
-  # Increase function size limit
-  included_files = ["!node_modules/firebase-admin/**", "!node_modules/@google-cloud/**"]
+  included_files = []
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-[plugins.inputs]
-  # Use new runtime features
-  experimental_edge = false
 
 # Environment variables configuration
 # Set these in Netlify UI: Site settings > Environment variables
