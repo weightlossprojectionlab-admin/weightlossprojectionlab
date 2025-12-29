@@ -44,6 +44,12 @@ export async function determineUserDestination(
     email: user?.email
   })
 
+  // Allow admin pages to handle their own authentication
+  if (currentPath.startsWith('/admin')) {
+    logger.debug('[AuthRouter] Admin page detected - letting admin layout handle auth')
+    return { type: 'stay', reason: 'Admin page - handled by admin layout' }
+  }
+
   // Step 1: Not authenticated → Must go to /auth
   if (!user) {
     logger.debug('[AuthRouter] No user - redirect to /auth')

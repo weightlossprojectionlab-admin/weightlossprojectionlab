@@ -3,23 +3,27 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { useSubscription } from '@/hooks/useSubscription'
 import { getAuthLoadingMessage } from '@/lib/auth-message-selector'
 import { logger } from '@/lib/logger'
 
 interface AuthGuardProps {
   children: React.ReactNode
   fallback?: React.ReactNode
+  requireAdmin?: boolean
 }
 
 /**
  * AuthGuard - Simple authentication check
  *
- * Only checks if user is authenticated with Firebase Auth.
+ * Checks if user is authenticated with Firebase Auth.
+ * Optionally checks for admin privileges.
  * Does NOT check profile or onboarding status.
  * Individual pages should use OnboardingRouter or DashboardRouter for those checks.
  */
-export default function AuthGuard({ children, fallback }: AuthGuardProps) {
+export default function AuthGuard({ children, fallback, requireAdmin = false }: AuthGuardProps) {
   const { user, loading } = useAuth()
+  const { isAdmin, loading: subscriptionLoading } = useSubscription()
   const router = useRouter()
   const [loadingMessage, setLoadingMessage] = useState('Loading your health journey...')
 
@@ -29,6 +33,13 @@ export default function AuthGuard({ children, fallback }: AuthGuardProps) {
       router.push('/auth')
     }
   }, [user, loading, router])
+
+  useEffect(() => {
+    if (!loading && !subscriptionLoading && user && requireAdmin && !isAdmin) {
+      logger.debug('🔒 AuthGuard: User is not admin, redirecting to dashboard')
+      router.push('/dashboard')
+    }
+  }, [user, loading, subscriptionLoading, requireAdmin, isAdmin, router])
 
   // Rotate loading message every 3 seconds for entertainment
   useEffect(() => {
@@ -45,8 +56,8 @@ export default function AuthGuard({ children, fallback }: AuthGuardProps) {
     }
   }, [loading])
 
-  // Show loading spinner while Firebase Auth initializes
-  if (loading) {
+  // Show loading spinner while Firebase Auth or subscription initializes
+  if (loading || (requireAdmin && subscriptionLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
@@ -68,7 +79,18 @@ export default function AuthGuard({ children, fallback }: AuthGuardProps) {
     )
   }
 
-  // User is authenticated → Render children
+  // If admin required but user is not admin, show access denied
+  if (requireAdmin && !isAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="text-muted-foreground">Access denied. Redirecting...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // User is authenticated (and admin if required) → Render children
   // (Individual pages will handle profile/onboarding checks)
   return <>{children}</>
 }

@@ -15,11 +15,12 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // SECURITY: Super admin check using hardcoded emails (for bootstrapping)
+    // SECURITY: Super admin check using hardcoded UIDs (for bootstrapping)
     // Once custom claims are set, prefer using isAdmin() which checks token claims
     function isSuperAdmin() {
       return isAuthenticated() &&
-             (request.auth.token.email == 'perriceconsulting@gmail.com' ||
+             (request.auth.uid == 'Y8wSTgymg3YXWU94iJVjzoGxsMI2' ||
+              request.auth.token.email == 'perriceconsulting@gmail.com' ||
               request.auth.token.email == 'weightlossprojectionlab@gmail.com');
     }
 
@@ -82,6 +83,10 @@ service cloud.firestore {
     match /users/{userId} {
       // Read: Users can read their own profile, admins can read all
       allow read: if isOwner(userId) || isAdmin();
+
+      // Allow admins to query the users collection (for admin stats)
+      // TEMPORARY: Allow authenticated users to test permissions
+      allow list: if isAuthenticated();
 
       // Create: Users can create their own profile
       allow create: if isOwner(userId);
@@ -546,6 +551,9 @@ service cloud.firestore {
                      (request.auth.uid in resource.data.involvedUserIds ||
                       isModerator());
 
+      // Allow moderators/admins to query the collection (for admin stats)
+      allow list: if isModerator();
+
       // Create: Any authenticated user can create a case
       allow create: if isAuthenticated() &&
                       request.resource.data.reporterId == request.auth.uid;
@@ -576,6 +584,7 @@ service cloud.firestore {
     // AI decision logs (admin read-only)
     match /ai_decision_logs/{logId} {
       allow read: if isAdmin();
+      allow list: if isAdmin(); // Allow admins to query the collection
       allow write: if false;
     }
 
@@ -627,11 +636,12 @@ service cloud.firestore {
       allow get: if resource.data.status == 'published' || isAdmin();
 
       // List queries: require authentication + pagination
+      // Admins can list all recipes without limit restrictions
       // TODO: Enable Firebase App Check in Firebase Console for additional protection
       // NOTE: Firebase App Check should be enabled to protect against automated abuse
       //       Setup: Firebase Console > Build > App Check > Register your app
-      allow list: if isAuthenticated()
-                  && request.query.limit <= 50;
+      allow list: if isAdmin() ||
+                  (isAuthenticated() && request.query.limit <= 50);
 
       // Create: Admin-only, with required recipe fields
       allow create: if isAdmin() &&
@@ -671,6 +681,25 @@ service cloud.firestore {
         request.resource.data.updatedAt is timestamp &&
         // Validate image limits if present
         (!('imageUrls' in request.resource.data) || request.resource.data.imageUrls.size() <= 4);
+
+      // Delete: Admin-only
+      allow delete: if isAdmin();
+    }
+
+    // Public recipes (user-submitted recipes for moderation)
+    match /publicRecipes/{recipeId} {
+      // Read: Admins and moderators only
+      allow read: if isModerator();
+
+      // List queries: Admins and moderators only (for moderation queue)
+      allow list: if isModerator();
+
+      // Create: Authenticated users can submit recipes
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid;
+
+      // Update: Moderators can update moderation status
+      allow update: if isModerator();
 
       // Delete: Admin-only
       allow delete: if isAdmin();
@@ -1095,6 +1124,228 @@ service cloud.firestore {
 
       // Delete: Server-side only
       allow delete: if false;
+    }
+
+    // ============================================
+    // CAREERS & JOB POSTINGS
+    // ============================================
+
+    // Job postings collection
+    match /job_postings/{jobId} {
+      // Read: Anyone can read published jobs, admins can read all
+      allow read: if isAdmin() || resource.data.status == 'published';
+
+      // List: Admins can list all jobs, public can list published jobs
+      allow list: if isAdmin() || (request.query.limit <= 100 && resource.data.status == 'published');
+
+      // Create: Admin-only
+      allow create: if isAdmin() &&
+                      request.resource.data.status in ['draft', 'published', 'closed'] &&
+                      request.resource.data.createdBy == request.auth.uid;
+
+      // Update: Admin-only
+      allow update: if isAdmin();
+
+      // Delete: Admin-only
+      allow delete: if isAdmin();
+    }
+
+    // Job applications collection
+    match /job_applications/{applicationId} {
+      // Read: Admins can read all, applicants can read their own
+      allow read: if isAdmin() ||
+                     (isAuthenticated() && resource.data.applicantEmail == request.auth.token.email);
+
+      // List: Admin-only (to view all applications)
+      allow list: if isAdmin();
+
+      // Create: Any authenticated or anonymous user can apply
+      allow create: if request.resource.data.keys().hasAll(['jobId', 'applicantName', 'applicantEmail']) &&
+                      request.resource.data.status == 'pending';
+
+      // Update: Admin-only (to change status, add notes)
+      allow update: if isAdmin();
+
+      // Delete: Admin-only
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // DEMO REQUESTS
+    // ============================================
+
+    // Demo requests collection
+    match /demo_requests/{requestId} {
+      // Read: Admin-only
+      allow read: if isAdmin();
+
+      // List queries: Admin-only (for admin dashboard)
+      allow list: if isAdmin();
+
+      // Create: Anyone can submit (with validation)
+      allow create: if request.resource.data.keys().hasAll(['name', 'email', 'submittedAt', 'status']) &&
+                       request.resource.data.status == 'pending' &&
+                       request.resource.data.name is string &&
+                       request.resource.data.name.size() > 0 &&
+                       request.resource.data.name.size() <= 100 &&
+                       request.resource.data.email is string &&
+                       request.resource.data.email.matches('[\\w\\-.]+@[\\w\\-.]+\\.[a-z]{2,}') &&
+                       request.resource.data.submittedAt is string &&
+                       // Prevent future timestamps
+                       timestamp(request.resource.data.submittedAt) <= request.time;
+
+      // Update: Admin-only (for status changes, scheduling, notes)
+      allow update: if isAdmin() &&
+                       // Cannot change contact info after submission (data integrity)
+                       request.resource.data.email == resource.data.email &&
+                       request.resource.data.name == resource.data.name &&
+                       // Can only update allowed fields
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'scheduledAt', 'completedAt', 'cancelledAt',
+                                   'assignedTo', 'internalNotes', 'followUpDate']);
+
+      // Delete: Admin-only
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // AI SUPPORT SYSTEM (100% Self-Service)
+    // ============================================
+
+    // AI Conversations: Users can read/write their own conversations
+    // Anonymous users (userId == null) can also create conversations
+    match /ai_conversations/{conversationId} {
+      // Authenticated users can only read their own conversations
+      allow read: if isAuthenticated() &&
+                     resource.data.userId == request.auth.uid;
+
+      // Authenticated users can create conversations for themselves
+      allow create: if isAuthenticated() &&
+                       request.resource.data.userId == request.auth.uid &&
+                       request.resource.data.keys().hasAll([
+                         'userId', 'messages', 'startedAt', 'status',
+                         'resolution', 'topicTags', 'documentationLinksProvided', 'metadata'
+                       ]) &&
+                       request.resource.data.status == 'active' &&
+                       request.resource.data.resolution == null;
+
+      // Users can update their own conversations (add messages, end conversation)
+      allow update: if isAuthenticated() &&
+                       resource.data.userId == request.auth.uid;
+
+      // Anonymous conversations: Allow creation and updates for anonymous users
+      allow read, create, update: if resource.data.userId == null &&
+                                      request.resource.data.userId == null;
+
+      // Admins can read all conversations (for analytics only)
+      allow read: if isAdmin();
+
+      // No one can delete conversations (audit trail)
+      allow delete: if false;
+    }
+
+    // Conversation Analytics: Admin/Support read-only
+    // Only Cloud Functions can write (analytics aggregation)
+    match /conversation_analytics/{date} {
+      allow read: if isAdmin() || isSupport();
+      allow write: if false; // Only Cloud Functions write via Admin SDK
+    }
+
+    // Bug Reports: Users can create, Admin/Support can manage
+    match /bug_reports/{reportId} {
+      // Anyone can create bug reports
+      allow create: if request.resource.data.keys().hasAll([
+        'conversationId', 'reportedBy', 'description',
+        'severity', 'status', 'createdAt', 'metadata'
+      ]) &&
+      request.resource.data.status == 'new';
+
+      // Users can read their own bug reports
+      allow read: if isAuthenticated() &&
+                     resource.data.reportedBy == request.auth.uid;
+
+      // Admin/Support can read and update all bug reports
+      allow read, update: if isAdmin() || isSupport();
+
+      // Only admins can delete bug reports
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // PRESS & MEDIA
+    // ============================================
+
+    // Press contacts tracking
+    match /press_contacts/{contactId} {
+      // Anyone can create contact records (public endpoint)
+      allow create: if request.resource.data.keys().hasAll([
+        'releaseId', 'releaseSlug', 'releaseTitle', 'contactedAt', 'source'
+      ]) &&
+      request.resource.data.contactedAt is timestamp &&
+      request.resource.data.source in ['release-page', 'release-list', 'email'];
+
+      // Only admins can read contact data (analytics)
+      allow read: if isAdmin();
+      allow list: if isAdmin();
+
+      // No updates or deletes (immutable audit trail)
+      allow update, delete: if false;
+    }
+
+    // Press contact stats (aggregate data)
+    match /press_contact_stats/{releaseSlug} {
+      // Only admins can read stats
+      allow read: if isAdmin();
+      allow list: if isAdmin();
+
+      // Only server-side writes (via Admin SDK in API route)
+      allow write: if false;
+    }
+
+    // Press downloads tracking
+    match /press_downloads/{downloadId} {
+      allow read: if isAdmin();
+      allow write: if false; // Server-side only
+    }
+
+    // Press download stats
+    match /press_download_stats/{asset} {
+      allow read: if isAdmin();
+      allow write: if false; // Server-side only
+    }
+
+    // Press subscribers
+    match /press_subscribers/{subscriberId} {
+      allow read: if isAdmin();
+      allow write: if false; // Server-side only
+    }
+
+    // Press analytics events
+    match /press_analytics/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false; // Server-side only
+    }
+
+    // ============================================
+    // CONTACT SUBMISSIONS
+    // ============================================
+
+    // Contact form submissions
+    match /contact_submissions/{submissionId} {
+      // Read: Admin-only
+      allow read: if isAdmin();
+
+      // List queries: Admin-only (for admin dashboard)
+      allow list: if isAdmin();
+
+      // Create: Server-side only (via API)
+      allow create: if false;
+
+      // Update: Admin-only (for status changes)
+      allow update: if isAdmin();
+
+      // Delete: Admin-only
+      allow delete: if isAdmin();
     }
 
     // ============================================

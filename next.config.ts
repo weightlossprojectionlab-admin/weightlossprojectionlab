@@ -4,6 +4,30 @@ const nextConfig: NextConfig = {
   // Enable static export for Capacitor native builds
   output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : undefined,
 
+  // Externalize Firebase Admin and Google Cloud packages to reduce bundle size
+  // This prevents these large packages from being bundled into the server build
+  serverExternalPackages: [
+    'firebase-admin',
+    '@google-cloud/firestore',
+    '@google-cloud/storage',
+    '@google-cloud/pubsub',
+    'google-auth-library',
+    'grpc',
+    'protobufjs'
+  ],
+
+  // Exclude Firebase packages from Next.js file tracing
+  // This prevents them from being included in the function bundle
+  outputFileTracingExcludes: {
+    '*': [
+      'node_modules/firebase-admin/**/*',
+      'node_modules/@google-cloud/**/*',
+      'node_modules/google-auth-library/**/*',
+      'node_modules/grpc/**/*',
+      'node_modules/protobufjs/**/*'
+    ]
+  },
+
   // Configure webpack to handle pdfjs-dist and pdf-parse properly
   webpack: (config, { isServer }) => {
     // Fix canvas issues for both client and server builds
@@ -13,11 +37,22 @@ const nextConfig: NextConfig = {
       config.resolve.alias.canvas = false
       config.resolve.alias.encoding = false
     } else {
-      // Server-side: Mark canvas as external to prevent webpack from bundling it
-      // This allows pdf-parse to use its native dependencies at runtime
+      // Server-side: Mark canvas and Firebase Admin packages as external
+      // This prevents webpack from bundling large packages that should be installed separately
       config.externals = config.externals || []
       if (Array.isArray(config.externals)) {
-        config.externals.push('canvas', '@napi-rs/canvas')
+        config.externals.push(
+          'canvas',
+          '@napi-rs/canvas',
+          // Externalize Firebase Admin and Google Cloud packages to reduce bundle size
+          'firebase-admin',
+          '@google-cloud/firestore',
+          '@google-cloud/storage',
+          '@google-cloud/pubsub',
+          'google-auth-library',
+          'grpc',
+          'protobufjs'
+        )
       }
     }
 
@@ -74,6 +109,18 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   async headers() {
@@ -119,9 +166,9 @@ const nextConfig: NextConfig = {
                   "default-src 'self'",
                   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://cdn.jsdelivr.net https://unpkg.com",
                   "style-src 'self' 'unsafe-inline'",
-                  "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com",
+                  "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://images.unsplash.com https://picsum.photos",
                   "font-src 'self' data:",
-                  "connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://api.stripe.com https://generativelanguage.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://lh3.googleusercontent.com",
+                  "connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://api.stripe.com https://generativelanguage.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://lh3.googleusercontent.com https://images.unsplash.com https://picsum.photos https://api.openai.com",
                   "frame-src https://js.stripe.com https://firebasestorage.googleapis.com https://accounts.google.com https://weightlossprojectionlab-8b284.firebaseapp.com https://app.netlify.com",
                   "frame-ancestors 'none'",
                   "base-uri 'self'",

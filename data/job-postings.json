@@ -1,0 +1,76 @@
+{
+  "jobs": [
+    {
+      "id": 1,
+      "title": "Senior Full-Stack Engineer (TypeScript/React/Firebase)",
+      "count": 2,
+      "summary": "Build AI-powered health tech with React 19, Next.js 16, Firebase. Accelerate feature velocity 2x."
+    },
+    {
+      "id": 2,
+      "title": "DevOps/Site Reliability Engineer (SRE)",
+      "count": 1,
+      "summary": "Build production infrastructure, monitoring, and deployment pipelines for healthtech platform."
+    },
+    {
+      "id": 3,
+      "title": "Mobile Engineer (iOS/Android - Capacitor)",
+      "count": 1,
+      "summary": "Launch iOS/Android apps with HealthKit/Google Fit integrations. Unlock 60% of TAM."
+    },
+    {
+      "id": 4,
+      "title": "AI/ML Engineer (Customer Support & LLM Optimization)",
+      "count": 1,
+      "summary": "Build enterprise AI support chatbot (save $250K-500K/year) and optimize Gemini costs 50%."
+    },
+    {
+      "id": 5,
+      "title": "Product Manager (HealthTech)",
+      "count": 1,
+      "summary": "Define roadmap, prioritize features, drive product-market fit for AI health platform."
+    },
+    {
+      "id": 6,
+      "title": "QA/Test Automation Engineer",
+      "count": 1,
+      "summary": "Build test automation framework, increase coverage to 80%+, prevent production bugs."
+    },
+    {
+      "id": 7,
+      "title": "Security Engineer (HIPAA Compliance Specialist)",
+      "count": 1,
+      "summary": "Complete HIPAA compliance, penetration testing, security audits for healthcare platform."
+    },
+    {
+      "id": 8,
+      "title": "Technical Writer (API Documentation)",
+      "count": 1,
+      "summary": "Create API docs, user guides, developer onboarding. Reduce support burden 40%."
+    },
+    {
+      "id": 9,
+      "title": "UI/UX Designer",
+      "count": 1,
+      "summary": "Improve conversion optimization, accessibility (WCAG 2.1 AA), mobile UX."
+    },
+    {
+      "id": 10,
+      "title": "Customer Success Manager",
+      "count": 1,
+      "summary": "Handle enterprise accounts, onboarding, retention. Reduce churn 20%."
+    },
+    {
+      "id": 11,
+      "title": "Marketing/Growth Manager",
+      "count": 1,
+      "summary": "User acquisition, SEO, content marketing. Reduce CAC, increase organic growth."
+    },
+    {
+      "id": 12,
+      "title": "Data Engineer/Analyst",
+      "count": 1,
+      "summary": "Build analytics pipeline, user insights, churn prediction. Inform product decisions with data."
+    }
+  ]
+}

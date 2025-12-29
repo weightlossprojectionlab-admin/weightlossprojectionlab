@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/firebase'
-import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
+import { adminDb } from '@/lib/firebase-admin'
+import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
 import { logger } from '@/lib/logger'
 
@@ -28,14 +28,16 @@ export async function POST(
     const { takenAt, notes } = body
 
     // Get the medication document
-    const medicationRef = doc(db, `users/${ownerUserId}/patients/${patientId}/medications/${medicationId}`)
-    const medicationSnap = await getDoc(medicationRef)
+    const medicationRef = adminDb.collection('users').doc(ownerUserId)
+      .collection('patients').doc(patientId)
+      .collection('medications').doc(medicationId)
+    const medicationSnap = await medicationRef.get()
 
-    if (!medicationSnap.exists()) {
+    if (!medicationSnap.exists) {
       return NextResponse.json({ error: 'Medication not found' }, { status: 404 })
     }
 
-    const medication = medicationSnap.data()
+    const medication = medicationSnap.data()!
     const now = takenAt ? new Date(takenAt) : new Date()
 
     // Calculate new quantity remaining (if quantity is tracked)
@@ -48,11 +50,10 @@ export async function POST(
     }
 
     // Log the dose in adherenceLogs subcollection
-    const adherenceLogsRef = collection(db, `users/${ownerUserId}/patients/${patientId}/medications/${medicationId}/adherenceLogs`)
-    await addDoc(adherenceLogsRef, {
+    await medicationRef.collection('adherenceLogs').add({
       takenAt: Timestamp.fromDate(now),
       loggedBy: userId,
-      loggedAt: serverTimestamp(),
+      loggedAt: FieldValue.serverTimestamp(),
       notes: notes || null
     })
 
@@ -68,7 +69,7 @@ export async function POST(
     // Update medication document
     const updates: any = {
       lastTaken: Timestamp.fromDate(now),
-      lastModified: serverTimestamp()
+      lastModified: FieldValue.serverTimestamp()
     }
 
     if (quantityRemaining !== undefined) {
@@ -79,10 +80,10 @@ export async function POST(
       updates.adherenceRate = adherenceRate
     }
 
-    await updateDoc(medicationRef, updates)
+    await medicationRef.update(updates)
 
     // Fetch updated medication
-    const updatedSnap = await getDoc(medicationRef)
+    const updatedSnap = await medicationRef.get()
     const updatedMedication = {
       id: updatedSnap.id,
       ...updatedSnap.data(),
@@ -130,21 +131,18 @@ async function calculateAdherenceRate(
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    const adherenceLogsRef = collection(
-      db,
-      `users/${ownerUserId}/patients/${patientId}/medications/${medicationId}/adherenceLogs`
-    )
+    const adherenceLogsRef = adminDb.collection('users').doc(ownerUserId)
+      .collection('patients').doc(patientId)
+      .collection('medications').doc(medicationId)
+      .collection('adherenceLogs')
 
     // For simplicity, we'll just count total logs
     // A more sophisticated implementation would query with date filters
-    const { getDocs, query: firestoreQuery, where, orderBy } = await import('firebase/firestore')
-    const q = firestoreQuery(
-      adherenceLogsRef,
-      where('takenAt', '>=', Timestamp.fromDate(thirtyDaysAgo)),
-      orderBy('takenAt', 'desc')
-    )
+    const snapshot = await adherenceLogsRef
+      .where('takenAt', '>=', Timestamp.fromDate(thirtyDaysAgo))
+      .orderBy('takenAt', 'desc')
+      .get()
 
-    const snapshot = await getDocs(q)
     const actualDoses = snapshot.size
 
     // Calculate expected doses (30 days * doses per day)

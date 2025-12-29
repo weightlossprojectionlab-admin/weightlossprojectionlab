@@ -140,7 +140,7 @@ export const registerBiometric = async (userId: string, userEmail: string): Prom
   const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
     challenge: challenge as BufferSource,
     rp: {
-      name: 'Weight Loss Progress Lab',
+      name: 'Weight Loss Projection Lab',
       id: window.location.hostname,
     },
     user: {

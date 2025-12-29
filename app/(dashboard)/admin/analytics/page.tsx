@@ -21,6 +21,7 @@ import {
 import Link from 'next/link'
 import { auth } from '@/lib/firebase'
 import type { HealthVitalsSummary } from '@/types'
+import { AISupportAnalytics } from '@/components/admin/AISupportAnalytics'
 
 // Dynamic imports for Recharts components to reduce bundle size
 const AdminWeightLogsChart = dynamic(() => import('@/components/charts/AdminWeightLogsChart').then(m => ({ default: m.AdminWeightLogsChart })), {
@@ -1304,7 +1305,13 @@ function PlatformAnalytics() {
     setError(null)
     const url = `/api/admin/analytics?range=${dateRange}`
     try {
-      const response = await fetch(url)
+      const user = auth.currentUser
+      if (!user) throw new Error('User not authenticated')
+      const token = await user.getIdToken()
+
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Failed to load analytics' }))
         throw new Error(errorData.error || 'Failed to load analytics')
@@ -1650,6 +1657,11 @@ function PlatformAnalytics() {
         </div>
       </div>
 
+      {/* AI Support Analytics */}
+      <div className="mb-8">
+        <AISupportAnalytics />
+      </div>
+
       {/* Info */}
       <div className="bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-6">
         <h3 className="text-lg font-semibold text-accent-dark mb-2">Analytics Notes</h3>
@@ -1657,6 +1669,7 @@ function PlatformAnalytics() {
           <li>• DAU/WAU/MAU are calculated based on lastActiveAt timestamps</li>
           <li>• Retention rates measure users who return after signup</li>
           <li>• Activity metrics aggregate all user logs across the platform</li>
+          <li>• AI Support metrics show 30-day rolling window of conversation data</li>
           <li>• Data refreshes every 5 minutes for real-time insights</li>
         </ul>
       </div>

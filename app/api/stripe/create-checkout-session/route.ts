@@ -101,6 +101,9 @@ export async function POST(request: NextRequest) {
           quantity: 1
         }
       ],
+      automatic_tax: {
+        enabled: true, // Enable automatic tax calculation
+      },
       success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/profile?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/profile`,
       metadata: {

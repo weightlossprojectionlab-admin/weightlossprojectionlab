@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Check if user is admin
     const adminEmails = [
       'perriceconsulting@gmail.com',
-      'weigthlossprojectionlab@gmail.com'
+      'weightlossprojectionlab@gmail.com'
     ]
 
     if (!adminEmails.includes(decodedToken.email || '')) {
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
     // Check if user is admin
     const adminEmails = [
       'perriceconsulting@gmail.com',
-      'weigthlossprojectionlab@gmail.com'
+      'weightlossprojectionlab@gmail.com'
     ]
 
     if (!adminEmails.includes(decodedToken.email || '')) {
