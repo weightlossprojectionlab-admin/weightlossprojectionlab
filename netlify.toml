@@ -40,18 +40,6 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-  [plugins.inputs]
-    # Configure Next.js plugin to externalize Firebase packages
-    external_node_modules = [
-      "firebase-admin",
-      "@google-cloud/firestore",
-      "@google-cloud/storage",
-      "@google-cloud/pubsub",
-      "google-auth-library",
-      "grpc",
-      "protobufjs"
-    ]
-
 # Environment variables configuration
 # Set these in Netlify UI: Site settings > Environment variables
 #

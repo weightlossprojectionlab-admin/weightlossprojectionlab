@@ -4,6 +4,18 @@ const nextConfig: NextConfig = {
   // Enable static export for Capacitor native builds
   output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : undefined,
 
+  // Externalize Firebase Admin and Google Cloud packages to reduce bundle size
+  // This prevents these large packages from being bundled into the server build
+  serverComponentsExternalPackages: [
+    'firebase-admin',
+    '@google-cloud/firestore',
+    '@google-cloud/storage',
+    '@google-cloud/pubsub',
+    'google-auth-library',
+    'grpc',
+    'protobufjs'
+  ],
+
   // Configure webpack to handle pdfjs-dist and pdf-parse properly
   webpack: (config, { isServer }) => {
     // Fix canvas issues for both client and server builds
