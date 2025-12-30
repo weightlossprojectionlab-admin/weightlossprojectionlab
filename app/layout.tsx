@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { ConditionalProviders } from '@/components/ConditionalProviders'
 import { CsrfInitializer } from '@/components/CsrfInitializer'
 import { ConditionalFooter } from '@/components/ConditionalFooter'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 
 // Force dynamic rendering for all pages to skip static generation
@@ -65,6 +66,7 @@ export default function RootLayout({
           <ConditionalProviders>{children}</ConditionalProviders>
         </div>
         <ConditionalFooter />
+        <SpeedInsights />
       </body>
     </html>
   )
