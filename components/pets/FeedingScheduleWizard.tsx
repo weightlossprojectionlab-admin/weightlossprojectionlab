@@ -98,7 +98,14 @@ export function FeedingScheduleWizard({ isOpen, onClose, petId, petName, onSucce
         defaultPortionSize: formData.defaultPortionSize,
         defaultPortionUnit: formData.defaultPortionUnit,
         reminderEnabled: formData.reminderEnabled,
-        reminderMinutesBefore: formData.reminderMinutesBefore
+        reminderMinutesBefore: formData.reminderMinutesBefore,
+        isActive: true,
+        startedAt: new Date().toISOString(),
+        notificationChannels: {
+          push: true,
+          email: false,
+          sms: false
+        }
       })
 
       toast.success(`Feeding schedule created for ${petName}!`)
