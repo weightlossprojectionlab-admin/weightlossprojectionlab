@@ -1,0 +1,213 @@
+/**
+ * Pet Health Tracking Configuration
+ * Species-specific dashboard features, vitals, and tracking capabilities
+ */
+
+import { VitalType } from '@/types/medical'
+
+// Species-specific vitals that can be tracked
+export const PET_VITAL_CONFIG: Record<string, VitalType[]> = {
+  Dog: ['weight', 'temperature'],
+  Cat: ['weight', 'temperature'],
+  Bird: ['weight'],
+  Fish: ['temperature'], // Water temperature
+  Rabbit: ['weight', 'temperature'],
+  'Guinea Pig': ['weight'],
+  Hamster: ['weight'],
+  Reptile: ['weight', 'temperature'], // Basking spot temperature
+  Other: ['weight']
+}
+
+// Default vitals for unknown species
+export const DEFAULT_PET_VITALS: VitalType[] = ['weight']
+
+// Dashboard tabs visible for each species
+export const PET_TAB_VISIBILITY: Record<string, string[]> = {
+  Dog: ['info', 'vitals', 'feeding', 'activity', 'medications', 'appointments', 'grooming', 'settings'],
+  Cat: ['info', 'vitals', 'feeding', 'activity', 'medications', 'appointments', 'grooming', 'settings'],
+  Bird: ['info', 'vitals', 'feeding', 'medications', 'appointments', 'settings'],
+  Fish: ['info', 'vitals', 'feeding', 'settings'], // Fish rarely need vet appointments
+  Rabbit: ['info', 'vitals', 'feeding', 'medications', 'appointments', 'grooming', 'settings'],
+  'Guinea Pig': ['info', 'vitals', 'feeding', 'medications', 'appointments', 'grooming', 'settings'],
+  Hamster: ['info', 'vitals', 'feeding', 'medications', 'settings'], // Hamsters rarely need vet visits
+  Reptile: ['info', 'vitals', 'feeding', 'medications', 'appointments', 'settings'],
+  Other: ['info', 'vitals', 'feeding', 'medications', 'settings']
+}
+
+// Human dashboard tabs for reference
+export const HUMAN_TAB_VISIBILITY: string[] = [
+  'info', 'vitals', 'meals', 'steps', 'medications', 'recipes', 'appointments', 'settings'
+]
+
+// Species-specific label overrides
+export const PET_TAB_LABELS: Record<string, Record<string, string>> = {
+  Dog: {
+    feeding: '🍖 Feeding',
+    activity: '🏃 Exercise',
+    vitals: '🩺 Vitals',
+    grooming: '✂️ Grooming'
+  },
+  Cat: {
+    feeding: '🐟 Feeding',
+    activity: '🎾 Activity',
+    vitals: '🩺 Vitals',
+    grooming: '✂️ Grooming'
+  },
+  Bird: {
+    feeding: '🌾 Feeding',
+    vitals: '🩺 Vitals'
+  },
+  Fish: {
+    feeding: '🐠 Feeding',
+    vitals: '🌡️ Water Vitals'
+  },
+  Rabbit: {
+    feeding: '🥕 Feeding',
+    activity: '🏃 Exercise',
+    vitals: '🩺 Vitals',
+    grooming: '✂️ Grooming'
+  },
+  'Guinea Pig': {
+    feeding: '🥬 Feeding',
+    activity: '🎡 Exercise',
+    vitals: '🩺 Vitals',
+    grooming: '✂️ Grooming'
+  },
+  Hamster: {
+    feeding: '🌰 Feeding',
+    vitals: '🩺 Vitals'
+  },
+  Reptile: {
+    feeding: '🦗 Feeding',
+    vitals: '🌡️ Habitat Vitals'
+  }
+}
+
+// Helper functions
+
+/**
+ * Get available vitals for a pet species
+ */
+export function getPetVitals(species?: string): VitalType[] {
+  if (!species) return DEFAULT_PET_VITALS
+  return PET_VITAL_CONFIG[species] || DEFAULT_PET_VITALS
+}
+
+/**
+ * Get visible tabs for a pet species
+ */
+export function getPetTabs(species?: string): string[] {
+  if (!species) return PET_TAB_VISIBILITY.Other
+  return PET_TAB_VISIBILITY[species] || PET_TAB_VISIBILITY.Other
+}
+
+/**
+ * Get tab label for a species (with emoji)
+ */
+export function getPetTabLabel(species: string, tab: string): string {
+  const speciesLabels = PET_TAB_LABELS[species] || {}
+  return speciesLabels[tab] || getDefaultTabLabel(tab)
+}
+
+/**
+ * Get default tab labels for fallback
+ */
+function getDefaultTabLabel(tab: string): string {
+  const defaultLabels: Record<string, string> = {
+    info: 'ℹ️ Info',
+    vitals: '🩺 Vitals',
+    feeding: '🍽️ Feeding',
+    meals: '🍽️ Meals',
+    steps: '🚶 Steps',
+    activity: '🏃 Activity',
+    medications: '💊 Meds',
+    recipes: '📖 Recipes',
+    appointments: '📅 Appt',
+    grooming: '✂️ Groom',
+    settings: '⚙️ Settings'
+  }
+  return defaultLabels[tab] || tab
+}
+
+/**
+ * Check if a vital type is allowed for a pet species
+ */
+export function canTrackVital(species: string | undefined, vitalType: VitalType): boolean {
+  if (!species) return DEFAULT_PET_VITALS.includes(vitalType)
+  const allowedVitals = PET_VITAL_CONFIG[species] || DEFAULT_PET_VITALS
+  return allowedVitals.includes(vitalType)
+}
+
+/**
+ * Check if a tab should be visible for a pet species
+ */
+export function shouldShowTab(species: string | undefined, tab: string): boolean {
+  if (!species) return PET_TAB_VISIBILITY.Other.includes(tab)
+  const visibleTabs = PET_TAB_VISIBILITY[species] || PET_TAB_VISIBILITY.Other
+  return visibleTabs.includes(tab)
+}
+
+/**
+ * Get human-readable vital name for pets
+ */
+export function getPetVitalName(vitalType: VitalType, species?: string): string {
+  // Special cases for specific species
+  if (vitalType === 'temperature') {
+    if (species === 'Fish') return 'Water Temperature'
+    if (species === 'Reptile') return 'Habitat Temperature'
+    return 'Temperature'
+  }
+
+  // Default vital names
+  const vitalNames: Record<VitalType, string> = {
+    weight: 'Weight',
+    temperature: 'Temperature',
+    blood_pressure: 'Blood Pressure',
+    blood_sugar: 'Blood Sugar',
+    pulse_oximeter: 'Oxygen Level'
+  }
+
+  return vitalNames[vitalType] || vitalType
+}
+
+/**
+ * Get species emoji for UI
+ */
+export function getSpeciesEmoji(species?: string): string {
+  const emojiMap: Record<string, string> = {
+    Dog: '🐕',
+    Cat: '🐱',
+    Bird: '🐦',
+    Fish: '🐠',
+    Rabbit: '🐰',
+    'Guinea Pig': '🐹',
+    Hamster: '🐹',
+    Reptile: '🦎',
+    Other: '🐾'
+  }
+  return emojiMap[species || 'Other'] || '🐾'
+}
+
+/**
+ * Check if species supports step/activity tracking
+ */
+export function supportsActivityTracking(species?: string): boolean {
+  return ['Dog', 'Cat', 'Rabbit', 'Guinea Pig'].includes(species || '')
+}
+
+/**
+ * Check if species needs grooming tracking
+ */
+export function supportsGroomingTracking(species?: string): boolean {
+  return ['Dog', 'Cat', 'Rabbit', 'Guinea Pig'].includes(species || '')
+}
+
+/**
+ * Get activity label for species
+ */
+export function getActivityLabel(species?: string): string {
+  if (species === 'Dog') return 'Exercise Minutes'
+  if (species === 'Cat') return 'Activity Level'
+  if (species === 'Rabbit' || species === 'Guinea Pig') return 'Exercise Time'
+  return 'Activity'
+}
