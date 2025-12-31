@@ -560,6 +560,77 @@ function generateHealthReport(data: any): string {
 
 // Helper functions that are report-specific (not moved to utility yet)
 
+function getPositiveHighlights(weight: any, activity: any, nutrition: any, vitals: any, medications: any, docsCount: number): string[] {
+  const highlights = []
+
+  if (weight.logsCount >= 7) highlights.push(`Consistent weight tracking with ${weight.logsCount} logs`)
+  if (weight.status === 'losing') highlights.push(`Making progress toward weight goal`)
+  if (activity && activity.status === 'meeting_goal') highlights.push(`Meeting daily step goal consistently`)
+  if (nutrition && nutrition.mealsCount >= 3) highlights.push(`Logging meals regularly (${nutrition.mealsCount} today)`)
+  if (vitals.totalCount >= 5) highlights.push(`Active vital signs monitoring (${vitals.totalCount} records)`)
+  if (medications.status === 'active') highlights.push(`Medication regimen documented and tracked`)
+  if (docsCount >= 3) highlights.push(`Medical documents organized (${docsCount} files)`)
+
+  return highlights.length > 0 ? highlights : ['Starting to build healthy tracking habits']
+}
+
+function getRecommendations(weight: any, activity: any, nutrition: any, vitals: any, medications: any): string[] {
+  const recommendations = []
+
+  if (weight.status === 'no_data' || weight.logsCount < 3) {
+    recommendations.push('Log weight regularly to track progress and identify trends')
+  }
+  if (activity && activity.status === 'below_goal') {
+    recommendations.push('Try to increase daily steps gradually - even 500 more steps helps!')
+  }
+  if (nutrition && nutrition.status === 'no_data') {
+    recommendations.push('Start logging meals to understand calorie intake and patterns')
+  }
+  if (nutrition && nutrition.status === 'under_goal' && nutrition.calories < nutrition.goal * 0.5) {
+    recommendations.push('⚠️ Calorie intake is very low - ensure adequate nutrition for health and energy')
+  } else if (nutrition && nutrition.status === 'under_goal') {
+    recommendations.push('Consider adding healthy snacks or larger portions to meet calorie goals')
+  }
+  if (nutrition && nutrition.status === 'over_goal') {
+    recommendations.push('Consider smaller portions or healthier substitutions to stay within calorie goal')
+  }
+  if (vitals.status === 'no_data') {
+    recommendations.push('Monitor vital signs regularly for a complete health picture')
+  }
+
+  return recommendations.length > 0 ? recommendations : ['Continue current healthy habits and stay consistent']
+}
+
+function getNextSteps(weight: any, activity: any, nutrition: any, vitals: any, medications: any): string[] {
+  const steps = []
+
+  if (weight.status === 'no_data' || weight.logsCount < 7) {
+    steps.push('Log weight weekly to establish a baseline and track trends')
+  } else if (weight.status === 'losing') {
+    steps.push('Maintain current eating and activity habits - they\'re working!')
+  }
+
+  if (activity && (activity.status === 'below_goal' || activity.status === 'close_to_goal')) {
+    steps.push('Set a daily step reminder and aim for short walks after meals')
+  }
+
+  if (nutrition && nutrition.mealsCount < 2) {
+    steps.push('Log all meals today to get accurate calorie tracking')
+  }
+
+  if (steps.length < 3 && vitals.status !== 'recorded') {
+    steps.push('Record vital signs to monitor overall health indicators')
+  }
+
+  if (steps.length === 0) {
+    steps.push('Keep up the great work with consistent tracking!')
+    steps.push('Review progress weekly and adjust goals as needed')
+    steps.push('Consider consulting healthcare provider for personalized guidance')
+  }
+
+  return steps.slice(0, 3)
+}
+
 function getDoctorDiscussionPoints(weight: any, nutrition: any, vitals: any, medications: any, age: number): string[] {
   const points = []
 
