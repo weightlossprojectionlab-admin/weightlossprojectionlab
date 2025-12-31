@@ -75,6 +75,9 @@ function ProfileContent() {
     ? familyMembers.find(m => m.id === selectedMemberId)
     : null
 
+  // Detect if viewing a pet profile
+  const isPetProfile = currentlyViewingMember?.type === 'pet' || !!currentlyViewingMember?.species
+
   // Get the effective patient ID for medications (DRY)
   const effectivePatientId = selectedMemberId || user?.uid || ''
 
@@ -533,9 +536,10 @@ function ProfileContent() {
           />
         )}
 
-        {/* Account Information */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-foreground mb-4">Account Information</h2>
+        {/* Account Information - Only show for own profile */}
+        {!currentlyViewingMember && (
+          <div className="bg-card rounded-lg p-6 shadow-sm">
+            <h2 className="text-lg font-medium text-foreground mb-4">Account Information</h2>
           <div className="space-y-3">
             <div>
               <label className="text-label mb-1">Email</label>
@@ -551,10 +555,11 @@ function ProfileContent() {
               </p>
             </div>
           </div>
-        </div>
+          </div>
+        )}
 
-        {/* Subscription Section */}
-        {subscription && !subscriptionLoading && (
+        {/* Subscription Section - Only show for own profile */}
+        {!currentlyViewingMember && subscription && !subscriptionLoading && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
             <h2 className="text-lg font-medium text-foreground mb-4">Subscription</h2>
 
@@ -691,8 +696,8 @@ function ProfileContent() {
           </div>
         )}
 
-        {/* Biometric Authentication Settings */}
-        {mounted && (
+        {/* Biometric Authentication Settings - Only show for own profile */}
+        {!currentlyViewingMember && mounted && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
             <h2 className="text-lg font-medium text-foreground mb-4">
               Biometric Authentication
@@ -780,8 +785,9 @@ function ProfileContent() {
           </div>
         )}
 
-        {/* App Settings */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
+        {/* App Settings - Only show step tracking for own profile */}
+        {!currentlyViewingMember && (
+          <div className="bg-card rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground mb-4">App Settings</h2>
           <div className="space-y-4">
             {/* Automatic Step Tracking */}
@@ -812,10 +818,12 @@ function ProfileContent() {
             </div>
 
           </div>
-        </div>
+          </div>
+        )}
 
-        {/* Reminders Settings */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
+        {/* Reminders Settings - Hide vital reminders for pets */}
+        {!isPetProfile && (
+          <div className="bg-card rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-foreground">⏰ Vital Sign Reminders</h2>
             <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
@@ -1003,7 +1011,323 @@ function ProfileContent() {
               Use the <strong>Vitals Wizard</strong> in the patient detail page for advanced scheduling with compliance tracking.
             </p>
           </div>
-        </div>
+          </div>
+        )}
+
+        {/* Pet Reminder Settings - Show for pets instead of vital reminders */}
+        {isPetProfile && (
+          <div className="bg-card rounded-lg p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">{currentlyViewingMember?.species === 'Dog' ? '🐕' : currentlyViewingMember?.species === 'Cat' ? '🐱' : currentlyViewingMember?.species === 'Bird' ? '🦜' : currentlyViewingMember?.species === 'Fish' ? '🐠' : '🐾'}</span>
+                <h2 className="text-lg font-medium text-foreground">Pet Health Reminders</h2>
+              </div>
+              <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
+                {currentlyViewingMember?.name}
+              </span>
+            </div>
+            <p className="text-description mb-6">
+              Configure reminders for <strong>{currentlyViewingMember?.name}'s</strong> health and care needs.
+            </p>
+
+            <div className="space-y-6">
+              {/* Feeding Reminders */}
+              <div className="border-b border-border pb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xl">🔔</span>
+                      <h3 className="font-medium text-foreground">Feeding Reminders</h3>
+                    </div>
+                    <p className="text-description mt-1">
+                      Get notified when it's time to feed {currentlyViewingMember?.name}
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const currentValue = profileData?.preferences?.petReminders?.feeding?.enabled ?? true
+
+                        const auth = getAuth()
+                        const currentUser = auth.currentUser
+                        if (!currentUser) throw new Error('Not authenticated')
+                        const authToken = await currentUser.getIdToken()
+
+                        const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
+                          method: 'PUT',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`,
+                          },
+                          body: JSON.stringify({
+                            preferences: {
+                              ...profileData?.preferences,
+                              petReminders: {
+                                ...profileData?.preferences?.petReminders,
+                                feeding: {
+                                  enabled: !currentValue,
+                                  minutesBefore: profileData?.preferences?.petReminders?.feeding?.minutesBefore || 15
+                                }
+                              }
+                            }
+                          })
+                        })
+
+                        if (!response.ok) throw new Error('Failed to update reminder settings')
+
+                        const result = await response.json()
+                        setProfileData(result.data)
+
+                        toast.success(
+                          !currentValue
+                            ? 'Feeding reminders enabled'
+                            : 'Feeding reminders disabled'
+                        )
+                      } catch (error) {
+                        toast.error('Failed to update reminder settings')
+                      }
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                      profileData?.preferences?.petReminders?.feeding?.enabled ?? true
+                        ? 'bg-primary'
+                        : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        profileData?.preferences?.petReminders?.feeding?.enabled ?? true
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {(profileData?.preferences?.petReminders?.feeding?.enabled ?? true) && (
+                  <div className="mt-4 pl-4 border-l-2 border-primary/30">
+                    <p className="text-description-sm">
+                      ⚙️ Feeding times are configured in the <a href={`/patients/${currentlyViewingMember?.id}`} className="text-primary hover:underline">Feeding Schedule</a>
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Vaccination Reminders */}
+              <div className="border-b border-border pb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xl">💉</span>
+                      <h3 className="font-medium text-foreground">Vaccination & Prevention Reminders</h3>
+                    </div>
+                    <p className="text-description mt-1">
+                      Get reminded when vaccinations or preventive treatments are due
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const currentValue = profileData?.preferences?.petReminders?.vaccinations?.enabled ?? true
+
+                        const auth = getAuth()
+                        const currentUser = auth.currentUser
+                        if (!currentUser) throw new Error('Not authenticated')
+                        const authToken = await currentUser.getIdToken()
+
+                        const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
+                          method: 'PUT',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`,
+                          },
+                          body: JSON.stringify({
+                            preferences: {
+                              ...profileData?.preferences,
+                              petReminders: {
+                                ...profileData?.preferences?.petReminders,
+                                vaccinations: {
+                                  enabled: !currentValue,
+                                  daysBefore: profileData?.preferences?.petReminders?.vaccinations?.daysBefore || 7
+                                }
+                              }
+                            }
+                          })
+                        })
+
+                        if (!response.ok) throw new Error('Failed to update reminder settings')
+
+                        const result = await response.json()
+                        setProfileData(result.data)
+
+                        toast.success(
+                          !currentValue
+                            ? 'Vaccination reminders enabled'
+                            : 'Vaccination reminders disabled'
+                        )
+                      } catch (error) {
+                        toast.error('Failed to update reminder settings')
+                      }
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                      profileData?.preferences?.petReminders?.vaccinations?.enabled ?? true
+                        ? 'bg-primary'
+                        : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        profileData?.preferences?.petReminders?.vaccinations?.enabled ?? true
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {(profileData?.preferences?.petReminders?.vaccinations?.enabled ?? true) && (
+                  <div className="mt-4 pl-4 border-l-2 border-primary/30">
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Remind me before
+                    </label>
+                    <select
+                      value={profileData?.preferences?.petReminders?.vaccinations?.daysBefore || 7}
+                      onChange={async (e) => {
+                        try {
+                          const daysBefore = parseInt(e.target.value)
+
+                          const auth = getAuth()
+                          const currentUser = auth.currentUser
+                          if (!currentUser) throw new Error('Not authenticated')
+                          const authToken = await currentUser.getIdToken()
+
+                          const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
+                            method: 'PUT',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${authToken}`,
+                            },
+                            body: JSON.stringify({
+                              preferences: {
+                                ...profileData?.preferences,
+                                petReminders: {
+                                  ...profileData?.preferences?.petReminders,
+                                  vaccinations: {
+                                    enabled: true,
+                                    daysBefore
+                                  }
+                                }
+                              }
+                            })
+                          })
+
+                          if (!response.ok) throw new Error('Failed to update reminder settings')
+
+                          const result = await response.json()
+                          setProfileData(result.data)
+
+                          toast.success('Reminder timing updated')
+                        } catch (error) {
+                          toast.error('Failed to update reminder settings')
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 font-semibold focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >
+                      <option value="1">1 day before</option>
+                      <option value="3">3 days before</option>
+                      <option value="7">1 week before</option>
+                      <option value="14">2 weeks before</option>
+                      <option value="30">1 month before</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Medication Reminders */}
+              <div className="border-b border-border pb-6 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xl">💊</span>
+                      <h3 className="font-medium text-foreground">Medication Reminders</h3>
+                    </div>
+                    <p className="text-description mt-1">
+                      Get reminded when it's time to give medications
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const currentValue = profileData?.preferences?.petReminders?.medications?.enabled ?? true
+
+                        const auth = getAuth()
+                        const currentUser = auth.currentUser
+                        if (!currentUser) throw new Error('Not authenticated')
+                        const authToken = await currentUser.getIdToken()
+
+                        const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
+                          method: 'PUT',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`,
+                          },
+                          body: JSON.stringify({
+                            preferences: {
+                              ...profileData?.preferences,
+                              petReminders: {
+                                ...profileData?.preferences?.petReminders,
+                                medications: {
+                                  enabled: !currentValue,
+                                  minutesBefore: profileData?.preferences?.petReminders?.medications?.minutesBefore || 15
+                                }
+                              }
+                            }
+                          })
+                        })
+
+                        if (!response.ok) throw new Error('Failed to update reminder settings')
+
+                        const result = await response.json()
+                        setProfileData(result.data)
+
+                        toast.success(
+                          !currentValue
+                            ? 'Medication reminders enabled'
+                            : 'Medication reminders disabled'
+                        )
+                      } catch (error) {
+                        toast.error('Failed to update reminder settings')
+                      }
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                      profileData?.preferences?.petReminders?.medications?.enabled ?? true
+                        ? 'bg-primary'
+                        : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        profileData?.preferences?.petReminders?.medications?.enabled ?? true
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {(profileData?.preferences?.petReminders?.medications?.enabled ?? true) && (
+                  <div className="mt-4 pl-4 border-l-2 border-primary/30">
+                    <p className="text-description-sm">
+                      ⚙️ Medication schedules are configured in the <a href={`/patients/${currentlyViewingMember?.id}`} className="text-primary hover:underline">Medications section</a>
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-description">
+                <strong>💡 Tip:</strong> Configure specific feeding times, medication schedules, and veterinary appointments in <a href={`/patients/${currentlyViewingMember?.id}`} className="text-primary hover:underline font-semibold">{currentlyViewingMember?.name}'s Dashboard</a>.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Test Notification */}
         <div className="bg-card rounded-lg p-6 shadow-sm">
@@ -1026,13 +1350,16 @@ function ProfileContent() {
         {/* Legacy Notification Settings */}
         <NotificationSettings userId={user?.uid} />
 
-        {/* Health Sync */}
-        <div className="bg-card rounded-lg shadow-sm">
-          <HealthSyncCard onSetupClick={() => setShowHealthModal(true)} />
-        </div>
+        {/* Health Sync - Only show for own profile (not pets or family members) */}
+        {!currentlyViewingMember && !isPetProfile && (
+          <div className="bg-card rounded-lg shadow-sm">
+            <HealthSyncCard onSetupClick={() => setShowHealthModal(true)} />
+          </div>
+        )}
 
-        {/* Privacy & Data Settings */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
+        {/* Privacy & Data Settings - Only show for own profile */}
+        {!currentlyViewingMember && (
+          <div className="bg-card rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground mb-4">Privacy & Data</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -1075,9 +1402,11 @@ function ProfileContent() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Sign Out */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
+        {/* Sign Out - Only show for own profile */}
+        {!currentlyViewingMember && (
+          <div className="bg-card rounded-lg p-6 shadow-sm">
           <button
             onClick={handleSignOut}
             disabled={signOutLoading}
@@ -1087,7 +1416,8 @@ function ProfileContent() {
             {signOutLoading && <Spinner size="sm" className="text-error" />}
             <span>{signOutLoading ? 'Signing Out...' : '🚪 Sign Out'}</span>
           </button>
-        </div>
+          </div>
+        )}
 
         {/* App Info */}
         <div className="text-center text-description space-y-1">

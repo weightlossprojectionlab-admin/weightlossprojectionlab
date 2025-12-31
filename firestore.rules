@@ -236,6 +236,72 @@ service cloud.firestore {
           allow delete: if isOwner(userId);
         }
 
+        // Vaccinations subcollection (pet health records)
+        match /vaccinations/{vaccinationId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId) &&
+                          request.resource.data.petId == patientId &&
+                          request.resource.data.createdBy == userId;
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
+
+        // Parasite prevention subcollection (pet health records)
+        match /parasitePrevention/{preventionId} {
+          // Owner can read their pet's prevention records
+          allow read: if isOwner(userId);
+
+          // Owner can create prevention records for their pets
+          allow create: if isOwner(userId) &&
+                          request.resource.data.petId == patientId &&
+                          request.resource.data.createdBy == userId;
+
+          // Owner can update their pet's prevention records
+          allow update: if isOwner(userId);
+
+          // Owner can delete their pet's prevention records
+          allow delete: if isOwner(userId);
+        }
+
+        // ============================================
+        // PET FEEDING SYSTEM
+        // ============================================
+
+        // Food profiles (what the pet eats)
+        match /foodProfiles/{foodProfileId} {
+          allow read: if isOwner(userId);
+
+          allow create: if isOwner(userId) &&
+                          request.resource.data.petId == patientId &&
+                          request.resource.data.createdBy == userId;
+
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
+
+        // Feeding schedules (when to feed)
+        match /feedingSchedule/{scheduleId} {
+          allow read: if isOwner(userId);
+
+          allow create: if isOwner(userId) &&
+                          request.resource.data.petId == patientId &&
+                          request.resource.data.createdBy == userId;
+
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
+
+        // Feeding logs (compliance tracking)
+        match /feedingLogs/{logId} {
+          allow read: if isOwner(userId);
+
+          allow create: if isOwner(userId) &&
+                          request.resource.data.petId == patientId;
+
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
+
         // Helper function to check if user is a family member with access
         function isFamilyMemberWithAccess() {
           return exists(/databases/$(database)/documents/users/$(userId)/familyMembers/$(request.auth.uid));

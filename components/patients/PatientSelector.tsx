@@ -5,6 +5,7 @@ import { PatientProfile } from '@/types/medical'
 import { medicalOperations } from '@/lib/medical-operations'
 import { UserCircleIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import { useUserProfile } from '@/hooks/useUserProfile'
+import { capitalizeName } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 interface PatientSelectorProps {
@@ -175,7 +176,7 @@ export function PatientSelector({
                   <div className={`font-medium ${
                     patient.id === selectedPatientId ? 'text-primary' : 'text-foreground'
                   }`}>
-                    {patient.name}
+                    {capitalizeName(patient.name)}
                   </div>
                   <div className="text-xs text-muted-foreground capitalize">
                     {patient.relationship}

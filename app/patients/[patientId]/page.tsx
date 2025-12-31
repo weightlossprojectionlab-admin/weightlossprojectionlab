@@ -45,9 +45,11 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 import { calculateAge } from '@/lib/age-utils'
+import { capitalizeName } from '@/lib/utils'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import SupervisedVitalsWizard from '@/components/wizards/SupervisedVitalsWizard'
+import { getVitalRecommendations } from '@/lib/veterinary/vital-recommendation-engine'
 import VitalsSummaryModal from '@/components/wizards/VitalsSummaryModal'
 import AppointmentWizard from '@/components/wizards/AppointmentWizard'
 import { transformWizardDataToVitals, hasAnyVitalMeasurement } from '@/lib/vitals-wizard-transform'
@@ -56,6 +58,10 @@ import { useAppointments } from '@/hooks/useAppointments'
 import { useProviders } from '@/hooks/useProviders'
 import { useVitalSchedules } from '@/hooks/useVitalSchedules'
 import { updateVitalReminders } from '@/lib/services/patient-preferences'
+import { getPetTabs, getPetTabLabel, getSpeciesEmoji, HUMAN_TAB_VISIBILITY } from '@/lib/pet-health-config'
+import { FeedingDashboardWidget } from '@/components/pets/FeedingDashboardWidget'
+import { VaccinationTracker } from '@/components/pets/VaccinationTracker'
+import { SymptomLogger } from '@/components/pets/SymptomLogger'
 
 export default function PatientDetailPage() {
   return (
@@ -80,6 +86,30 @@ function PatientDetailContent() {
   const [editingVital, setEditingVital] = useState<VitalSign | null>(null)
   const [deletingVital, setDeletingVital] = useState<{ id: string; type: string } | null>(null)
   const [showFamilyAccess, setShowFamilyAccess] = useState(false)
+
+  // Determine visible tabs based on patient type
+  const isPet = patient?.type === 'pet'
+  const visibleTabs = isPet ? getPetTabs(patient?.species) : HUMAN_TAB_VISIBILITY
+
+  // Helper to get tab label with species-specific emoji
+  const getTabLabel = (tab: string): string => {
+    if (isPet && patient?.species) {
+      return getPetTabLabel(patient.species, tab)
+    }
+    // Default human labels
+    const labels: Record<string, string> = {
+      info: 'ℹ️ Info',
+      vitals: '🩺 Vitals',
+      meals: '📸 Meals',
+      steps: '🚶 Steps',
+      medications: '💊 Meds',
+      appointments: '📅 Appts',
+      recipes: '🍽️ Recipes',
+      settings: '⚙️ Settings'
+    }
+    return labels[tab] || tab
+  }
+
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null)
   const [editPermissions, setEditPermissions] = useState<FamilyMemberPermissions | null>(null)
@@ -94,7 +124,7 @@ function PatientDetailContent() {
   const [medications, setMedications] = useState<PatientMedication[]>([])
   const [loadingMedications, setLoadingMedications] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
-  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'settings'>(tabParam || 'vitals')
+  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'settings' | 'feeding' | 'activity' | 'grooming'>(tabParam || 'vitals')
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
   const [showVitalsWizard, setShowVitalsWizard] = useState(false)
   const [showVitalsSummary, setShowVitalsSummary] = useState(false)
@@ -308,6 +338,13 @@ function PatientDetailContent() {
     fetchPatient()
   }, [patientId])
 
+  // Set default vital type for pets (weight instead of blood_pressure)
+  useEffect(() => {
+    if (patient?.type === 'pet' && selectedVitalType === 'blood_pressure') {
+      setSelectedVitalType('weight')
+    }
+  }, [patient])
+
   // Fetch documents
   const fetchDocuments = async () => {
     try {
@@ -450,13 +487,23 @@ function PatientDetailContent() {
   // RBAC: User can manage family if they're the owner OR an admin
   const canManageFamily = isOwner || adminRole === 'admin'
 
-  const vitalTypes: VitalType[] = [
-    'blood_pressure',
-    'blood_sugar',
-    'pulse_oximeter',
-    'temperature',
-    'weight'
-  ]
+  // Get intelligent vital recommendations based on species, breed, age, and health conditions
+  const vitalRecommendations = patient && isPet ? getVitalRecommendations({
+    species: patient.species || '',
+    breed: patient.breed,
+    age: patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : undefined,
+    weight: undefined, // Weight is tracked as vitals, not a patient property
+    healthConditions: patient.healthConditions || []
+  }) : null
+
+  // Vital types - use intelligent recommendations for pets, standard for humans
+  const vitalTypes: VitalType[] = isPet && vitalRecommendations
+    ? vitalRecommendations
+        .filter(r => r.priority === 'essential' || r.priority === 'recommended')
+        .map(r => r.vitalType as VitalType) // Cast veterinary VitalType to medical VitalType
+    : isPet
+    ? ['weight', 'temperature'] // Fallback for pets without recommendations
+    : ['blood_pressure', 'blood_sugar', 'pulse_oximeter', 'temperature', 'weight']
 
   if (loading) {
     return (
@@ -479,12 +526,22 @@ function PatientDetailContent() {
   return (
     <div className="min-h-screen bg-background">
       <PageHeader
-        title={patient.name}
+        title={`${isPet && patient.species ? getSpeciesEmoji(patient.species) + ' ' : ''}${capitalizeName(patient.name)}`}
         subtitle={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="capitalize">
-              {patient.type && `${patient.type} • `}
-              {patient.relationship?.replace(/-/g, ' ')}
+              {isPet ? (
+                <>
+                  {patient.species && `${patient.species}`}
+                  {patient.breed && ` • ${patient.breed}`}
+                  {patient.gender && ` • ${patient.gender}`}
+                </>
+              ) : (
+                <>
+                  {patient.type && `${patient.type} • `}
+                  {patient.relationship?.replace(/-/g, ' ')}
+                </>
+              )}
             </span>
             {role && !isOwner && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full">
@@ -505,105 +562,167 @@ function PatientDetailContent() {
               <div className="bg-card rounded-lg shadow-sm border border-border p-4">
                 <h3 className="font-semibold text-foreground mb-3">Quick Actions</h3>
                 <div className="grid grid-cols-4 gap-1.5 lg:flex lg:flex-col lg:gap-2">
-                  <button
-                    onClick={() => {
-                      setActiveTab('info')
-                      // Scroll to content on mobile, do nothing on desktop
-                      setTimeout(() => {
-                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }, 100)
-                    }}
-                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
-                      activeTab === 'info'
-                        ? 'bg-primary text-white'
-                        : 'bg-muted hover:bg-muted/80 text-foreground'
-                    }`}
-                  >
-                    <span className="text-5xl lg:text-xl">ℹ️</span>
-                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Info</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveTab('meals')
-                      setTimeout(() => {
-                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }, 100)
-                    }}
-                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
-                      activeTab === 'meals'
-                        ? 'bg-primary text-white'
-                        : 'bg-muted hover:bg-muted/80 text-foreground'
-                    }`}
-                  >
-                    <span className="text-5xl lg:text-xl">📸</span>
-                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Meals</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveTab('medications')
-                      setTimeout(() => {
-                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }, 100)
-                    }}
-                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
-                      activeTab === 'medications'
-                        ? 'bg-primary text-white'
-                        : 'bg-muted hover:bg-muted/80 text-foreground'
-                    }`}
-                  >
-                    <span className="text-5xl lg:text-xl">💊</span>
-                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Meds</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowVitalsWizard(true)
-                    }}
-                    className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-muted hover:bg-muted/80 text-foreground"
-                  >
-                    <span className="text-5xl lg:text-xl">🩺</span>
-                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Vitals</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowAppointmentWizard(true)
-                    }}
-                    className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-muted hover:bg-muted/80 text-foreground"
-                  >
-                    <span className="text-5xl lg:text-xl">📅</span>
-                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Appt</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveTab('steps')
-                      setTimeout(() => {
-                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }, 100)
-                    }}
-                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
-                      activeTab === 'steps'
-                        ? 'bg-primary text-white'
-                        : 'bg-muted hover:bg-muted/80 text-foreground'
-                    }`}
-                  >
-                    <span className="text-5xl lg:text-xl">🚶</span>
-                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Steps</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveTab('appointments')
-                      setTimeout(() => {
-                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }, 100)
-                    }}
-                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
-                      activeTab === 'appointments'
-                        ? 'bg-primary text-white'
-                        : 'bg-muted hover:bg-muted/80 text-foreground'
-                    }`}
-                  >
-                    <span className="text-5xl lg:text-xl">📋</span>
-                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Appts</span>
-                  </button>
+                  {/* Info - Always visible */}
+                  {visibleTabs.includes('info') && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('info')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'info'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">ℹ️</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Info</span>
+                    </button>
+                  )}
+
+                  {/* Meals (Humans) / Feeding (Pets) */}
+                  {visibleTabs.includes('meals') && !isPet && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('meals')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'meals'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">📸</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Meals</span>
+                    </button>
+                  )}
+                  {visibleTabs.includes('feeding') && isPet && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('meals')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'meals'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">{patient?.species === 'Dog' ? '🍖' : patient?.species === 'Cat' ? '🐟' : patient?.species === 'Bird' ? '🌾' : patient?.species === 'Fish' ? '🐠' : patient?.species === 'Rabbit' ? '🥕' : '🍽️'}</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Feeding</span>
+                    </button>
+                  )}
+                  {/* Medications */}
+                  {visibleTabs.includes('medications') && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('medications')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'medications'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">💊</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Meds</span>
+                    </button>
+                  )}
+
+                  {/* Vitals Wizard */}
+                  {visibleTabs.includes('vitals') && (
+                    <button
+                      onClick={() => {
+                        setShowVitalsWizard(true)
+                      }}
+                      className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-muted hover:bg-muted/80 text-foreground"
+                    >
+                      <span className="text-5xl lg:text-xl">🩺</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Vitals</span>
+                    </button>
+                  )}
+
+                  {/* Appointments Wizard */}
+                  {visibleTabs.includes('appointments') && (
+                    <button
+                      onClick={() => {
+                        setShowAppointmentWizard(true)
+                      }}
+                      className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-muted hover:bg-muted/80 text-foreground"
+                    >
+                      <span className="text-5xl lg:text-xl">📅</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Appt</span>
+                    </button>
+                  )}
+
+                  {/* Steps (Humans) / Activity (Pets) */}
+                  {visibleTabs.includes('steps') && !isPet && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('steps')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'steps'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">🚶</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Steps</span>
+                    </button>
+                  )}
+                  {visibleTabs.includes('activity') && isPet && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('steps')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'steps'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">🏃</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Activity</span>
+                    </button>
+                  )}
+
+                  {/* Appointments List View */}
+                  {visibleTabs.includes('appointments') && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('appointments')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'appointments'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">📋</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">{isPet ? 'Vet Appts' : 'Appts'}</span>
+                    </button>
+                  )}
+                  {/* Shopping - Always visible */}
                   <Link
                     href={`/shopping?memberId=${patientId}`}
                     className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-muted hover:bg-muted/80 text-foreground"
@@ -611,22 +730,48 @@ function PatientDetailContent() {
                     <span className="text-5xl lg:text-xl">🛒</span>
                     <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Shop</span>
                   </Link>
-                  <button
-                    onClick={() => {
-                      setActiveTab('recipes')
-                      setTimeout(() => {
-                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }, 100)
-                    }}
-                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
-                      activeTab === 'recipes'
-                        ? 'bg-primary text-white'
-                        : 'bg-muted hover:bg-muted/80 text-foreground'
-                    }`}
-                  >
-                    <span className="text-5xl lg:text-xl">🍽️</span>
-                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Recipes</span>
-                  </button>
+
+                  {/* Recipes (Humans only) */}
+                  {visibleTabs.includes('recipes') && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('recipes')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'recipes'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">🍽️</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Recipes</span>
+                    </button>
+                  )}
+
+                  {/* Grooming (Pets only - Dogs, Cats, Rabbits, Guinea Pigs) */}
+                  {visibleTabs.includes('grooming') && isPet && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('grooming')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'grooming'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">✂️</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Groom</span>
+                    </button>
+                  )}
+
+                  {/* Documents */}
                   {canUploadDocuments && (
                     <button
                       onClick={() => setShowDocumentUpload(!showDocumentUpload)}
@@ -636,6 +781,8 @@ function PatientDetailContent() {
                       <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Docs</span>
                     </button>
                   )}
+
+                  {/* Duties - Always visible */}
                   <Link
                     href={`/patients/${patientId}/duties`}
                     className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
@@ -643,22 +790,26 @@ function PatientDetailContent() {
                     <span className="text-5xl lg:text-xl">🏠</span>
                     <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Duties</span>
                   </Link>
-                  <button
-                    onClick={() => {
-                      setActiveTab('settings')
-                      setTimeout(() => {
-                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }, 100)
-                    }}
-                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
-                      activeTab === 'settings'
-                        ? 'bg-primary text-white'
-                        : 'bg-muted hover:bg-muted/80 text-foreground'
-                    }`}
-                  >
-                    <span className="text-5xl lg:text-xl">⚙️</span>
-                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Settings</span>
-                  </button>
+
+                  {/* Settings - Always visible */}
+                  {visibleTabs.includes('settings') && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('settings')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'settings'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">⚙️</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Settings</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Document Upload Form */}
@@ -684,86 +835,138 @@ function PatientDetailContent() {
             {/* Mobile Tab Navigation - Only visible on small screens */}
             <div className="lg:hidden mb-6 overflow-x-auto pb-2 -mx-4 px-4">
               <div className="flex gap-2 min-w-max">
-                <button
-                  onClick={() => setActiveTab('info')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeTab === 'info'
-                      ? 'bg-primary text-white'
-                      : 'bg-card border border-border text-foreground'
-                  }`}
-                >
-                  ℹ️ Info
-                </button>
-                <button
-                  onClick={() => setActiveTab('vitals')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeTab === 'vitals'
-                      ? 'bg-primary text-white'
-                      : 'bg-card border border-border text-foreground'
-                  }`}
-                >
-                  🩺 Vitals
-                </button>
-                <button
-                  onClick={() => setActiveTab('meals')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeTab === 'meals'
-                      ? 'bg-primary text-white'
-                      : 'bg-card border border-border text-foreground'
-                  }`}
-                >
-                  📸 Meals
-                </button>
-                <button
-                  onClick={() => setActiveTab('steps')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeTab === 'steps'
-                      ? 'bg-primary text-white'
-                      : 'bg-card border border-border text-foreground'
-                  }`}
-                >
-                  🚶 Steps
-                </button>
-                <button
-                  onClick={() => setActiveTab('medications')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeTab === 'medications'
-                      ? 'bg-primary text-white'
-                      : 'bg-card border border-border text-foreground'
-                  }`}
-                >
-                  💊 Meds
-                </button>
-                <button
-                  onClick={() => setActiveTab('appointments')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeTab === 'appointments'
-                      ? 'bg-primary text-white'
-                      : 'bg-card border border-border text-foreground'
-                  }`}
-                >
-                  📅 Appointments
-                </button>
-                <button
-                  onClick={() => setActiveTab('recipes')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeTab === 'recipes'
-                      ? 'bg-primary text-white'
-                      : 'bg-card border border-border text-foreground'
-                  }`}
-                >
-                  🍽️ Recipes
-                </button>
-                <button
-                  onClick={() => setActiveTab('settings')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeTab === 'settings'
-                      ? 'bg-primary text-white'
-                      : 'bg-card border border-border text-foreground'
-                  }`}
-                >
-                  ⚙️ Settings
-                </button>
+                {visibleTabs.includes('info') && (
+                  <button
+                    onClick={() => setActiveTab('info')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'info'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    ℹ️ Info
+                  </button>
+                )}
+                {visibleTabs.includes('vitals') && (
+                  <button
+                    onClick={() => setActiveTab('vitals')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'vitals'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    {isPet ? getPetTabLabel(patient?.species || 'Other', 'vitals') : '🩺 Vitals'}
+                  </button>
+                )}
+                {visibleTabs.includes('meals') && !isPet && (
+                  <button
+                    onClick={() => setActiveTab('meals')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'meals'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    📸 Meals
+                  </button>
+                )}
+                {visibleTabs.includes('feeding') && isPet && (
+                  <button
+                    onClick={() => setActiveTab('meals')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'meals'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    {getPetTabLabel(patient?.species || 'Other', 'feeding')}
+                  </button>
+                )}
+                {visibleTabs.includes('steps') && (
+                  <button
+                    onClick={() => setActiveTab('steps')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'steps'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    🚶 Steps
+                  </button>
+                )}
+                {visibleTabs.includes('activity') && isPet && (
+                  <button
+                    onClick={() => setActiveTab('steps')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'steps'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    {getPetTabLabel(patient?.species || 'Other', 'activity')}
+                  </button>
+                )}
+                {visibleTabs.includes('medications') && (
+                  <button
+                    onClick={() => setActiveTab('medications')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'medications'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    💊 Meds
+                  </button>
+                )}
+                {visibleTabs.includes('appointments') && (
+                  <button
+                    onClick={() => setActiveTab('appointments')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'appointments'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    📅 Appointments
+                  </button>
+                )}
+                {visibleTabs.includes('recipes') && (
+                  <button
+                    onClick={() => setActiveTab('recipes')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'recipes'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    🍽️ Recipes
+                  </button>
+                )}
+                {visibleTabs.includes('grooming') && isPet && (
+                  <button
+                    onClick={() => setActiveTab('grooming')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'grooming'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    {getPetTabLabel(patient?.species || 'Other', 'grooming')}
+                  </button>
+                )}
+                {visibleTabs.includes('settings') && (
+                  <button
+                    onClick={() => setActiveTab('settings')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'settings'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    ⚙️ Settings
+                  </button>
+                )}
               </div>
             </div>
 
@@ -837,7 +1040,7 @@ function PatientDetailContent() {
         {/* Health Overview Cards - Desktop only, always visible */}
         {canViewVitals && (
           <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {/* Weight Progress Card */}
+            {/* Weight Progress Card - Always show for humans and pets */}
             <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-primary">
               <div className="flex items-center gap-2 mb-2">
                 <ScaleIcon className="w-5 h-5 text-primary" />
@@ -890,90 +1093,132 @@ function PatientDetailContent() {
               )}
             </div>
 
-            {/* Today's Nutrition Card */}
-            <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-success">
-              <div className="flex items-center gap-2 mb-2">
-                <FireIcon className="w-5 h-5 text-success" />
-                <h3 className="font-semibold text-foreground text-sm">Today's Calories</h3>
-              </div>
-              {healthDataLoading ? (
-                <div className="animate-pulse">
-                  <div className="h-8 bg-muted rounded w-20 mb-1"></div>
-                  <div className="h-4 bg-muted rounded w-16"></div>
+            {/* Today's Nutrition Card - HUMANS ONLY */}
+            {!isPet && (
+              <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-success">
+                <div className="flex items-center gap-2 mb-2">
+                  <FireIcon className="w-5 h-5 text-success" />
+                  <h3 className="font-semibold text-foreground text-sm">Today's Calories</h3>
                 </div>
-              ) : nutritionSummary ? (
-                <>
-                  <div className="flex items-end gap-2">
-                    <span className="text-2xl font-bold text-foreground">
-                      {nutritionSummary.todayCalories}
-                    </span>
-                    <span className="text-sm text-muted-foreground mb-1">
-                      / {nutritionSummary.goalCalories}
-                    </span>
+                {healthDataLoading ? (
+                  <div className="animate-pulse">
+                    <div className="h-8 bg-muted rounded w-20 mb-1"></div>
+                    <div className="h-4 bg-muted rounded w-16"></div>
                   </div>
-                  <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-success rounded-full"
-                      style={{ width: `${Math.min((nutritionSummary.todayCalories / nutritionSummary.goalCalories) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
-                    <div>
-                      <span className="text-muted-foreground">P: </span>
-                      <span className="font-medium">{Math.round(nutritionSummary.macros.protein ?? 0)}g</span>
+                ) : nutritionSummary ? (
+                  <>
+                    <div className="flex items-end gap-2">
+                      <span className="text-2xl font-bold text-foreground">
+                        {nutritionSummary.todayCalories}
+                      </span>
+                      <span className="text-sm text-muted-foreground mb-1">
+                        / {nutritionSummary.goalCalories}
+                      </span>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">C: </span>
-                      <span className="font-medium">{Math.round(nutritionSummary.macros.carbs ?? 0)}g</span>
+                    <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-success rounded-full"
+                        style={{ width: `${Math.min((nutritionSummary.todayCalories / nutritionSummary.goalCalories) * 100, 100)}%` }}
+                      />
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">F: </span>
-                      <span className="font-medium">{Math.round(nutritionSummary.macros.fat ?? 0)}g</span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">No data yet</p>
-              )}
-            </div>
-
-            {/* Activity Summary Card */}
-            <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-accent">
-              <div className="flex items-center gap-2 mb-2">
-                <CameraIcon className="w-5 h-5 text-accent" />
-                <h3 className="font-semibold text-foreground text-sm">Activity</h3>
-              </div>
-              {healthDataLoading ? (
-                <div className="animate-pulse">
-                  <div className="h-8 bg-muted rounded w-20 mb-1"></div>
-                  <div className="h-4 bg-muted rounded w-16"></div>
-                </div>
-              ) : stepsSummary ? (
-                <>
-                  <div className="flex items-end gap-2">
-                    <span className="text-2xl font-bold text-foreground">
-                      {stepsSummary.todaySteps?.toLocaleString() || 0}
-                    </span>
-                    <span className="text-sm text-muted-foreground mb-1">steps</span>
-                  </div>
-                  {stepsSummary.goalSteps > 0 && (
-                    <>
-                      <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-accent rounded-full"
-                          style={{ width: `${Math.min(((stepsSummary.todaySteps || 0) / stepsSummary.goalSteps) * 100, 100)}%` }}
-                        />
+                    <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">P: </span>
+                        <span className="font-medium">{Math.round(nutritionSummary.macros.protein ?? 0)}g</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {Math.round(((stepsSummary.todaySteps || 0) / stepsSummary.goalSteps) * 100)}% of {stepsSummary.goalSteps.toLocaleString()} goal
-                      </p>
-                    </>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">No data yet</p>
-              )}
-            </div>
+                      <div>
+                        <span className="text-muted-foreground">C: </span>
+                        <span className="font-medium">{Math.round(nutritionSummary.macros.carbs ?? 0)}g</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">F: </span>
+                        <span className="font-medium">{Math.round(nutritionSummary.macros.fat ?? 0)}g</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No data yet</p>
+                )}
+              </div>
+            )}
+
+            {/* Feeding Schedule Card - PETS ONLY */}
+            {isPet && (
+              <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-success">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">{patient?.species === 'Dog' ? '🍖' : patient?.species === 'Cat' ? '🐟' : '🍽️'}</span>
+                  <h3 className="font-semibold text-foreground text-sm">Feeding</h3>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <p className="mb-1">Setup feeding schedule</p>
+                  <button
+                    onClick={() => setActiveTab('meals')}
+                    className="mt-2 w-full text-xs px-2 py-1.5 bg-success/10 text-success hover:bg-success/20 rounded transition-colors"
+                  >
+                    View Schedule →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Activity Summary Card - HUMANS ONLY */}
+            {!isPet && (
+              <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-accent">
+                <div className="flex items-center gap-2 mb-2">
+                  <CameraIcon className="w-5 h-5 text-accent" />
+                  <h3 className="font-semibold text-foreground text-sm">Activity</h3>
+                </div>
+                {healthDataLoading ? (
+                  <div className="animate-pulse">
+                    <div className="h-8 bg-muted rounded w-20 mb-1"></div>
+                    <div className="h-4 bg-muted rounded w-16"></div>
+                  </div>
+                ) : stepsSummary ? (
+                  <>
+                    <div className="flex items-end gap-2">
+                      <span className="text-2xl font-bold text-foreground">
+                        {stepsSummary.todaySteps?.toLocaleString() || 0}
+                      </span>
+                      <span className="text-sm text-muted-foreground mb-1">steps</span>
+                    </div>
+                    {stepsSummary.goalSteps > 0 && (
+                      <>
+                        <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-accent rounded-full"
+                            style={{ width: `${Math.min(((stepsSummary.todaySteps || 0) / stepsSummary.goalSteps) * 100, 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {Math.round(((stepsSummary.todaySteps || 0) / stepsSummary.goalSteps) * 100)}% of {stepsSummary.goalSteps.toLocaleString()} goal
+                        </p>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No data yet</p>
+                )}
+              </div>
+            )}
+
+            {/* Vaccinations Card - PETS ONLY */}
+            {isPet && (
+              <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-accent">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">💉</span>
+                  <h3 className="font-semibold text-foreground text-sm">Vaccinations</h3>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <p className="mb-1">Track vaccine records</p>
+                  <button
+                    onClick={() => setActiveTab('medications')}
+                    className="mt-2 w-full text-xs px-2 py-1.5 bg-accent/10 text-accent hover:bg-accent/20 rounded transition-colors"
+                  >
+                    View Records →
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Recent Trends Card */}
             <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-secondary">
@@ -1119,7 +1364,8 @@ function PatientDetailContent() {
             </>
           )}
 
-          {activeTab === 'meals' && canLogVitals && (
+          {/* Meals Tab - HUMANS ONLY */}
+          {activeTab === 'meals' && canLogVitals && !isPet && (
             <div className="bg-card rounded-lg shadow-sm p-6">
               <h2 className="text-lg font-bold text-foreground mb-4">
                 Log Meals
@@ -1163,7 +1409,13 @@ function PatientDetailContent() {
             </div>
           )}
 
-          {activeTab === 'steps' && canLogVitals && (
+          {/* Feeding Tab - PETS ONLY */}
+          {activeTab === 'meals' && isPet && patient && (
+            <FeedingDashboardWidget patient={patient} />
+          )}
+
+          {/* Steps Tab - HUMANS ONLY */}
+          {activeTab === 'steps' && canLogVitals && !isPet && (
             <div className="bg-card rounded-lg shadow-sm p-6">
               <h2 className="text-lg font-bold text-foreground mb-4">
                 Log Steps
@@ -1175,9 +1427,17 @@ function PatientDetailContent() {
             </div>
           )}
 
-          {activeTab === 'medications' && (
+          {/* Activity Tab - PETS ONLY */}
+          {activeTab === 'steps' && isPet && (
+            <div className="text-center py-12 text-muted-foreground">
+              <p className="text-lg mb-2">Pet Activity Tracking</p>
+              <p className="text-sm">Coming soon: Activity and exercise logging</p>
+            </div>
+          )}
+
+          {activeTab === 'medications' && !isPet && (
             <div className="space-y-6">
-              {/* Medication Management */}
+              {/* Medication Management - HUMANS ONLY */}
               <div className="bg-card rounded-lg shadow-sm p-6">
                 <h2 className="text-lg font-bold text-foreground mb-4">
                   Medications
@@ -1209,6 +1469,47 @@ function PatientDetailContent() {
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Contact the account owner to request access.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Medications/Vaccinations Tab - PETS ONLY */}
+          {activeTab === 'medications' && isPet && patient && (
+            <div className="space-y-6">
+              <VaccinationTracker patient={patient} />
+
+              {/* Pet Medications (separate from vaccinations) */}
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-bold text-foreground mb-4">
+                  Medications
+                </h2>
+                {canEditMedications ? (
+                  <>
+                    <MedicationForm
+                      patientId={patientId}
+                      onSuccess={() => {
+                        fetchMedications()
+                        toast.success('Medication added successfully')
+                      }}
+                    />
+                    <div className="mt-6 pt-6 border-t border-border">
+                      <h3 className="font-semibold text-foreground mb-4">Current Medications</h3>
+                      <MedicationList
+                        patientId={patientId}
+                        patientOwnerId={patient?.userId}
+                        medications={medications}
+                        loading={loadingMedications}
+                        onMedicationUpdated={fetchMedications}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-2">
+                      You don't have permission to manage medications for this patient.
                     </p>
                   </div>
                 )}
@@ -1254,8 +1555,13 @@ function PatientDetailContent() {
 
           {activeTab === 'info' && (
           <div className="overflow-y-auto max-h-[calc(100vh-200px)] space-y-6">
+            {/* Symptom Logger - PETS ONLY */}
+            {isPet && patient && (
+              <SymptomLogger patient={patient} />
+            )}
+
             {/* AI Health Report */}
-            {patient && (
+            {patient && !isPet && (
               <AIHealthReport
                 patient={patient}
                 medications={medications}
@@ -1516,12 +1822,13 @@ function PatientDetailContent() {
           {/* Right Sidebar - Recent Data */}
           <aside className="w-full lg:w-80 flex-shrink-0 mt-6 lg:mt-0">
           <div className="lg:sticky lg:top-4 space-y-4">
-            {/* Recent Meals - Hide on mobile when Meals tab is active to avoid duplication */}
-            <div className={`bg-card rounded-lg shadow-sm border border-border p-4 ${activeTab === 'meals' ? 'hidden lg:block' : ''}`}>
-              <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                <CameraIcon className="w-5 h-5 text-primary" />
-                Recent Meals
-              </h3>
+            {/* Recent Meals - HUMANS ONLY - Hide on mobile when Meals tab is active to avoid duplication */}
+            {!isPet && (
+              <div className={`bg-card rounded-lg shadow-sm border border-border p-4 ${activeTab === 'meals' ? 'hidden lg:block' : ''}`}>
+                <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <CameraIcon className="w-5 h-5 text-primary" />
+                  Recent Meals
+                </h3>
               {todayMeals && todayMeals.length > 0 ? (
                 <div className="space-y-2">
                   {todayMeals.slice(0, 5).map((meal: any) => (
@@ -1573,7 +1880,8 @@ function PatientDetailContent() {
                   </Link>
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
             {/* Current Medications - Hide on mobile when Medications tab is active to avoid duplication */}
             <div className={`bg-card rounded-lg shadow-sm border border-border p-4 ${activeTab === 'medications' ? 'hidden lg:block' : ''}`}>
@@ -2080,7 +2388,12 @@ function PatientDetailContent() {
               name: patient.name,
               age: calculateAge(patient.dateOfBirth),
               conditions: patient.healthConditions || [],
-              createdAt: patient.createdAt
+              createdAt: patient.createdAt,
+              type: patient.type,
+              species: patient.species,
+              breed: patient.breed,
+              weight: undefined, // Weight is tracked as vitals
+              dateOfBirth: patient.dateOfBirth
             }}
             caregivers={caregivers}
             onComplete={(savedVitals) => {

@@ -3,6 +3,50 @@
  */
 
 /**
+ * Capitalize the first letter of each word in a name (Title Case)
+ * Handles special cases like "O'Brien", "McDonald", etc.
+ *
+ * @param name - The name to capitalize
+ * @returns Properly capitalized name
+ *
+ * @example
+ * capitalizeName("charlie") // "Charlie"
+ * capitalizeName("john doe") // "John Doe"
+ * capitalizeName("o'brien") // "O'Brien"
+ * capitalizeName("mcdonald") // "McDonald"
+ */
+export function capitalizeName(name: string): string {
+  if (!name || typeof name !== 'string') return ''
+
+  return name
+    .toLowerCase()
+    .split(' ')
+    .map(word => {
+      if (!word) return word
+
+      // Handle names with apostrophes (O'Brien, D'Angelo)
+      if (word.includes("'")) {
+        return word.split("'").map(part =>
+          part.charAt(0).toUpperCase() + part.slice(1)
+        ).join("'")
+      }
+
+      // Handle Mc/Mac names (McDonald, MacLeod)
+      if (word.startsWith('mc') && word.length > 2) {
+        return 'Mc' + word.charAt(2).toUpperCase() + word.slice(3)
+      }
+      if (word.startsWith('mac') && word.length > 3) {
+        return 'Mac' + word.charAt(3).toUpperCase() + word.slice(4)
+      }
+
+      // Default: capitalize first letter
+      return word.charAt(0).toUpperCase() + word.slice(1)
+    })
+    .join(' ')
+    .trim()
+}
+
+/**
  * Generate a SEO-friendly slug from a recipe name
  * @param recipeName - The recipe name (e.g., "Greek Chicken Bowl")
  * @returns URL-safe slug (e.g., "greek-chicken-bowl")

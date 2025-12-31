@@ -9,6 +9,9 @@ import toast from 'react-hot-toast'
 import type { PersonOnboardingAnswers, PersonRole, AutomationLevelExtended } from '@/types'
 import { DriverLicenseScanner } from '@/components/family/DriverLicenseScanner'
 import { VitalsFormSection } from '@/components/family/VitalsFormSection'
+import { canAccessFeature } from '@/lib/feature-gates'
+import { UpgradeModal } from '@/components/subscription/UpgradeModal'
+import { useSubscription } from '@/hooks/useSubscription'
 
 interface WizardStep {
   id: string
@@ -36,6 +39,54 @@ const HEALTH_CONDITIONS = [
   'High Cholesterol', 'Thyroid Disorder', 'Kidney Disease', 'Allergies', 'Other'
 ]
 
+const PET_HEALTH_CONDITIONS: Record<string, string[]> = {
+  Dog: [
+    'Arthritis', 'Hip Dysplasia', 'Allergies', 'Dental Disease',
+    'Skin Conditions', 'Ear Infections', 'Obesity', 'Kidney Disease',
+    'Heart Disease', 'Diabetes', 'Thyroid Disorder', 'Other'
+  ],
+  Cat: [
+    'Kidney Disease', 'Dental Disease', 'Diabetes', 'Hyperthyroidism',
+    'Urinary Tract Issues', 'Obesity', 'Arthritis', 'Allergies',
+    'Heart Disease', 'Skin Conditions', 'Other'
+  ],
+  Bird: [
+    'Respiratory Issues', 'Feather Plucking', 'Beak Problems', 'Obesity',
+    'Psittacosis', 'Egg Binding', 'Nutritional Deficiencies', 'Parasites',
+    'Bumblefoot', 'Other'
+  ],
+  Fish: [
+    'Ich (White Spot Disease)', 'Fin Rot', 'Swim Bladder Disease', 'Fungal Infections',
+    'Parasites', 'Dropsy', 'Velvet Disease', 'Bacterial Infections',
+    'Columnaris', 'Other'
+  ],
+  Rabbit: [
+    'Dental Disease', 'GI Stasis', 'Obesity', 'Respiratory Issues',
+    'Ear Mites', 'Arthritis', 'Urinary Tract Issues', 'Skin Conditions',
+    'Parasites', 'Other'
+  ],
+  'Guinea Pig': [
+    'Dental Disease', 'Scurvy (Vitamin C Deficiency)', 'Respiratory Issues',
+    'Skin Conditions', 'Obesity', 'Bumblefoot', 'Urinary Stones',
+    'Parasites', 'Other'
+  ],
+  Hamster: [
+    'Wet Tail', 'Respiratory Issues', 'Dental Disease', 'Skin Conditions',
+    'Tumors', 'Obesity', 'Diabetes', 'Parasites', 'Other'
+  ],
+  Reptile: [
+    'Metabolic Bone Disease', 'Respiratory Infection', 'Shell Rot (Turtles)',
+    'Parasites', 'Mouth Rot', 'Impaction', 'Skin Infections',
+    'Dehydration', 'Nutritional Deficiencies', 'Other'
+  ]
+}
+
+// Default pet conditions for species not in the list or "Other"
+const DEFAULT_PET_CONDITIONS = [
+  'Obesity', 'Dental Disease', 'Skin Conditions', 'Parasites',
+  'Nutritional Deficiencies', 'Respiratory Issues', 'Other'
+]
+
 const VITAL_TYPES = [
   { id: 'blood_pressure', label: 'Blood Pressure' },
   { id: 'blood_sugar', label: 'Blood Sugar' },
@@ -48,6 +99,51 @@ const RELATIONSHIPS = [
   'Self', 'Spouse', 'Partner', 'Parent', 'Child', 'Sibling', 'Grandparent',
   'Grandchild', 'Other Family', 'Care Recipient', 'Pet'
 ]
+
+const PET_BREEDS: Record<string, string[]> = {
+  Dog: [
+    'Labrador Retriever', 'German Shepherd', 'Golden Retriever', 'French Bulldog',
+    'Bulldog', 'Poodle', 'Beagle', 'Rottweiler', 'German Shorthaired Pointer',
+    'Yorkshire Terrier', 'Boxer', 'Dachshund', 'Siberian Husky', 'Great Dane',
+    'Doberman Pinscher', 'Australian Shepherd', 'Miniature Schnauzer', 'Cavalier King Charles Spaniel',
+    'Shih Tzu', 'Boston Terrier', 'Pomeranian', 'Havanese', 'Shetland Sheepdog',
+    'Brittany', 'Pembroke Welsh Corgi', 'Mixed Breed', 'Other'
+  ],
+  Cat: [
+    'Domestic Shorthair', 'Domestic Longhair', 'Siamese', 'Persian', 'Maine Coon',
+    'Ragdoll', 'Bengal', 'Abyssinian', 'Birman', 'Oriental Shorthair',
+    'Sphynx', 'Devon Rex', 'American Shorthair', 'British Shorthair', 'Scottish Fold',
+    'Exotic Shorthair', 'Burmese', 'Himalayan', 'Russian Blue', 'Norwegian Forest Cat',
+    'Mixed Breed', 'Other'
+  ],
+  Bird: [
+    'Parakeet (Budgie)', 'Cockatiel', 'Canary', 'Finch', 'Lovebird',
+    'Conure', 'African Grey Parrot', 'Macaw', 'Cockatoo', 'Amazon Parrot',
+    'Dove', 'Pigeon', 'Quaker Parrot', 'Other'
+  ],
+  Fish: [
+    'Goldfish', 'Betta Fish', 'Guppy', 'Molly', 'Platy', 'Swordtail',
+    'Tetra', 'Angelfish', 'Gourami', 'Cichlid', 'Koi', 'Oscar',
+    'Discus', 'Catfish', 'Other'
+  ],
+  Rabbit: [
+    'Holland Lop', 'Netherland Dwarf', 'Mini Rex', 'Lionhead', 'Flemish Giant',
+    'Dutch', 'English Lop', 'Mini Lop', 'Rex', 'Angora', 'Mixed Breed', 'Other'
+  ],
+  'Guinea Pig': [
+    'American', 'Abyssinian', 'Peruvian', 'Silkie', 'Teddy', 'Texel',
+    'Skinny Pig', 'Mixed Breed', 'Other'
+  ],
+  Hamster: [
+    'Syrian (Golden)', 'Dwarf Campbell Russian', 'Dwarf Winter White Russian',
+    'Roborovski', 'Chinese', 'Other'
+  ],
+  Reptile: [
+    'Bearded Dragon', 'Leopard Gecko', 'Crested Gecko', 'Ball Python',
+    'Corn Snake', 'Red-Eared Slider Turtle', 'Box Turtle', 'Iguana',
+    'Chameleon', 'Blue-Tongued Skink', 'Other'
+  ]
+}
 
 interface FamilyMemberData {
   // Step 1: Basic Info
@@ -70,6 +166,12 @@ interface FamilyMemberData {
   // Step 3: Conditions
   conditions: string[]
 
+  // Pet-specific fields
+  species?: string
+  breed?: string
+  breedDetails?: string  // For "Mixed Breed" or "Other" breed details
+  microchipNumber?: string
+
   // Optional: Goals and Vitals tracking (currently unused)
   goals?: string[]
   trackVitals?: string[]
@@ -78,9 +180,11 @@ interface FamilyMemberData {
 export default function FamilyMemberOnboardingWizard() {
   const { user } = useAuth()
   const router = useRouter()
+  const { subscription } = useSubscription()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   const [data, setData] = useState<FamilyMemberData>({
     name: '',
@@ -105,24 +209,46 @@ export default function FamilyMemberOnboardingWizard() {
   function handleNext() {
     // Validation before moving forward
     if (currentStepData.id === 'basic_info') {
-      if (!data.name || !data.dateOfBirth || !data.relationship || !data.gender) {
-        toast.error('Please fill in all required fields')
-        return
+      const isPet = data.relationship === 'Pet'
+
+      // Check required fields based on type
+      if (isPet) {
+        if (!data.name || !data.dateOfBirth || !data.relationship || !data.species) {
+          toast.error('Please fill in all required fields')
+          return
+        }
+
+        // Check pet-tracking feature access
+        if (!subscription || subscription.plan === 'free') {
+          setShowUpgradeModal(true)
+          return
+        }
+      } else {
+        if (!data.name || !data.dateOfBirth || !data.relationship || !data.gender) {
+          toast.error('Please fill in all required fields')
+          return
+        }
       }
     }
 
     if (currentStepData.id === 'vitals') {
+      const isPet = data.relationship === 'Pet'
+
       if (!data.currentWeight) {
         toast.error('Please enter current weight')
         return
       }
-      if (data.heightUnit === 'imperial' && !data.heightFeet) {
-        toast.error('Please enter height')
-        return
-      }
-      if (data.heightUnit === 'metric' && !data.heightCm) {
-        toast.error('Please enter height')
-        return
+
+      // Height is not required for pets
+      if (!isPet) {
+        if (data.heightUnit === 'imperial' && !data.heightFeet) {
+          toast.error('Please enter height')
+          return
+        }
+        if (data.heightUnit === 'metric' && !data.heightCm) {
+          toast.error('Please enter height')
+          return
+        }
       }
     }
 
@@ -198,6 +324,8 @@ export default function FamilyMemberOnboardingWizard() {
       }
 
       // Prepare vitals data
+      const isPet = data.relationship === 'Pet'
+
       const patientData: any = {
         userId: user.uid,
         name: data.name,
@@ -205,9 +333,26 @@ export default function FamilyMemberOnboardingWizard() {
         age: age,
         isMinor: isMinor,
         relationship: data.relationship,
-        gender: data.gender,
+        type: isPet ? 'pet' : 'human',
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
+      }
+
+      // Add pet-specific fields
+      if (isPet) {
+        if (data.species) patientData.species = data.species
+        if (data.breed) {
+          // If Mixed Breed or Other, combine with details
+          if ((data.breed === 'Mixed Breed' || data.breed === 'Other') && data.breedDetails) {
+            patientData.breed = `${data.breed} (${data.breedDetails})`
+          } else {
+            patientData.breed = data.breed
+          }
+        }
+        if (data.microchipNumber) patientData.microchipNumber = data.microchipNumber
+      } else {
+        // Add human-specific fields
+        if (data.gender) patientData.gender = data.gender
       }
 
       // Add vitals if provided
@@ -332,6 +477,8 @@ export default function FamilyMemberOnboardingWizard() {
   }
 
   function renderVitalsStep() {
+    const isPet = data.relationship === 'Pet'
+
     return (
       <VitalsFormSection
         data={{
@@ -347,14 +494,22 @@ export default function FamilyMemberOnboardingWizard() {
         }}
         onChange={(updates) => setData({ ...data, ...updates })}
         required={true}
-        showGoals={true}
+        showGoals={!isPet}
+        hideHeight={isPet}
       />
     )
   }
 
   function renderConditionsStep() {
+    const isPet = data.relationship === 'Pet'
     const suggestedConditions = getSuggestedConditions()
-    const otherConditions = ['Arthritis', 'Asthma', 'Thyroid Disorder', 'Kidney Disease', 'Allergies', 'Other']
+
+    // Get species-specific conditions for pets
+    const otherConditions = isPet
+      ? (data.species && PET_HEALTH_CONDITIONS[data.species]
+          ? PET_HEALTH_CONDITIONS[data.species]
+          : DEFAULT_PET_CONDITIONS)
+      : ['Arthritis', 'Asthma', 'Thyroid Disorder', 'Kidney Disease', 'Allergies', 'Other']
 
     const toggleCondition = (condition: string) => {
       setData(prev => ({
@@ -367,8 +522,8 @@ export default function FamilyMemberOnboardingWizard() {
 
     return (
       <div className="space-y-6">
-        {/* AI Suggestions */}
-        {suggestedConditions.length > 0 && (
+        {/* AI Suggestions (only for humans with BMI data) */}
+        {!isPet && suggestedConditions.length > 0 && (
           <div>
             <div className="flex items-start gap-3 mb-4 p-4 rounded-lg bg-primary/10 border-2 border-primary/30">
               <span className="text-2xl">🤖</span>
@@ -409,7 +564,9 @@ export default function FamilyMemberOnboardingWizard() {
 
         {/* Other Conditions */}
         <div>
-          <h3 className="font-semibold mb-3 text-foreground">Other Conditions (Optional)</h3>
+          <h3 className="font-semibold mb-3 text-foreground">
+            {isPet ? 'Health Conditions (Optional)' : 'Other Conditions (Optional)'}
+          </h3>
           <div className="grid grid-cols-2 gap-3">
             {otherConditions.map(condition => {
               const isSelected = data.conditions.includes(condition)
@@ -484,31 +641,112 @@ export default function FamilyMemberOnboardingWizard() {
           </select>
         </div>
 
-        {/* Gender */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Gender *</label>
-          <div className="grid grid-cols-3 gap-3">
-            {['Male', 'Female', 'Other'].map(gender => (
-              <button
-                key={gender}
-                type="button"
-                onClick={() => setData({ ...data, gender })}
-                className={`
-                  px-4 py-3 rounded-xl font-medium transition-all
-                  ${data.gender === gender
-                    ? 'bg-primary text-primary-foreground border-2 border-primary'
-                    : 'bg-accent border-2 border-transparent hover:border-primary/30'
-                  }
-                `}
+        {/* Pet-specific fields */}
+        {data.relationship === 'Pet' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium mb-2">Species *</label>
+              <select
+                value={data.species || ''}
+                onChange={(e) => setData({ ...data, species: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
               >
-                {gender}
-              </button>
-            ))}
+                <option value="">Select species</option>
+                <option value="Dog">Dog</option>
+                <option value="Cat">Cat</option>
+                <option value="Bird">Bird</option>
+                <option value="Fish">Fish</option>
+                <option value="Rabbit">Rabbit</option>
+                <option value="Guinea Pig">Guinea Pig</option>
+                <option value="Hamster">Hamster</option>
+                <option value="Reptile">Reptile</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Breed (Optional)</label>
+              {data.species && PET_BREEDS[data.species] ? (
+                <>
+                  <select
+                    value={data.breed || ''}
+                    onChange={(e) => setData({ ...data, breed: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
+                  >
+                    <option value="">Select breed</option>
+                    {PET_BREEDS[data.species].map(breed => (
+                      <option key={breed} value={breed}>{breed}</option>
+                    ))}
+                  </select>
+
+                  {/* Additional details for Mixed Breed or Other */}
+                  {(data.breed === 'Mixed Breed' || data.breed === 'Other') && (
+                    <div className="mt-3">
+                      <label className="block text-xs text-muted-foreground mb-1">
+                        {data.breed === 'Mixed Breed' ? 'Specify mix (e.g., Labrador/Poodle)' : 'Specify breed'}
+                      </label>
+                      <input
+                        type="text"
+                        value={data.breedDetails || ''}
+                        onChange={(e) => setData({ ...data, breedDetails: e.target.value })}
+                        placeholder={data.breed === 'Mixed Breed' ? 'e.g., Labrador/Poodle Mix' : 'Enter specific breed'}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <input
+                  type="text"
+                  value={data.breed || ''}
+                  onChange={(e) => setData({ ...data, breed: e.target.value })}
+                  placeholder={data.species === 'Other' ? 'Enter breed' : 'Select a species first'}
+                  disabled={!data.species}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors disabled:opacity-50"
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Microchip Number (Optional)</label>
+              <input
+                type="text"
+                value={data.microchipNumber || ''}
+                onChange={(e) => setData({ ...data, microchipNumber: e.target.value })}
+                placeholder="15-digit microchip ID"
+                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Gender (only for humans) */}
+        {data.relationship !== 'Pet' && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Gender *</label>
+            <div className="grid grid-cols-3 gap-3">
+              {['Male', 'Female', 'Other'].map(gender => (
+                <button
+                  key={gender}
+                  type="button"
+                  onClick={() => setData({ ...data, gender })}
+                  className={`
+                    px-4 py-3 rounded-xl font-medium transition-all
+                    ${data.gender === gender
+                      ? 'bg-primary text-primary-foreground border-2 border-primary'
+                      : 'bg-accent border-2 border-transparent hover:border-primary/30'
+                    }
+                  `}
+                >
+                  {gender}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Option: Scan Driver's License (only for adults) */}
-        {data.relationship.toLowerCase() !== 'child' && (
+        {data.relationship.toLowerCase() !== 'child' && data.relationship !== 'Pet' && (
           <div className="pt-4 border-t border-white/20">
             <button
               type="button"
@@ -713,6 +951,15 @@ export default function FamilyMemberOnboardingWizard() {
         isOpen={showScanner}
         onClose={() => setShowScanner(false)}
         onScanComplete={handleScanComplete}
+      />
+
+      {/* Upgrade Modal for Pet Tracking */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        currentPlan={subscription?.plan}
+        currentBillingInterval={subscription?.billingInterval}
+        suggestedPlan="family_basic"
       />
     </div>
   )
