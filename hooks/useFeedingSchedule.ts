@@ -81,7 +81,7 @@ export function useFeedingSchedule({ userId, petId, autoFetch = true, realtime =
   }
 
   // Create feeding schedule
-  const createSchedule = async (data: Omit<FeedingSchedule, 'id' | 'createdAt' | 'updatedAt' | 'petId' | 'createdBy'>) => {
+  const createSchedule = async (data: Omit<FeedingSchedule, 'id' | 'createdAt' | 'updatedAt' | 'petId' | 'createdBy' | 'isActive' | 'startedAt'>) => {
     try {
       logger.debug('[useFeedingSchedule] Creating feeding schedule', { petId })
 

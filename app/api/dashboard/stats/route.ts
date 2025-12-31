@@ -196,11 +196,14 @@ export async function GET(request: NextRequest) {
         })
         const latestWeight = sortedWeights[0]
 
+        // Infer type if missing: species field indicates pet, otherwise human
+        const type = patientData.type || (patientData.species ? 'pet' : 'human')
+
         return {
           id: patientId,
           name: patientData.name,
           photo: patientData.photo,
-          type: patientData.type,
+          type,
           relationship: patientData.relationship,
           activeMedications: medicationsSnapshot.size,
           lastVitalCheck: latestVital ? (latestVital.data().recordedAt || latestVital.data().timestamp) : null,

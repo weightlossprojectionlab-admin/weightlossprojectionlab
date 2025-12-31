@@ -99,8 +99,6 @@ export function FeedingScheduleWizard({ isOpen, onClose, petId, petName, onSucce
         defaultPortionUnit: formData.defaultPortionUnit,
         reminderEnabled: formData.reminderEnabled,
         reminderMinutesBefore: formData.reminderMinutesBefore,
-        isActive: true,
-        startedAt: new Date().toISOString(),
         notificationChannels: {
           push: true,
           email: false,
