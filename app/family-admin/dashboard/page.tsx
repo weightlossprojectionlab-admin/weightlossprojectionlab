@@ -33,6 +33,7 @@ import {
   ChartBarIcon,
   EnvelopeIcon
 } from '@heroicons/react/24/outline'
+import { capitalizeName } from '@/lib/utils'
 
 export default function FamilyAdminDashboardPage() {
   return (
@@ -574,7 +575,7 @@ function PatientSnapshotCard({ patient, onClick }: any) {
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-foreground truncate">{patient.name}</h3>
+          <h3 className="font-bold text-foreground truncate">{capitalizeName(patient.name)}</h3>
           <p className="text-sm text-muted-foreground">{patient.relationship}</p>
           <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
             patient.type === 'human' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400'
