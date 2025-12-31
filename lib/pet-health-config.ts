@@ -45,41 +45,49 @@ export const PET_TAB_LABELS: Record<string, Record<string, string>> = {
     feeding: '🍖 Feeding',
     activity: '🏃 Exercise',
     vitals: '🩺 Vitals',
-    grooming: '✂️ Grooming'
+    grooming: '✂️ Grooming',
+    medications: '💉 Health Care'
   },
   Cat: {
     feeding: '🐟 Feeding',
     activity: '🎾 Activity',
     vitals: '🩺 Vitals',
-    grooming: '✂️ Grooming'
+    grooming: '✂️ Grooming',
+    medications: '💉 Health Care'
   },
   Bird: {
     feeding: '🌾 Feeding',
-    vitals: '🩺 Vitals'
+    vitals: '🩺 Vitals',
+    medications: '💉 Health Care'
   },
   Fish: {
     feeding: '🐠 Feeding',
-    vitals: '🌡️ Water Vitals'
+    vitals: '🌡️ Water Vitals',
+    medications: '💊 Treatments'
   },
   Rabbit: {
     feeding: '🥕 Feeding',
     activity: '🏃 Exercise',
     vitals: '🩺 Vitals',
-    grooming: '✂️ Grooming'
+    grooming: '✂️ Grooming',
+    medications: '💉 Health Care'
   },
   'Guinea Pig': {
     feeding: '🥬 Feeding',
     activity: '🎡 Exercise',
     vitals: '🩺 Vitals',
-    grooming: '✂️ Grooming'
+    grooming: '✂️ Grooming',
+    medications: '💉 Health Care'
   },
   Hamster: {
     feeding: '🌰 Feeding',
-    vitals: '🩺 Vitals'
+    vitals: '🩺 Vitals',
+    medications: '💉 Health Care'
   },
   Reptile: {
     feeding: '🦗 Feeding',
-    vitals: '🌡️ Habitat Vitals'
+    vitals: '🌡️ Habitat Vitals',
+    medications: '💉 Health Care'
   }
 }
 
@@ -120,7 +128,7 @@ function getDefaultTabLabel(tab: string): string {
     meals: '🍽️ Meals',
     steps: '🚶 Steps',
     activity: '🏃 Activity',
-    medications: '💊 Meds',
+    medications: '💊 Medications', // For humans
     recipes: '📖 Recipes',
     appointments: '📅 Appt',
     grooming: '✂️ Groom',

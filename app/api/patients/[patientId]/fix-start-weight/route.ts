@@ -44,51 +44,70 @@ export async function POST(
 
     const patientData = patientDoc.data()
     const currentStartWeight = patientData?.goals?.startWeight
+    const isPet = patientData?.type === 'pet'
 
-    // Get the first (oldest) weight log for this patient
-    const weightLogsSnapshot = await adminDb
-      .collection('users')
-      .doc(userId)
-      .collection('patients')
-      .doc(patientId)
-      .collection('weightLogs')
-      .orderBy('loggedAt', 'asc')
-      .limit(1)
-      .get()
+    let firstWeight: number | null = null
+    let source = ''
 
-    if (weightLogsSnapshot.empty) {
-      // No weight logs - check if patient has currentWeight field (legacy)
-      if (patientData?.currentWeight && patientData.currentWeight > 0) {
-        // Use currentWeight as starting weight
-        await adminDb
-          .collection('users')
-          .doc(userId)
-          .collection('patients')
-          .doc(patientId)
-          .update({
-            'goals.startWeight': patientData.currentWeight
-          })
+    if (isPet) {
+      // For pets, check vitals collection instead of weightLogs
+      const vitalsSnapshot = await adminDb
+        .collection('users')
+        .doc(userId)
+        .collection('patients')
+        .doc(patientId)
+        .collection('vitals')
+        .orderBy('timestamp', 'asc')
+        .limit(1)
+        .get()
 
-        return NextResponse.json({
-          success: true,
-          message: 'Start weight set from currentWeight field',
-          newStartWeight: patientData.currentWeight,
-          source: 'currentWeight'
-        })
+      if (!vitalsSnapshot.empty) {
+        const firstVital = vitalsSnapshot.docs[0].data()
+        firstWeight = firstVital.weight || firstVital.petVitals?.weight || null
+        source = 'vitals'
       }
+    } else {
+      // For humans, check weightLogs
+      const weightLogsSnapshot = await adminDb
+        .collection('users')
+        .doc(userId)
+        .collection('patients')
+        .doc(patientId)
+        .collection('weightLogs')
+        .orderBy('loggedAt', 'asc')
+        .limit(1)
+        .get()
 
-      return NextResponse.json({ error: 'No weight logs or currentWeight found for this patient' }, { status: 404 })
+      if (!weightLogsSnapshot.empty) {
+        const firstWeightLog = weightLogsSnapshot.docs[0].data()
+        firstWeight = firstWeightLog.weight
+        source = 'weightLog'
+      }
     }
 
-    const firstWeightLog = weightLogsSnapshot.docs[0].data()
-    const firstWeight = firstWeightLog.weight
+    // Fallback: check currentWeight field (legacy)
+    if (!firstWeight && patientData?.currentWeight && patientData.currentWeight > 0) {
+      firstWeight = patientData.currentWeight
+      source = 'currentWeight'
+    }
 
-    // Only update if current startWeight is missing or unrealistic (< 10 lbs for humans)
-    if (currentStartWeight && currentStartWeight >= 10) {
+    // If still no weight found, return error
+    if (!firstWeight) {
+      return NextResponse.json({
+        error: `No weight data found for this ${isPet ? 'pet' : 'patient'}. Please record their first weight measurement.`,
+        isPet
+      }, { status: 404 })
+    }
+
+    // Only update if current startWeight is missing or unrealistic
+    // For pets, any positive number is valid; for humans, >= 10 lbs
+    const minValidWeight = isPet ? 0.1 : 10
+    if (currentStartWeight && currentStartWeight >= minValidWeight) {
       return NextResponse.json({
         message: 'Start weight is already set and valid, no update needed',
         currentStartWeight,
-        firstWeight
+        firstWeight,
+        isPet
       })
     }
 
@@ -104,11 +123,11 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: 'Start weight updated successfully from first weight log',
+      message: `Start weight updated successfully from ${source}`,
       oldStartWeight: currentStartWeight || null,
       newStartWeight: firstWeight,
-      firstWeightLogDate: firstWeightLog.loggedAt.toDate().toISOString(),
-      source: 'weightLog'
+      source,
+      isPet
     })
   } catch (error) {
     return errorResponse(error, {

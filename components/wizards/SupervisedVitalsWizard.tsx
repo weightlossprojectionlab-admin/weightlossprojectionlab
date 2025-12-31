@@ -9,7 +9,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Dialog } from '@headlessui/react'
 import {
   XMarkIcon,
   CheckCircleIcon,
@@ -587,195 +586,111 @@ export default function SupervisedVitalsWizard({
   const currentStepIndex = stepOrder.indexOf(currentStep)
   const progress = ((currentStepIndex + 1) / stepOrder.length) * 100
 
+  if (!isOpen) return null
+
   return (
-    <>
-      <style>{`
-        .wizard-compact-content * {
-          line-height: 1.3 !important;
-        }
-        .wizard-compact-content h1,
-        .wizard-compact-content h2,
-        .wizard-compact-content h3,
-        .wizard-compact-content h4 {
-          font-size: clamp(11px, 2.8vw, 14px) !important;
-          margin-bottom: clamp(2px, 0.5vh, 4px) !important;
-          margin-top: clamp(2px, 0.5vh, 4px) !important;
-        }
-        .wizard-compact-content p,
-        .wizard-compact-content span,
-        .wizard-compact-content label,
-        .wizard-compact-content li {
-          font-size: clamp(9px, 2.2vw, 11px) !important;
-          margin-bottom: clamp(1px, 0.3vh, 3px) !important;
-        }
-        .wizard-compact-content input,
-        .wizard-compact-content select,
-        .wizard-compact-content textarea {
-          font-size: clamp(11px, 2.8vw, 14px) !important;
-          padding: clamp(3px, 0.7vh, 6px) clamp(4px, 1vw, 8px) !important;
-          min-height: auto !important;
-        }
-        .wizard-compact-content input[type="number"],
-        .wizard-compact-content input[type="text"],
-        .wizard-compact-content input[type="date"] {
-          -webkit-appearance: none !important;
-        }
-        .wizard-compact-content button {
-          font-size: clamp(9px, 2.2vw, 11px) !important;
-          padding: clamp(3px, 0.7vh, 6px) clamp(6px, 1.5vw, 10px) !important;
-        }
-        .wizard-compact-content .space-y-6 > * + *,
-        .wizard-compact-content .space-y-4 > * + *,
-        .wizard-compact-content .space-y-3 > * + *,
-        .wizard-compact-content .space-y-2 > * + * {
-          margin-top: clamp(3px, 0.8vh, 6px) !important;
-        }
-        .wizard-compact-content .gap-6,
-        .wizard-compact-content .gap-4,
-        .wizard-compact-content .gap-3,
-        .wizard-compact-content .gap-2 {
-          gap: clamp(3px, 0.8vw, 6px) !important;
-        }
-        .wizard-compact-content svg,
-        .wizard-compact-content img {
-          width: clamp(10px, 2.5vw, 16px) !important;
-          height: clamp(10px, 2.5vw, 16px) !important;
-        }
-        .wizard-compact-content .p-6,
-        .wizard-compact-content .p-4,
-        .wizard-compact-content .p-3,
-        .wizard-compact-content .p-2 {
-          padding: clamp(3px, 0.8vh, 6px) !important;
-        }
-        .wizard-compact-content .rounded-lg,
-        .wizard-compact-content .rounded-md {
-          border-radius: clamp(3px, 0.8vw, 6px) !important;
-        }
-        .wizard-compact-content .border-2 {
-          border-width: 1px !important;
-        }
-        .wizard-compact-content .mb-6,
-        .wizard-compact-content .mb-4,
-        .wizard-compact-content .mb-3,
-        .wizard-compact-content .mb-2,
-        .wizard-compact-content .mb-1 {
-          margin-bottom: clamp(2px, 0.5vh, 4px) !important;
-        }
-        .wizard-compact-content .mt-6,
-        .wizard-compact-content .mt-4,
-        .wizard-compact-content .mt-3,
-        .wizard-compact-content .mt-2,
-        .wizard-compact-content .mt-1 {
-          margin-top: clamp(2px, 0.5vh, 4px) !important;
-        }
-      `}</style>
-      <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-
-      <div className="fixed inset-0 flex items-start justify-center pt-4 sm:pt-8 p-0 sm:p-4 overflow-y-auto">
-        <Dialog.Panel className="mx-auto w-full bg-card rounded-t-2xl sm:rounded-xl shadow-xl overflow-hidden flex flex-col" style={{
-          maxWidth: 'clamp(320px, 95vw, 700px)',
-          maxHeight: 'calc(100vh - 60px)'
-        }}>
-          {/* Header - Compact */}
-          <div className="bg-primary flex items-center justify-between flex-shrink-0" style={{ padding: 'clamp(4px, 1vh, 8px) clamp(6px, 2vw, 12px)' }}>
-            <div className="flex-1 min-w-0">
-              <Dialog.Title className="font-bold text-primary-foreground truncate" style={{ fontSize: 'clamp(10px, 2.5vw, 14px)' }}>
-                Vitals - {familyMember.name}
-              </Dialog.Title>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-primary-foreground hover:text-primary-foreground/80 transition-colors flex-shrink-0" style={{ marginLeft: 'clamp(4px, 1vw, 8px)' }}
-            >
-              <XMarkIcon style={{ width: 'clamp(12px, 3vw, 16px)', height: 'clamp(12px, 3vw, 16px)' }} />
-            </button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-background rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-background border-b border-border px-6 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Vitals Check</h2>
+            <p className="text-sm text-muted-foreground mt-1">for {familyMember.name}</p>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+        </div>
 
-          {/* Progress Bar - Thin */}
-          {currentStep !== 'confirmation' && (
-            <div className="bg-muted flex-shrink-0" style={{ height: 'clamp(2px, 0.5vh, 4px)' }}>
+        {/* Progress Indicator */}
+        {currentStep !== 'confirmation' && (
+          <div className="px-6 py-4 border-b border-border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Step {currentStepIndex + 1} of {stepOrder.length}</span>
+              <span className="text-sm text-muted-foreground capitalize">
+                {currentStep.replace('_', ' ')}
+              </span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2">
               <div
-                className="bg-primary transition-all duration-300"
-                style={{ width: `${progress}%`, height: '100%' }}
+                className="bg-primary h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
               />
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Training Mode Toggle - Compact */}
-          {currentStep !== 'intro' && currentStep !== 'confirmation' && currentStep !== 'date_selection' && (
-            <div className="bg-accent-light border-b border-accent/20 flex-shrink-0" style={{ padding: 'clamp(4px, 1vh, 8px) clamp(6px, 2vw, 12px)' }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center" style={{ gap: 'clamp(2px, 0.5vw, 4px)' }}>
-                  <AcademicCapIcon className="text-accent-dark flex-shrink-0" style={{ width: 'clamp(10px, 2.5vw, 14px)', height: 'clamp(10px, 2.5vw, 14px)' }} />
-                  <span className="font-medium text-accent-dark" style={{ fontSize: 'clamp(8px, 2vw, 10px)' }}>
-                    Training
-                  </span>
-                </div>
-                <button
-                  onClick={() => setShowGuidance(!showGuidance)}
-                  className={`relative inline-flex items-center rounded-full transition-colors ${
-                    showGuidance ? 'bg-accent' : 'bg-muted-dark'
-                  }`}
-                  style={{ height: 'clamp(12px, 3vw, 16px)', width: 'clamp(24px, 6vw, 32px)' }}
-                  role="switch"
-                  aria-checked={showGuidance}
-                  aria-label="Toggle training guidance"
-                >
-                  <span
-                    className={`inline-block transform rounded-full bg-white transition-transform ${
-                      showGuidance ? 'translate-x-[calc(100%-2px)]' : 'translate-x-0.5'
-                    }`}
-                    style={{ height: 'clamp(10px, 2.5vw, 12px)', width: 'clamp(10px, 2.5vw, 12px)' }}
-                  />
-                </button>
+        {/* Training Mode Toggle */}
+        {currentStep !== 'intro' && currentStep !== 'confirmation' && currentStep !== 'date_selection' && (
+          <div className="bg-accent-light border-b border-accent/20 px-6 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AcademicCapIcon className="w-5 h-5 text-accent-dark" />
+                <span className="text-sm font-medium text-accent-dark">
+                  Training Mode
+                </span>
               </div>
-            </div>
-          )}
-
-          {/* Step Content - Minimal padding */}
-          <LightThemeWizardWrapper>
-            <div className="flex-1 overflow-y-auto min-h-0 wizard-compact-content" style={{ padding: 'clamp(4px, 1vh, 8px) clamp(6px, 2vw, 12px)' }}>
-              {renderStepContent()}
-            </div>
-          </LightThemeWizardWrapper>
-
-          {/* Footer Navigation - Compact */}
-          {currentStep !== 'confirmation' && currentStep !== 'intro' && currentStep !== 'review' && currentStep !== 'schedule' && currentStep !== 'date_selection' && (
-            <div className="bg-muted border-t border-border flex items-center justify-between flex-shrink-0" style={{ padding: 'clamp(4px, 1vh, 8px) clamp(6px, 2vw, 12px)' }}>
               <button
-                onClick={handleBack}
-                className="font-medium text-foreground hover:text-foreground/80 flex items-center touch-manipulation"
-                style={{ padding: 'clamp(3px, 0.75vh, 6px) clamp(6px, 1.5vw, 10px)', fontSize: 'clamp(10px, 2.5vw, 12px)', gap: 'clamp(2px, 0.5vw, 4px)' }}
+                type="button"
+                onClick={() => setShowGuidance(!showGuidance)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  showGuidance ? 'bg-accent' : 'bg-muted'
+                }`}
+                role="switch"
+                aria-checked={showGuidance}
+                aria-label="Toggle training guidance"
               >
-                <ArrowLeftIcon style={{ width: 'clamp(10px, 2.5vw, 12px)', height: 'clamp(10px, 2.5vw, 12px)' }} />
-                Back
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    showGuidance ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step Content */}
+        <LightThemeWizardWrapper>
+          <div className="px-6 py-6">
+            {renderStepContent()}
+          </div>
+        </LightThemeWizardWrapper>
+
+        {/* Footer Navigation */}
+        {currentStep !== 'confirmation' && currentStep !== 'intro' && currentStep !== 'review' && currentStep !== 'schedule' && currentStep !== 'date_selection' && (
+          <div className="sticky bottom-0 bg-background border-t border-border px-6 py-4 flex justify-between">
+            <button
+              onClick={handleBack}
+              className="px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors flex items-center gap-2"
+            >
+              <ArrowLeftIcon className="w-4 h-4" />
+              Back
+            </button>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleSkipStep}
+                className="px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors"
+              >
+                Skip
               </button>
 
-              <div className="flex items-center" style={{ gap: 'clamp(4px, 1vw, 8px)' }}>
-                <button
-                  onClick={handleSkipStep}
-                  className="font-medium text-muted-foreground hover:text-foreground touch-manipulation"
-                  style={{ padding: 'clamp(3px, 0.75vh, 6px) clamp(6px, 1.5vw, 10px)', fontSize: 'clamp(10px, 2.5vw, 12px)' }}
-                >
-                  Skip
-                </button>
-
-                <button
-                  onClick={handleNext}
-                  className="bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center touch-manipulation"
-                  style={{ padding: 'clamp(3px, 0.75vh, 6px) clamp(8px, 2vw, 12px)', fontSize: 'clamp(10px, 2.5vw, 12px)', gap: 'clamp(2px, 0.5vw, 4px)' }}
-                >
-                  Next
-                  <ArrowRightIcon style={{ width: 'clamp(10px, 2.5vw, 12px)', height: 'clamp(10px, 2.5vw, 12px)' }} />
-                </button>
-              </div>
+              <button
+                onClick={handleNext}
+                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
+              >
+                Next
+                <ArrowRightIcon className="w-4 h-4" />
+              </button>
             </div>
-          )}
-        </Dialog.Panel>
+          </div>
+        )}
       </div>
-    </Dialog>
-    </>
+    </div>
   )
 }
 
@@ -1696,13 +1611,12 @@ function ReviewStep({
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between pt-2 border-t border-border">
+      <div className="flex items-center justify-between pt-4 border-t border-border">
         <button
           onClick={onBack}
-          className="font-medium text-foreground hover:text-foreground/80 flex items-center touch-manipulation"
-          style={{ padding: 'clamp(3px, 0.75vh, 6px) clamp(6px, 1.5vw, 10px)', fontSize: 'clamp(10px, 2.5vw, 12px)', gap: 'clamp(2px, 0.5vw, 4px)' }}
+          className="px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors flex items-center gap-2"
         >
-          <ArrowLeftIcon style={{ width: 'clamp(10px, 2.5vw, 12px)', height: 'clamp(10px, 2.5vw, 12px)' }} />
+          <ArrowLeftIcon className="w-4 h-4" />
           Back
         </button>
 

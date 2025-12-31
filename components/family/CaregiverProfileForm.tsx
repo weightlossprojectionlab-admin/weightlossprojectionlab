@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react'
 import { AvailabilityCalendar } from './AvailabilityCalendar'
+import { NameInput } from '@/components/form/NameInput'
 import type {
   CaregiverProfileFormData,
   AvailabilityStatus,
@@ -177,21 +178,15 @@ export function CaregiverProfileForm({
       <div className="min-h-[400px]">
         {activeTab === 'basic' && (
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Name *
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg bg-background text-foreground ${
-                  errors.name ? 'border-error' : 'border-border'
-                }`}
-                placeholder="Enter full name"
-              />
-              {errors.name && <p className="text-error text-sm mt-1">{errors.name}</p>}
-            </div>
+            <NameInput
+              value={formData.name}
+              onChange={(name) => handleChange('name', name)}
+              label="Name"
+              placeholder="Enter full name"
+              required
+              error={errors.name}
+              className=""
+            />
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">

@@ -13,6 +13,9 @@
 
 import { useState, useRef } from 'react'
 import { CameraIcon, XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { getTodayDateString, isValidBirthDate, getBirthDateErrorMessage } from '@/lib/date-utils'
+import { NameInput } from '@/components/form/NameInput'
+import toast from 'react-hot-toast'
 
 export interface FacePhotoCaptureProps {
   onComplete: (data: {
@@ -79,6 +82,12 @@ export function FacePhotoCapture({ onComplete, onClose, isOpen }: FacePhotoCaptu
 
     if (!photos.front || !photos.left || !photos.right) {
       alert('Please capture all 3 photos')
+      return
+    }
+
+    // Validate date of birth if provided
+    if (formData.dateOfBirth && !isValidBirthDate(formData.dateOfBirth)) {
+      toast.error(getBirthDateErrorMessage(formData.dateOfBirth))
       return
     }
 
@@ -273,34 +282,22 @@ export function FacePhotoCapture({ onComplete, onClose, isOpen }: FacePhotoCaptu
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    First Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder="John"
-                    className="w-full px-4 py-3 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
-                    required
-                    autoFocus
-                  />
-                </div>
+                <NameInput
+                  value={formData.firstName}
+                  onChange={(firstName) => setFormData({ ...formData, firstName })}
+                  label="First Name"
+                  placeholder="John"
+                  required
+                  autoFocus
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Last Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    placeholder="Doe"
-                    className="w-full px-4 py-3 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
-                    required
-                  />
-                </div>
+                <NameInput
+                  value={formData.lastName}
+                  onChange={(lastName) => setFormData({ ...formData, lastName })}
+                  label="Last Name"
+                  placeholder="Doe"
+                  required
+                />
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
@@ -310,6 +307,7 @@ export function FacePhotoCapture({ onComplete, onClose, isOpen }: FacePhotoCaptu
                     type="date"
                     value={formData.dateOfBirth}
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                    max={getTodayDateString()}
                     className="w-full px-4 py-3 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
                   />
                 </div>

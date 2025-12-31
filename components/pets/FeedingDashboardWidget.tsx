@@ -132,6 +132,7 @@ export function FeedingDashboardWidget({ patient }: FeedingDashboardWidgetProps)
           onClose={() => setShowScheduleWizard(false)}
           petId={patient.id}
           petName={capitalizeName(patient.name)}
+          petSpecies={patient.species}
           onSuccess={() => {
             setShowScheduleWizard(false)
             // Schedule will auto-refresh via real-time listener
@@ -297,6 +298,7 @@ export function FeedingDashboardWidget({ patient }: FeedingDashboardWidgetProps)
         onClose={() => setShowScheduleWizard(false)}
         petId={patient.id}
         petName={capitalizeName(patient.name)}
+        petSpecies={patient.species}
         onSuccess={() => {
           setShowScheduleWizard(false)
           // Schedule will auto-refresh via real-time listener

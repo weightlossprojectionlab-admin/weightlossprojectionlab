@@ -13,7 +13,9 @@
 import { useState } from 'react'
 import { XMarkIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { calculateAge, checkCaregiverEligibility, getTrustPromptMessage, getPermissionLevelDescription } from '@/lib/caregiver-eligibility'
+import { NameInput } from '@/components/form/NameInput'
 import toast from 'react-hot-toast'
+import { getTodayDateString, isValidBirthDate, getBirthDateErrorMessage } from '@/lib/date-utils'
 
 interface FamilyMemberInvitationFlowProps {
   isOpen: boolean
@@ -84,6 +86,12 @@ export function FamilyMemberInvitationFlow({
 
     if (formData.type === 'pet' && !formData.species) {
       toast.error('Please enter the species')
+      return
+    }
+
+    // Validate date of birth is not in the future
+    if (!isValidBirthDate(formData.dateOfBirth)) {
+      toast.error(getBirthDateErrorMessage(formData.dateOfBirth))
       return
     }
 
@@ -245,15 +253,11 @@ export function FamilyMemberInvitationFlow({
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
+                  <NameInput
                     value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(name) => setFormData(prev => ({ ...prev, name }))}
+                    label="Name"
                     placeholder={formData.type === 'pet' ? "Pet's name" : "Full name"}
-                    className="w-full px-4 py-3 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                     required
                   />
                 </div>
@@ -266,6 +270,7 @@ export function FamilyMemberInvitationFlow({
                     type="date"
                     value={formData.dateOfBirth}
                     onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                    max={getTodayDateString()}
                     className="w-full px-4 py-3 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                     required
                   />

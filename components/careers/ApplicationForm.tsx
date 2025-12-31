@@ -7,6 +7,7 @@
 
 import { useState } from 'react'
 import { logger } from '@/lib/logger'
+import { NameInput } from '@/components/form/NameInput'
 import type { JobPosting } from '@/types/jobs'
 
 interface ApplicationFormProps {
@@ -154,19 +155,14 @@ export function ApplicationForm({ job, onSuccess }: ApplicationFormProps) {
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Full Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            value={formData.applicantName}
-            onChange={e => setFormData({ ...formData, applicantName: e.target.value })}
-            className="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            placeholder="John Doe"
-          />
-        </div>
+        <NameInput
+          value={formData.applicantName}
+          onChange={(applicantName) => setFormData({ ...formData, applicantName })}
+          label="Full Name"
+          placeholder="John Doe"
+          required
+          className=""
+        />
 
         {/* Email */}
         <div>

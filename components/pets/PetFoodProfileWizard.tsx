@@ -5,19 +5,22 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePetFoodProfiles } from '@/hooks/usePetFoodProfiles'
 import { useAuth } from '@/hooks/useAuth'
 import { PetFoodProfile } from '@/types/pet-feeding'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
+import { getPetFoodOptions } from '@/lib/pet-food-data'
+import { getBrandProducts, brandHasProducts } from '@/lib/pet-food-products'
 
 interface PetFoodProfileWizardProps {
   isOpen: boolean
   onClose: () => void
   petId: string
   petName: string
+  petSpecies?: string
   editProfile?: PetFoodProfile | null
   onSuccess?: () => void
 }
@@ -27,6 +30,7 @@ export function PetFoodProfileWizard({
   onClose,
   petId,
   petName,
+  petSpecies,
   editProfile,
   onSuccess
 }: PetFoodProfileWizardProps) {
@@ -38,6 +42,29 @@ export function PetFoodProfileWizard({
     petId,
     autoFetch: false
   })
+
+  // Get species-specific food options
+  const foodOptions = getPetFoodOptions(petSpecies)
+  const [customBrand, setCustomBrand] = useState(false)
+  const [customFoodName, setCustomFoodName] = useState(false)
+
+  // Get products for selected brand
+  const [availableProducts, setAvailableProducts] = useState<string[]>([])
+  const showProductDropdown = brandHasProducts(petSpecies, formData.brand) && !customBrand
+
+  // Update available products when brand changes
+  useEffect(() => {
+    if (formData.brand && !customBrand) {
+      const products = getBrandProducts(petSpecies, formData.brand)
+      setAvailableProducts(products)
+      // Reset food name when brand changes
+      if (products.length > 0 && !customFoodName) {
+        setFormData(prev => ({ ...prev, foodName: '' }))
+      }
+    } else {
+      setAvailableProducts([])
+    }
+  }, [formData.brand, petSpecies, customBrand, customFoodName])
 
   // Form state
   const [formData, setFormData] = useState({
@@ -120,28 +147,121 @@ export function PetFoodProfileWizard({
 
         {/* Form Content */}
         <div className="px-6 py-6 space-y-6">
-          {/* Food Name & Brand */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Food Name *</label>
-              <input
-                type="text"
-                value={formData.foodName}
-                onChange={(e) => setFormData(prev => ({ ...prev, foodName: e.target.value }))}
-                placeholder="Purina Dog Chow Complete"
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Brand *</label>
-              <input
-                type="text"
-                value={formData.brand}
-                onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
-                placeholder="Purina"
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+          {/* Brand */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Brand *</label>
+            {!customBrand ? (
+              <div className="flex gap-2">
+                <select
+                  value={formData.brand}
+                  onChange={(e) => {
+                    if (e.target.value === 'Other') {
+                      setCustomBrand(true)
+                      setFormData(prev => ({ ...prev, brand: '' }))
+                    } else {
+                      setFormData(prev => ({ ...prev, brand: e.target.value }))
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Select brand</option>
+                  {foodOptions.brands.map(brand => (
+                    <option key={brand} value={brand}>{brand}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={formData.brand}
+                  onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
+                  placeholder="Enter custom brand"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomBrand(false)
+                    setFormData(prev => ({ ...prev, brand: '' }))
+                  }}
+                  className="text-sm text-primary hover:underline"
+                >
+                  ← Choose from list
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Food Name */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Food Name *</label>
+            {showProductDropdown && availableProducts.length > 0 ? (
+              <div className="space-y-2">
+                <select
+                  value={formData.foodName}
+                  onChange={(e) => {
+                    if (e.target.value === 'Custom') {
+                      setCustomFoodName(true)
+                      setFormData(prev => ({ ...prev, foodName: '' }))
+                    } else {
+                      setFormData(prev => ({ ...prev, foodName: e.target.value }))
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Select product</option>
+                  {availableProducts.map(product => (
+                    <option key={product} value={product}>{product}</option>
+                  ))}
+                  <option value="Custom">Other/Custom Product</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Select a common {formData.brand} product or choose "Other/Custom"
+                </p>
+              </div>
+            ) : customFoodName || !formData.brand || availableProducts.length === 0 ? (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={formData.foodName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, foodName: e.target.value }))}
+                  placeholder="Complete Food Name"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                {customFoodName && formData.brand && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomFoodName(false)
+                      setFormData(prev => ({ ...prev, foodName: '' }))
+                    }}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    ← Choose from {formData.brand} products
+                  </button>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  e.g., {
+                    petSpecies === 'Dog' || petSpecies === 'Cat' ? 'Adult Chicken & Rice' :
+                    petSpecies === 'Bird' ? 'Daily Pellet Blend' :
+                    petSpecies === 'Fish' ? 'Tropical Flakes' :
+                    petSpecies === 'Guinea Pig' ? 'Timothy Hay' :
+                    petSpecies === 'Rabbit' ? 'Timothy Hay' :
+                    petSpecies === 'Hamster' ? 'Lab Blocks' :
+                    petSpecies === 'Reptile' ? 'Bearded Dragon Food' :
+                    petSpecies === 'Horse' ? 'Timothy Hay or Senior Grain' :
+                    petSpecies === 'Cow' ? 'Grass Hay or Dairy Feed' :
+                    petSpecies === 'Goat' ? 'Alfalfa Hay or Goat Grain' :
+                    petSpecies === 'Sheep' ? 'Grass Hay or Sheep Pellets' :
+                    petSpecies === 'Pig' ? 'Grower Pellets or Finisher Feed' :
+                    petSpecies === 'Chicken' ? 'Layer Crumbles or Grower Feed' :
+                    petSpecies === 'Duck' ? 'Waterfowl Pellets or Layer Feed' :
+                    'Complete Food Name'
+                  }
+                </p>
+              </div>
+            ) : null}
           </div>
 
           {/* Food Type */}
@@ -152,12 +272,9 @@ export function PetFoodProfileWizard({
               onChange={(e) => setFormData(prev => ({ ...prev, foodType: e.target.value as any }))}
               className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <option value="dry">Dry Kibble</option>
-              <option value="wet">Wet/Canned</option>
-              <option value="raw">Raw Diet</option>
-              <option value="freeze-dried">Freeze-Dried</option>
-              <option value="homemade">Homemade</option>
-              <option value="prescription">Prescription Diet</option>
+              {foodOptions.foodTypes.map(type => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
             </select>
           </div>
 
@@ -178,11 +295,9 @@ export function PetFoodProfileWizard({
                 onChange={(e) => setFormData(prev => ({ ...prev, servingUnit: e.target.value as any }))}
                 className="px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="cups">Cups</option>
-                <option value="grams">Grams</option>
-                <option value="oz">Ounces</option>
-                <option value="cans">Cans</option>
-                <option value="tbsp">Tablespoons</option>
+                {foodOptions.servingUnits.map(unit => (
+                  <option key={unit.value} value={unit.value}>{unit.label}</option>
+                ))}
               </select>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -192,7 +307,7 @@ export function PetFoodProfileWizard({
 
           {/* Calories per Serving */}
           <div>
-            <label className="block text-sm font-medium mb-2">Calories per Serving</label>
+            <label className="block text-sm font-medium mb-2">Calories per Serving {petSpecies === 'Dog' || petSpecies === 'Cat' ? '' : '(Optional)'}</label>
             <input
               type="number"
               min="0"
@@ -203,7 +318,9 @@ export function PetFoodProfileWizard({
               className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Check the food bag for calories per {formData.servingUnit}
+              {petSpecies === 'Dog' || petSpecies === 'Cat'
+                ? `Check the food bag for calories per ${formData.servingUnit}`
+                : 'Most commonly available for commercial pellets/kibble'}
             </p>
           </div>
 
