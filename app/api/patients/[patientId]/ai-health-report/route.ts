@@ -72,7 +72,8 @@ export async function POST(
       medicationAnalysis: analyses.medicationAnalysis,
       petFeedingAnalysis: analyses.petFeedingAnalysis,
       petVaccinationAnalysis: analyses.petVaccinationAnalysis,
-      documentsCount: documents?.length || 0
+      documentsCount: documents?.length || 0,
+      analyses: analyses  // Add full analyses object for getCriticalAlerts and calculateHealthScore
     })
 
     logger.info('[Health Report] Report generated successfully', {
@@ -129,7 +130,8 @@ function generateHealthReport(data: any): string {
     medicationAnalysis,
     petFeedingAnalysis,
     petVaccinationAnalysis,
-    documentsCount
+    documentsCount,
+    analyses
   } = data
 
   const reportDate = new Date().toLocaleString('en-US', {
