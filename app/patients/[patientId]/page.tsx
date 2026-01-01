@@ -72,7 +72,7 @@ interface QuickWeightModalProps {
 
 function QuickWeightModal({ patient, onClose, onSuccess }: QuickWeightModalProps) {
   const { user } = useAuth()
-  const { logVital } = useVitals(patient.id)
+  const { logVital } = useVitals({ patientId: patient.id })
   const [weight, setWeight] = useState('')
   const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg' | 'g'>(
     patient.species && ['Hamster', 'Guinea Pig', 'Bird'].includes(patient.species) ? 'g' : 'lbs'
