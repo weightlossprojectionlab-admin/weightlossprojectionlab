@@ -74,7 +74,7 @@ export function useAdminStats() {
             logger.debug(`Successfully fetched ${snap.size} users`)
             return snap
           }).catch(err => {
-            logger.error('Error fetching users collection:', err)
+            logger.error('Error fetching users collection:', err instanceof Error ? err : new Error(String(err)))
             throw err
           }),
 
@@ -88,7 +88,7 @@ export function useAdminStats() {
             logger.debug(`Successfully fetched ${snap.size} active users`)
             return snap
           }).catch(err => {
-            logger.error('Error fetching active users:', err)
+            logger.error('Error fetching active users:', err instanceof Error ? err : new Error(String(err)))
             throw err
           }),
 
@@ -97,7 +97,7 @@ export function useAdminStats() {
             logger.debug(`Successfully fetched ${snap.size} recipes`)
             return snap
           }).catch(err => {
-            logger.error('Error fetching recipes:', err)
+            logger.error('Error fetching recipes:', err instanceof Error ? err : new Error(String(err)))
             throw err
           }),
 
@@ -112,7 +112,7 @@ export function useAdminStats() {
             logger.debug(`Successfully fetched ${snap.size} pending recipes`)
             return snap
           }).catch((err) => {
-            logger.warn('Error fetching pending recipes (may not exist):', err)
+            logger.warn('Error fetching pending recipes (may not exist)', { error: err instanceof Error ? err.message : String(err) })
             return { size: 0 }
           }),
 
@@ -126,7 +126,7 @@ export function useAdminStats() {
             logger.debug(`Successfully fetched ${snap.size} open cases`)
             return snap
           }).catch((err) => {
-            logger.warn('Error fetching open cases:', err)
+            logger.warn('Error fetching open cases', { error: err instanceof Error ? err.message : String(err) })
             return { size: 0 }
           }),
 
@@ -141,7 +141,7 @@ export function useAdminStats() {
             logger.debug(`Successfully fetched ${snap.size} low confidence AI decisions`)
             return snap
           }).catch((err) => {
-            logger.warn('Error fetching AI decisions:', err)
+            logger.warn('Error fetching AI decisions', { error: err instanceof Error ? err.message : String(err) })
             return { size: 0 }
           }),
         ])
@@ -179,7 +179,7 @@ export function useAdminStats() {
         fetchStats()
       },
       (err) => {
-        logger.error('Error listening to users:', err)
+        logger.error('Error listening to users:', err instanceof Error ? err : new Error(String(err)))
       }
     )
 
@@ -191,7 +191,7 @@ export function useAdminStats() {
         fetchStats()
       },
       (err) => {
-        logger.error('Error listening to dispute_cases:', err)
+        logger.error('Error listening to dispute_cases:', err instanceof Error ? err : new Error(String(err)))
       }
     )
 

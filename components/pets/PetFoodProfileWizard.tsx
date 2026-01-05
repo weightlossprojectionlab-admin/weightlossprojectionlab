@@ -48,6 +48,18 @@ export function PetFoodProfileWizard({
   const [customBrand, setCustomBrand] = useState(false)
   const [customFoodName, setCustomFoodName] = useState(false)
 
+  // Form state - MUST be declared before being used
+  const [formData, setFormData] = useState({
+    foodName: editProfile?.foodName || '',
+    brand: editProfile?.brand || '',
+    foodType: (editProfile?.foodType || 'dry') as 'dry' | 'wet' | 'raw' | 'freeze-dried' | 'homemade' | 'prescription',
+    servingSize: editProfile?.servingSize || 1,
+    servingUnit: (editProfile?.servingUnit || 'cups') as 'cups' | 'grams' | 'oz' | 'cans' | 'tbsp',
+    caloriesPerServing: editProfile?.caloriesPerServing || 0,
+    isCurrentFood: editProfile?.isCurrentFood ?? true,
+    notes: editProfile?.notes || ''
+  })
+
   // Get products for selected brand
   const [availableProducts, setAvailableProducts] = useState<string[]>([])
   const showProductDropdown = brandHasProducts(petSpecies, formData.brand) && !customBrand
@@ -65,18 +77,6 @@ export function PetFoodProfileWizard({
       setAvailableProducts([])
     }
   }, [formData.brand, petSpecies, customBrand, customFoodName])
-
-  // Form state
-  const [formData, setFormData] = useState({
-    foodName: editProfile?.foodName || '',
-    brand: editProfile?.brand || '',
-    foodType: (editProfile?.foodType || 'dry') as 'dry' | 'wet' | 'raw' | 'freeze-dried' | 'homemade' | 'prescription',
-    servingSize: editProfile?.servingSize || 1,
-    servingUnit: (editProfile?.servingUnit || 'cups') as 'cups' | 'grams' | 'oz' | 'cans' | 'tbsp',
-    caloriesPerServing: editProfile?.caloriesPerServing || 0,
-    isCurrentFood: editProfile?.isCurrentFood ?? true,
-    notes: editProfile?.notes || ''
-  })
 
   const handleSubmit = async () => {
     try {

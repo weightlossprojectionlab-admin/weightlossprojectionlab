@@ -184,7 +184,7 @@ export function useSymptomLogs({ userId, petId, petSpecies, autoFetch = true, re
 
       return await createSymptomLog(symptomLog)
     } catch (err) {
-      logger.error('[useSymptomLogs] Error in quick log', err)
+      logger.error('[useSymptomLogs] Error in quick log', err instanceof Error ? err : new Error(String(err)))
       throw err
     }
   }
@@ -198,7 +198,7 @@ export function useSymptomLogs({ userId, petId, petSpecies, autoFetch = true, re
         resolutionNotes
       })
     } catch (err) {
-      logger.error('[useSymptomLogs] Error resolving symptom', err)
+      logger.error('[useSymptomLogs] Error resolving symptom', err instanceof Error ? err : new Error(String(err)))
       throw err
     }
   }
@@ -385,7 +385,7 @@ export function useSymptomLogs({ userId, petId, petSpecies, autoFetch = true, re
         logger.debug('[useSymptomLogs] Real-time update', { count: logs.length })
       },
       (err) => {
-        logger.error('[useSymptomLogs] Real-time listener error', err)
+        logger.error('[useSymptomLogs] Real-time listener error', err instanceof Error ? err : new Error(String(err)))
         setError(err instanceof Error ? err : new Error('Real-time listener failed'))
       }
     )

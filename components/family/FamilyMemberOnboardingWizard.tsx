@@ -1765,10 +1765,12 @@ export default function FamilyMemberOnboardingWizard() {
 
             // Auto-populate weight from pet vitals
             if (vitalsData.weight) {
+              // Convert 'g' to 'kg' for compatibility with FamilyMemberData
+              const weightUnit = vitalsData.weightUnit === 'g' ? 'kg' : (vitalsData.weightUnit || 'lbs');
               setData({
                 ...data,
                 currentWeight: vitalsData.weight.toString(),
-                weightUnit: vitalsData.weightUnit || 'lbs'
+                weightUnit: weightUnit as 'lbs' | 'kg'
               });
             }
 

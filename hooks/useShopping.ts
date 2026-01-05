@@ -65,7 +65,7 @@ export function useShopping() {
       setNeededItems(needed)
       setStores(userStores)
     } catch (err: any) {
-      logger.error('Error fetching shopping items:', err)
+      logger.error('Error fetching shopping items:', err instanceof Error ? err : new Error(String(err)))
       setError(err.message || 'Failed to load shopping items')
     } finally {
       setLoading(false)

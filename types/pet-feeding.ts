@@ -336,6 +336,7 @@ export type FeedingStatus = 'pending' | 'fed' | 'skipped' | 'late'
 export type FoodType = 'dry' | 'wet' | 'raw' | 'freeze-dried' | 'homemade' | 'prescription'
 export type TreatType = 'commercial-treat' | 'dental-chew' | 'training-treat' | 'table-food' | 'vegetable' | 'fruit' | 'other'
 export type FeedingFrequency = 'once' | 'twice' | 'three-times' | 'four-times' | 'free-feeding' | 'custom'
+export type PortionUnit = 'cups' | 'grams' | 'oz' | 'cans' | 'tbsp'
 
 // ==================== REQUEST/RESPONSE TYPES ====================
 
@@ -347,7 +348,7 @@ export interface CreateFeedingLogRequest {
   scheduledFor: string
   foodProfileId: string
   portionSize: number
-  portionUnit: string
+  portionUnit: PortionUnit
   appetiteLevel?: AppetiteLevel
   fedAt?: string
   medicationHidden?: boolean
@@ -379,5 +380,5 @@ export interface QuickFeedingStatus {
   canLogNow: boolean
   foodName: string
   portionSize: number
-  portionUnit: string
+  portionUnit: PortionUnit
 }

@@ -109,8 +109,10 @@ export default function VitalsWizardRouter({
                   type: 'weight',
                   value: vitalsData.weight,
                   unit: vitalsData.weightUnit || 'lbs',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -120,8 +122,10 @@ export default function VitalsWizardRouter({
                   type: 'temperature',
                   value: vitalsData.temperature,
                   unit: '°F',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -131,8 +135,10 @@ export default function VitalsWizardRouter({
                   type: 'heartRate',
                   value: vitalsData.heartRate,
                   unit: 'bpm',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -142,8 +148,10 @@ export default function VitalsWizardRouter({
                   type: 'respiratoryRate',
                   value: vitalsData.respiratoryRate,
                   unit: 'breaths/min',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -153,8 +161,10 @@ export default function VitalsWizardRouter({
                   type: 'bodyConditionScore',
                   value: vitalsData.bodyConditionScore,
                   unit: vitalsData.bodyConditionScale || '1-9',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -165,8 +175,10 @@ export default function VitalsWizardRouter({
                   type: 'waterTemp',
                   value: vitalsData.waterTemp,
                   unit: '°F',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -176,8 +188,10 @@ export default function VitalsWizardRouter({
                   type: 'pH',
                   value: vitalsData.pH,
                   unit: 'pH',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -187,8 +201,10 @@ export default function VitalsWizardRouter({
                   type: 'ammonia',
                   value: vitalsData.ammonia,
                   unit: 'ppm',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -198,8 +214,10 @@ export default function VitalsWizardRouter({
                   type: 'nitrite',
                   value: vitalsData.nitrite,
                   unit: 'ppm',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -209,8 +227,10 @@ export default function VitalsWizardRouter({
                   type: 'nitrate',
                   value: vitalsData.nitrate,
                   unit: 'ppm',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -221,8 +241,10 @@ export default function VitalsWizardRouter({
                   type: 'baskingTemp',
                   value: vitalsData.baskingTemp,
                   unit: '°F',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -232,8 +254,10 @@ export default function VitalsWizardRouter({
                   type: 'coolSideTemp',
                   value: vitalsData.coolSideTemp,
                   unit: '°F',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 
@@ -243,8 +267,10 @@ export default function VitalsWizardRouter({
                   type: 'humidity',
                   value: vitalsData.humidity,
                   unit: '%',
-                  timestamp,
-                  patientId: familyMember.id
+                  recordedAt: timestamp.toISOString(),
+                  patientId: familyMember.id,
+                  takenBy: familyMember.id,
+                  method: 'manual'
                 } as VitalSign);
               }
 

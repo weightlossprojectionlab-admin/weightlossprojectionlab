@@ -236,7 +236,7 @@ export function useParasitePrevention({ userId, petId, autoFetch = true, realtim
 
       return await createPreventionRecord(record)
     } catch (err) {
-      logger.error('[useParasitePrevention] Error in quick log', err)
+      logger.error('[useParasitePrevention] Error in quick log', err instanceof Error ? err : new Error(String(err)))
       throw err
     }
   }
@@ -269,7 +269,7 @@ export function useParasitePrevention({ userId, petId, autoFetch = true, realtim
         ...doc.data()
       })) as ParasitePreventionRecord[]
     } catch (err) {
-      logger.error('[useParasitePrevention] Error getting prevention history', err)
+      logger.error('[useParasitePrevention] Error getting prevention history', err instanceof Error ? err : new Error(String(err)))
       return []
     }
   }
@@ -308,7 +308,7 @@ export function useParasitePrevention({ userId, petId, autoFetch = true, realtim
         logger.debug('[useParasitePrevention] Real-time update', { count: updatedRecords.length })
       },
       (err) => {
-        logger.error('[useParasitePrevention] Real-time listener error', err)
+        logger.error('[useParasitePrevention] Real-time listener error', err instanceof Error ? err : new Error(String(err)))
         setError(err instanceof Error ? err : new Error('Real-time listener failed'))
       }
     )

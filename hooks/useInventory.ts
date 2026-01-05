@@ -70,7 +70,7 @@ export function useInventory() {
       })
       setExpirationAlerts(alerts)
     } catch (err: any) {
-      logger.error('Error fetching inventory:', err)
+      logger.error('Error fetching inventory:', err instanceof Error ? err : new Error(String(err)))
       setError(err.message || 'Failed to load inventory')
     } finally {
       setLoading(false)

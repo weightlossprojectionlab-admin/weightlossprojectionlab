@@ -92,14 +92,11 @@ function QuickWeightModal({ patient, onClose, onSuccess }: QuickWeightModalProps
 
       // Save weight as a vital using the hook
       const vitalData = {
-        timestamp: new Date(),
-        recordedDate: new Date(),
-        weight: weightValue,
-        weightUnit,
-        petVitals: {
-          weight: weightValue,
-          weightUnit
-        }
+        type: 'weight' as const,
+        value: weightValue,
+        unit: weightUnit,
+        recordedAt: new Date().toISOString(),
+        method: 'manual' as const
       }
 
       await logVital(vitalData)
@@ -388,10 +385,7 @@ function PatientDetailContent() {
       toast.success(result.message || 'Starting weight updated successfully!')
       logger.info('[PatientDetail] Start weight fixed', result)
     } catch (error: any) {
-      logger.error('[PatientDetail] Error fixing start weight', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
+      logger.error('[PatientDetail] Error fixing start weight', error, {
         patientId,
         patientType: patient?.type
       })

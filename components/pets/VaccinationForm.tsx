@@ -24,10 +24,10 @@ export function VaccinationForm({ species, petName, onSubmit, onCancel, initialD
     administeredDate: initialData?.administeredDate || new Date().toISOString().split('T')[0],
     expirationDate: initialData?.expirationDate || '',
     nextDueDate: initialData?.nextDueDate || '',
-    batchNumber: initialData?.batchNumber || '',
+    batchNumber: initialData?.lotNumber || '',
     administeredBy: initialData?.administeredBy || '',
-    administeredAt: initialData?.administeredAt || '',
-    reactions: initialData?.reactions || '',
+    administrationSite: initialData?.administrationSite || '',
+    reactionNotes: initialData?.reactionNotes || '',
     notes: initialData?.notes || ''
   })
 
@@ -79,10 +79,10 @@ export function VaccinationForm({ species, petName, onSubmit, onCancel, initialD
         administeredDate: formData.administeredDate,
         expirationDate: formData.expirationDate || undefined,
         nextDueDate: formData.nextDueDate || undefined,
-        batchNumber: formData.batchNumber || undefined,
+        lotNumber: formData.batchNumber || undefined,
         administeredBy: formData.administeredBy || undefined,
-        administeredAt: formData.administeredAt || undefined,
-        reactions: formData.reactions || undefined,
+        administrationSite: formData.administrationSite || undefined,
+        reactionNotes: formData.reactionNotes || undefined,
         notes: formData.notes || undefined
       }
 
@@ -155,7 +155,7 @@ export function VaccinationForm({ species, petName, onSubmit, onCancel, initialD
       )}
 
       {/* Custom Vaccine Name (if Other selected) */}
-      {formData.vaccineType === 'Other' && (
+      {formData.vaccineType === 'other' && (
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
             Custom Vaccine Name <span className="text-error">*</span>
@@ -172,7 +172,7 @@ export function VaccinationForm({ species, petName, onSubmit, onCancel, initialD
       )}
 
       {/* Only show form fields if there are actual vaccines OR if user wants to add custom */}
-      {(!noVaccinesNeeded || formData.vaccineType === 'Other') && (
+      {(!noVaccinesNeeded || formData.vaccineType === 'other') && (
         <>
       {/* Administered Date */}
       <div>
@@ -226,8 +226,8 @@ export function VaccinationForm({ species, petName, onSubmit, onCancel, initialD
         </label>
         <input
           type="text"
-          value={formData.administeredAt}
-          onChange={(e) => setFormData(prev => ({ ...prev, administeredAt: e.target.value }))}
+          value={formData.administrationSite}
+          onChange={(e) => setFormData(prev => ({ ...prev, administrationSite: e.target.value }))}
           placeholder="Clinic or location name"
           className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         />
@@ -253,8 +253,8 @@ export function VaccinationForm({ species, petName, onSubmit, onCancel, initialD
           Reactions/Side Effects
         </label>
         <textarea
-          value={formData.reactions}
-          onChange={(e) => setFormData(prev => ({ ...prev, reactions: e.target.value }))}
+          value={formData.reactionNotes}
+          onChange={(e) => setFormData(prev => ({ ...prev, reactionNotes: e.target.value }))}
           placeholder="Any reactions or side effects observed..."
           rows={3}
           className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"

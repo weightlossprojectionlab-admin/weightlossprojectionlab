@@ -23,13 +23,15 @@ interface VitalsFormSectionProps {
   onChange: (updates: Partial<VitalsFormData>) => void
   required?: boolean
   showGoals?: boolean
+  hideHeight?: boolean
 }
 
 export function VitalsFormSection({
   data,
   onChange,
   required = false,
-  showGoals = false
+  showGoals = false,
+  hideHeight = false
 }: VitalsFormSectionProps) {
   // Calculate BMI and healthy weight range
   function calculateBMI() {
@@ -140,55 +142,57 @@ export function VitalsFormSection({
       </div>
 
       {/* Height */}
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          Height {required && <span className="text-error">*</span>}
-        </label>
-        {data.heightUnit === 'imperial' ? (
-          <div className="grid grid-cols-2 gap-3">
+      {!hideHeight && (
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Height {required && <span className="text-error">*</span>}
+          </label>
+          {data.heightUnit === 'imperial' ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Feet</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="8"
+                  value={data.heightFeet}
+                  onChange={(e) => onChange({ heightFeet: e.target.value })}
+                  placeholder="5"
+                  required={required}
+                  className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Inches</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="11"
+                  value={data.heightInches}
+                  onChange={(e) => onChange({ heightInches: e.target.value })}
+                  placeholder="8"
+                  className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
+                />
+              </div>
+            </div>
+          ) : (
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Feet</label>
               <input
                 type="number"
-                min="0"
-                max="8"
-                value={data.heightFeet}
-                onChange={(e) => onChange({ heightFeet: e.target.value })}
-                placeholder="5"
+                min="50"
+                max="250"
+                step="0.1"
+                value={data.heightCm}
+                onChange={(e) => onChange({ heightCm: e.target.value })}
+                placeholder="170"
                 required={required}
                 className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
               />
+              <p className="text-xs text-muted-foreground mt-1">Centimeters</p>
             </div>
-            <div>
-              <label className="block text-xs text-muted-foreground mb-1">Inches</label>
-              <input
-                type="number"
-                min="0"
-                max="11"
-                value={data.heightInches}
-                onChange={(e) => onChange({ heightInches: e.target.value })}
-                placeholder="8"
-                className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
-              />
-            </div>
-          </div>
-        ) : (
-          <div>
-            <input
-              type="number"
-              min="50"
-              max="250"
-              step="0.1"
-              value={data.heightCm}
-              onChange={(e) => onChange({ heightCm: e.target.value })}
-              placeholder="170"
-              required={required}
-              className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
-            />
-            <p className="text-xs text-muted-foreground mt-1">Centimeters</p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Current Weight */}
       <div>

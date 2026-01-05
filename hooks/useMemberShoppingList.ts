@@ -73,7 +73,7 @@ export function useMemberShoppingList(options: UseMemberShoppingListOptions) {
       setHouseholdInventory(household)
       setSummary(summaryData)
     } catch (err: any) {
-      logger.error('[useMemberShoppingList] Error fetching data:', err)
+      logger.error('[useMemberShoppingList] Error fetching data:', err instanceof Error ? err : new Error(String(err)))
       setError(err.message || 'Failed to load shopping list')
     } finally {
       setLoading(false)
@@ -102,7 +102,7 @@ export function useMemberShoppingList(options: UseMemberShoppingListOptions) {
         await addToMemberShoppingList(householdId, memberId, itemData)
         await fetchData()
       } catch (err: any) {
-        logger.error('[useMemberShoppingList] Error adding item:', err)
+        logger.error('[useMemberShoppingList] Error adding item:', err instanceof Error ? err : new Error(String(err)))
         throw err
       }
     },
@@ -121,7 +121,7 @@ export function useMemberShoppingList(options: UseMemberShoppingListOptions) {
         await updateMemberShoppingListItem(householdId, memberId, itemId, updates)
         await fetchData()
       } catch (err: any) {
-        logger.error('[useMemberShoppingList] Error updating item:', err)
+        logger.error('[useMemberShoppingList] Error updating item:', err instanceof Error ? err : new Error(String(err)))
         throw err
       }
     },
@@ -137,7 +137,7 @@ export function useMemberShoppingList(options: UseMemberShoppingListOptions) {
         await removeFromMemberShoppingList(householdId, memberId, itemId, productKey)
         await fetchData()
       } catch (err: any) {
-        logger.error('[useMemberShoppingList] Error removing item:', err)
+        logger.error('[useMemberShoppingList] Error removing item:', err instanceof Error ? err : new Error(String(err)))
         throw err
       }
     },
@@ -168,7 +168,7 @@ export function useMemberShoppingList(options: UseMemberShoppingListOptions) {
 
         await fetchData()
       } catch (err: any) {
-        logger.error('[useMemberShoppingList] Error purchasing item:', err)
+        logger.error('[useMemberShoppingList] Error purchasing item:', err instanceof Error ? err : new Error(String(err)))
         throw err
       }
     },
@@ -184,7 +184,7 @@ export function useMemberShoppingList(options: UseMemberShoppingListOptions) {
       await fetchData()
       return count
     } catch (err: any) {
-      logger.error('[useMemberShoppingList] Error clearing purchased items:', err)
+      logger.error('[useMemberShoppingList] Error clearing purchased items:', err instanceof Error ? err : new Error(String(err)))
       throw err
     }
   }, [householdId, memberId, fetchData])

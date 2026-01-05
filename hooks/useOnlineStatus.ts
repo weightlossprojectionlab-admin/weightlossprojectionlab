@@ -27,12 +27,12 @@ export function useOnlineStatus(): OnlineStatus {
     setIsOnline(navigator.onLine)
 
     // Register background sync on mount
-    registerBackgroundSync().catch(err => logger.error('Failed to register background sync', err))
+    registerBackgroundSync().catch(err => logger.error('Failed to register background sync', err instanceof Error ? err : new Error(String(err))))
 
     // Update queued count
     getQueueStats()
       .then(stats => setQueuedCount(stats.unsynced))
-      .catch(err => logger.error('Failed to get queue stats', err))
+      .catch(err => logger.error('Failed to get queue stats', err instanceof Error ? err : new Error(String(err))))
   }, [])
 
   // Listen to online/offline events

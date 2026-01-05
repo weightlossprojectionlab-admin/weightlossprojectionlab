@@ -116,6 +116,119 @@ const VITAL_CONFIG: Record<VitalType, {
       return moodMap[data.mood] || 6
     },
     getDefaultUnit: () => 'scale'
+  },
+  // Pet-specific vitals
+  heartRate: {
+    label: 'Heart Rate',
+    icon: '❤️',
+    fields: [
+      { name: 'heartRate', label: 'Heart Rate', type: 'number', placeholder: '80', unit: 'bpm', min: 40, max: 200 }
+    ],
+    getDefaultValue: () => ({ heartRate: '' }),
+    formatValue: (data) => Number(data.heartRate),
+    getDefaultUnit: () => 'bpm'
+  },
+  respiratoryRate: {
+    label: 'Respiratory Rate',
+    icon: '💨',
+    fields: [
+      { name: 'respiratoryRate', label: 'Respiratory Rate', type: 'number', placeholder: '20', unit: 'breaths/min', min: 10, max: 60 }
+    ],
+    getDefaultValue: () => ({ respiratoryRate: '' }),
+    formatValue: (data) => Number(data.respiratoryRate),
+    getDefaultUnit: () => 'breaths/min'
+  },
+  bodyConditionScore: {
+    label: 'Body Condition Score',
+    icon: '📊',
+    fields: [
+      { name: 'bodyConditionScore', label: 'Body Condition Score', type: 'number', placeholder: '5', unit: '1-9 scale', min: 1, max: 9 }
+    ],
+    getDefaultValue: () => ({ bodyConditionScore: '' }),
+    formatValue: (data) => Number(data.bodyConditionScore),
+    getDefaultUnit: () => '1-9'
+  },
+  // Fish-specific vitals
+  waterTemp: {
+    label: 'Water Temperature',
+    icon: '🌡️',
+    fields: [
+      { name: 'waterTemp', label: 'Water Temperature', type: 'number', placeholder: '75', unit: '°F', min: 60, max: 90 }
+    ],
+    getDefaultValue: () => ({ waterTemp: '' }),
+    formatValue: (data) => Number(data.waterTemp),
+    getDefaultUnit: () => '°F'
+  },
+  pH: {
+    label: 'pH Level',
+    icon: '🧪',
+    fields: [
+      { name: 'pH', label: 'pH Level', type: 'number', placeholder: '7.0', unit: 'pH', min: 6.0, max: 8.5 }
+    ],
+    getDefaultValue: () => ({ pH: '' }),
+    formatValue: (data) => Number(data.pH),
+    getDefaultUnit: () => 'pH'
+  },
+  ammonia: {
+    label: 'Ammonia',
+    icon: '🧪',
+    fields: [
+      { name: 'ammonia', label: 'Ammonia', type: 'number', placeholder: '0', unit: 'ppm', min: 0, max: 10 }
+    ],
+    getDefaultValue: () => ({ ammonia: '' }),
+    formatValue: (data) => Number(data.ammonia),
+    getDefaultUnit: () => 'ppm'
+  },
+  nitrite: {
+    label: 'Nitrite',
+    icon: '🧪',
+    fields: [
+      { name: 'nitrite', label: 'Nitrite', type: 'number', placeholder: '0', unit: 'ppm', min: 0, max: 10 }
+    ],
+    getDefaultValue: () => ({ nitrite: '' }),
+    formatValue: (data) => Number(data.nitrite),
+    getDefaultUnit: () => 'ppm'
+  },
+  nitrate: {
+    label: 'Nitrate',
+    icon: '🧪',
+    fields: [
+      { name: 'nitrate', label: 'Nitrate', type: 'number', placeholder: '20', unit: 'ppm', min: 0, max: 100 }
+    ],
+    getDefaultValue: () => ({ nitrate: '' }),
+    formatValue: (data) => Number(data.nitrate),
+    getDefaultUnit: () => 'ppm'
+  },
+  // Reptile-specific vitals
+  baskingTemp: {
+    label: 'Basking Temperature',
+    icon: '🌡️',
+    fields: [
+      { name: 'baskingTemp', label: 'Basking Temperature', type: 'number', placeholder: '95', unit: '°F', min: 70, max: 120 }
+    ],
+    getDefaultValue: () => ({ baskingTemp: '' }),
+    formatValue: (data) => Number(data.baskingTemp),
+    getDefaultUnit: () => '°F'
+  },
+  coolSideTemp: {
+    label: 'Cool Side Temperature',
+    icon: '🌡️',
+    fields: [
+      { name: 'coolSideTemp', label: 'Cool Side Temperature', type: 'number', placeholder: '75', unit: '°F', min: 60, max: 100 }
+    ],
+    getDefaultValue: () => ({ coolSideTemp: '' }),
+    formatValue: (data) => Number(data.coolSideTemp),
+    getDefaultUnit: () => '°F'
+  },
+  humidity: {
+    label: 'Humidity',
+    icon: '💧',
+    fields: [
+      { name: 'humidity', label: 'Humidity', type: 'number', placeholder: '60', unit: '%', min: 0, max: 100 }
+    ],
+    getDefaultValue: () => ({ humidity: '' }),
+    formatValue: (data) => Number(data.humidity),
+    getDefaultUnit: () => '%'
   }
 }
 
