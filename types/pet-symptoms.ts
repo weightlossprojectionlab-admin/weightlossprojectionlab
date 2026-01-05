@@ -150,6 +150,11 @@ export type SymptomType =
   | 'bad-breath'
   | 'weight-loss'
   | 'weight-gain'
+
+  // Fish-specific
+  | 'difficulty-swimming'
+  | 'fin-damage'
+
   | 'other'
 
 /**
