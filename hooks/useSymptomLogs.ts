@@ -293,14 +293,14 @@ export function useSymptomLogs({ userId, petId, petSpecies, autoFetch = true, re
       }
 
       // Check for escalation (severity increasing over time)
-      const symptomLogs = symptomLogs
+      const filteredLogs = symptomLogs
         .filter(log => log.symptomType === pattern.symptomType)
         .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
 
-      if (symptomLogs.length >= 2) {
+      if (filteredLogs.length >= 2) {
         const severityMap = { mild: 1, moderate: 2, severe: 3 }
-        const recent = symptomLogs.slice(-3)
-        const older = symptomLogs.slice(0, 3)
+        const recent = filteredLogs.slice(-3)
+        const older = filteredLogs.slice(0, 3)
 
         const recentAvg = recent.reduce((sum, log) => sum + severityMap[log.severity], 0) / recent.length
         const olderAvg = older.reduce((sum, log) => sum + severityMap[log.severity], 0) / older.length
