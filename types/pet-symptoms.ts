@@ -154,6 +154,8 @@ export type SymptomType =
   // Fish-specific
   | 'difficulty-swimming'
   | 'fin-damage'
+  | 'gasping'
+  | 'laying-on-bottom'
 
   | 'other'
 
