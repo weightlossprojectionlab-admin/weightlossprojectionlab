@@ -172,7 +172,22 @@ export function getPetVitalName(vitalType: VitalType, species?: string): string 
     temperature: 'Temperature',
     blood_pressure: 'Blood Pressure',
     blood_sugar: 'Blood Sugar',
-    pulse_oximeter: 'Oxygen Level'
+    pulse_oximeter: 'Oxygen Level',
+    mood: 'Mood',
+    // Pet-specific vitals
+    heartRate: 'Heart Rate',
+    respiratoryRate: 'Respiratory Rate',
+    bodyConditionScore: 'Body Condition Score',
+    // Fish-specific vitals
+    waterTemp: 'Water Temperature',
+    pH: 'pH Level',
+    ammonia: 'Ammonia',
+    nitrite: 'Nitrite',
+    nitrate: 'Nitrate',
+    // Reptile-specific vitals
+    baskingTemp: 'Basking Temperature',
+    coolSideTemp: 'Cool Side Temperature',
+    humidity: 'Humidity',
   }
 
   return vitalNames[vitalType] || vitalType
