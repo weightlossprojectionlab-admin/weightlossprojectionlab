@@ -126,7 +126,21 @@ export const FREQUENCY_OPTIONS: Record<VitalType, VitalFrequency[]> = {
   temperature: ['daily', 'weekly', 'biweekly'],
   pulse_oximeter: ['daily', 'twice-daily', 'weekly'],
   weight: ['daily', 'weekly', 'biweekly', 'monthly'],
-  mood: ['daily', 'twice-daily', 'three-times-daily']
+  mood: ['daily', 'twice-daily', 'three-times-daily'],
+  // Pet-specific vitals
+  heartRate: ['daily', 'weekly', 'monthly'],
+  respiratoryRate: ['daily', 'weekly', 'monthly'],
+  bodyConditionScore: ['weekly', 'monthly'],
+  // Fish-specific vitals
+  waterTemp: ['daily', 'twice-daily'],
+  pH: ['daily', 'twice-daily'],
+  ammonia: ['daily', 'twice-daily', 'weekly'],
+  nitrite: ['daily', 'twice-daily', 'weekly'],
+  nitrate: ['daily', 'weekly', 'biweekly'],
+  // Reptile-specific vitals
+  baskingTemp: ['daily', 'twice-daily'],
+  coolSideTemp: ['daily', 'twice-daily'],
+  humidity: ['daily', 'twice-daily'],
 }
 
 /**
