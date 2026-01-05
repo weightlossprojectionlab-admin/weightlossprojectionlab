@@ -446,8 +446,10 @@ export function getReferenceRanges(speciesCategory: PetSpeciesCategory, speciesD
       return REPTILE_REFERENCE_RANGES.general;
 
     case PetSpeciesCategory.FISH:
+      // Exclude temperature as it has a different structure for fish (tropical/coldwater)
+      const { temperature, ...fishRanges } = FISH_REFERENCE_RANGES.freshwater;
       return {
-        ...FISH_REFERENCE_RANGES.freshwater,
+        ...fishRanges,
         gillMovementRate: FISH_REFERENCE_RANGES.gillMovementRate
       };
 
