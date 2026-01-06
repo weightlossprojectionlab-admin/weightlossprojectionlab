@@ -314,27 +314,27 @@ function DashboardContent() {
 
     // Priority 1: Top feature gets shown first
     const topFeature = userPrefs.getTopFeature()
-    if (topFeature === 'weight_loss' || topFeature === 'fitness') {
+    if (topFeature === 'body_fitness') {
       widgets.push('progress')
-    } else if (topFeature === 'meal_planning') {
+    } else if (topFeature === 'nutrition_kitchen') {
       widgets.push('gallery')
-    } else if (topFeature === 'medical_tracking') {
+    } else if (topFeature === 'health_medical') {
       widgets.push('medical')
     }
 
     // Priority 2: Add remaining widgets ONLY if user selected relevant features
-    // Weight/Progress widget - show if user wants weight_loss OR fitness
-    if ((preferences.includes('weight_loss') || preferences.includes('fitness')) && !widgets.includes('progress')) {
+    // Weight/Progress widget - show if user wants body_fitness
+    if (preferences.includes('body_fitness') && !widgets.includes('progress')) {
       widgets.push('progress')
     }
 
-    // Meal Gallery widget - show if user wants meal_planning
-    if (preferences.includes('meal_planning') && !widgets.includes('gallery')) {
+    // Meal Gallery widget - show if user wants nutrition_kitchen
+    if (preferences.includes('nutrition_kitchen') && !widgets.includes('gallery')) {
       widgets.push('gallery')
     }
 
-    // Medical widget - show if user wants medical_tracking
-    if (preferences.includes('medical_tracking') && !widgets.includes('medical')) {
+    // Medical widget - show if user wants health_medical
+    if (preferences.includes('health_medical') && !widgets.includes('medical')) {
       widgets.push('medical')
     }
 
@@ -359,12 +359,12 @@ function DashboardContent() {
     }
 
     return {
-      showMeal: preferences.includes('meal_planning') || preferences.includes('weight_loss'),
-      showMedications: preferences.includes('medical_tracking'),
-      showGallery: preferences.includes('meal_planning'),
-      showShopping: preferences.includes('shopping_automation') || preferences.includes('meal_planning'),
-      showWeight: preferences.includes('weight_loss') || preferences.includes('fitness') || preferences.includes('medical_tracking'),
-      showInventory: preferences.includes('shopping_automation') || preferences.includes('meal_planning'),
+      showMeal: preferences.includes('nutrition_kitchen') || preferences.includes('body_fitness'),
+      showMedications: preferences.includes('health_medical'),
+      showGallery: preferences.includes('nutrition_kitchen'),
+      showShopping: preferences.includes('nutrition_kitchen'),
+      showWeight: preferences.includes('body_fitness') || preferences.includes('health_medical'),
+      showInventory: preferences.includes('nutrition_kitchen'),
     }
   }, [userPrefs.featurePreferences])
 
@@ -698,8 +698,50 @@ function DashboardContent() {
         {/* Feature Discovery - Show upsells for features user didn't select */}
         {userPrefs.featurePreferences.length > 0 && (
           <>
-            {/* Health & Medical Tracking Upsell */}
-            {!userPrefs.featurePreferences.includes('medical_tracking') && (
+            {/* Body & Fitness Upsell */}
+            {!userPrefs.featurePreferences.includes('body_fitness') && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="text-4xl">💪</div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-blue-900 mb-2">Track Body & Fitness Goals</h3>
+                    <p className="text-sm text-gray-700 mb-4">
+                      Track weight, exercise, body composition, and fitness goals - whether gaining, losing, or maintaining.
+                    </p>
+                    <button
+                      onClick={() => router.push('/onboarding')}
+                      className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
+                    >
+                      Enable Body & Fitness
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Nutrition & Kitchen Upsell */}
+            {!userPrefs.featurePreferences.includes('nutrition_kitchen') && (
+              <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="text-4xl">🍎</div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-orange-900 mb-2">Master Nutrition & Kitchen</h3>
+                    <p className="text-sm text-gray-700 mb-4">
+                      Plan meals with AI analysis, discover recipes, smart shopping lists, and pantry tracking all in one place.
+                    </p>
+                    <button
+                      onClick={() => router.push('/onboarding')}
+                      className="px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
+                    >
+                      Enable Nutrition & Kitchen
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Health & Medical Upsell */}
+            {!userPrefs.featurePreferences.includes('health_medical') && (
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6 shadow-sm">
                 <div className="flex items-start gap-4">
                   <div className="text-4xl">💊</div>
@@ -712,28 +754,7 @@ function DashboardContent() {
                       onClick={() => router.push('/onboarding')}
                       className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
                     >
-                      Enable Health & Medical Tracking
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Shopping Automation Upsell */}
-            {!userPrefs.featurePreferences.includes('shopping_automation') && (
-              <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-lg p-6 shadow-sm">
-                <div className="flex items-start gap-4">
-                  <div className="text-4xl">🛒</div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-orange-900 mb-2">Automate Your Shopping</h3>
-                    <p className="text-sm text-gray-700 mb-4">
-                      Smart shopping lists, inventory tracking, and barcode scanning. Never run out of ingredients again.
-                    </p>
-                    <button
-                      onClick={() => router.push('/onboarding')}
-                      className="px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
-                    >
-                      Enable Shopping Automation
+                      Enable Health & Medical
                     </button>
                   </div>
                 </div>

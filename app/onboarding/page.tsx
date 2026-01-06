@@ -52,9 +52,7 @@ interface OnboardingScreen {
 
 // Map onboarding goals to gated features for subscription filtering
 const GOAL_TO_FEATURE_MAP: Record<string, string[]> = {
-  'medical_tracking': ['appointments', 'medications', 'medical-records'],
-  'vitals': ['vitals-tracking'],
-  'medications': ['medications'],
+  'health_medical': ['appointments', 'medications', 'medical-records', 'vitals-tracking'],
   'caregiving': ['multiple-patients', 'patient-management'],
 }
 
