@@ -49,16 +49,23 @@
       },
       {
         "id": "food_management",
-        "question": "How do you usually manage food?",
-        "options": ["self", "others", "shared", "i_shop", "i_dont_shop", "delivery", "meal_kits"],
+        "question": "How do you get your food?",
+        "options": ["i_cook_at_home", "meal_delivery", "meal_kits", "mostly_restaurants"],
+        "optionsByRole": {
+          "myself": ["i_cook_at_home", "meal_delivery", "meal_kits", "mostly_restaurants"],
+          "family": ["self", "others", "shared", "i_shop", "i_dont_shop", "delivery", "meal_kits"]
+        },
         "optionDescriptions": {
+          "i_cook_at_home": "I cook at home (need recipes, shopping lists)",
+          "meal_delivery": "Meal delivery services (need quick meal tracking)",
+          "meal_kits": "Meal kit services (need simple ingredient tracking)",
+          "mostly_restaurants": "Mostly restaurants/takeout (need easy photo logging)",
           "self": "I cook and shop for myself",
           "others": "Someone else cooks for me (e.g., family member, caregiver)",
           "shared": "We share cooking and shopping duties",
           "i_shop": "I do the grocery shopping",
           "i_dont_shop": "Someone else does the shopping",
-          "delivery": "I use delivery services (Instacart, DoorDash, etc.)",
-          "meal_kits": "I use meal kit services (HelloFresh, Blue Apron, etc.)"
+          "delivery": "I use delivery services (Instacart, DoorDash, etc.)"
         },
         "sets": "kitchenMode"
       },

@@ -81,6 +81,11 @@ export type HouseholdType =
   | 'dependents'
 
 export type KitchenMode =
+  // Individual user options
+  | 'i_cook_at_home'
+  | 'meal_delivery'
+  | 'mostly_restaurants'
+  // Family/household options
   | 'self'
   | 'others'
   | 'shared'
