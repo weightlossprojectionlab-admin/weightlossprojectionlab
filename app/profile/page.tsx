@@ -826,7 +826,7 @@ function ProfileContent() {
         )}
 
         {/* Reminders Settings - Hide vital reminders for pets, filter by onboarding goals */}
-        {!isPetProfile && (userPrefs.featurePreferences.includes('health_medical') || userPrefs.featurePreferences.length === 0) && (
+        {!isPetProfile && userPrefs.featurePreferences && (userPrefs.featurePreferences.includes('health_medical') || userPrefs.featurePreferences.length === 0) && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-foreground">⏰ Vital Sign Reminders</h2>
@@ -1334,7 +1334,7 @@ function ProfileContent() {
         )}
 
         {/* Upsell: Health & Medical Tracking - Show if user didn't select medical_tracking */}
-        {!isPetProfile && !currentlyViewingMember && userPrefs.featurePreferences.length > 0 && !userPrefs.featurePreferences.includes('health_medical') && (
+        {!isPetProfile && !currentlyViewingMember && userPrefs.featurePreferences && userPrefs.featurePreferences.length > 0 && !userPrefs.featurePreferences.includes('health_medical') && (
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6 shadow-sm">
             <div className="flex items-start gap-4">
               <div className="text-4xl">💊</div>
@@ -1370,12 +1370,12 @@ function ProfileContent() {
         </div>
 
         {/* Notification Preferences - Filter by onboarding goals */}
-        {user?.uid && (userPrefs.featurePreferences.includes('health_medical') || userPrefs.featurePreferences.includes('nutrition_kitchen') || userPrefs.featurePreferences.length === 0) && (
+        {user?.uid && userPrefs.featurePreferences && (userPrefs.featurePreferences.includes('health_medical') || userPrefs.featurePreferences.includes('nutrition_kitchen') || userPrefs.featurePreferences.length === 0) && (
           <NotificationPreferences userId={user.uid} />
         )}
 
         {/* Legacy Notification Settings */}
-        {(userPrefs.featurePreferences.length === 0 || userPrefs.featurePreferences.some(pref =>
+        {userPrefs.featurePreferences && (userPrefs.featurePreferences.length === 0 || userPrefs.featurePreferences.some(pref =>
           ['meal_planning', 'weight_loss', 'medical_tracking', 'vitals', 'medications', 'fitness'].includes(pref)
         )) && <NotificationSettings userId={user?.uid} />}
 

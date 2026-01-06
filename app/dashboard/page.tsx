@@ -696,7 +696,7 @@ function DashboardContent() {
         )}
 
         {/* Feature Discovery - Show upsells for features user didn't select */}
-        {userPrefs.featurePreferences.length > 0 && (
+        {userPrefs.featurePreferences && userPrefs.featurePreferences.length > 0 && (
           <>
             {/* Body & Fitness Upsell */}
             {!userPrefs.featurePreferences.includes('body_fitness') && (
