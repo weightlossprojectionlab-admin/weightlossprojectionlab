@@ -2,7 +2,7 @@
 
 ## Overview
 
-The WLPL admin panel provides comprehensive tools for managing the platform, including user support, content moderation, trust & safety, AI decision review, and analytics.
+The WPL admin panel provides comprehensive tools for managing the platform, including user support, content moderation, trust & safety, AI decision review, and analytics.
 
 ## Access Levels
 

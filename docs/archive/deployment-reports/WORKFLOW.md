@@ -24,7 +24,7 @@
 ## 🌳 Worktree Structure
 
 ```
-C:\Users\percy\wlpl\
+C:\Users\percy\WPL\
 ├── weightlossprojectlab\              # main branch (production)
 ├── weightlossprojectlab-perf-log-meal\          # perf/log-meal-optimization
 ├── weightlossprojectlab-manual-entry\           # feature/manual-meal-entry
@@ -55,7 +55,7 @@ C:\Users\percy\wlpl\
 ```
 
 **What it creates:**
-- New directory: `C:\Users\percy\wlpl\weightlossprojectlab-<feature-name>\`
+- New directory: `C:\Users\percy\WPL\weightlossprojectlab-<feature-name>\`
 - New branch: `<type>/<feature-name>`
 - Branch based on: `main`
 
@@ -63,7 +63,7 @@ C:\Users\percy\wlpl\
 
 ```powershell
 # Navigate to worktree
-cd C:\Users\percy\wlpl\weightlossprojectlab-log-meal-optimization
+cd C:\Users\percy\WPL\weightlossprojectlab-log-meal-optimization
 
 # Install dependencies (first time only)
 npm install
@@ -108,7 +108,7 @@ git push -u origin perf/log-meal-optimization
 
 ```powershell
 # Go back to main
-cd C:\Users\percy\wlpl\weightlossprojectlab
+cd C:\Users\percy\WPL\weightlossprojectlab
 
 # Pull latest changes
 git pull origin main
@@ -279,7 +279,7 @@ git pull
 
 ```powershell
 # Main worktree should ALWAYS be on main and ready!
-cd C:\Users\percy\wlpl\weightlossprojectlab
+cd C:\Users\percy\WPL\weightlossprojectlab
 
 # 1. Create hotfix worktree
 .\scripts\worktree-create.ps1 auth-bug hotfix
@@ -306,15 +306,15 @@ git pull
 # You can work on multiple features at once!
 
 # Terminal 1: Performance work
-cd C:\Users\percy\wlpl\weightlossprojectlab-perf-log-meal
+cd C:\Users\percy\WPL\weightlossprojectlab-perf-log-meal
 npm run dev -- --port 3000
 
 # Terminal 2: Feature work
-cd C:\Users\percy\wlpl\weightlossprojectlab-manual-entry
+cd C:\Users\percy\WPL\weightlossprojectlab-manual-entry
 npm run dev -- --port 3001
 
 # Terminal 3: Another feature
-cd C:\Users\percy\wlpl\weightlossprojectlab-pwa
+cd C:\Users\percy\WPL\weightlossprojectlab-pwa
 npm run dev -- --port 3002
 
 # No conflicts, no context switching, no stashing!
@@ -335,11 +335,11 @@ Output:
 📊 Active Git Worktrees
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   [MAIN] weightlossprojectlab
-      📂 Path: C:\Users\percy\wlpl\weightlossprojectlab
+      📂 Path: C:\Users\percy\WPL\weightlossprojectlab
       🌿 Branch: main
 
   [1] weightlossprojectlab-perf-log-meal
-      📂 Path: C:\Users\percy\wlpl\weightlossprojectlab-perf-log-meal
+      📂 Path: C:\Users\percy\WPL\weightlossprojectlab-perf-log-meal
       🌿 Branch: perf/log-meal-optimization
 
 Total: 2 worktree(s)
@@ -349,16 +349,16 @@ Total: 2 worktree(s)
 
 ```powershell
 # Just cd to the directory!
-cd C:\Users\percy\wlpl\weightlossprojectlab-perf-log-meal
+cd C:\Users\percy\WPL\weightlossprojectlab-perf-log-meal
 
 # Or use VS Code
-code C:\Users\percy\wlpl\weightlossprojectlab-manual-entry
+code C:\Users\percy\WPL\weightlossprojectlab-manual-entry
 ```
 
 ### Check Worktree Status
 
 ```powershell
-cd C:\Users\percy\wlpl\weightlossprojectlab-perf-log-meal
+cd C:\Users\percy\WPL\weightlossprojectlab-perf-log-meal
 git status
 git log --oneline -5
 ```
@@ -424,13 +424,13 @@ Cost: $0/month ✅
 .\scripts\worktree-list.ps1
 
 # Force remove if stuck
-git worktree remove C:\Users\percy\wlpl\weightlossprojectlab-<name> --force
+git worktree remove C:\Users\percy\WPL\weightlossprojectlab-<name> --force
 ```
 
 ### Can't Delete Worktree
 ```powershell
 # Commit or stash changes first
-cd C:\Users\percy\wlpl\weightlossprojectlab-<name>
+cd C:\Users\percy\WPL\weightlossprojectlab-<name>
 git stash
 cd ..\weightlossprojectlab
 .\scripts\worktree-remove.ps1 <name>
@@ -439,7 +439,7 @@ cd ..\weightlossprojectlab
 ### Wrong Branch in Worktree
 ```powershell
 # Don't try to fix it - remove and recreate
-cd C:\Users\percy\wlpl\weightlossprojectlab
+cd C:\Users\percy\WPL\weightlossprojectlab
 .\scripts\worktree-remove.ps1 <name>
 .\scripts\worktree-create.ps1 <name> <type>
 ```

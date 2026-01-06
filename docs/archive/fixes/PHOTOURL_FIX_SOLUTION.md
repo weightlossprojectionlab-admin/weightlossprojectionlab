@@ -121,7 +121,7 @@ This ensures we ALWAYS have the image data:
 
 ## Files Modified
 
-- `C:\Users\percy\wlpl\weightlossprojectlab\app\log-meal\page.tsx`
+- `C:\Users\percy\WPL\weightlossprojectlab\app\log-meal\page.tsx`
 
 ## Diagnostic Logs Added
 

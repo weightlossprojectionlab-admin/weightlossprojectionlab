@@ -2,7 +2,7 @@
 
 **Version**: 1.0
 **Last Updated**: 2025-12-01
-**Scope**: Weight Loss Projection Lab (WLPL) Platform
+**Scope**: Wellness Projection Lab (WPL) Platform
 **Severity Levels**: CRITICAL, HIGH, MEDIUM, LOW
 
 ---
@@ -506,7 +506,7 @@ export async function rateLimit(request: NextRequest, limiterType: string, ident
 Modify `ALLOWED_ORIGINS` environment variable to exclude malicious origins:
 ```bash
 # In production environment
-ALLOWED_ORIGINS=https://app.wlpl.com,https://admin.wlpl.com
+ALLOWED_ORIGINS=https://app.wpl.com,https://admin.wpl.com
 # Do NOT include attacker origins
 ```
 

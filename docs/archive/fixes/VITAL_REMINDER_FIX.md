@@ -13,7 +13,7 @@
 ## Technical Analysis
 
 ### Bug Location
-**File:** `C:\Users\percy\wlpl\weightlossprojectlab\components\vitals\VitalReminderPrompt.tsx`
+**File:** `C:\Users\percy\WPL\weightlossprojectlab\components\vitals\VitalReminderPrompt.tsx`
 
 **Line 97 (Before Fix):**
 ```typescript

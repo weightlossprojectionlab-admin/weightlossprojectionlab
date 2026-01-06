@@ -1,6 +1,6 @@
 # Executive Summary: Security & Deployment Program
 
-**Project**: Weight Loss Projection Lab - Enterprise Security Hardening
+**Project**: Wellness Projection Lab - Enterprise Security Hardening
 **Duration**: Sprint 1-3 + Completion + Deployment (5 phases)
 **Status**: ✅ READY FOR PRODUCTION (pending 3 blocking fixes)
 **Date**: December 1, 2025

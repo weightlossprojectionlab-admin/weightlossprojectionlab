@@ -215,7 +215,7 @@ The following security branches were merged in this production deployment:
 - **Node.js**: v20.19.0
 - **npm**: v10.8.2
 - **Git branch**: main
-- **Working directory**: C:\Users\percy\wlpl\weightlossprojectlab
+- **Working directory**: C:\Users\percy\WPL\weightlossprojectlab
 
 ### Installation Log Summary
 

@@ -1,6 +1,6 @@
 # Migration Procedures Guide
 
-**Project**: Weight Loss Projection Lab
+**Project**: Wellness Projection Lab
 **Version**: 1.0.0
 **Last Updated**: 2024-12-01
 **Purpose**: Comprehensive guide for executing Sprint 1 security migrations safely

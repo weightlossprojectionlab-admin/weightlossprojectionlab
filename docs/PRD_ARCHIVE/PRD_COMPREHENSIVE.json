@@ -1,7 +1,7 @@
 {
   "metadata": {
     "documentType": "Product Requirements Document (PRD)",
-    "projectName": "Weight Loss Project Lab (WLPL)",
+    "projectName": "Weight Loss Project Lab (WPL)",
     "version": "2.2.0",
     "lastUpdated": "2025-11-05T00:00:00Z",
     "status": "Active Development",
@@ -64,7 +64,7 @@
 
     "valueProposition": {
       "traditional": "📸 Take Photo → 🔍 Search Database → ⌨️ Manual Entry → 💾 Save (5-10 minutes)",
-      "wlpl": "📸 Take Photo → 🤖 AI Analysis → ✓ Confirm (30 seconds)",
+      "WPL": "📸 Take Photo → 🤖 AI Analysis → ✓ Confirm (30 seconds)",
       "improvement": "90% time reduction, 100% accuracy improvement"
     },
 

@@ -1,4 +1,4 @@
-# WLPL Phase 3 - Quick Start Guide
+# WPL Phase 3 - Quick Start Guide
 
 **Status:** 🟢 Core Infrastructure Complete (60%)
 **Ready for:** AI Orchestration, Coaching Dashboard, Testing

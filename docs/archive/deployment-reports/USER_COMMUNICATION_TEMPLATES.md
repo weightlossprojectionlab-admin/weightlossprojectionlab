@@ -26,7 +26,7 @@ Hi [First Name],
 You're one of the first 20 people to trust us with your weight loss journey,
 and we couldn't be more grateful.
 
-As we prepare to officially launch and bring WLPL to more people, we wanted
+As we prepare to officially launch and bring WPL to more people, we wanted
 to give you a personal heads-up about what's changing—and what's NOT changing
 for you.
 
@@ -72,9 +72,9 @@ Reply to this email with any questions. We read every reply personally.
 With deep gratitude,
 
 [Your Name]
-Founder, WLPL
+Founder, WPL
 
-P.S. If you know anyone who might benefit from WLPL, we'd love an introduction.
+P.S. If you know anyone who might benefit from WPL, we'd love an introduction.
 As a thank you, we'll give your friend their first month free when you refer them.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -111,7 +111,7 @@ No action needed from you. Just wanted you to know you're all set.
 Thanks for being an early supporter,
 
 [Your Name]
-Founder, WLPL
+Founder, WPL
 
 P.S. Have feedback on how we can improve? I'd love to hear it.
 Just hit reply.
@@ -193,7 +193,7 @@ Just hit reply.
         🎉
       </div>
       <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-        Welcome to WLPL!
+        Welcome to WPL!
       </h2>
       <p className="text-gray-600 dark:text-gray-400 mt-2">
         Your 30-day free trial starts now
@@ -402,7 +402,7 @@ Just hit reply.
 
 ## FAQ Document (for website)
 
-### Frequently Asked Questions: WLPL Pricing
+### Frequently Asked Questions: WPL Pricing
 
 **Q: I'm an existing user. Will I be charged?**
 A: No! If you created your account before [Launch Date], you're grandfathered in with permanent free access. You'll never be charged unless you choose to upgrade for additional features.
@@ -429,7 +429,7 @@ A: Yes! We keep your data for 90 days after your subscription ends. You can expo
 A: Yes! We offer a 30-day money-back guarantee, no questions asked. After 30 days, we provide pro-rated refunds for the current month.
 
 **Q: I'm a student/senior/veteran. Do you offer discounts?**
-A: Yes! Email us at support@wlpl.com with proof of status, and we'll provide a 30% discount on any plan.
+A: Yes! Email us at support@WPL.com with proof of status, and we'll provide a 30% discount on any plan.
 
 ---
 
@@ -475,7 +475,7 @@ Thanks for being an early user! I understand seeing pricing can feel sudden.
 
 Here's the situation:
 
-We launched WLPL a few months ago to test the product with a small group
+We launched WPL a few months ago to test the product with a small group
 (that's you!). During that time, we didn't charge anyone because we were still
 building features and fixing bugs.
 
@@ -506,8 +506,8 @@ Best,
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Your Name]
-Founder, WLPL
-support@wlpl.com
+Founder, WPL
+support@WPL.com
 
 Need help? Reply to this email—we read every message.
 

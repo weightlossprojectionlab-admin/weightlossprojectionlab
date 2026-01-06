@@ -2,7 +2,7 @@
 
 **Version**: 1.0
 **Last Updated**: 2025-12-01
-**Audience**: All developers contributing to WLPL
+**Audience**: All developers contributing to WPL
 **Compliance**: OWASP Top 10 2021, WCAG 2.1 AA
 
 ---
@@ -320,7 +320,7 @@ export async function GET(request: NextRequest) {
 ALLOWED_ORIGINS=http://localhost:3000
 
 # Production
-ALLOWED_ORIGINS=https://app.wlpl.com,https://admin.wlpl.com
+ALLOWED_ORIGINS=https://app.wpl.com,https://admin.wpl.com
 ```
 
 ---

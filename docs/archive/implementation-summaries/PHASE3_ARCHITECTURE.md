@@ -1,4 +1,4 @@
-# WLPL Phase 3: Orchestration & Interface Layer - Architecture
+# WPL Phase 3: Orchestration & Interface Layer - Architecture
 
 ## Overview
 

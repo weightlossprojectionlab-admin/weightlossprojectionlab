@@ -168,7 +168,7 @@ The notification system uses SendGrid for transactional email notifications.
 3. **Create New Sender**
    - Click **Create New Sender**
    - Fill in sender details:
-     - **From Name:** WLPL Family Health (or your app name)
+     - **From Name:** WPL Family Health (or your app name)
      - **From Email:** Use a non-Gmail email you control
      - **Reply To:** (optional) Can be your support email
      - **Company Address:** Your business address
@@ -238,7 +238,7 @@ The notification system uses SendGrid for transactional email notifications.
 
 1. Navigate to: Settings → API Keys
 2. Click **Create API Key**
-3. Name: "WLPL Notification System" (or descriptive name)
+3. Name: "WPL Notification System" (or descriptive name)
 4. Permissions: **Full Access** (or **Restricted Access** with Mail Send enabled)
 5. Click **Create & View**
 6. **Copy the API key immediately** (shown only once!)
@@ -416,7 +416,7 @@ SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxx
 
 # Verified sender email (NOT @gmail.com)
 SENDGRID_FROM_EMAIL=noreply@yourapp.com
-SENDGRID_FROM_NAME=WLPL Family Health
+SENDGRID_FROM_NAME=WPL Family Health
 
 # Optional: Allow users to reply to different email
 SENDGRID_REPLY_TO_EMAIL=support@yourapp.com

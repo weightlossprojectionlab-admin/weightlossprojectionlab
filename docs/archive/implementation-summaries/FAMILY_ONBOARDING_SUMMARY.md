@@ -6,14 +6,14 @@ Created a comprehensive multi-step onboarding flow for family members and caregi
 ## Components Created
 
 ### 1. Main Onboarding Page
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\app\family\onboarding\page.tsx`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\app\family\onboarding\page.tsx`
 
 - Entry point for the onboarding experience
 - Protected by AuthGuard to ensure user authentication
 - Renders the OnboardingWizard component
 
 ### 2. OnboardingWizard Container
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\family\onboarding\OnboardingWizard.tsx`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\family\onboarding\OnboardingWizard.tsx`
 
 **Features:**
 - 7-step wizard with progress tracking
@@ -30,7 +30,7 @@ Created a comprehensive multi-step onboarding flow for family members and caregi
 - Validates each step before allowing progression
 
 ### 3. OnboardingProgress Component
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\family\onboarding\OnboardingProgress.tsx`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\family\onboarding\OnboardingProgress.tsx`
 
 **Features:**
 - Visual progress bar showing completion percentage
@@ -41,7 +41,7 @@ Created a comprehensive multi-step onboarding flow for family members and caregi
 ### 4. Step Components
 
 #### a. WelcomeStep
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\family\onboarding\steps\WelcomeStep.tsx`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\family\onboarding\steps\WelcomeStep.tsx`
 
 **Features:**
 - Welcome message with hero icon
@@ -53,7 +53,7 @@ Created a comprehensive multi-step onboarding flow for family members and caregi
 - "Get Started" button
 
 #### b. BasicInfoStep
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\family\onboarding\steps\BasicInfoStep.tsx`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\family\onboarding\steps\BasicInfoStep.tsx`
 
 **Features:**
 - Profile photo upload with preview
@@ -68,7 +68,7 @@ Created a comprehensive multi-step onboarding flow for family members and caregi
 - Phone number auto-formats as user types
 
 #### c. RoleStep
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\family\onboarding\steps\RoleStep.tsx`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\family\onboarding\steps\RoleStep.tsx`
 
 **Features:**
 - Toggle for "I am a medical professional"
@@ -86,7 +86,7 @@ Created a comprehensive multi-step onboarding flow for family members and caregi
 - Visual indicators for selected relationships
 
 #### d. ProfessionalInfoStep
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\family\onboarding\steps\ProfessionalInfoStep.tsx`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\family\onboarding\steps\ProfessionalInfoStep.tsx`
 
 **Features:**
 - Professional title dropdown (RN, LPN, CNA, etc.)
@@ -103,7 +103,7 @@ Created a comprehensive multi-step onboarding flow for family members and caregi
 **Only shown if:** User selected "I am a medical professional" in RoleStep
 
 #### e. AvailabilityStep
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\family\onboarding\steps\AvailabilityStep.tsx`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\family\onboarding\steps\AvailabilityStep.tsx`
 
 **Features:**
 - Timezone selector (auto-detects user's timezone)
@@ -127,7 +127,7 @@ Created a comprehensive multi-step onboarding flow for family members and caregi
 - Max hours range: 1-168 hours/week
 
 #### f. PreferencesStep
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\family\onboarding\steps\PreferencesStep.tsx`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\family\onboarding\steps\PreferencesStep.tsx`
 
 **Features:**
 - Multi-select languages (15+ common languages)
@@ -154,7 +154,7 @@ Created a comprehensive multi-step onboarding flow for family members and caregi
 - Character counter for communication style
 
 #### g. ReviewStep
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\family\onboarding\steps\ReviewStep.tsx`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\family\onboarding\steps\ReviewStep.tsx`
 
 **Features:**
 - Summary of all entered information:

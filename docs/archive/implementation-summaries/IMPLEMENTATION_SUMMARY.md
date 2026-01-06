@@ -502,25 +502,25 @@ function calculateLinearRegression(vitals: VitalSign[]) {
 ## File Paths (Absolute)
 
 **Type Definitions:**
-- `C:\Users\percy\wlpl\weightlossprojectlab\types\health-outcomes.ts`
+- `C:\Users\percy\WPL\weightlossprojectlab\types\health-outcomes.ts`
 
 **Core Libraries:**
-- `C:\Users\percy\wlpl\weightlossprojectlab\lib\nutrition-vitals-correlation.ts`
-- `C:\Users\percy\wlpl\weightlossprojectlab\lib\health-outcomes.ts`
-- `C:\Users\percy\wlpl\weightlossprojectlab\lib\health-analytics.ts`
+- `C:\Users\percy\WPL\weightlossprojectlab\lib\nutrition-vitals-correlation.ts`
+- `C:\Users\percy\WPL\weightlossprojectlab\lib\health-outcomes.ts`
+- `C:\Users\percy\WPL\weightlossprojectlab\lib\health-analytics.ts`
 
 **UI Components:**
-- `C:\Users\percy\wlpl\weightlossprojectlab\components\health\HealthProgressTracker.tsx`
-- `C:\Users\percy\wlpl\weightlossprojectlab\components\health\NutritionImpactInsights.tsx`
+- `C:\Users\percy\WPL\weightlossprojectlab\components\health\HealthProgressTracker.tsx`
+- `C:\Users\percy\WPL\weightlossprojectlab\components\health\NutritionImpactInsights.tsx`
 
 **API Routes:**
-- `C:\Users\percy\wlpl\weightlossprojectlab\app\api\health\correlations\route.ts`
-- `C:\Users\percy\wlpl\weightlossprojectlab\app\api\health\reports\route.ts`
-- `C:\Users\percy\wlpl\weightlossprojectlab\app\api\health\predictions\route.ts`
+- `C:\Users\percy\WPL\weightlossprojectlab\app\api\health\correlations\route.ts`
+- `C:\Users\percy\WPL\weightlossprojectlab\app\api\health\reports\route.ts`
+- `C:\Users\percy\WPL\weightlossprojectlab\app\api\health\predictions\route.ts`
 
 **Documentation:**
-- `C:\Users\percy\wlpl\weightlossprojectlab\docs\NUTRITION_VITALS_FEEDBACK_LOOP.md`
-- `C:\Users\percy\wlpl\weightlossprojectlab\docs\QUICK_INTEGRATION_GUIDE.md`
+- `C:\Users\percy\WPL\weightlossprojectlab\docs\NUTRITION_VITALS_FEEDBACK_LOOP.md`
+- `C:\Users\percy\WPL\weightlossprojectlab\docs\QUICK_INTEGRATION_GUIDE.md`
 
 ---
 

@@ -1,6 +1,6 @@
 # Feature Gating System
 
-Complete guide to the subscription-based feature gating system in WLPL.
+Complete guide to the subscription-based feature gating system in WPL.
 
 ## Overview
 

@@ -117,7 +117,7 @@ FIREBASE_ADMIN_PRIVATE_KEY="your_private_key"
 # SendGrid Configuration (optional, for email tests)
 SENDGRID_API_KEY=SG.your_sendgrid_key
 SENDGRID_FROM_EMAIL=verified@yourdomain.com
-SENDGRID_FROM_NAME="WLPL Family Health"
+SENDGRID_FROM_NAME="WPL Family Health"
 
 # Test Configuration (optional)
 TEST_USER_ID=your_test_user_id

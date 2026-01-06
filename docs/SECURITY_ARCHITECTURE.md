@@ -23,7 +23,7 @@
 
 ### Security Posture
 
-The Weight Loss Projection Lab (WLPL) platform implements a comprehensive defense-in-depth security architecture with multiple layers of protection:
+The Wellness Projection Lab (WPL) platform implements a comprehensive defense-in-depth security architecture with multiple layers of protection:
 
 **Security Layers**:
 1. **Edge Layer**: Security headers, CORS, rate limiting
@@ -45,24 +45,24 @@ The Weight Loss Projection Lab (WLPL) platform implements a comprehensive defens
 | SSRF Protection |  Complete | `lib/url-validation.ts` | Sprint 1 (SEC-001) |
 | Super Admin Migration |  Complete | Firebase Custom Claims | Sprint 1 (SEC-002) |
 | Storage Path Security |  Complete | User-scoped paths | Sprint 1 (SEC-003) |
-| CORS Hardening |   Partial | Origin whitelist | Sprint 1 (SEC-004) |
-| CSRF Protection |   Partial | Client-side only | Sprint 1 (SEC-005) |
+| CORS Hardening | ï¿½ Partial | Origin whitelist | Sprint 1 (SEC-004) |
+| CSRF Protection | ï¿½ Partial | Client-side only | Sprint 1 (SEC-005) |
 | Rate Limiting |  Complete | Upstash Redis | Sprint 2 (SEC-006) |
 | Recipe DB Protection |  Complete | Auth + pagination | Sprint 2 (SEC-007) |
-| Error Sanitization |   Partial | Foundation ready | Sprint 2 (SEC-008) |
-| Security Headers |   Partial | Basic headers | Sprint 2 (SEC-009) |
+| Error Sanitization | ï¿½ Partial | Foundation ready | Sprint 2 (SEC-008) |
+| Security Headers | ï¿½ Partial | Basic headers | Sprint 2 (SEC-009) |
 | Debug Guards |  Complete | Production blocks | Sprint 1/2 (SEC-000/010) |
 
 **Legend**:
 -  **Complete**: Fully implemented and tested
--   **Partial**: Foundation ready, integration pending
+- ï¿½ **Partial**: Foundation ready, integration pending
 - L **Not Started**: Planned for future sprint
 
 ---
 
 ## Defense-in-Depth Strategy
 
-### Layer 1: Network Edge (Client ’ Server)
+### Layer 1: Network Edge (Client ï¿½ Server)
 
 **Purpose**: Block malicious requests before they reach application logic
 
@@ -96,7 +96,7 @@ graph LR
 - **Configuration**:
   ```typescript
   // Environment variable
-  ALLOWED_ORIGINS=https://app.wlpl.com,https://admin.wlpl.com
+  ALLOWED_ORIGINS=https://app.wpl.com,https://admin.wpl.com
 
   // Runtime check
   const origin = request.headers.get('origin')
@@ -719,7 +719,7 @@ npm run test:firestore-rules
 **Threat Mitigated**: Information disclosure, stack trace leakage
 **Severity**: HIGH
 **Sprint**: 2
-**Status**:   Partial (foundation complete, catch blocks pending migration)
+**Status**: ï¿½ Partial (foundation complete, catch blocks pending migration)
 
 **Implementation**:
 - **File**: `lib/api-response.ts` (125 lines)
@@ -823,12 +823,12 @@ bash scripts/bulk-error-migration.sh
 | SEC-001 | SSRF Protection | SSRF | CRITICAL |  Complete | 1 |
 | SEC-002 | Super Admin Migration | Hardcoded Creds | CRITICAL |  Complete | 1 |
 | SEC-003 | Storage Path Security | IDOR | CRITICAL |  Complete | 1 |
-| SEC-004 | CORS Hardening | CORS Abuse | CRITICAL |   Partial | 1 |
-| SEC-005 | CSRF Protection | CSRF | CRITICAL |   Partial | 1 |
+| SEC-004 | CORS Hardening | CORS Abuse | CRITICAL | ï¿½ Partial | 1 |
+| SEC-005 | CSRF Protection | CSRF | CRITICAL | ï¿½ Partial | 1 |
 | SEC-006 | Rate Limiting | DoS, Cost | HIGH |  Complete | 2 |
 | SEC-007 | Recipe DB Protection | Scraping | HIGH |  Complete | 2 |
-| SEC-008 | Error Sanitization | Info Disclosure | HIGH |   Partial | 2 |
-| SEC-009 | Security Headers | XSS, Clickjacking | HIGH |   Partial | 2 |
+| SEC-008 | Error Sanitization | Info Disclosure | HIGH | ï¿½ Partial | 2 |
+| SEC-009 | Security Headers | XSS, Clickjacking | HIGH | ï¿½ Partial | 2 |
 
 ---
 
@@ -994,11 +994,11 @@ sequenceDiagram
 | T-003 | Hardcoded credentials | HIGH | Low | MEDIUM | Custom Claims, env variables |  Mitigated |
 | T-004 | Rate limit abuse (AI) | HIGH | High | HIGH | Upstash Redis rate limiting |  Mitigated |
 | T-005 | Database scraping | MEDIUM | Medium | MEDIUM | Auth + pagination enforcement |  Mitigated |
-| T-006 | Stack trace leakage | MEDIUM | High | MEDIUM | Error sanitization |   Partial |
-| T-007 | CSRF attacks | HIGH | Medium | HIGH | CSRF tokens |   Partial |
+| T-006 | Stack trace leakage | MEDIUM | High | MEDIUM | Error sanitization | ï¿½ Partial |
+| T-007 | CSRF attacks | HIGH | Medium | HIGH | CSRF tokens | ï¿½ Partial |
 | T-008 | Debug endpoint exposure | HIGH | Low | MEDIUM | Production guards |  Mitigated |
-| T-009 | XSS attacks | MEDIUM | Medium | MEDIUM | CSP headers |   Pending |
-| T-010 | Clickjacking | LOW | Low | LOW | X-Frame-Options |   Pending |
+| T-009 | XSS attacks | MEDIUM | Medium | MEDIUM | CSP headers | ï¿½ Pending |
+| T-010 | Clickjacking | LOW | Low | LOW | X-Frame-Options | ï¿½ Pending |
 
 ### Attack Vector Analysis
 
@@ -1144,7 +1144,7 @@ curl http://localhost:3000/api/recipes
 - Development returns full details for debugging
 - All errors logged server-side with full context
 
-**Status**:   **PARTIAL** (SEC-008 - foundation complete, catch block migration pending)
+**Status**: ï¿½ **PARTIAL** (SEC-008 - foundation complete, catch block migration pending)
 
 **Verification**:
 ```bash
@@ -1561,7 +1561,7 @@ npm test -- __tests__/security/ --passWithNoTests
 ### Security Contacts
 
 **Internal**:
-- Security Team: security@wlpl.com
+- Security Team: security@wpl.com
 - Super Admins: See `SUPER_ADMIN_EMAILS` environment variable
 - On-Call Engineer: [PagerDuty/Opsgenie]
 

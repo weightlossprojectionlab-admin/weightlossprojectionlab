@@ -44,7 +44,7 @@ Added **15 new composite indexes** to support dashboard and notification queries
 - `notifications(userId ASC, createdAt DESC)` - For recent notifications
 - `notifications(userId ASC, read ASC, createdAt DESC)` - For filtered notification lists
 
-**File:** `C:\Users\percy\wlpl\weightlossprojectlab\firestore.indexes.json`
+**File:** `C:\Users\percy\WPL\weightlossprojectlab\firestore.indexes.json`
 
 ### 2. Fixed Notification Collection Architecture
 
@@ -53,9 +53,9 @@ Added **15 new composite indexes** to support dashboard and notification queries
 **Solution:** Standardized on root collection approach for consistency and better query flexibility.
 
 **Files Updated:**
-- `C:\Users\percy\wlpl\weightlossprojectlab\app\api\notifications\route.ts`
-- `C:\Users\percy\wlpl\weightlossprojectlab\app\api\notifications\[id]\read\route.ts`
-- `C:\Users\percy\wlpl\weightlossprojectlab\app\api\notifications\mark-all-read\route.ts`
+- `C:\Users\percy\WPL\weightlossprojectlab\app\api\notifications\route.ts`
+- `C:\Users\percy\WPL\weightlossprojectlab\app\api\notifications\[id]\read\route.ts`
+- `C:\Users\percy\WPL\weightlossprojectlab\app\api\notifications\mark-all-read\route.ts`
 
 **Changes:**
 - Changed from: `adminDb.collection('users').doc(userId).collection('notifications')`
@@ -70,7 +70,7 @@ Added **15 new composite indexes** to support dashboard and notification queries
 
 ```bash
 # Navigate to project directory
-cd C:\Users\percy\wlpl\weightlossprojectlab
+cd C:\Users\percy\WPL\weightlossprojectlab
 
 # Deploy indexes to Firebase
 firebase deploy --only firestore:indexes

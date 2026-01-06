@@ -6,14 +6,14 @@ This repository uses Git worktrees for parallel development across multiple feat
 ## Active Worktrees
 
 ### 📍 Main Repository
-**Location:** `C:/Users/percy/wlpl/weightlossprojectlab`
+**Location:** `C:/Users/percy/WPL/weightlossprojectlab`
 **Branch:** `main`
 **Purpose:** Production-ready code, stable branch
 
 ### 🚀 Feature Worktrees
 
 #### 1. Native Wrapper (Priority 1)
-**Location:** `C:/Users/percy/wlpl/wlpl-native-wrapper`
+**Location:** `C:/Users/percy/WPL/WPL-native-wrapper`
 **Branch:** `feature/native-wrapper`
 **Purpose:** React Native/Capacitor integration for full health API access
 **Key Deliverables:**
@@ -23,7 +23,7 @@ This repository uses Git worktrees for parallel development across multiple feat
 - Mobile app deployment setup
 
 #### 2. Social Expansion (Priority 1)
-**Location:** `C:/Users/percy/wlpl/wlpl-social-expansion`
+**Location:** `C:/Users/percy/WPL/WPL-social-expansion`
 **Branch:** `feature/social-expansion`
 **Purpose:** Enhanced social features, groups, and challenges
 **Key Deliverables:**
@@ -33,7 +33,7 @@ This repository uses Git worktrees for parallel development across multiple feat
 - Leaderboards and competitions
 
 #### 3. Recipe Marketplace (Priority 1)
-**Location:** `C:/Users/percy/wlpl/wlpl-recipe-marketplace`
+**Location:** `C:/Users/percy/WPL/WPL-recipe-marketplace`
 **Branch:** `feature/recipe-marketplace`
 **Purpose:** Recipe discovery and sharing platform
 **Key Deliverables:**
@@ -43,7 +43,7 @@ This repository uses Git worktrees for parallel development across multiple feat
 - User ratings and reviews
 
 #### 4. Premium Subscription (Priority 1)
-**Location:** `C:/Users/percy/wlpl/wlpl-premium-subscription`
+**Location:** `C:/Users/percy/WPL/WPL-premium-subscription`
 **Branch:** `feature/premium-subscription`
 **Purpose:** Subscription tier implementation
 **Key Deliverables:**
@@ -55,7 +55,7 @@ This repository uses Git worktrees for parallel development across multiple feat
 ### 🧪 Testing Worktree
 
 #### 5. E2E Test Suite (Priority 2)
-**Location:** `C:/Users/percy/wlpl/wlpl-e2e-suite`
+**Location:** `C:/Users/percy/WPL/WPL-e2e-suite`
 **Branch:** `test/e2e-suite`
 **Purpose:** Comprehensive E2E testing with Playwright
 **Key Deliverables:**
@@ -68,7 +68,7 @@ This repository uses Git worktrees for parallel development across multiple feat
 ### ⚡ Performance Worktrees
 
 #### 6. Bundle Optimization (Priority 2)
-**Location:** `C:/Users/percy/wlpl/wlpl-bundle-optimization`
+**Location:** `C:/Users/percy/WPL/WPL-bundle-optimization`
 **Branch:** `perf/bundle-optimization`
 **Purpose:** Further reduce bundle sizes and improve performance
 **Key Deliverables:**
@@ -80,7 +80,7 @@ This repository uses Git worktrees for parallel development across multiple feat
 ### 🔧 Refactoring Worktrees
 
 #### 7. React 19 Features (Priority 2)
-**Location:** `C:/Users/percy/wlpl/wlpl-react-19-features`
+**Location:** `C:/Users/percy/WPL/WPL-react-19-features`
 **Branch:** `refactor/react-19-features`
 **Purpose:** Migrate to React 19 concurrent features
 **Key Deliverables:**
@@ -92,7 +92,7 @@ This repository uses Git worktrees for parallel development across multiple feat
 ### 📚 Documentation Worktree
 
 #### 8. Repository Cleanup (Priority 3)
-**Location:** `C:/Users/percy/wlpl/wlpl-repository-cleanup`
+**Location:** `C:/Users/percy/WPL/WPL-repository-cleanup`
 **Branch:** `docs/repository-cleanup`
 **Purpose:** Documentation organization and repository maintenance
 **Key Deliverables:**
@@ -104,7 +104,7 @@ This repository uses Git worktrees for parallel development across multiple feat
 ### 🧪 Shopping System Worktrees
 
 #### 9. Shopping E2E Tests (Priority 2)
-**Location:** `C:/Users/percy/wlpl/wlpl-shopping-tests`
+**Location:** `C:/Users/percy/WPL/WPL-shopping-tests`
 **Branch:** `test/shopping-e2e`
 **Purpose:** End-to-end tests for sequential shopping flow
 **Key Deliverables:**
@@ -115,7 +115,7 @@ This repository uses Git worktrees for parallel development across multiple feat
 - Performance benchmarks
 
 #### 10. Family Chat Feature (Priority 2)
-**Location:** `C:/Users/percy/wlpl/wlpl-family-chat`
+**Location:** `C:/Users/percy/WPL/WPL-family-chat`
 **Branch:** `feature/family-chat`
 **Purpose:** Real-time family shopping collaboration
 **Key Deliverables:**
@@ -131,7 +131,7 @@ This repository uses Git worktrees for parallel development across multiple feat
 
 ```bash
 # Navigate to worktree
-cd C:/Users/percy/wlpl/wlpl-native-wrapper
+cd C:/Users/percy/WPL/WPL-native-wrapper
 
 # Make changes
 # ... edit files ...
@@ -155,8 +155,8 @@ gh pr create --title "feat: Native wrapper integration" --body "Description"
 
 ```bash
 # Simply navigate to different directories
-cd C:/Users/percy/wlpl/weightlossprojectlab    # Main
-cd C:/Users/percy/wlpl/wlpl-native-wrapper     # Feature work
+cd C:/Users/percy/WPL/weightlossprojectlab    # Main
+cd C:/Users/percy/WPL/WPL-native-wrapper     # Feature work
 ```
 
 ### Syncing with Main
@@ -180,7 +180,7 @@ git worktree list
 
 ```bash
 # From main repository
-git worktree remove ../wlpl-native-wrapper
+git worktree remove ../WPL-native-wrapper
 
 # Delete the branch
 git branch -d feature/native-wrapper
@@ -194,7 +194,7 @@ git push origin --delete feature/native-wrapper
 ### 1. Keep Worktrees Updated
 Regularly sync with main to avoid conflicts:
 ```bash
-cd C:/Users/percy/wlpl/wlpl-native-wrapper
+cd C:/Users/percy/WPL/WPL-native-wrapper
 git fetch origin
 git merge origin/main
 ```
@@ -242,30 +242,30 @@ Remove worktrees and branches after PRs are merged.
 ### Worktree Already Exists
 ```bash
 # Remove and recreate
-git worktree remove ../wlpl-native-wrapper
-git worktree add ../wlpl-native-wrapper -b feature/native-wrapper
+git worktree remove ../WPL-native-wrapper
+git worktree add ../WPL-native-wrapper -b feature/native-wrapper
 ```
 
 ### Branch Already Exists
 ```bash
 # Use existing branch
-git worktree add ../wlpl-native-wrapper feature/native-wrapper
+git worktree add ../WPL-native-wrapper feature/native-wrapper
 
 # Or delete and recreate
 git branch -d feature/native-wrapper
-git worktree add ../wlpl-native-wrapper -b feature/native-wrapper
+git worktree add ../WPL-native-wrapper -b feature/native-wrapper
 ```
 
 ### Can't Remove Worktree
 ```bash
 # Force remove
-git worktree remove --force ../wlpl-native-wrapper
+git worktree remove --force ../WPL-native-wrapper
 ```
 
 ## Git Configuration
 
 All worktrees share the same git configuration from the main repository at:
-- `C:/Users/percy/wlpl/weightlossprojectlab/.git/`
+- `C:/Users/percy/WPL/weightlossprojectlab/.git/`
 
 ## Status Tracking
 
@@ -284,9 +284,9 @@ git log --all --oneline --graph -10
 Open multiple VS Code windows for parallel development:
 
 ```bash
-code C:/Users/percy/wlpl/weightlossprojectlab
-code C:/Users/percy/wlpl/wlpl-native-wrapper
-code C:/Users/percy/wlpl/wlpl-social-expansion
+code C:/Users/percy/WPL/weightlossprojectlab
+code C:/Users/percy/WPL/WPL-native-wrapper
+code C:/Users/percy/WPL/WPL-social-expansion
 ```
 
 ## Resources

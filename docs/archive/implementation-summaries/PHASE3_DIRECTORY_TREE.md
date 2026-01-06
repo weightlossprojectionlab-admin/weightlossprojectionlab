@@ -1,4 +1,4 @@
-# WLPL Phase 3 - Complete Directory Tree
+# WPL Phase 3 - Complete Directory Tree
 
 **Generated:** 2025-10-07
 **PRD Version:** 1.3.7

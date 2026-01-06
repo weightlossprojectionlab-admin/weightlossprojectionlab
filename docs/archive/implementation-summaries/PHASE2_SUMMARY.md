@@ -1,4 +1,4 @@
-# WLPL Phase 2: Business Logic Implementation - Complete
+# WPL Phase 2: Business Logic Implementation - Complete
 
 ## Project Structure
 

@@ -973,7 +973,7 @@ export async function registerBiometric() {
   const credential = await navigator.credentials.create({
     publicKey: {
       challenge: new Uint8Array(32),
-      rp: { name: "WLPL" },
+      rp: { name: "WPL" },
       user: { id, name, displayName },
       pubKeyCredParams: [{ alg: -7, type: "public-key" }],
       authenticatorSelection: {
@@ -1167,7 +1167,7 @@ export async function compressImage(file: File): Promise<File> {
 
 ```javascript
 // Cache static assets for offline use
-const CACHE_NAME = 'wlpl-v1'
+const CACHE_NAME = 'WPL-v1'
 const urlsToCache = [
   '/',
   '/dashboard',
@@ -1341,7 +1341,7 @@ const StepTrackingDemo = dynamic(() => import('@/lib/step-detection/demo'), {
 #### 1. Delete Log Weight Page (5 minutes) ✅
 
 ```bash
-cd C:\Users\percy\wlpl\weightlossprojectlab
+cd C:\Users\percy\WPL\weightlossprojectlab
 git rm -rf app/log-weight/
 git commit -m "Remove weight logging page per PRD v1.4 - enforce accountability model"
 ```

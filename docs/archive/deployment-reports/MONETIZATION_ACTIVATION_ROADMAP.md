@@ -97,17 +97,17 @@ With only 20 existing users, you can afford to be generous with grandfathering w
 **Tasks:**
 
 1. **Update TypeScript Types** ✅ COMPLETED
-   - File: `C:\Users\percy\wlpl\weightlossprojectlab\types\index.ts`
+   - File: `C:\Users\percy\WPL\weightlossprojectlab\types\index.ts`
    - Added: `isGrandfathered`, `grandfatheredAt`, `grandfatheredReason` fields
    - Status: Deployed
 
 2. **Update Feature Gates** ✅ COMPLETED
-   - File: `C:\Users\percy\wlpl\weightlossprojectlab\lib\feature-gates.ts`
+   - File: `C:\Users\percy\WPL\weightlossprojectlab\lib\feature-gates.ts`
    - Changes: Added grandfathering bypass logic in `canAccessFeature()` and `canAddPatient()`
    - Status: Deployed
 
 3. **Modify User Profile Creation API** ✅ COMPLETED
-   - File: `C:\Users\percy\wlpl\weightlossprojectlab\app\api\user-profile\route.ts`
+   - File: `C:\Users\percy\WPL\weightlossprojectlab\app\api\user-profile\route.ts`
    - Changes: Auto-create 30-day trial subscription on POST /api/user-profile
    - Trial: `status: 'trialing'`, `trialEndsAt: +30 days`, `plan: 'single'`
    - Status: Deployed
@@ -134,13 +134,13 @@ With only 20 existing users, you can afford to be generous with grandfathering w
 
 **Pre-Flight Checklist:**
 - [ ] Backup Firestore database (Firebase Console → Firestore → Export)
-- [ ] Verify service account key exists at `C:\Users\percy\wlpl\weightlossprojectlab\serviceAccountKey.json`
+- [ ] Verify service account key exists at `C:\Users\percy\WPL\weightlossprojectlab\serviceAccountKey.json`
 - [ ] Test migration script in DRY_RUN mode first
 
 **Migration Script:**
 ```bash
 # Step 1: Dry run (shows what will change, makes no modifications)
-cd C:\Users\percy\wlpl\weightlossprojectlab
+cd C:\Users\percy\WPL\weightlossprojectlab
 npx ts-node scripts/grandfather-existing-users.ts
 
 # Step 2: Review output carefully
@@ -197,7 +197,7 @@ db.collection('users').get().then(snapshot => {
 
 #### 4.1 Founding Member Badge Component
 
-**Create:** `C:\Users\percy\wlpl\weightlossprojectlab\components\subscription\FoundingMemberBanner.tsx`
+**Create:** `C:\Users\percy\WPL\weightlossprojectlab\components\subscription\FoundingMemberBanner.tsx`
 
 ```tsx
 'use client'
@@ -263,7 +263,7 @@ export function FoundingMemberBanner() {
 
 #### 4.2 Add to Dashboard
 
-**File:** `C:\Users\percy\wlpl\weightlossprojectlab\app\dashboard\page.tsx`
+**File:** `C:\Users\percy\WPL\weightlossprojectlab\app\dashboard\page.tsx`
 
 ```tsx
 import { FoundingMemberBanner } from '@/components/subscription/FoundingMemberBanner'
@@ -283,7 +283,7 @@ export default function DashboardPage() {
 
 #### 4.3 Trial Expiration Banner
 
-**Create:** `C:\Users\percy\wlpl\weightlossprojectlab\components\subscription\TrialExpiringBanner.tsx`
+**Create:** `C:\Users\percy\WPL\weightlossprojectlab\components\subscription\TrialExpiringBanner.tsx`
 
 ```tsx
 'use client'
@@ -423,7 +423,7 @@ export default function DashboardPage() {
 
 **Send to:** All 20 existing users (query Firestore for `users` with `subscription.isGrandfathered === true`)
 
-**Template:** See `C:\Users\percy\wlpl\weightlossprojectlab\docs\USER_COMMUNICATION_TEMPLATES.md` (Email Template 1)
+**Template:** See `C:\Users\percy\WPL\weightlossprojectlab\docs\USER_COMMUNICATION_TEMPLATES.md` (Email Template 1)
 
 **Sending Options:**
 
@@ -514,28 +514,28 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 **Products to Create:**
 
 1. **Single User**
-   - Name: `WLPL Single User`
+   - Name: `WPL Single User`
    - Description: `Weight loss tracking for individuals`
    - Price: $9.99 USD / month (recurring)
    - Metadata: `plan_id: single`
 
 2. **Single User Plus**
-   - Name: `WLPL Single User Plus`
+   - Name: `WPL Single User Plus`
    - Price: $14.99 USD / month
    - Metadata: `plan_id: single_plus`
 
 3. **Family Basic**
-   - Name: `WLPL Family Basic`
+   - Name: `WPL Family Basic`
    - Price: $19.99 USD / month
    - Metadata: `plan_id: family_basic`
 
 4. **Family Plus** (Popular)
-   - Name: `WLPL Family Plus`
+   - Name: `WPL Family Plus`
    - Price: $29.99 USD / month
    - Metadata: `plan_id: family_plus`
 
 5. **Family Premium**
-   - Name: `WLPL Family Premium`
+   - Name: `WPL Family Premium`
    - Price: $39.99 USD / month
    - Metadata: `plan_id: family_premium`
 
@@ -544,7 +544,7 @@ After creating, copy the price IDs (look like `price_1ABC...`) - you'll need the
 
 #### 7.3 Create Checkout Session API Route
 
-**Create:** `C:\Users\percy\wlpl\weightlossprojectlab\app\api\stripe\create-checkout\route.ts`
+**Create:** `C:\Users\percy\WPL\weightlossprojectlab\app\api\stripe\create-checkout\route.ts`
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
@@ -660,7 +660,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000 # Change to your domain in production
 
 #### 7.4 Create Webhook Handler
 
-**Create:** `C:\Users\percy\wlpl\weightlossprojectlab\app\api\stripe\webhook\route.ts`
+**Create:** `C:\Users\percy\WPL\weightlossprojectlab\app\api\stripe\webhook\route.ts`
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
@@ -826,7 +826,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
 #### 7.6 Update Pricing Page
 
-**File:** `C:\Users\percy\wlpl\weightlossprojectlab\app\pricing\page.tsx`
+**File:** `C:\Users\percy\WPL\weightlossprojectlab\app\pricing\page.tsx`
 
 ```typescript
 'use client'
@@ -1417,7 +1417,7 @@ Your data and access are completely safe. We'll update you within 24 hours.
 Thanks for your patience!
 
 [Your Name]
-Founder, WLPL
+Founder, WPL
 ```
 
 **In-App Banner:**

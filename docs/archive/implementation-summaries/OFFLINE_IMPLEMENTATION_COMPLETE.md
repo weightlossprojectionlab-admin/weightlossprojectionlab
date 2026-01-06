@@ -72,8 +72,8 @@ interface QueuedMeal {
 ### 2. Service Worker Enhancements (`public/sw.js` v4)
 
 **New Cache Layers**:
-- `wlpl-medical-v1`: Medication images, document images
-- `wlpl-shopping-v1`: Shopping list API, product lookup API
+- `WPL-medical-v1`: Medication images, document images
+- `WPL-shopping-v1`: Shopping list API, product lookup API
 
 **Caching Strategies**:
 - **Medications**: Cache-first (instant offline access)
@@ -230,19 +230,19 @@ await cacheShoppingList(userId, items)
 
 ### IndexedDB Databases
 
-**Database**: `wlpl-medical-offline` (v1)
+**Database**: `WPL-medical-offline` (v1)
 - `medications`: Keyed by `[patientId, id]`
 - `documents`: Keyed by `[patientId, id]`, indexed by `availableOffline`
 - `vitals`: Keyed by `[patientId, id]`, indexed by `recordedAt`
 - `profiles`: Keyed by `id` (patientId)
 - `cached-patients`: Metadata list
 
-**Database**: `wlpl-shopping-offline` (v1)
+**Database**: `WPL-shopping-offline` (v1)
 - `shopping-list`: Keyed by `userId`
 - `product-cache`: Keyed by `barcode`, indexed by `cachedAt`
 - `purchase-queue`: Keyed by `id`, indexed by `synced`, `queuedAt`
 
-**Database**: `wlpl-offline-queue` (v3) ⚠️ BREAKING CHANGE
+**Database**: `WPL-offline-queue` (v3) ⚠️ BREAKING CHANGE
 - `meal-queue`: Added indexes: `patientId`, `loggedBy`
 - `weight-queue`: Added indexes: `patientId`, `loggedBy`
 
@@ -338,7 +338,7 @@ await cacheShoppingList(userId, items)
 
 ### Breaking Changes
 
-**IndexedDB Version Bump**: `wlpl-offline-queue` v2 → v3
+**IndexedDB Version Bump**: `WPL-offline-queue` v2 → v3
 
 Existing queued meals/weights will be migrated automatically by browser's `onupgradeneeded` handler. New indexes (`patientId`, `loggedBy`) will be created.
 

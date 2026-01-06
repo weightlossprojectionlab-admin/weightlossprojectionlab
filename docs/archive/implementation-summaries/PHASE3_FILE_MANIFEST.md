@@ -1,4 +1,4 @@
-# WLPL Phase 3 - File Manifest
+# WPL Phase 3 - File Manifest
 
 **Generated:** 2025-10-07
 **Total Files Created:** 24

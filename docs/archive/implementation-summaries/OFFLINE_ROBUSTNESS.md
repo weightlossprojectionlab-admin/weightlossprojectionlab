@@ -287,7 +287,7 @@ for (const purchase of unsynced) {
 
 ## IndexedDB Schema
 
-### Database: `wlpl-medical-offline`
+### Database: `WPL-medical-offline`
 | Store | Key | Indexes | Purpose |
 |-------|-----|---------|---------|
 | `medications` | `[patientId, id]` | `patientId`, `cachedAt` | Medication list |
@@ -296,14 +296,14 @@ for (const purchase of unsynced) {
 | `profiles` | `id` | `cachedAt` | Patient profiles |
 | `cached-patients` | `patientId` | `cachedAt` | Cached patient list |
 
-### Database: `wlpl-shopping-offline`
+### Database: `WPL-shopping-offline`
 | Store | Key | Indexes | Purpose |
 |-------|-----|---------|---------|
 | `shopping-list` | `userId` | `cachedAt` | Shopping list |
 | `product-cache` | `barcode` | `cachedAt` | Product lookups |
 | `purchase-queue` | `id` | `synced`, `queuedAt` | Offline purchases |
 
-### Database: `wlpl-offline-queue` (Updated)
+### Database: `WPL-offline-queue` (Updated)
 | Store | Key | Indexes | Purpose |
 |-------|-----|---------|---------|
 | `meal-queue` | `id` | `synced`, `queuedAt`, `patientId`, `loggedBy` | Offline meals |

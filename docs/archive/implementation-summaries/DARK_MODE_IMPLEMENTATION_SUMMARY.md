@@ -109,7 +109,7 @@ Add Tailwind dark mode variants to ALL color classes across the entire codebase 
 
 ```bash
 # Run the Python script
-cd C:\Users\percy\wlpl\weightlossprojectlab
+cd C:\Users\percy\WPL\weightlossprojectlab
 python scripts/add-dark-mode.py
 ```
 

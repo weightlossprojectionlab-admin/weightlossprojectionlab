@@ -2,12 +2,12 @@
 
 ## Overview
 
-Successfully implemented a comprehensive notification preferences management UI for the Weight Loss Projection Lab (WLPL) application. Users can now customize their notification settings across multiple channels (email, push) for various health and family-related events.
+Successfully implemented a comprehensive notification preferences management UI for the Wellness Projection Lab (WPL) application. Users can now customize their notification settings across multiple channels (email, push) for various health and family-related events.
 
 ## Files Created
 
 ### 1. NotificationPreferences Component
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\settings\NotificationPreferences.tsx`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\settings\NotificationPreferences.tsx`
 
 A full-featured React component (19KB) that provides:
 - Master enable/disable toggle for all notifications
@@ -19,7 +19,7 @@ A full-featured React component (19KB) that provides:
 - Loading states and error handling
 
 ### 2. Index File
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\settings\index.ts`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\settings\index.ts`
 
 Clean export for easier imports:
 ```typescript
@@ -27,7 +27,7 @@ export { NotificationPreferences } from './NotificationPreferences'
 ```
 
 ### 3. Documentation
-**Location:** `C:\Users\percy\wlpl\weightlossprojectlab\components\settings\README.md`
+**Location:** `C:\Users\percy\WPL\weightlossprojectlab\components\settings\README.md`
 
 Comprehensive documentation (6.7KB) covering:
 - Component features and capabilities
@@ -41,7 +41,7 @@ Comprehensive documentation (6.7KB) covering:
 ## Integration
 
 ### Profile Page Integration
-**Modified:** `C:\Users\percy\wlpl\weightlossprojectlab\app\profile\page.tsx`
+**Modified:** `C:\Users\percy\WPL\weightlossprojectlab\app\profile\page.tsx`
 
 Added import:
 ```typescript

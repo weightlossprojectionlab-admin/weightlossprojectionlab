@@ -83,7 +83,7 @@
     }
   },
   "product": {
-    "name": "Weight Loss Projection Lab (WLPL)",
+    "name": "Wellness Projection Lab (WPL)",
     "version": "1.5.0",
     "tagline": "AI-powered weight loss tracking with Pinterest-style recipe discovery and freemium community",
     "description": "A comprehensive health and fitness application that helps users track their weight loss journey through intelligent logging, Pinterest-hybrid recipe discovery platform with user-generated content, freemium monetization model, AI-powered nutrition analysis, human & AI coaching, and seamless biometric authentication. Features viral social sharing, creator profiles, and SEO-optimized recipe content for organic acquisition.",
@@ -428,7 +428,7 @@
         "replacement_window_days": 7
       },
       "invitation_payment_links": {
-        "method": "WLPL-hosted Stripe Checkout",
+        "method": "WPL-hosted Stripe Checkout",
         "link_validity_hours": 24,
         "security": [
           "signed_links",
@@ -485,7 +485,7 @@
             ],
             "revenue_split": {
               "coach": 0.9,
-              "wlpl": 0.1
+              "WPL": 0.1
             },
             "visibility": "discoverable"
           },
@@ -495,7 +495,7 @@
             ],
             "revenue_split": {
               "coach": 0.0,
-              "wlpl": 1.0
+              "WPL": 1.0
             },
             "visibility": "private"
           }
@@ -593,7 +593,7 @@
             "design": {
               "gradient_background": "Indigo to purple gradient for brand recognition",
               "content": "Recipe name, description, calories, protein, prep time, macros, dietary tags",
-              "branding": "WLPL logo and tagline: 'Snap. Analyze. Track. All in 30 seconds.'",
+              "branding": "WPL logo and tagline: 'Snap. Analyze. Track. All in 30 seconds.'",
               "visual_hierarchy": "Bold typography with clear nutrition grid"
             }
           },
@@ -896,7 +896,7 @@
           "revalidation": "Revalidate every hour for top 100 recipes",
           "static_generation": "Pre-render top 100 recipes at build time",
           "dynamic_metadata": {
-            "title": "{Recipe Name} - Healthy Recipe | WLPL",
+            "title": "{Recipe Name} - Healthy Recipe | WPL",
             "description": "{Recipe description} - {Calories} calories, {Protein}g protein, {PrepTime} min prep",
             "keywords": "Dynamic from meal type, dietary tags, cuisine"
           },
@@ -946,7 +946,7 @@
         "social_sharing": {
           "platforms": ["Pinterest", "Instagram Stories", "Facebook", "Twitter", "WhatsApp"],
           "share_cards": "Generate Pinterest-optimized recipe cards (already built in recipe_system)",
-          "share_url": "https://wlpl.com/recipe/{slug}?ref={userId} (track referrals)",
+          "share_url": "https://WPL.com/recipe/{slug}?ref={userId} (track referrals)",
           "incentives": "Free premium month for every 10 referrals who sign up"
         },
         "save_counts": {
@@ -960,8 +960,8 @@
         },
         "embed_widgets": {
           "planned": "Allow creators to embed recipes on their blogs",
-          "script": "<script src=\"wlpl.com/embed/recipe-{id}\"></script>",
-          "benefit": "Backlinks for SEO, traffic back to WLPL"
+          "script": "<script src=\"WPL.com/embed/recipe-{id}\"></script>",
+          "benefit": "Backlinks for SEO, traffic back to WPL"
         }
       },
       "technical_implementation": {
@@ -1596,7 +1596,7 @@
     "ai_decision_governance": {
       "version_control": {
         "policy_docs": "Versioned under /policy_docs/{versionId}",
-        "models": "Version-locked (wlpl-support-v1,v2)",
+        "models": "Version-locked (WPL-support-v1,v2)",
         "changelog_tracking": true
       },
       "decision_review": {
@@ -1621,7 +1621,7 @@
     "ai_transparency_and_consent": {
       "user_notification": "AI-powered support & insights disclosed",
       "consent_requirements": {
-        "policy_reference": "WLPL Privacy Policy v2.0",
+        "policy_reference": "WPL Privacy Policy v2.0",
         "data_usage": "AI accesses anonymized relevant records",
         "opt_out": "Human review on request"
       },
@@ -1889,7 +1889,7 @@
         "interval": "monthly",
         "revenue_split": {
           "coach": 0.9,
-          "wlpl": 0.1
+          "WPL": 0.1
         }
       },
       "coaching_session": {
@@ -1897,7 +1897,7 @@
         "metric": "minutes",
         "revenue_split": {
           "coach": 0.85,
-          "wlpl": 0.15
+          "WPL": 0.15
         },
         "integration": "zoom_to_stripe_usage"
       },
@@ -1906,7 +1906,7 @@
         "unit_price": 0.5,
         "revenue_split": {
           "coach": 0.8,
-          "wlpl": 0.2
+          "WPL": 0.2
         }
       }
     },
@@ -1918,7 +1918,7 @@
     "fraud_prevention": {
       "usage_validation": "Zoom vs attendance",
       "duplicate_session_check": true,
-      "refund_policy": "WLPL-managed"
+      "refund_policy": "WPL-managed"
     }
   },
   "client_coach_interaction_flow_schema": {
