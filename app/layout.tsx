@@ -10,8 +10,8 @@ export const dynamic = 'force-dynamic'
 export const dynamicParams = true
 
 export const metadata: Metadata = {
-  title: 'Weight Loss Projection Lab',
-  description: 'AI-powered weight loss tracking with biometric authentication and meal analysis',
+  title: 'Wellness Projection Lab',
+  description: 'AI-powered wellness tracking with comprehensive health, nutrition, and fitness management',
   manifest: '/manifest.json',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   icons: {

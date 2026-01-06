@@ -1,7 +1,7 @@
 {
-  "name": "Weight Loss Projection Lab",
+  "name": "Wellness Projection Lab",
   "short_name": "WLPL",
-  "description": "AI-powered weight loss tracking with biometric authentication and meal analysis",
+  "description": "AI-powered wellness tracking with comprehensive health, nutrition, and fitness management",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

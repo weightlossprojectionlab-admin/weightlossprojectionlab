@@ -161,10 +161,10 @@ export function Footer() {
           <div className="text-center md:text-left">
             <div className="flex items-center gap-2 mb-2 justify-center md:justify-start">
               <div className="text-2xl">⚖️</div>
-              <span className="text-white font-bold text-lg">Weight Loss Projection Lab</span>
+              <span className="text-white font-bold text-lg">Wellness Projection Lab</span>
             </div>
             <p className="text-sm text-gray-400">
-              &copy; {currentYear} Weight Loss Projection Lab. All rights reserved.
+              &copy; {currentYear} Wellness Projection Lab. All rights reserved.
             </p>
             <p className="text-xs text-gray-500 mt-1">
               AI-powered health tracking platform. HIPAA compliant.
