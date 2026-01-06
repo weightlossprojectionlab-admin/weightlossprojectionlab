@@ -659,10 +659,44 @@ function OnboardingContent() {
 
   if (!currentScreen) return null
 
+  // Show selected wellness pillars if goals have been selected
+  const selectedGoals = answers.goals as string[] | undefined
+  const showSelectedPillars = selectedGoals && selectedGoals.length > 0 && step > visibleScreens.findIndex(s => s.id === 'goals')
+
+  const pillarEmojis: Record<string, string> = {
+    'body_fitness': '💪',
+    'nutrition_kitchen': '🍎',
+    'health_medical': '💊'
+  }
+
+  const pillarLabels: Record<string, string> = {
+    'body_fitness': 'Body & Fitness',
+    'nutrition_kitchen': 'Nutrition & Kitchen',
+    'health_medical': 'Health & Medical'
+  }
+
   return (
     <AuthGuard>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent p-4">
         <div className="max-w-xl w-full space-y-8">
+          {/* Selected Wellness Pillars - Show after goals step */}
+          {showSelectedPillars && (
+            <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20">
+              <div className="text-sm text-muted-foreground mb-2 text-center font-medium">Your Wellness Focus:</div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {selectedGoals.map((goal: string) => (
+                  <div
+                    key={goal}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-card rounded-lg border border-border shadow-sm"
+                  >
+                    <span className="text-lg">{pillarEmojis[goal] || '✨'}</span>
+                    <span className="text-sm font-medium">{pillarLabels[goal] || goal}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Progress bar */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
