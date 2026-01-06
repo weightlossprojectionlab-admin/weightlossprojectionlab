@@ -174,7 +174,7 @@ export function Footer() {
           {/* Social Links */}
           <div className="flex items-center gap-6">
             <a
-              href="https://twitter.com/wlpl"
+              href="https://twitter.com/wpl"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors"
@@ -185,7 +185,7 @@ export function Footer() {
               </svg>
             </a>
             <a
-              href="https://github.com/wlpl"
+              href="https://github.com/wpl"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors"
@@ -200,7 +200,7 @@ export function Footer() {
               </svg>
             </a>
             <a
-              href="https://linkedin.com/company/wlpl"
+              href="https://linkedin.com/company/wpl"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors"
@@ -211,7 +211,7 @@ export function Footer() {
               </svg>
             </a>
             <a
-              href="https://youtube.com/@wlpl"
+              href="https://youtube.com/@wpl"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors"
@@ -246,7 +246,7 @@ export function Footer() {
             <p className="text-sm text-gray-400">Get the mobile app:</p>
             <div className="flex gap-3">
               <a
-                href="https://apps.apple.com/app/wlpl"
+                href="https://apps.apple.com/app/wpl"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
@@ -257,7 +257,7 @@ export function Footer() {
                 <span className="text-sm font-medium">App Store</span>
               </a>
               <a
-                href="https://play.google.com/store/apps/details?id=com.wlpl"
+                href="https://play.google.com/store/apps/details?id=com.wpl"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
