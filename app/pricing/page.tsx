@@ -26,9 +26,26 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
+    id: 'free',
+    name: 'Free Plan',
+    description: 'Try the basics at no cost',
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    features: [
+      { name: '1 user account', included: true },
+      { name: 'Basic meal logging', included: true },
+      { name: 'Weight tracking', included: true },
+      { name: 'Limited AI features', included: true },
+      { name: 'Progress dashboard', included: true },
+      { name: 'Medical tracking', included: false },
+      { name: 'Recipes & shopping', included: false },
+      { name: 'Advanced analytics', included: false },
+    ],
+  },
+  {
     id: 'single',
     name: 'Single User',
-    description: 'Perfect for individual weight loss journeys',
+    description: 'Perfect for individual wellness journeys',
     monthlyPrice: 9.99,
     yearlyPrice: 99,
     features: [
@@ -195,16 +212,79 @@ export default function PricingPage() {
     return { amount: savings.toFixed(2), percentage }
   }
 
+  // Helper: Determine button text based on current plan and target plan
+  const getButtonText = (targetPlan: SubscriptionPlan, isCurrentPlan: boolean, isLoading: boolean) => {
+    if (isLoading) return 'Loading...'
+    if (isCurrentPlan) return 'Current Plan'
+
+    if (!user) return 'Get Started'
+
+    // Plan tier hierarchy: free < single < single_plus < family_basic < family_plus < family_premium
+    const planTiers: Record<SubscriptionPlan, number> = {
+      free: 0,
+      single: 1,
+      single_plus: 2,
+      family_basic: 3,
+      family_plus: 4,
+      family_premium: 5,
+    }
+
+    const currentTier = planTiers[currentPlan as SubscriptionPlan] ?? 0
+    const targetTier = planTiers[targetPlan]
+
+    if (currentPlan === 'free') {
+      return 'Start Free Trial'
+    } else if (targetTier > currentTier) {
+      return `Upgrade to ${targetPlan === 'single_plus' ? 'Plus' : targetPlan === 'family_basic' ? 'Family' : targetPlan === 'family_plus' ? 'Plus' : 'Premium'}`
+    } else if (targetTier < currentTier) {
+      return 'Switch Plan'
+    }
+
+    return 'Select Plan'
+  }
+
+  // Helper: Get dynamic headline based on user state
+  const getHeadline = () => {
+    if (!user) {
+      return {
+        title: 'Choose Your Plan',
+        subtitle: 'Start your wellness journey with a 7-day free trial. No credit card required.'
+      }
+    }
+
+    if (currentPlan === 'free') {
+      return {
+        title: 'Choose Your Plan',
+        subtitle: "You're currently on the free plan. Upgrade anytime to unlock premium features and start your 7-day trial."
+      }
+    }
+
+    const planNames: Record<string, string> = {
+      single: 'Single User',
+      single_plus: 'Single User Plus',
+      family_basic: 'Family Basic',
+      family_plus: 'Family Plus',
+      family_premium: 'Family Premium',
+    }
+
+    return {
+      title: 'Manage Your Subscription',
+      subtitle: `You're on the ${planNames[currentPlan as string] || currentPlan} plan. Upgrade for more features or switch plans anytime.`
+    }
+  }
+
+  const headline = getHeadline()
+
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-foreground mb-4">
-            Choose Your Plan
+            {headline.title}
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Start your weight loss journey with a 7-day free trial. No credit card required.
+            {headline.subtitle}
           </p>
 
           {/* Billing Toggle */}
@@ -232,7 +312,7 @@ export default function PricingPage() {
         </div>
 
         {/* Plan Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {PLANS.map((planData) => {
             const price = billingInterval === 'monthly' ? planData.monthlyPrice : planData.yearlyPrice
             const savings = calculateSavings(planData.monthlyPrice, planData.yearlyPrice)
@@ -277,18 +357,28 @@ export default function PricingPage() {
 
                 {/* Pricing */}
                 <div className="mb-6">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-foreground">
-                      ${price}
-                    </span>
-                    <span className="text-muted-foreground">
-                      /{billingInterval === 'monthly' ? 'mo' : 'yr'}
-                    </span>
-                  </div>
-                  {billingInterval === 'yearly' && (
-                    <p className="text-sm text-green-600 mt-1">
-                      Save ${savings.amount}/year ({savings.percentage}% off)
-                    </p>
+                  {planData.id === 'free' ? (
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold text-green-600">
+                        Free
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold text-foreground">
+                          ${price}
+                        </span>
+                        <span className="text-muted-foreground">
+                          /{billingInterval === 'monthly' ? 'mo' : 'yr'}
+                        </span>
+                      </div>
+                      {billingInterval === 'yearly' && (
+                        <p className="text-sm text-green-600 mt-1">
+                          Save ${savings.amount}/year ({savings.percentage}% off)
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -324,11 +414,7 @@ export default function PricingPage() {
                       : 'bg-primary/10 text-primary hover:bg-primary/20'
                   } disabled:opacity-50`}
                 >
-                  {loading === planData.id
-                    ? 'Loading...'
-                    : isCurrentPlan
-                    ? 'Current Plan'
-                    : 'Start Free Trial'}
+                  {getButtonText(planData.id, isCurrentPlan, loading === planData.id)}
                 </button>
               </div>
             )
@@ -346,7 +432,7 @@ export default function PricingPage() {
                 How does the 7-day trial work?
               </summary>
               <p className="mt-2 text-muted-foreground text-sm">
-                You get full access to all features of your selected plan for 7 days. No credit card required. After your trial ends, you'll be prompted to add payment to continue.
+                When you upgrade from the free plan to any paid plan, you get full access to all features for 7 days with no payment required. After your trial ends, you'll be prompted to add payment to continue. The free plan itself has no trial period - it's free forever with basic features.
               </p>
             </details>
             <details className="bg-card rounded-lg p-4 border border-border">
@@ -362,7 +448,7 @@ export default function PricingPage() {
                 What happens after my trial ends?
               </summary>
               <p className="mt-2 text-muted-foreground text-sm">
-                After 7 days, you'll need to add payment to continue using the platform. We'll send you reminders before your trial ends.
+                After your 7-day trial of a paid plan ends, you'll need to add payment to continue with that plan's features. If you don't add payment, you'll automatically return to the free plan. We'll send you reminders before your trial ends so you're never surprised.
               </p>
             </details>
             <details className="bg-card rounded-lg p-4 border border-border">

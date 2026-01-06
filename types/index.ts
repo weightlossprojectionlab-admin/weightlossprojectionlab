@@ -192,12 +192,12 @@ export interface UserPreferences {
 // Subscription & Feature Gating
 // Subscription Plan Tiers
 export type SubscriptionPlan =
-  | 'free'             // Free trial: 1 seat, 14 days, basic features
-  | 'single'           // Single User: 1 seat, weight loss only, 0 caregivers
-  | 'single_plus'      // Single User Plus: 1 seat, weight loss + medical + 3 caregivers
-  | 'family_basic'     // Family Basic: 5 seats, family features
-  | 'family_plus'      // Family Plus: 10 seats, premium features (POPULAR)
-  | 'family_premium'   // Family Premium: Unlimited seats, all features
+  | 'free'             // Free plan: 1 seat, unlimited duration, basic features only
+  | 'single'           // Single User: 1 seat, weight loss only, 0 caregivers (7-day trial)
+  | 'single_plus'      // Single User Plus: 1 seat, weight loss + medical + 3 caregivers (7-day trial)
+  | 'family_basic'     // Family Basic: 5 seats, family features (7-day trial)
+  | 'family_plus'      // Family Plus: 10 seats, premium features (POPULAR) (7-day trial)
+  | 'family_premium'   // Family Premium: Unlimited seats, all features (7-day trial)
 
 // Billing Interval
 export type BillingInterval = 'monthly' | 'yearly'
