@@ -1,4 +1,4 @@
-# Weight Loss Project Lab - System Flow Diagrams
+﻿# Wellness Projection Lab - System Flow Diagrams
 
 > **Visual diagrams for understanding data flows and system architecture**
 > These Mermaid diagrams can be viewed in GitHub, VS Code, or exported as images for Figma
@@ -879,7 +879,7 @@ graph TB
 
 ```mermaid
 journey
-    title Weight Loss Project Lab - User Journey
+    title Wellness Projection Lab - User Journey
     section Discovery
       Find app online: 5: User
       Read features: 4: User

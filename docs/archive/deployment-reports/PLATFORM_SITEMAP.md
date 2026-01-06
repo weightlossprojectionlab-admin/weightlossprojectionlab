@@ -1,4 +1,4 @@
-# Weight Loss Project Lab - Complete Platform Sitemap
+﻿# Wellness Projection Lab - Complete Platform Sitemap
 
 > **Last Updated:** 2025-11-22
 > **Status:** Living Document
@@ -23,7 +23,7 @@
 
 ## Platform Overview
 
-**Weight Loss Project Lab** is a comprehensive health and wellness platform combining:
+**Wellness Projection Lab** is a comprehensive health and wellness platform combining:
 - 🎯 Weight loss tracking with AI-powered meal analysis
 - 🏥 Family medical records management
 - 🛒 Smart grocery shopping with inventory tracking

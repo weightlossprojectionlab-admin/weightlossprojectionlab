@@ -7,9 +7,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Documentation | Weight Loss Projection Lab',
+  title: 'Documentation | Wellness Projection Lab',
   description:
-    'Comprehensive documentation for Weight Loss Projection Lab - user guides, API reference, tutorials, and developer resources.',
+    'Comprehensive documentation for Wellness Projection Lab - user guides, API reference, tutorials, and developer resources.',
 }
 
 export default function DocsPage() {
@@ -39,7 +39,7 @@ export default function DocsPage() {
           </Link>
           <h1 className="text-5xl font-bold text-gray-900 mb-4">Documentation Center</h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Everything you need to get the most out of Weight Loss Projection Lab
+            Everything you need to get the most out of Wellness Projection Lab
           </p>
         </div>
 
@@ -155,7 +155,7 @@ export default function DocsPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">Getting Started</h3>
                 <p className="text-gray-600 mb-4">
-                  New to WLPL? Start here to learn the basics and set up your account.
+                  New to WPL? Start here to learn the basics and set up your account.
                 </p>
                 <div className="text-sm text-gray-500">
                   <div className="flex items-center gap-2 mb-1">
@@ -518,7 +518,7 @@ export default function DocsPage() {
                   </div>
                   <div className="p-6">
                     <h3 className="font-semibold text-gray-900 mb-2">
-                      Getting Started with WLPL
+                      Getting Started with WPL
                     </h3>
                     <p className="text-sm text-gray-600 mb-3">
                       A complete walkthrough for new users

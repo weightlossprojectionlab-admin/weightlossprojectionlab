@@ -1,4 +1,4 @@
-# Weight Loss Project Lab - Complete Feature Inventory
+﻿# Wellness Projection Lab - Complete Feature Inventory
 
 > **Last Updated:** 2025-11-22
 > **Total Features:** 157

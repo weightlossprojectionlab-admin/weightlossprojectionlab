@@ -1,8 +1,8 @@
-# Vital Reminders System Documentation
+﻿# Vital Reminders System Documentation
 
 ## Overview
 
-The Weight Loss Project Lab supports **two distinct reminder systems** for vital sign monitoring:
+The Wellness Projection Lab supports **two distinct reminder systems** for vital sign monitoring:
 
 1. **Profile-Based Frequency Reminders** (Simple) - This Document
 2. **Wizard-Based Schedules** (Advanced) - See `types/vital-schedules.ts`

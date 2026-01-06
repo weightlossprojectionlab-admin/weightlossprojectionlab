@@ -1,4 +1,4 @@
-# Landing Page Marketing Flow
+﻿# Landing Page Marketing Flow
 
 ## System Architecture
 
@@ -215,8 +215,8 @@ UTM Source    UTM Campaign   Conversion
 ```
 PERSONA: Diabetes Weight Loss
 ├─► Hero Ad
-│   Headline: "Manage Diabetes & Lose Weight"
-│   Hook: "Prevent diabetes through weight loss"
+│   Headline: "Manage Diabetes & Wellness"
+│   Hook: "Prevent diabetes through wellness"
 │   CTA: "Start Free Trial"
 │
 ├─► Feature Ad

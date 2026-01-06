@@ -1,8 +1,8 @@
-# Subscription System Implementation
+﻿# Subscription System Implementation
 
 ## Overview
 
-This document describes the subscription-based feature gating system implemented for the Weight Loss Project Lab application. The system supports flexible monetization with multiple plan tiers and feature add-ons, along with admin override and development simulation capabilities.
+This document describes the subscription-based feature gating system implemented for the Wellness Projection Lab application. The system supports flexible monetization with multiple plan tiers and feature add-ons, along with admin override and development simulation capabilities.
 
 ## Architecture
 

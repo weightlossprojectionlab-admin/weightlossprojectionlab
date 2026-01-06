@@ -1,4 +1,4 @@
-# Git Worktree Guide - Weight Loss Project Lab
+﻿# Git Worktree Guide - Wellness Projection Lab
 
 ## Overview
 This repository uses Git worktrees for parallel development across multiple features and improvements. Each worktree is a separate working directory pointing to a different branch.

@@ -1,4 +1,4 @@
-# Messaging Guidelines - AI Terminology Strategy
+﻿# Messaging Guidelines - AI Terminology Strategy
 
 ## Overview
 
@@ -109,7 +109,7 @@ Quick lookup table for developers:
 | **Shopping Suggestions** | AI Smart Shopping Lists | Intelligent Shopping Recommendation Engine | Smart Suggestions |
 | **Recipe Generation** | AI Recipe Generator | Adaptive Recipe Generation System | Recipe Generator |
 | **AI Coaching** | AI Wellness Coach | Conversational AI Health Coaching | Wellness Coach |
-| **Weight Projections** | AI Weight Loss Predictions | Predictive Weight Modeling | Goal Projections |
+| **Weight Projections** | AI Wellness Predictions | Predictive Weight Modeling | Goal Projections |
 | **Nutrition Analysis** | AI Nutrition Analysis | Multi-Modal Nutrition Computation | Nutrition Analysis |
 | **Health Correlations** | AI Health Pattern Detection | Multi-Variate Health Correlation Analysis | Health Patterns |
 | **Appointment Recommendations** | AI Health Appointment Reminders | Clinical Decision Support for Preventive Care | Checkup Reminders |

@@ -1,6 +1,6 @@
-# Production Deployment Automation
+﻿# Production Deployment Automation
 
-Complete guide for automated production deployment of the Weight Loss Project Lab application.
+Complete guide for automated production deployment of the Wellness Projection Lab application.
 
 ## Table of Contents
 
