@@ -7,9 +7,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Security | Weight Loss Projection Lab',
+  title: 'Security | Wellness Projection Lab',
   description:
-    'Learn about Weight Loss Projection Lab\'s enterprise-grade security measures, HIPAA compliance, and commitment to protecting your health data.',
+    'Learn about Wellness Projection Lab\'s enterprise-grade security measures, HIPAA compliance, and commitment to protecting your health data.',
 }
 
 export default function SecurityPage() {
@@ -38,7 +38,7 @@ export default function SecurityPage() {
             Back to Home
           </Link>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Security at Weight Loss Projection Lab
+            Security at Wellness Projection Lab
           </h1>
           <p className="text-xl text-gray-600">
             Enterprise-grade security to protect your most sensitive health information
@@ -97,7 +97,7 @@ export default function SecurityPage() {
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Security Overview</h2>
             <p className="text-gray-700 leading-relaxed mb-6">
-              At Weight Loss Projection Lab, security is not an afterthought—it's built into
+              At Wellness Projection Lab, security is not an afterthought—it's built into
               every layer of our platform. We understand that you're trusting us with your most
               sensitive health information, and we take that responsibility seriously.
             </p>
@@ -952,10 +952,10 @@ export default function SecurityPage() {
                 <div className="flex items-start gap-3">
                   <span className="font-semibold text-gray-900 min-w-[100px]">Email:</span>
                   <a
-                    href="mailto:security@weightlossproglab.com"
+                    href="mailto:security@wellnessproglab.com"
                     className="text-blue-600 hover:text-blue-700 underline"
                   >
-                    security@weightlossproglab.com
+                    security@wellnessproglab.com
                   </a>
                 </div>
                 <div className="flex items-start gap-3">
@@ -1004,10 +1004,10 @@ export default function SecurityPage() {
                   Security Team:
                 </span>
                 <a
-                  href="mailto:security@weightlossproglab.com"
+                  href="mailto:security@wellnessproglab.com"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  security@weightlossproglab.com
+                  security@wellnessproglab.com
                 </a>
               </div>
               <div className="flex items-start gap-3">
@@ -1023,10 +1023,10 @@ export default function SecurityPage() {
                   Status Page:
                 </span>
                 <a
-                  href="https://status.weightlossproglab.com"
+                  href="https://status.wellnessproglab.com"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  status.weightlossproglab.com
+                  status.wellnessproglab.com
                 </a>
               </div>
             </div>

@@ -1,15 +1,15 @@
 /**
  * Terms of Service Page
- * Legal terms and conditions for using Weight Loss Projection Lab
+ * Legal terms and conditions for using Wellness Projection Lab
  */
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | Weight Loss Projection Lab',
+  title: 'Terms of Service | Wellness Projection Lab',
   description:
-    'Terms of Service for Weight Loss Projection Lab - Legal terms and conditions governing your use of our health tracking platform.',
+    'Terms of Service for Wellness Projection Lab - Legal terms and conditions governing your use of our health tracking platform.',
 }
 
 export default function TermsPage() {
@@ -39,7 +39,7 @@ export default function TermsPage() {
           </Link>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Terms of Service</h1>
           <p className="text-xl text-gray-600">
-            Legal terms and conditions governing your use of Weight Loss Projection Lab
+            Legal terms and conditions governing your use of Wellness Projection Lab
           </p>
           <p className="text-sm text-gray-500 mt-2">
             Effective Date: January 1, 2025 | Last Updated: December 27, 2025
@@ -68,7 +68,7 @@ export default function TermsPage() {
               </h3>
               <p className="text-sm text-gray-700 leading-relaxed">
                 These Terms of Service constitute a legally binding agreement between you and
-                Weight Loss Projection Lab. By accessing or using our services, you agree to be
+                Wellness Projection Lab. By accessing or using our services, you agree to be
                 bound by these terms. If you do not agree, please do not use our services.
               </p>
             </div>
@@ -699,7 +699,7 @@ export default function TermsPage() {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Trademarks</h3>
                 <p className="text-gray-700">
-                  "Weight Loss Projection Lab," "WLPL," and our logos are trademarks of WLPL. You
+                  "Wellness Projection Lab," "WPL," and our logos are trademarks of WPL. You
                   may not use our trademarks without prior written consent.
                 </p>
               </div>
@@ -1108,7 +1108,7 @@ export default function TermsPage() {
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[140px]">Company Name:</span>
-                <span className="text-gray-700">Weight Loss Projection Lab</span>
+                <span className="text-gray-700">Wellness Projection Lab</span>
               </div>
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[140px]">Email:</span>

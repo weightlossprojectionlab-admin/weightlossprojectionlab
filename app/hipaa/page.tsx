@@ -1,15 +1,15 @@
 /**
  * HIPAA Compliance Page
- * Details WLPL's HIPAA compliance measures and Notice of Privacy Practices
+ * Details WPL's HIPAA compliance measures and Notice of Privacy Practices
  */
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'HIPAA Compliance | Weight Loss Projection Lab',
+  title: 'HIPAA Compliance | Wellness Projection Lab',
   description:
-    'Weight Loss Projection Lab HIPAA compliance information and Notice of Privacy Practices for Protected Health Information (PHI).',
+    'Wellness Projection Lab HIPAA compliance information and Notice of Privacy Practices for Protected Health Information (PHI).',
 }
 
 export default function HipaaPage() {
@@ -41,7 +41,7 @@ export default function HipaaPage() {
             HIPAA Compliance & Notice of Privacy Practices
           </h1>
           <p className="text-xl text-gray-600">
-            How Weight Loss Projection Lab protects your Protected Health Information
+            How Wellness Projection Lab protects your Protected Health Information
           </p>
           <p className="text-sm text-gray-500 mt-2">
             Effective Date: January 1, 2025 | Last Updated: December 27, 2025
@@ -71,7 +71,7 @@ export default function HipaaPage() {
             <div>
               <h2 className="text-2xl font-bold mb-3">HIPAA Compliant Platform</h2>
               <p className="text-blue-100 leading-relaxed mb-4">
-                Weight Loss Projection Lab is fully compliant with the Health Insurance
+                Wellness Projection Lab is fully compliant with the Health Insurance
                 Portability and Accountability Act (HIPAA). We implement comprehensive
                 administrative, physical, and technical safeguards to protect your Protected
                 Health Information (PHI).
@@ -104,7 +104,7 @@ export default function HipaaPage() {
             <p className="text-gray-700 leading-relaxed">
               HIPAA applies to "covered entities" (healthcare providers, health plans, and
               healthcare clearinghouses) and their "business associates" (companies that
-              handle PHI on their behalf). As a health tracking platform, WLPL acts as a
+              handle PHI on their behalf). As a health tracking platform, WPL acts as a
               business associate and is fully committed to HIPAA compliance.
             </p>
           </section>
@@ -120,7 +120,7 @@ export default function HipaaPage() {
               CAREFULLY.</strong>
             </p>
             <p className="text-gray-700 leading-relaxed">
-              Weight Loss Projection Lab is required by law to maintain the privacy and security
+              Wellness Projection Lab is required by law to maintain the privacy and security
               of your Protected Health Information (PHI). This Notice of Privacy Practices
               describes our legal duties and privacy practices with respect to your PHI, and
               your rights regarding your PHI.
@@ -134,7 +134,7 @@ export default function HipaaPage() {
             </h2>
             <p className="text-gray-700 leading-relaxed mb-4">
               PHI is any information about your health status, provision of healthcare, or
-              payment for healthcare that can be linked to you. On WLPL, this includes:
+              payment for healthcare that can be linked to you. On WPL, this includes:
             </p>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -388,7 +388,7 @@ export default function HipaaPage() {
                 </p>
                 <p className="text-xs text-gray-600">
                   You can edit most information directly in your account. For other amendments,
-                  contact us at privacy@weightlossproglab.com.
+                  contact us at privacy@wellnessproglab.com.
                 </p>
               </div>
 
@@ -448,7 +448,7 @@ export default function HipaaPage() {
                   Practices, even if you have agreed to receive it electronically.
                 </p>
                 <p className="text-xs text-gray-600">
-                  Contact us at privacy@weightlossproglab.com to request a paper copy.
+                  Contact us at privacy@wellnessproglab.com to request a paper copy.
                 </p>
               </div>
 
@@ -487,10 +487,10 @@ export default function HipaaPage() {
                   <span>
                     Email us at{' '}
                     <a
-                      href="mailto:privacy@weightlossproglab.com"
+                      href="mailto:privacy@wellnessproglab.com"
                       className="text-blue-600 hover:text-blue-700 underline"
                     >
-                      privacy@weightlossproglab.com
+                      privacy@wellnessproglab.com
                     </a>
                   </span>
                 </li>
@@ -752,22 +752,22 @@ export default function HipaaPage() {
                 <div className="space-y-3">
                   <div>
                     <h4 className="font-semibold text-gray-900 text-sm mb-2">
-                      File with WLPL:
+                      File with WPL:
                     </h4>
                     <div className="space-y-2 text-sm text-gray-700">
                       <div className="flex items-start gap-3">
                         <span className="font-medium min-w-[80px]">Email:</span>
                         <a
-                          href="mailto:privacy@weightlossproglab.com"
+                          href="mailto:privacy@wellnessproglab.com"
                           className="text-blue-600 hover:text-blue-700 underline"
                         >
-                          privacy@weightlossproglab.com
+                          privacy@wellnessproglab.com
                         </a>
                       </div>
                       <div className="flex items-start gap-3">
                         <span className="font-medium min-w-[80px]">Mail:</span>
                         <div>
-                          Weight Loss Projection Lab
+                          Wellness Projection Lab
                           <br />
                           Attn: Privacy Officer
                           <br />
@@ -852,10 +852,10 @@ export default function HipaaPage() {
                   Privacy Officer:
                 </span>
                 <a
-                  href="mailto:privacy@weightlossproglab.com"
+                  href="mailto:privacy@wellnessproglab.com"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  privacy@weightlossproglab.com
+                  privacy@wellnessproglab.com
                 </a>
               </div>
               <div className="flex items-start gap-3">
@@ -863,10 +863,10 @@ export default function HipaaPage() {
                   Security Officer:
                 </span>
                 <a
-                  href="mailto:security@weightlossproglab.com"
+                  href="mailto:security@wellnessproglab.com"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  security@weightlossproglab.com
+                  security@wellnessproglab.com
                 </a>
               </div>
               <div className="flex items-start gap-3">
@@ -880,10 +880,10 @@ export default function HipaaPage() {
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[140px]">Website:</span>
                 <a
-                  href="https://weightlossproglab.com"
+                  href="https://wellnessproglab.com"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  weightlossproglab.com
+                  wellnessproglab.com
                 </a>
               </div>
             </div>

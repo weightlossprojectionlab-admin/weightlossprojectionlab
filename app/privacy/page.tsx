@@ -1,15 +1,15 @@
 /**
  * Privacy Policy Page
- * HIPAA-compliant privacy policy for Weight Loss Projection Lab
+ * HIPAA-compliant privacy policy for Wellness Projection Lab
  */
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | Weight Loss Projection Lab',
+  title: 'Privacy Policy | Wellness Projection Lab',
   description:
-    'Weight Loss Projection Lab Privacy Policy - Learn how we collect, use, and protect your health information in compliance with HIPAA and GDPR.',
+    'Wellness Projection Lab Privacy Policy - Learn how we collect, use, and protect your health information in compliance with HIPAA and GDPR.',
 }
 
 export default function PrivacyPage() {
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
                 Your Privacy is Our Priority
               </h2>
               <p className="text-gray-700 text-sm leading-relaxed">
-                Weight Loss Projection Lab (WLPL) is HIPAA compliant and committed to protecting
+                Wellness Projection Lab (WPL) is HIPAA compliant and committed to protecting
                 your personal health information. We never sell your data and only use it to
                 provide you with the best health tracking experience.
               </p>
@@ -672,7 +672,7 @@ export default function PrivacyPage() {
               8. Children's Privacy
             </h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              WLPL is not intended for children under 13. We do not knowingly collect
+              WPL is not intended for children under 13. We do not knowingly collect
               information from children under 13.
             </p>
             <p className="text-gray-700 leading-relaxed">
@@ -751,7 +751,7 @@ export default function PrivacyPage() {
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[120px]">Mail:</span>
                 <div className="text-gray-700">
-                  Weight Loss Projection Lab
+                  Wellness Projection Lab
                   <br />
                   Privacy Department
                   <br />

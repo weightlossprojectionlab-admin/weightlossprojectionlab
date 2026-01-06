@@ -1,15 +1,15 @@
 /**
  * Accessibility Statement Page
- * Details WLPL's commitment to accessibility and compliance with WCAG 2.1 AA standards
+ * Details WPL's commitment to accessibility and compliance with WCAG 2.1 AA standards
  */
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Accessibility Statement | Weight Loss Projection Lab',
+  title: 'Accessibility Statement | Wellness Projection Lab',
   description:
-    'Weight Loss Projection Lab is committed to ensuring digital accessibility for people with disabilities. Learn about our accessibility features and standards compliance.',
+    'Wellness Projection Lab is committed to ensuring digital accessibility for people with disabilities. Learn about our accessibility features and standards compliance.',
 }
 
 export default function AccessibilityPage() {
@@ -41,7 +41,7 @@ export default function AccessibilityPage() {
             Accessibility Statement
           </h1>
           <p className="text-xl text-gray-600">
-            Weight Loss Projection Lab is committed to ensuring digital accessibility for people
+            Wellness Projection Lab is committed to ensuring digital accessibility for people
             with disabilities.
           </p>
           <p className="text-sm text-gray-500 mt-2">
@@ -55,7 +55,7 @@ export default function AccessibilityPage() {
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Our Commitment</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              Weight Loss Projection Lab (WLPL) is committed to making our health tracking platform
+              Wellness Projection Lab (WPL) is committed to making our health tracking platform
               accessible to all users, including those with disabilities. We believe that everyone
               deserves equal access to health management tools, regardless of their abilities.
             </p>
@@ -261,7 +261,7 @@ export default function AccessibilityPage() {
               Tested Assistive Technologies
             </h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              WLPL has been tested with the following assistive technologies:
+              WPL has been tested with the following assistive technologies:
             </p>
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="flex items-center gap-2 text-gray-700">
@@ -295,7 +295,7 @@ export default function AccessibilityPage() {
           <section className="bg-blue-50 rounded-lg p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Feedback & Support</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              We welcome your feedback on the accessibility of Weight Loss Projection Lab. If you
+              We welcome your feedback on the accessibility of Wellness Projection Lab. If you
               encounter accessibility barriers or have suggestions for improvement, please
               contact us:
             </p>
@@ -303,10 +303,10 @@ export default function AccessibilityPage() {
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[80px]">Email:</span>
                 <a
-                  href="mailto:accessibility@weightlossproglab.com"
+                  href="mailto:accessibility@wellnessproglab.com"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  accessibility@weightlossproglab.com
+                  accessibility@wellnessproglab.com
                 </a>
               </div>
               <div className="flex items-start gap-3">
@@ -370,13 +370,13 @@ export default function AccessibilityPage() {
           <section className="border-t border-gray-200 pt-6 mt-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Legal Compliance</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              This accessibility statement applies to the Weight Loss Projection Lab platform
+              This accessibility statement applies to the Wellness Projection Lab platform
               available at{' '}
               <a
-                href="https://weightlossproglab.com"
+                href="https://wellnessproglab.com"
                 className="text-blue-600 hover:text-blue-700 underline"
               >
-                weightlossproglab.com
+                wellnessproglab.com
               </a>{' '}
               and our mobile applications.
             </p>

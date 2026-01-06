@@ -7,9 +7,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'About Us | Weight Loss Projection Lab',
+  title: 'About Us | Wellness Projection Lab',
   description:
-    'Learn about Weight Loss Projection Lab - our mission to revolutionize health tracking with AI-powered insights and HIPAA-compliant technology.',
+    'Learn about Wellness Projection Lab - our mission to revolutionize health tracking with AI-powered insights and HIPAA-compliant technology.',
 }
 
 export default function AboutPage() {
@@ -52,7 +52,7 @@ export default function AboutPage() {
               Transforming Health Management with AI
             </h2>
             <p className="text-lg text-blue-100 leading-relaxed">
-              Weight Loss Projection Lab combines cutting-edge artificial intelligence with
+              Wellness Projection Lab combines cutting-edge artificial intelligence with
               enterprise-grade security to deliver personalized health insights that help you
               achieve your wellness goals.
             </p>
@@ -67,7 +67,7 @@ export default function AboutPage() {
               <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Story</h2>
               <div className="space-y-4 text-gray-700 leading-relaxed">
                 <p>
-                  Weight Loss Projection Lab was founded with a simple yet powerful vision: to
+                  Wellness Projection Lab was founded with a simple yet powerful vision: to
                   make health tracking effortless and insightful for everyone. We believe that
                   managing your health shouldn't be complicated, time-consuming, or
                   overwhelming.
@@ -563,10 +563,10 @@ export default function AboutPage() {
                   </div>
                   <h3 className="font-semibold text-gray-900 mb-2">Email</h3>
                   <a
-                    href="mailto:hello@weightlossproglab.com"
+                    href="mailto:hello@wellnessprojectionlab.com"
                     className="text-blue-600 hover:text-blue-700 text-sm"
                   >
-                    hello@weightlossproglab.com
+                    hello@wellnessprojectionlab.com
                   </a>
                 </div>
 

@@ -7,9 +7,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Support & Help Center | Weight Loss Projection Lab',
+  title: 'Support & Help Center | Wellness Projection Lab',
   description:
-    'Get help with Weight Loss Projection Lab - FAQs, guides, troubleshooting, and contact support for meal tracking, family management, and health features.',
+    'Get help with Wellness Projection Lab - FAQs, guides, troubleshooting, and contact support for meal tracking, family management, and health features.',
 }
 
 export default function SupportPage() {
@@ -554,8 +554,8 @@ export default function SupportPage() {
                 <div className="bg-white/10 backdrop-blur rounded-lg p-6">
                   <div className="text-3xl mb-3">📧</div>
                   <div className="font-semibold mb-2">Email Support</div>
-                  <a href="mailto:support@weightlossproglab.com" className="text-blue-100 hover:text-white text-sm">
-                    support@wlpl.com
+                  <a href="mailto:support@wellnessproglab.com" className="text-blue-100 hover:text-white text-sm">
+                    support@wpl.com
                   </a>
                   <div className="text-xs text-blue-200 mt-2">Response in 24 hours</div>
                 </div>
