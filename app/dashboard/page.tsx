@@ -40,6 +40,7 @@ import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { shouldShowFeatureByPreference } from '@/lib/feature-preference-gate'
 import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
 import { getProductLabel, getTooltip } from '@/lib/messaging/terminology'
+import { TrustBadge } from '@/components/ui/TrustBadge'
 
 // Dynamic imports for heavy components (lazy loaded on demand)
 const GoalsEditor = dynamic(() => import('@/components/ui/GoalsEditor').then(mod => ({ default: mod.GoalsEditor })), {
@@ -764,6 +765,16 @@ function DashboardContent() {
             )}
           </>
         )}
+      </div>
+
+      {/* Trust Badge - Platform Credentials Footer */}
+      <div className="mt-12 pt-8 border-t border-border/50">
+        <div className="flex flex-col items-center text-center space-y-4">
+          <h3 className="text-sm font-medium text-muted-foreground">
+            Your Health Data is Protected
+          </h3>
+          <TrustBadge variant="default" />
+        </div>
       </div>
 
       {/* Goals Editor Modal */}

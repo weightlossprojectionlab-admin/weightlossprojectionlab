@@ -2,6 +2,8 @@
 
 Complete guide to the subscription-based feature gating system in WPL.
 
+**Note:** For messaging and terminology usage (e.g., "AI" vs "Computer Vision" vs "WPL Vision™"), see **[Messaging Guidelines](./MESSAGING_GUIDELINES.md)**.
+
 ## Overview
 
 The feature gating system controls access to features based on user subscription tiers. It provides:
@@ -79,7 +81,7 @@ Available to all users including free trial:
 - `recipe-search` - Search recipes
 - `meal-gallery` - View meal history
 - `basic-ai-coaching` - Basic AI recommendations
-- `meal-recognition` - AI meal photo recognition
+- `meal-recognition` - Computer vision meal photo recognition (WPL Vision™)
 - `inventory-management` - Track pantry items
 - `barcode-scanning` - Scan product barcodes
 - `pantry-tracking` - Track pantry inventory
@@ -113,10 +115,10 @@ Requires Family Basic, Plus, or Premium:
 
 ### Family Plus+ Features
 Requires Family Plus or Premium:
-- `advanced-analytics` - Advanced health analytics
-- `health-insights` - AI health insights
-- `trend-analysis` - Trend analysis
-- `predictive-ai` - Predictive health AI
+- `advanced-analytics` - Advanced health analytics (Wellness Intelligence)
+- `health-insights` - Predictive health insights (Wellness Intelligence)
+- `trend-analysis` - Multi-variate trend analysis
+- `predictive-ai` - Predictive health modeling (Goal Projections)
 
 ### Family Premium Only
 Requires Family Premium:

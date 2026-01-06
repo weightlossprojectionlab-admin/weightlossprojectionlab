@@ -29,6 +29,7 @@ import { medicalOperations } from '@/lib/medical-operations'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
 import { getProductLabel } from '@/lib/messaging/terminology'
+import { TrustBadge } from '@/components/ui/TrustBadge'
 
 // Dynamic imports for heavy dependencies (reduces initial bundle size)
 // BarcodeScanner uses html5-qrcode library (~50kB)
@@ -1928,6 +1929,11 @@ function LogMealContent() {
           <div className="bg-card rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-medium text-foreground">{getProductLabel('mealTracking')}</h2>
+            </div>
+
+            {/* Trust Badge - Privacy Assurance after Photo Analysis */}
+            <div className="mb-6">
+              <TrustBadge variant="compact" />
             </div>
 
             <div className="space-y-4">

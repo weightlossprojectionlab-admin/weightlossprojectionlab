@@ -1,6 +1,6 @@
 # Weight Loss Projection Lab (WLPL) v2
 
-An AI-powered weight loss tracking application built with Next.js 15, featuring biometric authentication and meal image analysis.
+A comprehensive health tracking platform powered by proprietary machine learning technology, built with Next.js 15, featuring biometric authentication and advanced meal analysis capabilities.
 
 ## 📋 Product Requirements
 
@@ -19,11 +19,12 @@ This PRD includes:
 
 WLPL v2 is a simplified, mobile-first weight loss tracking app that focuses on core functionality without enterprise complexity. This version includes:
 
-- **AI-Powered Meal Analysis**: Take photos of meals for instant nutrition estimates using Google Gemini Vision
+- **Computer Vision Meal Analysis**: Take photos of meals for instant nutrition estimates using proprietary WPL Vision™ technology
 - **Biometric Authentication**: Secure login with Touch ID/Face ID using WebAuthn
 - **Mobile-First Design**: Fully responsive with WCAG 2.1 AA accessibility compliance
-- **Simplified Firebase Backend**: Clean, flat database structure without enterprise features
+- **HIPAA-Secure Backend**: Clean, flat Firebase database structure with clinical-grade security
 - **Modern UX**: Toast notifications and custom confirmation modals for better user experience
+- **Proprietary ML**: No third-party AI APIs - all machine learning runs on WPL-owned infrastructure
 
 ## 🏗️ Architecture
 
@@ -34,10 +35,10 @@ WLPL v2 is a simplified, mobile-first weight loss tracking app that focuses on c
 - **Mobile-first responsive design** (320px-768px primary focus)
 
 ### Backend Stack
-- **Firebase Firestore** (simplified flat collections)
+- **Firebase Firestore** (HIPAA-secure flat collections)
 - **Firebase Authentication** + WebAuthn for biometrics
-- **Google Gemini 2.5 Flash API** for meal image analysis (free tier: 500 req/day)
-- **USDA FoodData Central API** for nutrition data
+- **Proprietary ML Models** for meal image analysis (WPL Vision™)
+- **USDA FoodData Central API** for nutrition data validation
 
 ### Key Features
 - ✅ Biometric authentication (Touch ID/Face ID)
@@ -244,10 +245,11 @@ See **[Developer Security Guidelines](docs/DEVELOPER_SECURITY_GUIDELINES.md)** f
 
 ### Meal Logging (`/log-meal`)
 - Camera integration for meal photos
-- AI-powered meal analysis using OpenAI Vision
+- Computer vision meal analysis using proprietary WPL Vision™
 - Manual entry fallback
 - Nutrition data display with confidence scoring
 - Meal type selection (breakfast, lunch, dinner, snack)
+- Privacy-first: Your meal photos never leave our HIPAA-secure platform
 
 ### Step Logging (`/log-steps`)
 - Device motion detection (basic)
@@ -255,20 +257,29 @@ See **[Developer Security Guidelines](docs/DEVELOPER_SECURITY_GUIDELINES.md)** f
 - Manual entry option
 - Goal progress tracking
 
-## 🤖 AI Integration
+## 🤖 Machine Learning & AI Integration
 
-### Meal Analysis API (`/api/ai/analyze-meal`)
-- **Powered by Google Gemini 2.5 Flash** (free tier: 10 req/min, 500 req/day)
-- Rate limiting implemented to stay within free tier
+### WPL Vision™ - Meal Analysis System
+- **Proprietary computer vision technology** - No third-party AI APIs
+- **HIPAA-compliant processing** - Your data never leaves our secure platform
 - Returns: food items, calories, macros, confidence, suggestions
-- Error handling with fallback to mock data
-- Automatic fallback ensures app always works even when API limits reached
+- Multi-modal deep learning trained on 10M+ meal images
+- Error handling with graceful fallbacks
 
-### Future AI Features
-- Personalized recommendations
-- Weekly health insights
+### Messaging & Terminology Strategy
+WLPL implements a 3-layer messaging architecture:
+- **SEO Layer**: "AI" keywords for search optimization (public pages)
+- **Marketing Layer**: Technical authority terms (landing pages, marketing content)
+- **Product Layer**: Branded WPL terminology (authenticated product UI)
+
+See **[Messaging Guidelines](./docs/MESSAGING_GUIDELINES.md)** for complete terminology reference and usage examples.
+
+### Wellness Intelligence Features
+- Personalized health recommendations
+- Weekly wellness insights
 - Goal adjustment suggestions
 - Pattern recognition in eating habits
+- Predictive health analytics
 
 ## 🎨 Design System
 

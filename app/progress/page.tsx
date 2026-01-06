@@ -77,6 +77,7 @@ import { collection, query, where, orderBy, limit, onSnapshot, Timestamp } from 
 import toast from 'react-hot-toast'
 import { ScannedMedication } from '@/lib/medication-lookup'
 import type { WeightLog } from '@/types/medical'
+import { TrustBadge } from '@/components/ui/TrustBadge'
 
 export default function ProgressPage() {
   return (
@@ -566,10 +567,16 @@ function ProgressContent() {
 
             {/* Data Completeness Tracker - Advanced Analytics Feature */}
             {hasAdvancedAnalytics ? (
-              <DataCompletenessTracker
-                patientId={selectedPatientId}
-                className="mb-6"
-              />
+              <>
+                <DataCompletenessTracker
+                  patientId={selectedPatientId}
+                  className="mb-6"
+                />
+                {/* Trust Badge - Health Insights Privacy */}
+                <div className="mb-6">
+                  <TrustBadge variant="compact" />
+                </div>
+              </>
             ) : (
               <div className="bg-card rounded-lg shadow-sm p-6 mb-6 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-50/80 to-blue-50/80 dark:from-purple-900/20 dark:to-blue-900/20 backdrop-blur-sm z-10 flex items-center justify-center">
