@@ -37,6 +37,7 @@ import { logger } from '@/lib/logger'
 import { shouldShowWeightReminder, getWeightReminderMessage, getWeightReminderColor } from '@/lib/weight-reminder-logic'
 import { useFeatureGate } from '@/hooks/useFeatureGate'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
+import { shouldShowFeatureByPreference } from '@/lib/feature-preference-gate'
 
 // Dynamic imports for heavy components (lazy loaded on demand)
 const GoalsEditor = dynamic(() => import('@/components/ui/GoalsEditor').then(mod => ({ default: mod.GoalsEditor })), {
@@ -300,49 +301,72 @@ function DashboardContent() {
   }, [userPrefs.preferences, userPrefs.loading])
 
   // PHASE 2: Widget Personalization Logic
-  // Reorder/filter widgets based on user's feature preferences
+  // Filter and reorder widgets based on user's feature preferences
   const dashboardWidgets = useMemo(() => {
-    if (!userPrefs.preferences) {
-      // Default widget order if no preferences
+    const preferences = userPrefs.featurePreferences
+
+    // Backward compatibility: show all widgets if no preferences
+    if (!preferences || preferences.length === 0) {
       return ['progress', 'gallery', 'medical']
     }
 
-    const features = userPrefs.getAllFeatures()
-    const userMode = userPrefs.preferences.userMode
     const widgets: string[] = []
 
     // Priority 1: Top feature gets shown first
     const topFeature = userPrefs.getTopFeature()
-    if (topFeature === 'weight_loss') {
+    if (topFeature === 'weight_loss' || topFeature === 'fitness') {
       widgets.push('progress')
-    } else if (topFeature === 'meal_planning') {
+    } else if (topFeature === 'meal_planning' || topFeature === 'recipes') {
       widgets.push('gallery')
-    } else if (topFeature === 'medical_tracking') {
+    } else if (topFeature === 'medical_tracking' || topFeature === 'vitals' || topFeature === 'medications') {
       widgets.push('medical')
     }
 
-    // Priority 2: Add remaining widgets based on selected features
-    if (features.includes('meal_planning') && !widgets.includes('gallery')) {
-      widgets.push('gallery')
-    }
-    if (features.includes('weight_loss') && !widgets.includes('progress')) {
+    // Priority 2: Add remaining widgets ONLY if user selected relevant features
+    // Weight/Progress widget - show if user wants weight_loss OR fitness
+    if ((preferences.includes('weight_loss') || preferences.includes('fitness')) && !widgets.includes('progress')) {
       widgets.push('progress')
     }
-    if (features.includes('medical_tracking') && !widgets.includes('medical')) {
+
+    // Meal Gallery widget - show if user wants meal_planning OR recipes
+    if ((preferences.includes('meal_planning') || preferences.includes('recipes')) && !widgets.includes('gallery')) {
+      widgets.push('gallery')
+    }
+
+    // Medical widget - show if user wants medical_tracking, vitals, OR medications
+    if ((preferences.includes('medical_tracking') || preferences.includes('vitals') || preferences.includes('medications')) && !widgets.includes('medical')) {
       widgets.push('medical')
     }
 
-    // Priority 3: Add widgets not yet included
-    const allWidgets = ['progress', 'gallery', 'medical']
-    allWidgets.forEach(w => {
-      if (!widgets.includes(w)) {
-        widgets.push(w)
-      }
-    })
-
-    logger.debug('📊 Personalized widget order:', { widgets, topFeature, features })
+    logger.debug('📊 Filtered & personalized widgets:', { widgets, topFeature, preferences })
     return widgets
-  }, [userPrefs.preferences])
+  }, [userPrefs.featurePreferences, userPrefs.getTopFeature])
+
+  // Quick Action Visibility based on preferences
+  const quickActions = useMemo(() => {
+    const preferences = userPrefs.featurePreferences
+
+    // Backward compatibility: show all if no preferences
+    if (!preferences || preferences.length === 0) {
+      return {
+        showMeal: true,
+        showMedications: true,
+        showGallery: true,
+        showShopping: true,
+        showWeight: true,
+        showInventory: true,
+      }
+    }
+
+    return {
+      showMeal: preferences.includes('meal_planning') || preferences.includes('recipes') || preferences.includes('weight_loss'),
+      showMedications: preferences.includes('medical_tracking') || preferences.includes('medications'),
+      showGallery: preferences.includes('meal_planning') || preferences.includes('recipes'),
+      showShopping: preferences.includes('shopping_automation') || preferences.includes('meal_planning'),
+      showWeight: preferences.includes('weight_loss') || preferences.includes('fitness') || preferences.includes('vitals'),
+      showInventory: preferences.includes('shopping_automation') || preferences.includes('meal_planning'),
+    }
+  }, [userPrefs.featurePreferences])
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -490,103 +514,116 @@ function DashboardContent() {
           </>
         )}
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Filtered by preferences */}
         <div className="grid grid-cols-4 gap-1.5">
-          <button
-            onClick={() => {
-              setNavigatingTo('log-meal')
-              router.push('/log-meal')
-            }}
-            disabled={!!navigatingTo}
-            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Log meal"
-          >
-            {navigatingTo === 'log-meal' ? (
-              <Spinner size="sm" className="text-primary" />
-            ) : (
-              <span className="text-5xl" role="img" aria-label="camera">📸</span>
-            )}
-            <span className="text-[9px] font-medium leading-tight mt-0.5">Meal</span>
-          </button>
+          {quickActions.showMeal && (
+            <button
+              onClick={() => {
+                setNavigatingTo('log-meal')
+                router.push('/log-meal')
+              }}
+              disabled={!!navigatingTo}
+              className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label="Log meal"
+            >
+              {navigatingTo === 'log-meal' ? (
+                <Spinner size="sm" className="text-primary" />
+              ) : (
+                <span className="text-5xl" role="img" aria-label="camera">📸</span>
+              )}
+              <span className="text-[9px] font-medium leading-tight mt-0.5">Meal</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => {
-              setNavigatingTo('medications')
-              router.push('/medications')
-            }}
-            disabled={!!navigatingTo}
-            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Manage medications"
-          >
-            {navigatingTo === 'medications' ? (
-              <Spinner size="sm" className="text-primary" />
-            ) : (
-              <span className="text-5xl" role="img" aria-label="medications">💊</span>
-            )}
-            <span className="text-[9px] font-medium leading-tight mt-0.5">Meds</span>
-          </button>
+          {quickActions.showMedications && (
+            <button
+              onClick={() => {
+                setNavigatingTo('medications')
+                router.push('/medications')
+              }}
+              disabled={!!navigatingTo}
+              className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label="Manage medications"
+            >
+              {navigatingTo === 'medications' ? (
+                <Spinner size="sm" className="text-primary" />
+              ) : (
+                <span className="text-5xl" role="img" aria-label="medications">💊</span>
+              )}
+              <span className="text-[9px] font-medium leading-tight mt-0.5">Meds</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => {
-              setNavigatingTo('gallery')
-              router.push('/gallery')
-            }}
-            disabled={!!navigatingTo}
-            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Photo gallery with social sharing"
-          >
-            {navigatingTo === 'gallery' ? (
-              <Spinner size="sm" className="text-primary" />
-            ) : (
-              <span className="text-5xl" role="img" aria-label="gallery">🖼️</span>
-            )}
-            <span className="text-[9px] font-medium leading-tight mt-0.5">Gallery</span>
-          </button>
+          {quickActions.showGallery && (
+            <button
+              onClick={() => {
+                setNavigatingTo('gallery')
+                router.push('/gallery')
+              }}
+              disabled={!!navigatingTo}
+              className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label="Photo gallery with social sharing"
+            >
+              {navigatingTo === 'gallery' ? (
+                <Spinner size="sm" className="text-primary" />
+              ) : (
+                <span className="text-5xl" role="img" aria-label="gallery">🖼️</span>
+              )}
+              <span className="text-[9px] font-medium leading-tight mt-0.5">Gallery</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => {
-              setNavigatingTo('shopping')
-              router.push('/shopping')
-            }}
-            disabled={!!navigatingTo}
-            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Shopping list"
-          >
-            {navigatingTo === 'shopping' ? (
-              <Spinner size="sm" className="text-primary" />
-            ) : (
-              <span className="text-5xl" role="img" aria-label="shopping">🛒</span>
-            )}
-            <span className="text-[9px] font-medium leading-tight mt-0.5">Shop</span>
-          </button>
+          {quickActions.showShopping && (
+            <button
+              onClick={() => {
+                setNavigatingTo('shopping')
+                router.push('/shopping')
+              }}
+              disabled={!!navigatingTo}
+              className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label="Shopping list"
+            >
+              {navigatingTo === 'shopping' ? (
+                <Spinner size="sm" className="text-primary" />
+              ) : (
+                <span className="text-5xl" role="img" aria-label="shopping">🛒</span>
+              )}
+              <span className="text-[9px] font-medium leading-tight mt-0.5">Shop</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setShowWeightModal(true)}
-            disabled={!!navigatingTo}
-            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Log weight"
-          >
-            <span className="text-2xl" role="img" aria-label="scale">⚖️</span>
-            <span className="text-[9px] font-medium leading-tight mt-0.5">Weight</span>
-          </button>
+          {quickActions.showWeight && (
+            <button
+              onClick={() => setShowWeightModal(true)}
+              disabled={!!navigatingTo}
+              className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label="Log weight"
+            >
+              <span className="text-2xl" role="img" aria-label="scale">⚖️</span>
+              <span className="text-[9px] font-medium leading-tight mt-0.5">Weight</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => {
-              setNavigatingTo('inventory')
-              router.push('/inventory')
-            }}
-            disabled={!!navigatingTo}
-            className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="Kitchen inventory"
-          >
-            {navigatingTo === 'inventory' ? (
-              <Spinner size="sm" className="text-primary" />
-            ) : (
-              <span className="text-5xl" role="img" aria-label="inventory">📦</span>
-            )}
-            <span className="text-[9px] font-medium leading-tight mt-0.5">Items</span>
-          </button>
+          {quickActions.showInventory && (
+            <button
+              onClick={() => {
+                setNavigatingTo('inventory')
+                router.push('/inventory')
+              }}
+              disabled={!!navigatingTo}
+              className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label="Kitchen inventory"
+            >
+              {navigatingTo === 'inventory' ? (
+                <Spinner size="sm" className="text-primary" />
+              ) : (
+                <span className="text-5xl" role="img" aria-label="inventory">📦</span>
+              )}
+              <span className="text-[9px] font-medium leading-tight mt-0.5">Items</span>
+            </button>
+          )}
 
+          {/* Settings - Always visible */}
           <button
             onClick={() => {
               setNavigatingTo('settings')
@@ -656,6 +693,74 @@ function DashboardContent() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Feature Discovery - Show upsells for features user didn't select */}
+        {userPrefs.featurePreferences.length > 0 && (
+          <>
+            {/* Vital Tracking Upsell */}
+            {!userPrefs.featurePreferences.includes('vitals') && !userPrefs.featurePreferences.includes('medical_tracking') && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="text-4xl">📊</div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-blue-900 mb-2">Track Your Vital Signs</h3>
+                    <p className="text-sm text-gray-700 mb-4">
+                      Monitor blood pressure, blood sugar, heart rate, and other vital signs. Get reminders and track trends over time.
+                    </p>
+                    <button
+                      onClick={() => router.push('/onboarding')}
+                      className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
+                    >
+                      Enable Vital Tracking
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Medical Tracking Upsell */}
+            {!userPrefs.featurePreferences.includes('medical_tracking') && !userPrefs.featurePreferences.includes('medications') && (
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="text-4xl">💊</div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-green-900 mb-2">Manage Medications & Appointments</h3>
+                    <p className="text-sm text-gray-700 mb-4">
+                      Track medications, schedule appointments, and never miss a dose or visit with smart reminders.
+                    </p>
+                    <button
+                      onClick={() => router.push('/onboarding')}
+                      className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
+                    >
+                      Enable Medical Tracking
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Shopping Automation Upsell */}
+            {!userPrefs.featurePreferences.includes('shopping_automation') && (
+              <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-lg p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="text-4xl">🛒</div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-orange-900 mb-2">Automate Your Shopping</h3>
+                    <p className="text-sm text-gray-700 mb-4">
+                      Smart shopping lists, inventory tracking, and barcode scanning. Never run out of ingredients again.
+                    </p>
+                    <button
+                      onClick={() => router.push('/onboarding')}
+                      className="px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
+                    >
+                      Enable Shopping Automation
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
