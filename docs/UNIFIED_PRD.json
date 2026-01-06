@@ -34,6 +34,8 @@
       {
         "id": "food_management",
         "question": "How do you get your food?",
+        "subtitle": "Select all that apply",
+        "multiSelect": true,
         "options": ["i_cook_at_home", "meal_delivery", "meal_kits", "mostly_restaurants"],
         "optionsByRole": {
           "myself": ["i_cook_at_home", "meal_delivery", "meal_kits", "mostly_restaurants"],
