@@ -69,8 +69,6 @@ export type FeaturePreference =
   | 'caregiving'
   | 'shopping_automation'
   | 'fitness'
-  | 'vitals'
-  | 'medications'
 
 export type HouseholdType =
   | 'alone'

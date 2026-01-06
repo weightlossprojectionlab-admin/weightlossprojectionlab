@@ -318,7 +318,7 @@ function DashboardContent() {
       widgets.push('progress')
     } else if (topFeature === 'meal_planning') {
       widgets.push('gallery')
-    } else if (topFeature === 'medical_tracking' || topFeature === 'vitals' || topFeature === 'medications') {
+    } else if (topFeature === 'medical_tracking') {
       widgets.push('medical')
     }
 
@@ -333,8 +333,8 @@ function DashboardContent() {
       widgets.push('gallery')
     }
 
-    // Medical widget - show if user wants medical_tracking, vitals, OR medications
-    if ((preferences.includes('medical_tracking') || preferences.includes('vitals') || preferences.includes('medications')) && !widgets.includes('medical')) {
+    // Medical widget - show if user wants medical_tracking
+    if (preferences.includes('medical_tracking') && !widgets.includes('medical')) {
       widgets.push('medical')
     }
 
@@ -360,10 +360,10 @@ function DashboardContent() {
 
     return {
       showMeal: preferences.includes('meal_planning') || preferences.includes('weight_loss'),
-      showMedications: preferences.includes('medical_tracking') || preferences.includes('medications'),
+      showMedications: preferences.includes('medical_tracking'),
       showGallery: preferences.includes('meal_planning'),
       showShopping: preferences.includes('shopping_automation') || preferences.includes('meal_planning'),
-      showWeight: preferences.includes('weight_loss') || preferences.includes('fitness') || preferences.includes('vitals'),
+      showWeight: preferences.includes('weight_loss') || preferences.includes('fitness') || preferences.includes('medical_tracking'),
       showInventory: preferences.includes('shopping_automation') || preferences.includes('meal_planning'),
     }
   }, [userPrefs.featurePreferences])
@@ -698,42 +698,21 @@ function DashboardContent() {
         {/* Feature Discovery - Show upsells for features user didn't select */}
         {userPrefs.featurePreferences.length > 0 && (
           <>
-            {/* Vital Tracking Upsell */}
-            {!userPrefs.featurePreferences.includes('vitals') && !userPrefs.featurePreferences.includes('medical_tracking') && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6 shadow-sm">
-                <div className="flex items-start gap-4">
-                  <div className="text-4xl">📊</div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-blue-900 mb-2">Track Your Vital Signs</h3>
-                    <p className="text-sm text-gray-700 mb-4">
-                      Monitor blood pressure, blood sugar, heart rate, and other vital signs. Get reminders and track trends over time.
-                    </p>
-                    <button
-                      onClick={() => router.push('/onboarding')}
-                      className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
-                    >
-                      Enable Vital Tracking
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Medical Tracking Upsell */}
-            {!userPrefs.featurePreferences.includes('medical_tracking') && !userPrefs.featurePreferences.includes('medications') && (
+            {/* Health & Medical Tracking Upsell */}
+            {!userPrefs.featurePreferences.includes('medical_tracking') && (
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6 shadow-sm">
                 <div className="flex items-start gap-4">
                   <div className="text-4xl">💊</div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-bold text-green-900 mb-2">Manage Medications & Appointments</h3>
+                    <h3 className="text-lg font-bold text-green-900 mb-2">Track Health & Medical Records</h3>
                     <p className="text-sm text-gray-700 mb-4">
-                      Track medications, schedule appointments, and never miss a dose or visit with smart reminders.
+                      Track appointments, medications, vital signs (blood pressure, glucose, etc.), and health records all in one place.
                     </p>
                     <button
                       onClick={() => router.push('/onboarding')}
                       className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
                     >
-                      Enable Medical Tracking
+                      Enable Health & Medical Tracking
                     </button>
                   </div>
                 </div>

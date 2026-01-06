@@ -49,7 +49,7 @@ export const PREFERENCE_TO_FEATURES: Record<FeaturePreference, string[]> = {
     'shared-shopping',
   ],
 
-  // Medical Tracking
+  // Medical Tracking (includes vitals and medications)
   medical_tracking: [
     'appointments',
     'medications',
@@ -86,23 +86,6 @@ export const PREFERENCE_TO_FEATURES: Record<FeaturePreference, string[]> = {
     'progress-charts',
     'weight-tracking',
     'trend-analysis',
-  ],
-
-  // Vitals
-  vitals: [
-    'vitals-tracking',
-    'health-insights',
-    'trend-analysis',
-    'appointments',
-    'providers',
-  ],
-
-  // Medications
-  medications: [
-    'medications',
-    'appointments',
-    'providers',
-    'medical-records',
   ],
 }
 
@@ -231,12 +214,10 @@ export function getPreferencesForFeature(feature: string): FeaturePreference[] {
 export const PREFERENCE_DISPLAY_NAMES: Record<FeaturePreference, string> = {
   weight_loss: 'Weight Loss',
   meal_planning: 'Meal Planning & Recipes',
-  medical_tracking: 'Medical Tracking',
+  medical_tracking: 'Health & Medical Tracking',
   caregiving: 'Caregiving',
   shopping_automation: 'Shopping Automation',
   fitness: 'Fitness',
-  vitals: 'Vital Signs',
-  medications: 'Medications',
 }
 
 /**
