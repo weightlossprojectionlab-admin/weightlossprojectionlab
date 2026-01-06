@@ -15,27 +15,19 @@
       },
       {
         "id": "goals",
-        "question": "What are your goals?",
+        "question": "What are your wellness goals?",
         "subtitle": "Select all that apply",
         "multiSelect": true,
-        "options": ["weight_loss", "meal_planning", "medical_tracking", "shopping_automation", "fitness"],
-        "optionsByRole": {
-          "myself": ["weight_loss", "meal_planning", "shopping_automation", "fitness"],
-          "family": ["weight_loss", "meal_planning", "medical_tracking", "shopping_automation", "fitness"]
-        },
+        "options": ["body_fitness", "nutrition_kitchen", "health_medical"],
         "optionDescriptions": {
-          "weight_loss": "Track weight, calories, and progress toward weight goals",
-          "meal_planning": "Plan and log meals with AI-powered analysis, plus discover healthy recipes",
-          "medical_tracking": "Track appointments, medications, vital signs (blood pressure, glucose, etc.), and health records",
-          "shopping_automation": "Smart shopping lists and inventory tracking",
-          "fitness": "Track steps, exercise, and fitness challenges"
+          "body_fitness": "Track weight, exercise, body composition, and fitness goals (whether gaining, losing, or maintaining)",
+          "nutrition_kitchen": "Plan meals with AI analysis, discover recipes, smart shopping lists, and pantry tracking",
+          "health_medical": "Track appointments, medications, vital signs (blood pressure, glucose, etc.), and health records"
         },
         "planRequirements": {
-          "weight_loss": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
-          "meal_planning": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
-          "medical_tracking": ["single_plus", "family_basic", "family_plus", "family_premium"],
-          "shopping_automation": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
-          "fitness": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"]
+          "body_fitness": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
+          "nutrition_kitchen": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
+          "health_medical": ["single_plus", "family_basic", "family_plus", "family_premium"]
         },
         "sets": "featurePreferences"
       },

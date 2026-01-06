@@ -63,12 +63,10 @@ export type PrimaryRole =
   | 'caregiver'
 
 export type FeaturePreference =
-  | 'weight_loss'
-  | 'meal_planning'
-  | 'medical_tracking'
-  | 'caregiving'
-  | 'shopping_automation'
-  | 'fitness'
+  | 'body_fitness'           // Merged: weight_loss + fitness
+  | 'nutrition_kitchen'      // Merged: meal_planning + shopping_automation
+  | 'health_medical'         // Previously: medical_tracking
+  | 'caregiving'             // Unchanged (for external caregivers)
 
 export type HouseholdType =
   | 'alone'

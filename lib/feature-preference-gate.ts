@@ -19,38 +19,39 @@ import { FeaturePreference } from '@/types'
  * when a user selects specific goals during onboarding.
  */
 export const PREFERENCE_TO_FEATURES: Record<FeaturePreference, string[]> = {
-  // Weight Loss
-  weight_loss: [
+  // Body & Fitness (merged: weight_loss + fitness)
+  body_fitness: [
     'weight-tracking',
     'weight-history',
     'progress-charts',
-    'meal-logging',
-    'photo-logging',
-    'meal-recognition',
-    'basic-recipes',
-    'recipe-search',
     'step-tracking',
+    'exercise-tracking',
+    'body-composition',
+    'fitness-challenges',
+    'trend-analysis',
     'basic-ai-coaching',
     'basic-dashboard',
   ],
 
-  // Meal Planning (includes recipes)
-  meal_planning: [
+  // Nutrition & Kitchen (merged: meal_planning + shopping_automation)
+  nutrition_kitchen: [
     'meal-logging',
     'photo-logging',
     'meal-recognition',
     'meal-gallery',
     'basic-recipes',
     'recipe-search',
+    'recipe-discovery',
     'inventory-management',
     'pantry-tracking',
     'barcode-scanning',
-    'family-meal-planning',
+    'shopping-lists',
     'shared-shopping',
+    'family-meal-planning',
   ],
 
-  // Medical Tracking (includes vitals and medications)
-  medical_tracking: [
+  // Health & Medical (previously: medical_tracking)
+  health_medical: [
     'appointments',
     'medications',
     'vitals-tracking',
@@ -58,6 +59,7 @@ export const PREFERENCE_TO_FEATURES: Record<FeaturePreference, string[]> = {
     'medical-records',
     'health-insights',
     'trend-analysis',
+    'symptom-tracking',
   ],
 
   // Caregiving (Family mode)
@@ -69,23 +71,6 @@ export const PREFERENCE_TO_FEATURES: Record<FeaturePreference, string[]> = {
     'external-caregivers',
     'caregiver-invites',
     'family-health-dashboard',
-  ],
-
-  // Shopping Automation
-  shopping_automation: [
-    'inventory-management',
-    'barcode-scanning',
-    'pantry-tracking',
-    'shared-shopping',
-    'family-meal-planning',
-  ],
-
-  // Fitness
-  fitness: [
-    'step-tracking',
-    'progress-charts',
-    'weight-tracking',
-    'trend-analysis',
   ],
 }
 
@@ -212,12 +197,10 @@ export function getPreferencesForFeature(feature: string): FeaturePreference[] {
  * Maps feature preferences to user-friendly display names
  */
 export const PREFERENCE_DISPLAY_NAMES: Record<FeaturePreference, string> = {
-  weight_loss: 'Weight Loss',
-  meal_planning: 'Meal Planning & Recipes',
-  medical_tracking: 'Health & Medical Tracking',
+  body_fitness: 'Body & Fitness',
+  nutrition_kitchen: 'Nutrition & Kitchen',
+  health_medical: 'Health & Medical',
   caregiving: 'Caregiving',
-  shopping_automation: 'Shopping Automation',
-  fitness: 'Fitness',
 }
 
 /**
