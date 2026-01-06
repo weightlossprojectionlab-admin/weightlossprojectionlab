@@ -316,7 +316,7 @@ function DashboardContent() {
     const topFeature = userPrefs.getTopFeature()
     if (topFeature === 'weight_loss' || topFeature === 'fitness') {
       widgets.push('progress')
-    } else if (topFeature === 'meal_planning' || topFeature === 'recipes') {
+    } else if (topFeature === 'meal_planning') {
       widgets.push('gallery')
     } else if (topFeature === 'medical_tracking' || topFeature === 'vitals' || topFeature === 'medications') {
       widgets.push('medical')
@@ -328,8 +328,8 @@ function DashboardContent() {
       widgets.push('progress')
     }
 
-    // Meal Gallery widget - show if user wants meal_planning OR recipes
-    if ((preferences.includes('meal_planning') || preferences.includes('recipes')) && !widgets.includes('gallery')) {
+    // Meal Gallery widget - show if user wants meal_planning
+    if (preferences.includes('meal_planning') && !widgets.includes('gallery')) {
       widgets.push('gallery')
     }
 
@@ -359,9 +359,9 @@ function DashboardContent() {
     }
 
     return {
-      showMeal: preferences.includes('meal_planning') || preferences.includes('recipes') || preferences.includes('weight_loss'),
+      showMeal: preferences.includes('meal_planning') || preferences.includes('weight_loss'),
       showMedications: preferences.includes('medical_tracking') || preferences.includes('medications'),
-      showGallery: preferences.includes('meal_planning') || preferences.includes('recipes'),
+      showGallery: preferences.includes('meal_planning'),
       showShopping: preferences.includes('shopping_automation') || preferences.includes('meal_planning'),
       showWeight: preferences.includes('weight_loss') || preferences.includes('fitness') || preferences.includes('vitals'),
       showInventory: preferences.includes('shopping_automation') || preferences.includes('meal_planning'),

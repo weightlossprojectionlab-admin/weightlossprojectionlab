@@ -68,7 +68,6 @@ export type FeaturePreference =
   | 'medical_tracking'
   | 'caregiving'
   | 'shopping_automation'
-  | 'recipes'
   | 'fitness'
   | 'vitals'
   | 'medications'

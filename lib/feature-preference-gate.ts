@@ -34,7 +34,7 @@ export const PREFERENCE_TO_FEATURES: Record<FeaturePreference, string[]> = {
     'basic-dashboard',
   ],
 
-  // Meal Planning
+  // Meal Planning (includes recipes)
   meal_planning: [
     'meal-logging',
     'photo-logging',
@@ -78,13 +78,6 @@ export const PREFERENCE_TO_FEATURES: Record<FeaturePreference, string[]> = {
     'pantry-tracking',
     'shared-shopping',
     'family-meal-planning',
-  ],
-
-  // Recipes
-  recipes: [
-    'basic-recipes',
-    'recipe-search',
-    'meal-gallery',
   ],
 
   // Fitness
@@ -237,11 +230,10 @@ export function getPreferencesForFeature(feature: string): FeaturePreference[] {
  */
 export const PREFERENCE_DISPLAY_NAMES: Record<FeaturePreference, string> = {
   weight_loss: 'Weight Loss',
-  meal_planning: 'Meal Planning',
+  meal_planning: 'Meal Planning & Recipes',
   medical_tracking: 'Medical Tracking',
   caregiving: 'Caregiving',
   shopping_automation: 'Shopping Automation',
-  recipes: 'Recipes',
   fitness: 'Fitness',
   vitals: 'Vital Signs',
   medications: 'Medications',
