@@ -1,4 +1,4 @@
-# Backend Agent - WLPL v2
+# Backend Agent - WPL v2
 
 ## Role: Backend & Infrastructure Specialist
 

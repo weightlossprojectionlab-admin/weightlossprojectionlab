@@ -130,7 +130,7 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
     <nav className="w-64 bg-card text-foreground dark:text-white min-h-screen p-4 border-r border-border">
       {/* Logo/Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold">WLPL Admin</h1>
+        <h1 className="text-2xl font-bold">WPL Admin</h1>
         <p className="text-sm text-muted-foreground mt-1">Administration Panel</p>
       </div>
 

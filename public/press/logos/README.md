@@ -1,4 +1,4 @@
-# WLPL Brand Logos
+# WPL Brand Logos
 
 This directory contains official brand logos for Weight Loss Projection Lab.
 

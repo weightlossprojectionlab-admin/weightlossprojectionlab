@@ -25,7 +25,7 @@ TEST_PATIENT_NAME="Jane Doe"
 # SendGrid (Optional - for email tests)
 SENDGRID_API_KEY=SG.your_key_here
 SENDGRID_FROM_EMAIL=noreply@yourdomain.com
-SENDGRID_FROM_NAME="WLPL Family Health"
+SENDGRID_FROM_NAME="WPL Family Health"
 ```
 
 2. **Create Test Users** (if needed)

@@ -1,4 +1,4 @@
-# WLPL v2 Agent Team Configuration
+# WPL v2 Agent Team Configuration
 
 ## Project: AI-Powered Weight Loss Progress Logger v2
 

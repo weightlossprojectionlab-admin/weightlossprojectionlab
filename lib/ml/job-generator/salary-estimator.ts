@@ -66,7 +66,7 @@ export function estimateSalary(
     seniority,
     location: 'Remote (US)',
     marketRate: { min: baseSalary.min, max: baseSalary.max },
-    source: 'WLPL Market Data 2024-2025',
+    source: 'WPL Market Data 2024-2025',
     lastUpdated: new Date('2024-12-01')
   }
 

@@ -4,7 +4,7 @@
  * Contains condition-specific follow-up questions for detailed health profiling.
  * Questions are shown in a modal after user selects a condition in onboarding.
  *
- * WLPL uses this data to generate accurate dietary restrictions and meal recommendations.
+ * WPL uses this data to generate accurate dietary restrictions and meal recommendations.
  */
 
 export interface HealthConditionQuestion {
@@ -13,7 +13,7 @@ export interface HealthConditionQuestion {
   type: 'select' | 'text' | 'number' | 'date' | 'multiselect' | 'medication-scanner'
   options?: Array<{ value: string; label: string }>
   required: boolean
-  tooltip?: string // "Why WLPL asks this"
+  tooltip?: string // "Why WPL asks this"
   placeholder?: string
   min?: number
   max?: number
@@ -33,7 +33,7 @@ export interface HealthConditionQuestionnaire {
 export const ckdQuestionnaire: HealthConditionQuestionnaire = {
   conditionName: 'Chronic Kidney Disease (CKD)',
   conditionKey: 'kidney-disease-ckd',
-  description: 'WLPL needs to know about your kidney function to set safe sodium, potassium, phosphorus, and protein limits.',
+  description: 'WPL needs to know about your kidney function to set safe sodium, potassium, phosphorus, and protein limits.',
   questions: [
     {
       id: 'ckd_stage',
@@ -60,7 +60,7 @@ export const ckdQuestionnaire: HealthConditionQuestionnaire = {
       unit: 'mL/min/1.73m²',
       required: false,
       placeholder: 'e.g., 45',
-      tooltip: 'GFR shows how well your kidneys filter waste. WLPL uses this to calculate safe protein intake.'
+      tooltip: 'GFR shows how well your kidneys filter waste. WPL uses this to calculate safe protein intake.'
     },
     {
       id: 'ckd_sodium_limit',
@@ -71,7 +71,7 @@ export const ckdQuestionnaire: HealthConditionQuestionnaire = {
       unit: 'mg/day',
       required: false,
       placeholder: 'e.g., 1500',
-      tooltip: 'CKD patients typically need 1500-2300mg/day sodium. WLPL will flag high-sodium meals.'
+      tooltip: 'CKD patients typically need 1500-2300mg/day sodium. WPL will flag high-sodium meals.'
     },
     {
       id: 'ckd_potassium_limit',
@@ -82,7 +82,7 @@ export const ckdQuestionnaire: HealthConditionQuestionnaire = {
       unit: 'mg/day',
       required: false,
       placeholder: 'e.g., 2000',
-      tooltip: 'Advanced CKD requires low potassium (2000-3000mg/day). WLPL will warn about bananas, potatoes, tomatoes.'
+      tooltip: 'Advanced CKD requires low potassium (2000-3000mg/day). WPL will warn about bananas, potatoes, tomatoes.'
     },
     {
       id: 'ckd_on_dialysis',
@@ -105,7 +105,7 @@ export const ckdQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'yes', label: 'Yes, doctor recommended' }
       ],
       required: false,
-      tooltip: 'Advanced CKD requires low phosphorus (<1000mg/day). WLPL will flag dairy, nuts, beans, soda.'
+      tooltip: 'Advanced CKD requires low phosphorus (<1000mg/day). WPL will flag dairy, nuts, beans, soda.'
     }
   ]
 }
@@ -116,7 +116,7 @@ export const ckdQuestionnaire: HealthConditionQuestionnaire = {
 export const cancerQuestionnaire: HealthConditionQuestionnaire = {
   conditionName: 'Cancer (Active or Recent Treatment)',
   conditionKey: 'cancer-active-or-recent-treatment',
-  description: 'WLPL adjusts meal suggestions for appetite changes, nausea, taste alterations, and protein needs during treatment.',
+  description: 'WPL adjusts meal suggestions for appetite changes, nausea, taste alterations, and protein needs during treatment.',
   questions: [
     {
       id: 'cancer_type',
@@ -139,7 +139,7 @@ export const cancerQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'surgery-only', label: 'Surgery only, no chemo/radiation' }
       ],
       required: true,
-      tooltip: 'Active treatment causes appetite loss, nausea, taste changes. WLPL suggests gentle, high-calorie foods.'
+      tooltip: 'Active treatment causes appetite loss, nausea, taste changes. WPL suggests gentle, high-calorie foods.'
     },
     {
       id: 'cancer_appetite',
@@ -152,7 +152,7 @@ export const cancerQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'no-appetite', label: 'No appetite at all' }
       ],
       required: true,
-      tooltip: 'Poor appetite requires small, frequent, calorie-dense meals. WLPL will suggest smoothies, soups, soft foods.'
+      tooltip: 'Poor appetite requires small, frequent, calorie-dense meals. WPL will suggest smoothies, soups, soft foods.'
     },
     {
       id: 'cancer_nausea',
@@ -165,7 +165,7 @@ export const cancerQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'severe', label: 'Severe nausea (daily)' }
       ],
       required: true,
-      tooltip: 'Nausea requires bland foods (crackers, rice, applesauce). WLPL will avoid greasy, spicy, strong-smelling foods.'
+      tooltip: 'Nausea requires bland foods (crackers, rice, applesauce). WPL will avoid greasy, spicy, strong-smelling foods.'
     },
     {
       id: 'cancer_taste_changes',
@@ -180,7 +180,7 @@ export const cancerQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'none', label: 'No taste changes' }
       ],
       required: true,
-      tooltip: 'Chemo causes metallic/bitter taste. WLPL suggests plastic utensils, citrus flavors, cold foods to mask taste.'
+      tooltip: 'Chemo causes metallic/bitter taste. WPL suggests plastic utensils, citrus flavors, cold foods to mask taste.'
     },
     {
       id: 'cancer_weight_loss',
@@ -193,7 +193,7 @@ export const cancerQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'severe', label: 'Yes, >10% of body weight' }
       ],
       required: true,
-      tooltip: 'Unintentional weight loss >5% requires high-protein, high-calorie diet. WLPL will prioritize nutrient-dense foods.'
+      tooltip: 'Unintentional weight loss >5% requires high-protein, high-calorie diet. WPL will prioritize nutrient-dense foods.'
     }
   ]
 }
@@ -204,7 +204,7 @@ export const cancerQuestionnaire: HealthConditionQuestionnaire = {
 export const type1DiabetesQuestionnaire: HealthConditionQuestionnaire = {
   conditionName: 'Type 1 Diabetes',
   conditionKey: 'type-1-diabetes',
-  description: 'WLPL helps you count carbs, balance meals, and avoid hypo/hyperglycemia.',
+  description: 'WPL helps you count carbs, balance meals, and avoid hypo/hyperglycemia.',
   questions: [
     {
       id: 't1d_insulin_regimen',
@@ -228,7 +228,7 @@ export const type1DiabetesQuestionnaire: HealthConditionQuestionnaire = {
       unit: '%',
       required: false,
       placeholder: 'e.g., 7.2',
-      tooltip: 'A1C >8% means blood sugar control needs improvement. WLPL will suggest lower-carb meals.'
+      tooltip: 'A1C >8% means blood sugar control needs improvement. WPL will suggest lower-carb meals.'
     },
     {
       id: 't1d_carb_ratio',
@@ -236,7 +236,7 @@ export const type1DiabetesQuestionnaire: HealthConditionQuestionnaire = {
       type: 'text',
       required: false,
       placeholder: 'e.g., 1:10',
-      tooltip: 'Your I:C ratio (e.g., 1:10) tells WLPL how many grams of carbs are covered by 1 unit of insulin.'
+      tooltip: 'Your I:C ratio (e.g., 1:10) tells WPL how many grams of carbs are covered by 1 unit of insulin.'
     },
     {
       id: 't1d_hypo_frequency',
@@ -249,7 +249,7 @@ export const type1DiabetesQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'daily', label: 'Daily or multiple times per week' }
       ],
       required: true,
-      tooltip: 'Frequent hypos mean you need more consistent carb intake. WLPL will suggest balanced meals with protein/fat.'
+      tooltip: 'Frequent hypos mean you need more consistent carb intake. WPL will suggest balanced meals with protein/fat.'
     },
     {
       id: 't1d_hypo_awareness',
@@ -261,7 +261,7 @@ export const type1DiabetesQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'no', label: 'No, I have hypoglycemia unawareness' }
       ],
       required: true,
-      tooltip: 'Hypoglycemia unawareness is dangerous. WLPL will recommend higher carb targets and frequent small meals.'
+      tooltip: 'Hypoglycemia unawareness is dangerous. WPL will recommend higher carb targets and frequent small meals.'
     }
   ]
 }
@@ -272,7 +272,7 @@ export const type1DiabetesQuestionnaire: HealthConditionQuestionnaire = {
 export const type2DiabetesQuestionnaire: HealthConditionQuestionnaire = {
   conditionName: 'Type 2 Diabetes',
   conditionKey: 'type-2-diabetes',
-  description: 'WLPL helps you manage blood sugar with low-glycemic meals and carb control.',
+  description: 'WPL helps you manage blood sugar with low-glycemic meals and carb control.',
   questions: [
     {
       id: 't2d_a1c',
@@ -283,7 +283,7 @@ export const type2DiabetesQuestionnaire: HealthConditionQuestionnaire = {
       unit: '%',
       required: false,
       placeholder: 'e.g., 7.5',
-      tooltip: 'A1C <7% is controlled. 7-9% needs improvement. >9% is poorly controlled. WLPL tightens carb limits for higher A1C.'
+      tooltip: 'A1C <7% is controlled. 7-9% needs improvement. >9% is poorly controlled. WPL tightens carb limits for higher A1C.'
     },
     {
       id: 't2d_blood_sugar_control',
@@ -296,7 +296,7 @@ export const type2DiabetesQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'poor', label: 'Poor (A1C >9%)' }
       ],
       required: true,
-      tooltip: 'Poor control requires strict carb limits (30-45g per meal). WLPL will prioritize low-glycemic foods.'
+      tooltip: 'Poor control requires strict carb limits (30-45g per meal). WPL will prioritize low-glycemic foods.'
     },
     {
       id: 't2d_carb_target',
@@ -307,7 +307,7 @@ export const type2DiabetesQuestionnaire: HealthConditionQuestionnaire = {
       unit: 'g/day',
       required: false,
       placeholder: 'e.g., 150',
-      tooltip: 'Typical T2D carb targets: 100-150g/day (low-carb) or 150-200g/day (moderate). WLPL will track your carb intake.'
+      tooltip: 'Typical T2D carb targets: 100-150g/day (low-carb) or 150-200g/day (moderate). WPL will track your carb intake.'
     }
   ]
 }
@@ -318,7 +318,7 @@ export const type2DiabetesQuestionnaire: HealthConditionQuestionnaire = {
 export const surgeryQuestionnaire: HealthConditionQuestionnaire = {
   conditionName: 'Recent Surgery / Wound Healing',
   conditionKey: 'recent-surgery-wound-healing',
-  description: 'WLPL ensures you get enough protein, calories, and nutrients for optimal healing.',
+  description: 'WPL ensures you get enough protein, calories, and nutrients for optimal healing.',
   questions: [
     {
       id: 'surgery_type',
@@ -333,14 +333,14 @@ export const surgeryQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'other', label: 'Other' }
       ],
       required: true,
-      tooltip: 'GI surgery requires low-fiber, soft foods. Bariatric requires high-protein, small meals. WLPL adapts recommendations.'
+      tooltip: 'GI surgery requires low-fiber, soft foods. Bariatric requires high-protein, small meals. WPL adapts recommendations.'
     },
     {
       id: 'surgery_date',
       question: 'When was your surgery?',
       type: 'date',
       required: true,
-      tooltip: 'First 2 weeks: soft foods, high protein. Weeks 3-6: gradual return to normal. WLPL adjusts based on healing phase.'
+      tooltip: 'First 2 weeks: soft foods, high protein. Weeks 3-6: gradual return to normal. WPL adjusts based on healing phase.'
     },
     {
       id: 'surgery_healing_phase',
@@ -352,7 +352,7 @@ export const surgeryQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'late', label: 'Late healing (6+ weeks)' }
       ],
       required: true,
-      tooltip: 'Immediate phase: soft, gentle foods. Early phase: protein focus. Late phase: normal diet. WLPL suggests appropriate textures.'
+      tooltip: 'Immediate phase: soft, gentle foods. Early phase: protein focus. Late phase: normal diet. WPL suggests appropriate textures.'
     },
     {
       id: 'surgery_protein_needs',
@@ -364,7 +364,7 @@ export const surgeryQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'yes-high', label: 'Yes, significantly increased (1.5-2g/kg)' }
       ],
       required: false,
-      tooltip: 'Wound healing requires 1.5-2g protein/kg body weight. WLPL will prioritize protein-rich meals.'
+      tooltip: 'Wound healing requires 1.5-2g protein/kg body weight. WPL will prioritize protein-rich meals.'
     },
     {
       id: 'surgery_dietary_restrictions',
@@ -378,7 +378,7 @@ export const surgeryQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'no-restrictions', label: 'No restrictions' }
       ],
       required: true,
-      tooltip: 'WLPL will filter meal suggestions based on your post-surgery restrictions.'
+      tooltip: 'WPL will filter meal suggestions based on your post-surgery restrictions.'
     }
   ]
 }
@@ -389,7 +389,7 @@ export const surgeryQuestionnaire: HealthConditionQuestionnaire = {
 export const pregnancyQuestionnaire: HealthConditionQuestionnaire = {
   conditionName: 'Pregnancy',
   conditionKey: 'pregnancy-nursing',
-  description: 'WLPL ensures you and your baby get proper nutrition while managing pregnancy symptoms.',
+  description: 'WPL ensures you and your baby get proper nutrition while managing pregnancy symptoms.',
   questions: [
     {
       id: 'pregnancy_trimester',
@@ -414,7 +414,7 @@ export const pregnancyQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'yes-insulin', label: 'Yes, on insulin' }
       ],
       required: true,
-      tooltip: 'Gestational diabetes requires carb limits (150-175g/day), spread across 3 meals + 2-3 snacks. WLPL tracks carbs closely.'
+      tooltip: 'Gestational diabetes requires carb limits (150-175g/day), spread across 3 meals + 2-3 snacks. WPL tracks carbs closely.'
     },
     {
       id: 'pregnancy_preeclampsia',
@@ -426,7 +426,7 @@ export const pregnancyQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'high-bp', label: 'High blood pressure only' }
       ],
       required: true,
-      tooltip: 'Preeclampsia requires low sodium (<2300mg/day) and adequate protein (70-100g/day). WLPL flags high-sodium foods.'
+      tooltip: 'Preeclampsia requires low sodium (<2300mg/day) and adequate protein (70-100g/day). WPL flags high-sodium foods.'
     },
     {
       id: 'pregnancy_morning_sickness',
@@ -439,7 +439,7 @@ export const pregnancyQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'severe', label: 'Severe nausea (hyperemesis gravidarum)' }
       ],
       required: true,
-      tooltip: 'Morning sickness requires bland, dry foods (crackers, toast). Small, frequent meals. WLPL suggests gentle options.'
+      tooltip: 'Morning sickness requires bland, dry foods (crackers, toast). Small, frequent meals. WPL suggests gentle options.'
     },
     {
       id: 'pregnancy_food_aversions',
@@ -447,7 +447,7 @@ export const pregnancyQuestionnaire: HealthConditionQuestionnaire = {
       type: 'text',
       required: false,
       placeholder: 'e.g., Meat, eggs, strong smells',
-      tooltip: 'Pregnancy aversions are common. WLPL will avoid suggesting these foods.'
+      tooltip: 'Pregnancy aversions are common. WPL will avoid suggesting these foods.'
     }
   ]
 }
@@ -458,7 +458,7 @@ export const pregnancyQuestionnaire: HealthConditionQuestionnaire = {
 export const ibdQuestionnaire: HealthConditionQuestionnaire = {
   conditionName: 'Inflammatory Bowel Disease (IBD)',
   conditionKey: 'inflammatory-bowel-disease-ibd',
-  description: 'WLPL adjusts fiber, fat, and trigger foods based on whether you\'re in remission or flaring.',
+  description: 'WPL adjusts fiber, fat, and trigger foods based on whether you\'re in remission or flaring.',
   questions: [
     {
       id: 'ibd_type',
@@ -470,7 +470,7 @@ export const ibdQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'unknown', label: 'Not sure / unspecified IBD' }
       ],
       required: true,
-      tooltip: 'Crohn\'s can affect entire GI tract. UC affects colon only. WLPL tailors fiber/fat recommendations.'
+      tooltip: 'Crohn\'s can affect entire GI tract. UC affects colon only. WPL tailors fiber/fat recommendations.'
     },
     {
       id: 'ibd_flare_status',
@@ -483,7 +483,7 @@ export const ibdQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'severe-flare', label: 'Severe flare' }
       ],
       required: true,
-      tooltip: 'Flare = low-fiber, low-fat, easy-to-digest foods. Remission = normal diet with caution. WLPL adjusts accordingly.'
+      tooltip: 'Flare = low-fiber, low-fat, easy-to-digest foods. Remission = normal diet with caution. WPL adjusts accordingly.'
     },
     {
       id: 'ibd_fiber_tolerance',
@@ -496,7 +496,7 @@ export const ibdQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'none', label: 'Cannot tolerate any fiber' }
       ],
       required: true,
-      tooltip: 'IBD flares require low-residue diet (<10g fiber/day). WLPL will avoid raw veggies, whole grains, nuts, seeds.'
+      tooltip: 'IBD flares require low-residue diet (<10g fiber/day). WPL will avoid raw veggies, whole grains, nuts, seeds.'
     },
     {
       id: 'ibd_trigger_foods',
@@ -504,7 +504,7 @@ export const ibdQuestionnaire: HealthConditionQuestionnaire = {
       type: 'text',
       required: false,
       placeholder: 'e.g., Dairy, spicy foods, raw vegetables',
-      tooltip: 'Common IBD triggers: dairy, caffeine, alcohol, spicy foods, high-fat foods. WLPL will avoid your specific triggers.'
+      tooltip: 'Common IBD triggers: dairy, caffeine, alcohol, spicy foods, high-fat foods. WPL will avoid your specific triggers.'
     },
     {
       id: 'ibd_strictures',
@@ -515,7 +515,7 @@ export const ibdQuestionnaire: HealthConditionQuestionnaire = {
         { value: 'yes', label: 'Yes, I have strictures' }
       ],
       required: false,
-      tooltip: 'Strictures require low-fiber, soft, well-cooked foods to prevent blockages. WLPL will avoid tough meats, raw veggies.'
+      tooltip: 'Strictures require low-fiber, soft, well-cooked foods to prevent blockages. WPL will avoid tough meats, raw veggies.'
     }
   ]
 }

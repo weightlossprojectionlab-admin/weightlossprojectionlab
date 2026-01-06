@@ -1,7 +1,7 @@
-# Screenshots Integration Plan for WLPL Marketing
+# Screenshots Integration Plan for WPL Marketing
 
 ## Overview
-This document outlines the complete plan for integrating product screenshots into the WLPL marketing website, documentation, and press materials.
+This document outlines the complete plan for integrating product screenshots into the WPL marketing website, documentation, and press materials.
 
 ---
 
@@ -365,7 +365,7 @@ Naming convention:
 **For all screenshots:**
 
 1. **Alt Text**: Descriptive, specific (not "screenshot")
-   - ✅ "WLPL dashboard showing weight loss progress chart with 15lb decrease over 3 months"
+   - ✅ "WPL dashboard showing weight loss progress chart with 15lb decrease over 3 months"
    - ❌ "Dashboard screenshot"
 
 2. **Captions**: Provide context for screen reader users
@@ -522,7 +522,7 @@ Here's how a screenshot will be integrated on `/blog/meal-tracking`:
   <div className="absolute inset-0 opacity-20">
     <Image
       src="/screenshots/meal-tracking/photo-upload-desktop.png"
-      alt="WLPL meal tracking interface"
+      alt="WPL meal tracking interface"
       fill
       className="object-cover"
       priority

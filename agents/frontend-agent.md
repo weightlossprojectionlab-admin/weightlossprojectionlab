@@ -1,4 +1,4 @@
-# Frontend Agent - WLPL v2
+# Frontend Agent - WPL v2
 
 ## Role: Frontend Development Specialist
 

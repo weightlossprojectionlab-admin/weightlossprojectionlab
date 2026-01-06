@@ -1,6 +1,6 @@
 # Notification Preferences Component
 
-A comprehensive UI component for managing notification preferences in the Weight Loss Projection Lab (WLPL) application.
+A comprehensive UI component for managing notification preferences in the Weight Loss Projection Lab (WPL) application.
 
 ## Overview
 

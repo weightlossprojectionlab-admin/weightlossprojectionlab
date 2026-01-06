@@ -1,6 +1,6 @@
 /**
  * Documentation Center Page
- * Comprehensive documentation hub for WLPL users, developers, and partners
+ * Comprehensive documentation hub for WPL users, developers, and partners
  */
 
 import type { Metadata } from 'next'

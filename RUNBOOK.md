@@ -1,8 +1,8 @@
-# WLPL Phase 2 Business Logic - RUNBOOK
+# WPL Phase 2 Business Logic - RUNBOOK
 
 ## Overview
 
-This runbook provides instructions for running, testing, and deploying the Phase 2 business logic modules for the Weight Loss Project Lab (WLPL).
+This runbook provides instructions for running, testing, and deploying the Phase 2 business logic modules for the Weight Loss Project Lab (WPL).
 
 ## Prerequisites
 

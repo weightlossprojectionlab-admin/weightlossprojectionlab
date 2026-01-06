@@ -367,7 +367,7 @@ const template = (page) => `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${page.title} | WLPL</title>
+  <title>${page.title} | WPL</title>
   <meta name="description" content="${page.meta.description}">
   <meta name="keywords" content="${page.meta.keywords}">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -385,7 +385,7 @@ const template = (page) => `<!DOCTYPE html>
 
     <div class="content">
       <section class="section">
-        <h2 class="section-title">Why WLPL Works for You</h2>
+        <h2 class="section-title">Why WPL Works for You</h2>
         <div class="benefits-list">
           ${page.benefits.map(b => `<div class="benefit-item"><div class="benefit-icon">${b.icon}</div><div class="benefit-text"><h3>${b.title}</h3><p>${b.desc}</p></div></div>`).join('\n          ')}
         </div>
@@ -406,7 +406,7 @@ const template = (page) => `<!DOCTYPE html>
 
       <div class="footer-cta">
         <h2>Ready to Get Started?</h2>
-        <p>Join thousands achieving their weight loss goals with WLPL.</p>
+        <p>Join thousands achieving their weight loss goals with WPL.</p>
         <a href="/auth" class="cta-button">Start Free Today 🚀</a>
         <div class="trust-badges">
           <div class="badge"><span class="badge-icon">📱</span><span>Mobile-First</span></div>

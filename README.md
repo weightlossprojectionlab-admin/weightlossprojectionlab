@@ -1,4 +1,4 @@
-# Weight Loss Projection Lab (WLPL) v2
+# Wellness Projection Lab (WPL) v2
 
 A comprehensive health tracking platform powered by proprietary machine learning technology, built with Next.js 15, featuring biometric authentication and advanced meal analysis capabilities.
 
@@ -17,7 +17,7 @@ This PRD includes:
 
 ## 🎯 Project Overview
 
-WLPL v2 is a simplified, mobile-first weight loss tracking app that focuses on core functionality without enterprise complexity. This version includes:
+WPL v2 is a simplified, mobile-first weight loss tracking app that focuses on core functionality without enterprise complexity. This version includes:
 
 - **Computer Vision Meal Analysis**: Take photos of meals for instant nutrition estimates using proprietary WPL Vision™ technology
 - **Biometric Authentication**: Secure login with Touch ID/Face ID using WebAuthn
@@ -179,7 +179,7 @@ npm audit --audit-level=high
 
 **🚨 Found a security vulnerability? Please report responsibly.**
 
-- **Email**: security@wlpl.com (or primary contact email)
+- **Email**: security@wpl.com (or primary contact email)
 - **PGP Key**: [Optional: Add PGP key for encrypted reports]
 - **Response Time**: We aim to respond within 24 hours
 
@@ -208,7 +208,7 @@ We appreciate responsible disclosure and will acknowledge your contribution (wit
 SUPER_ADMIN_EMAILS=admin1@example.com,admin2@example.com
 
 # CORS Configuration
-ALLOWED_ORIGINS=https://app.wlpl.com,https://admin.wlpl.com
+ALLOWED_ORIGINS=https://app.wpl.com,https://admin.wpl.com
 
 # Rate Limiting
 UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
@@ -267,7 +267,7 @@ See **[Developer Security Guidelines](docs/DEVELOPER_SECURITY_GUIDELINES.md)** f
 - Error handling with graceful fallbacks
 
 ### Messaging & Terminology Strategy
-WLPL implements a 3-layer messaging architecture:
+WPL implements a 3-layer messaging architecture:
 - **SEO Layer**: "AI" keywords for search optimization (public pages)
 - **Marketing Layer**: Technical authority terms (landing pages, marketing content)
 - **Product Layer**: Branded WPL terminology (authenticated product UI)

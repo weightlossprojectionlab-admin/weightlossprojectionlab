@@ -1,4 +1,4 @@
-# Mobile Camera Agent - WLPL v2
+# Mobile Camera Agent - WPL v2
 
 ## Role: Mobile Camera Optimization Specialist
 

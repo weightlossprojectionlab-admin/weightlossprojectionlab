@@ -289,7 +289,7 @@ function generateEmailHtml(notification: Notification, recipientName: string): s
     </head>
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 28px;">WLPL Family Health</h1>
+        <h1 style="color: white; margin: 0; font-size: 28px;">WPL Family Health</h1>
         <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">Notification</p>
       </div>
 
@@ -340,7 +340,7 @@ function generateEmailText(notification: Notification, recipientName: string): s
   const message = generateContextAwareMessage(notification.type, notification.metadata)
 
   return `
-WLPL Family Health Notification
+WPL Family Health Notification
 
 ${notification.title}
 Priority: ${notification.priority.toUpperCase()}

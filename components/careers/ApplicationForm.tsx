@@ -283,7 +283,7 @@ export function ApplicationForm({ job, onSuccess }: ApplicationFormProps) {
       {/* Why Excited */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Why are you excited about WLPL? (optional)
+          Why are you excited about WPL? (optional)
         </label>
         <textarea
           rows={4}

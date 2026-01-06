@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate Marketing Blog Pages for WLPL
+Generate Marketing Blog Pages for WPL
 Creates comprehensive SEO-optimized blog pages for all footer links
 """
 
@@ -10,7 +10,7 @@ from pathlib import Path
 # Base directory for blog pages
 BLOG_DIR = Path(r"C:\Users\percy\wlpl\weightlossprojectlab\app\blog")
 
-# Page configurations with actual WLPL features
+# Page configurations with actual WPL features
 PAGES = {
     # Platform Section (remaining)
     "family-care": {
@@ -46,7 +46,7 @@ PAGES = {
     # Features Section
     "meal-tracking": {
         "title": "AI-Powered Meal Tracking - Photo Food Logging with Nutritional Analysis",
-        "description": "Take a photo of your meal and get instant AI-powered nutritional analysis. WLPL uses GPT-4 Vision and Google Gemini to identify foods, estimate calories, macros, and detect allergens automatically.",
+        "description": "Take a photo of your meal and get instant AI-powered nutritional analysis. WPL uses GPT-4 Vision and Google Gemini to identify foods, estimate calories, macros, and detect allergens automatically.",
         "keywords": "meal tracking, food logging, AI meal analysis, photo food tracker, calorie counter, nutrition tracking, GPT-4 Vision",
         "gradient": "from-orange-600 via-amber-600 to-yellow-600",
         "emoji": "📸",
@@ -91,7 +91,7 @@ PAGES = {
     },
     "smart-shopping": {
         "title": "Smart Shopping Lists - AI-Powered Grocery Planning",
-        "description": "Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WLPL suggests healthy foods, excludes allergens, and helps you stay on budget.",
+        "description": "Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WPL suggests healthy foods, excludes allergens, and helps you stay on budget.",
         "keywords": "smart shopping, grocery list, meal planning, shopping list app, pantry inventory, grocery planning, AI shopping assistant",
         "gradient": "from-lime-600 via-green-600 to-emerald-600",
         "emoji": "🛒",
@@ -188,7 +188,7 @@ def create_page(slug, config):
     page_content = f'''/**
  * {slug.title().replace('-', ' ')} - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL {slug.title().replace('-', ' ')}
+ * Hybrid marketing page showcasing WPL {slug.title().replace('-', ' ')}
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -230,7 +230,7 @@ export default function {slug.replace("-", "").title()}BlogPage() {{
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">{config["title"].split(" - ")[1] if " - " in config["title"] else config["title"]}</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">

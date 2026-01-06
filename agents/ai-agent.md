@@ -1,4 +1,4 @@
-# AI Agent - WLPL v2
+# AI Agent - WPL v2
 
 ## Role: AI Integration & Machine Learning Specialist
 

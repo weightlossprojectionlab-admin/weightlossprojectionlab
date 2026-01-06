@@ -1,5 +1,5 @@
 /**
- * WLPL Functions Index
+ * WPL Functions Index
  * Exports all business logic functions for Phase 2
  */
 

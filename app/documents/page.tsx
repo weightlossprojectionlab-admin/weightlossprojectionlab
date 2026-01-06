@@ -2,7 +2,7 @@
  * Medical Documents Page
  *
  * Comprehensive guide to the platform's document management system
- * All content is 100% relevant to the actual WLPL platform features
+ * All content is 100% relevant to the actual WPL platform features
  */
 
 'use client'

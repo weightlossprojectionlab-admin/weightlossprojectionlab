@@ -1,4 +1,4 @@
-# Camera Debug Agent - WLPL v2
+# Camera Debug Agent - WPL v2
 
 ## Role: Camera Access Diagnostics Specialist
 

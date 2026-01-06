@@ -121,14 +121,14 @@ export default function PressPage() {
 
               <div className="grid md:grid-cols-2 gap-8 mb-8">
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">About WLPL</h3>
+                  <h3 className="font-semibold text-gray-900 mb-3">About WPL</h3>
                   <p className="text-gray-700 leading-relaxed mb-4">
-                    Weight Loss Projection Lab (WLPL) is a HIPAA-compliant health tracking platform
+                    Weight Loss Projection Lab (WPL) is a HIPAA-compliant health tracking platform
                     that combines artificial intelligence with enterprise-grade security to help
                     individuals and families manage their wellness journey.
                   </p>
                   <p className="text-gray-700 leading-relaxed">
-                    Founded in 2025, WLPL revolutionizes health tracking by providing AI-powered
+                    Founded in 2025, WPL revolutionizes health tracking by providing AI-powered
                     nutritional analysis, personalized insights, and comprehensive family health
                     management—all while maintaining the highest standards of privacy and security.
                   </p>
@@ -175,7 +175,7 @@ export default function PressPage() {
                     Weight Loss Projection Lab is an AI-powered health tracking platform that helps
                     individuals and families achieve their wellness goals through intelligent meal
                     analysis, personalized insights, and comprehensive health management. With
-                    HIPAA compliance and enterprise-grade security, WLPL provides the privacy and
+                    HIPAA compliance and enterprise-grade security, WPL provides the privacy and
                     protection users need when managing sensitive health information. The platform
                     features advanced AI technology from OpenAI and Google, biometric
                     authentication, and family care management tools that make health tracking
@@ -571,7 +571,7 @@ export default function PressPage() {
           {/* In the News */}
           <section>
             <div className="bg-white rounded-2xl shadow-lg p-10">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8">WLPL in the News</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-8">WPL in the News</h2>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="border border-gray-200 rounded-lg p-6 hover:border-blue-500 transition-colors">
@@ -608,7 +608,7 @@ export default function PressPage() {
                     "HIPAA Compliance Done Right in Digital Health"
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    WLPL sets new standards for privacy and security in consumer health
+                    WPL sets new standards for privacy and security in consumer health
                     applications...
                   </p>
                   <a href="#" className="text-blue-600 hover:text-blue-700 font-medium text-sm">

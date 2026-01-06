@@ -1625,7 +1625,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
             ]))
             updateData({ healthConditions: mergedConditions })
 
-            toast.success(`Based on your medications, WLPL identified ${highConfidenceConditions.length} condition(s)`)
+            toast.success(`Based on your medications, WPL identified ${highConfidenceConditions.length} condition(s)`)
           }
         } catch (error) {
           logger.error('[Onboarding] Medication classification failed', error as Error)
@@ -1704,20 +1704,20 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
       medications: allMedications
     })
 
-    toast.success(`WLPL now understands your ${selectedCondition}`)
+    toast.success(`WPL now understands your ${selectedCondition}`)
   }
 
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <h2>Let WLPL Get to Know You</h2>
+        <h2>Let WPL Get to Know You</h2>
         <p className="text-muted-foreground mt-2">
-          Help WLPL understand your health story to provide safe, personalized guidance
+          Help WPL understand your health story to provide safe, personalized guidance
         </p>
         <div className="bg-primary-light dark:bg-purple-900/20 border-2 border-primary rounded-lg p-4 mt-4">
           <h3 className="font-bold text-primary-dark dark:text-primary-light mb-2">You're Seen</h3>
           <p className="text-sm text-primary-dark dark:text-primary-light">
-            WLPL is designed to support complex health needs. The more you share, the safer and more accurate your meal recommendations will be.
+            WPL is designed to support complex health needs. The more you share, the safer and more accurate your meal recommendations will be.
           </p>
         </div>
         <div className="bg-error-light dark:bg-error-dark/20 border-2 border-error rounded-lg p-4 mt-4">
@@ -1876,7 +1876,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
         <div className="bg-primary-light dark:bg-purple-900/20 border-2 border-primary rounded-lg p-4">
           <h3 className="font-medium text-primary-dark dark:text-primary-light mb-1">📷 Scan Your Medications</h3>
           <p className="text-sm text-primary-dark dark:text-primary-light">
-            Scan all your prescription bottles - WLPL will identify what conditions they treat. This helps caregivers and family members who may not know medication details.
+            Scan all your prescription bottles - WPL will identify what conditions they treat. This helps caregivers and family members who may not know medication details.
           </p>
         </div>
 
@@ -1884,14 +1884,14 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
           medications={(data.medications || []) as PatientMedication[]}
           onChange={(medications) => updateData({ medications: medications as any })}
           label="Your Medications"
-          description="Scan prescription labels with NDC barcode or OCR. WLPL will auto-suggest health conditions based on your medications."
+          description="Scan prescription labels with NDC barcode or OCR. WPL will auto-suggest health conditions based on your medications."
         />
 
         {/* Show suggested conditions from medications */}
         {suggestedConditions.length > 0 && (
           <div className="bg-success-light dark:bg-green-900/20 border-2 border-green-400 dark:border-success rounded-lg p-4">
             <h4 className="font-semibold text-green-900 dark:text-green-200 mb-2">
-              ✓ WLPL identified conditions from your medications:
+              ✓ WPL identified conditions from your medications:
             </h4>
             <ul className="space-y-1">
               {suggestedConditions.map((suggestion, index) => (
@@ -1982,7 +1982,7 @@ function StepFive({ data, updateData }: { data: OnboardingData; updateData: (dat
             ))}
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            WLPL uses this information to ensure meal suggestions are safe for your specific health needs.
+            WPL uses this information to ensure meal suggestions are safe for your specific health needs.
           </p>
         </div>
       </div>

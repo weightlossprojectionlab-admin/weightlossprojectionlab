@@ -1,4 +1,4 @@
-# Camera Fix Agent - WLPL v2
+# Camera Fix Agent - WPL v2
 
 ## Role: Camera Functionality Implementation Specialist
 

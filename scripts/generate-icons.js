@@ -28,7 +28,7 @@ const createSVG = (size) => `
 
     <!-- Weight indicator -->
     <text x="0" y="${-size * 0.1}" font-family="Arial, sans-serif" font-size="${size * 0.12}" font-weight="bold" fill="white" text-anchor="middle">
-      WLPL
+      WPL
     </text>
 
     <!-- Trend arrow -->

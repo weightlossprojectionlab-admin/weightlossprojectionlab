@@ -1,4 +1,4 @@
-# Permission Manager Agent - WLPL v2
+# Permission Manager Agent - WPL v2
 
 ## Role: Permission Handling & User Guidance Specialist
 

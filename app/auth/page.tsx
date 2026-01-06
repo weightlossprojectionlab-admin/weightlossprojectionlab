@@ -404,7 +404,7 @@ function AuthContent() {
         {/* Header */}
         <div className="text-center">
           <Link href="/" className="text-2xl font-bold text-foreground">
-            WLPL
+            WPL
           </Link>
           <h2 className="mt-4">
             {isInvitationFlow
@@ -436,7 +436,7 @@ function AuthContent() {
               <div>
                 <h2>Account Created Successfully!</h2>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Welcome to WLPL! Your account is ready to use.
+                  Welcome to WPL! Your account is ready to use.
                 </p>
               </div>
 

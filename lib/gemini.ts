@@ -186,7 +186,7 @@ export async function callGeminiHealthProfile(profile: {
       })
     }
 
-    const prompt = `You are WLPL's medical nutrition AI assistant. Analyze the following health profile and generate personalized dietary restrictions and safety guidelines.
+    const prompt = `You are WPL's medical nutrition AI assistant. Analyze the following health profile and generate personalized dietary restrictions and safety guidelines.
 
 USER PROFILE:
 - Health Conditions: ${profile.healthConditions?.join(', ') || 'None reported'}

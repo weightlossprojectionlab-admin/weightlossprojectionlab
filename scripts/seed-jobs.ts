@@ -113,7 +113,7 @@ const jobPostings: Omit<JobPosting, 'id' | 'createdAt' | 'updatedAt'>[] = [
     ],
     createdBy: ADMIN_UID,
     metaDescription:
-      'Join WLPL as a Senior Full-Stack Engineer. Build AI-powered health tech with React 19, Next.js 16, Firebase. Remote $140K-180K + equity.',
+      'Join WPL as a Senior Full-Stack Engineer. Build AI-powered health tech with React 19, Next.js 16, Firebase. Remote $140K-180K + equity.',
     keywords: [
       'senior full-stack engineer',
       'react',
@@ -219,7 +219,7 @@ const jobPostings: Omit<JobPosting, 'id' | 'createdAt' | 'updatedAt'>[] = [
     ],
     createdBy: ADMIN_UID,
     metaDescription:
-      'Join WLPL as DevOps/SRE Engineer. Build production infrastructure for healthtech platform. Remote $130K-170K + equity.',
+      'Join WPL as DevOps/SRE Engineer. Build production infrastructure for healthtech platform. Remote $130K-170K + equity.',
     keywords: ['devops', 'sre', 'infrastructure', 'monitoring', 'firebase', 'remote'],
   },
 
@@ -316,7 +316,7 @@ Mobile-first users represent 60% of our target market. Launching on iOS and Andr
     ],
     createdBy: ADMIN_UID,
     metaDescription:
-      'Join WLPL as Mobile Engineer. Build iOS/Android apps with Capacitor, HealthKit, Google Fit. Remote $120K-160K + equity.',
+      'Join WPL as Mobile Engineer. Build iOS/Android apps with Capacitor, HealthKit, Google Fit. Remote $120K-160K + equity.',
     keywords: ['mobile engineer', 'ios', 'android', 'capacitor', 'healthkit', 'remote'],
   },
 
@@ -424,7 +424,7 @@ Mobile-first users represent 60% of our target market. Launching on iOS and Andr
     ],
     createdBy: ADMIN_UID,
     metaDescription:
-      'Join WLPL as AI/ML Engineer. Build enterprise AI support chatbot, optimize LLMs. Remote $150K-190K + equity.',
+      'Join WPL as AI/ML Engineer. Build enterprise AI support chatbot, optimize LLMs. Remote $150K-190K + equity.',
     keywords: [
       'ai engineer',
       'machine learning',
@@ -529,7 +529,7 @@ Mobile-first users represent 60% of our target market. Launching on iOS and Andr
     ],
     createdBy: ADMIN_UID,
     metaDescription:
-      'Join WLPL as Product Manager. Define roadmap for AI-powered healthtech platform. Remote $110K-150K + equity.',
+      'Join WPL as Product Manager. Define roadmap for AI-powered healthtech platform. Remote $110K-150K + equity.',
     keywords: [
       'product manager',
       'healthtech',

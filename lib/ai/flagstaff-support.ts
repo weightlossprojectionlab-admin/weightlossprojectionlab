@@ -1,7 +1,7 @@
 /**
  * Flagstaff AI Support Service Layer
  *
- * 100% self-service AI-powered support system for WLPL platform.
+ * 100% self-service AI-powered support system for WPL platform.
  * No live human agents - AI answers all questions using comprehensive knowledge base.
  * Human escalation only for critical bugs as last resort.
  *
@@ -381,7 +381,7 @@ async function callFlagstaffAI(
         message: sanitizedMessage,
         conversationHistory,
         documentationContext: docContext,
-        systemPrompt: `You are the WLPL AI Support Assistant.
+        systemPrompt: `You are the WPL AI Support Assistant.
 Your goal is to help users with questions about the Weight Loss Projection Lab platform.
 Use the provided documentation to answer questions accurately.
 If you detect a bug or technical issue, set shouldEscalateToBugReport to true.

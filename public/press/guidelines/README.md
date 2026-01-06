@@ -1,8 +1,8 @@
-# WLPL Brand Guidelines
+# WPL Brand Guidelines
 
 ## Brand Overview
 
-Weight Loss Projection Lab (WLPL) is a HIPAA-compliant AI health platform. Our brand represents trust, innovation, and accessibility in digital health.
+Weight Loss Projection Lab (WPL) is a HIPAA-compliant AI health platform. Our brand represents trust, innovation, and accessibility in digital health.
 
 ## Primary Brand Colors
 

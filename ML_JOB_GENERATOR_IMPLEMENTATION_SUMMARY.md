@@ -365,7 +365,7 @@ result.jobs.forEach(job => {
 
 ## 📊 Example Output
 
-### For This Codebase (WLPL)
+### For This Codebase (WPL)
 
 **Detected:**
 - 42 technologies (React, Next.js, TypeScript, Firebase, etc.)

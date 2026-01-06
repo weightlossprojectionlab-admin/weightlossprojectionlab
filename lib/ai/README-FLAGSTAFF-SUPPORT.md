@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Flagstaff AI Support Service provides a **100% self-service AI-powered support system** for the WLPL platform. This implementation follows enterprise-grade architectural patterns with complete separation of concerns, HIPAA compliance, and production-ready error handling.
+The Flagstaff AI Support Service provides a **100% self-service AI-powered support system** for the WPL platform. This implementation follows enterprise-grade architectural patterns with complete separation of concerns, HIPAA compliance, and production-ready error handling.
 
 ## Architecture
 
@@ -612,7 +612,7 @@ logEvent(analytics, 'ai_bug_escalated', {
 
 ## License
 
-This implementation is part of the WLPL platform and follows the same license terms.
+This implementation is part of the WPL platform and follows the same license terms.
 
 ---
 

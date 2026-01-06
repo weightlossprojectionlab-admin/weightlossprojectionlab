@@ -229,7 +229,7 @@ export interface MLGeneratedJob {
 
 export interface MLGenerationMetadata {
   modelVersion: string
-  generatedBy: 'WLPL-ML-Engine'
+  generatedBy: 'WPL-ML-Engine'
   generatedAt: Date
   features: CodebaseFeatures
   classification: RoleClassification

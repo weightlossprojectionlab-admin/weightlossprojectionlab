@@ -142,7 +142,7 @@ async function callOpenAI(params: {
         messages: [
           {
             role: 'system',
-            content: 'You are AISA, an AI assistant for the Weight Loss Projection Lab (WLPL) application.',
+            content: 'You are AISA, an AI assistant for the Weight Loss Projection Lab (WPL) application.',
           },
           {
             role: 'user',

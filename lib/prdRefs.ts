@@ -2,7 +2,7 @@
  * PRD v1.3.7 Reference Constants
  *
  * This file exports typed string constants that map to specific paths
- * in the WLPL PRD JSON structure. Use these in TODO comments to maintain
+ * in the WPL PRD JSON structure. Use these in TODO comments to maintain
  * traceability between code and product requirements.
  */
 

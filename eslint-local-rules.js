@@ -1,5 +1,5 @@
 /**
- * Custom ESLint rules for WLPL
+ * Custom ESLint rules for WPL
  *
  * These rules enforce design system compliance
  */

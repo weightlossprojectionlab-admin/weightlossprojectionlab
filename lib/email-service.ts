@@ -21,7 +21,7 @@ if (process.env.SENDGRID_API_KEY) {
 // 2. Set up domain authentication in SendGrid (recommended)
 // 3. Use a custom domain you own
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@wlpl.app'
-const FROM_NAME = process.env.SENDGRID_FROM_NAME || 'WLPL Family Health'
+const FROM_NAME = process.env.SENDGRID_FROM_NAME || 'WPL Family Health'
 const REPLY_TO_EMAIL = process.env.SENDGRID_REPLY_TO_EMAIL || undefined
 
 /**

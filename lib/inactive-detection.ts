@@ -354,7 +354,7 @@ You're closer to your target than you think. Let's keep that momentum going!
 Your AI coach has personalized tips waiting for you.
 
 See you soon,
-The WLPL Team
+The WPL Team
 
 P.S. Need motivation? Try our new Weekly Missions for bonus XP and badges!
         `,
@@ -386,7 +386,7 @@ You've already made amazing progress with ${user.totalMealsLogged} meals logged.
 This offer expires in 7 days.
 
 We believe in you!
-The WLPL Team
+The WPL Team
 
 P.S. Your data and progress are all saved and waiting for you.
         `,
@@ -420,7 +420,7 @@ If you're done with Weight Loss Project Lab, we understand. But before you go, c
 [Give Feedback] → https://app.weightlossprojectlab.com/feedback
 
 Rooting for you always,
-The WLPL Team
+The WPL Team
 
 P.S. This is our final email. We won't bother you again, but we'll always be here if you need us.
         `,

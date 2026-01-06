@@ -142,7 +142,7 @@ export async function sendEmergencyAlert(alert: EmergencyAlert): Promise<{
           ) {
             await sendSMS(recipient.phoneNumber, {
               message: `🚨 EMERGENCY: ${alert.familyMemberName} - ${alert.message}. ${alert.guidance}`,
-              from: 'WLPL_ALERTS'
+              from: 'WPL_ALERTS'
             })
           }
 

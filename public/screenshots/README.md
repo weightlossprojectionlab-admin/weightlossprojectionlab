@@ -187,7 +187,7 @@ mogrify -format png -quality 90 *.png
 Good alt text is descriptive and specific:
 
 ✅ **Good:**
-- "WLPL dashboard showing weight loss progress chart with 15lb decrease over 3 months, recent meal log, and AI health insights"
+- "WPL dashboard showing weight loss progress chart with 15lb decrease over 3 months, recent meal log, and AI health insights"
 - "Mobile meal tracking interface with photo upload button and AI-analyzed nutrition breakdown"
 - "Family care dashboard displaying health metrics for 3 family members with quick action buttons"
 
@@ -237,7 +237,7 @@ import { Screenshot } from '@/components/ui/Screenshot'
 // Basic usage
 <Screenshot
   src="/screenshots/dashboard/overview-desktop-light.png"
-  alt="WLPL dashboard showing health metrics"
+  alt="WPL dashboard showing health metrics"
   caption="Your family's health at a glance"
 />
 

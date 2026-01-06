@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides a comprehensive guide to the Demo Request system implemented for the Weight Loss Projection Lab (WLPL) platform. The system captures demo requests from marketing pages, stores them in Firebase, and provides an admin dashboard for managing and scheduling demos.
+This document provides a comprehensive guide to the Demo Request system implemented for the Weight Loss Projection Lab (WPL) platform. The system captures demo requests from marketing pages, stores them in Firebase, and provides an admin dashboard for managing and scheduling demos.
 
 ---
 

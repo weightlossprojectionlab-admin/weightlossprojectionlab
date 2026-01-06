@@ -122,7 +122,7 @@ export function DemoRequestModal({ isOpen, onClose, source }: DemoRequestModalPr
           <div>
             <h2 className="text-2xl font-bold text-foreground">Schedule a Demo</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              See WLPL in action - personalized for your needs
+              See WPL in action - personalized for your needs
             </p>
           </div>
           <button
@@ -142,7 +142,7 @@ export function DemoRequestModal({ isOpen, onClose, source }: DemoRequestModalPr
             </div>
             <h3 className="text-2xl font-bold text-foreground mb-2">Request Received!</h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Thank you for your interest in WLPL. We'll review your request and contact you within 24 hours to schedule your personalized demo.
+              Thank you for your interest in WPL. We'll review your request and contact you within 24 hours to schedule your personalized demo.
             </p>
             <p className="text-sm text-muted-foreground mb-6">
               Check your email ({formData.email}) for confirmation details.
@@ -309,7 +309,7 @@ export function DemoRequestModal({ isOpen, onClose, source }: DemoRequestModalPr
 
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
-                      What brings you to WLPL?
+                      What brings you to WPL?
                     </label>
                     <textarea
                       value={formData.useCase}
@@ -364,7 +364,7 @@ export function DemoRequestModal({ isOpen, onClose, source }: DemoRequestModalPr
 
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                     <p className="text-sm text-blue-900 dark:text-blue-100">
-                      By submitting this form, you agree to our Privacy Policy and consent to be contacted about WLPL services.
+                      By submitting this form, you agree to our Privacy Policy and consent to be contacted about WPL services.
                     </p>
                   </div>
                 </div>

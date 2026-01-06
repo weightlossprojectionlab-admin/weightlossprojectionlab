@@ -122,7 +122,7 @@ export interface JobApplication {
   resumeUrl?: string // Firebase Storage URL
   resumeFileName?: string
   coverLetter?: string
-  whyExcited?: string // Why excited about WLPL
+  whyExcited?: string // Why excited about WPL
 
   // AI Analysis
   aiAnalysis?: AIResumeAnalysis

@@ -47,7 +47,7 @@ if (fromEmail.includes('@gmail.com')) {
 }
 
 console.log(`✅ SENDGRID_FROM_EMAIL: ${fromEmail}`)
-console.log(`✅ SENDGRID_FROM_NAME: ${fromName || 'WLPL Family Health'}`)
+console.log(`✅ SENDGRID_FROM_NAME: ${fromName || 'WPL Family Health'}`)
 if (replyToEmail) {
   console.log(`✅ SENDGRID_REPLY_TO_EMAIL: ${replyToEmail}`)
 }
@@ -95,21 +95,21 @@ rl.question('Send test email? (y/n): ', async (answer: string) => {
         to: recipientEmail,
         from: {
           email: fromEmail,
-          name: fromName || 'WLPL Family Health'
+          name: fromName || 'WPL Family Health'
         },
-        subject: 'SendGrid Test Email - WLPL',
+        subject: 'SendGrid Test Email - WPL',
         html: `
           <h1>SendGrid Test Successful!</h1>
-          <p>This is a test email from your WLPL application.</p>
+          <p>This is a test email from your WPL application.</p>
           <p><strong>Configuration Details:</strong></p>
           <ul>
             <li>From Email: ${fromEmail}</li>
-            <li>From Name: ${fromName || 'WLPL Family Health'}</li>
+            <li>From Name: ${fromName || 'WPL Family Health'}</li>
             <li>Sent at: ${new Date().toISOString()}</li>
           </ul>
           <p>If you received this email, your SendGrid configuration is working correctly!</p>
         `,
-        text: `SendGrid Test Successful! This is a test email from your WLPL application. From: ${fromEmail}. Sent at: ${new Date().toISOString()}`
+        text: `SendGrid Test Successful! This is a test email from your WPL application. From: ${fromEmail}. Sent at: ${new Date().toISOString()}`
       }
 
       if (replyToEmail) {

@@ -84,12 +84,12 @@ export default function HealthConditionModal({
               onMouseEnter={() => setShowTooltip(question.id)}
               onMouseLeave={() => setShowTooltip(null)}
               className="relative text-primary hover:text-primary-hover"
-              aria-label="Why WLPL asks this"
+              aria-label="Why WPL asks this"
             >
               <InformationCircleIcon className="w-4 h-4" />
               {showTooltip === question.id && (
                 <div className="absolute z-50 right-0 top-6 w-64 bg-background border-2 border-primary rounded-lg p-3 shadow-lg">
-                  <p className="text-xs font-semibold text-primary mb-1">Why WLPL asks this:</p>
+                  <p className="text-xs font-semibold text-primary mb-1">Why WPL asks this:</p>
                   <p className="text-xs text-foreground">{question.tooltip}</p>
                 </div>
               )}
@@ -192,7 +192,7 @@ export default function HealthConditionModal({
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-semibold text-primary bg-primary-light dark:bg-purple-900/20 px-2 py-1 rounded">
-                Guided by WLPL
+                Guided by WPL
               </span>
             </div>
             <h3 className="text-xl font-bold text-foreground">
@@ -217,7 +217,7 @@ export default function HealthConditionModal({
           <div className="bg-primary-light dark:bg-purple-900/20 border-2 border-primary rounded-lg p-4">
             <h4 className="font-bold text-primary-dark dark:text-primary-light mb-1">You're Safe</h4>
             <p className="text-sm text-primary-dark dark:text-primary-light">
-              WLPL uses this information to protect you from unsafe meal suggestions. Your responses help create personalized dietary guidelines.
+              WPL uses this information to protect you from unsafe meal suggestions. Your responses help create personalized dietary guidelines.
             </p>
           </div>
 
@@ -237,7 +237,7 @@ export default function HealthConditionModal({
             onClick={handleSave}
             className="btn btn-primary"
           >
-            Teach WLPL About My {questionnaire.conditionName.split(' ')[0]}
+            Teach WPL About My {questionnaire.conditionName.split(' ')[0]}
           </button>
         </div>
       </div>

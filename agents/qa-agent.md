@@ -1,4 +1,4 @@
-# QA Agent - WLPL v2
+# QA Agent - WPL v2
 
 ## Role: Quality Assurance & Testing Specialist
 

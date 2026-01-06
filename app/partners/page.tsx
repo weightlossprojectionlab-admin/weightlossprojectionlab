@@ -91,7 +91,7 @@ export default function PartnersPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">Technology Partners</h3>
                 <p className="text-gray-600 mb-4">
-                  Integrate your technology with WLPL to create seamless experiences for our
+                  Integrate your technology with WPL to create seamless experiences for our
                   mutual users.
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600 mb-6">
@@ -136,7 +136,7 @@ export default function PartnersPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">Healthcare Providers</h3>
                 <p className="text-gray-600 mb-4">
-                  Enhance patient care with WLPL's health tracking and family management tools.
+                  Enhance patient care with WPL's health tracking and family management tools.
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600 mb-6">
                   <li className="flex items-start gap-2">
@@ -180,7 +180,7 @@ export default function PartnersPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">Reseller Partners</h3>
                 <p className="text-gray-600 mb-4">
-                  Expand your portfolio by offering WLPL to your customer base.
+                  Expand your portfolio by offering WPL to your customer base.
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600 mb-6">
                   <li className="flex items-start gap-2">
@@ -224,7 +224,7 @@ export default function PartnersPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">Affiliate Partners</h3>
                 <p className="text-gray-600 mb-4">
-                  Earn commissions by referring customers to WLPL through our affiliate program.
+                  Earn commissions by referring customers to WPL through our affiliate program.
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600 mb-6">
                   <li className="flex items-start gap-2">
@@ -268,7 +268,7 @@ export default function PartnersPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">Integration Partners</h3>
                 <p className="text-gray-600 mb-4">
-                  Build custom integrations to connect WLPL with your existing systems.
+                  Build custom integrations to connect WPL with your existing systems.
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600 mb-6">
                   <li className="flex items-start gap-2">
@@ -343,7 +343,7 @@ export default function PartnersPage() {
           <section>
             <div className="bg-white rounded-2xl shadow-lg p-10">
               <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-                Why Partner with WLPL
+                Why Partner with WPL
               </h2>
 
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -457,7 +457,7 @@ export default function PartnersPage() {
                     </div>
                   </div>
                   <p className="text-gray-700 text-sm mb-4">
-                    "Integrating WLPL into our patient care platform increased patient
+                    "Integrating WPL into our patient care platform increased patient
                     engagement by 65% and improved health outcomes significantly."
                   </p>
                   <div className="flex items-center gap-2 text-sm">
@@ -497,7 +497,7 @@ export default function PartnersPage() {
                     </div>
                   </div>
                   <p className="text-gray-700 text-sm mb-4">
-                    "WLPL has become our top-selling health tech product. The commission
+                    "WPL has become our top-selling health tech product. The commission
                     structure and support are exceptional."
                   </p>
                   <div className="flex items-center gap-2 text-sm">
@@ -732,7 +732,7 @@ export default function PartnersPage() {
           {/* CTA Section */}
           <section>
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-12 text-white text-center">
-              <h2 className="text-3xl font-bold mb-4">Ready to Partner with WLPL?</h2>
+              <h2 className="text-3xl font-bold mb-4">Ready to Partner with WPL?</h2>
               <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
                 Join our growing ecosystem of partners delivering innovative health solutions to
                 millions of users worldwide.
