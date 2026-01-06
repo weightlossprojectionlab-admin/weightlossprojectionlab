@@ -49,7 +49,7 @@ export default function AboutPage() {
           <div className="max-w-3xl mx-auto text-center">
             <div className="text-6xl mb-6">⚖️</div>
             <h2 className="text-3xl font-bold mb-6">
-              Transforming Health Management with AI
+              Transforming Health Management with Advanced Technology
             </h2>
             <p className="text-lg text-blue-100 leading-relaxed">
               Wellness Projection Lab combines cutting-edge artificial intelligence with
@@ -146,7 +146,7 @@ export default function AboutPage() {
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Our Vision</h2>
                 <p className="text-gray-700 leading-relaxed">
-                  To become the world's most trusted health companion, where AI-powered insights
+                  To become the world's most trusted health companion, where data-driven insights
                   meet human-centered design, helping millions of people live healthier, happier
                   lives while maintaining the highest standards of privacy and security.
                 </p>
@@ -203,7 +203,7 @@ export default function AboutPage() {
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 mb-2">Innovation</h3>
                   <p className="text-sm text-gray-600">
-                    We leverage the latest AI technology to provide insights that were
+                    We leverage the latest machine learning technology to provide insights that were
                     previously impossible.
                   </p>
                 </div>
@@ -273,10 +273,10 @@ export default function AboutPage() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      AI-Powered Intelligence
+                      Intelligent Analysis Engine
                     </h3>
                     <p className="text-gray-700">
-                      Our advanced AI analyzes your meal photos, provides nutritional insights,
+                      Our computer vision engine analyzes your meal photos, provides nutritional insights,
                       and offers personalized recommendations based on your unique health
                       patterns. It's like having a nutritionist and health coach in your pocket.
                     </p>
@@ -358,7 +358,7 @@ export default function AboutPage() {
 
                 <div className="text-center">
                   <div className="text-4xl font-bold mb-2">&lt;2s</div>
-                  <div className="text-blue-100 text-sm">AI Analysis Time</div>
+                  <div className="text-blue-100 text-sm">Analysis Time</div>
                 </div>
 
                 <div className="text-center">
@@ -400,7 +400,7 @@ export default function AboutPage() {
                 </div>
 
                 <div className="border border-gray-200 rounded-lg p-6">
-                  <h3 className="font-bold text-gray-900 mb-4">AI & Machine Learning</h3>
+                  <h3 className="font-bold text-gray-900 mb-4">Machine Learning & Computer Vision</h3>
                   <ul className="space-y-2 text-sm text-gray-700">
                     <li className="flex items-center gap-2">
                       <span className="text-purple-600">✓</span>

@@ -167,7 +167,7 @@ export function Footer() {
               &copy; {currentYear} Wellness Projection Lab. All rights reserved.
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              AI-powered health tracking platform. HIPAA compliant.
+              Intelligent wellness tracking with proprietary ML. HIPAA compliant.
             </p>
           </div>
 
