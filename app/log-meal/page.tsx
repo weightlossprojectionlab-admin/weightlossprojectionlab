@@ -26,6 +26,7 @@ import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
 import { logger } from '@/lib/logger'
 import { medicalOperations } from '@/lib/medical-operations'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
 
 // Dynamic imports for heavy dependencies (reduces initial bundle size)
 // BarcodeScanner uses html5-qrcode library (~50kB)
@@ -196,6 +197,10 @@ function LogMealContent() {
   // Weekly missions for progress tracking
   const { checkProgress } = useMissions(auth.currentUser?.uid)
 
+  // PHASE 2: Get user's meal logging preferences
+  const userPrefs = useUserPreferences()
+  const photoInputRef = useRef<HTMLInputElement>(null)
+
   // Check for duplicate meal on page load
   useEffect(() => {
     if (!loadingHistory && mealHistory) {
@@ -270,6 +275,18 @@ function LogMealContent() {
 
     loadPatient()
   }, [patientIdParam])
+
+  // PHASE 2: Auto-open camera for photo-preference users (on mount only)
+  useEffect(() => {
+    if (!userPrefs.loading && userPrefs.wantsPhotoLogging() && !capturedImage) {
+      // Small delay to ensure page is fully loaded
+      const timer = setTimeout(() => {
+        logger.debug('📸 Auto-triggering camera for photo-preference user')
+        photoInputRef.current?.click()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [userPrefs.loading]) // Only run once when preferences load
 
   // Load user profile for personalized meal schedule
   useEffect(() => {
@@ -1577,6 +1594,7 @@ function LogMealContent() {
                 <label className="btn btn-primary w-full cursor-pointer">
                   📸 Take Photo
                   <input
+                    ref={photoInputRef}
                     type="file"
                     accept="image/*"
                     capture="environment"

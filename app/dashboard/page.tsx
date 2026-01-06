@@ -36,6 +36,7 @@ import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 import { shouldShowWeightReminder, getWeightReminderMessage, getWeightReminderColor } from '@/lib/weight-reminder-logic'
 import { useFeatureGate } from '@/hooks/useFeatureGate'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
 
 // Dynamic imports for heavy components (lazy loaded on demand)
 const GoalsEditor = dynamic(() => import('@/components/ui/GoalsEditor').then(mod => ({ default: mod.GoalsEditor })), {
@@ -89,6 +90,9 @@ function DashboardContent() {
 
   // Check if user has family plan features
   const { canAccess: hasFamilyFeatures } = useFeatureGate('multiple-patients')
+
+  // Get user's onboarding preferences for personalization
+  const userPrefs = useUserPreferences()
 
   // Fetch all dashboard data for current user (no family member selection)
   const {
@@ -281,6 +285,65 @@ function DashboardContent() {
 
   // Onboarding check is now handled by DashboardRouter
 
+  // Debug: Log user preferences on mount (Phase 1 - Proof of Concept)
+  useEffect(() => {
+    if (userPrefs.preferences && !userPrefs.loading) {
+      logger.debug('📊 Dashboard loaded with user preferences:', {
+        userMode: userPrefs.preferences.userMode,
+        topFeature: userPrefs.getTopFeature(),
+        wantsPhotoLogging: userPrefs.wantsPhotoLogging(),
+        wantsReminders: userPrefs.wantsReminders(),
+        kitchenMode: userPrefs.getKitchenMode(),
+        automationLevel: userPrefs.preferences.automationLevel
+      })
+    }
+  }, [userPrefs.preferences, userPrefs.loading])
+
+  // PHASE 2: Widget Personalization Logic
+  // Reorder/filter widgets based on user's feature preferences
+  const dashboardWidgets = useMemo(() => {
+    if (!userPrefs.preferences) {
+      // Default widget order if no preferences
+      return ['progress', 'gallery', 'medical']
+    }
+
+    const features = userPrefs.getAllFeatures()
+    const userMode = userPrefs.preferences.userMode
+    const widgets: string[] = []
+
+    // Priority 1: Top feature gets shown first
+    const topFeature = userPrefs.getTopFeature()
+    if (topFeature === 'weight_loss') {
+      widgets.push('progress')
+    } else if (topFeature === 'meal_planning') {
+      widgets.push('gallery')
+    } else if (topFeature === 'medical_tracking') {
+      widgets.push('medical')
+    }
+
+    // Priority 2: Add remaining widgets based on selected features
+    if (features.includes('meal_planning') && !widgets.includes('gallery')) {
+      widgets.push('gallery')
+    }
+    if (features.includes('weight_loss') && !widgets.includes('progress')) {
+      widgets.push('progress')
+    }
+    if (features.includes('medical_tracking') && !widgets.includes('medical')) {
+      widgets.push('medical')
+    }
+
+    // Priority 3: Add widgets not yet included
+    const allWidgets = ['progress', 'gallery', 'medical']
+    allWidgets.forEach(w => {
+      if (!widgets.includes(w)) {
+        widgets.push(w)
+      }
+    })
+
+    logger.debug('📊 Personalized widget order:', { widgets, topFeature, features })
+    return widgets
+  }, [userPrefs.preferences])
+
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Offline Indicator */}
@@ -352,62 +415,76 @@ function DashboardContent() {
             {/* Urgent AI Recommendations Widget */}
             <UrgentRecommendationsWidget />
 
-            {/* Progress Charts Link */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold mb-1">📊 Visualize Your Progress</h3>
-                  <p className="text-sm text-purple-100">View interactive charts and detailed trends</p>
-                </div>
-                <a
-                  href="/progress"
-                  className="px-6 py-3 bg-white dark:bg-gray-900 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium flex items-center gap-2"
-                >
-                  <span>View Charts</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </a>
-              </div>
-            </div>
+            {/* PHASE 2: Personalized Dashboard Widgets (ordered by user's feature preferences) */}
+            {dashboardWidgets.map((widgetId) => {
+              if (widgetId === 'progress') {
+                return (
+                  <div key="progress" className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold mb-1">📊 Visualize Your Progress</h3>
+                        <p className="text-sm text-purple-100">View interactive charts and detailed trends</p>
+                      </div>
+                      <a
+                        href="/progress"
+                        className="px-6 py-3 bg-white dark:bg-gray-900 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium flex items-center gap-2"
+                      >
+                        <span>View Charts</span>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                )
+              }
 
-            {/* Photo Gallery Link */}
-            <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold mb-1">📸 Browse Your Meal Photos</h3>
-                  <p className="text-sm text-indigo-100">View your food journey in a beautiful gallery</p>
-                </div>
-                <a
-                  href="/gallery"
-                  className="px-6 py-3 bg-white dark:bg-gray-900 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-medium flex items-center gap-2"
-                >
-                  <span>View Gallery</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </a>
-              </div>
-            </div>
+              if (widgetId === 'gallery') {
+                return (
+                  <div key="gallery" className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold mb-1">📸 Browse Your Meal Photos</h3>
+                        <p className="text-sm text-indigo-100">View your food journey in a beautiful gallery</p>
+                      </div>
+                      <a
+                        href="/gallery"
+                        className="px-6 py-3 bg-white dark:bg-gray-900 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-medium flex items-center gap-2"
+                      >
+                        <span>View Gallery</span>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                )
+              }
 
-            {/* Medical Info Link */}
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold mb-1">🏥 Medical Info</h3>
-                  <p className="text-sm text-green-100">Manage health information for you or your family</p>
-                </div>
-                <a
-                  href="/medical"
-                  className="px-6 py-3 bg-white dark:bg-gray-900 text-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium flex items-center gap-2"
-                >
-                  <span>View Info</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </a>
-              </div>
-            </div>
+              if (widgetId === 'medical') {
+                return (
+                  <div key="medical" className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg shadow hover:shadow-lg transition-all p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold mb-1">🏥 Medical Info</h3>
+                        <p className="text-sm text-green-100">Manage health information for you or your family</p>
+                      </div>
+                      <a
+                        href="/medical"
+                        className="px-6 py-3 bg-white dark:bg-gray-900 text-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium flex items-center gap-2"
+                      >
+                        <span>View Info</span>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                )
+              }
+
+              return null
+            })}
 
             {/* PATIENT-SPECIFIC HEALTH DATA REMOVED - Now on /patients/[patientId] pages */}
           </>

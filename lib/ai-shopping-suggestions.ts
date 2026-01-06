@@ -195,18 +195,21 @@ function isPerishableItem(productName: string): boolean {
  * Generate health-based shopping suggestions for a patient
  */
 export async function generateHealthSuggestions(
-  request: HealthSuggestionsRequest
+  request: HealthSuggestionsRequest & { kitchenMode?: 'self' | 'others' | 'shared' | 'i_shop' | 'delivery' | 'meal_kits' }
 ): Promise<HealthSuggestionsResponse> {
   try {
     // Check cache
-    const cacheKey = `${request.patientId}_${request.userId}`
+    const cacheKey = `${request.patientId}_${request.userId}_${request.kitchenMode || 'default'}`
     const cached = suggestionsCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       logger.info('[AI Shopping] Returning cached suggestions', { patientId: request.patientId })
       return cached.data
     }
 
-    logger.info('[AI Shopping] Generating health-based suggestions', { patientId: request.patientId })
+    logger.info('[AI Shopping] Generating health-based suggestions', {
+      patientId: request.patientId,
+      kitchenMode: request.kitchenMode
+    })
 
     // Fetch patient data
     const patient = await patientOperations.getPatient(request.patientId) as ExtendedPatientProfile
@@ -220,7 +223,8 @@ export async function generateHealthSuggestions(
       dietaryType: patient.dietaryPreferences?.type,
       hasHealthGoals: !!patient.healthGoals,
       weightGoal: patient.healthGoals?.weightGoal,
-      age: patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : null
+      age: patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : null,
+      kitchenMode: request.kitchenMode
     })
 
     // Fetch latest vitals if requested
@@ -232,8 +236,8 @@ export async function generateHealthSuggestions(
     // Analyze patient health data and generate suggestions
     const analysis = analyzePatientHealth(patient, latestVitals)
 
-    // Generate AI-powered suggestions
-    const suggestions = await generateAISuggestions(patient, latestVitals, analysis)
+    // PHASE 3: Generate AI-powered suggestions with kitchen mode personalization
+    const suggestions = await generateAISuggestions(patient, latestVitals, analysis, request.kitchenMode)
 
     // Group suggestions by category
     const groupedSuggestions = groupSuggestionsByCategory(suggestions)
@@ -437,7 +441,8 @@ function analyzePatientHealth(patient: ExtendedPatientProfile, vitals: any): {
 async function generateAISuggestions(
   patient: ExtendedPatientProfile,
   vitals: any,
-  analysis: { needs: HealthSuggestionReason[]; priorities: Map<HealthSuggestionReason, 'high' | 'medium' | 'low'> }
+  analysis: { needs: HealthSuggestionReason[]; priorities: Map<HealthSuggestionReason, 'high' | 'medium' | 'low'> },
+  kitchenMode?: 'self' | 'others' | 'shared' | 'i_shop' | 'delivery' | 'meal_kits'
 ): Promise<HealthBasedSuggestion[]> {
   logger.info('[AI Shopping] Generating Firebase-based suggestions', {
     patientId: patient.userId,
@@ -447,15 +452,18 @@ async function generateAISuggestions(
       hasBloodPressure: !!vitals.bloodPressure,
       hasBloodGlucose: !!vitals.bloodGlucose,
       hasWeight: !!vitals.weight
-    }
+    },
+    kitchenMode
   })
 
-  // Use Firebase data to generate personalized rule-based suggestions
-  const suggestions = generateFirebaseBasedSuggestions(patient, vitals, analysis)
+  // PHASE 3: Use Firebase data to generate personalized rule-based suggestions
+  // with kitchenMode personalization
+  const suggestions = generateFirebaseBasedSuggestions(patient, vitals, analysis, kitchenMode)
 
   logger.info('[AI Shopping] Generated suggestions from Firebase data', {
     count: suggestions.length,
-    sampleSuggestions: suggestions.slice(0, 3).map(s => s.productName)
+    sampleSuggestions: suggestions.slice(0, 3).map(s => s.productName),
+    kitchenMode
   })
 
   return suggestions
@@ -517,18 +525,20 @@ Return structured JSON with suggestions and itemsToAvoid arrays.`
 function generateFirebaseBasedSuggestions(
   patient: ExtendedPatientProfile,
   vitals: any,
-  analysis: { needs: HealthSuggestionReason[]; priorities: Map<HealthSuggestionReason, 'high' | 'medium' | 'low'> }
+  analysis: { needs: HealthSuggestionReason[]; priorities: Map<HealthSuggestionReason, 'high' | 'medium' | 'low'> },
+  kitchenMode?: 'self' | 'others' | 'shared' | 'i_shop' | 'delivery' | 'meal_kits'
 ): HealthBasedSuggestion[] {
   const suggestions: HealthBasedSuggestion[] = []
 
   logger.info('[AI Shopping] Processing health needs', {
     needsCount: analysis.needs.length,
-    needs: analysis.needs
+    needs: analysis.needs,
+    kitchenMode
   })
 
   for (const need of analysis.needs) {
     const priority = analysis.priorities.get(need) || 'medium'
-    const categorySuggestions = getSuggestionsForNeed(need, patient, vitals, priority)
+    const categorySuggestions = getSuggestionsForNeed(need, patient, vitals, priority, kitchenMode)
 
     if (categorySuggestions.length === 0) {
       logger.warn('[AI Shopping] No suggestions generated for need', { need, priority })
@@ -577,9 +587,16 @@ function getSuggestionsForNeed(
   need: HealthSuggestionReason,
   patient: ExtendedPatientProfile,
   vitals: any,
-  priority: 'high' | 'medium' | 'low'
+  priority: 'high' | 'medium' | 'low',
+  kitchenMode?: 'self' | 'others' | 'shared' | 'i_shop' | 'delivery' | 'meal_kits'
 ): HealthBasedSuggestion[] {
-  const suggestions: HealthBasedSuggestion[] = []
+  let suggestions: HealthBasedSuggestion[] = []
+
+  // PHASE 3: Kitchen Mode Personalization Logic
+  const isBulkShopping = kitchenMode === 'i_shop' // Bulk items for main shopper
+  const isDeliveryMode = kitchenMode === 'delivery' // Quick, ready-to-eat items
+  const isMealKitMode = kitchenMode === 'meal_kits' // Simple ingredients for meal kits
+  const preferReadyToEat = isDeliveryMode || kitchenMode === 'others' // Less cooking
 
   switch (need) {
     case 'high_blood_pressure':
