@@ -38,6 +38,8 @@ import { shouldShowWeightReminder, getWeightReminderMessage, getWeightReminderCo
 import { useFeatureGate } from '@/hooks/useFeatureGate'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { shouldShowFeatureByPreference } from '@/lib/feature-preference-gate'
+import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
+import { getProductLabel, getTooltip } from '@/lib/messaging/terminology'
 
 // Dynamic imports for heavy components (lazy loaded on demand)
 const GoalsEditor = dynamic(() => import('@/components/ui/GoalsEditor').then(mod => ({ default: mod.GoalsEditor })), {
@@ -196,7 +198,7 @@ function DashboardContent() {
   const displaySteps = isEnabled ? todaysSteps : activitySummary.todaySteps
   const displayProgress = (displaySteps / activitySummary.goalSteps) * 100
 
-  // Generate AI Coach recommendations based on live data (memoized to prevent recalculation on every render)
+  // Generate Wellness Coach recommendations based on live data (memoized to prevent recalculation on every render)
   const aiRecommendations = useMemo(() => {
     const recommendations: string[] = []
 
@@ -682,7 +684,7 @@ function DashboardContent() {
         {/* AI Recommendations */}
         {aiRecommendations.length > 0 && (
           <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-6">
-            <h2 className="mb-3">AI Coach</h2>
+            <h2 className="mb-3">{BRAND_TERMS.WELLNESS_COACH}</h2>
             <div className="space-y-3">
               {aiRecommendations.map((recommendation, index) => (
                 <div key={index} className="bg-white dark:bg-gray-900 rounded-lg p-4">
@@ -727,7 +729,7 @@ function DashboardContent() {
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-orange-900 mb-2">Master Nutrition & Kitchen</h3>
                     <p className="text-sm text-gray-700 mb-4">
-                      Plan meals with AI analysis, discover recipes, smart shopping lists, and pantry tracking all in one place.
+                      Plan meals with WPL Vision™, discover recipes, smart shopping lists, and pantry tracking all in one place.
                     </p>
                     <button
                       onClick={() => router.push('/onboarding')}
@@ -808,7 +810,7 @@ function DashboardContent() {
         patientId={null}
       />
 
-      {/* AI Coach Chat Widget */}
+      {/* Wellness Coach Chat Widget */}
       <ChatWidget userId={userProfile?.userId} />
     </main>
   )

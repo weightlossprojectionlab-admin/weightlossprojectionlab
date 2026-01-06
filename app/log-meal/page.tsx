@@ -27,6 +27,8 @@ import { Suspense } from 'react'
 import { logger } from '@/lib/logger'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
+import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
+import { getProductLabel } from '@/lib/messaging/terminology'
 
 // Dynamic imports for heavy dependencies (reduces initial bundle size)
 // BarcodeScanner uses html5-qrcode library (~50kB)
@@ -1646,7 +1648,7 @@ function LogMealContent() {
                     <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
                       <div className="text-white text-center">
                         <Spinner size="lg" className="text-white mx-auto mb-2" />
-                        <p>Analyzing with AI...</p>
+                        <p>{BRAND_TERMS.WPL_VISION} analyzing...</p>
                       </div>
                     </div>
                   )}
@@ -1864,7 +1866,7 @@ function LogMealContent() {
             ) : mealTemplates.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-sm text-muted-foreground mb-2">No templates saved yet</p>
-                <p className="text-xs text-muted-foreground">Log a meal with AI analysis and save it as a template!</p>
+                <p className="text-xs text-muted-foreground">Log a meal with {BRAND_TERMS.WPL_VISION} analysis and save it as a template!</p>
               </div>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -1925,7 +1927,7 @@ function LogMealContent() {
         {aiAnalysis && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-foreground">AI Analysis</h2>
+              <h2 className="text-lg font-medium text-foreground">{getProductLabel('mealTracking')}</h2>
             </div>
 
             <div className="space-y-4">
@@ -2135,7 +2137,7 @@ function LogMealContent() {
 
               {aiAnalysis.suggestions && (
                 <div>
-                  <h3 className="text-sm font-medium text-foreground mb-2">AI Suggestions</h3>
+                  <h3 className="text-sm font-medium text-foreground mb-2">Smart Suggestions</h3>
                   <ul className="text-sm text-success space-y-1">
                     {aiAnalysis.suggestions.map((suggestion: string, index: number) => (
                       <li key={index}>💡 {suggestion}</li>
@@ -2465,7 +2467,7 @@ function LogMealContent() {
               <div className="space-y-2 text-xs text-muted-foreground max-w-sm mx-auto">
                 <div className="flex items-center space-x-2">
                   <span className="flex-shrink-0">📸</span>
-                  <p className="text-left">Snap a photo and let AI analyze your meal</p>
+                  <p className="text-left">Snap a photo and let {BRAND_TERMS.WPL_VISION} analyze your meal</p>
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="flex-shrink-0">🎯</span>
@@ -2787,7 +2789,7 @@ function LogMealContent() {
 
             {/* Confidence Score */}
             <div className="text-xs text-muted-foreground dark:text-muted-foreground flex items-center gap-2">
-              <span>AI Confidence:</span>
+              <span>Recognition Confidence:</span>
               <span className="font-medium">{mealSafetyCheck.confidence}%</span>
             </div>
 
