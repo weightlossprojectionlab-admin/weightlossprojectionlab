@@ -8,9 +8,69 @@
  * This ensures users only see features they:
  * - Have subscription access to (plan tier)
  * - Actually want to use (expressed interest during onboarding)
+ *
+ * BACKWARD COMPATIBILITY:
+ * - Supports legacy preference names (weight_loss, fitness, meal_planning, etc.)
+ * - Automatically maps old preferences to new 3-pillar structure
+ * - No migration required for existing users
  */
 
 import { FeaturePreference } from '@/types'
+
+/**
+ * Legacy preference mapping for backward compatibility
+ * Maps old 5-goal system to new 3-pillar system
+ */
+export const LEGACY_PREFERENCE_MAP: Record<string, FeaturePreference> = {
+  // Old weight_loss and fitness → body_fitness
+  'weight_loss': 'body_fitness',
+  'fitness': 'body_fitness',
+
+  // Old meal_planning and shopping_automation → nutrition_kitchen
+  'meal_planning': 'nutrition_kitchen',
+  'shopping_automation': 'nutrition_kitchen',
+
+  // Old medical_tracking, vitals, medications → health_medical
+  'medical_tracking': 'health_medical',
+  'vitals': 'health_medical',
+  'medications': 'health_medical',
+}
+
+/**
+ * Normalize preferences array to use new 3-pillar names
+ * Handles backward compatibility by mapping legacy names
+ *
+ * @param preferences - User's preferences (may include legacy names)
+ * @returns Normalized array using only new pillar names
+ */
+export function normalizePreferences(preferences: string[]): FeaturePreference[] {
+  if (!preferences || preferences.length === 0) {
+    return []
+  }
+
+  const normalized = new Set<FeaturePreference>()
+
+  preferences.forEach(pref => {
+    // Check if it's a legacy preference that needs mapping
+    const mapped = LEGACY_PREFERENCE_MAP[pref]
+    if (mapped) {
+      normalized.add(mapped)
+    } else if (isValidNewPreference(pref)) {
+      // It's already a new pillar name
+      normalized.add(pref as FeaturePreference)
+    }
+    // Silently ignore unknown preferences
+  })
+
+  return Array.from(normalized)
+}
+
+/**
+ * Check if a preference is a valid new pillar name
+ */
+function isValidNewPreference(pref: string): boolean {
+  return ['body_fitness', 'nutrition_kitchen', 'health_medical', 'caregiving'].includes(pref)
+}
 
 /**
  * Maps onboarding feature preferences to technical feature gates

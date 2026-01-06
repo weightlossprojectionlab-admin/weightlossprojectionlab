@@ -5,6 +5,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { auth } from '@/lib/auth'
 import { logger } from '@/lib/logger'
+import { normalizePreferences } from '@/lib/feature-preference-gate'
 import {
   OnboardingAnswers,
   UserMode,
@@ -44,13 +45,20 @@ export function useUserPreferences() {
           const onboardingAnswers = data?.preferences?.onboardingAnswers
 
           if (onboardingAnswers) {
-            setPreferences(onboardingAnswers as OnboardingAnswers)
+            // Normalize preferences for backward compatibility
+            const normalizedPreferences = {
+              ...onboardingAnswers,
+              featurePreferences: normalizePreferences(onboardingAnswers.featurePreferences || [])
+            } as OnboardingAnswers
+
+            setPreferences(normalizedPreferences)
             logger.debug('✅ Loaded user preferences:', {
-              userMode: onboardingAnswers.userMode,
-              featurePreferences: onboardingAnswers.featurePreferences,
-              mealLoggingMode: onboardingAnswers.mealLoggingMode,
-              kitchenMode: onboardingAnswers.kitchenMode,
-              automationLevel: onboardingAnswers.automationLevel
+              userMode: normalizedPreferences.userMode,
+              featurePreferences: normalizedPreferences.featurePreferences,
+              rawPreferences: onboardingAnswers.featurePreferences,
+              mealLoggingMode: normalizedPreferences.mealLoggingMode,
+              kitchenMode: normalizedPreferences.kitchenMode,
+              automationLevel: normalizedPreferences.automationLevel
             })
           } else {
             logger.warn('⚠️ No onboarding answers found for user')
