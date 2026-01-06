@@ -1,7 +1,7 @@
 /**
  * Providers - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Providers
+ * Hybrid marketing page showcasing WPL Providers
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline'
 
 export const metadata: Metadata = {
-  title: 'Healthcare Provider Directory - Manage Your Medical Team | Weight Loss Projection Lab',
+  title: 'Healthcare Provider Directory - Manage Your Medical Team | Wellness Projection Lab',
   description: 'Organize your healthcare providers in one directory. Store contact info, specialties, addresses, and link appointments to the right providers. Never lose a doctor\'s phone number again.',
   keywords: 'healthcare providers, doctor directory, medical contacts, provider management, physician directory, specialist tracking',
   openGraph: {
@@ -52,7 +52,7 @@ export default function ProvidersBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Manage Your Medical Team</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">

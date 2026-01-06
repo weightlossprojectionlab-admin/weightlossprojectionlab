@@ -1,7 +1,7 @@
 /**
  * Medications - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Medications
+ * Hybrid marketing page showcasing WPL Medications
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -16,7 +16,7 @@ import {
 import { Screenshot } from '@/components/ui/Screenshot'
 
 export const metadata: Metadata = {
-  title: 'Medication Tracking - Never Miss a Dose with Smart Reminders | Weight Loss Projection Lab',
+  title: 'Medication Tracking - Never Miss a Dose with Smart Reminders | Wellness Projection Lab',
   description: 'Track all medications, vitamins, and supplements with dose schedules, refill reminders, and adherence monitoring. Perfect for managing complex medication regimens for elderly parents or chronic conditions.',
   keywords: 'medication tracking, prescription management, medication reminders, pill tracker, medication adherence, refill reminders',
   openGraph: {
@@ -53,7 +53,7 @@ export default function MedicationsBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Never Miss a Dose with Smart Reminders</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">

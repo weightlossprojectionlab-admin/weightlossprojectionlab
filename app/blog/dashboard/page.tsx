@@ -1,7 +1,7 @@
 /**
  * Dashboard Feature - Marketing Blog Page
  *
- * Hybrid marketing page showcasing the WLPL Dashboard
+ * Hybrid marketing page showcasing the WPL Dashboard
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -20,9 +20,9 @@ import {
 import { DemoRequestButton } from '@/components/DemoRequestButton'
 
 export const metadata: Metadata = {
-  title: 'Health Dashboard - Centralized Family Health Tracking | Weight Loss Projection Lab',
+  title: 'Health Dashboard - Centralized Family Health Tracking | Wellness Projection Lab',
   description: 'Monitor weight loss progress, meal logs, vitals, and intelligent health insights for your entire family from one unified dashboard. Track goals, view trends, and manage care coordination effortlessly.',
-  keywords: 'health dashboard, family health tracking, weight loss dashboard, meal tracking, vitals monitoring, health insights, patient dashboard, caregiver dashboard, WLPL dashboard',
+  keywords: 'health dashboard, family health tracking, weight loss dashboard, meal tracking, vitals monitoring, health insights, patient dashboard, caregiver dashboard, WPL dashboard',
   openGraph: {
     title: 'Health Dashboard - Centralized Family Health Tracking',
     description: 'Monitor weight loss progress, meal logs, vitals, and intelligent health insights for your entire family from one unified dashboard.',
@@ -57,7 +57,7 @@ export default function DashboardBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Health Dashboard</span>
+              <span className="text-sm font-medium">WPL Health Dashboard</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Your Family's Health Command Center</h1>
             <p className="text-xl text-blue-100 mb-8 leading-relaxed">
@@ -84,11 +84,11 @@ export default function DashboardBlogPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* What Is The Dashboard */}
         <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-8 text-center">What Is The WLPL Dashboard?</h2>
+          <h2 className="text-4xl font-bold text-foreground mb-8 text-center">What Is The WPL Dashboard?</h2>
           <div className="max-w-4xl mx-auto text-lg text-muted-foreground space-y-4">
             <p>
-              The <strong>Weight Loss Projection Lab Dashboard</strong> is your family's centralized health command center.
-              Instead of juggling multiple apps, spreadsheets, and paper logs, the WLPL Dashboard brings all your health
+              The <strong>Wellness Projection Lab Dashboard</strong> is your family's centralized health command center.
+              Instead of juggling multiple apps, spreadsheets, and paper logs, the WPL Dashboard brings all your health
               data into one beautiful, easy-to-use interface.
             </p>
             <p>
@@ -116,7 +116,7 @@ export default function DashboardBlogPage() {
             <FeatureCard
               icon={<SparklesIcon className="w-12 h-12 text-indigo-600" />}
               title="Intelligent Health Insights"
-              description="Get personalized recommendations based on meal patterns, weight trends, and vital signs from WLPL platform."
+              description="Get personalized recommendations based on meal patterns, weight trends, and vital signs from WPL platform."
             />
             <FeatureCard
               icon={<BellAlertIcon className="w-12 h-12 text-red-600" />}
@@ -171,7 +171,7 @@ export default function DashboardBlogPage() {
               ]}
             />
             <DashboardSection
-              title="📊 WLPL Health Report Card"
+              title="📊 WPL Health Report Card"
               description="Weekly health analysis with personalized recommendations, risk alerts, and caregiver action items."
               features={[
                 'Nutrition quality scores',
@@ -257,7 +257,7 @@ export default function DashboardBlogPage() {
             <UseCaseCard
               title="Weight Loss Accountability Partner"
               scenario="Emily and her spouse are on a joint weight loss journey and want to support each other's progress."
-              solution="Both can view the household Dashboard to see each other's weight trends, meal logs, and WLPL health reports, creating accountability and motivation."
+              solution="Both can view the household Dashboard to see each other's weight trends, meal logs, and WPL health reports, creating accountability and motivation."
             />
           </div>
         </section>
@@ -325,7 +325,7 @@ export default function DashboardBlogPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <RelatedLink href="/blog/meal-tracking" title="Meal Tracking" description="Photo meal logging with nutritional analysis" />
             <RelatedLink href="/blog/weight-tracking" title="Weight Tracking" description="Track weight trends with goal setting and progress visualization" />
-            <RelatedLink href="/blog/ai-health-reports" title="WLPL Health Reports" description="Weekly personalized health insights and recommendations" />
+            <RelatedLink href="/blog/ai-health-reports" title="WPL Health Reports" description="Weekly personalized health insights and recommendations" />
             <RelatedLink href="/blog/family-care" title="Family Care" description="Manage health data for multiple family members" />
             <RelatedLink href="/blog/vitals-tracking" title="Vitals Tracking" description="Monitor blood pressure, glucose, temperature, and more" />
             <RelatedLink href="/blog/patient-care" title="Patient Management" description="Comprehensive patient profile and care coordination" />
@@ -334,14 +334,14 @@ export default function DashboardBlogPage() {
 
         {/* SEO-Optimized Content */}
         <section className="mb-20 prose prose-lg max-w-4xl mx-auto">
-          <h2>Why Choose WLPL Dashboard Over Other Health Tracking Apps?</h2>
+          <h2>Why Choose WPL Dashboard Over Other Health Tracking Apps?</h2>
           <p>
-            Unlike single-purpose health apps that only track weight OR meals OR vitals, the WLPL Dashboard brings
+            Unlike single-purpose health apps that only track weight OR meals OR vitals, the WPL Dashboard brings
             everything together in one unified interface. Here's what sets us apart:
           </p>
           <ul>
-            <li><strong>Family-First Design:</strong> Most health apps are built for individuals. WLPL is designed from the ground up for families and caregivers managing multiple people's health.</li>
-            <li><strong>Intelligent Insights:</strong> WLPL platform provides personalized recommendations that go far beyond basic calorie counting.</li>
+            <li><strong>Family-First Design:</strong> Most health apps are built for individuals. WPL is designed from the ground up for families and caregivers managing multiple people's health.</li>
+            <li><strong>Intelligent Insights:</strong> WPL platform provides personalized recommendations that go far beyond basic calorie counting.</li>
             <li><strong>HIPAA Compliance:</strong> Medical-grade security and privacy for protecting your family's sensitive health information.</li>
             <li><strong>Comprehensive Data Types:</strong> Track weight, meals, vitals, medications, appointments, documents, and more—all in one place.</li>
             <li><strong>Real Collaboration:</strong> True multi-user support with role-based permissions, not just "share your data" features.</li>
@@ -349,7 +349,7 @@ export default function DashboardBlogPage() {
 
           <h2>How The Dashboard Improves Health Outcomes</h2>
           <p>
-            Research shows that consistent health tracking improves outcomes. The WLPL Dashboard makes tracking
+            Research shows that consistent health tracking improves outcomes. The WPL Dashboard makes tracking
             effortless through:
           </p>
           <ul>
@@ -362,7 +362,7 @@ export default function DashboardBlogPage() {
 
           <h2>Getting Started With Your Dashboard</h2>
           <p>
-            Setting up your WLPL Dashboard takes less than 5 minutes:
+            Setting up your WPL Dashboard takes less than 5 minutes:
           </p>
           <ol>
             <li>Sign up for a free trial (no credit card required)</li>

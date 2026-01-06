@@ -1,7 +1,7 @@
 /**
  * Family Care - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Family Care
+ * Hybrid marketing page showcasing WPL Family Care
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -16,7 +16,7 @@ import {
 import { Screenshot, MobileFrame, ScreenshotGallery } from '@/components/ui/Screenshot'
 
 export const metadata: Metadata = {
-  title: 'Family Care Dashboard - Coordinate Health for Your Whole Family | Weight Loss Projection Lab',
+  title: 'Family Care Dashboard - Coordinate Health for Your Whole Family | Wellness Projection Lab',
   description: 'Centralized family health dashboard for tracking multiple family members. View aggregate health data, coordinate care between siblings, and manage family-wide health goals with role-based access.',
   keywords: 'family care, family health dashboard, care coordination, multi-patient view, family health tracking, caregiver dashboard',
   openGraph: {
@@ -53,7 +53,7 @@ export default function FamilycareBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Coordinate Health for Your Whole Family</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">
@@ -97,7 +97,7 @@ export default function FamilycareBlogPage() {
           <div className="grid md:grid-cols-2 gap-8 mb-12">
             <Screenshot
               src="/screenshots/family-care/family-dashboard-overview-desktop-light.png"
-              alt="WLPL Family Admin Dashboard showing 5 family members under care, pending tasks, invites, notifications, and upcoming appointments with family member health snapshots including active medications and last vital checks"
+              alt="WPL Family Admin Dashboard showing 5 family members under care, pending tasks, invites, notifications, and upcoming appointments with family member health snapshots including active medications and last vital checks"
               caption="Family health overview with quick stats and member snapshots"
               zoomable
             />

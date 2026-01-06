@@ -1,7 +1,7 @@
 /**
  * Vitals Tracking - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Vitals Tracking
+ * Hybrid marketing page showcasing WPL Vitals Tracking
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -16,7 +16,7 @@ import {
 import { Screenshot } from '@/components/ui/Screenshot'
 
 export const metadata: Metadata = {
-  title: 'Vital Signs Monitoring - Track BP, Glucose, Heart Rate, and More | Weight Loss Projection Lab',
+  title: 'Vital Signs Monitoring - Track BP, Glucose, Heart Rate, and More | Wellness Projection Lab',
   description: 'Monitor vital signs for your entire family. Track blood pressure, blood sugar, heart rate, temperature, oxygen saturation, mood, and pain levels with automatic alerts for abnormal readings.',
   keywords: 'vitals tracking, blood pressure monitor, glucose tracking, heart rate monitor, vital signs, health monitoring, medical tracking',
   openGraph: {
@@ -53,7 +53,7 @@ export default function VitalstrackingBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Track BP, Glucose, Heart Rate, and More</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">
@@ -122,7 +122,7 @@ export default function VitalstrackingBlogPage() {
             <FeatureCard
               icon={<SparklesIcon className="w-12 h-12 text-blue-600" />}
               title="AI Health Insights"
-              description="WLPL analyzes vitals and provides recommendations in weekly health reports"
+              description="WPL analyzes vitals and provides recommendations in weekly health reports"
             />
           </div>
         </section>

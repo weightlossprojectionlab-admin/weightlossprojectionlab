@@ -1,7 +1,7 @@
 /**
  * Patient Management - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Patient Management (for family plans)
+ * Hybrid marketing page showcasing WPL Patient Management (for family plans)
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -22,7 +22,7 @@ import { DemoRequestButton } from '@/components/DemoRequestButton'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Patient Management - Track Multiple Family Members | Weight Loss Projection Lab',
+  title: 'Patient Management - Track Multiple Family Members | Wellness Projection Lab',
   description: 'Manage health data for your entire family from one account. Track weight, meals, vitals, medications, and appointments for children, elderly parents, pets, and more with HIPAA-compliant patient profiles.',
   keywords: 'patient management, family health tracking, multi-patient dashboard, caregiver tools, elderly care, pediatric tracking, pet health, family plan',
   openGraph: {
@@ -89,7 +89,7 @@ export default function PatientsBlogPage() {
           <h2 className="text-4xl font-bold text-foreground mb-8 text-center">What Is Patient Management?</h2>
           <div className="max-w-4xl mx-auto text-lg text-muted-foreground space-y-4">
             <p>
-              <strong>Patient Management</strong> is WLPL's family plan feature that lets you track health data for multiple
+              <strong>Patient Management</strong> is WPL's family plan feature that lets you track health data for multiple
               people from one account. Create separate profiles for each patient and family member—children, elderly parents,
               spouse, or even pets—and manage their weight, meals, vitals, medications, and appointments individually.
             </p>
@@ -375,9 +375,9 @@ export default function PatientsBlogPage() {
 
         {/* SEO-Optimized Content */}
         <section className="mb-20 prose prose-lg max-w-4xl mx-auto">
-          <h2>Why Choose WLPL for Family Health Management?</h2>
+          <h2>Why Choose WPL for Family Health Management?</h2>
           <p>
-            Most health apps are built for individuals. WLPL's patient management system is designed from the ground up
+            Most health apps are built for individuals. WPL's patient management system is designed from the ground up
             for families, caregivers, and anyone managing multiple people's health.
           </p>
           <ul>
@@ -391,7 +391,7 @@ export default function PatientsBlogPage() {
           <h2>How Patient Management Saves Caregivers Time</h2>
           <p>
             Caregivers juggle medications, appointments, meal prep, and vital monitoring for multiple family members.
-            WLPL's patient management system brings everything into one app:
+            WPL's patient management system brings everything into one app:
           </p>
           <ul>
             <li><strong>No More Spreadsheets:</strong> Track medications, appointments, and vitals digitally with automated reminders</li>

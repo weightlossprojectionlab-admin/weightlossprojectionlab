@@ -1,7 +1,7 @@
 /**
  * Appointments - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Appointments
+ * Hybrid marketing page showcasing WPL Appointments
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -16,7 +16,7 @@ import {
 import { Screenshot } from '@/components/ui/Screenshot'
 
 export const metadata: Metadata = {
-  title: 'Appointment Scheduling - Never Miss a Doctor Visit | Weight Loss Projection Lab',
+  title: 'Appointment Scheduling - Never Miss a Doctor Visit | Wellness Projection Lab',
   description: 'Schedule and manage healthcare appointments for your entire family. Set reminders, assign transportation, track visit history, and sync with your calendar—all in one HIPAA-compliant system.',
   keywords: 'appointment scheduling, healthcare appointments, doctor visits, medical calendar, appointment reminders, patient appointments',
   openGraph: {
@@ -53,7 +53,7 @@ export default function AppointmentsBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Never Miss a Doctor Visit</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">

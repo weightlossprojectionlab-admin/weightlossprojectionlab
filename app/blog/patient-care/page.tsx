@@ -1,7 +1,7 @@
 /**
  * Patient Care - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Patient Care
+ * Hybrid marketing page showcasing WPL Patient Care
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -16,7 +16,7 @@ import {
 import { Screenshot } from '@/components/ui/Screenshot'
 
 export const metadata: Metadata = {
-  title: 'Comprehensive Patient Care - Full Health Profiles for Every Family Member | Weight Loss Projection Lab',
+  title: 'Comprehensive Patient Care - Full Health Profiles for Every Family Member | Wellness Projection Lab',
   description: 'Create detailed patient profiles with complete health histories, vital signs, medications, appointments, and medical documents. Perfect for caregivers managing elderly parents or children with complex medical needs.',
   keywords: 'patient care, patient profiles, health records, medical history, patient management, caregiver tools, elderly care',
   openGraph: {
@@ -53,7 +53,7 @@ export default function PatientcareBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Full Health Profiles for Every Family Member</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">

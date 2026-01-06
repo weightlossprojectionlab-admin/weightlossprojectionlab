@@ -1,7 +1,7 @@
 /**
  * Ai Health Reports - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Ai Health Reports
+ * Hybrid marketing page showcasing WPL Ai Health Reports
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -16,19 +16,19 @@ import {
 import { ArrowTrendingUpIcon } from '@heroicons/react/24/solid'
 
 export const metadata: Metadata = {
-  title: 'Weekly Health Reports - Personalized Insights and Recommendations | Weight Loss Projection Lab',
-  description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Weight Loss Projection Lab.',
-  keywords: 'health reports, health insights, personalized recommendations, health coach, health analysis, weekly health summary, WLPL reports',
+  title: 'Weekly Health Reports - Personalized Insights and Recommendations | Wellness Projection Lab',
+  description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Wellness Projection Lab.',
+  keywords: 'health reports, health insights, personalized recommendations, health coach, health analysis, weekly health summary, WPL reports',
   openGraph: {
     title: 'Weekly Health Reports - Personalized Insights and Recommendations',
-    description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Weight Loss Projection Lab.',
+    description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Wellness Projection Lab.',
     type: 'article',
     url: 'https://weightlossproglab.com/blog/ai-health-reports',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Weekly Health Reports - Personalized Insights and Recommendations',
-    description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Weight Loss Projection Lab.',
+    description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Wellness Projection Lab.',
   },
   alternates: {
     canonical: 'https://weightlossproglab.com/blog/ai-health-reports'
@@ -53,11 +53,11 @@ export default function AihealthreportsBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Personalized Insights and Recommendations</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">
-              Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Weight Loss Projection Lab.
+              Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Wellness Projection Lab.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
@@ -85,7 +85,7 @@ export default function AihealthreportsBlogPage() {
             <FeatureCard
               icon={<SparklesIcon className="w-12 h-12 text-blue-600" />}
               title="Intelligent Analysis"
-              description="WLPL platform analyzes your health data for actionable insights"
+              description="WPL platform analyzes your health data for actionable insights"
             />
             <FeatureCard
               icon={<DocumentTextIcon className="w-12 h-12 text-blue-600" />}

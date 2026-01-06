@@ -1,7 +1,7 @@
 /**
  * Inventory Management - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Inventory Management
+ * Hybrid marketing page showcasing WPL Inventory Management
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -16,7 +16,7 @@ import {
 import { Screenshot } from '@/components/ui/Screenshot'
 
 export const metadata: Metadata = {
-  title: 'Kitchen Inventory Management - Track Pantry and Fridge Items | Weight Loss Projection Lab',
+  title: 'Kitchen Inventory Management - Track Pantry and Fridge Items | Wellness Projection Lab',
   description: 'Never waste food again. Track pantry items, monitor expiration dates, get alerts for expiring foods, and generate shopping lists based on what you need to restock.',
   keywords: 'inventory management, pantry tracking, food expiration, kitchen inventory, food waste reduction, pantry organization',
   openGraph: {
@@ -53,7 +53,7 @@ export default function InventorymanagementBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Track Pantry and Fridge Items</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">

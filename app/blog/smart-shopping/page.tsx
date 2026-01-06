@@ -1,7 +1,7 @@
 /**
  * Smart Shopping - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Smart Shopping
+ * Hybrid marketing page showcasing WPL Smart Shopping
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -15,19 +15,19 @@ import {
 } from '@heroicons/react/24/outline'
 
 export const metadata: Metadata = {
-  title: 'Smart Shopping Lists - Intelligent Grocery Planning | Weight Loss Projection Lab',
-  description: 'Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WLPL suggests healthy foods, excludes allergens, and helps you stay on budget.',
+  title: 'Smart Shopping Lists - Intelligent Grocery Planning | Wellness Projection Lab',
+  description: 'Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WPL suggests healthy foods, excludes allergens, and helps you stay on budget.',
   keywords: 'smart shopping, grocery list, meal planning, shopping list app, pantry inventory, grocery planning, AI shopping assistant',
   openGraph: {
     title: 'Smart Shopping Lists - Intelligent Grocery Planning',
-    description: 'Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WLPL suggests healthy foods, excludes allergens, and helps you stay on budget.',
+    description: 'Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WPL suggests healthy foods, excludes allergens, and helps you stay on budget.',
     type: 'article',
     url: 'https://weightlossproglab.com/blog/smart-shopping',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Smart Shopping Lists - Intelligent Grocery Planning',
-    description: 'Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WLPL suggests healthy foods, excludes allergens, and helps you stay on budget.',
+    description: 'Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WPL suggests healthy foods, excludes allergens, and helps you stay on budget.',
   },
   alternates: {
     canonical: 'https://weightlossproglab.com/blog/smart-shopping'
@@ -52,11 +52,11 @@ export default function SmartshoppingBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Intelligent Grocery Planning</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">
-              Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WLPL suggests healthy foods, excludes allergens, and helps you stay on budget.
+              Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WPL suggests healthy foods, excludes allergens, and helps you stay on budget.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link

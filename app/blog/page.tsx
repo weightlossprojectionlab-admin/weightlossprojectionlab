@@ -1,7 +1,7 @@
 /**
  * Blog Index Page
  *
- * Main blog landing page showcasing all WLPL feature articles
+ * Main blog landing page showcasing all WPL feature articles
  * Organized by category with search and filtering
  */
 
@@ -98,8 +98,8 @@ export default function BlogPage() {
     },
     {
       slug: '/blog/ai-health-reports',
-      title: 'WLPL Health Reports',
-      description: 'Weekly personalized health insights powered by WLPL platform',
+      title: 'WPL Health Reports',
+      description: 'Weekly personalized health insights powered by WPL platform',
       category: 'features',
       icon: <BeakerIcon className="w-6 h-6" />,
       readTime: '7 min read'
@@ -185,7 +185,7 @@ export default function BlogPage() {
       <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">WLPL Blog</h1>
+            <h1 className="text-5xl md:text-6xl font-bold mb-6">WPL Blog</h1>
             <p className="text-xl text-blue-100 mb-8 leading-relaxed">
               Explore our comprehensive guides on health tracking, family care coordination, and intelligent wellness management.
             </p>
@@ -324,7 +324,7 @@ export default function BlogPage() {
         <section className="mt-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-12 text-center text-white">
           <h2 className="text-4xl font-bold mb-4">Ready to Start Your Health Journey?</h2>
           <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
-            Join thousands of families using WLPL to track health, coordinate care, and achieve their wellness goals.
+            Join thousands of families using WPL to track health, coordinate care, and achieve their wellness goals.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link

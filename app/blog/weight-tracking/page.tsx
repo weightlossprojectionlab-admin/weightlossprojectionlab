@@ -1,7 +1,7 @@
 /**
  * Weight Tracking - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Weight Tracking
+ * Hybrid marketing page showcasing WPL Weight Tracking
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline'
 
 export const metadata: Metadata = {
-  title: 'Weight Loss Progress Tracking - Visualize Your Journey | Weight Loss Projection Lab',
+  title: 'Weight Loss Progress Tracking - Visualize Your Journey | Wellness Projection Lab',
   description: 'Track weight loss progress with interactive charts, goal setting, BMI calculations, and trend analysis. Set custom weight check-in reminders and celebrate milestones as you reach your health goals.',
   keywords: 'weight tracking, weight loss tracker, BMI calculator, weight goals, progress charts, weight trends, weight loss journey',
   openGraph: {
@@ -52,7 +52,7 @@ export default function WeighttrackingBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Visualize Your Journey</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">

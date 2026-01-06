@@ -1,7 +1,7 @@
 /**
  * Meal Tracking - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Meal Tracking
+ * Hybrid marketing page showcasing WPL Meal Tracking
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -15,19 +15,19 @@ import {
 } from '@heroicons/react/24/outline'
 
 export const metadata: Metadata = {
-  title: 'Meal Tracking - Photo Food Logging with Nutritional Analysis | Weight Loss Projection Lab',
-  description: 'Take a photo of your meal and get instant nutritional analysis. WLPL platform identifies foods, estimates calories, macros, and detects allergens automatically.',
-  keywords: 'meal tracking, food logging, photo food tracker, calorie counter, nutrition tracking, WLPL meal analysis',
+  title: 'Meal Tracking - Photo Food Logging with Nutritional Analysis | Wellness Projection Lab',
+  description: 'Take a photo of your meal and get instant nutritional analysis. WPL platform identifies foods, estimates calories, macros, and detects allergens automatically.',
+  keywords: 'meal tracking, food logging, photo food tracker, calorie counter, nutrition tracking, WPL meal analysis',
   openGraph: {
     title: 'Meal Tracking - Photo Food Logging with Nutritional Analysis',
-    description: 'Take a photo of your meal and get instant nutritional analysis. WLPL platform identifies foods, estimates calories, macros, and detects allergens automatically.',
+    description: 'Take a photo of your meal and get instant nutritional analysis. WPL platform identifies foods, estimates calories, macros, and detects allergens automatically.',
     type: 'article',
     url: 'https://weightlossproglab.com/blog/meal-tracking',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Meal Tracking - Photo Food Logging with Nutritional Analysis',
-    description: 'Take a photo of your meal and get instant nutritional analysis. WLPL platform identifies foods, estimates calories, macros, and detects allergens automatically.',
+    description: 'Take a photo of your meal and get instant nutritional analysis. WPL platform identifies foods, estimates calories, macros, and detects allergens automatically.',
   },
   alternates: {
     canonical: 'https://weightlossproglab.com/blog/meal-tracking'
@@ -52,11 +52,11 @@ export default function MealtrackingBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WLPL Feature</span>
+              <span className="text-sm font-medium">WPL Feature</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">Photo Food Logging with Nutritional Analysis</h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed">
-              Take a photo of your meal and get instant nutritional analysis. WLPL platform identifies foods, estimates calories, macros, and detects allergens automatically.
+              Take a photo of your meal and get instant nutritional analysis. WPL platform identifies foods, estimates calories, macros, and detects allergens automatically.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
@@ -89,7 +89,7 @@ export default function MealtrackingBlogPage() {
             <FeatureCard
               icon={<SparklesIcon className="w-12 h-12 text-blue-600" />}
               title="Advanced Analysis"
-              description="WLPL platform technology provides accurate nutritional insights"
+              description="WPL platform technology provides accurate nutritional insights"
             />
             <FeatureCard
               icon={<ExclamationTriangleIcon className="w-12 h-12 text-blue-600" />}

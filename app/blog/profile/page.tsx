@@ -1,7 +1,7 @@
 /**
  * Profile Management - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WLPL Profile Management
+ * Hybrid marketing page showcasing WPL Profile Management
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -21,7 +21,7 @@ import {
 import { Screenshot, ScreenshotGallery } from '@/components/ui/Screenshot'
 
 export const metadata: Metadata = {
-  title: 'User Profile Management - Personalized Health Settings | Weight Loss Projection Lab',
+  title: 'User Profile Management - Personalized Health Settings | Wellness Projection Lab',
   description: 'Customize your health journey with comprehensive profile settings. Set dietary preferences, food allergies, weight goals, notification preferences, and privacy controls for personalized health tracking.',
   keywords: 'user profile, health settings, dietary preferences, food allergies, weight goals, privacy settings, notification preferences, personalized health tracking',
   openGraph: {
@@ -91,7 +91,7 @@ export default function ProfileBlogPage() {
           <div className="grid md:grid-cols-2 gap-8 mb-12">
             <Screenshot
               src="/screenshots/settings/profile-overview-desktop-light.png"
-              alt="WLPL Profile page showing currently viewing test user (Child's Health Profile), family member dropdown selector, Advanced Health Profile section with HIPAA encryption notice, Profile Summary, Dietary & Allergy Information, and Medications sections"
+              alt="WPL Profile page showing currently viewing test user (Child's Health Profile), family member dropdown selector, Advanced Health Profile section with HIPAA encryption notice, Profile Summary, Dietary & Allergy Information, and Medications sections"
               caption="Profile Overview - Switch between family members and manage health information"
               priority
               zoomable
@@ -169,7 +169,7 @@ export default function ProfileBlogPage() {
           <h3 className="text-2xl font-bold text-foreground mb-6 text-center">Privacy & Data Management</h3>
           <Screenshot
             src="/screenshots/settings/privacy-data-export-desktop-light.png"
-            alt="Privacy & Data section showing Export button to download personal data, Reset All Data & Start Over warning box explaining permanent deletion of all data including meals, weight logs, and progress, with blue Reset All Data & Start Over button and red Sign Out button. Footer shows WLPL - Weight Loss Projection Lab, Version 1.0.0, Privacy-focused • Secure • Accessible"
+            alt="Privacy & Data section showing Export button to download personal data, Reset All Data & Start Over warning box explaining permanent deletion of all data including meals, weight logs, and progress, with blue Reset All Data & Start Over button and red Sign Out button. Footer shows WPL - Wellness Projection Lab, Version 1.0.0, Privacy-focused • Secure • Accessible"
             caption="Data Export & Account Management - Full control over your health data"
             zoomable
           />
@@ -180,7 +180,7 @@ export default function ProfileBlogPage() {
           <h2 className="text-4xl font-bold text-foreground mb-8 text-center">What Is Profile Management?</h2>
           <div className="max-w-4xl mx-auto text-lg text-muted-foreground space-y-4">
             <p>
-              Your <strong>WLPL Profile</strong> is the control center for your personalized health journey.
+              Your <strong>WPL Profile</strong> is the control center for your personalized health journey.
               From dietary restrictions and food allergies to weight goals and notification preferences, your profile
               ensures every feature works perfectly for your unique needs.
             </p>
@@ -233,7 +233,7 @@ export default function ProfileBlogPage() {
             <FeatureCard
               icon={<SparklesIcon className="w-12 h-12 text-pink-600" />}
               title="Platform Personalization"
-              description="Customize how WLPL analyzes your health data and generates insights."
+              description="Customize how WPL analyzes your health data and generates insights."
             />
             <FeatureCard
               icon={<CheckCircleIcon className="w-12 h-12 text-teal-600" />}
@@ -260,7 +260,7 @@ export default function ProfileBlogPage() {
             />
             <ProfileSection
               title="🎯 Health Goals"
-              description="Define your targets and let WLPL track your progress toward them."
+              description="Define your targets and let WPL track your progress toward them."
               features={[
                 'Target weight with realistic goal date',
                 'Daily calorie goal (auto-calculated or custom)',
@@ -450,7 +450,7 @@ export default function ProfileBlogPage() {
         <section className="mb-20 prose prose-lg max-w-4xl mx-auto">
           <h2>Why Profile Customization Matters for Health Tracking</h2>
           <p>
-            Generic health apps treat everyone the same. WLPL's comprehensive profile system ensures your experience is
+            Generic health apps treat everyone the same. WPL's comprehensive profile system ensures your experience is
             tailored to your unique health situation, dietary needs, and personal goals.
           </p>
           <ul>
@@ -461,12 +461,12 @@ export default function ProfileBlogPage() {
             <li><strong>True Privacy:</strong> Granular sharing controls let you decide who sees what health data.</li>
           </ul>
 
-          <h2>How Profile Settings Power the WLPL Platform</h2>
+          <h2>How Profile Settings Power the WPL Platform</h2>
           <p>
             Your profile isn't just settings—it's the engine that drives personalization across every feature:
           </p>
           <ul>
-            <li><strong>Meal Tracking:</strong> WLPL analyzes photos for allergens and flags foods that don't match your dietary preferences</li>
+            <li><strong>Meal Tracking:</strong> WPL analyzes photos for allergens and flags foods that don't match your dietary preferences</li>
             <li><strong>Shopping Lists:</strong> Automatically filters products based on allergies and diet type</li>
             <li><strong>Recipes:</strong> Shows only recipes that match your preferences and exclude allergens</li>
             <li><strong>Health Reports:</strong> AI recommendations consider your specific goals, not generic averages</li>
@@ -475,7 +475,7 @@ export default function ProfileBlogPage() {
 
           <h2>Getting Started With Your Profile</h2>
           <p>
-            Setting up your WLPL profile takes 3-5 minutes and unlocks the full power of personalized health tracking:
+            Setting up your WPL profile takes 3-5 minutes and unlocks the full power of personalized health tracking:
           </p>
           <ol>
             <li>Enter basic info (height, weight, age) for accurate calorie calculations</li>

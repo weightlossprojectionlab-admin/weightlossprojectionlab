@@ -9,7 +9,7 @@ import { Metadata } from 'next'
 import { DocumentTextIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 
 export const metadata: Metadata = {
-  title: 'Medical Documents - Secure Document Storage | Weight Loss Projection Lab',
+  title: 'Medical Documents - Secure Document Storage | Wellness Projection Lab',
   description: 'Securely store and manage medical documents for your family. HIPAA-compliant storage with Intelligent OCR text extraction, smart categorization, and easy sharing with healthcare providers.',
   keywords: 'medical documents, document storage, insurance cards, lab results, prescriptions, HIPAA storage, OCR extraction, medical records',
   openGraph: {
@@ -96,7 +96,7 @@ export default function MedicalDocumentsBlogPage() {
             <div className="text-center p-6">
               <div className="text-5xl mb-4">🔍</div>
               <h3 className="font-semibold text-foreground mb-2">Intelligent OCR</h3>
-              <p className="text-muted-foreground">Automatic text extraction with WLPL platform</p>
+              <p className="text-muted-foreground">Automatic text extraction with WPL platform</p>
             </div>
             <div className="text-center p-6">
               <div className="text-5xl mb-4">🔒</div>
