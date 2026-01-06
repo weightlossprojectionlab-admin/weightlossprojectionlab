@@ -40,7 +40,7 @@ export function usePatients(): UsePatientsReturn {
       logger.info('[usePatients] Patients fetched successfully', { count: data.length })
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to fetch patients'
-      logger.error('[usePatients] Error fetching patients', err)
+      logger.error('[usePatients] Error fetching patients', err instanceof Error ? err : new Error(String(err)))
       setError(errorMessage)
     } finally {
       setLoading(false)
@@ -68,7 +68,7 @@ export function usePatients(): UsePatientsReturn {
       return newPatient
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to create patient'
-      logger.error('[usePatients] Error creating patient', err)
+      logger.error('[usePatients] Error creating patient', err instanceof Error ? err : new Error(String(err)))
       throw new Error(errorMessage)
     }
   }, [])
@@ -92,7 +92,7 @@ export function usePatients(): UsePatientsReturn {
       return updatedPatient
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to update patient'
-      logger.error('[usePatients] Error updating patient', err, { patientId })
+      logger.error('[usePatients] Error updating patient', err instanceof Error ? err : new Error(String(err)), { patientId })
       throw new Error(errorMessage)
     }
   }, [])
@@ -110,7 +110,7 @@ export function usePatients(): UsePatientsReturn {
       logger.info('[usePatients] Patient deleted successfully', { patientId })
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to delete patient'
-      logger.error('[usePatients] Error deleting patient', err, { patientId })
+      logger.error('[usePatients] Error deleting patient', err instanceof Error ? err : new Error(String(err)), { patientId })
       throw new Error(errorMessage)
     }
   }, [])

@@ -184,7 +184,7 @@ export function useVaccinations({ userId, petId, autoFetch = true, realtime = fa
 
       return 'current'
     } catch (err) {
-      logger.error('[useVaccinations] Error calculating status', err)
+      logger.error('[useVaccinations] Error calculating status', err instanceof Error ? err : new Error(String(err)))
       return 'current' // Default to current on error
     }
   }
@@ -247,7 +247,7 @@ export function useVaccinations({ userId, petId, autoFetch = true, realtime = fa
         ...doc.data()
       })) as VaccinationRecord[]
     } catch (err) {
-      logger.error('[useVaccinations] Error getting vaccination history', err)
+      logger.error('[useVaccinations] Error getting vaccination history', err instanceof Error ? err : new Error(String(err)))
       return []
     }
   }
@@ -275,7 +275,7 @@ export function useVaccinations({ userId, petId, autoFetch = true, realtime = fa
 
       return await createVaccination(vaccination)
     } catch (err) {
-      logger.error('[useVaccinations] Error in quick add', err)
+      logger.error('[useVaccinations] Error in quick add', err instanceof Error ? err : new Error(String(err)))
       throw err
     }
   }
@@ -314,7 +314,7 @@ export function useVaccinations({ userId, petId, autoFetch = true, realtime = fa
         logger.debug('[useVaccinations] Real-time update', { count: updatedRecords.length })
       },
       (err) => {
-        logger.error('[useVaccinations] Real-time listener error', err)
+        logger.error('[useVaccinations] Real-time listener error', err instanceof Error ? err : new Error(String(err)))
         setError(err instanceof Error ? err : new Error('Real-time listener failed'))
       }
     )

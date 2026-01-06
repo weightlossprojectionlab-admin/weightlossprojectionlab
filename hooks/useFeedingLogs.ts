@@ -22,7 +22,7 @@ import {
   limit
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { FeedingLog, QuickFeedingStatus } from '@/types/pet-feeding'
+import { FeedingLog, QuickFeedingStatus, PortionUnit } from '@/types/pet-feeding'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import { startOfDay, endOfDay, subDays, format } from 'date-fns'
@@ -117,7 +117,7 @@ export function useFeedingLogs({ userId, petId, date, autoFetch = true, realtime
     scheduledFor: string,
     foodProfileId: string,
     portionSize: number,
-    portionUnit: string,
+    portionUnit: PortionUnit,
     appetiteLevel: 'ate-all' | 'ate-most' | 'ate-some' | 'ate-little' | 'refused',
     fedBy: string,
     fedByName?: string
@@ -142,13 +142,14 @@ export function useFeedingLogs({ userId, petId, date, autoFetch = true, realtime
         wasTreat: false,
         wasTableFood: false,
         medicationHidden: false,
+        medicationTaken: false,
         vomitedAfter: false,
         diarrheaAfter: false
       }
 
       return await createFeedingLog(feedingLog)
     } catch (err) {
-      logger.error('[useFeedingLogs] Error in quick log', err)
+      logger.error('[useFeedingLogs] Error in quick log', err instanceof Error ? err : new Error('Quick log failed'))
       throw err
     }
   }
@@ -238,7 +239,7 @@ export function useFeedingLogs({ userId, petId, date, autoFetch = true, realtime
         }
       })
     } catch (err) {
-      logger.error('[useFeedingLogs] Error getting today status', err)
+      logger.error('[useFeedingLogs] Error getting today status', err instanceof Error ? err : new Error(String(err)))
       return []
     }
   }
@@ -297,7 +298,7 @@ export function useFeedingLogs({ userId, petId, date, autoFetch = true, realtime
         mealsCount: data.count
       })).sort((a, b) => a.date.localeCompare(b.date))
     } catch (err) {
-      logger.error('[useFeedingLogs] Error getting appetite trend', err)
+      logger.error('[useFeedingLogs] Error getting appetite trend', err instanceof Error ? err : new Error(String(err)))
       return []
     }
   }
@@ -326,7 +327,7 @@ export function useFeedingLogs({ userId, petId, date, autoFetch = true, realtime
 
       return { rate, totalMeals, fedMeals }
     } catch (err) {
-      logger.error('[useFeedingLogs] Error getting compliance rate', err)
+      logger.error('[useFeedingLogs] Error getting compliance rate', err instanceof Error ? err : new Error(String(err)))
       return { rate: 0, totalMeals: 0, fedMeals: 0 }
     }
   }

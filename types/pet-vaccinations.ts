@@ -64,6 +64,7 @@ export type VaccineType =
   | 'leptospirosis'
   | 'lyme-disease'
   | 'canine-influenza'
+  | 'canine-distemper' // For ferrets
   // Cats
   | 'fvrcp' // Feline Viral Rhinotracheitis, Calicivirus, Panleukopenia
   | 'felv' // Feline Leukemia

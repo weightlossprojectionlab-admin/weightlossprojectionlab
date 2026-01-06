@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
 import { logger } from '@/lib/logger'
+import {
+  generateHealthSummary,
+  getCriticalAlerts,
+  calculateHealthScore,
+  getVitalStatus,
+  type HealthSummaryInput
+} from '@/lib/health-summary-generator'
 
 /**
  * POST /api/patients/[patientId]/ai-health-report
@@ -27,41 +34,46 @@ export async function POST(
       documents,
       todayMeals,
       weightData,
-      stepsData
+      stepsData,
+      // Pet-specific data
+      feedingData,
+      vaccinations
     } = await request.json()
 
-    logger.info('[Health Report] Generating rule-based report', { patientId, patientName: patient.name })
+    logger.info('[Health Report] Generating rule-based report', { patientId, patientName: patient.name, patientType: patient.type })
 
-    // Analyze patient data to generate insights
-    const age = calculateAge(patient.dateOfBirth)
-    const isPet = patient.type === 'pet'
+    // Build input for health summary generator
+    const summaryInput: HealthSummaryInput = {
+      patient,
+      medications,
+      vitals,
+      documents,
+      weightData,
+      stepsData,
+      todayMeals,
+      // Pet-specific fields
+      feedingData,
+      vaccinations
+    }
 
-    // Analyze weight trend
-    const weightAnalysis = analyzeWeightTrend(weightData, patient.goals)
+    // Generate analysis using centralized utility
+    const analyses = generateHealthSummary(summaryInput)
 
-    // Analyze activity levels
-    const activityAnalysis = analyzeActivity(stepsData, patient.goals)
-
-    // Analyze nutrition
-    const nutritionAnalysis = analyzeNutrition(todayMeals, patient.goals)
-
-    // Analyze vitals
-    const vitalsAnalysis = analyzeVitals(vitals)
-
-    // Analyze medication adherence
-    const medicationAnalysis = analyzeMedications(medications)
-
-    // Build the report
+    // Build the report using the existing report generator
     const reportText = generateHealthReport({
       patient,
-      age,
-      isPet,
-      weightAnalysis,
-      activityAnalysis,
-      nutritionAnalysis,
-      vitalsAnalysis,
-      medicationAnalysis,
-      documentsCount: documents?.length || 0
+      age: analyses.age,
+      isPet: analyses.isPet,
+      species: analyses.species,
+      weightAnalysis: analyses.weightAnalysis,
+      activityAnalysis: analyses.activityAnalysis,
+      nutritionAnalysis: analyses.nutritionAnalysis,
+      vitalsAnalysis: analyses.vitalsAnalysis,
+      medicationAnalysis: analyses.medicationAnalysis,
+      petFeedingAnalysis: analyses.petFeedingAnalysis,
+      petVaccinationAnalysis: analyses.petVaccinationAnalysis,
+      documentsCount: documents?.length || 0,
+      analyses: analyses  // Add full analyses object for getCriticalAlerts and calculateHealthScore
     })
 
     logger.info('[Health Report] Report generated successfully', {
@@ -75,13 +87,17 @@ export async function POST(
       generatedAt: new Date().toISOString(),
       metadata: {
         method: 'rule-based',
+        patientType: patient.type,
+        species: patient.species,
         dataPoints: {
           vitals: vitals?.length || 0,
           medications: medications?.length || 0,
           weightLogs: weightData?.length || 0,
           stepLogs: stepsData?.length || 0,
           meals: todayMeals?.length || 0,
-          documents: documents?.length || 0
+          documents: documents?.length || 0,
+          feedingLogs: feedingData?.length || 0,
+          vaccinations: vaccinations?.length || 0
         }
       }
     })
@@ -99,207 +115,24 @@ export async function POST(
   }
 }
 
-// Helper functions
-function calculateAge(dateOfBirth: string): number {
-  const today = new Date()
-  const birthDate = new Date(dateOfBirth)
-  let age = today.getFullYear() - birthDate.getFullYear()
-  const monthDiff = today.getMonth() - birthDate.getMonth()
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--
-  }
-  return age
-}
-
-function analyzeWeightTrend(weightData: any[], goals: any) {
-  if (!weightData || weightData.length === 0) {
-    return { status: 'no_data', message: 'No weight data available', trend: null }
-  }
-
-  const latestWeight = weightData[0]?.weight
-  const targetWeight = goals?.targetWeight
-
-  if (weightData.length < 2) {
-    return {
-      status: 'insufficient',
-      message: 'Keep logging to see trends',
-      current: latestWeight,
-      target: targetWeight,
-      trend: null
-    }
-  }
-
-  const firstWeight = weightData[weightData.length - 1]?.weight
-  const diff = latestWeight - firstWeight
-  const percentChange = ((diff / firstWeight) * 100).toFixed(1)
-
-  let status = 'stable'
-  let message = 'Weight is stable'
-
-  if (diff < -1) {
-    status = 'losing'
-    message = `Down ${Math.abs(diff).toFixed(1)} lbs (${Math.abs(parseFloat(percentChange))}%)`
-  } else if (diff > 1) {
-    status = 'gaining'
-    message = `Up ${diff.toFixed(1)} lbs (${percentChange}%)`
-  }
-
-  return {
-    status,
-    message,
-    current: latestWeight,
-    target: targetWeight,
-    diff,
-    percentChange,
-    logsCount: weightData.length
-  }
-}
-
-function analyzeActivity(stepsData: any[], goals: any) {
-  if (!stepsData || stepsData.length === 0) {
-    return { status: 'no_data', message: 'No activity data available' }
-  }
-
-  const totalSteps = stepsData.reduce((sum: number, log: any) => sum + (log.steps || 0), 0)
-  const avgSteps = Math.round(totalSteps / stepsData.length)
-  const dailyGoal = goals?.dailyStepGoal || 10000
-
-  let status = 'below_goal'
-  let message = `Averaging ${avgSteps.toLocaleString()} steps/day`
-
-  if (avgSteps >= dailyGoal) {
-    status = 'meeting_goal'
-    message = `Great! Averaging ${avgSteps.toLocaleString()} steps/day`
-  } else if (avgSteps >= dailyGoal * 0.75) {
-    status = 'close_to_goal'
-    message = `Almost there! ${avgSteps.toLocaleString()} steps/day`
-  }
-
-  return {
-    status,
-    message,
-    average: avgSteps,
-    goal: dailyGoal,
-    logsCount: stepsData.length
-  }
-}
-
-function analyzeNutrition(todayMeals: any[], goals: any) {
-  if (!todayMeals || todayMeals.length === 0) {
-    return { status: 'no_data', message: 'No meals logged today' }
-  }
-
-  const totalCalories = todayMeals.reduce((sum: number, meal: any) => {
-    return sum + (meal.calories || meal.nutritionEstimate?.calories || 0)
-  }, 0)
-
-  const dailyGoal = goals?.dailyCalorieGoal || 2000
-
-  let status = 'on_track'
-  let message = `${totalCalories} calories logged today`
-
-  if (totalCalories > dailyGoal * 1.15) {
-    status = 'over_goal'
-    message = `${totalCalories} cal (${Math.round((totalCalories / dailyGoal) * 100)}% of goal)`
-  } else if (totalCalories < dailyGoal * 0.85) {
-    status = 'under_goal'
-    message = `${totalCalories} cal (${Math.round((totalCalories / dailyGoal) * 100)}% of goal)`
-  }
-
-  return {
-    status,
-    message,
-    calories: totalCalories,
-    goal: dailyGoal,
-    mealsCount: todayMeals.length
-  }
-}
-
-function analyzeVitals(vitals: any[]) {
-  if (!vitals || vitals.length === 0) {
-    return { status: 'no_data', message: 'No vitals recorded', recent: [] }
-  }
-
-  const recentVitals = vitals.slice(0, 5).map((v: any) => {
-    // Parse recordedAt - handle both Firestore timestamp and ISO string
-    let dateStr = 'N/A'
-    try {
-      if (v.recordedAt) {
-        if (typeof v.recordedAt === 'string') {
-          dateStr = new Date(v.recordedAt).toLocaleDateString('en-US', {
-            month: 'numeric',
-            day: 'numeric',
-            year: 'numeric'
-          })
-        } else if (v.recordedAt.toDate) {
-          // Firestore Timestamp
-          dateStr = v.recordedAt.toDate().toLocaleDateString('en-US', {
-            month: 'numeric',
-            day: 'numeric',
-            year: 'numeric'
-          })
-        } else if (v.recordedAt.seconds) {
-          // Firestore Timestamp as object
-          dateStr = new Date(v.recordedAt.seconds * 1000).toLocaleDateString('en-US', {
-            month: 'numeric',
-            day: 'numeric',
-            year: 'numeric'
-          })
-        }
-      }
-    } catch (e) {
-      logger.error('[analyzeVitals] Error parsing recordedAt', e as Error, { vitalId: v.id })
-      dateStr = 'N/A'
-    }
-
-    return {
-      type: v.type,
-      value: formatVitalValue(v),
-      date: dateStr
-    }
-  })
-
-  return {
-    status: 'recorded',
-    message: `${vitals.length} vitals recorded`,
-    recent: recentVitals,
-    totalCount: vitals.length
-  }
-}
-
-function formatVitalValue(vital: any): string {
-  if (vital.type === 'blood_pressure') {
-    const systolic = vital.systolic || vital.value?.systolic || 'N/A'
-    const diastolic = vital.diastolic || vital.value?.diastolic || 'N/A'
-    return `${systolic}/${diastolic} mmHg`
-  } else if (vital.type === 'blood_sugar') {
-    return `${vital.value} mg/dL`
-  } else if (vital.type === 'pulse_oximeter') {
-    return `${vital.value}%`
-  } else if (vital.type === 'temperature') {
-    return `${vital.value}°${vital.unit === 'celsius' ? 'C' : 'F'}`
-  } else if (vital.type === 'weight') {
-    return `${vital.value} ${vital.unit}`
-  }
-  return `${vital.value || 'N/A'}`
-}
-
-function analyzeMedications(medications: any[]) {
-  if (!medications || medications.length === 0) {
-    return { status: 'none', message: 'No medications recorded', count: 0, medications: [] }
-  }
-
-  return {
-    status: 'active',
-    message: `${medications.length} active medication${medications.length > 1 ? 's' : ''}`,
-    count: medications.length,
-    medications: medications, // Add full medications array for report generation
-    list: medications.slice(0, 5).map((m: any) => `${m.name} (${m.strength} ${m.dosageForm})`)
-  }
-}
+// Report formatting function - keep this for now as it contains UI-specific logic
 
 function generateHealthReport(data: any): string {
-  const { patient, age, isPet, weightAnalysis, activityAnalysis, nutritionAnalysis, vitalsAnalysis, medicationAnalysis, documentsCount } = data
+  const {
+    patient,
+    age,
+    isPet,
+    species,
+    weightAnalysis,
+    activityAnalysis,
+    nutritionAnalysis,
+    vitalsAnalysis,
+    medicationAnalysis,
+    petFeedingAnalysis,
+    petVaccinationAnalysis,
+    documentsCount,
+    analyses
+  } = data
 
   const reportDate = new Date().toLocaleString('en-US', {
     year: 'numeric',
@@ -311,6 +144,9 @@ function generateHealthReport(data: any): string {
 
   let report = `# HEALTH SUMMARY REPORT\n\n`
   report += `**Patient:** ${patient.name}  \n`
+  if (isPet && species) {
+    report += `**Species:** ${species}${patient.breed ? ` (${patient.breed})` : ''}  \n`
+  }
   report += `**Report Date:** ${reportDate}  \n\n`
   report += `---\n\n`
 
@@ -320,8 +156,10 @@ function generateHealthReport(data: any): string {
   report += `|------------|---------|--------|--------|\n`
 
   // Demographics row
-  const demographics = `${age}y ${!isPet && patient.gender ? patient.gender.charAt(0).toUpperCase() : ''}`
-  report += `| Patient Profile | ${demographics} | - | ${patient.relationship ? patient.relationship.charAt(0).toUpperCase() + patient.relationship.slice(1) : 'Self'} |\n`
+  const demographics = isPet
+    ? `${age}y ${species || 'Pet'}`
+    : `${age}y ${patient.gender ? patient.gender.charAt(0).toUpperCase() : ''}`
+  report += `| Patient Profile | ${demographics} | - | ${isPet ? species || 'Pet' : (patient.relationship ? patient.relationship.charAt(0).toUpperCase() + patient.relationship.slice(1) : 'Self')} |\n`
 
   // Weight
   if (weightAnalysis.current) {
@@ -331,24 +169,45 @@ function generateHealthReport(data: any): string {
     report += `| Current Weight | ${weightAnalysis.current} lbs | ${weightAnalysis.target || '-'} lbs | ${weightStatus} |\n`
   }
 
-  // Nutrition
-  if (nutritionAnalysis.status !== 'no_data') {
-    const nutritionAlert = nutritionAnalysis.calories < nutritionAnalysis.goal * 0.5 ? '⚠️ CRITICALLY LOW'
-      : nutritionAnalysis.status === 'under_goal' ? 'Below Target'
-      : nutritionAnalysis.status === 'over_goal' ? 'Above Target'
-      : 'On Track'
-    report += `| Daily Calories | ${nutritionAnalysis.calories} cal | ${nutritionAnalysis.goal} cal | ${nutritionAlert} (${Math.round((nutritionAnalysis.calories / nutritionAnalysis.goal) * 100)}%) |\n`
+  // Human-specific metrics
+  if (!isPet) {
+    // Nutrition
+    if (nutritionAnalysis && nutritionAnalysis.status !== 'no_data') {
+      const nutritionAlert = nutritionAnalysis.calories < nutritionAnalysis.goal * 0.5 ? '⚠️ CRITICALLY LOW'
+        : nutritionAnalysis.status === 'under_goal' ? 'Below Target'
+        : nutritionAnalysis.status === 'over_goal' ? 'Above Target'
+        : 'On Track'
+      report += `| Daily Calories | ${nutritionAnalysis.calories} cal | ${nutritionAnalysis.goal} cal | ${nutritionAlert} (${Math.round((nutritionAnalysis.calories / nutritionAnalysis.goal) * 100)}%) |\n`
+    }
+
+    // Activity
+    if (activityAnalysis && activityAnalysis.status !== 'no_data') {
+      const activityStatus = activityAnalysis.status === 'meeting_goal' ? 'Meeting Goal'
+        : activityAnalysis.status === 'close_to_goal' ? 'Near Goal'
+        : 'Below Goal'
+      report += `| Daily Steps | ${activityAnalysis.average?.toLocaleString() || 'N/A'} | ${activityAnalysis.goal?.toLocaleString() || 'N/A'} | ${activityStatus} |\n`
+    }
   }
 
-  // Activity
-  if (activityAnalysis.status !== 'no_data') {
-    const activityStatus = activityAnalysis.status === 'meeting_goal' ? 'Meeting Goal'
-      : activityAnalysis.status === 'close_to_goal' ? 'Near Goal'
-      : 'Below Goal'
-    report += `| Daily Steps | ${activityAnalysis.average?.toLocaleString() || 'N/A'} | ${activityAnalysis.goal?.toLocaleString() || 'N/A'} | ${activityStatus} |\n`
+  // Pet-specific metrics
+  if (isPet) {
+    // Feeding compliance
+    if (petFeedingAnalysis && petFeedingAnalysis.status !== 'no_data') {
+      const feedingStatus = petFeedingAnalysis.complianceRate >= 90 ? 'Excellent'
+        : petFeedingAnalysis.complianceRate >= 75 ? 'Good'
+        : petFeedingAnalysis.complianceRate >= 50 ? 'Needs Improvement'
+        : 'Poor'
+      report += `| Feeding Compliance | ${petFeedingAnalysis.complianceRate}% | 90% | ${feedingStatus} (${petFeedingAnalysis.totalFeedings} feedings) |\n`
+    }
+
+    // Vaccination status
+    if (petVaccinationAnalysis && petVaccinationAnalysis.status !== 'no_data') {
+      const vaccinationStatus = petVaccinationAnalysis.upToDate ? 'Current' : 'Update Needed'
+      report += `| Vaccination Status | ${petVaccinationAnalysis.totalVaccinations} records | - | ${vaccinationStatus} |\n`
+    }
   }
 
-  // Medical records
+  // Medical records (common to both)
   report += `| Active Medications | ${medicationAnalysis.count || 0} | - | ${medicationAnalysis.status === 'active' ? 'Documented' : 'None'} |\n`
   report += `| Vital Sign Records | ${vitalsAnalysis.totalCount || 0} | - | ${vitalsAnalysis.totalCount > 0 ? 'Active Monitoring' : 'None'} |\n`
   report += `| Medical Documents | ${documentsCount || 0} | - | ${documentsCount > 0 ? 'Organized' : 'None'} |\n`
@@ -356,7 +215,7 @@ function generateHealthReport(data: any): string {
   report += `\n---\n\n`
 
   // Clinical Alerts (if any critical issues)
-  const criticalAlerts = getCriticalAlerts(weightAnalysis, nutritionAnalysis, vitalsAnalysis)
+  const criticalAlerts = getCriticalAlerts(analyses, patient)
   if (criticalAlerts.length > 0) {
     report += `## CLINICAL ALERTS\n\n`
     criticalAlerts.forEach(alert => {
@@ -387,7 +246,7 @@ function generateHealthReport(data: any): string {
   report += `\n`
 
   // Clinical Summary
-  const healthScore = calculateHealthScore(weightAnalysis, activityAnalysis, nutritionAnalysis)
+  const healthScore = calculateHealthScore(analyses, patient)
   report += `## CLINICAL SUMMARY\n\n`
   report += `${healthScore.message}\n\n`
 
@@ -414,35 +273,58 @@ function generateHealthReport(data: any): string {
     report += `\n`
   }
 
-  // Activity & Nutrition
-  report += `### Activity & Nutrition\n\n`
-  report += `| Metric | Current | Goal | Status |\n`
-  report += `|--------|---------|------|--------|\n`
+  // Human: Activity & Nutrition
+  if (!isPet && (activityAnalysis || nutritionAnalysis)) {
+    report += `### Activity & Nutrition\n\n`
+    report += `| Metric | Current | Goal | Status |\n`
+    report += `|--------|---------|------|--------|\n`
 
-  if (activityAnalysis.status !== 'no_data') {
-    const activityPercent = activityAnalysis.average && activityAnalysis.goal
-      ? `${Math.round((activityAnalysis.average / activityAnalysis.goal) * 100)}%`
-      : 'N/A'
-    const activityStatus = activityAnalysis.status === 'meeting_goal' ? 'Meeting Goal'
-      : activityAnalysis.status === 'close_to_goal' ? 'Near Goal'
-      : 'Below Goal'
-    report += `| Daily Steps | ${activityAnalysis.average?.toLocaleString() || 'N/A'} | ${activityAnalysis.goal?.toLocaleString() || 'N/A'} | ${activityStatus} (${activityPercent}) |\n`
-  }
-
-  if (nutritionAnalysis.status !== 'no_data') {
-    const nutritionPercent = nutritionAnalysis.calories && nutritionAnalysis.goal
-      ? `${Math.round((nutritionAnalysis.calories / nutritionAnalysis.goal) * 100)}%`
-      : 'N/A'
-    const nutritionStatus = nutritionAnalysis.status === 'on_track' ? 'On Track'
-      : nutritionAnalysis.status === 'under_goal' ? 'Below Goal'
-      : 'Above Goal'
-    report += `| Daily Calories | ${nutritionAnalysis.calories || 'N/A'} | ${nutritionAnalysis.goal || 'N/A'} | ${nutritionStatus} (${nutritionPercent}) |\n`
-    if (nutritionAnalysis.mealsCount) {
-      report += `| Meals Logged Today | ${nutritionAnalysis.mealsCount} | - | - |\n`
+    if (activityAnalysis && activityAnalysis.status !== 'no_data') {
+      const activityPercent = activityAnalysis.average && activityAnalysis.goal
+        ? `${Math.round((activityAnalysis.average / activityAnalysis.goal) * 100)}%`
+        : 'N/A'
+      const activityStatus = activityAnalysis.status === 'meeting_goal' ? 'Meeting Goal'
+        : activityAnalysis.status === 'close_to_goal' ? 'Near Goal'
+        : 'Below Goal'
+      report += `| Daily Steps | ${activityAnalysis.average?.toLocaleString() || 'N/A'} | ${activityAnalysis.goal?.toLocaleString() || 'N/A'} | ${activityStatus} (${activityPercent}) |\n`
     }
+
+    if (nutritionAnalysis && nutritionAnalysis.status !== 'no_data') {
+      const nutritionPercent = nutritionAnalysis.calories && nutritionAnalysis.goal
+        ? `${Math.round((nutritionAnalysis.calories / nutritionAnalysis.goal) * 100)}%`
+        : 'N/A'
+      const nutritionStatus = nutritionAnalysis.status === 'on_track' ? 'On Track'
+        : nutritionAnalysis.status === 'under_goal' ? 'Below Goal'
+        : 'Above Goal'
+      report += `| Daily Calories | ${nutritionAnalysis.calories || 'N/A'} | ${nutritionAnalysis.goal || 'N/A'} | ${nutritionStatus} (${nutritionPercent}) |\n`
+      if (nutritionAnalysis.mealsCount) {
+        report += `| Meals Logged Today | ${nutritionAnalysis.mealsCount} | - | - |\n`
+      }
+    }
+
+    report += `\n`
   }
 
-  report += `\n`
+  // Pet: Feeding Compliance
+  if (isPet && petFeedingAnalysis && petFeedingAnalysis.status !== 'no_data') {
+    report += `### Feeding Compliance\n\n`
+    report += `| Metric | Value |\n`
+    report += `|--------|-------|\n`
+    report += `| Total Feedings Logged | ${petFeedingAnalysis.totalFeedings} |\n`
+    report += `| Compliance Rate | ${petFeedingAnalysis.complianceRate}% |\n`
+    report += `| Status | ${petFeedingAnalysis.complianceRate >= 90 ? 'Excellent' : petFeedingAnalysis.complianceRate >= 75 ? 'Good' : petFeedingAnalysis.complianceRate >= 50 ? 'Needs Improvement' : 'Poor'} |\n`
+    report += `\n`
+  }
+
+  // Pet: Vaccination Status
+  if (isPet && petVaccinationAnalysis && petVaccinationAnalysis.status !== 'no_data') {
+    report += `### Vaccination Status\n\n`
+    report += `| Metric | Value |\n`
+    report += `|--------|-------|\n`
+    report += `| Total Vaccination Records | ${petVaccinationAnalysis.totalVaccinations} |\n`
+    report += `| Status | ${petVaccinationAnalysis.upToDate ? 'All vaccines current' : 'Update needed'} |\n`
+    report += `\n`
+  }
 
   // Current Medications with images
   if (medicationAnalysis.status === 'active' && medicationAnalysis.medications) {
@@ -676,38 +558,15 @@ function generateHealthReport(data: any): string {
   return report
 }
 
-function calculateHealthScore(weight: any, activity: any, nutrition: any) {
-  const scores = []
-
-  if (weight.status === 'losing') scores.push(3)
-  else if (weight.status === 'stable') scores.push(2)
-  else if (weight.status === 'gaining') scores.push(1)
-
-  if (activity.status === 'meeting_goal') scores.push(3)
-  else if (activity.status === 'close_to_goal') scores.push(2)
-  else if (activity.status === 'below_goal') scores.push(1)
-
-  if (nutrition.status === 'on_track') scores.push(3)
-  else if (nutrition.status === 'under_goal' || nutrition.status === 'over_goal') scores.push(2)
-
-  const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 2
-
-  if (avgScore >= 2.5) {
-    return { score: avgScore, message: 'Overall health metrics are looking great! Keep up the excellent work.' }
-  } else if (avgScore >= 1.5) {
-    return { score: avgScore, message: 'Making good progress with some areas to improve. Consistency is key!' }
-  } else {
-    return { score: avgScore, message: 'Getting started on the health journey. Small steps lead to big changes!' }
-  }
-}
+// Helper functions that are report-specific (not moved to utility yet)
 
 function getPositiveHighlights(weight: any, activity: any, nutrition: any, vitals: any, medications: any, docsCount: number): string[] {
   const highlights = []
 
   if (weight.logsCount >= 7) highlights.push(`Consistent weight tracking with ${weight.logsCount} logs`)
   if (weight.status === 'losing') highlights.push(`Making progress toward weight goal`)
-  if (activity.status === 'meeting_goal') highlights.push(`Meeting daily step goal consistently`)
-  if (nutrition.mealsCount >= 3) highlights.push(`Logging meals regularly (${nutrition.mealsCount} today)`)
+  if (activity && activity.status === 'meeting_goal') highlights.push(`Meeting daily step goal consistently`)
+  if (nutrition && nutrition.mealsCount >= 3) highlights.push(`Logging meals regularly (${nutrition.mealsCount} today)`)
   if (vitals.totalCount >= 5) highlights.push(`Active vital signs monitoring (${vitals.totalCount} records)`)
   if (medications.status === 'active') highlights.push(`Medication regimen documented and tracked`)
   if (docsCount >= 3) highlights.push(`Medical documents organized (${docsCount} files)`)
@@ -721,18 +580,18 @@ function getRecommendations(weight: any, activity: any, nutrition: any, vitals: 
   if (weight.status === 'no_data' || weight.logsCount < 3) {
     recommendations.push('Log weight regularly to track progress and identify trends')
   }
-  if (activity.status === 'below_goal') {
+  if (activity && activity.status === 'below_goal') {
     recommendations.push('Try to increase daily steps gradually - even 500 more steps helps!')
   }
-  if (nutrition.status === 'no_data') {
+  if (nutrition && nutrition.status === 'no_data') {
     recommendations.push('Start logging meals to understand calorie intake and patterns')
   }
-  if (nutrition.status === 'under_goal' && nutrition.calories < nutrition.goal * 0.5) {
+  if (nutrition && nutrition.status === 'under_goal' && nutrition.calories < nutrition.goal * 0.5) {
     recommendations.push('⚠️ Calorie intake is very low - ensure adequate nutrition for health and energy')
-  } else if (nutrition.status === 'under_goal') {
+  } else if (nutrition && nutrition.status === 'under_goal') {
     recommendations.push('Consider adding healthy snacks or larger portions to meet calorie goals')
   }
-  if (nutrition.status === 'over_goal') {
+  if (nutrition && nutrition.status === 'over_goal') {
     recommendations.push('Consider smaller portions or healthier substitutions to stay within calorie goal')
   }
   if (vitals.status === 'no_data') {
@@ -751,11 +610,11 @@ function getNextSteps(weight: any, activity: any, nutrition: any, vitals: any, m
     steps.push('Maintain current eating and activity habits - they\'re working!')
   }
 
-  if (activity.status === 'below_goal' || activity.status === 'close_to_goal') {
+  if (activity && (activity.status === 'below_goal' || activity.status === 'close_to_goal')) {
     steps.push('Set a daily step reminder and aim for short walks after meals')
   }
 
-  if (nutrition.mealsCount < 2) {
+  if (nutrition && nutrition.mealsCount < 2) {
     steps.push('Log all meals today to get accurate calorie tracking')
   }
 
@@ -770,84 +629,6 @@ function getNextSteps(weight: any, activity: any, nutrition: any, vitals: any, m
   }
 
   return steps.slice(0, 3)
-}
-
-function getCriticalAlerts(weight: any, nutrition: any, vitals: any): any[] {
-  const alerts = []
-
-  // Critical calorie deficit
-  if (nutrition.status !== 'no_data' && nutrition.calories < nutrition.goal * 0.5) {
-    alerts.push({
-      severity: 'CRITICAL',
-      message: 'Severely inadequate caloric intake detected',
-      details: [
-        `Current intake: ${nutrition.calories} calories (${Math.round((nutrition.calories / nutrition.goal) * 100)}% of target)`,
-        `Target: ${nutrition.goal} calories`,
-        `Deficit: ${nutrition.goal - nutrition.calories} calories`,
-        `Risk: Prolonged inadequate nutrition may impact health, energy levels, and metabolic function`,
-        `Recommendation: Increase meal frequency and portion sizes immediately. Consult healthcare provider if persistent.`
-      ]
-    })
-  }
-
-  // Significant weight increase
-  if (weight.status === 'gaining' && weight.diff && weight.diff > 20) {
-    alerts.push({
-      severity: 'ATTENTION REQUIRED',
-      message: `Significant weight increase observed`,
-      details: [
-        `Change: +${weight.diff.toFixed(1)} lbs`,
-        `Measurements: ${weight.logsCount} recorded`,
-        `Recommendation: Schedule consultation with healthcare provider to discuss weight trend`
-      ]
-    })
-  }
-
-  return alerts
-}
-
-function getVitalStatus(vital: any): string {
-  if (vital.type === 'blood_pressure') {
-    const systolic = vital.systolic || vital.value?.systolic
-    const diastolic = vital.diastolic || vital.value?.diastolic
-
-    if (!systolic || !diastolic) return 'N/A'
-
-    if (systolic >= 140 || diastolic >= 90) return 'Elevated'
-    if (systolic >= 130 || diastolic >= 80) return 'High Normal'
-    if (systolic < 90 || diastolic < 60) return 'Low'
-    return 'Normal'
-  }
-
-  if (vital.type === 'blood_sugar') {
-    const value = vital.value
-    if (!value) return 'N/A'
-
-    if (value > 125) return 'Elevated'
-    if (value > 100) return 'High Normal'
-    if (value < 70) return 'Low'
-    return 'Normal'
-  }
-
-  if (vital.type === 'temperature') {
-    const value = vital.value
-    if (!value) return 'N/A'
-
-    if (value > 100.4) return 'Fever'
-    if (value < 95) return 'Low'
-    return 'Normal'
-  }
-
-  if (vital.type === 'pulse_oximeter') {
-    const value = vital.value
-    if (!value) return 'N/A'
-
-    if (value < 90) return 'Low'
-    if (value >= 95) return 'Normal'
-    return 'Monitor'
-  }
-
-  return 'Recorded'
 }
 
 function getDoctorDiscussionPoints(weight: any, nutrition: any, vitals: any, medications: any, age: number): string[] {

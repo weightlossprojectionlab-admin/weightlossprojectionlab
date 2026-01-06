@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import { useFeedingLogs } from '@/hooks/useFeedingLogs'
 import { useAuth } from '@/hooks/useAuth'
-import { AppetiteLevel } from '@/types/pet-feeding'
+import { AppetiteLevel, PortionUnit } from '@/types/pet-feeding'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
@@ -22,7 +22,7 @@ interface FeedingQuickLogModalProps {
   foodProfileId: string
   foodName: string
   portionSize: number
-  portionUnit: string
+  portionUnit: PortionUnit
   mealName?: string // "Breakfast", "Dinner", etc.
 }
 

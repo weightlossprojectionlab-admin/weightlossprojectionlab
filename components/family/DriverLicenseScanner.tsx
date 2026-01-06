@@ -5,6 +5,9 @@ import { scanDriversLicenseFront, type LicenseData } from '@/lib/drivers-license
 import { CameraIcon, XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { AlertModal } from '@/components/ui/AlertModal'
 import { logger } from '@/lib/logger'
+import { getTodayDateString, isValidBirthDate, getBirthDateErrorMessage } from '@/lib/date-utils'
+import { NameInput } from '@/components/form/NameInput'
+import toast from 'react-hot-toast'
 
 export interface DriverLicenseScannerProps {
   onScanComplete: (data: {
@@ -193,6 +196,12 @@ export function DriverLicenseScanner({ onScanComplete, onClose, isOpen }: Driver
       return
     }
 
+    // Validate date of birth is not in the future
+    if (!isValidBirthDate(manualFormData.dateOfBirth)) {
+      toast.error(getBirthDateErrorMessage(manualFormData.dateOfBirth))
+      return
+    }
+
     onScanComplete({
       ...manualFormData,
       frontImage: frontImage || undefined,
@@ -308,19 +317,14 @@ export function DriverLicenseScanner({ onScanComplete, onClose, isOpen }: Driver
 
               {/* Manual Entry Form */}
               <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={manualFormData.name}
-                    onChange={(e) => setManualFormData({ ...manualFormData, name: e.target.value })}
-                    placeholder="John Doe"
-                    className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
-                    required
-                  />
-                </div>
+                <NameInput
+                  value={manualFormData.name}
+                  onChange={(name) => setManualFormData({ ...manualFormData, name })}
+                  label="Full Name"
+                  placeholder="John Doe"
+                  required
+                  className=""
+                />
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
@@ -330,6 +334,7 @@ export function DriverLicenseScanner({ onScanComplete, onClose, isOpen }: Driver
                     type="date"
                     value={manualFormData.dateOfBirth}
                     onChange={(e) => setManualFormData({ ...manualFormData, dateOfBirth: e.target.value })}
+                    max={getTodayDateString()}
                     className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
                     required
                   />

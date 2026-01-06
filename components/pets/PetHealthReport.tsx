@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from 'react'
 import { PatientProfile, PatientMedication, VitalSign, PatientDocument } from '@/types/medical'
+import { FeedingLog } from '@/types/pet-feeding'
+import { VaccinationRecord } from '@/types/pet-vaccinations'
 import { SparklesIcon, ArrowPathIcon, PrinterIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
@@ -13,25 +15,25 @@ import { useAuth } from '@/hooks/useAuth'
 import { canAccessFeature } from '@/lib/feature-gates'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
 
-interface AIHealthReportProps {
-  patient: PatientProfile
+interface PetHealthReportProps {
+  patient: PatientProfile // Pet profile
   medications: PatientMedication[]
   vitals: VitalSign[]
   documents: PatientDocument[]
-  todayMeals: any[]
+  feedingLogs: FeedingLog[]
+  vaccinations: VaccinationRecord[]
   weightData: any[]
-  stepsData: any[]
 }
 
-export function AIHealthReport({
+export function PetHealthReport({
   patient,
   medications,
   vitals,
   documents,
-  todayMeals,
-  weightData,
-  stepsData
-}: AIHealthReportProps) {
+  feedingLogs,
+  vaccinations,
+  weightData
+}: PetHealthReportProps) {
   const { user } = useAuth()
   const [generating, setGenerating] = useState(false)
   const [report, setReport] = useState<string | null>(null)
@@ -40,17 +42,17 @@ export function AIHealthReport({
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
 
   // Feature gate check
-  const hasAccess = canAccessFeature(user as any, 'health-reports')
+  const hasAccess = canAccessFeature(user as any, 'pet-health-reports')
 
   // Show upgrade prompt if no access
   if (!hasAccess) {
     return (
       <UpgradePrompt
-        feature="health-reports"
-        featureName="Unlock AI Health Reports"
-        icon="🏥"
-        message="Get comprehensive health analysis and insights. Available on Single Plus or higher plans."
-        suggestedPlan="single_plus"
+        feature="pet-health-reports"
+        featureName="Unlock Pet Health Reports"
+        icon="🐾"
+        message="Get veterinary-grade health analysis for your pets. Available on Family Basic or higher plans."
+        suggestedPlan="family_basic"
         size="lg"
         variant="card"
       />
@@ -60,7 +62,7 @@ export function AIHealthReport({
   const generateReport = async () => {
     try {
       setGenerating(true)
-      logger.info('[AI Health Report] Generating report', { patientId: patient.id })
+      logger.info('[Pet Health Report] Generating report', { petId: patient.id, petName: patient.name })
 
       // Get auth token
       const user = auth.currentUser
@@ -80,21 +82,23 @@ export function AIHealthReport({
           medications,
           vitals: vitals.slice(0, 20), // Last 20 vitals
           documents: documents.slice(0, 10), // Last 10 documents
-          todayMeals,
-          weightData: weightData.slice(0, 30), // Last 30 days
-          stepsData: stepsData.slice(0, 30) // Last 30 days
+          weightData: weightData.slice(0, 60), // Last 60 days
+          feedingData: feedingLogs.slice(0, 60), // Last 60 feedings
+          vaccinations: vaccinations.slice(0, 20), // All vaccinations
+          todayMeals: [], // Not applicable for pets
+          stepsData: [] // Not applicable for pets
         })
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        console.error('[AI Health Report] API Error Details:', {
+        console.error('[Pet Health Report] API Error Details:', {
           status: response.status,
           statusText: response.statusText,
           errorData
         })
         const error = new Error(errorData.details || errorData.error || `API Error: ${response.status} ${response.statusText}`)
-        logger.error('[AI Health Report] API Error', error)
+        logger.error('[Pet Health Report] API Error', error)
         throw error
       }
 
@@ -105,9 +109,9 @@ export function AIHealthReport({
       toast.success('Health report generated!')
 
     } catch (error: any) {
-      console.error('[AI Health Report] Full Error:', error)
+      console.error('[Pet Health Report] Full Error:', error)
       const err = error instanceof Error ? error : new Error(String(error))
-      logger.error('[AI Health Report] Error generating report', err)
+      logger.error('[Pet Health Report] Error generating report', err)
       toast.error(error.message || 'Failed to generate health report')
     } finally {
       setGenerating(false)
@@ -127,7 +131,7 @@ export function AIHealthReport({
       <html>
         <head>
           <meta charset="utf-8">
-          <title>Health Summary Report - ${patient.name}</title>
+          <title>Pet Health Summary Report - ${patient.name}</title>
           <style>
             @page {
               margin: 0.75in;
@@ -242,7 +246,7 @@ export function AIHealthReport({
     }
   }, [report, patient.name])
 
-  // Simple markdown to HTML converter for printing
+  // Simple markdown to HTML converter for printing (same as human report)
   const convertMarkdownToHtml = (markdown: string): string => {
     let html = markdown
 
@@ -300,22 +304,22 @@ export function AIHealthReport({
     navigator.clipboard.writeText(report).then(() => {
       toast.success('Report copied to clipboard!')
     }).catch((err) => {
-      logger.error('[AI Health Report] Error copying to clipboard', err)
+      logger.error('[Pet Health Report] Error copying to clipboard', err)
       toast.error('Failed to copy report')
     })
   }, [report])
 
   return (
-    <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-700 p-6">
+    <div className="bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-lg border-2 border-emerald-200 dark:border-emerald-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
             <SparklesIcon className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-foreground text-lg">Health Summary</h3>
+            <h3 className="font-bold text-foreground text-lg">Pet Health Summary</h3>
             <p className="text-xs text-muted-foreground">
-              {lastGenerated ? `Generated ${lastGenerated.toLocaleString()}` : 'Comprehensive health analysis'}
+              {lastGenerated ? `Generated ${lastGenerated.toLocaleString()}` : `Comprehensive health analysis for ${patient.name}`}
             </p>
           </div>
         </div>
@@ -343,7 +347,7 @@ export function AIHealthReport({
           <button
             onClick={generateReport}
             disabled={generating}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {generating ? (
               <>
@@ -362,17 +366,17 @@ export function AIHealthReport({
 
       {!report && !generating && (
         <div className="text-center py-8">
-          <SparklesIcon className="w-16 h-16 mx-auto text-purple-300 dark:text-purple-600 mb-3" />
+          <SparklesIcon className="w-16 h-16 mx-auto text-emerald-300 dark:text-emerald-600 mb-3" />
           <p className="text-muted-foreground mb-4">
-            Click the button above to generate a comprehensive health summary analyzing:
+            Click the button above to generate a comprehensive health summary for {patient.name}, analyzing:
           </p>
           <ul className="text-sm text-muted-foreground space-y-1 text-left max-w-md mx-auto">
-            <li>✓ Vital signs and health metrics</li>
-            <li>✓ Weight trends and progress</li>
-            <li>✓ Nutrition and meal patterns</li>
-            <li>✓ Activity and step tracking</li>
+            <li>✓ Vital signs (species-specific ranges)</li>
+            <li>✓ Weight trends and body condition</li>
+            <li>✓ Feeding compliance and appetite</li>
+            <li>✓ Vaccination status and due dates</li>
             <li>✓ Current medications</li>
-            <li>✓ Medical documents and history</li>
+            <li>✓ Medical records and history</li>
           </ul>
         </div>
       )}
@@ -380,14 +384,14 @@ export function AIHealthReport({
       {generating && (
         <div className="text-center py-12">
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-purple-200 dark:bg-purple-800 rounded w-3/4 mx-auto"></div>
-            <div className="h-4 bg-purple-200 dark:bg-purple-800 rounded w-full"></div>
-            <div className="h-4 bg-purple-200 dark:bg-purple-800 rounded w-5/6 mx-auto"></div>
-            <div className="h-4 bg-purple-200 dark:bg-purple-800 rounded w-full"></div>
-            <div className="h-4 bg-purple-200 dark:bg-purple-800 rounded w-2/3 mx-auto"></div>
+            <div className="h-4 bg-emerald-200 dark:bg-emerald-800 rounded w-3/4 mx-auto"></div>
+            <div className="h-4 bg-emerald-200 dark:bg-emerald-800 rounded w-full"></div>
+            <div className="h-4 bg-emerald-200 dark:bg-emerald-800 rounded w-5/6 mx-auto"></div>
+            <div className="h-4 bg-emerald-200 dark:bg-emerald-800 rounded w-full"></div>
+            <div className="h-4 bg-emerald-200 dark:bg-emerald-800 rounded w-2/3 mx-auto"></div>
           </div>
-          <p className="text-purple-600 dark:text-purple-400 mt-4 text-sm">
-            Analyzing health data...
+          <p className="text-emerald-600 dark:text-emerald-400 mt-4 text-sm">
+            Analyzing health data for {patient.name}...
           </p>
         </div>
       )}
@@ -471,7 +475,7 @@ export function AIHealthReport({
                               return next
                             })
                           }}
-                          className="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 cursor-pointer"
+                          className="mt-1 w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 cursor-pointer"
                         />
                         <span className={localChecked ? 'line-through text-muted-foreground' : ''}>
                           {text}
@@ -527,8 +531,8 @@ export function AIHealthReport({
       {report && (
         <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
           <p className="text-xs text-amber-800 dark:text-amber-200">
-            <strong>⚠️ Important:</strong> This automated summary is for informational purposes only and should not replace professional medical advice.
-            Always consult with qualified healthcare providers for medical decisions.
+            <strong>Important:</strong> This automated summary is for informational purposes only and should not replace professional veterinary advice.
+            Always consult with a qualified veterinarian for medical decisions regarding your pet's health.
           </p>
         </div>
       )}

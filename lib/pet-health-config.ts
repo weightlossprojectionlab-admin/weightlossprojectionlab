@@ -45,41 +45,49 @@ export const PET_TAB_LABELS: Record<string, Record<string, string>> = {
     feeding: '🍖 Feeding',
     activity: '🏃 Exercise',
     vitals: '🩺 Vitals',
-    grooming: '✂️ Grooming'
+    grooming: '✂️ Grooming',
+    medications: '💉 Health Care'
   },
   Cat: {
     feeding: '🐟 Feeding',
     activity: '🎾 Activity',
     vitals: '🩺 Vitals',
-    grooming: '✂️ Grooming'
+    grooming: '✂️ Grooming',
+    medications: '💉 Health Care'
   },
   Bird: {
     feeding: '🌾 Feeding',
-    vitals: '🩺 Vitals'
+    vitals: '🩺 Vitals',
+    medications: '💉 Health Care'
   },
   Fish: {
     feeding: '🐠 Feeding',
-    vitals: '🌡️ Water Vitals'
+    vitals: '🌡️ Water Vitals',
+    medications: '💊 Treatments'
   },
   Rabbit: {
     feeding: '🥕 Feeding',
     activity: '🏃 Exercise',
     vitals: '🩺 Vitals',
-    grooming: '✂️ Grooming'
+    grooming: '✂️ Grooming',
+    medications: '💉 Health Care'
   },
   'Guinea Pig': {
     feeding: '🥬 Feeding',
     activity: '🎡 Exercise',
     vitals: '🩺 Vitals',
-    grooming: '✂️ Grooming'
+    grooming: '✂️ Grooming',
+    medications: '💉 Health Care'
   },
   Hamster: {
     feeding: '🌰 Feeding',
-    vitals: '🩺 Vitals'
+    vitals: '🩺 Vitals',
+    medications: '💉 Health Care'
   },
   Reptile: {
     feeding: '🦗 Feeding',
-    vitals: '🌡️ Habitat Vitals'
+    vitals: '🌡️ Habitat Vitals',
+    medications: '💉 Health Care'
   }
 }
 
@@ -120,7 +128,7 @@ function getDefaultTabLabel(tab: string): string {
     meals: '🍽️ Meals',
     steps: '🚶 Steps',
     activity: '🏃 Activity',
-    medications: '💊 Meds',
+    medications: '💊 Medications', // For humans
     recipes: '📖 Recipes',
     appointments: '📅 Appt',
     grooming: '✂️ Groom',
@@ -164,7 +172,22 @@ export function getPetVitalName(vitalType: VitalType, species?: string): string 
     temperature: 'Temperature',
     blood_pressure: 'Blood Pressure',
     blood_sugar: 'Blood Sugar',
-    pulse_oximeter: 'Oxygen Level'
+    pulse_oximeter: 'Oxygen Level',
+    mood: 'Mood',
+    // Pet-specific vitals
+    heartRate: 'Heart Rate',
+    respiratoryRate: 'Respiratory Rate',
+    bodyConditionScore: 'Body Condition Score',
+    // Fish-specific vitals
+    waterTemp: 'Water Temperature',
+    pH: 'pH Level',
+    ammonia: 'Ammonia',
+    nitrite: 'Nitrite',
+    nitrate: 'Nitrate',
+    // Reptile-specific vitals
+    baskingTemp: 'Basking Temperature',
+    coolSideTemp: 'Cool Side Temperature',
+    humidity: 'Humidity',
   }
 
   return vitalNames[vitalType] || vitalType

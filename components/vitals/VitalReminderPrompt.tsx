@@ -16,7 +16,7 @@
 
 import { useState } from 'react'
 import { XMarkIcon, BellIcon, ClockIcon } from '@heroicons/react/24/outline'
-import { VitalSign, VitalType } from '@/types/medical'
+import { VitalSign, VitalType, PatientProfile } from '@/types/medical'
 import { shouldShowVitalReminder, getVitalReminderMessage, getVitalReminderColor, VitalFrequency } from '@/lib/vital-reminder-logic'
 import { userProfileOperations } from '@/lib/firebase-operations'
 import toast from 'react-hot-toast'
@@ -26,16 +26,7 @@ interface VitalReminderPromptProps {
   patientId: string
   patientName: string
   vitals: VitalSign[]
-  userPreferences?: {
-    vitalReminders?: {
-      blood_pressure?: VitalReminderConfig
-      blood_sugar?: VitalReminderConfig
-      temperature?: VitalReminderConfig
-      pulse_oximeter?: VitalReminderConfig
-      weight?: VitalReminderConfig
-      mood?: VitalReminderConfig
-    }
-  }
+  userPreferences?: PatientProfile['preferences']
   onLogVitalsClick: () => void
   onLogSpecificVital?: (vitalType: VitalType) => void
   onDisableReminder?: (vitalType: VitalType) => Promise<void>

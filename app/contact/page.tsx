@@ -9,6 +9,7 @@ import { useState } from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { toast } from 'react-hot-toast'
+import { NameInput } from '@/components/form/NameInput'
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -255,25 +256,15 @@ export default function ContactPage() {
 
             <form className="space-y-6" onSubmit={handleSubmit}>
               {/* Name */}
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  disabled={isSubmitting}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  placeholder="John Doe"
-                />
-              </div>
+              <NameInput
+                value={formData.name}
+                onChange={(name) => setFormData({ ...formData, name })}
+                label="Full Name"
+                placeholder="John Doe"
+                required
+                disabled={isSubmitting}
+                className=""
+              />
 
               {/* Email */}
               <div>

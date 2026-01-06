@@ -13,6 +13,7 @@
 import { useState } from 'react'
 import { XMarkIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { PatientProfile, ExternalCaregiverRole, ExternalCaregiverAccessLevel } from '@/types/medical'
+import { NameInput } from '@/components/form/NameInput'
 import toast from 'react-hot-toast'
 
 interface ExternalCaregiverInvitationFlowProps {
@@ -279,16 +280,13 @@ export function ExternalCaregiverInvitationFlow({
             <form onSubmit={handleBasicInfoSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
+                  <NameInput
                     value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(name) => setFormData(prev => ({ ...prev, name }))}
+                    label="Name"
                     placeholder="Full name"
-                    className="w-full px-4 py-3 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                     required
+                    className=""
                   />
                 </div>
 

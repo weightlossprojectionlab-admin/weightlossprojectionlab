@@ -78,7 +78,21 @@ export function VitalLogForm({ patientId, onSubmit, onCancel, defaultType, onTyp
       'pulse_oximeter': 'SpO₂% / bpm',
       'temperature': '°F',
       'weight': 'lbs',
-      'mood': 'scale'
+      'mood': 'scale',
+      // Pet-specific vitals
+      'heartRate': 'bpm',
+      'respiratoryRate': 'breaths/min',
+      'bodyConditionScore': '1-9',
+      // Fish-specific vitals
+      'waterTemp': '°F',
+      'pH': 'pH',
+      'ammonia': 'ppm',
+      'nitrite': 'ppm',
+      'nitrate': 'ppm',
+      // Reptile-specific vitals
+      'baskingTemp': '°F',
+      'coolSideTemp': '°F',
+      'humidity': '%'
     }
     return units[vitalType]
   }

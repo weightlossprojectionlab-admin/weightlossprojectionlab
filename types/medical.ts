@@ -92,14 +92,7 @@ export interface PatientProfile {
 
   // Patient-specific preferences (for vital reminders, etc.)
   preferences?: {
-    vitalReminders?: {
-      blood_pressure?: VitalReminderConfig
-      blood_sugar?: VitalReminderConfig
-      temperature?: VitalReminderConfig
-      pulse_oximeter?: VitalReminderConfig
-      weight?: VitalReminderConfig
-      mood?: VitalReminderConfig
-    }
+    vitalReminders?: Partial<Record<VitalType, VitalReminderConfig>>
   }
 
   // Health Goals (patient-specific)
@@ -148,6 +141,20 @@ export type VitalType =
   | 'temperature'
   | 'weight'
   | 'mood'
+  // Pet-specific vitals
+  | 'heartRate'
+  | 'respiratoryRate'
+  | 'bodyConditionScore'
+  // Fish-specific vitals
+  | 'waterTemp'
+  | 'pH'
+  | 'ammonia'
+  | 'nitrite'
+  | 'nitrate'
+  // Reptile-specific vitals
+  | 'baskingTemp'
+  | 'coolSideTemp'
+  | 'humidity'
 
 // ==================== WEIGHT LOGS ====================
 
@@ -228,8 +235,14 @@ export type VitalUnit =
   | '°C'
   | 'lbs'
   | 'kg'
+  | 'g'
   | 'SpO₂% / bpm'
   | 'scale'
+  // Pet-specific units
+  | 'breaths/min'
+  | '1-9' // Body condition score scale
+  | 'pH'
+  | 'ppm' // Parts per million (for water quality)
 
 export interface BloodPressureValue {
   systolic: number

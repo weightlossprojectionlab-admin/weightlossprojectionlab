@@ -20,10 +20,11 @@ interface FeedingScheduleWizardProps {
   onClose: () => void
   petId: string
   petName: string
+  petSpecies?: string
   onSuccess?: () => void
 }
 
-export function FeedingScheduleWizard({ isOpen, onClose, petId, petName, onSuccess }: FeedingScheduleWizardProps) {
+export function FeedingScheduleWizard({ isOpen, onClose, petId, petName, petSpecies, onSuccess }: FeedingScheduleWizardProps) {
   const { user } = useAuth()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -403,6 +404,7 @@ export function FeedingScheduleWizard({ isOpen, onClose, petId, petName, onSucce
         onClose={() => setShowFoodProfileWizard(false)}
         petId={petId}
         petName={petName}
+        petSpecies={petSpecies}
         onSuccess={() => {
           setShowFoodProfileWizard(false)
           // Food profiles will auto-refresh via real-time listener

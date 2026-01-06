@@ -226,7 +226,7 @@ export function usePetFoodProfiles({ userId, petId, autoFetch = true, realtime =
         ...snapshot.docs[0].data()
       } as PetFoodProfile
     } catch (err) {
-      logger.error('[usePetFoodProfiles] Error getting current food', err)
+      logger.error('[usePetFoodProfiles] Error getting current food', err instanceof Error ? err : new Error(String(err)))
       return null
     }
   }
@@ -259,7 +259,7 @@ export function usePetFoodProfiles({ userId, petId, autoFetch = true, realtime =
         logger.debug('[usePetFoodProfiles] Real-time update', { count: profiles.length })
       },
       (err) => {
-        logger.error('[usePetFoodProfiles] Real-time listener error', err)
+        logger.error('[usePetFoodProfiles] Real-time listener error', err instanceof Error ? err : new Error(String(err)))
         setError(err instanceof Error ? err : new Error('Real-time listener failed'))
       }
     )

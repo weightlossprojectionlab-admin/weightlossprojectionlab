@@ -554,6 +554,20 @@ function formatVitalName(vitalType: VitalType): string {
     temperature: 'Temperature',
     weight: 'Weight',
     mood: 'Mood',
+    // Pet-specific vitals
+    heartRate: 'Heart Rate',
+    respiratoryRate: 'Respiratory Rate',
+    bodyConditionScore: 'Body Condition Score',
+    // Fish-specific vitals
+    waterTemp: 'Water Temperature',
+    pH: 'pH Level',
+    ammonia: 'Ammonia',
+    nitrite: 'Nitrite',
+    nitrate: 'Nitrate',
+    // Reptile-specific vitals
+    baskingTemp: 'Basking Temperature',
+    coolSideTemp: 'Cool Side Temperature',
+    humidity: 'Humidity',
   }
   return names[vitalType] || vitalType
 }
@@ -566,6 +580,20 @@ function getVitalIcon(vitalType: VitalType): string {
     temperature: '🌡️',
     weight: '⚖️',
     mood: '😊',
+    // Pet-specific vitals
+    heartRate: '💗',
+    respiratoryRate: '🫁',
+    bodyConditionScore: '📏',
+    // Fish-specific vitals
+    waterTemp: '🌡️',
+    pH: '⚗️',
+    ammonia: '⚠️',
+    nitrite: '⚠️',
+    nitrate: '⚠️',
+    // Reptile-specific vitals
+    baskingTemp: '🔥',
+    coolSideTemp: '❄️',
+    humidity: '💧',
   }
   return icons[vitalType] || '📊'
 }

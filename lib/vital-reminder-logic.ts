@@ -48,7 +48,21 @@ export const VITAL_DISPLAY_NAMES: Record<VitalType, string> = {
   temperature: 'Temperature',
   pulse_oximeter: 'Pulse Oximeter',
   weight: 'Weight',
-  mood: 'Mood'
+  mood: 'Mood',
+  // Pet-specific vitals
+  heartRate: 'Heart Rate',
+  respiratoryRate: 'Respiratory Rate',
+  bodyConditionScore: 'Body Condition Score',
+  // Fish-specific vitals
+  waterTemp: 'Water Temperature',
+  pH: 'pH Level',
+  ammonia: 'Ammonia',
+  nitrite: 'Nitrite',
+  nitrate: 'Nitrate',
+  // Reptile-specific vitals
+  baskingTemp: 'Basking Temperature',
+  coolSideTemp: 'Cool Side Temperature',
+  humidity: 'Humidity',
 }
 
 /**
@@ -60,7 +74,21 @@ export const VITAL_ICONS: Record<VitalType, string> = {
   temperature: '🌡️',
   pulse_oximeter: '❤️',
   weight: '⚖️',
-  mood: '😊'
+  mood: '😊',
+  // Pet-specific vitals
+  heartRate: '💗',
+  respiratoryRate: '🫁',
+  bodyConditionScore: '📏',
+  // Fish-specific vitals
+  waterTemp: '🌡️',
+  pH: '⚗️',
+  ammonia: '⚠️',
+  nitrite: '⚠️',
+  nitrate: '⚠️',
+  // Reptile-specific vitals
+  baskingTemp: '🔥',
+  coolSideTemp: '❄️',
+  humidity: '💧',
 }
 
 /**
@@ -72,7 +100,21 @@ export const DEFAULT_FREQUENCIES: Record<VitalType, VitalFrequency> = {
   temperature: 'weekly',
   pulse_oximeter: 'daily',
   weight: 'weekly',
-  mood: 'daily'
+  mood: 'daily',
+  // Pet-specific vitals
+  heartRate: 'weekly',
+  respiratoryRate: 'weekly',
+  bodyConditionScore: 'monthly',
+  // Fish-specific vitals
+  waterTemp: 'daily',
+  pH: 'daily',
+  ammonia: 'daily',
+  nitrite: 'daily',
+  nitrate: 'weekly',
+  // Reptile-specific vitals
+  baskingTemp: 'daily',
+  coolSideTemp: 'daily',
+  humidity: 'daily',
 }
 
 /**
@@ -84,7 +126,21 @@ export const FREQUENCY_OPTIONS: Record<VitalType, VitalFrequency[]> = {
   temperature: ['daily', 'weekly', 'biweekly'],
   pulse_oximeter: ['daily', 'twice-daily', 'weekly'],
   weight: ['daily', 'weekly', 'biweekly', 'monthly'],
-  mood: ['daily', 'twice-daily', 'three-times-daily']
+  mood: ['daily', 'twice-daily', 'three-times-daily'],
+  // Pet-specific vitals
+  heartRate: ['daily', 'weekly', 'monthly'],
+  respiratoryRate: ['daily', 'weekly', 'monthly'],
+  bodyConditionScore: ['weekly', 'monthly'],
+  // Fish-specific vitals
+  waterTemp: ['daily', 'twice-daily'],
+  pH: ['daily', 'twice-daily'],
+  ammonia: ['daily', 'twice-daily', 'weekly'],
+  nitrite: ['daily', 'twice-daily', 'weekly'],
+  nitrate: ['daily', 'weekly', 'biweekly'],
+  // Reptile-specific vitals
+  baskingTemp: ['daily', 'twice-daily'],
+  coolSideTemp: ['daily', 'twice-daily'],
+  humidity: ['daily', 'twice-daily'],
 }
 
 /**

@@ -425,7 +425,7 @@ export function VaccinationTracker({ patient }: VaccinationTrackerProps) {
                   species={patient.species || 'Other'}
                   petName={patient.name}
                   onSubmit={async (data) => {
-                    await createVaccination(data)
+                    await createVaccination(data as any)
                     toast.success('Vaccination record added successfully!')
                     setShowAddModal(false)
                   }}
@@ -436,7 +436,7 @@ export function VaccinationTracker({ patient }: VaccinationTrackerProps) {
                   species={patient.species || 'Other'}
                   petName={patient.name}
                   onSubmit={async (data) => {
-                    await createPreventionRecord(data)
+                    await createPreventionRecord(data as any)
                     toast.success('Prevention record added successfully!')
                     setShowAddModal(false)
                   }}

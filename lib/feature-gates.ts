@@ -43,6 +43,8 @@ export const PLAN_FEATURES: Record<string, SubscriptionPlan[]> = {
   'vitals-tracking': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
   'providers': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
   'medical-records': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'health-reports': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
+  'pet-health-reports': ['family_basic', 'family_plus', 'family_premium'],
 
   // Advanced Analytics (Family Plus & Premium only)
   'advanced-analytics': ['family_plus', 'family_premium'],

@@ -6,7 +6,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ParasitePreventionRecord, PreventionType } from '@/types/pet-vaccinations'
+import { ParasitePreventionRecord, ParasitePrevention } from '@/types/pet-vaccinations'
 import { logger } from '@/lib/logger'
 
 interface ParasitePreventionFormProps {
@@ -19,9 +19,9 @@ interface ParasitePreventionFormProps {
 
 export function ParasitePreventionForm({ species, petName, onSubmit, onCancel, initialData }: ParasitePreventionFormProps) {
   const [formData, setFormData] = useState({
-    preventionType: initialData?.preventionType || ('' as PreventionType),
+    preventionType: initialData?.preventionType || ('' as ParasitePrevention),
     productName: initialData?.productName || '',
-    givenDate: initialData?.givenDate || new Date().toISOString().split('T')[0],
+    givenDate: initialData?.administeredDate || new Date().toISOString().split('T')[0],
     nextDueDate: initialData?.nextDueDate || '',
     status: initialData?.status || ('given' as const),
     notes: initialData?.notes || ''
@@ -60,12 +60,6 @@ export function ParasitePreventionForm({ species, petName, onSubmit, onCancel, i
 
       case 'tick':
         return [
-          { value: 'Bravecto', label: 'Bravecto (Flea + Tick - 3 months)' },
-          { value: 'Seresto Collar', label: 'Seresto Collar (Flea + Tick - 8 months)' }
-        ]
-
-      case 'flea_tick':
-        return [
           { value: 'NexGard', label: 'NexGard (Flea + Tick)' },
           { value: 'Bravecto', label: 'Bravecto (Flea + Tick - 3 months)' },
           { value: 'Seresto Collar', label: 'Seresto Collar (Flea + Tick - 8 months)' },
@@ -74,15 +68,24 @@ export function ParasitePreventionForm({ species, petName, onSubmit, onCancel, i
           { value: 'Credelio', label: 'Credelio (Flea + Tick)' }
         ]
 
-      case 'heartworm_flea_tick':
+      case 'intestinal-worms':
         return [
-          { value: 'Simparica Trio', label: 'Simparica Trio (Heartworm + Flea + Tick + Intestinal)' },
-          { value: 'Revolution Plus', label: 'Revolution Plus (Heartworm + Flea + Tick + Ear Mites)' },
+          { value: 'Interceptor Plus', label: 'Interceptor Plus (Heartworm + Intestinal)' },
           { value: 'Trifexis', label: 'Trifexis (Heartworm + Flea + Intestinal)' },
-          { value: 'Sentinel Spectrum', label: 'Sentinel Spectrum (Heartworm + Flea + Intestinal)' },
+          { value: 'Sentinel Spectrum', label: 'Sentinel Spectrum (Heartworm + Flea + Intestinal)' }
+        ]
+
+      case 'ear-mites':
+        return [
+          { value: 'Revolution Plus', label: 'Revolution Plus (Heartworm + Flea + Tick + Ear Mites)' },
           { value: 'Revolution (Cats)', label: 'Revolution (Cats - Heartworm + Flea + Ear Mites)' },
-          { value: 'Advantage Multi (Cats)', label: 'Advantage Multi (Cats - Heartworm + Flea + Intestinal)' },
-          { value: 'Bravecto Plus (Cats)', label: 'Bravecto Plus (Cats - Flea + Tick + Heartworm)' }
+          { value: 'Advantage Multi (Cats)', label: 'Advantage Multi (Cats - Heartworm + Flea + Intestinal)' }
+        ]
+
+      case 'mange':
+        return [
+          { value: 'Revolution', label: 'Revolution (Mange treatment)' },
+          { value: 'Bravecto', label: 'Bravecto (Mange + Flea + Tick)' }
         ]
 
       default:
@@ -164,7 +167,7 @@ export function ParasitePreventionForm({ species, petName, onSubmit, onCancel, i
               value={formData.preventionType}
               onChange={(e) => setFormData(prev => ({
                 ...prev,
-                preventionType: e.target.value as PreventionType,
+                preventionType: e.target.value as ParasitePrevention,
                 productName: '' // Reset product when prevention type changes
               }))}
               className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -174,8 +177,9 @@ export function ParasitePreventionForm({ species, petName, onSubmit, onCancel, i
               <option value="heartworm">Heartworm Prevention</option>
               <option value="flea">Flea Prevention</option>
               <option value="tick">Tick Prevention</option>
-              <option value="flea_tick">Flea & Tick Combination</option>
-              <option value="heartworm_flea_tick">Heartworm + Flea + Tick (All-in-One)</option>
+              <option value="intestinal-worms">Intestinal Worms</option>
+              <option value="ear-mites">Ear Mites</option>
+              <option value="mange">Mange</option>
             </select>
           </div>
 

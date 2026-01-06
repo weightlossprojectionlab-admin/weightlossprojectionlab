@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { toast } from 'react-hot-toast'
+import { NameInput } from '@/components/form/NameInput'
 import type { CreateDemoRequestInput, CompanySize, PreferredTime, Urgency } from '@/types/demo-requests'
 
 interface DemoRequestModalProps {
@@ -176,19 +177,14 @@ export function DemoRequestModal({ isOpen, onClose, source }: DemoRequestModalPr
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-foreground mb-4">Contact Information</h3>
 
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Full Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-background text-foreground"
-                      placeholder="John Doe"
-                      required
-                    />
-                  </div>
+                  <NameInput
+                    value={formData.name}
+                    onChange={(name) => handleInputChange('name', name)}
+                    label="Full Name"
+                    placeholder="John Doe"
+                    required
+                    className=""
+                  />
 
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">

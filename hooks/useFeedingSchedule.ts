@@ -186,7 +186,7 @@ export function useFeedingSchedule({ userId, petId, autoFetch = true, realtime =
 
       logger.debug('[useFeedingSchedule] Deactivated all schedules', { count: batch.length })
     } catch (err) {
-      logger.error('[useFeedingSchedule] Error deactivating schedules', err)
+      logger.error('[useFeedingSchedule] Error deactivating schedules', err instanceof Error ? err : new Error(String(err)))
       throw err
     }
   }
@@ -238,7 +238,7 @@ export function useFeedingSchedule({ userId, petId, autoFetch = true, realtime =
 
       return caloriesPerServing * totalServingsPerDay
     } catch (err) {
-      logger.error('[useFeedingSchedule] Error calculating daily calories', err)
+      logger.error('[useFeedingSchedule] Error calculating daily calories', err instanceof Error ? err : new Error(String(err)))
       return 0
     }
   }
