@@ -6,11 +6,10 @@
       {
         "id": "role_selection",
         "question": "Who will you primarily be managing?",
-        "options": ["myself", "family", "caregiver"],
+        "options": ["myself", "family"],
         "optionDescriptions": {
           "myself": "Just tracking my own health and wellness",
-          "family": "Managing health for family members (spouse, children, parents, etc.)",
-          "caregiver": "I'm a professional caregiver managing patients"
+          "family": "Managing health for family members (spouse, children, parents, etc.)"
         },
         "sets": "userMode"
       },
@@ -22,8 +21,7 @@
         "options": ["weight_loss", "meal_planning", "medical_tracking", "caregiving", "shopping_automation", "recipes", "fitness", "vitals", "medications"],
         "optionsByRole": {
           "myself": ["weight_loss", "meal_planning", "shopping_automation", "recipes", "fitness"],
-          "family": ["weight_loss", "meal_planning", "medical_tracking", "shopping_automation", "recipes", "fitness", "vitals", "medications"],
-          "caregiver": ["medical_tracking", "meal_planning", "vitals", "medications", "recipes"]
+          "family": ["weight_loss", "meal_planning", "medical_tracking", "shopping_automation", "recipes", "fitness", "vitals", "medications"]
         },
         "optionDescriptions": {
           "weight_loss": "Track weight, calories, and progress toward weight goals",

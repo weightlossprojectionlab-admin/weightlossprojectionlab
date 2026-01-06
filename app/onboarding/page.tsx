@@ -106,7 +106,6 @@ function OnboardingContent() {
   // Determine user mode from primary role
   function determineUserMode(role: PrimaryRole): UserMode {
     if (role === 'myself') return 'single'
-    if (role === 'caregiver') return 'caregiver'
     if (role === 'family') return 'household'
     return 'single' // fallback
   }
