@@ -26,23 +26,6 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
-    id: 'free',
-    name: 'Free Plan',
-    description: 'Try the basics at no cost',
-    monthlyPrice: 0,
-    yearlyPrice: 0,
-    features: [
-      { name: '1 user account', included: true },
-      { name: 'Basic meal logging', included: true },
-      { name: 'Weight tracking', included: true },
-      { name: 'Limited AI features', included: true },
-      { name: 'Progress dashboard', included: true },
-      { name: 'Medical tracking', included: false },
-      { name: 'Recipes & shopping', included: false },
-      { name: 'Advanced analytics', included: false },
-    ],
-  },
-  {
     id: 'single',
     name: 'Single User',
     description: 'Perfect for individual wellness journeys',
@@ -232,11 +215,14 @@ export default function PricingPage() {
     const currentTier = planTiers[currentPlan as SubscriptionPlan] ?? 0
     const targetTier = planTiers[targetPlan]
 
-    if (currentPlan === 'free') {
+    // Users without a subscription (free state) can start a trial
+    if (!currentPlan || currentPlan === 'free') {
       return 'Start Free Trial'
     } else if (targetTier > currentTier) {
+      // Upgrading to a higher tier
       return `Upgrade to ${targetPlan === 'single_plus' ? 'Plus' : targetPlan === 'family_basic' ? 'Family' : targetPlan === 'family_plus' ? 'Plus' : 'Premium'}`
     } else if (targetTier < currentTier) {
+      // Downgrading to a lower tier
       return 'Switch Plan'
     }
 
@@ -252,10 +238,11 @@ export default function PricingPage() {
       }
     }
 
-    if (currentPlan === 'free') {
+    // Users without a subscription see trial messaging
+    if (!currentPlan || currentPlan === 'free') {
       return {
         title: 'Choose Your Plan',
-        subtitle: "You're currently on the free plan. Upgrade anytime to unlock premium features and start your 7-day trial."
+        subtitle: 'Start your wellness journey with a 7-day free trial of any paid plan. No credit card required.'
       }
     }
 
@@ -312,7 +299,7 @@ export default function PricingPage() {
         </div>
 
         {/* Plan Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {PLANS.map((planData) => {
             const price = billingInterval === 'monthly' ? planData.monthlyPrice : planData.yearlyPrice
             const savings = calculateSavings(planData.monthlyPrice, planData.yearlyPrice)
@@ -357,28 +344,18 @@ export default function PricingPage() {
 
                 {/* Pricing */}
                 <div className="mb-6">
-                  {planData.id === 'free' ? (
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-bold text-green-600">
-                        Free
-                      </span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold text-foreground">
-                          ${price}
-                        </span>
-                        <span className="text-muted-foreground">
-                          /{billingInterval === 'monthly' ? 'mo' : 'yr'}
-                        </span>
-                      </div>
-                      {billingInterval === 'yearly' && (
-                        <p className="text-sm text-green-600 mt-1">
-                          Save ${savings.amount}/year ({savings.percentage}% off)
-                        </p>
-                      )}
-                    </>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-bold text-foreground">
+                      ${price}
+                    </span>
+                    <span className="text-muted-foreground">
+                      /{billingInterval === 'monthly' ? 'mo' : 'yr'}
+                    </span>
+                  </div>
+                  {billingInterval === 'yearly' && (
+                    <p className="text-sm text-green-600 mt-1">
+                      Save ${savings.amount}/year ({savings.percentage}% off)
+                    </p>
                   )}
                 </div>
 
