@@ -31,6 +31,7 @@ import { usePatients } from '@/hooks/usePatients'
 import { NotificationSettings } from '@/components/ui/NotificationPrompt'
 import { NotificationPreferences } from '@/components/settings/NotificationPreferences'
 import { AdvancedHealthProfile } from '@/components/profile/AdvancedHealthProfile'
+import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { VitalType } from '@/types/medical'
 import {
   getAllVitalTypes,
@@ -55,6 +56,9 @@ function ProfileContent() {
   const { current, max, percentage } = usePatientLimit(patients.length)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const { isEnabled: stepTrackingEnabled, enableTracking, disableTracking, isTracking } = useStepTracking()
+
+  // Get user preferences from onboarding
+  const userPrefs = useUserPreferences()
   const [biometricSupported, setBiometricSupported] = useState(false)
   const [biometricEnabled, setBiometricEnabled] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -821,8 +825,8 @@ function ProfileContent() {
           </div>
         )}
 
-        {/* Reminders Settings - Hide vital reminders for pets */}
-        {!isPetProfile && (
+        {/* Reminders Settings - Hide vital reminders for pets, filter by onboarding goals */}
+        {!isPetProfile && (userPrefs.featurePreferences.includes('vitals') || userPrefs.featurePreferences.includes('medical_tracking') || userPrefs.featurePreferences.length === 0) && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-foreground">⏰ Vital Sign Reminders</h2>
@@ -1329,6 +1333,48 @@ function ProfileContent() {
           </div>
         )}
 
+        {/* Upsell: Vital Tracking - Show if user didn't select vitals or medical_tracking */}
+        {!isPetProfile && !currentlyViewingMember && userPrefs.featurePreferences.length > 0 && !userPrefs.featurePreferences.includes('vitals') && !userPrefs.featurePreferences.includes('medical_tracking') && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl">📊</div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-blue-900 mb-2">Track Your Vital Signs</h3>
+                <p className="text-description mb-4">
+                  Monitor blood pressure, blood sugar, heart rate, and other vital signs. Get reminders and track trends over time.
+                </p>
+                <button
+                  onClick={() => router.push('/onboarding')}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
+                >
+                  Enable Vital Tracking
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Upsell: Medical Tracking - Show if user didn't select medical_tracking or medications */}
+        {!isPetProfile && !currentlyViewingMember && userPrefs.featurePreferences.length > 0 && !userPrefs.featurePreferences.includes('medical_tracking') && !userPrefs.featurePreferences.includes('medications') && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl">💊</div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-green-900 mb-2">Manage Medications & Appointments</h3>
+                <p className="text-description mb-4">
+                  Track medications, schedule appointments, and never miss a dose or visit with smart reminders.
+                </p>
+                <button
+                  onClick={() => router.push('/onboarding')}
+                  className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
+                >
+                  Enable Medical Tracking
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Test Notification */}
         <div className="bg-card rounded-lg p-6 shadow-sm">
           <h3 className="text-lg font-bold mb-4">🔔 Test Notifications</h3>
@@ -1344,11 +1390,15 @@ function ProfileContent() {
           </button>
         </div>
 
-        {/* Notification Preferences */}
-        {user?.uid && <NotificationPreferences userId={user.uid} />}
+        {/* Notification Preferences - Filter by onboarding goals */}
+        {user?.uid && (userPrefs.featurePreferences.includes('medical_tracking') || userPrefs.featurePreferences.includes('medications') || userPrefs.featurePreferences.includes('meal_planning') || userPrefs.featurePreferences.length === 0) && (
+          <NotificationPreferences userId={user.uid} />
+        )}
 
         {/* Legacy Notification Settings */}
-        <NotificationSettings userId={user?.uid} />
+        {(userPrefs.featurePreferences.length === 0 || userPrefs.featurePreferences.some(pref =>
+          ['meal_planning', 'weight_loss', 'medical_tracking', 'vitals', 'medications', 'fitness'].includes(pref)
+        )) && <NotificationSettings userId={user?.uid} />}
 
         {/* Health Sync - Only show for own profile (not pets or family members) */}
         {!currentlyViewingMember && !isPetProfile && (
