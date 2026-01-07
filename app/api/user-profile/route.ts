@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     try {
       decodedToken = await verifyIdToken(idToken)
     } catch (verifyError: any) {
-      logger.error('[API /user-profile GET] Token verification failed', verifyError)
+      logger.error('[API /user-profile GET] Token verification failed', verifyError as Error)
       console.error('[API /user-profile GET] Token verification error details:', {
         message: verifyError.message,
         code: verifyError.code,
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    logger.error('[API /user-profile GET] Error fetching user profile', error)
+    logger.error('[API /user-profile GET] Error fetching user profile', error as Error)
 
     // Log detailed error information for debugging
     console.error('[API /user-profile GET] Detailed error:', {
@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error: any) {
-    logger.error('[API /user-profile POST] Error creating user profile', error)
+    logger.error('[API /user-profile POST] Error creating user profile', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to create user profile' },
       { status: 500 }
@@ -420,14 +420,14 @@ export async function PUT(request: NextRequest) {
         message: 'User profile updated successfully'
       })
     } catch (updateError: any) {
-      logger.error('[API /user-profile PUT] Error updating user profile', updateError)
+      logger.error('[API /user-profile PUT] Error updating user profile', updateError as Error)
       return NextResponse.json(
         { success: false, error: updateError.message || 'Failed to update user profile' },
         { status: 500 }
       )
     }
   } catch (error: any) {
-    logger.error('[API /user-profile PUT] Error in PUT handler', error)
+    logger.error('[API /user-profile PUT] Error in PUT handler', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to update user profile' },
       { status: 500 }
