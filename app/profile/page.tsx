@@ -115,6 +115,7 @@ function ProfileContent() {
     if (!user) return
 
     let unsubscribe: (() => void) | undefined
+    let isMounted = true // Track if component is still mounted
 
     const setupRealtimeListener = async () => {
       try {
@@ -126,12 +127,18 @@ function ProfileContent() {
           const { db } = await import('@/lib/firebase')
           const { doc, onSnapshot, collection } = await import('firebase/firestore')
 
+          // Check if still mounted after async import
+          if (!isMounted) return
+
           // Subscribe to patient document changes
           const patientRef = doc(collection(db, 'users', user.uid, 'patients'), selectedMemberId)
 
           unsubscribe = onSnapshot(
             patientRef,
             (snapshot) => {
+              // Only update state if component is still mounted
+              if (!isMounted) return
+
               if (snapshot.exists()) {
                 const data = snapshot.data()
                 setProfileData({ id: snapshot.id, ...data })
@@ -145,6 +152,7 @@ function ProfileContent() {
               }
             },
             (error) => {
+              if (!isMounted) return
               logger.error('[Profile] Real-time listener error', error)
               toast.error('Failed to sync profile data')
             }
@@ -154,8 +162,13 @@ function ProfileContent() {
 
         // Otherwise load own profile (use API for user profile - no onSnapshot needed)
         const profile = await userProfileOperations.getUserProfile()
-        setProfileData(profile.data)
+
+        // Only update state if component is still mounted
+        if (isMounted) {
+          setProfileData(profile.data)
+        }
       } catch (error) {
+        if (!isMounted) return
         logger.error('Error setting up profile listener', error as Error)
         toast.error('Failed to load profile data')
       }
@@ -165,6 +178,7 @@ function ProfileContent() {
 
     // Cleanup listener on unmount or when selectedMemberId changes
     return () => {
+      isMounted = false // Mark as unmounted
       if (unsubscribe) {
         logger.debug('[Profile] Cleaning up real-time listener')
         unsubscribe()
