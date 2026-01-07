@@ -1,0 +1,352 @@
+
+> weightlossprojectlab@0.1.0 build
+> cross-env NODE_OPTIONS="--max-old-space-size=8192" next build --webpack
+
+   ▲ Next.js 16.0.7 (webpack)
+   - Environments: .env.local, .env.production, .env
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+ ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 6.6min
+   Running TypeScript ...
+   Collecting page data using 3 workers ...
+⚠️  No super admin emails configured. Set SUPER_ADMIN_EMAILS in .env.local
+Firebase Admin initialization error: Error: Service account object must contain a string "private_key" property.
+    at <unknown> (C:\Users\percy\wlpl\weightlossprojectlab\.next\server\app\api\admin\demo-requests\[id]\route.js:1:252) {
+  errorInfo: [Object],
+  codePrefix: 'app'
+}
+[WARN] Upstash Redis not configured - using in-memory rate limiting (dev/test mode)
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_URL`
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_URL`
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_TOKEN`
+[Upstash Redis] The 'url' property is missing or undefined in your Redis config.
+[Upstash Redis] The 'token' property is missing or undefined in your Redis config.
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_TOKEN`
+[Upstash Redis] The 'url' property is missing or undefined in your Redis config.
+[Upstash Redis] The 'token' property is missing or undefined in your Redis config.
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_URL`
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_TOKEN`
+[Upstash Redis] The 'url' property is missing or undefined in your Redis config.
+[Upstash Redis] The 'token' property is missing or undefined in your Redis config.
+[WARN] Upstash Redis not configured - using in-memory rate limiting (dev/test mode)
+ ⚠ Using edge runtime on a page currently disables static generation for that page
+   Generating static pages using 3 workers (0/97) ...
+   Generating static pages using 3 workers (24/97) 
+[WARN] Upstash Redis not configured - using in-memory rate limiting (dev/test mode)
+   Generating static pages using 3 workers (48/97) 
+⚠️  No super admin emails configured. Set SUPER_ADMIN_EMAILS in .env.local
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_URL`
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_TOKEN`
+[Upstash Redis] The 'url' property is missing or undefined in your Redis config.
+[Upstash Redis] The 'token' property is missing or undefined in your Redis config.
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_URL`
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_TOKEN`
+[Upstash Redis] The 'url' property is missing or undefined in your Redis config.
+[Upstash Redis] The 'token' property is missing or undefined in your Redis config.
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_URL`
+[Upstash Redis] Unable to find environment variable: `UPSTASH_REDIS_REST_TOKEN`
+[Upstash Redis] The 'url' property is missing or undefined in your Redis config.
+[Upstash Redis] The 'token' property is missing or undefined in your Redis config.
+   Generating static pages using 3 workers (72/97) 
+ ✓ Generating static pages using 3 workers (97/97) in 8.1s
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /about
+├ ƒ /accept-invitation
+├ ƒ /accessibility
+├ ƒ /admin
+├ ƒ /admin/ai-decisions
+├ ƒ /admin/analytics
+├ ƒ /admin/api-usage
+├ ƒ /admin/barcodes
+├ ƒ /admin/barcodes/[barcode]/edit
+├ ƒ /admin/careers
+├ ƒ /admin/coaching
+├ ƒ /admin/contact-submissions
+├ ƒ /admin/demo-requests
+├ ƒ /admin/marketing
+├ ƒ /admin/ml-analytics
+├ ƒ /admin/perks
+├ ƒ /admin/press-contacts
+├ ƒ /admin/products
+├ ƒ /admin/products/[barcode]
+├ ƒ /admin/recipes
+├ ƒ /admin/recipes/create
+├ ƒ /admin/settings
+├ ƒ /admin/trust-safety
+├ ƒ /admin/users
+├ ƒ /api/admin/ai-decisions
+├ ƒ /api/admin/ai-decisions/[id]/review
+├ ƒ /api/admin/ai-decisions/stats
+├ ƒ /api/admin/analytics
+├ ƒ /api/admin/api-usage
+├ ƒ /api/admin/applications
+├ ƒ /api/admin/applications/[id]/analyze
+├ ƒ /api/admin/backfill-duty-schedules
+├ ƒ /api/admin/demo-requests/[id]
+├ ƒ /api/admin/documents
+├ ƒ /api/admin/fix-stuck-documents
+├ ƒ /api/admin/grant-role
+├ ƒ /api/admin/jobs
+├ ƒ /api/admin/jobs/[id]
+├ ƒ /api/admin/jobs/generate
+├ ƒ /api/admin/ml/analyze-associations
+├ ƒ /api/admin/ml/generate-recipes
+├ ƒ /api/admin/perks
+├ ƒ /api/admin/products
+├ ƒ /api/admin/products/[barcode]
+├ ƒ /api/admin/products/[barcode]/fetch-nutrition
+├ ƒ /api/admin/products/fetch-nutrition-bulk
+├ ƒ /api/admin/recipes
+├ ƒ /api/admin/recipes/[id]
+├ ƒ /api/admin/recipes/[id]/media
+├ ƒ /api/admin/recipes/[id]/moderate
+├ ƒ /api/admin/recipes/community-insights
+├ ƒ /api/admin/settings/admin-users
+├ ƒ /api/admin/settings/audit-logs
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[uid]/add-caregiver
+├ ƒ /api/admin/users/[uid]/ai-health-profile
+├ ƒ /api/admin/users/[uid]/analytics
+├ ƒ /api/admin/users/[uid]/family-members
+├ ƒ /api/admin/users/[uid]/health-vitals
+├ ƒ /api/admin/users/[uid]/patients
+├ ƒ /api/admin/users/[uid]/remove-caregiver
+├ ƒ /api/admin/users/[uid]/update-caregiver
+├ ƒ /api/admin/users/export
+├ ƒ /api/ai/analyze-meal
+├ ƒ /api/ai/analyze-weight
+├ ƒ /api/ai/chat
+├ ƒ /api/ai/health
+├ ƒ /api/ai/health-profile/generate
+├ ƒ /api/ai/meal-safety
+├ ƒ /api/ai/orchestrate
+├ ƒ /api/applications
+├ ƒ /api/appointments
+├ ƒ /api/appointments/[appointmentId]
+├ ƒ /api/appointments/recommendations
+├ ƒ /api/appointments/recommendations/[recommendationId]
+├ ƒ /api/caregiver/action-items
+├ ƒ /api/caregiver/action-items/[itemId]/complete
+├ ƒ /api/contact
+├ ƒ /api/cron/duty-notifications
+├ ƒ /api/dashboard/activity
+├ ƒ /api/dashboard/stats
+├ ƒ /api/debug-profile
+├ ƒ /api/demo-requests
+├ ƒ /api/family/[memberId]
+├ ƒ /api/family/caregivers
+├ ƒ /api/family/caregivers/[caregiverId]
+├ ƒ /api/family/directory
+├ ƒ /api/family/hierarchy
+├ ƒ /api/family/members/[memberId]
+├ ƒ /api/family/migrate-patient-records
+├ ƒ /api/family/onboarding
+├ ƒ /api/family/profile
+├ ƒ /api/family/profile/photo
+├ ƒ /api/family/roles/assign
+├ ƒ /api/family/roles/transfer-ownership
+├ ƒ /api/fetch-url
+├ ƒ /api/fix-onboarding
+├ ƒ /api/fix-start-weight
+├ ƒ /api/health/correlations
+├ ƒ /api/health/predictions
+├ ƒ /api/health/reports
+├ ƒ /api/household-duties
+├ ƒ /api/household-duties/[dutyId]
+├ ƒ /api/household-duties/[dutyId]/complete
+├ ƒ /api/households
+├ ƒ /api/households/[id]
+├ ƒ /api/inactive/campaigns
+├ ƒ /api/inactive/detect
+├ ƒ /api/invitations
+├ ƒ /api/invitations/[invitationId]/accept
+├ ƒ /api/invitations/[invitationId]/decline
+├ ƒ /api/invitations/[invitationId]/resend
+├ ƒ /api/invitations/[invitationId]/revoke
+├ ƒ /api/invitations/verify
+├ ƒ /api/jobs
+├ ƒ /api/jobs/[slug]
+├ ƒ /api/meal-logs
+├ ƒ /api/meal-logs/[id]
+├ ƒ /api/meal-templates
+├ ƒ /api/meal-templates/[id]
+├ ƒ /api/medications/parse-label
+├ ƒ /api/notifications
+├ ƒ /api/notifications/[id]/read
+├ ƒ /api/notifications/mark-all-read
+├ ƒ /api/notifications/preferences
+├ ƒ /api/notifications/test
+├ ƒ /api/ocr/document
+├ ƒ /api/ocr/drivers-license
+├ ƒ /api/ocr/gemini-vision
+├ ƒ /api/ocr/medication
+├ ƒ /api/ocr/pdf
+├ ƒ /api/patients
+├ ƒ /api/patients/[patientId]
+├ ƒ /api/patients/[patientId]/ai-health-report
+├ ƒ /api/patients/[patientId]/compliance
+├ ƒ /api/patients/[patientId]/documents
+├ ƒ /api/patients/[patientId]/documents/[documentId]
+├ ƒ /api/patients/[patientId]/documents/[documentId]/email
+├ ƒ /api/patients/[patientId]/documents/[documentId]/ocr
+├ ƒ /api/patients/[patientId]/family
+├ ƒ /api/patients/[patientId]/family/[memberId]
+├ ƒ /api/patients/[patientId]/fix-start-weight
+├ ƒ /api/patients/[patientId]/health-reports
+├ ƒ /api/patients/[patientId]/health-reports/[reportId]
+├ ƒ /api/patients/[patientId]/meal-logs
+├ ƒ /api/patients/[patientId]/meal-logs/[logId]
+├ ƒ /api/patients/[patientId]/medications
+├ ƒ /api/patients/[patientId]/medications/[medicationId]
+├ ƒ /api/patients/[patientId]/medications/[medicationId]/log-dose
+├ ƒ /api/patients/[patientId]/providers
+├ ƒ /api/patients/[patientId]/providers/[providerId]
+├ ƒ /api/patients/[patientId]/providers/[providerId]/communications
+├ ƒ /api/patients/[patientId]/send-report
+├ ƒ /api/patients/[patientId]/step-logs
+├ ƒ /api/patients/[patientId]/vitals
+├ ƒ /api/patients/[patientId]/vitals/[vitalId]
+├ ƒ /api/patients/[patientId]/weight-logs
+├ ƒ /api/press/contact
+├ ƒ /api/press/downloads
+├ ƒ /api/press/newsletter
+├ ƒ /api/products/lookup
+├ ƒ /api/products/match
+├ ƒ /api/projection
+├ ƒ /api/providers
+├ ƒ /api/providers/[providerId]
+├ ƒ /api/providers/[providerId]/patients
+├ ƒ /api/providers/[providerId]/patients/[patientId]
+├ ƒ /api/proxy-image
+├ ƒ /api/proxy-pdf
+├ ƒ /api/readiness/analyze
+├ ƒ /api/recipes/generate-from-inventory
+├ ƒ /api/recipes/generate-steps
+├ ƒ /api/recipes/import
+├ ƒ /api/recipes/recommendations
+├ ƒ /api/shopping/confirm-purchases
+├ ƒ /api/shopping/suggestions
+├ ƒ /api/step-logs
+├ ƒ /api/stripe/create-checkout
+├ ƒ /api/stripe/create-checkout-session
+├ ƒ /api/stripe/create-portal-session
+├ ƒ /api/stripe/webhook
+├ ƒ /api/subscription/cancel
+├ ƒ /api/subscription/change-plan
+├ ƒ /api/subscription/start-trial
+├ ƒ /api/user-profile
+├ ƒ /api/user-profile/biometric
+├ ƒ /api/user-profile/reset
+├ ƒ /api/vital-schedules
+├ ƒ /api/vital-schedules/[scheduleId]
+├ ƒ /api/vital-schedules/[scheduleId]/instances
+├ ƒ /api/webhooks/stripe
+├ ƒ /api/weight-logs
+├ ƒ /api/weight-logs/[id]
+├ ƒ /appointments
+├ ƒ /appointments/[appointmentId]
+├ ƒ /appointments/new
+├ ƒ /auth
+├ ƒ /blog
+├ ƒ /blog/ai-health-reports
+├ ƒ /blog/appointments
+├ ƒ /blog/dashboard
+├ ƒ /blog/family-care
+├ ƒ /blog/inventory-management
+├ ƒ /blog/meal-tracking
+├ ƒ /blog/medical-documents
+├ ƒ /blog/medications
+├ ƒ /blog/patient-care
+├ ƒ /blog/patients
+├ ƒ /blog/profile
+├ ƒ /blog/providers
+├ ƒ /blog/smart-shopping
+├ ƒ /blog/vitals-tracking
+├ ƒ /blog/weight-tracking
+├ ƒ /calendar
+├ ƒ /careers
+├ ƒ /careers/[slug]
+├ ƒ /caregiver/[accountOwnerId]
+├ ƒ /coaching
+├ ƒ /contact
+├ ƒ /cooking/[sessionId]
+├ ƒ /dashboard
+├ ƒ /discover
+├ ƒ /docs
+├ ƒ /documents
+├ ƒ /family
+├ ƒ /family-admin/dashboard
+├ ƒ /family-admin/documents
+├ ƒ /family-admin/households
+├ ƒ /family-admin/inventory
+├ ƒ /family-admin/invites
+├ ƒ /family-admin/roles
+├ ƒ /family-admin/shopping
+├ ƒ /family/[memberId]
+├ ƒ /family/dashboard
+├ ƒ /family/directory
+├ ƒ /family/manage-roles
+├ ƒ /family/onboarding
+├ ƒ /family/profile/edit
+├ ƒ /fix-profile
+├ ƒ /gallery
+├ ƒ /groups
+├ ƒ /hipaa
+├ ƒ /households
+├ ƒ /inventory
+├ ƒ /inventory/cleanup
+├ ƒ /log-meal
+├ ƒ /log-steps
+├ ƒ /log-weight
+├ ƒ /meal-gallery
+├ ƒ /medical
+├ ƒ /medications
+├ ƒ /missions
+├ ƒ /notifications
+├ ƒ /onboarding
+├ ƒ /onboarding-archive
+├ ƒ /order/[orderId]/delivery-pin
+├ ƒ /order/[orderId]/inspect
+├ ƒ /partners
+├ ƒ /patients
+├ ƒ /patients/[patientId]
+├ ƒ /patients/[patientId]/duties
+├ ƒ /patients/[patientId]/family
+├ ƒ /patients/new
+├ ƒ /perks
+├ ƒ /press
+├ ƒ /press/releases
+├ ƒ /press/releases/[slug]
+├ ƒ /pricing
+├ ƒ /privacy
+├ ƒ /profile
+├ ƒ /progress
+├ ƒ /providers
+├ ƒ /providers/[id]
+├ ƒ /providers/[id]/edit
+├ ƒ /providers/new
+├ ƒ /recipes
+├ ƒ /recipes/[id]
+├ ƒ /security
+├ ƒ /shopping
+├ ƒ /shopping/orders/[orderId]
+├ ƒ /shopping/submit-order
+├ ƒ /support
+├ ƒ /support/customer
+├ ƒ /support/shopper
+├ ƒ /terms
+└ ƒ /weight-history
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -5,6 +5,8 @@ import { UpdateUserProfileRequestSchema } from '@/lib/validations/user-profile'
 // Error handling is done inline with logger and NextResponse
 import { z } from 'zod'
 
+// Force rebuild - timestamp: 2026-01-07
+
 interface UserProfile {
   email: string
   name: string
