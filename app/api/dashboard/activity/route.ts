@@ -270,7 +270,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    logger.error('[GET /api/dashboard/activity] Error fetching activity', error)
+    logger.error('[GET /api/dashboard/activity] Error fetching activity', error as Error)
     return NextResponse.json(
       {
         success: false,

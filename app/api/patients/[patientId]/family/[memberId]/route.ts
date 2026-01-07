@@ -108,7 +108,7 @@ export async function PUT(
       message: 'Permissions updated successfully'
     })
   } catch (error: any) {
-    logger.error('[API /patients/[id]/family/[memberId] PUT] Error updating permissions', error)
+    logger.error('[API /patients/[id]/family/[memberId] PUT] Error updating permissions', error as Error)
 
     if (error.name === 'ZodError') {
       return NextResponse.json(
@@ -218,7 +218,7 @@ export async function DELETE(
       message: 'Family member access removed'
     })
   } catch (error: any) {
-    logger.error('[API /patients/[id]/family/[memberId] DELETE] Error removing family member access', error)
+    logger.error('[API /patients/[id]/family/[memberId] DELETE] Error removing family member access', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to remove family member' },
       { status: 500 }

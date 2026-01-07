@@ -103,7 +103,7 @@ export async function POST(
     })
 
   } catch (error: any) {
-    logger.error('[AI Health Report] Error generating report', error)
+    logger.error('[AI Health Report] Error generating report', error as Error)
     return NextResponse.json(
       {
         success: false,

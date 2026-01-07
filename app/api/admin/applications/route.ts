@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       count: applications.length,
     })
   } catch (error: any) {
-    logger.error('Error fetching applications (admin):', error)
+    logger.error('Error fetching applications (admin):', error as Error)
 
     if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
       return NextResponse.json({ success: false, error: error.message }, { status: 401 })

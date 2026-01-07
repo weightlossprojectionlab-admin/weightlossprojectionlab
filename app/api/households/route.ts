@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       households: allHouseholds
     })
   } catch (error: any) {
-    logger.error('[API /households GET] Error fetching households', error)
+    logger.error('[API /households GET] Error fetching households', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch households' },
       { status: 500 }
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
       household
     }, { status: 201 })
   } catch (error: any) {
-    logger.error('[API /households POST] Error creating household', error)
+    logger.error('[API /households POST] Error creating household', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to create household' },
       { status: 500 }

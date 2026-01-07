@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     try {
       decodedToken = await adminAuth.verifyIdToken(token)
     } catch (authError: any) {
-      logger.error('[API /family/hierarchy] Auth error', authError)
+      logger.error('[API /family/hierarchy] Auth error', authError as Error)
       return NextResponse.json(
         { success: false, error: 'Invalid authentication token' },
         { status: 401 }
@@ -249,7 +249,7 @@ export async function GET(request: NextRequest) {
       data: response
     })
   } catch (error: any) {
-    logger.error('[API /family/hierarchy GET] Error fetching family hierarchy', error)
+    logger.error('[API /family/hierarchy GET] Error fetching family hierarchy', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch family hierarchy' },
       { status: 500 }

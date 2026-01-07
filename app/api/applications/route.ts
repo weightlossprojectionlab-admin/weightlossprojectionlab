@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 
         logger.info(`Resume uploaded for application ${applicationRef.id}: ${resumeUrl}`)
       } catch (uploadError: any) {
-        logger.error('Error uploading resume:', uploadError)
+        logger.error('Error uploading resume:', uploadError as Error)
         // Don't fail the application if upload fails
         await applicationRef.update({
           aiAnalysisStatus: 'failed',
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       message: 'Application submitted successfully! We will review your application and get back to you soon.',
     })
   } catch (error: any) {
-    logger.error('Error submitting application:', error)
+    logger.error('Error submitting application:', error as Error)
     return NextResponse.json(
       {
         success: false,

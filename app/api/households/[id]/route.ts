@@ -79,7 +79,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       patients
     })
   } catch (error: any) {
-    logger.error('[API /households/[id] GET] Error fetching household', error)
+    logger.error('[API /households/[id] GET] Error fetching household', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch household' },
       { status: 500 }
@@ -167,7 +167,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       household: updatedHousehold
     })
   } catch (error: any) {
-    logger.error('[API /households/[id] PUT] Error updating household', error)
+    logger.error('[API /households/[id] PUT] Error updating household', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to update household' },
       { status: 500 }
@@ -244,7 +244,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       message: 'Household deleted successfully'
     })
   } catch (error: any) {
-    logger.error('[API /households/[id] DELETE] Error deleting household', error)
+    logger.error('[API /households/[id] DELETE] Error deleting household', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to delete household' },
       { status: 500 }

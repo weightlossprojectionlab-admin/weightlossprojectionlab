@@ -391,7 +391,7 @@ ${emailBody}
       })
 
     } catch (emailError: any) {
-      logger.error('[Send Report] Email send failed', emailError)
+      logger.error('[Send Report] Email send failed', emailError as Error)
       return NextResponse.json(
         { error: 'Failed to send email. Please try again later.' },
         { status: 500 }

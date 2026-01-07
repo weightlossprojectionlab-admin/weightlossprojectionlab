@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
       url: session.url
     })
   } catch (error: any) {
-    logger.error('[Stripe Checkout] Error creating checkout session', error)
+    logger.error('[Stripe Checkout] Error creating checkout session', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to create checkout session' },
       { status: 500 }

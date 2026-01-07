@@ -217,7 +217,7 @@ export async function PUT(
     })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id] PUT] Error updating patient', error)
+    logger.error('[API /patients/[id] PUT] Error updating patient', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to update patient' },
       { status: 500 }
@@ -353,7 +353,7 @@ export async function DELETE(
     })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id] DELETE] Error deleting patient', error)
+    logger.error('[API /patients/[id] DELETE] Error deleting patient', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to delete patient' },
       { status: 500 }

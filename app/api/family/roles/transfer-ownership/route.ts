@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error: any) {
-    logger.error('[API /family/roles/transfer-ownership POST] Error transferring ownership', error)
+    logger.error('[API /family/roles/transfer-ownership POST] Error transferring ownership', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to transfer ownership' },
       { status: 500 }

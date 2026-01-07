@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       event = verifyWebhookSignature(body, signature)
     } catch (err: any) {
       console.error('❌ [STRIPE WEBHOOK] Signature verification error:', err.message)
-      logger.error('[Stripe Webhook] Signature verification failed', err)
+      logger.error('[Stripe Webhook] Signature verification failed', err as Error)
       return NextResponse.json(
         { error: `Webhook signature verification failed: ${err.message}` },
         { status: 400 }
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true })
   } catch (error: any) {
-    logger.error('[Stripe Webhook] Error processing webhook', error)
+    logger.error('[Stripe Webhook] Error processing webhook', error as Error)
     return NextResponse.json(
       { error: error.message || 'Webhook processing failed' },
       { status: 500 }

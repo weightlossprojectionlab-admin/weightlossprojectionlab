@@ -133,7 +133,7 @@ export async function POST(
     })
 
   } catch (error: any) {
-    logger.error('[Document OCR] Processing failed', error)
+    logger.error('[Document OCR] Processing failed', error as Error)
     console.error('Error processing OCR:', error)
 
     return NextResponse.json(

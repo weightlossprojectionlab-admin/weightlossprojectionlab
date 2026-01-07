@@ -114,7 +114,7 @@ export async function POST(
         message: 'Resume analyzed successfully',
       })
     } catch (analysisError: any) {
-      logger.error('AI analysis failed:', analysisError)
+      logger.error('AI analysis failed:', analysisError as Error)
 
       await applicationDoc.ref.update({
         aiAnalysisStatus: 'failed',
@@ -130,7 +130,7 @@ export async function POST(
       )
     }
   } catch (error: any) {
-    logger.error('Error in analyze endpoint:', error)
+    logger.error('Error in analyze endpoint:', error as Error)
 
     if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
       return NextResponse.json({ success: false, error: error.message }, { status: 401 })

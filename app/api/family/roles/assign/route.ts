@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
       message: `Role successfully changed to ${getRoleLabel(newRole)}`
     })
   } catch (error: any) {
-    logger.error('[API /family/roles/assign POST] Error assigning role', error)
+    logger.error('[API /family/roles/assign POST] Error assigning role', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to assign role' },
       { status: 500 }

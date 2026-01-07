@@ -48,7 +48,7 @@ export async function POST(
     })
 
   } catch (error: any) {
-    logger.error('[POST /api/caregiver/action-items/[itemId]/complete] Error completing action item', error)
+    logger.error('[POST /api/caregiver/action-items/[itemId]/complete] Error completing action item', error as Error)
     return NextResponse.json(
       {
         success: false,

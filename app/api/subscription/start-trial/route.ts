@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       message: `Your ${TRIAL_POLICY.DURATION_DAYS}-day free trial has started! No credit card required.`,
     })
   } catch (error: any) {
-    logger.error('[Start Trial] Error starting trial', error)
+    logger.error('[Start Trial] Error starting trial', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to start trial' },
       { status: 500 }

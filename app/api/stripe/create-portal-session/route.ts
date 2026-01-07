@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       url: session.url
     })
   } catch (error: any) {
-    logger.error('[Stripe Portal] Error creating portal session', error)
+    logger.error('[Stripe Portal] Error creating portal session', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to create portal session' },
       { status: 500 }

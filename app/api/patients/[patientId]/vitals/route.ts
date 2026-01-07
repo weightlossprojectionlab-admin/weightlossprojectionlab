@@ -116,7 +116,7 @@ export async function GET(
     })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals GET] Error fetching vitals', error)
+    logger.error('[API /patients/[id]/vitals GET] Error fetching vitals', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch vitals' },
       { status: 500 }
@@ -363,7 +363,7 @@ export async function POST(
     }, { status: 201 })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals POST] Error logging vital sign', error)
+    logger.error('[API /patients/[id]/vitals POST] Error logging vital sign', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to log vital sign' },
       { status: 500 }

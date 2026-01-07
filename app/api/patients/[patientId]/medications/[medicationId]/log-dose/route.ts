@@ -103,7 +103,7 @@ export async function POST(
 
     return NextResponse.json(updatedMedication)
   } catch (error: any) {
-    logger.error('[LogDose] Error logging dose', error)
+    logger.error('[LogDose] Error logging dose', error as Error)
     return NextResponse.json(
       { error: error.message || 'Failed to log dose' },
       { status: 500 }

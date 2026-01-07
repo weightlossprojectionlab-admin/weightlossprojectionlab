@@ -64,7 +64,7 @@ export async function GET(
       data: job,
     })
   } catch (error: any) {
-    logger.error('Error fetching job:', error)
+    logger.error('Error fetching job:', error as Error)
     return NextResponse.json(
       {
         success: false,

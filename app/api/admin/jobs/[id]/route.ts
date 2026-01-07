@@ -69,7 +69,7 @@ export async function GET(
       data: job,
     })
   } catch (error: any) {
-    logger.error('Error fetching job (admin):', error)
+    logger.error('Error fetching job (admin):', error as Error)
 
     if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
       return NextResponse.json({ success: false, error: error.message }, { status: 401 })
@@ -116,7 +116,7 @@ export async function PUT(
       data: { id, ...updateData },
     })
   } catch (error: any) {
-    logger.error('Error updating job (admin):', error)
+    logger.error('Error updating job (admin):', error as Error)
 
     if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
       return NextResponse.json({ success: false, error: error.message }, { status: 401 })
@@ -155,7 +155,7 @@ export async function DELETE(
       message: 'Job deleted successfully',
     })
   } catch (error: any) {
-    logger.error('Error deleting job (admin):', error)
+    logger.error('Error deleting job (admin):', error as Error)
 
     if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
       return NextResponse.json({ success: false, error: error.message }, { status: 401 })

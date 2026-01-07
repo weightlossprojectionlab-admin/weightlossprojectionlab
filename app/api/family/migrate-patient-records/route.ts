@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
       message: `Migration completed. Created ${result.recordsCreated} records, skipped ${result.recordsSkipped} existing records.`
     })
   } catch (error: any) {
-    logger.error('[API /family/migrate-patient-records POST] Migration failed', error)
+    logger.error('[API /family/migrate-patient-records POST] Migration failed', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Migration failed' },
       { status: 500 }

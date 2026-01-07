@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
       error: 'You are already on this plan',
     })
   } catch (error: any) {
-    logger.error('[Change Plan] Error changing plan', error)
+    logger.error('[Change Plan] Error changing plan', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to change plan' },
       { status: 500 }

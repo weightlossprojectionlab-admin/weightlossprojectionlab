@@ -98,7 +98,7 @@ export async function DELETE(
       message: 'Provider unlinked from patient successfully'
     })
   } catch (error: any) {
-    logger.error('[API /providers/[id]/patients/[id] DELETE] Error unlinking provider', error)
+    logger.error('[API /providers/[id]/patients/[id] DELETE] Error unlinking provider', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to unlink provider from patient' },
       { status: 500 }

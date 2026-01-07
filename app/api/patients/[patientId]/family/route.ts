@@ -83,7 +83,7 @@ export async function GET(
       data: familyMembers
     })
   } catch (error: any) {
-    logger.error('[API /patients/[id]/family GET] Error fetching family members', error)
+    logger.error('[API /patients/[id]/family GET] Error fetching family members', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch family members' },
       { status: 500 }

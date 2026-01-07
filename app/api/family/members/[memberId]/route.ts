@@ -224,7 +224,7 @@ export async function PATCH(
       data: updatedMember
     })
   } catch (error: any) {
-    logger.error('[API /family/members/[id] PATCH] Error updating member', error)
+    logger.error('[API /family/members/[id] PATCH] Error updating member', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to update family member' },
       { status: 500 }
@@ -377,7 +377,7 @@ export async function DELETE(
       message: 'Family member removed successfully'
     })
   } catch (error: any) {
-    logger.error('[API /family/members/[id] DELETE] Error removing member', error)
+    logger.error('[API /family/members/[id] DELETE] Error removing member', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to remove family member' },
       { status: 500 }

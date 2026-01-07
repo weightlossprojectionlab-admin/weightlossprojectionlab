@@ -73,7 +73,7 @@ export async function GET(
     })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals/[vitalId] GET] Error fetching vital', error)
+    logger.error('[API /patients/[id]/vitals/[vitalId] GET] Error fetching vital', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch vital sign' },
       { status: 500 }
@@ -191,7 +191,7 @@ export async function PUT(
     })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals/[vitalId] PUT] Error updating vital', error)
+    logger.error('[API /patients/[id]/vitals/[vitalId] PUT] Error updating vital', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to update vital sign' },
       { status: 500 }
@@ -262,7 +262,7 @@ export async function DELETE(
     })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals/[vitalId] DELETE] Error deleting vital', error)
+    logger.error('[API /patients/[id]/vitals/[vitalId] DELETE] Error deleting vital', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to delete vital sign' },
       { status: 500 }

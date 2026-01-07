@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       count: jobs.length,
     })
   } catch (error: any) {
-    logger.error('Error fetching jobs (admin):', error)
+    logger.error('Error fetching jobs (admin):', error as Error)
 
     if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
       return NextResponse.json({ success: false, error: error.message }, { status: 401 })
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       data: { id: docRef.id, ...jobData },
     })
   } catch (error: any) {
-    logger.error('Error creating job (admin):', error)
+    logger.error('Error creating job (admin):', error as Error)
 
     if (error.message === 'Unauthorized' || error.message.includes('Forbidden')) {
       return NextResponse.json({ success: false, error: error.message }, { status: 401 })

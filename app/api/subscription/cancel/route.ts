@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       immediateEffect: true,
     })
   } catch (error: any) {
-    logger.error('[Cancel Subscription] Error canceling subscription', error)
+    logger.error('[Cancel Subscription] Error canceling subscription', error as Error)
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to cancel subscription' },
       { status: 500 }

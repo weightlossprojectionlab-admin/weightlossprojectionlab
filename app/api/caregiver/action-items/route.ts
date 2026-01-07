@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    logger.error('[GET /api/caregiver/action-items] Error fetching action items', error)
+    logger.error('[GET /api/caregiver/action-items] Error fetching action items', error as Error)
     return NextResponse.json(
       {
         success: false,

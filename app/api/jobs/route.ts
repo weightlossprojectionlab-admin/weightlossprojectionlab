@@ -55,7 +55,7 @@ export async function GET(request: Request) {
       count: jobs.length,
     })
   } catch (error: any) {
-    logger.error('Error fetching jobs:', error)
+    logger.error('Error fetching jobs:', error as Error)
     return NextResponse.json(
       {
         success: false,

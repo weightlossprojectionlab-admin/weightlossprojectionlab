@@ -55,7 +55,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: medications })
   } catch (error: any) {
-    logger.error('[Medications API] Error fetching medications', error)
+    logger.error('[Medications API] Error fetching medications', error as Error)
     return NextResponse.json(
       { success: false, error: 'Failed to fetch medications', details: error.message },
       { status: 500 }
@@ -199,7 +199,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: medication }, { status: 201 })
   } catch (error: any) {
-    logger.error('[Medications API] Error adding medication', error)
+    logger.error('[Medications API] Error adding medication', error as Error)
     return NextResponse.json(
       { success: false, error: 'Failed to add medication', details: error.message },
       { status: 500 }
