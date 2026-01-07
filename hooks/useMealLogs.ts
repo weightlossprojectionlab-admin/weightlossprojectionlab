@@ -47,32 +47,70 @@ export function useMealLogsRealtime(params?: {
       return
     }
 
-    // For patient meal logs, still use API (requires backend authorization)
+    // For patient meal logs, use real-time Firestore listener with security rules authorization
     if (params?.patientId) {
-      const fetchPatientMeals = async () => {
-        try {
-          setLoading(true)
-          const queryParams = new URLSearchParams()
-          if (params?.limitCount) queryParams.set('limit', params.limitCount.toString())
-          if (params?.mealType) queryParams.set('mealType', params.mealType)
+      setLoading(true)
+      setError(null)
 
-          const token = await currentUser.getIdToken()
-          const response = await fetch(`/api/patients/${params.patientId}/meal-logs?${queryParams}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
+      try {
+        // Build Firestore query for patient's meal logs
+        // Security rules verify caregiver access
+        let q = query(
+          collection(db, 'users', params.patientId, 'mealLogs'),
+          orderBy('loggedAt', 'desc')
+        )
 
-          if (response.ok) {
-            const data = await response.json()
-            setMealLogs(data.data || [])
-          }
-          setLoading(false)
-        } catch (err) {
-          logger.error('Error fetching patient meals:', err as Error)
-          setError(err as Error)
-          setLoading(false)
+        // Add meal type filter if specified
+        if (params?.mealType) {
+          q = query(q, where('mealType', '==', params.mealType))
         }
+
+        // Add limit
+        const limitCount = params?.limitCount || 30
+        q = query(q, limit(limitCount))
+
+        logger.debug('🔄 Setting up real-time listener for patient meal logs', { patientId: params.patientId })
+
+        // Set up real-time listener
+        const unsubscribe = onSnapshot(
+          q,
+          (snapshot) => {
+            const logs = snapshot.docs.map(doc => {
+              const data = doc.data()
+              return {
+                id: doc.id,
+                ...data,
+                // Map API structure (totalCalories, macros.protein) to UI structure (calories, protein)
+                calories: data.totalCalories || 0,
+                protein: data.macros?.protein || 0,
+                carbs: data.macros?.carbs || 0,
+                fat: data.macros?.fat || 0,
+                fiber: data.macros?.fiber || 0,
+                loggedAt: data.loggedAt?.toDate?.()?.toISOString() || data.loggedAt
+              }
+            }) as MealLogData[]
+
+            logger.debug(`📊 ${logs.length} patient meal logs loaded (real-time)`)
+            setMealLogs(logs)
+            setLoading(false)
+          },
+          (err) => {
+            logger.error('❌ Error in patient meal logs listener:', err as Error)
+            setError(err as Error)
+            setLoading(false)
+          }
+        )
+
+        // Cleanup listener on unmount
+        return () => {
+          logger.debug('🔌 Cleaning up patient meal logs listener')
+          unsubscribe()
+        }
+      } catch (err) {
+        logger.error('❌ Error setting up patient meal logs listener:', err as Error)
+        setError(err as Error)
+        setLoading(false)
       }
-      fetchPatientMeals()
       return
     }
 
