@@ -930,11 +930,15 @@ function LogMealContent() {
         return null
       }
 
+      // Get CSRF token for security
+      const csrfToken = getCSRFToken()
+
       const response = await fetch('/api/ai/meal-safety', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           meal: {
