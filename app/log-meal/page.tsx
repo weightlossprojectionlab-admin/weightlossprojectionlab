@@ -10,6 +10,7 @@ import { mealLogOperations, useMealLogsRealtime, mealTemplateOperations, cooking
 import { uploadMealPhoto } from '@/lib/storage-upload'
 import { useConfirm } from '@/hooks/useConfirm'
 import { auth } from '@/lib/firebase'
+import { getCSRFToken } from '@/lib/csrf'
 import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
 import { formatFileSize } from '@/lib/image-compression'
 import { shareMeal, shareToPlatform, getPlatformInfo } from '@/lib/share-utils'
@@ -574,11 +575,15 @@ function LogMealContent() {
       }
       const token = await user.getIdToken()
 
+      // Get CSRF token for security
+      const csrfToken = getCSRFToken()
+
       const response = await fetch('/api/ai/analyze-meal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           imageData,
