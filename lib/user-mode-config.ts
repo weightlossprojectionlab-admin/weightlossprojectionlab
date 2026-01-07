@@ -139,32 +139,23 @@ export function getUIConfig(
   // Enable features based on preferences
   featurePreferences.forEach(pref => {
     switch (pref) {
-      case 'weight_loss':
+      case 'body_fitness':
         features.weightLoss = true
+        features.missions = true
+        features.groups = true
         break
-      case 'meal_planning':
+      case 'nutrition_kitchen':
         features.mealLogging = true
         features.recipes = true
-        break
-      case 'shopping_automation':
         features.shopping = true
         features.inventory = true
         break
-      case 'recipes':
-        features.recipes = true
-        break
-      case 'medical_tracking':
-      case 'medications':
-      case 'vitals':
+      case 'health_medical':
         features.medical = true
         break
       case 'caregiving':
         features.family = true
         features.medical = true
-        break
-      case 'fitness':
-        features.missions = true
-        features.groups = true
         break
     }
   })

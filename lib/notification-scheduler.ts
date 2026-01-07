@@ -54,10 +54,10 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 
   try {
     const permission = await Notification.requestPermission()
-    logger.info('Notification permission:', permission)
+    logger.info('Notification permission:', { permission })
     return permission
   } catch (error) {
-    logger.error('Error requesting notification permission:', error)
+    logger.error('Error requesting notification permission:', error as Error)
     return 'denied'
   }
 }
@@ -81,7 +81,6 @@ export function showLocalNotification(title: string, body: string, options?: Not
       body,
       icon: '/icon-192x192.png',
       badge: '/icon-72x72.png',
-      vibrate: [200, 100, 200],
       tag: 'meal-reminder',
       requireInteraction: false,
       ...options
@@ -90,7 +89,7 @@ export function showLocalNotification(title: string, body: string, options?: Not
     logger.debug('Notification shown:', { title, body })
     return notification
   } catch (error) {
-    logger.error('Error showing notification:', error)
+    logger.error('Error showing notification:', error as Error)
     return null
   }
 }
@@ -143,7 +142,7 @@ export function scheduleMealReminders(
         onReminder(reminder)
       }
 
-      logger.debug('Meal reminder triggered:', reminder)
+      logger.debug('Meal reminder triggered:', { reminder })
 
       // Reschedule for next day
       scheduleReminder(mealType, time)
@@ -184,7 +183,7 @@ export function getNextScheduledMeal(schedule: MealReminderSchedule): MealRemind
     return hours * 60 + minutes
   }
 
-  const meals = [
+  const meals: Array<{ mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack', time: string }> = [
     { mealType: 'breakfast' as const, time: schedule.breakfastTime },
     { mealType: 'lunch' as const, time: schedule.lunchTime },
     { mealType: 'dinner' as const, time: schedule.dinnerTime }

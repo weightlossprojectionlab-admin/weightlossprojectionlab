@@ -111,7 +111,7 @@ export function shouldSendNotification(
 
   const configKey = notificationMap[notificationType]
   if (!configKey) {
-    logger.warn('Unknown notification type:', notificationType)
+    logger.warn('Unknown notification type:', { notificationType })
     return false
   }
 

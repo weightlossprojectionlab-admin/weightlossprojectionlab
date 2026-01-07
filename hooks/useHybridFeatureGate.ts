@@ -75,7 +75,7 @@ export function useHybridFeatureGate(
 
   // Check if feature is hidden by preferences
   const hiddenByPreference = respectPreferences
-    ? !shouldShowFeatureByPreference(feature, userPrefs.featurePreferences)
+    ? !shouldShowFeatureByPreference(feature, userPrefs.preferences?.featurePreferences || [])
     : false
 
   // Get required preferences to unlock this feature
@@ -136,7 +136,7 @@ export function useHybridFeatureGates(
     // We can't use the hook in a loop, so we'll need to call it individually
     // This is a limitation - in practice, you'd use individual useHybridFeatureGate calls
     const hiddenByPreference = respectPreferences
-      ? !shouldShowFeatureByPreference(feature, userPrefs.featurePreferences)
+      ? !shouldShowFeatureByPreference(feature, userPrefs.preferences?.featurePreferences || [])
       : false
 
     const requiredPreferences = getPreferencesForFeature(feature)
@@ -185,6 +185,6 @@ export function useVisibleFeatures(allFeatures: string[]): string[] {
   const userPrefs = useUserPreferences()
 
   return allFeatures.filter(feature =>
-    shouldShowFeatureByPreference(feature, userPrefs.featurePreferences)
+    shouldShowFeatureByPreference(feature, userPrefs.preferences?.featurePreferences || [])
   )
 }

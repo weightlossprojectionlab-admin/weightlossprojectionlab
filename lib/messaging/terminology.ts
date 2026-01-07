@@ -366,7 +366,7 @@ export function getFeatureMessaging(
  */
 export function getProductLabel(featureKey: string): string {
   const messaging = getFeatureMessaging(featureKey, 'product')
-  return messaging?.label || featureKey
+  return (messaging && 'label' in messaging) ? messaging.label : featureKey
 }
 
 /**
@@ -380,7 +380,7 @@ export function getProductLabel(featureKey: string): string {
  */
 export function getSEOHeadline(featureKey: string): string {
   const messaging = getFeatureMessaging(featureKey, 'seo')
-  return messaging?.headline || getProductLabel(featureKey)
+  return (messaging && 'headline' in messaging) ? messaging.headline : getProductLabel(featureKey)
 }
 
 /**
@@ -394,7 +394,7 @@ export function getSEOHeadline(featureKey: string): string {
  */
 export function getMarketingHeadline(featureKey: string): string {
   const messaging = getFeatureMessaging(featureKey, 'marketing')
-  return messaging?.headline || getSEOHeadline(featureKey)
+  return (messaging && 'headline' in messaging) ? messaging.headline : getSEOHeadline(featureKey)
 }
 
 /**
@@ -409,7 +409,7 @@ export function getMarketingHeadline(featureKey: string): string {
  */
 export function getTooltip(featureKey: string): string | undefined {
   const messaging = getFeatureMessaging(featureKey, 'product')
-  return messaging?.tooltip
+  return (messaging && 'tooltip' in messaging) ? messaging.tooltip : undefined
 }
 
 /**
@@ -437,7 +437,7 @@ export function getAllFeatureKeys(): string[] {
  */
 export function getSEOKeywords(featureKey: string): string[] {
   const messaging = getFeatureMessaging(featureKey, 'seo')
-  return messaging?.keywords || []
+  return (messaging && 'keywords' in messaging) ? (messaging.keywords || []) : []
 }
 
 /**
@@ -452,7 +452,7 @@ export function getSEOKeywords(featureKey: string): string[] {
  */
 export function getTechnicalDetails(featureKey: string): string | undefined {
   const messaging = getFeatureMessaging(featureKey, 'marketing')
-  return messaging?.technicalDetails
+  return (messaging && 'technicalDetails' in messaging) ? messaging.technicalDetails : undefined
 }
 
 /**

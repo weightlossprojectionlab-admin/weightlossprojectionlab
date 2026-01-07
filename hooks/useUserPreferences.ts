@@ -66,7 +66,7 @@ export function useUserPreferences() {
           }
         }
       } catch (err) {
-        logger.error('Error fetching user preferences:', err)
+        logger.error('Error fetching user preferences:', err as Error)
         setError(err as Error)
       } finally {
         setLoading(false)
