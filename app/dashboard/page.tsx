@@ -306,7 +306,7 @@ function DashboardContent() {
   // PHASE 2: Widget Personalization Logic
   // Filter and reorder widgets based on user's feature preferences
   const dashboardWidgets = useMemo(() => {
-    const preferences = userPrefs.featurePreferences
+    const preferences = userPrefs.getAllFeatures()
 
     // Backward compatibility: show all widgets if no preferences
     if (!preferences || preferences.length === 0) {
@@ -343,11 +343,11 @@ function DashboardContent() {
 
     logger.debug('📊 Filtered & personalized widgets:', { widgets, topFeature, preferences })
     return widgets
-  }, [userPrefs.featurePreferences, userPrefs.getTopFeature])
+  }, [userPrefs.getAllFeatures, userPrefs.getTopFeature])
 
   // Quick Action Visibility based on preferences
   const quickActions = useMemo(() => {
-    const preferences = userPrefs.featurePreferences
+    const preferences = userPrefs.getAllFeatures()
 
     // Backward compatibility: show all if no preferences
     if (!preferences || preferences.length === 0) {
@@ -369,7 +369,7 @@ function DashboardContent() {
       showWeight: preferences.includes('body_fitness') || preferences.includes('health_medical'),
       showInventory: preferences.includes('nutrition_kitchen'),
     }
-  }, [userPrefs.featurePreferences])
+  }, [userPrefs.getAllFeatures])
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -699,10 +699,10 @@ function DashboardContent() {
         )}
 
         {/* Feature Discovery - Show upsells for features user didn't select */}
-        {userPrefs.featurePreferences && userPrefs.featurePreferences.length > 0 && (
+        {userPrefs.getAllFeatures() && userPrefs.getAllFeatures().length > 0 && (
           <>
             {/* Body & Fitness Upsell */}
-            {!userPrefs.featurePreferences.includes('body_fitness') && (
+            {!userPrefs.hasFeature('body_fitness') && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6 shadow-sm">
                 <div className="flex items-start gap-4">
                   <div className="text-4xl">💪</div>
@@ -723,7 +723,7 @@ function DashboardContent() {
             )}
 
             {/* Nutrition & Kitchen Upsell */}
-            {!userPrefs.featurePreferences.includes('nutrition_kitchen') && (
+            {!userPrefs.hasFeature('nutrition_kitchen') && (
               <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-lg p-6 shadow-sm">
                 <div className="flex items-start gap-4">
                   <div className="text-4xl">🍎</div>
@@ -744,7 +744,7 @@ function DashboardContent() {
             )}
 
             {/* Health & Medical Upsell */}
-            {!userPrefs.featurePreferences.includes('health_medical') && (
+            {!userPrefs.hasFeature('health_medical') && (
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6 shadow-sm">
                 <div className="flex items-start gap-4">
                   <div className="text-4xl">💊</div>
