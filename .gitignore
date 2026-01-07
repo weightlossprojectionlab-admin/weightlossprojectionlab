@@ -69,6 +69,12 @@ tmp/
 *.tmp
 nul
 
+# SECURITY: Never commit secret files
+.env.vercel
+vercel-env-import.txt
+*-env-import.txt
+*.env.backup
+
 # OS
 Thumbs.db
 .DS_Store
