@@ -155,8 +155,12 @@ const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) 
 
     logger.error('[FirebaseOps] API Error', new Error(fullErrorMessage), errorContext)
 
-    // Include detailed error message if available
-    throw new Error(errorMessage)
+    // Create error with status property for AuthRouter to handle properly
+    const error: any = new Error(errorMessage)
+    error.status = response.status
+    error.statusText = response.statusText
+    error.errorData = errorData
+    throw error
   }
 
   return response.json()
