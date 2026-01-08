@@ -70,7 +70,15 @@ export async function GET(request: NextRequest) {
         code: verifyError.code,
         stack: verifyError.stack
       })
-      throw new Error(`Token verification failed: ${verifyError.message}`)
+      // Return 401 instead of re-throwing to trigger proper auth flow
+      return NextResponse.json(
+        {
+          error: 'Token verification failed',
+          code: 'TOKEN_INVALID',
+          message: verifyError.message
+        },
+        { status: 401 }
+      )
     }
 
     const userId = decodedToken.uid
