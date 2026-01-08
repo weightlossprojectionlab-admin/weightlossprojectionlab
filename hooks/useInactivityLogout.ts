@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { auth } from '@/lib/firebase'
-import { signOut } from 'firebase/auth'
+import { signOut, onAuthStateChanged } from 'firebase/auth'
 import { logger } from '@/lib/logger'
 
 /**
@@ -12,21 +12,43 @@ import { logger } from '@/lib/logger'
  */
 export function useInactivityLogout(timeoutMinutes: number = 30) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const throttleTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastActivityRef = useRef<number>(Date.now())
+  const isMountedRef = useRef<boolean>(true)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+
+  // Monitor auth state to only track when user is logged in
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user)
+    })
+
+    return () => unsubscribe()
+  }, [])
 
   useEffect(() => {
+    // Only setup inactivity tracking if user is authenticated
+    if (!isAuthenticated) {
+      return
+    }
+
     const timeoutMs = timeoutMinutes * 60 * 1000
 
     const resetTimer = () => {
+      if (!isMountedRef.current) return
+
       lastActivityRef.current = Date.now()
 
       // Clear existing timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
       }
 
       // Set new timeout
       timeoutRef.current = setTimeout(async () => {
+        if (!isMountedRef.current) return
+
         const user = auth.currentUser
         if (user) {
           logger.info('Auto-logout due to inactivity', {
@@ -57,12 +79,14 @@ export function useInactivityLogout(timeoutMinutes: number = 30) {
     ]
 
     // Throttle activity tracking to avoid excessive timer resets
-    let throttleTimeout: NodeJS.Timeout | null = null
     const throttledResetTimer = () => {
-      if (!throttleTimeout) {
-        throttleTimeout = setTimeout(() => {
+      if (!isMountedRef.current) return
+
+      if (!throttleTimeoutRef.current) {
+        throttleTimeoutRef.current = setTimeout(() => {
+          if (!isMountedRef.current) return
           resetTimer()
-          throttleTimeout = null
+          throttleTimeoutRef.current = null
         }, 1000) // Throttle to once per second
       }
     }
@@ -77,15 +101,19 @@ export function useInactivityLogout(timeoutMinutes: number = 30) {
 
     // Cleanup
     return () => {
+      isMountedRef.current = false
+
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
       }
-      if (throttleTimeout) {
-        clearTimeout(throttleTimeout)
+      if (throttleTimeoutRef.current) {
+        clearTimeout(throttleTimeoutRef.current)
+        throttleTimeoutRef.current = null
       }
       activityEvents.forEach(event => {
         window.removeEventListener(event, throttledResetTimer)
       })
     }
-  }, [timeoutMinutes])
+  }, [timeoutMinutes, isAuthenticated])
 }
