@@ -7,8 +7,8 @@ import { useInactivityLogout } from '@/hooks/useInactivityLogout'
  * Mounted globally to track user activity across the app
  */
 export function InactivityHandler() {
-  // Auto-logout after 30 minutes of inactivity
-  useInactivityLogout(30)
+  // Auto-logout after 5 minutes of inactivity
+  useInactivityLogout(5)
 
   // This component renders nothing - it only handles the inactivity logic
   return null
