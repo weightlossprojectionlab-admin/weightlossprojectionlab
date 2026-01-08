@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'react'
 import { auth } from '@/lib/firebase'
 import { signOut } from 'firebase/auth'
 import { logger } from '@/lib/logger'
-import toast from 'react-hot-toast'
 
 /**
  * Hook to automatically log out users after a period of inactivity
@@ -35,9 +34,8 @@ export function useInactivityLogout(timeoutMinutes: number = 30) {
             inactiveMinutes: timeoutMinutes
           })
 
-          toast.error('You have been logged out due to inactivity', {
-            duration: 5000
-          })
+          // Use window.alert (intercepted by GlobalAlertModal for consistent styling)
+          window.alert('You have been logged out due to inactivity')
 
           try {
             await signOut(auth)
