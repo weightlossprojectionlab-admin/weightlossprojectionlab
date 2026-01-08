@@ -44,6 +44,7 @@ import {
   migrateLegacyWeightReminders
 } from '@/lib/vital-reminder-logic'
 import { updateVitalReminders } from '@/lib/services/patient-preferences'
+import { getCSRFToken } from '@/lib/csrf'
 
 function ProfileContent() {
   const { user } = useAuth()
@@ -893,6 +894,7 @@ function ProfileContent() {
                     throw new Error('Not authenticated')
                   }
                   const authToken = await currentUser.getIdToken()
+                  const csrfToken = getCSRFToken()
 
                   // Send only the preferences field (API will deep merge)
                   const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
@@ -900,6 +902,7 @@ function ProfileContent() {
                     headers: {
                       'Content-Type': 'application/json',
                       'Authorization': `Bearer ${authToken}`,
+                      'X-CSRF-Token': csrfToken,
                     },
                     body: JSON.stringify({
                       preferences: mergedPreferences
