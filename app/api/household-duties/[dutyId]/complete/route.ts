@@ -113,7 +113,7 @@ export async function POST(
     logger.info('Household duty completed', {
       dutyId,
       completedBy: authResult.userId,
-      nextDueDate
+      nextDueDate: updatedDuty.nextDueDate
     })
 
     // Get completedBy user name for notification
