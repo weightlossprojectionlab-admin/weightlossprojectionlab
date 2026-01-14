@@ -63,6 +63,7 @@ import { FeedingDashboardWidget } from '@/components/pets/FeedingDashboardWidget
 import { VaccinationTracker } from '@/components/pets/VaccinationTracker'
 import { SymptomLogger } from '@/components/pets/SymptomLogger'
 
+import { getCSRFToken } from '@/lib/csrf'
 // Quick Weight Modal Component
 interface QuickWeightModalProps {
   patient: PatientProfile
@@ -326,7 +327,8 @@ function PatientDetailContent() {
     try {
       const response = await fetch('/api/user-profile', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
         body: JSON.stringify({
           preferences: {
             ...userProfile?.preferences,
@@ -1134,10 +1136,12 @@ function PatientDetailContent() {
                 )
 
                 const authToken = await auth.currentUser?.getIdToken()
+                const csrfToken = getCSRFToken()
                 const response = await fetch(`/api/patients/${patientId}`, {
                   method: 'PUT',
                   headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken,
                     'Authorization': `Bearer ${authToken}`,
                   },
                   body: JSON.stringify({

@@ -11,6 +11,7 @@ import type { JobPosting, JobDepartment, JobLocationType } from '@/types/jobs'
 import { logger } from '@/lib/logger'
 import { SparklesIcon } from '@heroicons/react/24/outline'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function CareersPage() {
   const [jobs, setJobs] = useState<JobPosting[]>([])
   const [loading, setLoading] = useState(true)

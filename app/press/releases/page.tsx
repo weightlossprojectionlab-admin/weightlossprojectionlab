@@ -8,6 +8,7 @@ import { PressReleaseCard } from '@/components/press/PressReleaseCard'
 import pressReleasesData from '@/data/press/releases.json'
 import type { PressRelease } from '@/types/press'
 
+import { getCSRFToken } from '@/lib/csrf'
 export const metadata = {
   title: 'Press Releases | Weight Loss Projection Lab',
   description: 'Latest news and press releases from WPL - HIPAA-compliant AI health platform',
@@ -121,7 +122,8 @@ export default function PressReleasesPage() {
               // Track contact attempt from releases list page
               fetch('/api/press/contact', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
                 body: JSON.stringify({
                   releaseId: 'general',
                   releaseSlug: 'general',

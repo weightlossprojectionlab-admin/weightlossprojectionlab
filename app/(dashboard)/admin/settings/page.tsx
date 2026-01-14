@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getRoleDisplayName, getRoleBadgeColor } from '@/lib/admin/permissions'
 import { logger } from '@/lib/logger'
+import { getCSRFToken } from '@/lib/csrf'
 import {
   UserGroupIcon,
   ShieldCheckIcon,
@@ -88,7 +89,8 @@ export default function AdminSettingsPage() {
     try {
       const response = await fetch('/api/admin/grant-role', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
         body: JSON.stringify({
           targetEmail: grantRoleEmail,
           role: grantRoleType,
@@ -127,7 +129,8 @@ export default function AdminSettingsPage() {
     try {
       const response = await fetch('/api/admin/grant-role', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
         body: JSON.stringify({
           targetEmail: email,
           action: 'revoke',

@@ -17,6 +17,7 @@ import { PERMISSION_LABELS } from '@/lib/family-permissions'
 import type { FamilyInvitation } from '@/types/medical'
 import toast from 'react-hot-toast'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function AcceptInvitationPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>

@@ -15,6 +15,7 @@ import { JobFormModal } from '@/components/careers/JobFormModal'
 import { AIJobGenerationModal } from '@/components/careers/AIJobGenerationModal'
 import type { JobPosting, JobStatus } from '@/types/jobs'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function AdminCareersPage() {
   const [jobs, setJobs] = useState<JobPosting[]>([])
   const [loading, setLoading] = useState(true)

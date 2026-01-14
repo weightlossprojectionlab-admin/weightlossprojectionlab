@@ -70,30 +70,45 @@ export async function POST(
     if (body.subtasksCompleted) completion.subtasksCompleted = body.subtasksCompleted
     if (body.notes) completion.notes = body.notes
 
-    await db.collection('duty_completions').add(completion)
+    // Use Firestore transaction to prevent race conditions on completionCount
+    // Multiple users could complete the same duty simultaneously
+    const updatedDuty = await db.runTransaction(async (transaction) => {
+      const dutyRef = db.collection('household_duties').doc(dutyId)
+      const freshDutyDoc = await transaction.get(dutyRef)
 
-    // Calculate next due date
-    const nextDueDate = calculateNextDueDate(duty.frequency, duty.customSchedule)
+      if (!freshDutyDoc.exists) {
+        throw new Error('Duty not found during transaction')
+      }
 
-    // Update duty status
-    const updates: Partial<HouseholdDuty> = {
-      status: 'completed',
-      lastCompletedAt: now,
-      lastCompletedBy: authResult.userId,
-      completionCount: (duty.completionCount || 0) + 1,
-      lastModified: now,
-      nextDueDate,
-      // Reset to pending if there's a next due date
-      ...(nextDueDate ? { status: 'pending' } : {})
-    }
+      const freshDuty = freshDutyDoc.data() as HouseholdDuty
 
-    await db.collection('household_duties').doc(dutyId).update(updates)
+      // Calculate next due date
+      const nextDueDate = calculateNextDueDate(freshDuty.frequency, freshDuty.customSchedule)
 
-    const updatedDuty: HouseholdDuty = {
-      ...duty,
-      id: dutyId,
-      ...updates
-    }
+      // Update duty status with atomic increment
+      const updates: Partial<HouseholdDuty> = {
+        status: 'completed',
+        lastCompletedAt: now,
+        lastCompletedBy: authResult.userId,
+        completionCount: (freshDuty.completionCount || 0) + 1,
+        lastModified: now,
+        nextDueDate,
+        // Reset to pending if there's a next due date
+        ...(nextDueDate ? { status: 'pending' } : {})
+      }
+
+      transaction.update(dutyRef, updates)
+
+      // Create completion record
+      const completionRef = db.collection('duty_completions').doc()
+      transaction.set(completionRef, completion)
+
+      return {
+        ...freshDuty,
+        id: dutyId,
+        ...updates
+      } as HouseholdDuty
+    })
 
     logger.info('Household duty completed', {
       dutyId,

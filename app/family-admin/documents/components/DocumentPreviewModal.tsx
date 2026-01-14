@@ -12,6 +12,7 @@ import { toast } from 'react-hot-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { getCSRFToken, initCSRFProtection } from '@/lib/csrf'
 
+import { getCSRFToken } from '@/lib/csrf'
 interface DocumentPreviewModalProps {
   isOpen: boolean
   onClose: () => void
@@ -148,6 +149,7 @@ export default function DocumentPreviewModal({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,,
           'Authorization': `Bearer ${token}`,
           'x-csrf-token': csrfToken
         },

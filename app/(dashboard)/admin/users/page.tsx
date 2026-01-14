@@ -6,6 +6,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
+import { getCSRFToken } from '@/lib/csrf'
 import {
   MagnifyingGlassIcon,
   UserCircleIcon,
@@ -212,6 +213,7 @@ export default function AdminUsersPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,,
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ uid, action: 'suspend' }),
@@ -246,6 +248,7 @@ export default function AdminUsersPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,,
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ uid, action: 'unsuspend' }),
@@ -320,6 +323,7 @@ export default function AdminUsersPage() {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,,
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ uid }),

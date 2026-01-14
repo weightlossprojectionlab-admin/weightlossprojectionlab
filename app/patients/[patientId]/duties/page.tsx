@@ -20,6 +20,7 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function PatientDutiesPage() {
   return (
     <AuthGuard>

@@ -17,6 +17,7 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import type { CaregiverCardData, AvailabilityStatus } from '@/types/caregiver'
 import type { FamilyRole } from '@/types/medical'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function FamilyDirectoryPage() {
   return (
     <AuthGuard>

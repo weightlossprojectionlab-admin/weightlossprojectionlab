@@ -5,6 +5,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
+import { getCSRFToken } from '@/lib/csrf'
 import {
   CpuChipIcon,
   CheckCircleIcon,
@@ -127,6 +128,7 @@ export default function AIDecisionsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,,
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({

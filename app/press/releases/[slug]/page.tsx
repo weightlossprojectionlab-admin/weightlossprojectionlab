@@ -14,6 +14,7 @@ import pressReleasesData from '@/data/press/releases.json'
 import type { PressRelease } from '@/types/press'
 import { use } from 'react'
 
+import { getCSRFToken } from '@/lib/csrf'
 interface PressReleasePageProps {
   params: Promise<{
     slug: string
@@ -41,7 +42,8 @@ export default function PressReleasePage({ params }: PressReleasePageProps) {
     try {
       await fetch('/api/press/contact', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
         body: JSON.stringify({
           releaseId: release.id,
           releaseSlug: release.slug,
@@ -118,7 +120,8 @@ export default function PressReleasePage({ params }: PressReleasePageProps) {
                 // Track contact attempt (fire-and-forget, don't block mailto)
                 fetch('/api/press/contact', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
                   body: JSON.stringify({
                     releaseId: release.id,
                     releaseSlug: release.slug,
@@ -230,7 +233,8 @@ export default function PressReleasePage({ params }: PressReleasePageProps) {
               // Track contact attempt (fire-and-forget, don't block mailto)
               fetch('/api/press/contact', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
                 body: JSON.stringify({
                   releaseId: release.id,
                   releaseSlug: release.slug,

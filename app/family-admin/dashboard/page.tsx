@@ -35,6 +35,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { capitalizeName } from '@/lib/utils'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function FamilyAdminDashboardPage() {
   return (
     <AuthGuard>

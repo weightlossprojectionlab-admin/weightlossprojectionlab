@@ -382,10 +382,12 @@ function ProfileContent() {
         }
         const authToken = await currentUser.getIdToken()
 
+        const csrfToken = getCSRFToken()
         const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken,
             'Authorization': `Bearer ${authToken}`,
           },
           body: JSON.stringify(updatedPatientData)
@@ -1086,6 +1088,7 @@ function ProfileContent() {
                           method: 'PUT',
                           headers: {
                             'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
                             'Authorization': `Bearer ${authToken}`,
                           },
                           body: JSON.stringify({
@@ -1166,6 +1169,7 @@ function ProfileContent() {
                           method: 'PUT',
                           headers: {
                             'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
                             'Authorization': `Bearer ${authToken}`,
                           },
                           body: JSON.stringify({
@@ -1231,6 +1235,7 @@ function ProfileContent() {
                             method: 'PUT',
                             headers: {
                               'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
                               'Authorization': `Bearer ${authToken}`,
                             },
                             body: JSON.stringify({
@@ -1295,6 +1300,7 @@ function ProfileContent() {
                           method: 'PUT',
                           headers: {
                             'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
                             'Authorization': `Bearer ${authToken}`,
                           },
                           body: JSON.stringify({

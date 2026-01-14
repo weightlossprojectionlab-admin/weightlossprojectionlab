@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
 import { ChartBarIcon, CloudIcon, ClockIcon, CurrencyDollarIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 
+import { getCSRFToken } from '@/lib/csrf'
 // Dynamic imports for Recharts components to reduce bundle size
 const APIUsageTimeline = dynamic(() => import('@/components/charts/APIUsageTimeline').then(m => ({ default: m.APIUsageTimeline })), {
   loading: () => <div className="h-[300px] bg-muted rounded-lg animate-pulse" />,

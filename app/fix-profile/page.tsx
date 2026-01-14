@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function FixProfilePage() {
   const { user } = useAuth()
   const router = useRouter()

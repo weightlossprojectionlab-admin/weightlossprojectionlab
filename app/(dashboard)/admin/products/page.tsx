@@ -7,6 +7,7 @@ import { auth } from '@/lib/firebase'
 import { MagnifyingGlassIcon, ChartBarIcon, ShoppingCartIcon, CheckBadgeIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
+import { getCSRFToken } from '@/lib/csrf'
 interface Product {
   barcode: string
   productName: string

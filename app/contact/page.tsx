@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { toast } from 'react-hot-toast'
 import { NameInput } from '@/components/form/NameInput'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: '',
@@ -36,7 +37,8 @@ export default function ContactPage() {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify(formData)
       })

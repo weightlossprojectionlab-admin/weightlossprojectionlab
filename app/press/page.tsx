@@ -11,6 +11,7 @@ import { ScreenshotGallery } from '@/components/ui/Screenshot'
 import pressReleasesData from '@/data/press/releases.json'
 import executivesData from '@/data/press/executives.json'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function PressPage() {
   const [showScreenshots, setShowScreenshots] = useState(false)
   const [newsletterEmail, setNewsletterEmail] = useState('')
@@ -28,7 +29,8 @@ export default function PressPage() {
     try {
       const response = await fetch('/api/press/newsletter', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
         body: JSON.stringify({ email: newsletterEmail, source: 'press-page' })
       })
 

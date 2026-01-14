@@ -23,6 +23,7 @@ import { auth } from '@/lib/firebase'
 import type { HealthVitalsSummary } from '@/types'
 import { AISupportAnalytics } from '@/components/admin/AISupportAnalytics'
 
+import { getCSRFToken } from '@/lib/csrf'
 // Dynamic imports for Recharts components to reduce bundle size
 const AdminWeightLogsChart = dynamic(() => import('@/components/charts/AdminWeightLogsChart').then(m => ({ default: m.AdminWeightLogsChart })), {
   loading: () => <div className="h-[300px] bg-muted rounded-lg animate-pulse" />,

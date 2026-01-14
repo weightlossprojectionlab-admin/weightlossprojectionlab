@@ -17,6 +17,7 @@ import { CaregiverProfileForm } from '@/components/family/CaregiverProfileForm'
 import AuthGuard from '@/components/auth/AuthGuard'
 import type { CaregiverProfileFormData, CaregiverProfile } from '@/types/caregiver'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function EditProfilePage() {
   return (
     <AuthGuard>
@@ -142,7 +143,8 @@ function EditProfileContent() {
       // TODO: Replace with actual API call
       // const response = await fetch('/api/family/profile', {
       //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
+      //   headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
       //   body: JSON.stringify(formData)
       // })
       // if (!response.ok) throw new Error('Failed to save profile')

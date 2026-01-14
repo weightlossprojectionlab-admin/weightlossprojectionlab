@@ -9,6 +9,7 @@ import { ArrowLeftIcon, CheckBadgeIcon, TrashIcon, ArrowPathIcon } from '@heroic
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
+import { getCSRFToken } from '@/lib/csrf'
 interface ProductEditData {
   barcode: string
   productName: string
@@ -141,6 +142,7 @@ export default function ProductEditPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,,
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(formData)

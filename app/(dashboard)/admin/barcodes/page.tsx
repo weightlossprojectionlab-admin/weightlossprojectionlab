@@ -9,6 +9,7 @@ import { MagnifyingGlassIcon, PencilSquareIcon, CheckBadgeIcon, FunnelIcon, Arro
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
+import { getCSRFToken } from '@/lib/csrf'
 interface Product {
   barcode: string
   productName: string
@@ -170,6 +171,7 @@ export default function BarcodesManagementPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,,
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ barcodes })

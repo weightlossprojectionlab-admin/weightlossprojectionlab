@@ -38,6 +38,7 @@ import {
 // Import PRD config
 import prdConfig from '@/docs/UNIFIED_PRD.json'
 
+import { getCSRFToken } from '@/lib/csrf'
 interface OnboardingScreen {
   id: string
   question: string

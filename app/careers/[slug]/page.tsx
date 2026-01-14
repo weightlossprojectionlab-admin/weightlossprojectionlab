@@ -12,6 +12,7 @@ import type { JobPosting } from '@/types/jobs'
 import { logger } from '@/lib/logger'
 import { ApplicationForm } from '@/components/careers/ApplicationForm'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function JobPage() {
   const params = useParams()
   const router = useRouter()

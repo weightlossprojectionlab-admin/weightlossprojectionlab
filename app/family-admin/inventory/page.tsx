@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function InventoryManagementPage() {
   return (
     <AuthGuard>

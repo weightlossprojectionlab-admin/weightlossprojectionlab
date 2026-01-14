@@ -79,6 +79,7 @@ import { ScannedMedication } from '@/lib/medication-lookup'
 import type { WeightLog } from '@/types/medical'
 import { TrustBadge } from '@/components/ui/TrustBadge'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function ProgressPage() {
   return (
     <AuthGuard>

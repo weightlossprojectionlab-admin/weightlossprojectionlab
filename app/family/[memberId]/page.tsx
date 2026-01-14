@@ -20,6 +20,7 @@ import { CaregiverProfileView } from '@/components/family/CaregiverProfileView'
 import AuthGuard from '@/components/auth/AuthGuard'
 import type { CaregiverProfile } from '@/types/caregiver'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function CaregiverProfilePage() {
   return (
     <AuthGuard>

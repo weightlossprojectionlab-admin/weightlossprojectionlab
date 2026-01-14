@@ -7,6 +7,7 @@ import { ArrowPathIcon, BeakerIcon, ChartBarIcon, SparklesIcon, CubeIcon } from 
 import toast from 'react-hot-toast'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 
+import { getCSRFToken } from '@/lib/csrf'
 interface AnalysisStatus {
   running: boolean
   startedAt?: string

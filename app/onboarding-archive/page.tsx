@@ -41,6 +41,7 @@ import type { UserProfile, UserGoals, UserPreferences } from '@/types'
 import type { PatientMedication } from '@/types/medical'
 import { logger } from '@/lib/logger'
 
+import { getCSRFToken } from '@/lib/csrf'
 interface OnboardingData {
   // Step 1: About You
   birthDate?: Date

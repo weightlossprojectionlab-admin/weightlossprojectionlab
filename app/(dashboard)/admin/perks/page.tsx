@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
 import { logger } from '@/lib/logger'
+import { getCSRFToken } from '@/lib/csrf'
 import {
   GiftIcon,
   PlusCircleIcon,
@@ -173,7 +174,8 @@ export default function PerksAdminPage() {
     try {
       const response = await fetch(`/api/admin/perks?id=${perkId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
         body: JSON.stringify({ enabled: !enabled }),
       })
 

@@ -9,6 +9,7 @@ import { auth } from '@/lib/firebase'
 import { ArrowLeftIcon, CheckBadgeIcon, ClockIcon, MapPinIcon, ShoppingBagIcon, ChartBarIcon, UsersIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
+import { getCSRFToken } from '@/lib/csrf'
 // Dynamic imports for Recharts components to reduce bundle size
 const ProductScanTimeline = dynamic(() => import('@/components/charts/ProductScanTimeline').then(m => ({ default: m.ProductScanTimeline })), {
   loading: () => <div className="h-[300px] bg-muted rounded-lg animate-pulse" />,

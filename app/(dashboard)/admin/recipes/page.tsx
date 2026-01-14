@@ -16,6 +16,7 @@ import {
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import toast from 'react-hot-toast'
 
+import { getCSRFToken } from '@/lib/csrf'
 interface PublicRecipe {
   id: string
   title: string
@@ -93,7 +94,8 @@ export default function RecipeModerationPage() {
     try {
       const response = await fetch(`/api/admin/recipes/${recipeId}/moderate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
         body: JSON.stringify({
           action: 'approve',
           feature,
@@ -132,7 +134,8 @@ export default function RecipeModerationPage() {
     try {
       const response = await fetch(`/api/admin/recipes/${recipeId}/moderate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken, },
         body: JSON.stringify({
           action: 'reject',
           reason: rejectionReason,

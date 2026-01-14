@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth'
 import type { FamilyInvitation } from '@/types/medical'
 import { PlusIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
+import { getCSRFToken } from '@/lib/csrf'
 export default function FamilyAdminInvitesPage() {
   return (
     <AuthGuard>
