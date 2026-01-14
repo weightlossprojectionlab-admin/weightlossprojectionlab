@@ -1083,7 +1083,6 @@ function ProfileContent() {
                         const currentUser = auth.currentUser
                         if (!currentUser) throw new Error('Not authenticated')
                         const authToken = await currentUser.getIdToken()
-                        const csrfToken = getCSRFToken()
 
                         const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
                           method: 'PUT',
@@ -1165,7 +1164,6 @@ function ProfileContent() {
                         const currentUser = auth.currentUser
                         if (!currentUser) throw new Error('Not authenticated')
                         const authToken = await currentUser.getIdToken()
-                        const csrfToken = getCSRFToken()
 
                         const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
                           method: 'PUT',
@@ -1232,7 +1230,6 @@ function ProfileContent() {
                           const currentUser = auth.currentUser
                           if (!currentUser) throw new Error('Not authenticated')
                           const authToken = await currentUser.getIdToken()
-                          const csrfToken = getCSRFToken()
 
                           const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
                             method: 'PUT',
@@ -1298,7 +1295,6 @@ function ProfileContent() {
                         const currentUser = auth.currentUser
                         if (!currentUser) throw new Error('Not authenticated')
                         const authToken = await currentUser.getIdToken()
-                        const csrfToken = getCSRFToken()
 
                         const response = await fetch(`/api/patients/${currentlyViewingMember.id}`, {
                           method: 'PUT',

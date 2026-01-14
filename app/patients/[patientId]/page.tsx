@@ -325,10 +325,13 @@ function PatientDetailContent() {
   // Handler to set this patient as primary
   const handleSetAsPrimary = async () => {
     try {
+      const csrfToken = getCSRFToken()
       const response = await fetch('/api/user-profile', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({
           preferences: {
             ...userProfile?.preferences,
