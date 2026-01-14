@@ -149,7 +149,7 @@ export default function DocumentPreviewModal({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,,
+          'X-CSRF-Token': csrfToken,
           'Authorization': `Bearer ${token}`,
           'x-csrf-token': csrfToken
         },

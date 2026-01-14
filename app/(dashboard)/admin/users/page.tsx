@@ -213,7 +213,7 @@ export default function AdminUsersPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,,
+          'X-CSRF-Token': csrfToken,
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ uid, action: 'suspend' }),
@@ -248,7 +248,7 @@ export default function AdminUsersPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,,
+          'X-CSRF-Token': csrfToken,
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ uid, action: 'unsuspend' }),
@@ -323,7 +323,7 @@ export default function AdminUsersPage() {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,,
+          'X-CSRF-Token': csrfToken,
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ uid }),
