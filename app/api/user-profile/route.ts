@@ -114,7 +114,13 @@ export async function GET(request: NextRequest) {
       goals: {
         ...userData?.goals,
         targetDate: userData?.goals?.targetDate?.toDate?.()?.toISOString() || null
-      }
+      },
+      subscription: userData?.subscription ? {
+        ...userData.subscription,
+        trialEndsAt: userData.subscription.trialEndsAt?.toDate?.()?.toISOString() || userData.subscription.trialEndsAt || null,
+        currentPeriodStart: userData.subscription.currentPeriodStart?.toDate?.()?.toISOString() || userData.subscription.currentPeriodStart || null,
+        currentPeriodEnd: userData.subscription.currentPeriodEnd?.toDate?.()?.toISOString() || userData.subscription.currentPeriodEnd || null,
+      } : undefined
     }
 
     return NextResponse.json({

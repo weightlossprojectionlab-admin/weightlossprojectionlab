@@ -664,9 +664,17 @@ function ProfileContent() {
                       <p className="text-sm text-blue-800">
                         Trial ends:{' '}
                         <strong>
-                          {typeof subscription.trialEndsAt === 'object' && subscription.trialEndsAt && 'toDate' in subscription.trialEndsAt && typeof (subscription.trialEndsAt as any).toDate === 'function'
-                            ? (subscription.trialEndsAt as any).toDate().toLocaleDateString()
-                            : new Date(subscription.trialEndsAt as any).toLocaleDateString()}
+                          {(() => {
+                            try {
+                              if (!subscription.trialEndsAt) return 'Soon'
+                              const date = typeof subscription.trialEndsAt === 'object' && subscription.trialEndsAt && 'toDate' in subscription.trialEndsAt && typeof (subscription.trialEndsAt as any).toDate === 'function'
+                                ? (subscription.trialEndsAt as any).toDate()
+                                : new Date(subscription.trialEndsAt as any)
+                              return isNaN(date.getTime()) ? 'Soon' : date.toLocaleDateString()
+                            } catch {
+                              return 'Soon'
+                            }
+                          })()}
                         </strong>
                       </p>
                       <p className="text-xs text-blue-700 mt-2">

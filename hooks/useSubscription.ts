@@ -44,7 +44,20 @@ export function useSubscription() {
         const updatedSubscription = userData?.subscription as UserSubscription | undefined
         console.log('[useSubscription] Firestore subscription updated:', updatedSubscription)
         if (updatedSubscription) {
-          setSubscription(updatedSubscription)
+          // Convert Firestore Timestamps to Date objects for proper rendering
+          const converted = {
+            ...updatedSubscription,
+            trialEndsAt: updatedSubscription.trialEndsAt && typeof updatedSubscription.trialEndsAt === 'object' && 'toDate' in updatedSubscription.trialEndsAt
+              ? (updatedSubscription.trialEndsAt as any).toDate()
+              : updatedSubscription.trialEndsAt,
+            currentPeriodEnd: updatedSubscription.currentPeriodEnd && typeof updatedSubscription.currentPeriodEnd === 'object' && 'toDate' in updatedSubscription.currentPeriodEnd
+              ? (updatedSubscription.currentPeriodEnd as any).toDate()
+              : updatedSubscription.currentPeriodEnd,
+            currentPeriodStart: updatedSubscription.currentPeriodStart && typeof updatedSubscription.currentPeriodStart === 'object' && 'toDate' in updatedSubscription.currentPeriodStart
+              ? (updatedSubscription.currentPeriodStart as any).toDate()
+              : updatedSubscription.currentPeriodStart,
+          }
+          setSubscription(converted)
         }
       }
     }, (error) => {
