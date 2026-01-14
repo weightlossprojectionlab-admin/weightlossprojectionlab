@@ -120,10 +120,13 @@ export default function PressReleasesPage() {
             href="mailto:press@weightlossproglab.com"
             onClick={(e) => {
               // Track contact attempt from releases list page
+              const csrfToken = getCSRFToken()
               fetch('/api/press/contact', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRF-Token': csrfToken,
+                },
                 body: JSON.stringify({
                   releaseId: 'general',
                   releaseSlug: 'general',

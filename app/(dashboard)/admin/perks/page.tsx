@@ -172,10 +172,13 @@ export default function PerksAdminPage() {
   const handleToggleEnabled = async (perkId: string, enabled: boolean) => {
     setActionLoading(true)
     try {
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/perks?id=${perkId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({ enabled: !enabled }),
       })
 

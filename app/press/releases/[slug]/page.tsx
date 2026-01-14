@@ -40,10 +40,13 @@ export default function PressReleasePage({ params }: PressReleasePageProps) {
   // Track contact attempt (fire and forget)
   const trackContact = async () => {
     try {
+      const csrfToken = getCSRFToken()
       await fetch('/api/press/contact', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({
           releaseId: release.id,
           releaseSlug: release.slug,
@@ -118,10 +121,13 @@ export default function PressReleasePage({ params }: PressReleasePageProps) {
               href={`mailto:${release.contactEmail}`}
               onClick={(e) => {
                 // Track contact attempt (fire-and-forget, don't block mailto)
+                const csrfToken = getCSRFToken()
                 fetch('/api/press/contact', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken,
+                  },
                   body: JSON.stringify({
                     releaseId: release.id,
                     releaseSlug: release.slug,
@@ -231,10 +237,13 @@ export default function PressReleasePage({ params }: PressReleasePageProps) {
             href={`mailto:${release.contactEmail}`}
             onClick={(e) => {
               // Track contact attempt (fire-and-forget, don't block mailto)
+              const csrfToken = getCSRFToken()
               fetch('/api/press/contact', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRF-Token': csrfToken,
+                },
                 body: JSON.stringify({
                   releaseId: release.id,
                   releaseSlug: release.slug,

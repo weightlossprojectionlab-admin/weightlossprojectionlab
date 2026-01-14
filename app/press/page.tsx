@@ -27,10 +27,13 @@ export default function PressPage() {
     setNewsletterMessage('')
 
     try {
+      const csrfToken = getCSRFToken()
       const response = await fetch('/api/press/newsletter', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({ email: newsletterEmail, source: 'press-page' })
       })
 
