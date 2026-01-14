@@ -34,6 +34,7 @@ export default function ContactPage() {
     setIsSubmitting(true)
 
     try {
+      const csrfToken = getCSRFToken()
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {

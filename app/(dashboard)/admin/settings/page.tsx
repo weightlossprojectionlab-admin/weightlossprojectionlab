@@ -87,10 +87,13 @@ export default function AdminSettingsPage() {
 
     setActionLoading(true)
     try {
+      const csrfToken = getCSRFToken()
       const response = await fetch('/api/admin/grant-role', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({
           targetEmail: grantRoleEmail,
           role: grantRoleType,
@@ -127,10 +130,13 @@ export default function AdminSettingsPage() {
 
     setActionLoading(true)
     try {
+      const csrfToken = getCSRFToken()
       const response = await fetch('/api/admin/grant-role', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({
           targetEmail: email,
           action: 'revoke',

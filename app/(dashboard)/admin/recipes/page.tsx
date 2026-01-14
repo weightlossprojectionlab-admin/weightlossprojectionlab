@@ -92,10 +92,13 @@ export default function RecipeModerationPage() {
 
     setProcessing(true)
     try {
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/recipes/${recipeId}/moderate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({
           action: 'approve',
           feature,
@@ -132,10 +135,13 @@ export default function RecipeModerationPage() {
 
     setProcessing(true)
     try {
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/recipes/${recipeId}/moderate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({
           action: 'reject',
           reason: rejectionReason,
