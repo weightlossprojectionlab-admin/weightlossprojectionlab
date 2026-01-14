@@ -141,10 +141,13 @@ function EditProfileContent() {
 
     try {
       // TODO: Replace with actual API call
+      // const csrfToken = getCSRFToken()
       // const response = await fetch('/api/family/profile', {
       //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken, },
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'X-CSRF-Token': csrfToken,
+      //   },
       //   body: JSON.stringify(formData)
       // })
       // if (!response.ok) throw new Error('Failed to save profile')

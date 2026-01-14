@@ -11,8 +11,6 @@ import { XMarkIcon, ArrowDownTrayIcon, MagnifyingGlassPlusIcon, MagnifyingGlassM
 import { toast } from 'react-hot-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { getCSRFToken, initCSRFProtection } from '@/lib/csrf'
-
-import { getCSRFToken } from '@/lib/csrf'
 interface DocumentPreviewModalProps {
   isOpen: boolean
   onClose: () => void
