@@ -5,23 +5,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { auth as firebaseAdmin } from 'firebase-admin'
-import { initializeApp, getApps, cert } from 'firebase-admin/app'
-
-// Initialize Firebase Admin SDK
-if (!getApps().length) {
-  try {
-    initializeApp({
-      credential: cert({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      }),
-    })
-  } catch (error) {
-    console.error('Firebase Admin initialization error:', error)
-  }
-}
+import { getAdminAuth } from './firebase-admin'
 
 /**
  * Verify admin access from request
@@ -45,7 +29,8 @@ export async function verifyAdmin(request: NextRequest): Promise<{
     }
 
     // Verify the token
-    const decodedToken = await firebaseAdmin().verifyIdToken(token)
+    const auth = getAdminAuth()
+    const decodedToken = await auth.verifyIdToken(token)
 
     // Check for admin custom claim or super admin email
     const isAdmin =
@@ -84,7 +69,8 @@ export async function verifyAuth(request: NextRequest): Promise<{
       return { isAuthenticated: false }
     }
 
-    const decodedToken = await firebaseAdmin().verifyIdToken(token)
+    const auth = getAdminAuth()
+    const decodedToken = await auth.verifyIdToken(token)
 
     return {
       isAuthenticated: true,
