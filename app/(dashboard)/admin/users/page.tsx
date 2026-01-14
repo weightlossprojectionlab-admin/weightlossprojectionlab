@@ -90,6 +90,7 @@ export default function AdminUsersPage() {
 
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const params = new URLSearchParams()
       params.set('limit', '50')
       if (pageToken) params.set('pageToken', pageToken)
@@ -138,6 +139,7 @@ export default function AdminUsersPage() {
 
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users?q=${encodeURIComponent(searchQuery)}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -209,6 +211,7 @@ export default function AdminUsersPage() {
     setActionLoading(true)
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: {
@@ -244,6 +247,7 @@ export default function AdminUsersPage() {
     setActionLoading(true)
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: {
@@ -279,6 +283,7 @@ export default function AdminUsersPage() {
     setActionLoading(true)
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users/export?uid=${uid}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -319,6 +324,7 @@ export default function AdminUsersPage() {
     setActionLoading(true)
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch('/api/admin/users', {
         method: 'DELETE',
         headers: {
@@ -665,6 +671,7 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
     try {
       setLoadingMembers(true)
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users/${user.uid}/family-members`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -682,6 +689,7 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
 
   const loadPatients = async () => {
     const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
     try {
       // Use admin API to get patients
       const response = await fetch(`/api/admin/users/${user.uid}/patients`, {
@@ -729,6 +737,7 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
 
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users/${user.uid}/add-caregiver`, {
         method: 'POST',
         headers: {
@@ -787,6 +796,7 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
 
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users/${user.uid}/update-caregiver`, {
         method: 'PATCH',
         headers: {
@@ -824,6 +834,7 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
     setLoading(true)
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users/${user.uid}/remove-caregiver`, {
         method: 'DELETE',
         headers: {

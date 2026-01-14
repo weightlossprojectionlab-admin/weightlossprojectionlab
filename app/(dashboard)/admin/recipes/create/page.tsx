@@ -238,6 +238,7 @@ export default function CreateRecipePage() {
 
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const nutrition = calculateNutrition()
 
       const recipeData = {

@@ -103,6 +103,7 @@ export default function ProductEditPage() {
 
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/products/${barcode}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -138,6 +139,7 @@ export default function ProductEditPage() {
 
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/products/${barcode}`, {
         method: 'PUT',
         headers: {
@@ -180,6 +182,7 @@ export default function ProductEditPage() {
 
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/products/${barcode}/fetch-nutrition`, {
         method: 'POST',
         headers: {

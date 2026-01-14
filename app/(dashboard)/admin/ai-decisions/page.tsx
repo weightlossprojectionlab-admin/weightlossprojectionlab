@@ -124,6 +124,7 @@ export default function AIDecisionsPage() {
     setActionLoading(true)
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/ai-decisions/${decisionId}/review`, {
         method: 'POST',
         headers: {

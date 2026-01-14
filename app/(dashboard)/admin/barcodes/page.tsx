@@ -71,6 +71,7 @@ export default function BarcodesManagementPage() {
 
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/products?limit=500`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -165,6 +166,7 @@ export default function BarcodesManagementPage() {
 
     try {
       const token = await getAuthToken()
+      const csrfToken = getCSRFToken()
       const barcodes = Array.from(selectedProducts)
 
       const response = await fetch(`/api/admin/products/fetch-nutrition-bulk`, {
