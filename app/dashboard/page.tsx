@@ -9,7 +9,6 @@ import DashboardRouter from '@/components/auth/DashboardRouter'
 import { DashboardErrorBoundary } from '@/components/error/DashboardErrorBoundary'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PlateauDetectionEmpty } from '@/components/ui/EmptyState'
-import { SubscriptionPaywall } from '@/components/subscription/SubscriptionPaywall'
 import { RecipeQueue } from '@/components/ui/RecipeQueue'
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
 import { NotificationPrompt } from '@/components/ui/NotificationPrompt'
@@ -840,13 +839,11 @@ export default function DashboardPage() {
   return (
     <AuthGuard>
       <DashboardRouter>
-        <SubscriptionPaywall>
-          <StepTrackingProvider>
-            <DashboardErrorBoundary>
-              <DashboardContent />
-            </DashboardErrorBoundary>
-          </StepTrackingProvider>
-        </SubscriptionPaywall>
+        <StepTrackingProvider>
+          <DashboardErrorBoundary>
+            <DashboardContent />
+          </DashboardErrorBoundary>
+        </StepTrackingProvider>
       </DashboardRouter>
     </AuthGuard>
   )

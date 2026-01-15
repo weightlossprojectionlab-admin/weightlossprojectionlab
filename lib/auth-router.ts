@@ -123,16 +123,16 @@ export async function determineUserDestination(
     // Step 4: Check subscription status (block expired/canceled users)
     const subscription = profile.subscription
     if (subscription && (subscription.status === 'expired' || subscription.status === 'canceled')) {
-      logger.warn('[AuthRouter] User has expired/canceled subscription', {
+      logger.warn('[AuthRouter] User has expired/canceled subscription - BLOCKING ACCESS', {
         userId: user.uid,
-        status: subscription.status
+        status: subscription.status,
+        currentPath
       })
 
-      // Redirect to pricing page (paywall)
+      // IMMEDIATELY block access to all protected pages
       if (currentPath !== '/pricing' && currentPath !== '/auth') {
-        logger.debug('[AuthRouter] Redirecting to pricing (expired subscription)')
-        // For now, let them stay but features will be blocked by feature gates
-        // In the future, you could add: return { type: 'pricing', reason: 'Subscription expired' }
+        logger.debug('[AuthRouter] Redirecting expired user to /auth')
+        return { type: 'auth', reason: 'Subscription expired - upgrade required' }
       }
     }
 

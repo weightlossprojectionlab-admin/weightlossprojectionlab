@@ -6,7 +6,7 @@ import { userProfileOperations } from '@/lib/firebase-operations'
 import { DEFAULT_GOALS, createDefaultProfile } from '@/lib/default-profile'
 import { logger } from '@/lib/logger'
 import { db } from '@/lib/firebase'
-import { doc, onSnapshot } from 'firebase/firestore'
+import { doc, onSnapshot, getDoc } from 'firebase/firestore'
 
 export interface UserProfileData {
   goals?: any
@@ -88,16 +88,17 @@ export function useUserProfile() {
       return
     }
 
-    logger.debug('[useUserProfile] Setting up real-time listener', { userId: currentUser.uid })
+    logger.debug('[useUserProfile] Setting up subscription check', { userId: currentUser.uid })
 
-    // Listen for real-time changes to user profile
     const userDocRef = doc(db, 'users', currentUser.uid)
-    const unsubscribe = onSnapshot(
-      userDocRef,
-      (docSnapshot) => {
-        if (docSnapshot.exists()) {
-          const data = docSnapshot.data() as UserProfileData
-          logger.debug('[useUserProfile] Real-time update received', {
+
+    // CRITICAL FIX: Synchronous fetch first to prevent race condition
+    const initializeProfile = async () => {
+      try {
+        const docSnap = await getDoc(userDocRef)
+        if (docSnap.exists()) {
+          const data = docSnap.data() as UserProfileData
+          logger.debug('[useUserProfile] Initial sync fetch complete', {
             subscriptionStatus: data.subscription?.status
           })
           setProfile(data)
@@ -107,11 +108,30 @@ export function useUserProfile() {
           logger.warn('[useUserProfile] User document does not exist, creating...')
           fetchProfile()
         }
+      } catch (error) {
+        logger.error('[useUserProfile] Error fetching profile:', error)
+        setError(error as Error)
+        setLoading(false)
+      }
+    }
+
+    initializeProfile()
+
+    // THEN set up real-time listener for updates
+    const unsubscribe = onSnapshot(
+      userDocRef,
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data() as UserProfileData
+          logger.debug('[useUserProfile] Real-time update received', {
+            subscriptionStatus: data.subscription?.status
+          })
+          setProfile(data)
+        }
       },
       (error) => {
         logger.error('[useUserProfile] Real-time listener error:', error)
         setError(error)
-        setLoading(false)
       }
     )
 
