@@ -373,7 +373,6 @@ function DashboardContent() {
   }, [userPrefs.getAllFeatures])
 
   return (
-    <SubscriptionPaywall>
       <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Offline Indicator */}
       <OfflineIndicator />
@@ -841,13 +840,14 @@ export default function DashboardPage() {
   return (
     <AuthGuard>
       <DashboardRouter>
-        <StepTrackingProvider>
-          <DashboardErrorBoundary>
-            <DashboardContent />
-          </DashboardErrorBoundary>
-        </StepTrackingProvider>
+        <SubscriptionPaywall>
+          <StepTrackingProvider>
+            <DashboardErrorBoundary>
+              <DashboardContent />
+            </DashboardErrorBoundary>
+          </StepTrackingProvider>
+        </SubscriptionPaywall>
       </DashboardRouter>
-    </SubscriptionPaywall>
     </AuthGuard>
   )
 }
