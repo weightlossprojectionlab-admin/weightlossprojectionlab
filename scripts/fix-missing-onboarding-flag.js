@@ -45,14 +45,29 @@ async function fixMissingOnboardingFlags() {
       if (completedAt && !onboardingCompleted) {
         // User completed onboarding but flag is missing!
         console.log(`❌ ${userData.email || userId}: Missing onboardingCompleted flag`)
-        console.log(`   Completed onboarding at: ${completedAt.toDate().toISOString()}`)
+
+        // Handle both Firestore Timestamp and regular Date objects
+        let completedAtTimestamp = completedAt
+        if (completedAt.toDate && typeof completedAt.toDate === 'function') {
+          console.log(`   Completed onboarding at: ${completedAt.toDate().toISOString()}`)
+        } else if (completedAt instanceof Date) {
+          console.log(`   Completed onboarding at: ${completedAt.toISOString()}`)
+          completedAtTimestamp = admin.firestore.Timestamp.fromDate(completedAt)
+        } else if (typeof completedAt === 'string') {
+          const dateObj = new Date(completedAt)
+          console.log(`   Completed onboarding at: ${dateObj.toISOString()}`)
+          completedAtTimestamp = admin.firestore.Timestamp.fromDate(dateObj)
+        } else {
+          console.log(`   Completed onboarding at: ${new Date().toISOString()}`)
+          completedAtTimestamp = admin.firestore.Timestamp.now()
+        }
 
         // Fix it
         await db.collection('users').doc(userId).set(
           {
             profile: {
               onboardingCompleted: true,
-              onboardingCompletedAt: completedAt // Use their original completion time
+              onboardingCompletedAt: completedAtTimestamp // Use their original completion time
             }
           },
           { merge: true }
