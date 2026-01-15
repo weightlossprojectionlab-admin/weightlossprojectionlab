@@ -230,15 +230,19 @@ export function canAccessFeature(user: User | null, feature: string): boolean {
     return subscription.status === 'active' || subscription.status === 'trialing'
   }
 
-  // Check plan-gated features
+  // Check plan-gated features (must have active/trialing subscription)
   if (PLAN_FEATURES[feature]) {
-    return PLAN_FEATURES[feature].includes(subscription.plan)
+    const hasRequiredPlan = PLAN_FEATURES[feature].includes(subscription.plan)
+    const hasActiveSubscription = subscription.status === 'active' || subscription.status === 'trialing'
+    return hasRequiredPlan && hasActiveSubscription
   }
 
-  // Check addon-gated features
+  // Check addon-gated features (must have active/trialing subscription)
   if (ADDON_FEATURES[feature]) {
     const requiredAddon = ADDON_FEATURES[feature]
-    return subscription.addons?.[requiredAddon] === true
+    const hasAddon = subscription.addons?.[requiredAddon] === true
+    const hasActiveSubscription = subscription.status === 'active' || subscription.status === 'trialing'
+    return hasAddon && hasActiveSubscription
   }
 
   // Feature not recognized - default to denied
