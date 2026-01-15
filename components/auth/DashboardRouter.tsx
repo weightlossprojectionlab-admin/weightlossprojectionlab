@@ -42,22 +42,26 @@ export default function DashboardRouter({ children }: DashboardRouterProps) {
           case 'auth':
             logger.debug('➡️ Redirecting to /auth:', { reason: destination.reason })
             router.push('/auth')
-            break
+            // Keep checking=true to prevent dashboard render during redirect
+            return
 
           case 'onboarding':
             logger.debug('➡️ Redirecting to /onboarding:', { reason: destination.reason })
             router.push('/onboarding')
-            break
+            // Keep checking=true to prevent dashboard render during redirect
+            return
 
           case 'dashboard':
             logger.debug('➡️ Redirecting to /dashboard:', { reason: destination.reason })
             router.push('/dashboard')
-            break
+            // Keep checking=true to prevent current page render during redirect
+            return
 
           case 'patients':
             logger.debug('➡️ Redirecting to /patients:', { reason: destination.reason })
             router.push('/patients')
-            break
+            // Keep checking=true to prevent current page render during redirect
+            return
 
           case 'stay':
             logger.debug('✅ User can access protected page:', { reason: destination.reason })
