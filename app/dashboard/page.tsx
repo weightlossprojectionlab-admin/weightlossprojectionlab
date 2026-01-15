@@ -9,6 +9,7 @@ import DashboardRouter from '@/components/auth/DashboardRouter'
 import { DashboardErrorBoundary } from '@/components/error/DashboardErrorBoundary'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PlateauDetectionEmpty } from '@/components/ui/EmptyState'
+import { SubscriptionPaywall } from '@/components/subscription/SubscriptionPaywall'
 import { RecipeQueue } from '@/components/ui/RecipeQueue'
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
 import { NotificationPrompt } from '@/components/ui/NotificationPrompt'
@@ -372,7 +373,8 @@ function DashboardContent() {
   }, [userPrefs.getAllFeatures])
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <SubscriptionPaywall>
+      <main className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Offline Indicator */}
       <OfflineIndicator />
 
@@ -845,6 +847,7 @@ export default function DashboardPage() {
           </DashboardErrorBoundary>
         </StepTrackingProvider>
       </DashboardRouter>
+    </SubscriptionPaywall>
     </AuthGuard>
   )
 }
