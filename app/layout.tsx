@@ -54,6 +54,7 @@ export default function RootLayout({
       <head>
         <meta charSet="utf-8" />
         <meta name="color-scheme" content="light only" />
+        <meta name="msvalidate.01" content="4AE02DCF3B27464702CC151D52D82EC7" />
         {/* Resource hints for third-party origins */}
         <link rel="preconnect" href="https://apis.google.com" />
         <link rel="preconnect" href="https://weightlossprojectionlab-8b284.firebaseapp.com" />
