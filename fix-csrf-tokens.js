@@ -22,7 +22,6 @@ const filesToFix = [
   'app/progress/page.tsx',
   'app/fix-profile/page.tsx',
   'app/onboarding/page.tsx',
-  'app/onboarding-archive/page.tsx',
   'app/family/profile/edit/page.tsx',
   'app/family/[memberId]/page.tsx',
   'app/family/directory/page.tsx',
