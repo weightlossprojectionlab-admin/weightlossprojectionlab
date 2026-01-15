@@ -1,5 +1,6 @@
-// Service Worker for offline support
-const CACHE_NAME = 'wlpl-v5';
+// Service Worker for offline support with auto-update detection
+const VERSION = '6'; // Increment this to force update
+const CACHE_NAME = `wlpl-v${VERSION}`;
 const PHOTO_CACHE_NAME = 'wlpl-photos-v1';
 const MEDICAL_CACHE_NAME = 'wlpl-medical-v1';
 const SHOPPING_CACHE_NAME = 'wlpl-shopping-v1';
@@ -7,6 +8,7 @@ const OFFLINE_URL = '/offline.html';
 const MAX_PHOTO_CACHE_SIZE = 50; // Max number of photos to cache
 const MAX_MEDICAL_IMG_CACHE = 100; // Max medication images
 const MAX_SHOPPING_CACHE = 50; // Max shopping list items
+const UPDATE_CHECK_INTERVAL = 60000; // Check for updates every 60 seconds
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
@@ -19,7 +21,7 @@ const PRECACHE_ASSETS = [
 
 // Install event - cache essential assets
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing...');
+  console.log(`[Service Worker] Installing v${VERSION}...`);
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
       console.log('[Service Worker] Precaching assets');
@@ -40,16 +42,18 @@ self.addEventListener('install', (event) => {
       await Promise.all(cachePromises);
     })
   );
+  // Skip waiting to activate new service worker immediately
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and notify clients
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating...');
+  console.log(`[Service Worker] Activating v${VERSION}...`);
   const validCaches = [CACHE_NAME, PHOTO_CACHE_NAME, MEDICAL_CACHE_NAME, SHOPPING_CACHE_NAME];
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
+    caches.keys().then(async (cacheNames) => {
+      // Delete old caches
+      await Promise.all(
         cacheNames.map((cacheName) => {
           if (!validCaches.includes(cacheName)) {
             console.log('[Service Worker] Deleting old cache:', cacheName);
@@ -57,9 +61,23 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
+
+      // Take control of all clients immediately
+      await self.clients.claim();
+
+      // Notify all clients about the update
+      const clients = await self.clients.matchAll({ type: 'window' });
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'SW_UPDATED',
+          version: VERSION,
+          timestamp: Date.now()
+        });
+      });
+
+      console.log(`[Service Worker] v${VERSION} activated and controlling all clients`);
     })
   );
-  self.clients.claim();
 });
 
 // Helper: Cache meal photos with size limit

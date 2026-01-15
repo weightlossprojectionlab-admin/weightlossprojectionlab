@@ -128,6 +128,34 @@ const nextConfig: NextConfig = {
     }
 
     return [
+      // Prevent caching of dynamic pages (auth, onboarding, dashboard, etc.)
+      {
+        source: '/(auth|onboarding|dashboard|profile|patients|family|admin)/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          },
+          {
+            key: 'CDN-Cache-Control',
+            value: 'no-store',
+          },
+          {
+            key: 'Vercel-CDN-Cache-Control',
+            value: 'no-store',
+          },
+        ],
+      },
+      // Short cache for API routes with revalidation
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, max-age=0',
+          },
+        ],
+      },
       {
         source: '/:path*',
         headers: [

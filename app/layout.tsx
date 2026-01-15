@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { ConditionalProviders } from '@/components/ConditionalProviders'
 import { CsrfInitializer } from '@/components/CsrfInitializer'
 import { ConditionalFooter } from '@/components/ConditionalFooter'
+import { UpdateChecker } from '@/components/UpdateChecker'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 
@@ -63,6 +64,7 @@ export default function RootLayout({
       </head>
       <body className="h-full font-sans antialiased flex flex-col">
         <CsrfInitializer />
+        <UpdateChecker />
         <div className="flex-grow">
           <ConditionalProviders>{children}</ConditionalProviders>
         </div>
