@@ -26,6 +26,7 @@ import { useInstallPrompt } from '@/hooks/useInstallPrompt'
 import { useInventory } from '@/hooks/useInventory'
 import { formatProjectionDisplay } from '@/lib/weight-projection-agent'
 import { getNextMealContext, getMealCTA } from '@/lib/meal-context'
+import { isTrialActive } from '@/lib/subscription-policies'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
 import { Spinner } from '@/components/ui/Spinner'
 import { MealSuggestion } from '@/lib/meal-suggestions'
@@ -382,17 +383,7 @@ function DashboardContent() {
 
       <div className="container-narrow py-6 space-y-6">
         {/* Trial Upgrade Banner */}
-        {userProfile?.subscription?.status === 'trialing' && userProfile?.subscription?.trialEndsAt && (() => {
-          // Check if trial is still active (not expired)
-          try {
-            const trialEnd = typeof userProfile.subscription.trialEndsAt === 'object' && 'toDate' in userProfile.subscription.trialEndsAt
-              ? (userProfile.subscription.trialEndsAt as any).toDate()
-              : new Date(userProfile.subscription.trialEndsAt as any)
-            return trialEnd > new Date() // Only show if trial hasn't expired yet
-          } catch {
-            return false
-          }
-        })() && (
+        {userProfile?.subscription?.status === 'trialing' && isTrialActive(userProfile?.subscription?.trialEndsAt) && (
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-2xl p-6 text-white">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex-1">

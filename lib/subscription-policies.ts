@@ -163,6 +163,25 @@ export function isInTrialPeriod(
 }
 
 /**
+ * Check if trial is still active (not expired)
+ * Handles both Firestore Timestamp objects and Date objects
+ */
+export function isTrialActive(trialEndsAt?: Date | any): boolean {
+  if (!trialEndsAt) return false
+
+  try {
+    // Handle Firestore Timestamp objects
+    const date = typeof trialEndsAt === 'object' && 'toDate' in trialEndsAt && typeof trialEndsAt.toDate === 'function'
+      ? trialEndsAt.toDate()
+      : new Date(trialEndsAt)
+
+    return date > new Date()
+  } catch {
+    return false
+  }
+}
+
+/**
  * Check if trial is expiring soon (within reminder window)
  */
 export function isTrialExpiringSoon(trialEndsAt?: Date): boolean {

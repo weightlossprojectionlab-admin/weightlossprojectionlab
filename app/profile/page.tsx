@@ -23,6 +23,7 @@ import { HealthSyncCard } from '@/components/health/HealthSyncCard'
 import { HealthConnectModal } from '@/components/health/HealthConnectModal'
 import { detectPlatform, getHealthAppForPlatform } from '@/lib/health-sync-utils'
 import { logger } from '@/lib/logger'
+import { isTrialActive } from '@/lib/subscription-policies'
 import { useSubscription } from '@/hooks/useSubscription'
 import { usePatientLimit } from '@/hooks/usePatientLimit'
 import { PlanBadge } from '@/components/subscription/PlanBadge'
@@ -656,7 +657,7 @@ function ProfileContent() {
               </div>
 
               {/* Trial Info with Upgrade CTA */}
-              {subscription.trialEndsAt && subscription.status === 'trialing' && (
+              {subscription.status === 'trialing' && isTrialActive(subscription.trialEndsAt) && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
