@@ -75,36 +75,9 @@ function shouldBypassCsrf(pathname: string): boolean {
 /**
  * Main middleware function (Next.js 15+ pattern)
  */
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const method = request.method
-
-  // CRITICAL: Check subscription status for protected pages
-  // This runs at the edge BEFORE any client code executes
-  const protectedPaths = ['/dashboard', '/profile', '/meals', '/shopping', '/medical', '/family']
-  const isProtectedPage = protectedPaths.some(path => pathname.startsWith(path))
-
-  if (isProtectedPage) {
-    // Get auth token from cookie
-    const authToken = request.cookies.get('__session')?.value
-
-    if (authToken) {
-      // Check subscription status via admin SDK (server-side)
-      try {
-        // Import dynamically to avoid bundling issues
-        const { checkSubscriptionStatus } = await import('@/lib/subscription-check')
-        const { isAllowed, redirectTo } = await checkSubscriptionStatus(authToken)
-
-        if (!isAllowed && redirectTo) {
-          logger.warn('[Middleware] Blocking expired user at edge', { pathname, redirectTo })
-          return NextResponse.redirect(new URL(redirectTo, request.url))
-        }
-      } catch (error) {
-        logger.error('[Middleware] Error checking subscription', error as Error)
-        // On error, allow through (client-side will catch it)
-      }
-    }
-  }
 
   // Development bypass (from sec-005)
   if (isDevelopmentBypass) {
@@ -117,7 +90,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Only apply CSRF to API routes
+  // Only apply to API routes
   if (!pathname.startsWith('/api')) {
     return NextResponse.next()
   }
@@ -206,15 +179,7 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next()
 }
 
-// Apply middleware to API routes AND protected pages
+// Apply proxy only to API routes
 export const config = {
-  matcher: [
-    '/api/:path*',
-    '/dashboard/:path*',
-    '/profile/:path*',
-    '/meals/:path*',
-    '/shopping/:path*',
-    '/medical/:path*',
-    '/family/:path*',
-  ],
+  matcher: '/api/:path*',
 }
