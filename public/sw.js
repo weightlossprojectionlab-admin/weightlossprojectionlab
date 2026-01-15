@@ -1,5 +1,5 @@
 // Service Worker for offline support
-const CACHE_NAME = 'wlpl-v4';
+const CACHE_NAME = 'wlpl-v5';
 const PHOTO_CACHE_NAME = 'wlpl-photos-v1';
 const MEDICAL_CACHE_NAME = 'wlpl-medical-v1';
 const SHOPPING_CACHE_NAME = 'wlpl-shopping-v1';
@@ -10,21 +10,34 @@ const MAX_SHOPPING_CACHE = 50; // Max shopping list items
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
-  '/',
   '/offline.html',
   '/manifest.json',
   '/favicon.svg',
-  '/icon-192x192.svg',
-  '/icon-512x512.svg',
+  '/icon-192x192.png',
+  '/icon-512x512.png',
 ];
 
 // Install event - cache essential assets
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installing...');
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_NAME).then(async (cache) => {
       console.log('[Service Worker] Precaching assets');
-      return cache.addAll(PRECACHE_ASSETS);
+      // Cache assets individually to handle failures gracefully
+      const cachePromises = PRECACHE_ASSETS.map(async (url) => {
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            await cache.put(url, response);
+            console.log('[Service Worker] Cached:', url);
+          } else {
+            console.warn('[Service Worker] Failed to cache (non-200):', url, response.status);
+          }
+        } catch (error) {
+          console.warn('[Service Worker] Failed to cache:', url, error);
+        }
+      });
+      await Promise.all(cachePromises);
     })
   );
   self.skipWaiting();
