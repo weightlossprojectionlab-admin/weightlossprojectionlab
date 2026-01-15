@@ -220,48 +220,14 @@ export function canAccessFeature(user: User | null, feature: string): boolean {
   }
 
   // Non-grandfathered users: Check subscription status
-  // Expired or canceled subscriptions can't access features
+  // Trust server-side status updates from webhooks/cron - no client-side date checking
   if (subscription.status === 'expired' || subscription.status === 'canceled') {
     return false
   }
 
-  // Check if trial has actually expired (even if status is still 'trialing')
-  if (subscription.status === 'trialing' && subscription.trialEndsAt) {
-    try {
-      const trialEnd = typeof subscription.trialEndsAt === 'object' && 'toDate' in subscription.trialEndsAt
-        ? (subscription.trialEndsAt as any).toDate()
-        : new Date(subscription.trialEndsAt as any)
-
-      if (trialEnd <= new Date()) {
-        // Trial has expired - treat as expired subscription
-        return false
-      }
-    } catch (error) {
-      console.error('[FeatureGates] Error checking trial expiration:', error)
-      // On error, allow access for now (fail open for trials)
-    }
-  }
-
   // Check basic features (available to all active/trialing plans)
   if (BASIC_FEATURES.includes(feature)) {
-    if (subscription.status === 'active') return true
-
-    // For trialing status, verify trial hasn't expired
-    if (subscription.status === 'trialing') {
-      if (!subscription.trialEndsAt) return true // No expiry date set, allow access
-
-      try {
-        const trialEnd = typeof subscription.trialEndsAt === 'object' && 'toDate' in subscription.trialEndsAt
-          ? (subscription.trialEndsAt as any).toDate()
-          : new Date(subscription.trialEndsAt as any)
-
-        return trialEnd > new Date() // Only allow if trial is still active
-      } catch {
-        return true // On error, allow access (fail open for trials)
-      }
-    }
-
-    return false
+    return subscription.status === 'active' || subscription.status === 'trialing'
   }
 
   // Check plan-gated features

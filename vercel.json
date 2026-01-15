@@ -8,5 +8,11 @@
     "app/api/**/*.ts": {
       "maxDuration": 30
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/check-expired-trials",
+      "schedule": "0 */6 * * *"
+    }
+  ]
 }

@@ -26,7 +26,6 @@ import { useInstallPrompt } from '@/hooks/useInstallPrompt'
 import { useInventory } from '@/hooks/useInventory'
 import { formatProjectionDisplay } from '@/lib/weight-projection-agent'
 import { getNextMealContext, getMealCTA } from '@/lib/meal-context'
-import { isTrialActive } from '@/lib/subscription-policies'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
 import { Spinner } from '@/components/ui/Spinner'
 import { MealSuggestion } from '@/lib/meal-suggestions'
@@ -383,7 +382,7 @@ function DashboardContent() {
 
       <div className="container-narrow py-6 space-y-6">
         {/* Trial Upgrade Banner */}
-        {userProfile?.subscription?.status === 'trialing' && isTrialActive(userProfile?.subscription?.trialEndsAt) && (
+        {userProfile?.subscription?.status === 'trialing' && (
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-2xl p-6 text-white">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex-1">
