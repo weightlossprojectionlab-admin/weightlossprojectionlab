@@ -23,6 +23,15 @@ export function SubscriptionPaywall({ children }: SubscriptionPaywallProps) {
   const isCanceled = subscription?.status === 'canceled'
   const isBlocked = isExpired || isCanceled
 
+  // Debug logging
+  useEffect(() => {
+    if (subscription) {
+      console.log('[SubscriptionPaywall] Subscription status:', subscription.status)
+      console.log('[SubscriptionPaywall] Is blocked:', isBlocked)
+      console.log('[SubscriptionPaywall] Full subscription:', subscription)
+    }
+  }, [subscription, isBlocked])
+
   // Show loading state
   if (loading) {
     return (
