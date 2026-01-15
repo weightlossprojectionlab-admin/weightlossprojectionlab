@@ -5,11 +5,14 @@ import { auth } from '@/lib/auth'
 import { userProfileOperations } from '@/lib/firebase-operations'
 import { DEFAULT_GOALS, createDefaultProfile } from '@/lib/default-profile'
 import { logger } from '@/lib/logger'
+import { db } from '@/lib/firebase'
+import { doc, onSnapshot } from 'firebase/firestore'
 
 export interface UserProfileData {
   goals?: any
   preferences?: any
   profile?: any
+  subscription?: any
   [key: string]: any
 }
 
@@ -77,8 +80,46 @@ export function useUserProfile() {
     }
   }, [])
 
+  // Set up real-time listener for subscription changes
   useEffect(() => {
-    fetchProfile()
+    const currentUser = auth.currentUser
+    if (!currentUser) {
+      setLoading(false)
+      return
+    }
+
+    logger.debug('[useUserProfile] Setting up real-time listener', { userId: currentUser.uid })
+
+    // Listen for real-time changes to user profile
+    const userDocRef = doc(db, 'users', currentUser.uid)
+    const unsubscribe = onSnapshot(
+      userDocRef,
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data() as UserProfileData
+          logger.debug('[useUserProfile] Real-time update received', {
+            subscriptionStatus: data.subscription?.status
+          })
+          setProfile(data)
+          setLoading(false)
+        } else {
+          // Document doesn't exist, try to create it
+          logger.warn('[useUserProfile] User document does not exist, creating...')
+          fetchProfile()
+        }
+      },
+      (error) => {
+        logger.error('[useUserProfile] Real-time listener error:', error)
+        setError(error)
+        setLoading(false)
+      }
+    )
+
+    // Clean up listener on unmount
+    return () => {
+      logger.debug('[useUserProfile] Cleaning up real-time listener')
+      unsubscribe()
+    }
   }, [fetchProfile])
 
   return {

@@ -15,10 +15,10 @@ interface SubscriptionPaywallProps {
  * Displays upgrade prompt instead of protected content
  */
 export function SubscriptionPaywall({ children }: SubscriptionPaywallProps) {
-  const { userProfile, loading } = useUserProfile()
+  const { profile, loading } = useUserProfile()
   const router = useRouter()
 
-  const subscription = userProfile?.subscription
+  const subscription = profile?.subscription
   const isExpired = subscription?.status === 'expired'
   const isCanceled = subscription?.status === 'canceled'
   const isBlocked = isExpired || isCanceled
