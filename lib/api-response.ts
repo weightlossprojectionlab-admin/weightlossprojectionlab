@@ -33,6 +33,22 @@ export function errorResponse(
   // ALWAYS log full error details server-side
   logger.error('API error', error as Error, context)
 
+  const errorObj = error as any
+
+  // Detect Firebase auth errors → return 401 instead of 500
+  // These occur when a token is invalid, expired, or revoked
+  const isAuthError = errorObj?.code && (
+    String(errorObj.code).startsWith('auth/') ||
+    errorObj.code === 'TOKEN_INVALID'
+  )
+
+  if (isAuthError) {
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized', code: 'TOKEN_INVALID' },
+      { status: 401 }
+    )
+  }
+
   // Production: Return sanitized generic message
   if (process.env.NODE_ENV === 'production') {
     // Generate error code for debugging without exposing internals
@@ -51,7 +67,6 @@ export function errorResponse(
   }
 
   // Development: Return full details for debugging
-  const errorObj = error as Error
   return NextResponse.json(
     {
       success: false,

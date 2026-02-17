@@ -1,5 +1,6 @@
 /**
- * CSRF Protection Middleware
+ * CSRF Protection Proxy (Next.js 16+)
+ * Previously middleware.ts - renamed to proxy.ts per Next.js 16 convention
  *
  * Validates CSRF tokens for unsafe HTTP methods (POST/PUT/PATCH/DELETE) using
  * the double-submit cookie pattern.
