@@ -204,6 +204,9 @@ export default function PricingPage() {
 
     if (!user) return 'Get Started'
 
+    // Trialing users haven't paid yet — every plan is a new subscription
+    if (isTrialing) return 'Subscribe Now'
+
     // Plan tier hierarchy: free < single < single_plus < family_basic < family_plus < family_premium
     const planTiers: Record<SubscriptionPlan, number> = {
       free: 0,
@@ -216,11 +219,6 @@ export default function PricingPage() {
 
     const currentTier = planTiers[currentPlan as SubscriptionPlan] ?? 0
     const targetTier = planTiers[targetPlan]
-
-    // Trialing users: show "Subscribe Now" for their trial plan, upgrade options for others
-    if (isTrialing && targetPlan === currentPlan) {
-      return 'Subscribe Now'
-    }
 
     // Users without a subscription (free state) can start a trial
     if (!currentPlan || currentPlan === 'free') {

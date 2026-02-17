@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useUserProfile } from '@/hooks/useUserProfile'
 
@@ -17,11 +17,24 @@ interface SubscriptionPaywallProps {
 export function SubscriptionPaywall({ children }: SubscriptionPaywallProps) {
   const { profile, loading } = useUserProfile()
   const router = useRouter()
+  const [portalLoading, setPortalLoading] = useState(false)
 
   const subscription = profile?.subscription
   const isExpired = subscription?.status === 'expired'
   const isCanceled = subscription?.status === 'canceled'
   const isBlocked = isExpired || isCanceled
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true)
+    try {
+      const { createPortalSession } = await import('@/lib/stripe-client')
+      await createPortalSession(window.location.href)
+    } catch (error: any) {
+      alert(error?.message || 'Failed to open subscription management. Please try again.')
+    } finally {
+      setPortalLoading(false)
+    }
+  }
 
   // Debug logging
   useEffect(() => {
@@ -107,12 +120,23 @@ export function SubscriptionPaywall({ children }: SubscriptionPaywallProps) {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href="/pricing"
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
-              >
-                View Plans & Pricing
-              </Link>
+              {/* Previously-paid users can reactivate via Stripe Customer Portal */}
+              {subscription?.stripeCustomerId ? (
+                <button
+                  onClick={handleManageSubscription}
+                  disabled={portalLoading}
+                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {portalLoading ? 'Loading...' : 'Manage Subscription'}
+                </button>
+              ) : (
+                <Link
+                  href="/pricing"
+                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                >
+                  View Plans & Pricing
+                </Link>
+              )}
 
               <button
                 onClick={() => router.push('/auth')}
