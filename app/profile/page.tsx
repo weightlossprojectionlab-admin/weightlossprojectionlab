@@ -269,6 +269,46 @@ function ProfileContent() {
     }
   }
 
+  const handleSendVitalTestNotification = async (vitalType: string) => {
+    try {
+      const auth = getAuth()
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) {
+        toast.error('Please sign in to send a test notification')
+        return
+      }
+
+      const typeMap: Record<string, string> = {
+        weight: 'weight_reminder',
+        bloodPressure: 'general',
+        glucose: 'general',
+        heartRate: 'general',
+        temperature: 'general',
+        oxygenSaturation: 'general',
+      }
+
+      const csrfToken = getCSRFToken()
+      const response = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({ type: typeMap[vitalType] || 'general' }),
+      })
+
+      const result = await response.json()
+      if (response.ok) {
+        toast.success('Test reminder sent! Check your notifications.')
+      } else {
+        toast.error(result.error || 'Failed to send test reminder')
+      }
+    } catch (error) {
+      toast.error('Failed to send test reminder')
+    }
+  }
+
   const handleSendTestNotification = async () => {
     setSendingTestNotif(true)
     try {
@@ -1022,6 +1062,12 @@ function ProfileContent() {
                       <p className="text-description-sm mt-2">
                         You'll be reminded to log your {VITAL_DISPLAY_NAMES[vitalType].toLowerCase()} when it's due
                       </p>
+                      <button
+                        onClick={() => handleSendVitalTestNotification(vitalType)}
+                        className="mt-3 text-sm px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
+                      >
+                        🔔 Send Test Reminder
+                      </button>
                     </div>
                   )}
                 </div>

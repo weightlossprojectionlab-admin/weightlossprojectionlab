@@ -67,16 +67,56 @@ export async function POST(request: NextRequest) {
 
     const fcmToken = tokenDoc.data()!.token
 
+    // Parse optional body for notification type
+    let notificationType = 'general'
+    try {
+      const body = await request.json()
+      notificationType = body?.type || 'general'
+    } catch {
+      // No body or invalid JSON — use general
+    }
+
+    // Type-specific notification messages
+    const notificationMessages: Record<string, { title: string; body: string; link: string }> = {
+      weight_reminder: {
+        title: '⚖️ Time to weigh in!',
+        body: 'Log your weight today to stay on track with your goals.',
+        link: '/dashboard',
+      },
+      meal_reminder: {
+        title: '🍽️ Meal reminder',
+        body: 'Don\'t forget to log your meal to track your nutrition.',
+        link: '/dashboard',
+      },
+      medication_reminder: {
+        title: '💊 Medication reminder',
+        body: 'Time to take your medication.',
+        link: '/dashboard',
+      },
+      appointment_reminder: {
+        title: '📅 Appointment reminder',
+        body: 'You have an upcoming appointment.',
+        link: '/dashboard',
+      },
+      general: {
+        title: '🎉 Test Notification',
+        body: 'Your notifications are working! You\'ll receive helpful reminders to stay on track.',
+        link: '/dashboard',
+      },
+    }
+
+    const notif = notificationMessages[notificationType] ?? notificationMessages.general
+
     // Send test notification using FCM Admin SDK
     const message = {
       notification: {
-        title: '🎉 Test Notification',
-        body: 'Your notifications are working! You\'ll receive helpful reminders to stay on track.',
+        title: notif.title,
+        body: notif.body,
       },
       token: fcmToken,
       webpush: {
         fcmOptions: {
-          link: '/dashboard' // Where to navigate when clicked
+          link: notif.link,
         }
       }
     }
