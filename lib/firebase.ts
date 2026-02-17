@@ -16,61 +16,80 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
+// Skip Firebase initialization during build time (env vars not available)
+const hasFirebaseConfig = !!(
+  firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
+  firebaseConfig.projectId
+)
+
 // Initialize Firebase app (avoid duplicate initialization)
 let app: FirebaseApp
-try {
-  app = getApps().length > 0 ? getApps()[0]! : initializeApp(firebaseConfig)
-  logger.info('Firebase app initialized successfully')
-} catch (error) {
-  logger.error('Failed to initialize Firebase app', error as Error)
-  throw new Error('Firebase initialization failed')
-}
-
-// Initialize Firebase services with error handling
 let auth: Auth
 let db: Firestore
 let storage: FirebaseStorage
 let messaging: Messaging | null = null
 
-try {
-  auth = getAuth(app)
+if (!hasFirebaseConfig) {
+  // Build time or missing env vars — skip initialization
+  logger.warn('Firebase config missing — skipping initialization (build time or env vars not set)')
+  // @ts-expect-error intentionally undefined during build
+  app = undefined
+  // @ts-expect-error intentionally undefined during build
+  auth = undefined
+  // @ts-expect-error intentionally undefined during build
+  db = undefined
+  // @ts-expect-error intentionally undefined during build
+  storage = undefined
+} else {
+  try {
+    app = getApps().length > 0 ? getApps()[0]! : initializeApp(firebaseConfig)
+    logger.info('Firebase app initialized successfully')
+  } catch (error) {
+    logger.error('Failed to initialize Firebase app', error as Error)
+    throw new Error('Firebase initialization failed')
+  }
 
-  // Initialize Firestore with modern cache API (supports multi-tab)
-  if (!isServer()) {
-    try {
-      db = initializeFirestore(app, {
-        localCache: persistentLocalCache({
-          tabManager: persistentMultipleTabManager()
+  try {
+    auth = getAuth(app)
+
+    // Initialize Firestore with modern cache API (supports multi-tab)
+    if (!isServer()) {
+      try {
+        db = initializeFirestore(app, {
+          localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager()
+          })
         })
-      })
-      logger.info('Firestore initialized with multi-tab persistent cache')
-    } catch (error) {
-      // Fallback to default if already initialized
+        logger.info('Firestore initialized with multi-tab persistent cache')
+      } catch (error) {
+        // Fallback to default if already initialized
+        db = getFirestore(app)
+        logger.warn('Using default Firestore instance (already initialized)')
+      }
+    } else {
       db = getFirestore(app)
-      logger.warn('Using default Firestore instance (already initialized)')
     }
-  } else {
-    db = getFirestore(app)
+
+    storage = getStorage(app)
+
+    // Enable auth persistence (keep user signed in across browser sessions)
+    // Skip on server-side rendering to prevent crashes
+    if (!isServer()) {
+      setPersistence(auth, browserLocalPersistence)
+        .then(() => {
+          logger.info('Firebase Auth persistence enabled (browserLocalPersistence)')
+        })
+        .catch((err) => {
+          logger.error('Failed to set auth persistence', err as Error)
+        })
+    }
+
+    logger.info('Firebase services initialized successfully')
+  } catch (error) {
+    logger.error('Failed to initialize Firebase services', error as Error)
+    throw new Error('Firebase services initialization failed')
   }
-
-  storage = getStorage(app)
-
-  // Enable auth persistence (keep user signed in across browser sessions)
-  // Skip on server-side rendering to prevent crashes
-  if (!isServer()) {
-    setPersistence(auth, browserLocalPersistence)
-      .then(() => {
-        logger.info('Firebase Auth persistence enabled (browserLocalPersistence)')
-      })
-      .catch((err) => {
-        logger.error('Failed to set auth persistence', err as Error)
-      })
-  }
-
-  logger.info('Firebase services initialized successfully')
-} catch (error) {
-  logger.error('Failed to initialize Firebase services', error as Error)
-  throw new Error('Firebase services initialization failed')
 }
 
 // Initialize Firebase Cloud Messaging (client-side only)
