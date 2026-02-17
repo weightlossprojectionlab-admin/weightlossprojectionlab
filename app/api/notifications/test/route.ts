@@ -7,13 +7,6 @@ import { errorResponse } from '@/lib/api-response'
  * POST /api/notifications/test
  */
 export async function POST(request: NextRequest) {
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json(
-      { error: 'Not available in production' },
-      { status: 403 }
-    );
-  }
-
   try {
     logger.debug('[Test Notification] Starting...')
 
@@ -38,11 +31,11 @@ export async function POST(request: NextRequest) {
       admin = await import('firebase-admin')
       logger.debug('[Test Notification] Firebase Admin imported')
     } catch (error) {
-    return errorResponse(error, {
-      route: '/api/notifications/test',
-      operation: 'create'
-    })
-  }
+      return errorResponse(error, {
+        route: '/api/notifications/test',
+        operation: 'create'
+      })
+    }
 
     // Verify token
     let decodedToken
@@ -50,37 +43,29 @@ export async function POST(request: NextRequest) {
       decodedToken = await adminAuth.verifyIdToken(idToken)
       logger.debug('[Test Notification] Token verified', { userId: decodedToken.uid })
     } catch (error) {
-    return errorResponse(error, {
-      route: '/api/notifications/test',
-      operation: 'create'
-    })
-  }
+      return errorResponse(error, {
+        route: '/api/notifications/test',
+        operation: 'create'
+      })
+    }
 
     const userId = decodedToken.uid
 
-    // Fetch user data from Firestore
-    const userDoc = await adminDb.collection('users').doc(userId).get()
-    if (!userDoc.exists) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
+    // Fetch FCM token from notification_tokens collection (correct path)
+    const tokenDoc = await adminDb.collection('notification_tokens').doc(userId).get()
 
-    const userData = userDoc.data()
-
-    if (!userData?.notificationToken) {
+    if (!tokenDoc.exists || !tokenDoc.data()?.token) {
       logger.warn('[Test Notification] No notification token found', { userId })
       return NextResponse.json(
         {
-          error: 'No notification token found. Please enable notifications on the dashboard first.',
-          hint: 'Look for the notification prompt on your dashboard and click "Enable Notifications"'
+          error: 'No notification token found. Please enable notifications in your Profile settings first.',
+          hint: 'Go to Profile → Notifications and click "Enable Notifications"'
         },
         { status: 400 }
       )
     }
 
-    const fcmToken = userData.notificationToken
+    const fcmToken = tokenDoc.data()!.token
 
     // Send test notification using FCM Admin SDK
     const message = {
