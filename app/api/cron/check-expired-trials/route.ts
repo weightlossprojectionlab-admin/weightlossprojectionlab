@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   if (authHeader !== expectedAuth) {
     logger.warn('[Cron] Unauthorized access attempt', {
-      ip: request.ip,
+      ip: request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'unknown',
       headers: Object.fromEntries(request.headers.entries())
     })
     return NextResponse.json(
