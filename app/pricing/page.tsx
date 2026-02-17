@@ -116,7 +116,8 @@ const PLANS: Plan[] = [
 export default function PricingPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const { subscription, plan: currentPlan } = useSubscription()
+  const { subscription, plan: currentPlan, status: subscriptionStatus } = useSubscription()
+  const isTrialing = subscriptionStatus === 'trialing'
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly')
   const [loading, setLoading] = useState<string | null>(null)
 
@@ -126,7 +127,8 @@ export default function PricingPage() {
       return
     }
 
-    if (plan === currentPlan) {
+    // Allow trialing users to subscribe to their trial plan (converts trial → paid)
+    if (plan === currentPlan && !isTrialing) {
       alert('You are already on this plan')
       return
     }
@@ -215,6 +217,11 @@ export default function PricingPage() {
     const currentTier = planTiers[currentPlan as SubscriptionPlan] ?? 0
     const targetTier = planTiers[targetPlan]
 
+    // Trialing users: show "Subscribe Now" for their trial plan, upgrade options for others
+    if (isTrialing && targetPlan === currentPlan) {
+      return 'Subscribe Now'
+    }
+
     // Users without a subscription (free state) can start a trial
     if (!currentPlan || currentPlan === 'free') {
       return 'Start Free Trial'
@@ -252,6 +259,17 @@ export default function PricingPage() {
       family_basic: 'Family Basic',
       family_plus: 'Family Plus',
       family_premium: 'Family Premium',
+    }
+
+    // Trial users: different headline so they know they need to subscribe to keep access
+    if (isTrialing) {
+      const trialEnd = subscription?.trialEndsAt
+        ? new Date(subscription.trialEndsAt).toLocaleDateString()
+        : 'soon'
+      return {
+        title: 'Activate Your Subscription',
+        subtitle: `Your free trial of the ${planNames[currentPlan as string] || currentPlan} plan ends ${trialEnd}. Subscribe now to keep access to all your features.`
+      }
     }
 
     return {
@@ -303,7 +321,10 @@ export default function PricingPage() {
           {PLANS.map((planData) => {
             const price = billingInterval === 'monthly' ? planData.monthlyPrice : planData.yearlyPrice
             const savings = calculateSavings(planData.monthlyPrice, planData.yearlyPrice)
-            const isCurrentPlan = currentPlan === planData.id
+            // isCurrentPlan is true only for paid (non-trialing) subscribers on this plan
+            const isCurrentPlan = currentPlan === planData.id && !isTrialing
+            // isTrialPlan: the plan the user is currently trialing
+            const isTrialPlan = currentPlan === planData.id && isTrialing
 
             return (
               <div
@@ -312,7 +333,7 @@ export default function PricingPage() {
                   planData.popular
                     ? 'border-primary shadow-lg scale-105'
                     : 'border-border hover:border-primary/50'
-                } ${isCurrentPlan ? 'bg-primary/5' : 'bg-card'}`}
+                } ${isCurrentPlan ? 'bg-primary/5' : isTrialPlan ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'bg-card'}`}
               >
                 {/* Popular Badge */}
                 {planData.popular && (
@@ -323,11 +344,20 @@ export default function PricingPage() {
                   </div>
                 )}
 
-                {/* Current Plan Badge */}
+                {/* Current Plan Badge (paid subscribers only) */}
                 {isCurrentPlan && (
                   <div className="absolute top-4 right-4">
                     <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
                       Current Plan
+                    </span>
+                  </div>
+                )}
+
+                {/* Free Trial Badge (trialing users) */}
+                {isTrialPlan && (
+                  <div className="absolute top-4 right-4">
+                    <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-medium">
+                      Free Trial
                     </span>
                   </div>
                 )}
