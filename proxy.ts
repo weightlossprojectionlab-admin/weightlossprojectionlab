@@ -74,9 +74,9 @@ function shouldBypassCsrf(pathname: string): boolean {
 }
 
 /**
- * Main middleware function (Next.js 15+ pattern)
+ * Main proxy function (Next.js 16+ pattern — replaces middleware)
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const method = request.method
 
