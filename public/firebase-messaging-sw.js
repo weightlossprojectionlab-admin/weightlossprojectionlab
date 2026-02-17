@@ -32,8 +32,8 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || 'Weight Loss Projection Lab'
   const notificationOptions = {
     body: payload.notification?.body || '',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
+    icon: '/icon-192x192.png',
+    badge: '/icon-72x72.png',
     data: payload.data || {},
     // Navigate to actionUrl when notification is clicked
     ...(payload.data?.actionUrl && {

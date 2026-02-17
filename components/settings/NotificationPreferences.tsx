@@ -278,24 +278,17 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
       }
 
       if (permission === 'granted') {
-        // Send a browser notification directly
-        const notification = new Notification('Test Notification', {
+        // Use ServiceWorkerRegistration.showNotification() — required on mobile
+        // (new Notification() is blocked on Android/iOS browsers)
+        const swReg = await navigator.serviceWorker.ready
+        await swReg.showNotification('🔔 Test Notification', {
           body: 'Your notification preferences are working! You will receive helpful updates based on your settings.',
           icon: '/icon-192x192.png',
-          badge: '/icon-192x192.png',
+          badge: '/icon-72x72.png',
           tag: 'test-notification',
           requireInteraction: false,
           silent: false
         })
-
-        // Auto-close after 5 seconds
-        setTimeout(() => notification.close(), 5000)
-
-        // Handle click
-        notification.onclick = () => {
-          window.focus()
-          notification.close()
-        }
 
         toast.success('Test notification sent successfully!')
         logger.info('[NotificationPreferences] Test notification sent successfully')
