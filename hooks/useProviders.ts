@@ -9,6 +9,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { medicalOperations } from '@/lib/medical-operations'
 import type { Provider } from '@/types/medical'
 import toast from 'react-hot-toast'
+import { getAuth } from 'firebase/auth'
+import { logger } from '@/lib/logger'
 
 interface UseProvidersOptions {
   patientId?: string
@@ -56,11 +58,63 @@ export function useProviders({
     }
   }, [patientId])
 
+  // Set up real-time listener (if autoFetch is true)
   useEffect(() => {
-    if (autoFetch) {
-      fetchProviders()
+    if (!autoFetch) {
+      setLoading(false)
+      return
     }
-  }, [autoFetch, fetchProviders])
+
+    setLoading(true)
+    setError(null)
+
+    // Get current user ID
+    const auth = getAuth()
+    const userId = auth.currentUser?.uid
+
+    if (!userId) {
+      logger.warn('[useProviders] No authenticated user')
+      setLoading(false)
+      return
+    }
+
+    logger.debug('[useProviders] Setting up real-time provider listener', { userId, patientId })
+
+    // If filtering by patient, use API polling (requires server-side filtering)
+    if (patientId) {
+      // Initial fetch
+      fetchProviders()
+
+      // Poll every 5 seconds for patient-specific providers
+      const intervalId = setInterval(fetchProviders, 5000)
+      return () => clearInterval(intervalId)
+    }
+
+    // Otherwise use real-time Firestore listener for all providers
+    const unsubscribe = medicalOperations.providers.listenToProviders(
+      userId,
+      (data) => {
+        setProviders(data)
+        setLoading(false)
+        logger.info('[useProviders] Providers updated via real-time listener', {
+          userId,
+          count: data.length
+        })
+      },
+      (err) => {
+        const errorMessage = err.message || 'Failed to fetch providers'
+        logger.error('[useProviders] Real-time listener error', err, { userId })
+        setError(errorMessage)
+        setLoading(false)
+      }
+    )
+
+    // Cleanup listener on unmount
+    return () => {
+      logger.debug('[useProviders] Cleaning up real-time provider listener', { userId })
+      unsubscribe()
+    }
+  }, [autoFetch, patientId, fetchProviders])
 
   const createProvider = useCallback(
     async (data: Omit<Provider, 'id' | 'userId' | 'addedAt' | 'patientsServed'>): Promise<Provider> => {

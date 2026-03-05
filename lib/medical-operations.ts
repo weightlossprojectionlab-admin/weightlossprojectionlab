@@ -754,6 +754,54 @@ export const providerOperations = {
       logger.error('[MedicalOps] Error unlinking provider from patient', error as Error, { providerId, patientId })
       throw error
     }
+  },
+
+  /**
+   * Listen to real-time provider updates for the current user
+   * @returns Unsubscribe function to stop listening
+   */
+  listenToProviders(
+    userId: string,
+    onUpdate: (providers: Provider[]) => void,
+    onError?: (error: Error) => void
+  ): Unsubscribe {
+    try {
+      logger.debug('[MedicalOps] Setting up real-time provider listener', { userId })
+
+      const providersRef = collection(db, 'users', userId, 'providers')
+      const providersQuery = query(providersRef, orderBy('addedAt', 'desc'))
+
+      const unsubscribe = onSnapshot(
+        providersQuery,
+        (snapshot) => {
+          const providers: Provider[] = []
+          snapshot.forEach((doc) => {
+            providers.push({ id: doc.id, ...doc.data() } as Provider)
+          })
+
+          logger.debug('[MedicalOps] Providers updated via listener', {
+            userId,
+            count: providers.length
+          })
+
+          onUpdate(providers)
+        },
+        (error) => {
+          logger.error('[MedicalOps] Provider listener error', error as Error, {
+            userId,
+            errorMessage: (error as any)?.message
+          })
+          if (onError) {
+            onError(error as Error)
+          }
+        }
+      )
+
+      return unsubscribe
+    } catch (error) {
+      logger.error('[MedicalOps] Error setting up provider listener', error as Error, { userId })
+      throw error
+    }
   }
 }
 
