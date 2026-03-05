@@ -9,9 +9,6 @@
 
 import { Resend } from 'resend'
 
-// Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 // Use a verified Resend sender or domain
 // IMPORTANT: Gmail addresses won't work due to DMARC policies
 // Options:
@@ -21,6 +18,18 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@wlpl.app'
 const FROM_NAME = process.env.RESEND_FROM_NAME || 'WPL Family Health'
 const REPLY_TO_EMAIL = process.env.RESEND_REPLY_TO_EMAIL || undefined
+
+// Lazy initialization - only create Resend instance when needed
+let resendInstance: Resend | null = null
+function getResend(): Resend {
+  if (!resendInstance && process.env.RESEND_API_KEY) {
+    resendInstance = new Resend(process.env.RESEND_API_KEY)
+  }
+  if (!resendInstance) {
+    throw new Error('Resend API key not configured')
+  }
+  return resendInstance
+}
 
 /**
  * Get the application URL for email links
@@ -61,6 +70,8 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams): P
   }
 
   try {
+    const resend = getResend()
+
     const mailOptions: any = {
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
       to,
