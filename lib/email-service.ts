@@ -15,7 +15,8 @@ import { Resend } from 'resend'
 // 1. Use a verified sender email from Resend
 // 2. Set up domain authentication in Resend (recommended)
 // 3. Use a custom domain you own
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@wlpl.app'
+// Using Resend's testing domain by default until custom domain is verified
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 const FROM_NAME = process.env.RESEND_FROM_NAME || 'WPL Family Health'
 const REPLY_TO_EMAIL = process.env.RESEND_REPLY_TO_EMAIL || undefined
 
