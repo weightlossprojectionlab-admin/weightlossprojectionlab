@@ -85,7 +85,9 @@ export async function GET(
       userId,
       ownerUserId,
       patientId,
-      count: familyMembers.length
+      includeAll,
+      count: familyMembers.length,
+      members: familyMembers.map(m => ({ id: m.id, name: m.name, status: m.status }))
     })
 
     return NextResponse.json({
