@@ -122,7 +122,9 @@ function FamilyAdminInvitesContent() {
       const response = await fetch(`/api/invitations/${invitationId}/resend`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': getCSRFToken()
         }
       })
       if (response.ok) {
