@@ -1,5 +1,5 @@
 /**
- * Email Service using SendGrid
+ * Email Service using Resend
  *
  * Handles sending transactional emails including:
  * - Family invitations
@@ -7,22 +7,20 @@
  * - Alerts
  */
 
-import sgMail from '@sendgrid/mail'
+import { Resend } from 'resend'
 
-// Initialize SendGrid with API key
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY)
-}
+// Initialize Resend with API key
+const resend = new Resend(process.env.RESEND_API_KEY)
 
-// Use a verified SendGrid sender or domain
+// Use a verified Resend sender or domain
 // IMPORTANT: Gmail addresses won't work due to DMARC policies
 // Options:
-// 1. Use a verified sender email from SendGrid
-// 2. Set up domain authentication in SendGrid (recommended)
+// 1. Use a verified sender email from Resend
+// 2. Set up domain authentication in Resend (recommended)
 // 3. Use a custom domain you own
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@wlpl.app'
-const FROM_NAME = process.env.SENDGRID_FROM_NAME || 'WPL Family Health'
-const REPLY_TO_EMAIL = process.env.SENDGRID_REPLY_TO_EMAIL || undefined
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@wlpl.app'
+const FROM_NAME = process.env.RESEND_FROM_NAME || 'WPL Family Health'
+const REPLY_TO_EMAIL = process.env.RESEND_REPLY_TO_EMAIL || undefined
 
 /**
  * Get the application URL for email links
@@ -54,50 +52,41 @@ interface SendEmailParams {
 }
 
 /**
- * Send an email using SendGrid
+ * Send an email using Resend
  */
 export async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<void> {
-  if (!process.env.SENDGRID_API_KEY) {
-    console.warn('[Email Service] SENDGRID_API_KEY not configured. Email not sent.')
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[Email Service] RESEND_API_KEY not configured. Email not sent.')
     return
   }
 
   try {
     const mailOptions: any = {
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
       to,
-      from: {
-        email: FROM_EMAIL,
-        name: FROM_NAME
-      },
       subject,
       html,
       text: text || stripHtml(html),
-      // Gmail 2024 requirement: List-Unsubscribe header
       headers: {
         'List-Unsubscribe': `<mailto:${REPLY_TO_EMAIL || FROM_EMAIL}?subject=Unsubscribe>`,
-        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
         'X-Entity-Ref-ID': `wlpl-invitation-${Date.now()}`
-      },
-      trackingSettings: {
-        clickTracking: {
-          enable: false
-        },
-        openTracking: {
-          enable: false
-        }
       }
     }
 
     // Add reply-to if configured
     if (REPLY_TO_EMAIL) {
-      mailOptions.replyTo = REPLY_TO_EMAIL
+      mailOptions.reply_to = REPLY_TO_EMAIL
     }
 
-    await sgMail.send(mailOptions)
+    const { data, error } = await resend.emails.send(mailOptions)
 
-    console.log(`[Email Service] Email sent successfully to ${to}`)
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    console.log(`[Email Service] Email sent successfully to ${to}`, { id: data?.id })
   } catch (error: any) {
-    console.error('[Email Service] Error sending email:', error.response?.body || error.message)
+    console.error('[Email Service] Error sending email:', error.message)
     throw new Error(`Failed to send email: ${error.message}`)
   }
 }

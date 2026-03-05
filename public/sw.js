@@ -1,5 +1,5 @@
 // Service Worker for offline support with auto-update detection
-const VERSION = '6'; // Increment this to force update
+const VERSION = '8'; // Increment this to force update
 const CACHE_NAME = `wlpl-v${VERSION}`;
 const PHOTO_CACHE_NAME = 'wlpl-photos-v1';
 const MEDICAL_CACHE_NAME = 'wlpl-medical-v1';
@@ -17,6 +17,7 @@ const PRECACHE_ASSETS = [
   '/favicon.svg',
   '/icon-192x192.png',
   '/icon-512x512.png',
+  '/patients', // Ensure patients page works offline
 ];
 
 // Install event - cache essential assets
@@ -107,6 +108,13 @@ self.addEventListener('fetch', (event) => {
 
   // Skip Chrome extension requests
   if (event.request.url.startsWith('chrome-extension://')) {
+    return;
+  }
+
+  // CRITICAL: Skip service worker for navigation requests to prevent false offline detection
+  // Let Next.js handle all page navigations directly
+  if (event.request.mode === 'navigate') {
+    console.log('[Service Worker] Skipping navigation request:', event.request.url);
     return;
   }
 
@@ -284,16 +292,31 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => {
+      .catch((error) => {
         // Network failed, try cache
+        console.log('[Service Worker] Fetch failed for:', event.request.url, error.message);
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
+            console.log('[Service Worker] Served from cache:', event.request.url);
             return cachedResponse;
           }
 
-          // If HTML page not cached, show offline page
+          // If HTML page not cached AND truly offline, show offline page
           if (event.request.headers.get('accept')?.includes('text/html')) {
-            return caches.match(OFFLINE_URL);
+            // Only show offline page if navigator says we're offline
+            // This prevents false offline detection when network requests fail for other reasons
+            if (!self.navigator.onLine) {
+              console.log('[Service Worker] Showing offline page - truly offline');
+              return caches.match(OFFLINE_URL);
+            } else {
+              console.warn('[Service Worker] Network error but online - letting request fail naturally');
+              // Return a simple error response instead of offline page
+              return new Response('Network error. Please refresh the page.', {
+                status: 503,
+                statusText: 'Service Unavailable',
+                headers: { 'Content-Type': 'text/plain' }
+              });
+            }
           }
 
           // For other resources, return error
