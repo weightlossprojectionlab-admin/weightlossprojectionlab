@@ -10,7 +10,7 @@
 import { logger } from '@/lib/logger'
 import { apiClient } from '@/lib/api-client'
 import { db } from '@/lib/firebase'
-import { collection, query, where, onSnapshot, Unsubscribe } from 'firebase/firestore'
+import { collection, query, where, orderBy, onSnapshot, Unsubscribe } from 'firebase/firestore'
 import type {
   PatientProfile,
   VitalSign,
