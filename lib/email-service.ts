@@ -43,7 +43,7 @@ function getAppUrl(): string {
   if (!appUrl) {
     if (process.env.NODE_ENV === 'production') {
       // Production fallback
-      return 'https://weightlossprojectionlab.com'
+      return 'https://www.weightlossprojectionlab.com'
     }
     // Development fallback
     console.warn('[Email Service] NEXT_PUBLIC_APP_URL not set, using localhost (development only)')
