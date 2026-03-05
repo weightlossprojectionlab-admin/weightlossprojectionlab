@@ -406,19 +406,25 @@ export const familyOperations = {
 
   /**
    * Get family members for a specific patient
+   * @param includeAll - If true, returns ALL family members in account (for driver assignment)
+   *                     If false, returns only family members with access to this patient (for medical records)
    */
-  async getFamilyMembers(patientId: string): Promise<FamilyMember[]> {
+  async getFamilyMembers(patientId: string, includeAll: boolean = false): Promise<FamilyMember[]> {
     try {
-      logger.debug('[MedicalOps] Fetching family members', { patientId })
+      logger.debug('[MedicalOps] Fetching family members', { patientId, includeAll })
 
-      const members = await makeAuthenticatedRequest<FamilyMember[]>(`/patients/${patientId}/family`, {
+      const url = includeAll
+        ? `/patients/${patientId}/family?includeAll=true`
+        : `/patients/${patientId}/family`
+
+      const members = await makeAuthenticatedRequest<FamilyMember[]>(url, {
         method: 'GET'
       })
 
-      logger.debug('[MedicalOps] Family members fetched', { patientId, count: members?.length || 0 })
+      logger.debug('[MedicalOps] Family members fetched', { patientId, includeAll, count: members?.length || 0 })
       return members || []
     } catch (error) {
-      logger.error('[MedicalOps] Error fetching family members', error as Error, { patientId })
+      logger.error('[MedicalOps] Error fetching family members', error as Error, { patientId, includeAll })
       throw error
     }
   },

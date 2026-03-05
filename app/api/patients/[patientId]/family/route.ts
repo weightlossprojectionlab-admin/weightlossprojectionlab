@@ -41,6 +41,11 @@ export async function GET(
 
     logger.debug('[API /patients/[id]/family GET] Fetching family members', { userId, ownerUserId, patientId })
 
+    // Check if requesting ALL family members (for driver assignment, etc.)
+    // Default: filter by patient access (for medical records)
+    const { searchParams } = new URL(request.url)
+    const includeAll = searchParams.get('includeAll') === 'true'
+
     // Verify patient exists
     const patientRef = adminDb
       .collection('users')
@@ -57,14 +62,19 @@ export async function GET(
       )
     }
 
-    // Get all family members who have access to this patient
-    const familyMembersSnapshot = await adminDb
+    // Get family members based on filter
+    let familyMembersQuery = adminDb
       .collection('users')
       .doc(ownerUserId)
       .collection('familyMembers')
-      .where('patientsAccess', 'array-contains', patientId)
       .where('status', '==', 'accepted')
-      .get()
+
+    // If not includeAll, filter by patient access
+    if (!includeAll) {
+      familyMembersQuery = familyMembersQuery.where('patientsAccess', 'array-contains', patientId) as any
+    }
+
+    const familyMembersSnapshot = await familyMembersQuery.get()
 
     const familyMembers = familyMembersSnapshot.docs.map(doc => ({
       id: doc.id,

@@ -43,10 +43,11 @@ function NewAppointmentContent() {
   const [selectedPatient, setSelectedPatient] = useState<string>('')
   const [showWizard, setShowWizard] = useState(false)
 
-  // Fetch family members for selected patient
+  // Fetch ALL family members for driver assignment (not just those with patient access)
   const { familyMembers } = useFamilyMembers({
     patientId: selectedPatient,
-    autoFetch: !!selectedPatient
+    autoFetch: !!selectedPatient,
+    includeAll: true // Include all family members for driver selection
   })
 
   const handleSelectPatient = (patientId: string) => {

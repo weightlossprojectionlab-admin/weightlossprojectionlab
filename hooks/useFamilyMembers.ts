@@ -13,6 +13,7 @@ import toast from 'react-hot-toast'
 interface UseFamilyMembersOptions {
   patientId?: string
   autoFetch?: boolean
+  includeAll?: boolean // If true, fetch ALL family members (not just those with patient access)
 }
 
 interface UseFamilyMembersReturn {
@@ -29,7 +30,8 @@ interface UseFamilyMembersReturn {
 
 export function useFamilyMembers({
   patientId,
-  autoFetch = true
+  autoFetch = true,
+  includeAll = false
 }: UseFamilyMembersOptions = {}): UseFamilyMembersReturn {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,7 +47,7 @@ export function useFamilyMembers({
     try {
       setLoading(true)
       setError(null)
-      const data = await medicalOperations.family.getFamilyMembers(patientId)
+      const data = await medicalOperations.family.getFamilyMembers(patientId, includeAll)
       setFamilyMembers(data)
     } catch (err: any) {
       const errorMsg = err.message || 'Failed to fetch family members'
@@ -54,7 +56,7 @@ export function useFamilyMembers({
     } finally {
       setLoading(false)
     }
-  }, [patientId])
+  }, [patientId, includeAll])
 
   useEffect(() => {
     if (autoFetch) {
