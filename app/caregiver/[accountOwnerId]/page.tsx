@@ -12,7 +12,7 @@ import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/lib/firebase'
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import type { CaregiverContext } from '@/types'
@@ -78,21 +78,24 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
 
         setCaregiverContext(context)
 
-        // Fetch assigned patients from the account owner's patients collection
-        const patientsSnapshot = await getDocs(
-          collection(db, 'users', accountOwnerId, 'patients')
-        )
-
-        const allPatients: PatientProfile[] = []
-        patientsSnapshot.forEach((doc) => {
-          const patientData = doc.data() as PatientProfile
-          // Only include patients this caregiver has access to
-          if (context.patientsAccess.includes(doc.id)) {
-            allPatients.push({ ...patientData, id: doc.id })
+        // Fetch assigned patients via API (uses admin SDK for proper access)
+        const token = await user.getIdToken()
+        const response = await fetch(`/api/caregiver/${accountOwnerId}/patients`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
         })
 
-        setPatients(allPatients)
+        if (!response.ok) {
+          throw new Error('Failed to fetch patients')
+        }
+
+        const result = await response.json()
+        if (result.success) {
+          setPatients(result.data.patients || [])
+        } else {
+          console.error('Failed to fetch patients:', result.error)
+        }
       } catch (error) {
         console.error('Error loading caregiver data:', error)
       } finally {
