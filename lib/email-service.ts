@@ -71,6 +71,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams): P
 
   try {
     const resend = getResend()
+    console.log(`[Email Service] Sending email from: ${FROM_NAME} <${FROM_EMAIL}> to: ${to}`)
 
     const mailOptions: any = {
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
@@ -92,7 +93,8 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams): P
     const { data, error } = await resend.emails.send(mailOptions)
 
     if (error) {
-      throw new Error(error.message)
+      console.error('[Email Service] Resend API error:', JSON.stringify(error, null, 2))
+      throw new Error(`Resend error: ${error.message}`)
     }
 
     console.log(`[Email Service] Email sent successfully to ${to}`, { id: data?.id })
