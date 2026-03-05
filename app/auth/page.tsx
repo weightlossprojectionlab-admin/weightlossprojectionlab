@@ -63,11 +63,14 @@ function AuthContent() {
 
         // Check if this is a redirect result from Google Sign-in and handle invitation flow
         const wasInvitationFlow = localStorage.getItem('isInvitationFlow') === 'true'
-        if (wasInvitationFlow) {
-          localStorage.removeItem('isInvitationFlow')
-          const pendingCode = localStorage.getItem('pendingInvitationCode')
+        const pendingCode = localStorage.getItem('pendingInvitationCode')
 
-          logger.debug('🔗 Detected invitation flow after OAuth redirect', { pendingCode })
+        // IMPORTANT: Check invitation flow first, even if not from OAuth redirect
+        // This handles the case where user is already logged in and clicks invitation link
+        if (wasInvitationFlow || pendingCode || isInvitationFlow) {
+          localStorage.removeItem('isInvitationFlow')
+
+          logger.debug('🔗 Detected invitation flow - redirecting to accept-invitation', { pendingCode })
 
           if (pendingCode) {
             router.push(`/accept-invitation?code=${pendingCode}`)
