@@ -82,7 +82,9 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams): P
       text: text || stripHtml(html),
       headers: {
         'List-Unsubscribe': `<mailto:${REPLY_TO_EMAIL || FROM_EMAIL}?subject=Unsubscribe>`,
-        'X-Entity-Ref-ID': `wlpl-invitation-${Date.now()}`
+        'X-Entity-Ref-ID': `wlpl-invitation-${Date.now()}`,
+        'X-Priority': '1',
+        'Importance': 'high'
       }
     }
 
