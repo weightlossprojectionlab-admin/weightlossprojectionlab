@@ -41,6 +41,11 @@ import { shouldShowFeatureByPreference } from '@/lib/feature-preference-gate'
 import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
 import { getProductLabel, getTooltip } from '@/lib/messaging/terminology'
 import { TrustBadge } from '@/components/ui/TrustBadge'
+import { userProfileOperations } from '@/lib/firebase-operations'
+import { UpgradeRequiredModal } from '@/components/subscription/UpgradeRequiredModal'
+import { FeatureEnabledModal } from '@/components/subscription/FeatureEnabledModal'
+import { useSubscription } from '@/hooks/useSubscription'
+import type { FeaturePreference, SubscriptionPlan } from '@/types'
 
 // Dynamic imports for heavy components (lazy loaded on demand)
 const GoalsEditor = dynamic(() => import('@/components/ui/GoalsEditor').then(mod => ({ default: mod.GoalsEditor })), {
@@ -92,8 +97,17 @@ function DashboardContent() {
   const [showReminderModal, setShowReminderModal] = useState(false)
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
 
+  // Modal state for feature upgrade flow
+  const [showUpgradeRequiredModal, setShowUpgradeRequiredModal] = useState(false)
+  const [showFeatureEnabledModal, setShowFeatureEnabledModal] = useState(false)
+  const [pendingFeature, setPendingFeature] = useState<FeaturePreference | null>(null)
+  const [requiredPlan, setRequiredPlan] = useState<SubscriptionPlan>('single_plus')
+  const [wasUpgradeRequired, setWasUpgradeRequired] = useState(false)
+
   // Check if user has family plan features
   const { canAccess: hasFamilyFeatures } = useFeatureGate('multiple-patients')
+  const { canAccess: hasMedicalFeatures } = useFeatureGate('medications')
+  const { subscription } = useSubscription()
 
   // Get user's onboarding preferences for personalization
   const userPrefs = useUserPreferences()
@@ -720,7 +734,45 @@ function DashboardContent() {
                       Track weight, exercise, body composition, and fitness goals - whether gaining, losing, or maintaining.
                     </p>
                     <button
-                      onClick={() => router.push('/onboarding')}
+                      onClick={async () => {
+                        const user = auth.currentUser
+                        if (!user?.uid) return
+
+                        // Use feature enablement helper
+                        const { canEnableFeature, enableFeature, getFeatureMessages, getRequiredPlanForFeature } = await import('@/lib/feature-enablement')
+
+                        const result = canEnableFeature(user, 'body_fitness')
+                        const messages = getFeatureMessages('body_fitness')
+
+                        if (result.requiresUpgrade) {
+                          // Show upgrade modal
+                          setPendingFeature('body_fitness')
+                          setRequiredPlan(getRequiredPlanForFeature('body_fitness') as SubscriptionPlan)
+                          setWasUpgradeRequired(true)
+                          setShowUpgradeRequiredModal(true)
+                        } else if (result.canEnable) {
+                          // User has subscription, enable the preference
+                          try {
+                            const currentFeatures = userPrefs.getAllFeatures()
+                            const enableResult = await enableFeature(
+                              currentFeatures,
+                              'body_fitness',
+                              userPrefs.preferences
+                            )
+
+                            if (enableResult.success) {
+                              setPendingFeature('body_fitness')
+                              setWasUpgradeRequired(false)
+                              setShowFeatureEnabledModal(true)
+                            } else {
+                              toast.error(enableResult.error || 'Failed to enable feature')
+                            }
+                          } catch (error) {
+                            toast.error('Failed to enable feature. Please try again.')
+                            logger.error('Failed to enable body_fitness', error as Error)
+                          }
+                        }
+                      }}
                       className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
                     >
                       Enable Body & Fitness
@@ -741,7 +793,27 @@ function DashboardContent() {
                       Plan meals with WPL Vision™, discover recipes, smart shopping lists, and pantry tracking all in one place.
                     </p>
                     <button
-                      onClick={() => router.push('/onboarding')}
+                      onClick={async () => {
+                        // Nutrition & Kitchen is available on all plans, just enable it
+                        try {
+                          const currentFeatures = userPrefs.getAllFeatures()
+                          if (!currentFeatures.includes('nutrition_kitchen')) {
+                            await userProfileOperations.updateUserProfile({
+                              preferences: {
+                                onboardingAnswers: {
+                                  ...userPrefs.preferences,
+                                  featurePreferences: [...currentFeatures, 'nutrition_kitchen']
+                                }
+                              }
+                            })
+                            toast.success('Nutrition & Kitchen enabled! Refreshing...')
+                            window.location.reload()
+                          }
+                        } catch (error) {
+                          toast.error('Failed to enable feature. Please try again.')
+                          logger.error('Failed to enable nutrition_kitchen', error as Error)
+                        }
+                      }}
                       className="px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
                     >
                       Enable Nutrition & Kitchen
@@ -762,10 +834,37 @@ function DashboardContent() {
                       Track appointments, medications, vital signs (blood pressure, glucose, etc.), and health records all in one place.
                     </p>
                     <button
-                      onClick={() => router.push('/onboarding')}
+                      onClick={() => {
+                        // Health & Medical features require single_plus or higher subscription
+                        if (!hasMedicalFeatures) {
+                          router.push('/pricing')
+                        } else {
+                          // User has the subscription, enable the preference
+                          (async () => {
+                            try {
+                              const currentFeatures = userPrefs.getAllFeatures()
+                              if (!currentFeatures.includes('health_medical')) {
+                                await userProfileOperations.updateUserProfile({
+                                  preferences: {
+                                    onboardingAnswers: {
+                                      ...userPrefs.preferences,
+                                      featurePreferences: [...currentFeatures, 'health_medical']
+                                    }
+                                  }
+                                })
+                                toast.success('Health & Medical enabled! Refreshing...')
+                                window.location.reload()
+                              }
+                            } catch (error) {
+                              toast.error('Failed to enable feature. Please try again.')
+                              logger.error('Failed to enable health_medical', error as Error)
+                            }
+                          })()
+                        }
+                      }}
                       className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
                     >
-                      Enable Health & Medical
+                      {hasMedicalFeatures ? 'Enable Health & Medical' : 'Upgrade to Enable'}
                     </button>
                   </div>
                 </div>
@@ -831,6 +930,41 @@ function DashboardContent() {
 
       {/* Wellness Coach Chat Widget */}
       <ChatWidget userId={userProfile?.userId} />
+
+      {/* Upgrade Required Modal - Feature Gate */}
+      {pendingFeature && (
+        <UpgradeRequiredModal
+          isOpen={showUpgradeRequiredModal}
+          onClose={() => {
+            setShowUpgradeRequiredModal(false)
+            setPendingFeature(null)
+          }}
+          feature={pendingFeature}
+          currentPlan={(subscription?.plan || 'free') as SubscriptionPlan}
+          requiredPlan={requiredPlan}
+          onConfirm={async () => {
+            const user = auth.currentUser
+            const { trackFeatureIntent } = await import('@/lib/feature-enablement')
+            if (user?.uid) {
+              await trackFeatureIntent(user.uid, pendingFeature, '/dashboard')
+            }
+            router.push('/pricing')
+          }}
+        />
+      )}
+
+      {/* Feature Enabled Modal - Success Celebration */}
+      {pendingFeature && (
+        <FeatureEnabledModal
+          isOpen={showFeatureEnabledModal}
+          onClose={() => {
+            setShowFeatureEnabledModal(false)
+            setPendingFeature(null)
+          }}
+          feature={pendingFeature}
+          wasUpgradeRequired={wasUpgradeRequired}
+        />
+      )}
     </main>
   )
 }

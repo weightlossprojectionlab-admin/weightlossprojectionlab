@@ -60,7 +60,9 @@ export function useNotifications(userId: string | undefined) {
    */
   useEffect(() => {
     const checkSupport = async () => {
-      if (typeof window === 'undefined' || !('Notification' in window)) {
+      // Check if running in browser environment
+      if (typeof window === 'undefined') {
+        logger.debug('[useNotifications] Not in browser environment (SSR)')
         setState(prev => ({
           ...prev,
           isSupported: false,
@@ -69,6 +71,30 @@ export function useNotifications(userId: string | undefined) {
         return
       }
 
+      // Check if Notification API is available
+      if (!('Notification' in window)) {
+        logger.warn('[useNotifications] Notification API not available in this browser')
+        setState(prev => ({
+          ...prev,
+          isSupported: false,
+          loading: false
+        }))
+        return
+      }
+
+      // Check if service workers are supported (required for push notifications)
+      if (!('serviceWorker' in navigator)) {
+        logger.warn('[useNotifications] Service Workers not supported in this browser')
+        setState(prev => ({
+          ...prev,
+          isSupported: false,
+          loading: false
+        }))
+        return
+      }
+
+      // All checks passed - notifications are supported
+      logger.debug('[useNotifications] Notification support confirmed')
       setState(prev => ({
         ...prev,
         isSupported: true,
@@ -125,16 +151,36 @@ export function useNotifications(userId: string | undefined) {
    * Request notification permission and register FCM token
    */
   const requestPermission = async (): Promise<boolean> => {
-    if (!state.isSupported || !userId) {
-      toast.error('Notifications not supported in this browser')
+    // Check user authentication first
+    if (!userId) {
+      toast.error('Please sign in to enable notifications')
+      logger.warn('[useNotifications] Cannot request permission: userId not available')
+      return false
+    }
+
+    // Then check browser support
+    if (!state.isSupported) {
+      toast.error('Notifications not supported in this browser. Please use Chrome, Firefox, Edge, or Safari.')
+      logger.warn('[useNotifications] Cannot request permission: notifications not supported')
       return false
     }
 
     try {
       setState(prev => ({ ...prev, loading: true, error: null }))
 
+      // Ensure service worker is ready (required for mobile)
+      if (!('serviceWorker' in navigator)) {
+        throw new Error('Service workers not supported in this browser')
+      }
+
+      logger.debug('[useNotifications] Waiting for service worker...')
+      const registration = await navigator.serviceWorker.ready
+      logger.debug('[useNotifications] Service worker ready')
+
       // Request permission
+      logger.debug('[useNotifications] Requesting notification permission...')
       const permission = await Notification.requestPermission()
+      logger.debug('[useNotifications] Permission result:', permission)
 
       setState(prev => ({ ...prev, permission }))
 
@@ -144,47 +190,40 @@ export function useNotifications(userId: string | undefined) {
           loading: false,
           error: 'Notification permission denied'
         }))
-        toast.error('Please enable notifications to receive reminders')
+        toast.error('Please enable notifications in your browser settings to receive reminders')
         return false
       }
 
       // Initialize messaging
+      logger.debug('[useNotifications] Initializing Firebase messaging...')
       const messaging = await initializeMessaging()
       if (!messaging) {
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          error: 'Failed to initialize messaging'
-        }))
-        return false
+        throw new Error('Failed to initialize Firebase messaging')
       }
+      logger.debug('[useNotifications] Firebase messaging initialized')
 
       // Get FCM token with VAPID key
       const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
 
       if (!vapidKey) {
-        logger.warn('[useNotifications] VAPID key not configured')
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          error: 'VAPID key not configured'
-        }))
-        return false
+        throw new Error('VAPID key not configured. Please check environment variables.')
       }
 
-      const token = await getToken(messaging, { vapidKey })
+      logger.debug('[useNotifications] Getting FCM token...')
+      const token = await getToken(messaging, {
+        vapidKey,
+        serviceWorkerRegistration: registration
+      })
+      logger.debug('[useNotifications] FCM token obtained:', token ? 'success' : 'failed')
 
       if (!token) {
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          error: 'Failed to get FCM token'
-        }))
-        return false
+        throw new Error('Failed to get FCM token. Please refresh and try again.')
       }
 
       // Save token to Firestore
+      logger.debug('[useNotifications] Saving notification token...')
       await saveNotificationToken(userId, token)
+      logger.debug('[useNotifications] Token saved successfully')
 
       setState(prev => ({
         ...prev,
@@ -212,12 +251,21 @@ export function useNotifications(userId: string | undefined) {
       return true
     } catch (error) {
       logger.error('[useNotifications] Error requesting permission:', error as Error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       setState(prev => ({
         ...prev,
         loading: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: errorMessage
       }))
-      toast.error('Failed to enable notifications')
+
+      // More specific error messages
+      if (errorMessage.includes('service worker')) {
+        toast.error('Service worker not available. Please refresh the page and try again.')
+      } else if (errorMessage.includes('VAPID')) {
+        toast.error('Notification configuration error. Please contact support.')
+      } else {
+        toast.error(`Failed to enable notifications: ${errorMessage}`)
+      }
       return false
     }
   }

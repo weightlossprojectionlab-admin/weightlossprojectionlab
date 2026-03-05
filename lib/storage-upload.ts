@@ -1,7 +1,7 @@
 'use client'
 
 import { storage } from './firebase'
-import { ref, uploadString, getDownloadURL } from 'firebase/storage'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { auth } from './firebase'
 import { logger } from '@/lib/logger'
 
@@ -26,13 +26,32 @@ export async function uploadBase64Image(
 
     logger.debug('📤 Uploading to Firebase Storage:', { path: `users/${user.uid}/${path}` })
 
-    // Upload base64 string
-    const snapshot = await uploadString(storageRef, base64Image, 'data_url')
+    // Convert base64 to Blob (File object)
+    const contentTypeMatch = base64Image.match(/data:(image\/[a-zA-Z]+);base64,/)
+    const contentType = contentTypeMatch ? contentTypeMatch[1] : 'image/jpeg'
+
+    // Remove the data URL prefix
+    const base64Data = base64Image.replace(/^data:image\/[a-zA-Z]+;base64,/, '')
+
+    // Convert base64 to binary
+    const binaryString = atob(base64Data)
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+
+    // Create Blob with correct content type
+    const blob = new Blob([bytes], { type: contentType })
+
+    logger.debug('Uploading blob:', { type: contentType, size: blob.size })
+
+    // Upload using uploadBytes (same as medication-image-upload.ts)
+    await uploadBytes(storageRef, blob)
 
     logger.debug('✅ Upload complete, getting download URL...')
 
     // Get download URL
-    const downloadURL = await getDownloadURL(snapshot.ref)
+    const downloadURL = await getDownloadURL(storageRef)
 
     logger.debug('✅ Download URL retrieved:', { downloadURL })
 
@@ -67,8 +86,16 @@ export async function uploadBase64Image(
     console.error('🔍 DETAILED ERROR CAPTURE:', errorDetails)
     logger.error('Error uploading image', error as Error, errorDetails)
 
-    // Re-throw the original error to preserve details
-    throw error
+    // Provide user-friendly error message based on error code
+    const errorCode = (error as any)?.code
+    if (errorCode === 'storage/unauthorized') {
+      throw new Error('Storage permission denied. Please check Firebase Storage rules.')
+    } else if (errorCode === 'storage/unknown') {
+      throw new Error('Storage upload failed. This may be due to Firebase Storage rules. Please contact support.')
+    } else {
+      // Re-throw the original error to preserve details
+      throw error
+    }
   }
 }
 

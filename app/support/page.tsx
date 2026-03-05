@@ -1,6 +1,6 @@
 /**
  * Support & Help Center Page
- * Comprehensive support resources for WLPL users
+ * Comprehensive support resources for WPL users
  */
 
 import type { Metadata } from 'next'
@@ -39,7 +39,7 @@ export default function SupportPage() {
           </Link>
           <h1 className="text-5xl font-bold text-gray-900 mb-4">Help Center</h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Find answers, get help, and learn how to make the most of WLPL
+            Find answers, get help, and learn how to make the most of WPL
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export default function SupportPage() {
               </div>
               <h3 className="font-bold text-gray-900 mb-2">Meal Tracking</h3>
               <p className="text-sm text-gray-600">
-                Learn how to log meals and use AI analysis
+                Learn how to log meals and use WPL analysis
               </p>
             </Link>
 
@@ -188,7 +188,7 @@ export default function SupportPage() {
           <section id="meal-tracking">
             <div className="bg-white rounded-2xl shadow-lg p-10">
               <h2 className="text-3xl font-bold text-gray-900 mb-8">
-                Meal Tracking & AI Analysis
+                Meal Tracking & WPL Analysis
               </h2>
 
               <div className="space-y-6">
@@ -200,25 +200,25 @@ export default function SupportPage() {
                     </svg>
                   </summary>
                   <div className="mt-4 text-gray-700 space-y-3">
-                    <p>There are several ways to log a meal in WLPL:</p>
+                    <p>There are several ways to log a meal in WPL:</p>
                     <ol className="list-decimal list-inside space-y-2 ml-4">
-                      <li><strong>Take a photo:</strong> Navigate to your dashboard and click "Log Meal". Take or upload a photo of your meal for AI analysis.</li>
+                      <li><strong>Take a photo:</strong> Navigate to your dashboard and click "Log Meal". Take or upload a photo of your meal for WPL analysis.</li>
                       <li><strong>Manual entry:</strong> Click "Add Manually" to enter meal details without a photo.</li>
                       <li><strong>From patient dashboard:</strong> When managing patients, select the patient first, then log their meal.</li>
                     </ol>
-                    <p className="text-sm text-gray-600">The AI will automatically analyze your meal photo and provide nutritional estimates.</p>
+                    <p className="text-sm text-gray-600">WPL will automatically analyze your meal photo and provide nutritional estimates.</p>
                   </div>
                 </details>
 
                 <details className="border-b border-gray-200 pb-6">
                   <summary className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 flex items-center justify-between">
-                    <span>How accurate is the AI meal analysis?</span>
+                    <span>How accurate is the WPL meal analysis?</span>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </summary>
                   <div className="mt-4 text-gray-700">
-                    <p className="mb-3">Our AI uses advanced vision models (GPT-4 Vision and Google Gemini) to analyze meals. Accuracy typically ranges from 80-95% depending on:</p>
+                    <p className="mb-3">WPL uses advanced vision models to analyze meals. Accuracy typically ranges from 80-95% depending on:</p>
                     <ul className="list-disc list-inside space-y-1 ml-4">
                       <li>Photo quality and lighting</li>
                       <li>Visibility of all food items</li>
@@ -257,7 +257,7 @@ export default function SupportPage() {
                     </svg>
                   </summary>
                   <div className="mt-4 text-gray-700">
-                    <p>WLPL supports the following meal types:</p>
+                    <p>WPL supports the following meal types:</p>
                     <ul className="list-disc list-inside space-y-1 ml-4 mt-2">
                       <li>Breakfast</li>
                       <li>Lunch</li>
@@ -464,13 +464,13 @@ export default function SupportPage() {
               <div className="space-y-6">
                 <details className="border-b border-gray-200 pb-6">
                   <summary className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 flex items-center justify-between">
-                    <span>AI analysis is taking too long or failing</span>
+                    <span>WPL analysis is taking too long or failing</span>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </summary>
                   <div className="mt-4 text-gray-700">
-                    <p className="mb-3">If AI meal analysis is slow or failing, try these solutions:</p>
+                    <p className="mb-3">If WPL meal analysis is slow or failing, try these solutions:</p>
                     <ul className="list-disc list-inside space-y-2 ml-4">
                       <li>Check your internet connection</li>
                       <li>Ensure the photo is under 10MB in size</li>

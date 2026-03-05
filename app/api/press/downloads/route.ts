@@ -11,11 +11,19 @@ import { adminDb as db } from '@/lib/firebase-admin'
 import type { PressDownload, DownloadResponse } from '@/types/press'
 
 // Initialize rate limiter - 20 downloads per hour per IP
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(20, '1 h'),
-  analytics: true,
-})
+// Make Redis optional for development
+let ratelimit: Ratelimit | null = null
+try {
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    ratelimit = new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(20, '1 h'),
+      analytics: true,
+    })
+  }
+} catch (error) {
+  console.warn('[Press Downloads] Rate limiting disabled - Upstash Redis not configured')
+}
 
 // Define available press assets
 const PRESS_ASSETS: Record<string, { name: string; path: string; type: string }> = {
@@ -117,26 +125,33 @@ export async function GET(request: NextRequest) {
                request.headers.get('x-real-ip') ??
                'unknown'
 
-    // Check rate limit
-    const { success: rateLimitSuccess, limit, remaining, reset } = await ratelimit.limit(
-      `downloads_${ip}`
-    )
+    // Check rate limit (skip if Redis not configured)
+    let limit = 20
+    let remaining = 20
+    let reset = Date.now() + 3600000
 
-    if (!rateLimitSuccess) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Too many download requests. Please try again in ${Math.ceil((reset - Date.now()) / 1000 / 60)} minutes.`,
-        },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': limit.toString(),
-            'X-RateLimit-Remaining': remaining.toString(),
-            'X-RateLimit-Reset': reset.toString(),
+    if (ratelimit) {
+      const result = await ratelimit.limit(`downloads_${ip}`)
+      limit = result.limit
+      remaining = result.remaining
+      reset = result.reset
+
+      if (!result.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Too many download requests. Please try again in ${Math.ceil((reset - Date.now()) / 1000 / 60)} minutes.`,
           },
-        }
-      )
+          {
+            status: 429,
+            headers: {
+              'X-RateLimit-Limit': limit.toString(),
+              'X-RateLimit-Remaining': remaining.toString(),
+              'X-RateLimit-Reset': reset.toString(),
+            },
+          }
+        )
+      }
     }
 
     // Get asset parameter

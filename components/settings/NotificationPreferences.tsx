@@ -264,11 +264,18 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
         return
       }
 
+      // Check if service worker is available
+      if (!('serviceWorker' in navigator)) {
+        toast.error('Service workers not supported. Please use a modern browser.')
+        return
+      }
+
       // Check current permission
       let permission = Notification.permission
 
       // Request permission if not granted
       if (permission === 'default') {
+        logger.debug('[NotificationPreferences] Requesting permission...')
         permission = await Notification.requestPermission()
       }
 
@@ -278,16 +285,21 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
       }
 
       if (permission === 'granted') {
+        // Wait for service worker to be ready (critical for mobile)
+        logger.debug('[NotificationPreferences] Waiting for service worker...')
+        const swReg = await navigator.serviceWorker.ready
+        logger.debug('[NotificationPreferences] Service worker ready, showing notification...')
+
         // Use ServiceWorkerRegistration.showNotification() — required on mobile
         // (new Notification() is blocked on Android/iOS browsers)
-        const swReg = await navigator.serviceWorker.ready
         await swReg.showNotification('🔔 Test Notification', {
           body: 'Your notification preferences are working! You will receive helpful updates based on your settings.',
           icon: '/icon-192x192.png',
           badge: '/icon-72x72.png',
           tag: 'test-notification',
           requireInteraction: false,
-          silent: false
+          silent: false,
+          vibrate: [200, 100, 200] // Haptic feedback on mobile
         })
 
         toast.success('Test notification sent successfully!')
@@ -295,7 +307,12 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
       }
     } catch (error) {
       logger.error('Error sending test notification:', error as Error)
-      toast.error('Failed to send test notification: ' + (error as Error).message)
+      const errorMsg = (error as Error).message
+      if (errorMsg.includes('service worker')) {
+        toast.error('Service worker not ready. Please refresh the page and try again.')
+      } else {
+        toast.error('Failed to send test notification: ' + errorMsg)
+      }
     } finally {
       setSendingTest(false)
     }

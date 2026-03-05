@@ -168,7 +168,7 @@ export default function TermsPage() {
           <section id="acceptance">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Acceptance of Terms</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              By creating an account, accessing, or using Weight Loss Projection Lab ("WLPL,"
+              By creating an account, accessing, or using Wellness Projection Lab ("WPL,"
               "we," "us," or "our") services, including our website, mobile applications, and
               any related services (collectively, the "Services"), you agree to be bound by
               these Terms of Service ("Terms").
@@ -197,7 +197,7 @@ export default function TermsPage() {
               2. Description of Services
             </h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              WLPL provides an AI-powered health and wellness tracking platform that includes:
+              WPL provides a WPL-powered health and wellness tracking platform that includes:
             </p>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -210,7 +210,7 @@ export default function TermsPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-600 mt-0.5">•</span>
-                    <span>AI-powered nutritional analysis</span>
+                    <span>WPL-powered nutritional analysis</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-600 mt-0.5">•</span>
@@ -375,7 +375,7 @@ export default function TermsPage() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Subscription Plans</h3>
                 <p className="text-gray-700 mb-3">
-                  WLPL offers free and paid subscription plans. Paid plans may include:
+                  WPL offers free and paid subscription plans. Paid plans may include:
                 </p>
                 <ul className="space-y-2 text-gray-700">
                   <li className="flex items-start gap-2">
@@ -561,10 +561,10 @@ export default function TermsPage() {
                   </h3>
                   <div className="space-y-3 text-sm text-gray-700">
                     <p className="font-semibold">
-                      WLPL IS NOT A MEDICAL SERVICE AND DOES NOT PROVIDE MEDICAL ADVICE.
+                      WPL IS NOT A MEDICAL SERVICE AND DOES NOT PROVIDE MEDICAL ADVICE.
                     </p>
                     <p>
-                      The Services, including AI-powered insights and recommendations, are for
+                      The Services, including WPL-powered insights and recommendations, are for
                       informational and tracking purposes only. They are NOT a substitute for
                       professional medical advice, diagnosis, or treatment.
                     </p>
@@ -590,12 +590,12 @@ export default function TermsPage() {
                       </li>
                     </ul>
                     <p>
-                      <strong>AI Limitations:</strong> Our AI features provide estimates and
+                      <strong>WPL Limitations:</strong> Our WPL features provide estimates and
                       suggestions based on algorithms. They may not be accurate and should not be
                       relied upon for medical decisions.
                     </p>
                     <p>
-                      <strong>Not FDA Approved:</strong> WLPL is not a medical device and has not
+                      <strong>Not FDA Approved:</strong> WPL is not a medical device and has not
                       been evaluated or approved by the FDA.
                     </p>
                   </div>
@@ -677,7 +677,7 @@ export default function TermsPage() {
                 <h3 className="font-semibold text-gray-900 mb-2">Our Intellectual Property</h3>
                 <p className="text-gray-700 mb-3">
                   The Services and all content, features, and functionality (including but not
-                  limited to software, text, graphics, logos, and trademarks) are owned by WLPL
+                  limited to software, text, graphics, logos, and trademarks) are owned by WPL
                   or our licensors and are protected by copyright, trademark, and other
                   intellectual property laws.
                 </p>
@@ -792,7 +792,7 @@ export default function TermsPage() {
 
               <div className="space-y-3 text-sm text-gray-700">
                 <p>
-                  TO THE FULLEST EXTENT PERMITTED BY LAW, WLPL DISCLAIMS ALL WARRANTIES, EXPRESS
+                  TO THE FULLEST EXTENT PERMITTED BY LAW, WPL DISCLAIMS ALL WARRANTIES, EXPRESS
                   OR IMPLIED, INCLUDING BUT NOT LIMITED TO:
                 </p>
                 <ul className="space-y-2 ml-4">
@@ -820,7 +820,7 @@ export default function TermsPage() {
 
                 <p className="mt-4">
                   WE DO NOT WARRANT THAT: (a) the Services will meet your requirements; (b)
-                  results from the Services will be accurate or reliable; (c) AI-generated
+                  results from the Services will be accurate or reliable; (c) WPL-generated
                   insights will be correct; or (d) any errors will be corrected.
                 </p>
 
@@ -845,7 +845,7 @@ export default function TermsPage() {
 
               <div className="space-y-3 text-sm text-gray-700">
                 <p>
-                  WLPL, ITS AFFILIATES, OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS SHALL NOT BE
+                  WPL, ITS AFFILIATES, OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS SHALL NOT BE
                   LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE
                   DAMAGES, INCLUDING BUT NOT LIMITED TO:
                 </p>
@@ -896,7 +896,7 @@ export default function TermsPage() {
           <section id="indemnification">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">13. Indemnification</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              You agree to indemnify, defend, and hold harmless WLPL, its affiliates, officers,
+              You agree to indemnify, defend, and hold harmless WPL, its affiliates, officers,
               directors, employees, agents, and licensors from and against any claims,
               liabilities, damages, losses, costs, or expenses (including reasonable attorneys'
               fees) arising from or related to:
@@ -1026,7 +1026,7 @@ export default function TermsPage() {
                 <h3 className="font-semibold text-gray-900 mb-2">Entire Agreement</h3>
                 <p className="text-gray-700 text-sm">
                   These Terms, together with our Privacy Policy and any other policies
-                  referenced herein, constitute the entire agreement between you and WLPL
+                  referenced herein, constitute the entire agreement between you and WPL
                   regarding the Services.
                 </p>
               </div>

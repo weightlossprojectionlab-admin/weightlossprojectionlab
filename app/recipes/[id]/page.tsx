@@ -68,7 +68,7 @@ export default async function RecipeDetailPage({ params }: PageProps) {
       {/* Marketing Banner */}
       <div className="bg-gradient-to-r from-primary to-accent text-white py-3 px-4 text-center">
         <p className="text-sm font-medium">
-          ✨ Get 200+ recipes like this with AI-powered meal tracking.{' '}
+          ✨ Get 200+ recipes like this with WPL-powered meal tracking.{' '}
           <Link href="/auth" className="underline font-bold hover:text-primary-light">
             Start Free →
           </Link>
@@ -222,7 +222,7 @@ export default async function RecipeDetailPage({ params }: PageProps) {
         <div className="mt-12 bg-gradient-to-r from-primary to-accent text-white rounded-lg p-8 text-center">
           <h2 className="text-3xl font-bold mb-4">Love This Recipe?</h2>
           <p className="text-lg mb-6 opacity-90">
-            Track this meal and 200+ more recipes with AI-powered nutrition analysis
+            Track this meal and 200+ more recipes with WPL-powered nutrition analysis
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
@@ -253,7 +253,7 @@ export default async function RecipeDetailPage({ params }: PageProps) {
             </div>
             <div className="flex items-center justify-center space-x-2">
               <span className="text-3xl">🎯</span>
-              <span className="text-foreground">AI-powered analysis</span>
+              <span className="text-foreground">WPL-powered analysis</span>
             </div>
             <div className="flex items-center justify-center space-x-2">
               <span className="text-3xl">📈</span>

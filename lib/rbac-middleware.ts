@@ -64,6 +64,17 @@ export async function checkPatientAccess(
   try {
     logger.debug('[RBAC] Checking patient access', { userId, patientId, requiredPermission })
 
+    // If patientId equals userId, user is viewing their own data (always allowed)
+    if (patientId === userId) {
+      logger.info('[RBAC] User is viewing own profile - full access granted', { userId, patientId })
+      return {
+        authorized: true,
+        role: 'owner',
+        userId,
+        ownerUserId: userId
+      }
+    }
+
     // Check if user is the patient owner (full access)
     const patientRef = adminDb
       .collection('users')

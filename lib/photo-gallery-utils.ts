@@ -61,9 +61,6 @@ export async function fetchGalleryPhotos(filters?: GalleryFilters): Promise<Phot
       params.mealType = filters.mealType
     }
 
-    // Debug: Log params being sent
-    console.log('[Gallery] Fetching with params:', params)
-
     // Fetch meals from API
     const response = await mealLogOperations.getMealLogs(params)
     const meals: MealLog[] = response.data || []
@@ -71,25 +68,38 @@ export async function fetchGalleryPhotos(filters?: GalleryFilters): Promise<Phot
     // Filter to only meals with photos and transform to gallery items
     const galleryItems: PhotoGalleryItem[] = meals
       .filter(meal => meal.photoUrl && meal.photoUrl.length > 0)
-      .filter(meal => meal.aiAnalysis) // Only include meals with AI analysis
       .map(meal => {
+        // Get food items from AI analysis or manual entries
+        let foodItems: string[] = []
+        if (meal.aiAnalysis?.foodItems) {
+          foodItems = meal.aiAnalysis.foodItems.map(item => item.name)
+        } else if (meal.manualEntries && meal.manualEntries.length > 0) {
+          foodItems = meal.manualEntries.map(entry => entry.food)
+        }
+
         const item: PhotoGalleryItem = {
           id: meal.id,
           photoUrl: meal.photoUrl!,
           mealType: meal.mealType,
           loggedAt: new Date(meal.loggedAt),
-          calories: meal.aiAnalysis?.totalCalories || 0,
-          foodItems: meal.aiAnalysis?.foodItems?.map(item => item.name) || [],
+          calories: meal.aiAnalysis?.totalCalories || meal.totalCalories || 0,
+          foodItems,
           notes: meal.notes,
           title: meal.title
         }
 
-        // Add macros if available
+        // Add macros if available (from AI or manual entry)
         if (meal.aiAnalysis?.totalMacros) {
           item.macros = {
             protein: meal.aiAnalysis.totalMacros.protein || 0,
             carbs: meal.aiAnalysis.totalMacros.carbs || 0,
             fat: meal.aiAnalysis.totalMacros.fat || 0
+          }
+        } else if (meal.macros) {
+          item.macros = {
+            protein: meal.macros.protein || 0,
+            carbs: meal.macros.carbs || 0,
+            fat: meal.macros.fat || 0
           }
         }
 
@@ -98,7 +108,6 @@ export async function fetchGalleryPhotos(filters?: GalleryFilters): Promise<Phot
 
     return galleryItems
   } catch (error) {
-    console.error('[Gallery] Error fetching photos:', error)
     logger.error('Error fetching gallery photos', error as Error)
     return []
   }
@@ -128,8 +137,6 @@ export async function fetchGalleryPhotosForFamily(
       params.mealType = filters.mealType
     }
 
-    console.log('[Gallery] Fetching for', patients.length, 'patients with params:', params)
-
     // Fetch meal logs for all patients in parallel
     const patientMealPromises = patients.map(async (patient) => {
       try {
@@ -141,15 +148,13 @@ export async function fetchGalleryPhotosForFamily(
           patientName: patient.name
         }))
       } catch (error) {
-        console.error(`[Gallery] Error fetching meals for patient ${patient.name}:`, error)
+        logger.error(`Error fetching meals for patient ${patient.name}`, error as Error)
         return []
       }
     })
 
     const allPatientMeals = await Promise.all(patientMealPromises)
     const flattenedMeals = allPatientMeals.flat()
-
-    console.log('[Gallery] Fetched', flattenedMeals.length, 'meals across all patients')
 
     // Filter to only meals with photos and transform to gallery items
     const galleryItems: PhotoGalleryItem[] = flattenedMeals
@@ -184,7 +189,6 @@ export async function fetchGalleryPhotosForFamily(
 
     return galleryItems
   } catch (error) {
-    console.error('[Gallery] Error fetching family photos:', error)
     logger.error('Error fetching family gallery photos', error as Error)
     return []
   }

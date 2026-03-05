@@ -54,7 +54,6 @@ export default function GalleryPage() {
 
   // Load photos when timeRange or patients change
   useEffect(() => {
-    console.log('[Gallery] useEffect triggered, timeRange:', timeRange, 'patients:', patients?.length)
     // Only load if patients have been loaded (or if still loading patients)
     if (!patientsLoading) {
       loadPhotos()
@@ -65,16 +64,11 @@ export default function GalleryPage() {
   const loadPhotos = async () => {
     setLoading(true)
     try {
-      console.log('[Gallery] Starting to fetch photos, timeRange:', timeRange)
-      console.log('[Gallery] Patients available:', patients?.length || 0)
-
       // Pass patients to enable family-aware fetching
       const fetchedPhotos = await fetchRecentPhotos(timeRange, patients)
-      console.log('[Gallery] Fetched photos:', fetchedPhotos.length)
       setPhotos(fetchedPhotos)
       setFilteredPhotos(fetchedPhotos)
     } catch (error) {
-      console.error('[Gallery] Error loading photos:', error)
       logger.error('Error loading photos:', error as Error)
       toast.error('Failed to load photos')
     } finally {

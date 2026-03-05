@@ -7,8 +7,8 @@ export const revalidate = false
 
 // Override metadata for home page with optimized title
 export const metadata: Metadata = {
-  title: 'Weight Loss Projection Lab - AI-Powered Meal Tracking',
-  description: 'Stop guessing, start losing. Track meals in 30 seconds with AI-powered photo analysis. No tedious logging required.',
+  title: 'Wellness Projection Lab - WPL-Powered Meal Tracking',
+  description: 'Stop guessing, start losing. Track meals in 30 seconds with WPL-powered photo analysis. No tedious logging required.',
 }
 
 export default function HomePage() {
@@ -41,7 +41,7 @@ export default function HomePage() {
             Stop Guessing. Start Losing.
           </h1>
           <p className="text-xl text-muted-foreground font-sans max-w-2xl mx-auto">
-            Lose weight without the tedious tracking. Just snap a photo of your meal—our AI does the rest in 30 seconds.
+            Lose weight without the tedious tracking. Just snap a photo of your meal—WPL does the rest in 30 seconds.
           </p>
         </div>
 

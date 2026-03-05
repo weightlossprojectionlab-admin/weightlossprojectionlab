@@ -52,7 +52,7 @@ async function analyzeWithGemini(
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash', // Stable version with vision capabilities
     generationConfig: {
       temperature: 0.4,
       topK: 32,
@@ -272,7 +272,13 @@ export async function analyzeMealImage(
     return { analysis, provider: 'gemini' }
   } catch (geminiError) {
     const errorMsg = geminiError instanceof Error ? geminiError.message : String(geminiError)
-    logger.warn('Gemini failed, trying OpenAI fallback', { error: errorMsg })
+    const isQuotaError = errorMsg.includes('quota') || errorMsg.includes('429')
+
+    if (isQuotaError) {
+      logger.error('Gemini quota exceeded', { error: errorMsg })
+    } else {
+      logger.warn('Gemini failed, trying OpenAI fallback', { error: errorMsg })
+    }
 
     // Try OpenAI fallback
     try {
@@ -282,13 +288,29 @@ export async function analyzeMealImage(
       return { analysis, provider: 'openai' }
     } catch (openaiError) {
       const openaiMsg = openaiError instanceof Error ? openaiError.message : String(openaiError)
-      logger.warn('OpenAI failed, using mock data', { error: openaiMsg })
+      const isOpenAIQuotaError = openaiMsg.includes('quota') || openaiMsg.includes('429')
+
+      if (isOpenAIQuotaError) {
+        logger.error('OpenAI quota exceeded', { error: openaiMsg })
+      } else {
+        logger.warn('OpenAI failed, using mock data', { error: openaiMsg })
+      }
+
+      // Build user-friendly error message
+      let userErrorMsg = 'AI analysis temporarily unavailable'
+      if (isQuotaError && isOpenAIQuotaError) {
+        userErrorMsg = 'AI service quota exceeded. Please try again later or contact support.'
+      } else if (isQuotaError) {
+        userErrorMsg = 'Gemini quota exceeded. OpenAI also unavailable.'
+      } else if (isOpenAIQuotaError) {
+        userErrorMsg = 'OpenAI quota exceeded. Gemini also unavailable.'
+      }
 
       // Return mock data as final fallback
       return {
         analysis: getMockAnalysis(),
         provider: 'mock',
-        error: `All providers failed. Gemini: ${errorMsg}, OpenAI: ${openaiMsg}`
+        error: userErrorMsg
       }
     }
   }

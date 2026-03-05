@@ -10,6 +10,7 @@ import { medicalOperations } from '@/lib/medical-operations'
 import type { Appointment } from '@/types/medical'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/hooks/useAuth'
+import { useFeatureGate } from '@/hooks/useFeatureGate'
 
 interface UseAppointmentsOptions {
   patientId?: string
@@ -37,9 +38,19 @@ export function useAppointments({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Feature gate check
+  const { canAccess: hasAppointmentsAccess } = useFeatureGate('appointments')
+
+  // Allow access if viewing own data OR has appointments feature
+  const isOwnData = patientId === user?.uid
+  const hasAccess = isOwnData || hasAppointmentsAccess
+
+  // Auto-disable fetch if feature not enabled (prevents 403 errors)
+  const effectiveAutoFetch = hasAccess ? autoFetch : false
+
   // Fetch appointments on mount and when filters change
   useEffect(() => {
-    if (!autoFetch || !user) {
+    if (!effectiveAutoFetch || !user) {
       setLoading(false)
       return
     }
@@ -62,7 +73,7 @@ export function useAppointments({
     }
 
     fetchData()
-  }, [autoFetch, user, patientId, providerId])
+  }, [effectiveAutoFetch, user, patientId, providerId])
 
   const fetchAppointments = useCallback(async () => {
     // Keep for manual refetch if needed

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { auth } from '@/lib/auth'
 import { logger } from '@/lib/logger'
@@ -31,17 +31,20 @@ export function useUserPreferences() {
   const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
-    const fetchPreferences = async () => {
-      try {
-        const user = auth.currentUser
-        if (!user) {
-          setLoading(false)
-          return
-        }
+    const user = auth.currentUser
+    if (!user) {
+      setLoading(false)
+      return
+    }
 
-        const userDoc = await getDoc(doc(db, 'users', user.uid))
-        if (userDoc.exists()) {
-          const data = userDoc.data()
+    // Real-time listener for preference updates
+    logger.debug('[useUserPreferences] Setting up real-time listener for user:', user.uid)
+
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', user.uid),
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data()
           const onboardingAnswers = data?.preferences?.onboardingAnswers
 
           if (onboardingAnswers) {
@@ -52,7 +55,7 @@ export function useUserPreferences() {
             } as OnboardingAnswers
 
             setPreferences(normalizedPreferences)
-            logger.debug('✅ Loaded user preferences:', {
+            logger.debug('✅ User preferences updated:', {
               userMode: normalizedPreferences.userMode,
               featurePreferences: normalizedPreferences.featurePreferences,
               rawPreferences: onboardingAnswers.featurePreferences,
@@ -65,15 +68,19 @@ export function useUserPreferences() {
             setPreferences(null)
           }
         }
-      } catch (err) {
-        logger.error('Error fetching user preferences:', err as Error)
-        setError(err as Error)
-      } finally {
+        setLoading(false)
+      },
+      (err) => {
+        logger.error('Error in preferences listener:', err)
+        setError(err)
         setLoading(false)
       }
-    }
+    )
 
-    fetchPreferences()
+    return () => {
+      logger.debug('[useUserPreferences] Cleaning up listener')
+      unsubscribe()
+    }
   }, [])
 
   // Helper functions using useMemo to prevent recalculation on every render

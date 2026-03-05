@@ -133,7 +133,7 @@ export default function PressPage() {
                     individuals and families manage their wellness journey.
                   </p>
                   <p className="text-gray-700 leading-relaxed">
-                    Founded in 2025, WPL revolutionizes health tracking by providing AI-powered
+                    Founded in 2025, WPL revolutionizes health tracking by providing WPL-powered
                     nutritional analysis, personalized insights, and comprehensive family health
                     management—all while maintaining the highest standards of privacy and security.
                   </p>
@@ -152,7 +152,7 @@ export default function PressPage() {
                     </div>
                     <div>
                       <dt className="font-medium text-gray-700">Industry</dt>
-                      <dd className="text-gray-900">Healthcare Technology, AI, Digital Health</dd>
+                      <dd className="text-gray-900">Healthcare Technology, Intelligent Systems, Digital Health</dd>
                     </div>
                     <div>
                       <dt className="font-medium text-gray-700">Certifications</dt>
@@ -177,12 +177,12 @@ export default function PressPage() {
                 <h3 className="font-semibold text-gray-900 mb-4">Boilerplate</h3>
                 <div className="bg-gray-50 rounded-lg p-6">
                   <p className="text-sm text-gray-700 leading-relaxed italic">
-                    Weight Loss Projection Lab is an AI-powered health tracking platform that helps
+                    Wellness Projection Lab is a WPL-powered health tracking platform that helps
                     individuals and families achieve their wellness goals through intelligent meal
                     analysis, personalized insights, and comprehensive health management. With
                     HIPAA compliance and enterprise-grade security, WPL provides the privacy and
                     protection users need when managing sensitive health information. The platform
-                    features advanced AI technology from OpenAI and Google, biometric
+                    features advanced technology, biometric
                     authentication, and family care management tools that make health tracking
                     effortless and effective. For more information, visit weightlossproglab.com.
                   </p>
@@ -582,11 +582,11 @@ export default function PressPage() {
                 <div className="border border-gray-200 rounded-lg p-6 hover:border-blue-500 transition-colors">
                   <div className="text-sm text-gray-500 mb-2">TechCrunch • Dec 2025</div>
                   <h3 className="font-semibold text-gray-900 mb-3">
-                    "AI-Powered Health Tracking Meets Enterprise Security"
+                    "WPL-Powered Health Tracking Meets Enterprise Security"
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Weight Loss Projection Lab is redefining how families manage health data with
-                    HIPAA-compliant AI technology...
+                    Wellness Projection Lab is redefining how families manage health data with
+                    HIPAA-compliant WPL technology...
                   </p>
                   <a href="#" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
                     Read Article →
@@ -599,7 +599,7 @@ export default function PressPage() {
                     "The Future of Family Health Management"
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    How one startup is using AI to make health tracking effortless for entire
+                    How one startup is using WPL to make health tracking effortless for entire
                     households...
                   </p>
                   <a href="#" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
@@ -624,10 +624,10 @@ export default function PressPage() {
                 <div className="border border-gray-200 rounded-lg p-6 hover:border-blue-500 transition-colors">
                   <div className="text-sm text-gray-500 mb-2">The Verge • Dec 2025</div>
                   <h3 className="font-semibold text-gray-900 mb-3">
-                    "AI That Actually Helps You Eat Better"
+                    "Technology That Actually Helps You Eat Better"
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Weight Loss Projection Lab's meal analysis AI provides surprisingly accurate
+                    Wellness Projection Lab's meal analysis provides surprisingly accurate
                     nutritional insights...
                   </p>
                   <a href="#" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
@@ -666,7 +666,7 @@ export default function PressPage() {
                   <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-4xl">🤖</span>
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">AI Innovation Award</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">Technology Innovation Award</h3>
                   <p className="text-sm text-gray-600">Tech Innovation Summit 2025</p>
                 </div>
               </div>

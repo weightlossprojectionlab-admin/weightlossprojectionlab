@@ -1504,17 +1504,17 @@ function PatientDetailContent() {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-foreground mb-2">
-                        AI-Powered Meal Logging
+                        WPL-Powered Meal Logging
                       </h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Use our advanced meal logger with AI photo analysis, nutrition tracking, and barcode scanning for {patient.name}
+                        Use our advanced meal logger with WPL photo analysis, nutrition tracking, and barcode scanning for {patient.name}
                       </p>
                       <Link
                         href={`/log-meal?patientId=${patientId}`}
                         className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium"
                       >
                         <CameraIcon className="w-5 h-5" />
-                        Log Meal with AI
+                        Log Meal with WPL
                       </Link>
                     </div>
                   </div>
@@ -1686,7 +1686,7 @@ function PatientDetailContent() {
               <SymptomLogger patient={patient} />
             )}
 
-            {/* AI Health Report */}
+            {/* WPL Health Report */}
             {patient && !isPet && (
               <AIHealthReport
                 patient={patient}

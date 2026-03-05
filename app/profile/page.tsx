@@ -45,11 +45,16 @@ import {
 } from '@/lib/vital-reminder-logic'
 import { updateVitalReminders } from '@/lib/services/patient-preferences'
 import { getCSRFToken } from '@/lib/csrf'
+import { useFeatureGate } from '@/hooks/useFeatureGate'
+import { UpgradeRequiredModal } from '@/components/subscription/UpgradeRequiredModal'
+import { FeatureEnabledModal } from '@/components/subscription/FeatureEnabledModal'
+import type { FeaturePreference, SubscriptionPlan } from '@/types'
 
 function ProfileContent() {
   const { user } = useAuth()
   const router = useRouter()
   const { confirm, ConfirmDialog } = useConfirm()
+  const { canAccess: hasMedicalFeatures } = useFeatureGate('medications')
 
   // Subscription state
   const { subscription, loading: subscriptionLoading } = useSubscription()
@@ -71,6 +76,13 @@ function ProfileContent() {
   const [healthApp, setHealthApp] = useState<'apple-health' | 'google-fit' | 'none'>('none')
   const [sendingTestNotif, setSendingTestNotif] = useState(false)
   const [selectedMemberId, setSelectedMemberId] = useState<string>('')
+
+  // Modal state for feature upgrade flow
+  const [showUpgradeRequiredModal, setShowUpgradeRequiredModal] = useState(false)
+  const [showFeatureEnabledModal, setShowFeatureEnabledModal] = useState(false)
+  const [pendingFeature, setPendingFeature] = useState<FeaturePreference | null>(null)
+  const [requiredPlan, setRequiredPlan] = useState<SubscriptionPlan>('single_plus')
+  const [wasUpgradeRequired, setWasUpgradeRequired] = useState(false)
 
   // Use patients as family members (patients ARE the family members)
   const familyMembers = patients
@@ -318,11 +330,18 @@ function ProfileContent() {
         return
       }
 
+      // Check if service worker is available
+      if (!('serviceWorker' in navigator)) {
+        toast.error('Service workers not supported. Please use a modern browser.')
+        return
+      }
+
       // Check current permission
       let permission = Notification.permission
 
       // Request permission if not granted
       if (permission === 'default') {
+        logger.debug('[Profile] Requesting notification permission...')
         permission = await Notification.requestPermission()
       }
 
@@ -332,16 +351,21 @@ function ProfileContent() {
       }
 
       if (permission === 'granted') {
+        // Wait for service worker to be ready (critical for mobile)
+        logger.debug('[Profile] Waiting for service worker...')
+        const swReg = await navigator.serviceWorker.ready
+        logger.debug('[Profile] Service worker ready, showing notification...')
+
         // Use ServiceWorkerRegistration.showNotification() — required on mobile
         // (new Notification() is blocked on Android/iOS browsers)
-        const swReg = await navigator.serviceWorker.ready
         await swReg.showNotification('🎉 Test Notification', {
           body: 'Your notifications are working! You\'ll receive helpful reminders to stay on track.',
           icon: '/icon-192x192.png',
           badge: '/icon-72x72.png',
           tag: 'test-notification',
           requireInteraction: false,
-          silent: false
+          silent: false,
+          vibrate: [200, 100, 200] // Haptic feedback on mobile
         })
 
         toast.success('Test notification sent! You should see it now.')
@@ -349,7 +373,12 @@ function ProfileContent() {
       }
     } catch (error) {
       logger.error('Error sending test notification:', error as Error)
-      toast.error('Failed to send test notification: ' + (error as Error).message)
+      const errorMsg = (error as Error).message
+      if (errorMsg.includes('service worker')) {
+        toast.error('Service worker not ready. Please refresh the page and try again.')
+      } else {
+        toast.error('Failed to send test notification: ' + errorMsg)
+      }
     } finally {
       setSendingTestNotif(false)
     }
@@ -580,8 +609,8 @@ function ProfileContent() {
           )}
         </div>
 
-        {/* Advanced Health Profile Component */}
-        {profileData && (
+        {/* Advanced Health Profile Component - Only show if health_medical feature enabled */}
+        {profileData && userPrefs.hasFeature('health_medical') && (
           <AdvancedHealthProfile
             profileData={profileData}
             onSave={handleSaveAdvancedProfile}
@@ -923,11 +952,28 @@ function ProfileContent() {
                   currentPreferences: profileData?.preferences
                 })
 
-                // Use centralized service to merge preferences (DRY)
-                const mergedPreferences = updateVitalReminders(
-                  profileData?.preferences,
-                  updatedVitalReminders
-                )
+                // Ensure we preserve all existing preferences including required fields like 'units'
+                const currentPrefs = profileData?.preferences || {}
+
+                // Validate and set units field (required by API - must be exactly "metric" or "imperial")
+                const validUnits = currentPrefs.units === 'metric' || currentPrefs.units === 'imperial'
+                  ? currentPrefs.units
+                  : 'imperial'
+
+                const mergedPreferences = {
+                  ...currentPrefs,
+                  units: validUnits,
+                  vitalReminders: {
+                    ...(currentPrefs.vitalReminders || {}),
+                    ...updatedVitalReminders
+                  }
+                }
+
+                console.log('[Profile] Merged preferences being sent:', {
+                  mergedPreferences,
+                  originalUnits: currentPrefs.units,
+                  validatedUnits: validUnits
+                })
 
                 // If viewing a family member, save to their patient profile
                 if (currentlyViewingMember) {
@@ -953,7 +999,14 @@ function ProfileContent() {
                   })
 
                   if (!response.ok) {
-                    throw new Error('Failed to update patient vital reminders')
+                    const errorData = await response.json().catch(() => ({}))
+                    const errorMsg = errorData.error || `Server returned ${response.status}`
+                    logger.error('[Profile] Failed to update patient vital reminders', {
+                      status: response.status,
+                      errorData,
+                      patientId: currentlyViewingMember.id
+                    })
+                    throw new Error(errorMsg)
                   }
 
                   // Refresh patient data from the API response
@@ -1007,7 +1060,9 @@ function ProfileContent() {
                               : `${VITAL_DISPLAY_NAMES[vitalType]} reminders disabled`
                           )
                         } catch (error) {
-                          toast.error('Failed to update reminder settings')
+                          logger.error('[Profile] Failed to update vital reminder settings', error as Error)
+                          const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+                          toast.error(`Failed to update reminder settings: ${errorMsg}`)
                         }
                       }}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
@@ -1048,7 +1103,9 @@ function ProfileContent() {
                             await saveVitalReminders(updatedVitalReminders)
                             toast.success('Check-in frequency updated')
                           } catch (error) {
-                            toast.error('Failed to update frequency')
+                            logger.error('[Profile] Failed to update frequency', error as Error)
+                            const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+                            toast.error(`Failed to update frequency: ${errorMsg}`)
                           }
                         }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 font-semibold focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -1418,30 +1475,53 @@ function ProfileContent() {
                   Track appointments, medications, vital signs (blood pressure, glucose, etc.), and health records all in one place.
                 </p>
                 <button
-                  onClick={() => router.push('/onboarding')}
+                  onClick={async () => {
+                    if (!user?.uid) return
+
+                    // Use feature enablement helper to check user intent
+                    const { canEnableFeature, enableFeature, getFeatureMessages, getRequiredPlan } = await import('@/lib/feature-enablement')
+
+                    const result = canEnableFeature(user, 'health_medical')
+                    const messages = getFeatureMessages('health_medical')
+
+                    if (result.requiresUpgrade) {
+                      // Show upgrade modal instead of redirecting
+                      const { getRequiredPlanForFeature } = await import('@/lib/feature-enablement')
+                      setPendingFeature('health_medical')
+                      setRequiredPlan(getRequiredPlanForFeature('health_medical') as SubscriptionPlan)
+                      setWasUpgradeRequired(true)
+                      setShowUpgradeRequiredModal(true)
+                    } else if (result.canEnable) {
+                      // User has subscription, enable the preference
+                      try {
+                        const currentFeatures = userPrefs.getAllFeatures()
+                        const enableResult = await enableFeature(
+                          currentFeatures,
+                          'health_medical',
+                          userPrefs.preferences
+                        )
+
+                        if (enableResult.success) {
+                          setPendingFeature('health_medical')
+                          setWasUpgradeRequired(false)
+                          setShowFeatureEnabledModal(true)
+                        } else {
+                          toast.error(enableResult.error || 'Failed to enable feature')
+                        }
+                      } catch (error) {
+                        toast.error('Failed to enable feature. Please try again.')
+                        logger.error('Failed to enable health_medical', error as Error)
+                      }
+                    }
+                  }}
                   className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all"
                 >
-                  Enable Health & Medical Tracking
+                  {hasMedicalFeatures ? 'Enable Health & Medical Tracking' : 'Upgrade to Enable'}
                 </button>
               </div>
             </div>
           </div>
         )}
-
-        {/* Test Notification */}
-        <div className="bg-card rounded-lg p-6 shadow-sm">
-          <h3 className="text-lg font-bold mb-4">🔔 Test Notifications</h3>
-          <p className="text-description mb-4">
-            Send a test notification to verify your notification setup is working correctly.
-          </p>
-          <button
-            onClick={handleSendTestNotification}
-            disabled={sendingTestNotif}
-            className="btn btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {sendingTestNotif ? 'Sending Test...' : '📬 Send Test Notification'}
-          </button>
-        </div>
 
         {/* Notification Preferences - Filter by onboarding goals */}
         {user?.uid && (userPrefs.hasFeature('health_medical') || userPrefs.hasFeature('nutrition_kitchen') || userPrefs.getAllFeatures().length === 0) && (
@@ -1524,7 +1604,7 @@ function ProfileContent() {
 
         {/* App Info */}
         <div className="text-center text-description space-y-1">
-          <p>WLPL - Weight Loss Projection Lab</p>
+          <p>WPL - Wellness Projection Lab</p>
           <p>Version 1.0.0</p>
           <p>Privacy-focused • Secure • Accessible</p>
         </div>
@@ -1544,6 +1624,40 @@ function ProfileContent() {
         onClose={() => setShowUpgradeModal(false)}
         currentPlan={subscription?.plan}
       />
+
+      {/* Upgrade Required Modal - Feature Gate */}
+      {pendingFeature && (
+        <UpgradeRequiredModal
+          isOpen={showUpgradeRequiredModal}
+          onClose={() => {
+            setShowUpgradeRequiredModal(false)
+            setPendingFeature(null)
+          }}
+          feature={pendingFeature}
+          currentPlan={(subscription?.plan || 'free') as SubscriptionPlan}
+          requiredPlan={requiredPlan}
+          onConfirm={async () => {
+            const { trackFeatureIntent } = await import('@/lib/feature-enablement')
+            if (user?.uid) {
+              await trackFeatureIntent(user.uid, pendingFeature, '/profile')
+            }
+            router.push('/pricing')
+          }}
+        />
+      )}
+
+      {/* Feature Enabled Modal - Success Celebration */}
+      {pendingFeature && (
+        <FeatureEnabledModal
+          isOpen={showFeatureEnabledModal}
+          onClose={() => {
+            setShowFeatureEnabledModal(false)
+            setPendingFeature(null)
+          }}
+          feature={pendingFeature}
+          wasUpgradeRequired={wasUpgradeRequired}
+        />
+      )}
     </main>
     </>
   )

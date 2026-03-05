@@ -92,6 +92,7 @@ service cloud.firestore {
       allow create: if isOwner(userId);
 
       // Update: Users can update their own profile (except role field)
+      // Users can also update pendingFeatureIntent (for cross-device upgrade tracking)
       allow update: if isOwner(userId) &&
                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']));
 

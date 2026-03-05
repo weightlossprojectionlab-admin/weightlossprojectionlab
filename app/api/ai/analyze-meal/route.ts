@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth } from '@/lib/firebase-admin'
+import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { generateMealTitle } from '@/lib/meal-title-utils'
 import { batchValidateWithUSDA } from '@/lib/usda-nutrition'
 import { logger } from '@/lib/logger'
@@ -34,6 +34,63 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized: Invalid authentication token' },
         { status: 401 }
+      )
+    }
+
+    // Check subscription status - image analysis requires PAID subscription only
+    // No free users, no trials - only active paid subscriptions can afford API costs
+    try {
+      const userDoc = await adminDb.collection('users').doc(userId).get()
+      const userData = userDoc.data()
+      const subscription = userData?.subscription
+
+      // Only allow active paid subscriptions (NOT trialing, NOT free)
+      const hasActivePaidSubscription =
+        subscription &&
+        subscription.plan !== 'free' &&
+        subscription.status === 'active'
+
+      if (!hasActivePaidSubscription) {
+        logger.info('Blocking image analysis - active paid subscription required', {
+          userId,
+          plan: subscription?.plan || 'none',
+          status: subscription?.status || 'none',
+          reason: !subscription ? 'no_subscription' :
+                  subscription.plan === 'free' ? 'free_plan' :
+                  subscription.status !== 'active' ? 'not_active' : 'unknown'
+        })
+        return NextResponse.json(
+          {
+            error: 'Image analysis requires an active paid subscription',
+            requiresSubscription: true,
+            code: 'SUBSCRIPTION_REQUIRED',
+            currentPlan: subscription?.plan || 'none',
+            currentStatus: subscription?.status || 'none'
+          },
+          { status: 403 }
+        )
+      }
+
+      logger.info('✅ Subscription check passed', {
+        userId,
+        plan: subscription.plan,
+        status: subscription.status
+      })
+    } catch (subError) {
+      logger.error('❌ Subscription check failed', subError)
+      ErrorHandler.handle(subError, {
+        operation: 'subscription_check',
+        component: 'api/ai/analyze-meal',
+        userId
+      })
+      // If subscription check fails, block access to be safe
+      return NextResponse.json(
+        {
+          error: 'Unable to verify subscription status',
+          requiresSubscription: true,
+          code: 'SUBSCRIPTION_CHECK_FAILED'
+        },
+        { status: 403 }
       )
     }
 

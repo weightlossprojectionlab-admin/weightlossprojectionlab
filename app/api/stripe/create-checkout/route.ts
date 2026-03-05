@@ -7,6 +7,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { adminAuth as auth, adminDb as db } from '@/lib/firebase-admin'
 import { SubscriptionPlan } from '@/types'
+import {
+  determineOperationType,
+  validateTransition,
+  handleUpgrade,
+  handleDowngrade,
+  handleIntervalSwitch,
+  handleTrialConversion,
+  getOperationMessage,
+  type BillingInterval,
+  type TransitionParams
+} from '@/lib/services/subscription-service'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover',
@@ -100,24 +111,187 @@ export async function POST(request: NextRequest) {
     const existingSubscription = userData?.subscription
     let customerId = existingSubscription?.stripeCustomerId
 
-    // 5a. Enforce one subscription per account
-    // Check if user already has an active subscription
-    if (existingSubscription?.stripeSubscriptionId) {
-      const existingStatus = existingSubscription.status
+    // 5a. Rate limiting - max 3 subscription changes per 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const recentChanges = await db
+      .collection('subscriptionChangeLogs')
+      .where('userId', '==', userId)
+      .where('timestamp', '>', twentyFourHoursAgo)
+      .get()
 
-      // Prevent creating new subscription if user has active/trialing subscription
-      if (existingStatus === 'active' || existingStatus === 'trialing') {
+    if (recentChanges.size >= 3) {
+      return NextResponse.json(
+        {
+          error: 'Too many subscription changes. Please wait 24 hours before making another change.',
+          code: 'RATE_LIMIT_EXCEEDED'
+        },
+        { status: 429 }
+      )
+    }
+
+    // 5b. Universal subscription management - handle all transition types
+    if (existingSubscription?.stripeSubscriptionId) {
+      const existingStatus = existingSubscription.status as 'active' | 'trialing' | 'canceled' | 'incomplete' | 'past_due' | null
+
+      // Determine what type of operation this is
+      const transitionParams: TransitionParams = {
+        currentPlan: existingSubscription.plan as SubscriptionPlan,
+        currentInterval: existingSubscription.billingInterval as BillingInterval,
+        currentStatus: existingStatus,
+        newPlan: plan,
+        newInterval: billingInterval
+      }
+
+      const operationType = determineOperationType(transitionParams)
+
+      // Validate the transition
+      const validation = validateTransition(operationType, transitionParams)
+      if (!validation.valid) {
         return NextResponse.json(
           {
-            error: 'You already have an active subscription. Please use the Customer Portal to manage or upgrade your plan.',
-            code: 'EXISTING_SUBSCRIPTION'
+            error: validation.error,
+            code: 'INVALID_TRANSITION'
           },
           { status: 400 }
         )
       }
 
-      // If subscription is canceled/expired/past_due, we can allow creating a new one
-      // This handles cases where users canceled and want to re-subscribe
+      // Route to appropriate handler based on operation type
+      try {
+        switch (operationType) {
+          case 'UPGRADE':
+            console.log('[Subscription] Processing upgrade:', transitionParams.currentPlan, '→', transitionParams.newPlan)
+            const upgradedSubscription = await handleUpgrade(existingSubscription.stripeSubscriptionId, priceId)
+
+            // Update Firestore immediately (webhook will sync as backup)
+            await db.collection('users').doc(userId).update({
+              'subscription.plan': plan,
+              'subscription.billingInterval': billingInterval,
+              'subscription.stripePriceId': priceId,
+              'subscription.updatedAt': new Date()
+            })
+
+            // Audit log
+            await db.collection('subscriptionChangeLogs').add({
+              userId,
+              operationType: 'UPGRADE',
+              fromPlan: transitionParams.currentPlan,
+              toPlan: plan,
+              fromInterval: transitionParams.currentInterval,
+              toInterval: billingInterval,
+              timestamp: new Date(),
+              success: true,
+              stripeSubscriptionId: existingSubscription.stripeSubscriptionId
+            })
+
+            return NextResponse.json({
+              success: true,
+              operationType: 'UPGRADE',
+              message: getOperationMessage('UPGRADE'),
+              subscription: upgradedSubscription
+            })
+
+          case 'DOWNGRADE':
+            console.log('[Subscription] Scheduling downgrade:', transitionParams.currentPlan, '→', transitionParams.newPlan)
+            const schedule = await handleDowngrade(existingSubscription.stripeSubscriptionId, priceId)
+
+            // Audit log
+            await db.collection('subscriptionChangeLogs').add({
+              userId,
+              operationType: 'DOWNGRADE',
+              fromPlan: transitionParams.currentPlan,
+              toPlan: plan,
+              fromInterval: transitionParams.currentInterval,
+              toInterval: billingInterval,
+              timestamp: new Date(),
+              success: true,
+              scheduled: true,
+              stripeSubscriptionId: existingSubscription.stripeSubscriptionId
+            })
+
+            return NextResponse.json({
+              success: true,
+              operationType: 'DOWNGRADE',
+              message: getOperationMessage('DOWNGRADE'),
+              schedule
+            })
+
+          case 'INTERVAL_SWITCH':
+            console.log('[Subscription] Switching interval:', transitionParams.currentInterval, '→', transitionParams.newInterval)
+            const switchedSubscription = await handleIntervalSwitch(existingSubscription.stripeSubscriptionId, priceId)
+
+            // Audit log
+            await db.collection('subscriptionChangeLogs').add({
+              userId,
+              operationType: 'INTERVAL_SWITCH',
+              fromPlan: transitionParams.currentPlan,
+              toPlan: plan,
+              fromInterval: transitionParams.currentInterval,
+              toInterval: billingInterval,
+              timestamp: new Date(),
+              success: true,
+              stripeSubscriptionId: existingSubscription.stripeSubscriptionId
+            })
+
+            return NextResponse.json({
+              success: true,
+              operationType: 'INTERVAL_SWITCH',
+              message: getOperationMessage('INTERVAL_SWITCH'),
+              subscription: switchedSubscription
+            })
+
+          case 'TRIAL_CONVERSION':
+            console.log('[Subscription] Converting trial to paid')
+            const convertedSubscription = await handleTrialConversion(existingSubscription.stripeSubscriptionId)
+
+            // Audit log
+            await db.collection('subscriptionChangeLogs').add({
+              userId,
+              operationType: 'TRIAL_CONVERSION',
+              fromPlan: transitionParams.currentPlan,
+              toPlan: plan,
+              fromInterval: transitionParams.currentInterval,
+              toInterval: billingInterval,
+              timestamp: new Date(),
+              success: true,
+              stripeSubscriptionId: existingSubscription.stripeSubscriptionId
+            })
+
+            return NextResponse.json({
+              success: true,
+              operationType: 'TRIAL_CONVERSION',
+              message: getOperationMessage('TRIAL_CONVERSION'),
+              subscription: convertedSubscription
+            })
+
+          case 'REACTIVATION':
+            console.log('[Subscription] Reactivating canceled subscription')
+            // Fall through to create new checkout session below
+            break
+
+          case 'NEW_SUBSCRIPTION':
+            // Fall through to create new checkout session below
+            break
+
+          default:
+            return NextResponse.json(
+              {
+                error: 'Invalid subscription operation',
+                code: 'INVALID_OPERATION'
+              },
+              { status: 400 }
+            )
+        }
+      } catch (error: any) {
+        console.error('[Subscription] Operation error:', error)
+        return NextResponse.json(
+          {
+            error: error.message || 'Failed to process subscription change',
+            code: 'STRIPE_ERROR'
+          },
+          { status: 500 }
+        )
+      }
     }
 
     // 6. Create or retrieve Stripe customer

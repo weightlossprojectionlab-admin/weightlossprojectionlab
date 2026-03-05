@@ -10,6 +10,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { medicalOperations } from '@/lib/medical-operations'
 import { logger } from '@/lib/logger'
+import { useAuth } from '@/hooks/useAuth'
+import { useFeatureGate } from '@/hooks/useFeatureGate'
 import type { VitalSign, VitalType } from '@/types/medical'
 
 interface UseVitalsOptions {
@@ -49,6 +51,17 @@ export function useVitals({
   const [loading, setLoading] = useState<boolean>(autoFetch)
   const [error, setError] = useState<string | null>(null)
 
+  // Feature gate check
+  const { user } = useAuth()
+  const { canAccess: hasVitalsAccess } = useFeatureGate('vitals')
+
+  // Allow access if viewing own data OR has vitals feature
+  const isOwnData = patientId === user?.uid
+  const hasAccess = isOwnData || hasVitalsAccess
+
+  // Auto-disable fetch if feature not enabled (prevents 403 errors)
+  const effectiveAutoFetch = hasAccess ? autoFetch : false
+
   // Fetch vitals
   const fetchVitals = useCallback(async () => {
     // Don't fetch if no patientId
@@ -78,12 +91,14 @@ export function useVitals({
     }
   }, [patientId, type, limit])
 
-  // Initial fetch (if autoFetch is true)
+  // Initial fetch (if effectiveAutoFetch is true)
   useEffect(() => {
-    if (autoFetch) {
+    if (effectiveAutoFetch) {
       fetchVitals()
+    } else {
+      setLoading(false)
     }
-  }, [fetchVitals, autoFetch])
+  }, [fetchVitals, effectiveAutoFetch])
 
   // Log vital sign
   const logVital = useCallback(async (

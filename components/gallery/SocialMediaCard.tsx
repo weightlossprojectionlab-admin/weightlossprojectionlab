@@ -1,17 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Image from 'next/image'
 import type { PhotoGalleryItem } from '@/lib/photo-gallery-utils'
 import { PlatformSelector } from './PlatformSelector'
 import type { SocialPlatform, MealCardData } from '@/lib/social-media-cards'
 import { generatePlatformCard, getCardFilename, downloadCard } from '@/lib/social-media-cards'
 import { logger } from '@/lib/logger'
+import { generateSocialMediaPost, suggestBestPlatform } from '@/lib/social-media-agent'
 
 export interface SocialMediaCardProps {
   photo: PhotoGalleryItem
   onCardClick?: () => void
   showShareOverlay?: boolean
+  targetPlatform?: SocialPlatform // NEW: Allow specifying platform
 }
 
 /**
@@ -19,10 +21,35 @@ export interface SocialMediaCardProps {
  * Displays meal photo on top with info panel on bottom
  * Mimics Instagram Story/TikTok post aesthetic
  */
-export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false }: SocialMediaCardProps) {
+export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false, targetPlatform }: SocialMediaCardProps) {
   const [imageError, setImageError] = useState(false)
   const [generatingCard, setGeneratingCard] = useState(false)
   const [showPlatformSelector, setShowPlatformSelector] = useState(false)
+
+  // Generate intelligent platform-specific post using AI agent
+  const socialPost = useMemo(() => {
+    const platform = targetPlatform || suggestBestPlatform({
+      mealType: photo.mealType,
+      photoUrl: photo.photoUrl,
+      calories: photo.calories,
+      loggedAt: photo.loggedAt,
+      foodItems: photo.foodItems,
+      macros: photo.macros,
+      title: photo.title,
+      notes: photo.notes
+    })
+
+    return generateSocialMediaPost({
+      mealType: photo.mealType,
+      photoUrl: photo.photoUrl,
+      calories: photo.calories,
+      loggedAt: photo.loggedAt,
+      foodItems: photo.foodItems,
+      macros: photo.macros,
+      title: photo.title,
+      notes: photo.notes
+    }, platform)
+  }, [photo, targetPlatform])
 
   const handlePlatformSelect = async (platform: SocialPlatform) => {
     try {
@@ -111,14 +138,14 @@ export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false }
 
   return (
     <div
-      className="group relative bg-gradient-to-b from-purple-600 to-indigo-600 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer"
+      className="group relative rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer"
       style={{ aspectRatio: '9/16' }}
       onClick={onCardClick}
       onMouseEnter={() => showShareOverlay && setShowPlatformSelector(true)}
       onMouseLeave={() => !generatingCard && setShowPlatformSelector(false)}
     >
-      {/* Meal Photo Section - Top 65% */}
-      <div className="relative h-[65%] bg-black">
+      {/* Full Background Image */}
+      <div className="absolute inset-0">
         {!imageError ? (
           <Image
             src={photo.photoUrl}
@@ -129,108 +156,101 @@ export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false }
             onError={() => setImageError(true)}
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-muted-foreground">
             <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
         )}
+      </div>
 
-        {/* Platform Selector Overlay */}
-        {(showShareOverlay || showPlatformSelector) && !generatingCard && (
+      {/* Bottom Gradient Overlay for Text Readability */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+      {/* Platform Selector Overlay */}
+      {(showShareOverlay || showPlatformSelector) && !generatingCard && (
+        <div className="absolute inset-0 z-10">
           <PlatformSelector
             onSelectPlatform={handlePlatformSelect}
             className="z-10"
           />
-        )}
+        </div>
+      )}
 
-        {/* Generating Spinner */}
-        {generatingCard && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-20">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mx-auto mb-2"></div>
-              <p className="text-white text-sm font-medium">Generating...</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Info Panel Section - Bottom 35% */}
-      <div className="h-[35%] bg-card p-6 flex flex-col justify-center">
-        {/* Meal Type & Emoji - Prominent */}
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-4xl">{emoji}</span>
-          <div className="flex flex-col">
-            <span className="font-bold text-foreground text-xl">
-              {mealTypeDisplay}
-            </span>
-            {/* Patient Name Badge (for family plans) */}
-            {photo.patientName && (
-              <span className="text-xs text-muted-foreground font-medium mt-1">
-                {photo.patientName}
-              </span>
-            )}
+      {/* Generating Spinner */}
+      {generatingCard && (
+        <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mx-auto mb-2"></div>
+            <p className="text-white text-sm font-medium">Generating...</p>
           </div>
         </div>
+      )}
 
-        {/* Calories - HUGE and Eye-Catching (Hero Element) */}
+      {/* Content Overlay - AI-Powered Platform-Optimized Layout */}
+      <div className={`absolute ${
+        socialPost.designStyle.textPosition === 'top' ? 'top-0' :
+        socialPost.designStyle.textPosition === 'center' ? 'top-1/2 -translate-y-1/2' :
+        'bottom-0'
+      } left-0 right-0 p-6 z-10 text-white`}>
+
+        {/* Primary Text - Platform Optimized */}
         <div className="mb-4">
-          <div className="text-7xl font-bold text-primary leading-none">
-            {photo.calories}
+          <div className={`${
+            socialPost.designStyle.fontSize === '4xl' ? 'text-6xl md:text-7xl' :
+            socialPost.designStyle.fontSize === '3xl' ? 'text-5xl md:text-6xl' :
+            socialPost.designStyle.fontSize === '2xl' ? 'text-4xl md:text-5xl' :
+            'text-3xl md:text-4xl'
+          } ${
+            socialPost.designStyle.fontStyle === 'hand-drawn' ? 'font-black' :
+            socialPost.designStyle.fontStyle === 'bold' ? 'font-black' :
+            'font-bold'
+          } leading-tight text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]`}>
+            {socialPost.overlayText.primary}
           </div>
-          <div className="text-base text-muted-foreground mt-1">
-            calories
-          </div>
+          {socialPost.overlayText.secondary && (
+            <div className="text-xl md:text-2xl font-semibold mt-2 opacity-90 drop-shadow-lg">
+              {socialPost.overlayText.secondary}
+            </div>
+          )}
         </div>
 
-        {/* Macros (if available) - Supporting Info */}
-        {photo.macros && (
-          <div className="flex gap-3 mb-3 text-sm font-semibold text-foreground">
-            <span>P: {photo.macros.protein}g</span>
-            <span>•</span>
-            <span>C: {photo.macros.carbs}g</span>
-            <span>•</span>
-            <span>F: {photo.macros.fat}g</span>
+        {/* Stats Badge - Macros */}
+        {socialPost.overlayText.stats && (
+          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full mb-3 text-sm font-bold">
+            {socialPost.overlayText.stats}
           </div>
         )}
 
-        {/* Food Items (truncated) - Detail */}
-        <div className="text-xs text-muted-foreground line-clamp-1">
-          {photo.foodItems.slice(0, 2).join(', ')}
-          {photo.foodItems.length > 2 && '...'}
+        {/* Platform Badge */}
+        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600/90 to-pink-600/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-bold">
+          <span>✨ {socialPost.platform.toUpperCase()}</span>
+        </div>
+
+        {/* Engagement Hook */}
+        <div className="mt-4 text-sm font-medium opacity-90 line-clamp-2">
+          {socialPost.engagementHooks.callToAction}
         </div>
       </div>
 
-      {/* Share Button with First-Person CTA (appears on hover when not in share mode) */}
+      {/* Share Button (appears on hover) */}
       {!showShareOverlay && (
-        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200">
+        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10">
           <button
             onClick={(e) => {
               e.stopPropagation()
               setShowPlatformSelector(true)
             }}
-            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all font-semibold text-sm"
+            className="flex items-center gap-2 bg-white text-gray-900 px-4 py-2 rounded-full shadow-xl hover:scale-105 transition-all font-bold text-sm"
             aria-label="Share my win"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
             </svg>
-            <span>Share My Win! 🚀</span>
+            <span>Share 🚀</span>
           </button>
         </div>
       )}
-
-      {/* Achievement Badge (top left) */}
-      {!showShareOverlay && (
-        <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="bg-background/95/95 px-3 py-1.5 rounded-full shadow-lg">
-            <span className="text-xs font-semibold text-primary">My {mealTypeDisplay} 💪</span>
-          </div>
-        </div>
-      )}
-
-      {/* Hover Scale Effect */}
-      <div className="absolute inset-0 group-hover:scale-[1.02] transition-transform duration-300 pointer-events-none" />
     </div>
   )
 }

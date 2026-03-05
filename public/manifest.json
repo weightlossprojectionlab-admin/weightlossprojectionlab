@@ -1,6 +1,6 @@
 {
   "name": "Wellness Projection Lab",
-  "short_name": "WLPL",
+  "short_name": "WPL",
   "description": "AI-powered wellness tracking with comprehensive health, nutrition, and fitness management",
   "start_url": "/",
   "display": "standalone",

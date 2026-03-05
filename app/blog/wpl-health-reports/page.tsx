@@ -1,7 +1,7 @@
 /**
- * Ai Health Reports - Marketing Blog Page
+ * WPL Health Reports - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WPL Ai Health Reports
+ * Hybrid marketing page showcasing WPL Health Reports
  * Optimized for SEO with top-notch backlinks and conversion funnel
  */
 
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: 'Weekly Health Reports - Personalized Insights and Recommendations',
     description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Wellness Projection Lab.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/ai-health-reports',
+    url: 'https://weightlossproglab.com/blog/wpl-health-reports',
   },
   twitter: {
     card: 'summary_large_image',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Wellness Projection Lab.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/ai-health-reports'
+    canonical: 'https://weightlossproglab.com/blog/wpl-health-reports'
   }
 }
 

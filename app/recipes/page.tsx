@@ -158,7 +158,7 @@ export default function RecipeIndexPage() {
       {!memberId && (
         <div className="bg-gradient-to-r from-primary to-accent text-white py-3 px-4 text-center">
           <p className="text-sm font-medium">
-            ✨ Track these recipes with AI-powered meal analysis.{' '}
+            ✨ Track these recipes with WPL-powered meal analysis.{' '}
             <Link href="/auth" className="text-white underline font-bold hover:opacity-80">
               Start Free →
             </Link>
@@ -222,7 +222,7 @@ export default function RecipeIndexPage() {
             )}
           </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Browse 28 delicious, macro-friendly recipes. Track them automatically with our AI-powered app.
+            Browse 28 delicious, macro-friendly recipes. Track them automatically with our WPL-powered app.
           </p>
           {isAdminMode && (
             <div className="mt-4 space-y-3">

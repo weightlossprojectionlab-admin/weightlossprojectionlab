@@ -10,6 +10,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { medicalOperations } from '@/lib/medical-operations'
 import { logger } from '@/lib/logger'
+import { useAuth } from '@/hooks/useAuth'
+import { useFeatureGate } from '@/hooks/useFeatureGate'
 import type { PatientMedication } from '@/types/medical'
 
 interface MedicationLog {
@@ -60,8 +62,18 @@ export function useMedications({
   const [loading, setLoading] = useState<boolean>(autoFetch)
   const [error, setError] = useState<string | null>(null)
 
-  // DRY: Get patient ID - use provided patientId, or default to empty string if not available
-  // The caller should ensure a valid patientId is passed
+  // CRITICAL FIX: Add feature gate check at hook level
+  const { user } = useAuth()
+  const { canAccess: hasMedicationAccess } = useFeatureGate('medications')
+
+  // Allow access if viewing own data OR has medication feature
+  const isOwnData = patientId === user?.uid
+  const hasAccess = isOwnData || hasMedicationAccess
+
+  // Auto-disable fetch if feature not enabled (prevents 403 errors)
+  const effectiveAutoFetch = hasAccess ? autoFetch : false
+
+  // Get effective patient ID
   const effectivePatientId = patientId || ''
 
   // Fetch medications (one-time, used for manual refetch)
@@ -98,8 +110,8 @@ export function useMedications({
 
   // Set up real-time listener (if autoFetch is true AND patientId exists)
   useEffect(() => {
-    // Don't set up listener if no valid patientId
-    if (!autoFetch || !effectivePatientId || effectivePatientId.length === 0) {
+    // Don't set up listener if no valid patientId or no access
+    if (!effectiveAutoFetch || !effectivePatientId || effectivePatientId.length === 0) {
       setLoading(false)
       return
     }
@@ -145,7 +157,7 @@ export function useMedications({
       logger.debug('[useMedications] Cleaning up real-time medication listener', { patientId: effectivePatientId })
       unsubscribe()
     }
-  }, [effectivePatientId, autoFetch])
+  }, [effectivePatientId, effectiveAutoFetch])
 
   // Log medication administration
   const logMedication = useCallback(async (

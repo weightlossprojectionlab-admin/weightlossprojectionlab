@@ -22,8 +22,24 @@ export const NotificationPrompt = memo(function NotificationPrompt({ userId }: N
     requestPermission
   } = useNotifications(userId)
 
-  // Don't show if not supported or already granted
-  if (!isSupported || permission === 'granted' || isSubscribed) {
+  // Don't show while checking support
+  if (loading) {
+    return null
+  }
+
+  // Don't show if no userId (not logged in)
+  if (!userId) {
+    return null
+  }
+
+  // Don't show if not supported
+  if (!isSupported) {
+    logger.debug('[NotificationPrompt] Not showing prompt: notifications not supported')
+    return null
+  }
+
+  // Don't show if already granted or subscribed
+  if (permission === 'granted' || isSubscribed) {
     return null
   }
 
@@ -51,7 +67,20 @@ export const NotificationPrompt = memo(function NotificationPrompt({ userId }: N
           </ul>
 
           <button
-            onClick={requestPermission}
+            onClick={async () => {
+              logger.debug('[NotificationPrompt] Enable button clicked', {
+                userId,
+                isSupported,
+                permission,
+                loading
+              })
+              const success = await requestPermission()
+              if (success) {
+                logger.info('[NotificationPrompt] Notifications enabled successfully')
+              } else {
+                logger.warn('[NotificationPrompt] Failed to enable notifications')
+              }
+            }}
             disabled={loading}
             className="bg-background text-secondary font-semibold px-6 py-2 rounded-lg hover:bg-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >

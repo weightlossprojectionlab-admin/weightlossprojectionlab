@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import DOMPurify from 'dompurify'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { mealLogOperations, useMealLogsRealtime, mealTemplateOperations, cookingSessionOperations, userProfileOperations } from '@/lib/firebase-operations'
@@ -31,6 +32,7 @@ import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
 import { getProductLabel } from '@/lib/messaging/terminology'
 import { TrustBadge } from '@/components/ui/TrustBadge'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
 // Dynamic imports for heavy dependencies (reduces initial bundle size)
 // BarcodeScanner uses html5-qrcode library (~50kB)
@@ -38,6 +40,29 @@ const BarcodeScanner = dynamic(
   () => import('@/components/BarcodeScanner').then(mod => ({ default: mod.BarcodeScanner })),
   { ssr: false }
 )
+
+// Input validation constants
+const MAX_MEAL_NAME_LENGTH = 200
+const MAX_NOTES_LENGTH = 1000
+
+// Sanitize and validate user input
+const sanitizeInput = (input: string, maxLength: number): string => {
+  // Trim whitespace
+  let sanitized = input.trim()
+
+  // Limit length
+  if (sanitized.length > maxLength) {
+    sanitized = sanitized.substring(0, maxLength)
+  }
+
+  // Sanitize HTML to prevent XSS
+  sanitized = DOMPurify.sanitize(sanitized, {
+    ALLOWED_TAGS: [], // Strip all HTML tags
+    ALLOWED_ATTR: []
+  })
+
+  return sanitized
+}
 
 // Helper function to detect meal type based on current time (fallback when no schedule)
 const detectMealTypeFromTime = (): 'breakfast' | 'lunch' | 'dinner' | 'snack' => {
@@ -154,19 +179,23 @@ function LogMealContent() {
   const [showSafetyWarning, setShowSafetyWarning] = useState(false)
   const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([])
   const [uploadingAdditional, setUploadingAdditional] = useState(false)
+  const [showSubscriptionPaywall, setShowSubscriptionPaywall] = useState(false)
+  const [manualEntryImage, setManualEntryImage] = useState<string | null>(null)
+  const [manualEntryImageUrl, setManualEntryImageUrl] = useState<string | null>(null)
   const [manualEntryForm, setManualEntryForm] = useState({
-    foodItems: [''],
+    mealName: '',
+    notes: '',
     calories: '',
     protein: '',
     carbs: '',
-    fat: '',
-    fiber: '',
-    notes: ''
+    fat: ''
   })
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileReaderRef = useRef<FileReader | null>(null)
   const capturedImageRef = useRef<string | null>(null) // Ref to preserve image data across renders
+  const imageObjectUrlRef = useRef<string | null>(null) // Track object URL for cleanup
+  const manualEntryImageUrlRef = useRef<string | null>(null) // Track manual entry object URL for cleanup
 
   const { confirm, ConfirmDialog } = useConfirm()
 
@@ -235,11 +264,14 @@ function LogMealContent() {
       })
     : mealHistory
 
-  // Calculate today's totals
+  // Calculate today's totals using UTC to avoid timezone issues
   const todaysMeals = mealHistory.filter(meal => {
     const mealDate = new Date(meal.loggedAt)
     const today = new Date()
-    return mealDate.toDateString() === today.toDateString()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    return mealDate >= today && mealDate < tomorrow
   })
 
   const todaysSummary = todaysMeals.reduce((acc, meal) => ({
@@ -410,12 +442,16 @@ function LogMealContent() {
         fileReaderRef.current.abort()
       }
 
-      // Revoke current object URL to free memory
-      if (imageObjectUrl) {
-        URL.revokeObjectURL(imageObjectUrl)
+      // Revoke object URLs using refs to avoid dependency issues
+      if (imageObjectUrlRef.current) {
+        URL.revokeObjectURL(imageObjectUrlRef.current)
+      }
+
+      if (manualEntryImageUrlRef.current) {
+        URL.revokeObjectURL(manualEntryImageUrlRef.current)
       }
     }
-  }, [imageObjectUrl]) // Depend on imageObjectUrl to revoke the correct URL
+  }, []) // No dependencies - cleanup only on unmount
 
   // Keyboard support for lightbox (ESC to close)
   useEffect(() => {
@@ -464,8 +500,8 @@ function LogMealContent() {
     }
 
     // Clean up previous object URL to prevent memory leak
-    if (imageObjectUrl) {
-      URL.revokeObjectURL(imageObjectUrl)
+    if (imageObjectUrlRef.current) {
+      URL.revokeObjectURL(imageObjectUrlRef.current)
     }
 
     try {
@@ -473,6 +509,7 @@ function LogMealContent() {
 
       // Create object URL for preview
       const objectUrl = URL.createObjectURL(file)
+      imageObjectUrlRef.current = objectUrl
       setImageObjectUrl(objectUrl)
 
       // Convert to base64 for AI analysis (NO compression - AI needs quality)
@@ -555,6 +592,55 @@ function LogMealContent() {
     toast.success('Photo removed')
   }
 
+  const handleManualEntryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file is an image
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image too large. Please select an image under 10MB.')
+      return
+    }
+
+    // Clean up previous object URL
+    if (manualEntryImageUrlRef.current) {
+      URL.revokeObjectURL(manualEntryImageUrlRef.current)
+    }
+
+    try {
+      // Create object URL for preview
+      const objectUrl = URL.createObjectURL(file)
+      manualEntryImageUrlRef.current = objectUrl
+      setManualEntryImageUrl(objectUrl)
+
+      // Compress image for storage
+      const { compressImage } = await import('@/lib/image-compression')
+      const compressed = await compressImage(file)
+      setManualEntryImage(compressed.base64DataUrl)
+
+      toast.success('Image attached')
+    } catch (error) {
+      logger.error('Failed to process manual entry image:', error as Error)
+      toast.error('Failed to process image. Please try again.')
+    }
+  }
+
+  const removeManualEntryImage = () => {
+    if (manualEntryImageUrlRef.current) {
+      URL.revokeObjectURL(manualEntryImageUrlRef.current)
+      manualEntryImageUrlRef.current = null
+    }
+    setManualEntryImage(null)
+    setManualEntryImageUrl(null)
+    toast.success('Image removed')
+  }
+
   const analyzeImage = async (imageData: string) => {
     setAnalyzing(true)
 
@@ -594,6 +680,25 @@ function LogMealContent() {
 
       logger.debug('Response status:', { status: response.status })
       logger.debug('Response ok:', { ok: response.ok })
+
+      // Check for subscription required error (403)
+      if (response.status === 403) {
+        const errorData = await response.json()
+        if (errorData.code === 'SUBSCRIPTION_REQUIRED' || errorData.code === 'SUBSCRIPTION_CHECK_FAILED') {
+          logger.info('🔒 Subscription required for image analysis', { code: errorData.code })
+          // Clear the captured image
+          setCapturedImage(null)
+          capturedImageRef.current = null
+          if (imageObjectUrlRef.current) {
+            URL.revokeObjectURL(imageObjectUrlRef.current)
+            imageObjectUrlRef.current = null
+          }
+          setImageObjectUrl(null)
+          // Show paywall modal
+          setShowSubscriptionPaywall(true)
+          return
+        }
+      }
 
       if (!response.ok) {
         const errorText = await response.text()
@@ -663,18 +768,16 @@ function LogMealContent() {
       // Enable manual entry mode
       setShowManualEntry(true)
 
-      // Pre-fill the manual entry form with product data
+      // Pre-fill the simplified manual entry form with product data
+      const mealName = product.name + (product.brand ? ` (${product.brand})` : '')
+      const notes = `Scanned barcode: ${barcode}\nCalories: ${product.calories} | Protein: ${product.protein}g | Carbs: ${product.carbs}g | Fat: ${product.fat}g${product.servingSize ? ` | Serving: ${product.servingSize}` : ''}${product.quantity ? ` | Package: ${product.quantity}` : ''}`
+
       setManualEntryForm({
-        foodItems: [product.name + (product.brand ? ` (${product.brand})` : '')],
-        calories: product.calories.toString(),
-        protein: product.protein.toString(),
-        carbs: product.carbs.toString(),
-        fat: product.fat.toString(),
-        fiber: '',
-        notes: `Scanned barcode: ${barcode}${product.servingSize ? ` | Serving: ${product.servingSize}` : ''}${product.quantity ? ` | Package: ${product.quantity}` : ''}`
+        mealName,
+        notes
       })
 
-      toast.success(`Found: ${product.name}`)
+      toast.success(`Found: ${product.name} - Manual entry requires paid subscription for AI analysis`)
     } catch (error) {
       logger.error('Barcode lookup error:', error as Error)
       toast.error('Failed to lookup product. Please try again or enter manually.')
@@ -761,131 +864,103 @@ function LogMealContent() {
   }
 
   const saveManualEntry = async () => {
-    // Validate form
-    const calories = parseFloat(manualEntryForm.calories)
-    const protein = parseFloat(manualEntryForm.protein)
-    const carbs = parseFloat(manualEntryForm.carbs)
-    const fat = parseFloat(manualEntryForm.fat)
-    const fiber = parseFloat(manualEntryForm.fiber) || 0
+    // Sanitize and validate inputs
+    const sanitizedMealName = sanitizeInput(manualEntryForm.mealName, MAX_MEAL_NAME_LENGTH)
+    const sanitizedNotes = sanitizeInput(manualEntryForm.notes, MAX_NOTES_LENGTH)
 
-    if (!calories || calories <= 0) {
-      toast.error('Please enter valid calories')
+    // Validate form - now much simpler!
+    if (!sanitizedMealName) {
+      toast.error('Please enter a meal name')
       return
     }
 
-    if (!protein || !carbs || !fat) {
-      toast.error('Please enter all macronutrients')
-      return
-    }
-
-    const foodItems = manualEntryForm.foodItems.filter(item => item.trim() !== '')
-    if (foodItems.length === 0) {
-      toast.error('Please enter at least one food item')
+    if (sanitizedMealName.length < 2) {
+      toast.error('Meal name must be at least 2 characters')
       return
     }
 
     setSaving(true)
 
     try {
-      logger.debug('💾 Saving manual entry...')
+      logger.debug('💾 Saving simplified manual entry...')
 
-      // Create AIAnalysis object from manual form data
-      const manualAnalysis: AIAnalysis = {
-        foodItems: foodItems.map(item => ({
-          name: item,
-          portion: 'As entered',
-          calories: Math.round(calories / foodItems.length),
-          protein: Math.round(protein / foodItems.length),
-          carbs: Math.round(carbs / foodItems.length),
-          fat: Math.round(fat / foodItems.length),
-          fiber: Math.round(fiber / foodItems.length)
-        })),
-        totalCalories: calories,
-        totalMacros: { protein, carbs, fat, fiber },
-        confidence: 100, // Manual entries are 100% confident
-        isMockData: false
+      // Upload manual entry image if provided (no AI analysis)
+      let photoUrl: string | undefined = undefined
+      if (manualEntryImage) {
+        try {
+          logger.debug('📤 Uploading manual entry image...')
+          setUploadProgress('Uploading image...')
+          photoUrl = await uploadMealPhoto(manualEntryImage)
+          logger.debug('✅ Image uploaded:', photoUrl)
+        } catch (uploadError) {
+          logger.error('Failed to upload image, saving meal without photo:', uploadError as Error)
+          toast.error('Image upload failed. Saving meal without photo.')
+          // Continue saving the meal without the photo
+        }
       }
 
-      // Check if offline - queue instead of saving
-      if (!navigator.onLine) {
-        logger.debug('📡 Offline detected, queuing manual entry...')
+      // Parse nutrition values
+      const calories = parseInt(manualEntryForm.calories) || 0
+      const protein = parseInt(manualEntryForm.protein) || 0
+      const carbs = parseInt(manualEntryForm.carbs) || 0
+      const fat = parseInt(manualEntryForm.fat) || 0
 
-        const user = auth.currentUser
-        if (!user) {
-          toast.error('Please sign in to log meals')
-          return
-        }
-
-        // For self-logging: patientId, ownerUserId, and loggedBy are all the same user
-        const userId = user.uid
-        const patientId = patientIdParam || userId // Use patientId param or self
-        const ownerUserId = userId // User owns their own data
-        const loggedBy = userId // User is logging for themselves
-
-        await queueMeal(
-          {
-            mealType: selectedMealType,
-            aiAnalysis: manualAnalysis,
-            loggedAt: new Date().toISOString(),
-            notes: manualEntryForm.notes || undefined
-          },
-          patientId,
-          ownerUserId,
-          loggedBy
-        )
-
-        await registerBackgroundSync()
-        toast.success('Meal queued! Will sync when back online.')
-        logger.debug('✅ Manual entry queued for offline sync')
-
-        // Check mission progress
-        if (checkProgress) {
-          await checkProgress()
-        }
-
-        // Reset form
-        setShowManualEntry(false)
-        setManualEntryForm({
-          foodItems: [''],
-          calories: '',
-          protein: '',
-          carbs: '',
-          fat: '',
-          fiber: '',
-          notes: ''
-        })
-
-        return
-      }
-
-      // Online - proceed with normal save
+      // Create manual entry meal log with nutrition data
       const response = await mealLogOperations.createMealLog({
         mealType: selectedMealType,
-        photoUrl: undefined,
-        aiAnalysis: manualAnalysis,
+        photoUrl,
         loggedAt: new Date().toISOString(),
-        notes: manualEntryForm.notes || undefined
+        notes: sanitizedNotes || undefined,
+        totalCalories: calories,
+        macros: {
+          protein,
+          carbs,
+          fat
+        },
+        manualEntries: [{
+          food: sanitizedMealName,
+          calories,
+          protein,
+          carbs,
+          fat,
+          quantity: '1 serving'
+        }]
       })
 
       logger.debug('✅ Manual entry saved:', response.data)
-      toast.success('Meal logged successfully!')
+
+      if (photoUrl) {
+        toast.success('Meal logged successfully!')
+      } else if (manualEntryImage) {
+        toast.success('Meal logged (image upload failed - please deploy Firebase Storage rules)')
+      } else {
+        toast.success('Meal logged successfully!')
+      }
 
       // Check mission progress
       if (checkProgress) {
         await checkProgress()
       }
 
-      // Reset form
+      // Reset form and image
       setShowManualEntry(false)
       setManualEntryForm({
-        foodItems: [''],
+        mealName: '',
+        notes: '',
         calories: '',
         protein: '',
         carbs: '',
-        fat: '',
-        fiber: '',
-        notes: ''
+        fat: ''
       })
+
+      // Clean up image state
+      if (manualEntryImageUrlRef.current) {
+        URL.revokeObjectURL(manualEntryImageUrlRef.current)
+        manualEntryImageUrlRef.current = null
+      }
+      setManualEntryImage(null)
+      setManualEntryImageUrl(null)
+      setUploadProgress('')
 
     } catch (error) {
       logger.error('💥 Save error:', error as Error)
@@ -895,29 +970,6 @@ function LogMealContent() {
     }
   }
 
-  const addFoodItemField = () => {
-    setManualEntryForm({
-      ...manualEntryForm,
-      foodItems: [...manualEntryForm.foodItems, '']
-    })
-  }
-
-  const removeFoodItemField = (index: number) => {
-    const newFoodItems = manualEntryForm.foodItems.filter((_, i) => i !== index)
-    setManualEntryForm({
-      ...manualEntryForm,
-      foodItems: newFoodItems.length > 0 ? newFoodItems : ['']
-    })
-  }
-
-  const updateFoodItem = (index: number, value: string) => {
-    const newFoodItems = [...manualEntryForm.foodItems]
-    newFoodItems[index] = value
-    setManualEntryForm({
-      ...manualEntryForm,
-      foodItems: newFoodItems
-    })
-  }
 
   const checkMealSafety = async (mealData: AIAnalysis): Promise<MealSafetyCheck | null> => {
     try {
@@ -1042,10 +1094,11 @@ function LogMealContent() {
         }
 
         // Clean up and reset form
-        if (imageObjectUrl) {
-          URL.revokeObjectURL(imageObjectUrl)
-          setImageObjectUrl(null)
+        if (imageObjectUrlRef.current) {
+          URL.revokeObjectURL(imageObjectUrlRef.current)
+          imageObjectUrlRef.current = null
         }
+        setImageObjectUrl(null)
         setCapturedImage(null)
         capturedImageRef.current = null // Clear ref as well
         setAiAnalysis(null)
@@ -1264,10 +1317,11 @@ function LogMealContent() {
       // No need to refresh - real-time listener will update automatically
 
       // Clean up and reset form
-      if (imageObjectUrl) {
-        URL.revokeObjectURL(imageObjectUrl)
-        setImageObjectUrl(null)
+      if (imageObjectUrlRef.current) {
+        URL.revokeObjectURL(imageObjectUrlRef.current)
+        imageObjectUrlRef.current = null
       }
+      setImageObjectUrl(null)
       setCapturedImage(null)
       capturedImageRef.current = null // Clear ref as well
       setAiAnalysis(null)
@@ -1679,125 +1733,145 @@ function LogMealContent() {
               </div>
             )}
 
-            {/* Manual Entry Form */}
+            {/* Simplified Manual Entry Form */}
             {showManualEntry && (
               <div className="space-y-4 mt-4">
-                <div className="bg-indigo-100 dark:bg-indigo-900/20 border border-accent rounded-lg p-4">
-                  <p className="text-sm text-accent-dark">
-                    💡 Enter meal details manually (useful when you can't take a photo or prefer manual tracking)
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-1">
+                    📝 Quick Manual Entry
+                  </p>
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                    Want instant nutrition analysis? Upgrade to use WPL-powered photo analysis!
                   </p>
                 </div>
 
-                {/* Food Items */}
+                {/* Optional Photo Upload */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Food Items
+                    Meal Photo (Optional)
                   </label>
-                  {manualEntryForm.foodItems.map((item, index) => (
-                    <div key={index} className="flex items-center space-x-2 mb-2">
+                  {!manualEntryImage ? (
+                    <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors">
+                      <div className="text-center">
+                        <svg className="mx-auto h-8 w-8 text-muted-foreground mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p className="text-sm text-muted-foreground">
+                          Click to upload a photo
+                        </p>
+                      </div>
                       <input
-                        type="text"
-                        value={item}
-                        onChange={(e) => updateFoodItem(index, e.target.value)}
-                        placeholder="e.g., Grilled chicken breast"
-                        className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleManualEntryImageUpload}
+                        className="hidden"
                       />
-                      {manualEntryForm.foodItems.length > 1 && (
-                        <button
-                          onClick={() => removeFoodItemField(index)}
-                          className="text-error hover:text-error-dark"
-                          aria-label="Remove food item"
-                        >
-                          ✕
-                        </button>
-                      )}
+                    </label>
+                  ) : (
+                    <div className="relative rounded-lg border border-border">
+                      <img
+                        src={manualEntryImageUrl || manualEntryImage}
+                        alt="Manual entry meal"
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={removeManualEntryImage}
+                        className="absolute top-2 right-2 bg-error text-white rounded-full p-2 hover:bg-error-dark transition-colors shadow-lg z-10"
+                        aria-label="Remove image"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
-                  ))}
-                  <button
-                    onClick={addFoodItemField}
-                    className="text-sm text-primary hover:text-primary-hover font-medium"
+                  )}
+                </div>
+
+                {/* Meal Name */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Meal Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={manualEntryForm.mealName}
+                    onChange={(e) => setManualEntryForm({ ...manualEntryForm, mealName: e.target.value })}
+                    placeholder="e.g., Chicken and rice"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    maxLength={MAX_MEAL_NAME_LENGTH}
+                    required
+                  />
+                </div>
+
+                {/* Meal Type Dropdown */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Meal Type *
+                  </label>
+                  <select
+                    value={selectedMealType}
+                    onChange={(e) => setSelectedMealType(e.target.value as 'breakfast' | 'lunch' | 'dinner' | 'snack')}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                    required
                   >
-                    + Add another food item
-                  </button>
+                    <option value="breakfast">🌅 Breakfast</option>
+                    <option value="lunch">☀️ Lunch</option>
+                    <option value="dinner">🌙 Dinner</option>
+                    <option value="snack">🍎 Snack</option>
+                  </select>
                 </div>
 
                 {/* Calories */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Total Calories *
+                    Calories (optional)
                   </label>
                   <input
                     type="number"
                     value={manualEntryForm.calories}
                     onChange={(e) => setManualEntryForm({ ...manualEntryForm, calories: e.target.value })}
                     placeholder="e.g., 450"
-                    min="0"
-                    step="1"
                     className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
+                    min="0"
                   />
                 </div>
 
-                {/* Macros Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Protein (g) *
-                    </label>
-                    <input
-                      type="number"
-                      value={manualEntryForm.protein}
-                      onChange={(e) => setManualEntryForm({ ...manualEntryForm, protein: e.target.value })}
-                      placeholder="30"
-                      min="0"
-                      step="0.1"
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Carbs (g) *
-                    </label>
-                    <input
-                      type="number"
-                      value={manualEntryForm.carbs}
-                      onChange={(e) => setManualEntryForm({ ...manualEntryForm, carbs: e.target.value })}
-                      placeholder="40"
-                      min="0"
-                      step="0.1"
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Fat (g) *
-                    </label>
-                    <input
-                      type="number"
-                      value={manualEntryForm.fat}
-                      onChange={(e) => setManualEntryForm({ ...manualEntryForm, fat: e.target.value })}
-                      placeholder="15"
-                      min="0"
-                      step="0.1"
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Fiber (g)
-                    </label>
-                    <input
-                      type="number"
-                      value={manualEntryForm.fiber}
-                      onChange={(e) => setManualEntryForm({ ...manualEntryForm, fiber: e.target.value })}
-                      placeholder="5"
-                      min="0"
-                      step="0.1"
-                      className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                {/* Macros Row */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Macros (optional)
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <input
+                        type="number"
+                        value={manualEntryForm.protein}
+                        onChange={(e) => setManualEntryForm({ ...manualEntryForm, protein: e.target.value })}
+                        placeholder="Protein (g)"
+                        className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="number"
+                        value={manualEntryForm.carbs}
+                        onChange={(e) => setManualEntryForm({ ...manualEntryForm, carbs: e.target.value })}
+                        placeholder="Carbs (g)"
+                        className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="number"
+                        value={manualEntryForm.fat}
+                        onChange={(e) => setManualEntryForm({ ...manualEntryForm, fat: e.target.value })}
+                        placeholder="Fat (g)"
+                        className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                        min="0"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1811,6 +1885,7 @@ function LogMealContent() {
                     onChange={(e) => setManualEntryForm({ ...manualEntryForm, notes: e.target.value })}
                     placeholder="Add any additional notes about this meal..."
                     rows={3}
+                    maxLength={MAX_NOTES_LENGTH}
                     className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                   />
                 </div>
@@ -1835,14 +1910,16 @@ function LogMealContent() {
                     onClick={() => {
                       setShowManualEntry(false)
                       setManualEntryForm({
-                        foodItems: [''],
-                        calories: '',
-                        protein: '',
-                        carbs: '',
-                        fat: '',
-                        fiber: '',
+                        mealName: '',
                         notes: ''
                       })
+                      // Clean up image state
+                      if (manualEntryImageUrlRef.current) {
+                        URL.revokeObjectURL(manualEntryImageUrlRef.current)
+                        manualEntryImageUrlRef.current = null
+                      }
+                      setManualEntryImage(null)
+                      setManualEntryImageUrl(null)
                     }}
                     disabled={saving}
                     className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
@@ -2521,7 +2598,12 @@ function LogMealContent() {
                 const isDeleting = deletingMealId === meal.id
                 const isEditing = editingMealId === meal.id
                 const mealDate = new Date(meal.loggedAt)
-                const isToday = mealDate.toDateString() === new Date().toDateString()
+                // Use consistent UTC-based date comparison
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+                const tomorrow = new Date(today)
+                tomorrow.setDate(tomorrow.getDate() + 1)
+                const isToday = mealDate >= today && mealDate < tomorrow
                 const timeStr = mealDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
                 const dateStr = isToday ? 'Today' : mealDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
@@ -3019,6 +3101,65 @@ function LogMealContent() {
         </div>
       )}
 
+      {/* Subscription Paywall Modal */}
+      {showSubscriptionPaywall && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+                <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-2">
+                Image Analysis Requires Active Paid Subscription
+              </h3>
+              <p className="text-muted-foreground mb-6">
+                WPL-powered meal photo analysis uses advanced AI that costs us money per image. To keep the platform affordable, this feature requires an active paid subscription.
+              </p>
+              <div className="bg-muted/50 rounded-lg p-4 mb-6 text-left">
+                <h4 className="font-semibold text-foreground mb-2">With a subscription you get:</h4>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">✓</span>
+                    <span>WPL-powered photo analysis</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">✓</span>
+                    <span>Instant nutrition breakdown</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">✓</span>
+                    <span>Meal suggestions & insights</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">✓</span>
+                    <span>Track family members</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Link
+                  href="/pricing"
+                  className="btn btn-primary w-full"
+                >
+                  View Plans & Pricing
+                </Link>
+                <button
+                  onClick={() => setShowSubscriptionPaywall(false)}
+                  className="btn btn-ghost w-full"
+                >
+                  Close
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-4">
+                You can still log meals manually without a subscription.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmDialog />
     </main>
   )
@@ -3027,7 +3168,9 @@ function LogMealContent() {
 export default function LogMealPage() {
   return (
     <AuthGuard>
-      <LogMealContent />
+      <ErrorBoundary>
+        <LogMealContent />
+      </ErrorBoundary>
     </AuthGuard>
   )
 }

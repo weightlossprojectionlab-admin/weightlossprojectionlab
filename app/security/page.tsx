@@ -1,6 +1,6 @@
 /**
  * Security Page
- * Details WLPL's security measures, certifications, and practices
+ * Details WPL's security measures, certifications, and practices
  */
 
 import type { Metadata } from 'next'

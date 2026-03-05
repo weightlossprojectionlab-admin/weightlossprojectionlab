@@ -1,13 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useSubscription } from '@/hooks/useSubscription'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { SubscriptionPlan } from '@/types'
 import { CheckIcon } from '@heroicons/react/24/solid'
 import { auth } from '@/lib/firebase'
 import { getCSRFToken } from '@/lib/csrf'
+import { userProfileOperations } from '@/lib/firebase-operations'
+import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger'
 
 interface PlanFeature {
   name: string
@@ -33,7 +36,7 @@ const PLANS: Plan[] = [
     yearlyPrice: 99,
     features: [
       { name: '1 user account', included: true },
-      { name: 'Meal logging with AI', included: true },
+      { name: 'Meal logging with WPL', included: true },
       { name: 'Weight & step tracking', included: true },
       { name: 'Basic recipes', included: true },
       { name: 'Progress dashboard', included: true },
@@ -88,7 +91,7 @@ const PLANS: Plan[] = [
       { name: 'All Family Basic features', included: true },
       { name: 'Advanced analytics & insights', included: true },
       { name: 'Health trend analysis', included: true },
-      { name: 'Predictive AI coaching', included: true },
+      { name: 'Predictive WPL coaching', included: true },
       { name: '10 external caregivers', included: true },
       { name: 'Enhanced meal suggestions', included: true },
       { name: 'Priority support', included: true },
@@ -115,11 +118,72 @@ const PLANS: Plan[] = [
 
 export default function PricingPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
   const { subscription, plan: currentPlan, status: subscriptionStatus } = useSubscription()
   const isTrialing = subscriptionStatus === 'trialing'
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly')
   const [loading, setLoading] = useState<string | null>(null)
+
+  // Get feature intent from URL params
+  const featureIntent = searchParams?.get('feature')
+  const returnTo = searchParams?.get('returnTo') || '/profile'
+
+  // Check for pending feature intent on mount and after upgrades
+  useEffect(() => {
+    const checkPendingIntent = async () => {
+      if (!user?.uid || !subscription) return
+
+      const { getPendingFeatureIntent, clearFeatureIntent, enableFeature, getFeatureMessages, canEnableFeature } = await import('@/lib/feature-enablement')
+      const { useUserPreferences } = await import('@/hooks/useUserPreferences')
+
+      const intent = await getPendingFeatureIntent(user.uid)
+      if (!intent) return
+
+      // Check if user can now enable the feature (after upgrade)
+      const result = canEnableFeature(user, intent.feature)
+
+      if (result.canEnable) {
+        // Auto-enable the feature they wanted
+        logger.info('[Pricing] Auto-enabling feature after upgrade:', intent.feature)
+
+        try {
+          // Get current user preferences
+          const { doc, getDoc } = await import('firebase/firestore')
+          const { db } = await import('@/lib/firebase')
+
+          const userDoc = await getDoc(doc(db, 'users', user.uid))
+          const userData = userDoc.data()
+          const currentFeatures = userData?.preferences?.onboardingAnswers?.featurePreferences || []
+          const onboardingAnswers = userData?.preferences?.onboardingAnswers
+
+          // Enable the feature
+          const enableResult = await enableFeature(currentFeatures, intent.feature, onboardingAnswers)
+
+          if (enableResult.success) {
+            const messages = getFeatureMessages(intent.feature)
+            toast.success(`${messages.title} has been enabled! Redirecting...`)
+
+            // Clear intent after successful enablement
+            await clearFeatureIntent(user.uid)
+
+            setTimeout(() => {
+              router.push(intent.returnUrl || '/profile')
+            }, 1500)
+          } else {
+            toast.error('Feature upgrade succeeded, but auto-enable failed. Please enable manually.')
+            await clearFeatureIntent(user.uid)
+          }
+        } catch (error) {
+          logger.error('[Pricing] Failed to auto-enable feature', error as Error)
+          toast.error('Please manually enable the feature from your profile.')
+          await clearFeatureIntent(user.uid)
+        }
+      }
+    }
+
+    checkPendingIntent()
+  }, [user, subscription, router])
 
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
     if (!user) {
@@ -157,32 +221,30 @@ export default function PricingPage() {
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const error = await response.json()
-
-        // Check if user already has an active subscription
-        if (error.code === 'EXISTING_SUBSCRIPTION') {
-          const shouldOpenPortal = confirm(
-            `${error.error}\n\nWould you like to open the Customer Portal to manage your subscription?`
-          )
-
-          if (shouldOpenPortal) {
-            // Import and call the portal session function
-            const { createPortalSession } = await import('@/lib/stripe-client')
-            await createPortalSession(window.location.href)
-          }
-
-          setLoading(null)
-          return
-        }
-
-        throw new Error(error.error || 'Failed to create checkout session')
+        // Handle error responses
+        throw new Error(data.error || 'Failed to process subscription change')
       }
 
-      const { url } = await response.json()
+      // Check if this was an immediate operation (upgrade/downgrade/switch)
+      if (data.success && data.operationType) {
+        // Show success message based on operation type
+        alert(data.message || 'Subscription updated successfully!')
 
-      // Redirect to Stripe checkout
-      window.location.href = url
+        // Refresh the page to show updated subscription
+        router.refresh()
+        router.push('/profile?tab=subscription&updated=true')
+        return
+      }
+
+      // Otherwise, redirect to Stripe checkout for new subscriptions
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error('No checkout URL or operation result returned')
+      }
     } catch (error: any) {
       console.error('Checkout error:', error)
       alert(error.message || 'Failed to start checkout')
@@ -327,16 +389,16 @@ export default function PricingPage() {
             return (
               <div
                 key={planData.id}
-                className={`relative rounded-lg border-2 p-6 flex flex-col ${
+                className={`relative rounded-lg border-2 flex flex-col ${
                   planData.popular
-                    ? 'border-primary shadow-lg scale-105'
-                    : 'border-border hover:border-primary/50'
-                } ${isCurrentPlan ? 'bg-primary/5' : isTrialPlan ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'bg-card'}`}
+                    ? 'border-primary shadow-lg md:scale-105 pt-6 px-4 pb-6 sm:px-6'
+                    : 'border-border hover:border-primary/50 p-4 sm:p-6'
+                } ${isCurrentPlan ? 'bg-primary/5' : isTrialPlan ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'bg-card'} ${planData.popular ? 'mt-4' : ''}`}
               >
                 {/* Popular Badge */}
                 {planData.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="bg-primary text-white px-4 py-1 rounded-full text-sm font-medium">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                    <span className="bg-primary text-white px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
                       Most Popular
                     </span>
                   </div>

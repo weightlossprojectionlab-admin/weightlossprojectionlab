@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default', // Light status bar for light mode
-    title: 'WLPL',
+    title: 'WPL',
   },
   other: {
     'color-scheme': 'light only',

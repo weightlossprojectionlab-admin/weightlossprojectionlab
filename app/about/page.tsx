@@ -82,7 +82,7 @@ export default function AboutPage() {
                 <p>
                   What started as a weight loss tracking tool has evolved into a comprehensive
                   health management platform that supports individuals, families, and healthcare
-                  providers. Today, WLPL helps thousands of users track their wellness journey,
+                  providers. Today, WPL helps thousands of users track their wellness journey,
                   manage family health, and make informed decisions about their wellbeing.
                 </p>
                 <p>
@@ -343,7 +343,7 @@ export default function AboutPage() {
           {/* By the Numbers */}
           <section>
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-10 text-white">
-              <h2 className="text-3xl font-bold mb-8 text-center">WLPL by the Numbers</h2>
+              <h2 className="text-3xl font-bold mb-8 text-center">WPL by the Numbers</h2>
 
               <div className="grid md:grid-cols-4 gap-8">
                 <div className="text-center">

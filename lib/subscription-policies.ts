@@ -11,14 +11,21 @@ import { SubscriptionPlan, BillingInterval } from '@/types'
  * TRIAL POLICY
  * - 7-day free trial for all plans
  * - NO credit card required during trial
- * - Full access to selected plan features
+ * - Full access to SELECTED PLAN features (plan-specific trial)
  * - Payment required after trial to continue
  * - Reminders sent before trial ends
+ *
+ * IMPORTANT: FULL_FEATURE_ACCESS means "full features of the selected plan",
+ * NOT "all platform features regardless of plan". Trial users experience exactly
+ * what they will get when they subscribe to their chosen plan tier.
+ *
+ * Example: Single Plus trial users get medications/vitals (Single Plus features),
+ * but NOT family management (Family plan features).
  */
 export const TRIAL_POLICY = {
   DURATION_DAYS: 7,
   REQUIRES_PAYMENT_METHOD: false, // NO credit card required
-  FULL_FEATURE_ACCESS: true,
+  FULL_FEATURE_ACCESS: true, // Full features of SELECTED PLAN, not all platform features
   REMINDER_DAYS_BEFORE_EXPIRY: [3, 1], // Send reminders 3 days and 1 day before expiry
 } as const
 
