@@ -241,14 +241,12 @@ export async function addOrUpdateShoppingItem(
 
     return { ...newItem, id: docRef.id }
   } catch (error: any) {
-    console.error('[ShoppingOps] Detailed error:', {
-      name: error?.name,
-      message: error?.message,
-      code: error?.code,
-      stack: error?.stack,
-      fullError: error
+    logger.error('[ShoppingOps] Error adding/updating shopping item', error as Error, {
+      errorName: error?.name,
+      errorCode: error?.code,
+      userId: item.userId,
+      householdId: item.householdId
     })
-    logger.error('[ShoppingOps] Error adding/updating shopping item', error as Error)
     throw error
   }
 }

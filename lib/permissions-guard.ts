@@ -5,7 +5,7 @@
  * for destructive bulk operations (clear shopping list, batch discard inventory)
  */
 
-import { doc, getDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { HouseholdRole } from '@/types/household-permissions'
 import type { ShoppingSession } from '@/types/shopping-session'
@@ -181,11 +181,13 @@ async function getActiveShoppingSessions(
     // 3. Had activity in last 3 minutes (heartbeat tolerance)
     const threeMinutesAgo = Timestamp.fromMillis(Date.now() - 3 * 60 * 1000)
 
+    // Matches index: householdId ASC + status ASC + lastActivityAt DESC
     const q = query(
       collection(db, 'shopping_sessions'),
       where('householdId', '==', householdId),
       where('status', '==', 'active'),
-      where('lastActivityAt', '>', threeMinutesAgo)
+      where('lastActivityAt', '>', threeMinutesAgo),
+      orderBy('lastActivityAt', 'desc')
     )
 
     const snapshot = await getDocs(q)

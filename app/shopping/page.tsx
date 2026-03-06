@@ -273,7 +273,10 @@ function ShoppingListContent() {
       })
       toast.success(`✓ Added ${itemName} to shopping list`)
     } catch (error: any) {
-      console.error('[Shopping] Error fixing orphaned item:', error)
+      logger.error('[Shopping] Error fixing orphaned item', error as Error, {
+        itemId,
+        itemName
+      })
       toast.error(`Failed to fix item: ${error?.message || 'Unknown error'}`)
     }
   }
@@ -404,15 +407,11 @@ function ShoppingListContent() {
         setShowImpulseConfirm(true)
       }
     } catch (error: any) {
-      console.error('[Shopping] Barcode scan error details:', {
-        name: error?.name,
-        message: error?.message,
-        code: error?.code,
-        stack: error?.stack,
+      logger.error('[Shopping] Barcode scan error', error as Error, {
         barcode,
-        fullError: error
+        errorName: error?.name,
+        errorCode: error?.code
       })
-      logger.error('Barcode scan error', error as Error, { barcode })
       toast.error(`Failed to process barcode: ${error?.message || 'Unknown error'}`, { id: 'barcode-lookup' })
     }
   }

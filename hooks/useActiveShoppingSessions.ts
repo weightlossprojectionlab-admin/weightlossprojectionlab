@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, Timestamp, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { ShoppingSession } from '@/types/shopping-session'
 import { SESSION_TIMEOUTS, isSessionActive } from '@/types/shopping-session'
@@ -48,11 +48,13 @@ export function useActiveShoppingSessions(
     )
 
     // Query for active sessions in this household
+    // Matches index: householdId ASC + status ASC + lastActivityAt DESC
     const q = query(
       collection(db, 'shopping_sessions'),
       where('householdId', '==', householdId),
       where('status', '==', 'active'),
-      where('lastActivityAt', '>', threeMinutesAgo)
+      where('lastActivityAt', '>', threeMinutesAgo),
+      orderBy('lastActivityAt', 'desc')
     )
 
     // Set up real-time listener
