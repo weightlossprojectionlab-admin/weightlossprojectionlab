@@ -81,9 +81,37 @@ async function fetchGroupsData(userId: string): Promise<Omit<GroupsData, 'loadin
 }
 
 /**
- * Hook to fetch and manage groups data
+ * Simple hook to fetch all groups
  */
-export function useGroups(userId: string | null) {
+export function useGroups() {
+  const { data, error, isLoading, mutate } = useSWR<Group[]>(
+    'all-groups',
+    async () => {
+      const groupsSnap = await getDocs(collection(db, 'groups'));
+      return groupsSnap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Group[];
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 10000, // 10 seconds
+    }
+  );
+
+  return {
+    groups: data || [],
+    isLoading,
+    error: error || null,
+    mutate,
+  };
+}
+
+/**
+ * Hook to fetch and manage groups data for a specific user
+ */
+export function useUserGroups(userId: string | null) {
   const { data, error, isLoading, mutate } = useSWR<Omit<GroupsData, 'loading' | 'error'>>(
     userId ? `groups-${userId}` : null,
     () => fetchGroupsData(userId!),
