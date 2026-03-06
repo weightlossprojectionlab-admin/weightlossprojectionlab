@@ -18,7 +18,7 @@ export default function CreateGroupModal({
   onClose,
   onSuccess
 }: CreateGroupModalProps) {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -55,12 +55,16 @@ export default function CreateGroupModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!user) {
-      toast.error('You must be logged in to create a group')
+    if (!validateForm()) {
       return
     }
 
-    if (!validateForm()) {
+    if (!user) {
+      logger.error('[CreateGroupModal] No user found when submitting', {
+        loading,
+        hasUser: !!user
+      })
+      toast.error('You must be logged in to create a group')
       return
     }
 
