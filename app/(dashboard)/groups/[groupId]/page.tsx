@@ -265,9 +265,16 @@ export default function GroupDetailPage() {
         {/* Members List */}
         {isMember && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Members
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Members
+              </h2>
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <span className="cursor-help" title="Trust Score reflects member reliability and support activity. New members start at 0.5, creators at 1.0. Grows by sending support actions.">
+                  ℹ️ About Trust Scores
+                </span>
+              </div>
+            </div>
 
             {members.length === 0 ? (
               <p className="text-gray-600 dark:text-gray-400">No members yet</p>
@@ -300,24 +307,33 @@ export default function GroupDetailPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleSendSupport(member.uid, 'cheer')}
-                          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
-                          title="Send Cheer"
+                          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg group relative"
+                          title="Cheer: Send encouragement and celebrate their wins"
                         >
                           <Heart className="w-5 h-5" />
+                          <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                            Cheer 🎉
+                          </span>
                         </button>
                         <button
                           onClick={() => handleSendSupport(member.uid, 'motivation')}
-                          className="p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg"
-                          title="Send Motivation"
+                          className="p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg group relative"
+                          title="Motivation: Boost their energy and keep them going"
                         >
                           <Sparkles className="w-5 h-5" />
+                          <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                            Motivate ⚡
+                          </span>
                         </button>
                         <button
                           onClick={() => handleSendSupport(member.uid, 'tip')}
-                          className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg"
-                          title="Send Tip"
+                          className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg group relative"
+                          title="Tip: Share helpful advice or resources"
                         >
                           <TrendingUp className="w-5 h-5" />
+                          <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                            Share Tip 💡
+                          </span>
                         </button>
                       </div>
                     )}
