@@ -13,6 +13,7 @@
 
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 export interface AdminVerificationResult {
   isAdmin: boolean
@@ -72,12 +73,7 @@ export async function verifyAdminAuth(
     }
 
     // Fallback check: Super admin email whitelist
-    const superAdminEmails = [
-      'perriceconsulting@gmail.com',
-      'weightlossprojectionlab@gmail.com'
-    ]
-
-    if (email && superAdminEmails.includes(email.toLowerCase())) {
+    if (email && isSuperAdmin(email)) {
       logger.debug('[Admin Auth] Verified via super admin email', { uid, email })
 
       // Optionally set custom claim for future requests

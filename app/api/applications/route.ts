@@ -6,11 +6,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting (5 requests per hour)
+    const rateLimitResponse = await rateLimit(request, 'public-forms')
+    if (rateLimitResponse) return rateLimitResponse
+
     const formData = await request.formData()
 
     // Extract form fields
@@ -25,6 +30,58 @@ export async function POST(request: NextRequest) {
     const coverLetter = formData.get('coverLetter') as string | null
     const whyExcited = formData.get('whyExcited') as string | null
     const resumeFile = formData.get('resume') as File | null
+
+    // File upload validation constants
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+    const ALLOWED_MIME_TYPES = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/vnd.oasis.opendocument.text', // .odt
+    ]
+    const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.odt']
+
+    // Validate resume file if provided
+    if (resumeFile) {
+      // Check file size
+      if (resumeFile.size > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { success: false, error: 'Resume file is too large. Maximum size is 10MB.' },
+          { status: 400 }
+        )
+      }
+
+      // Check MIME type
+      if (!ALLOWED_MIME_TYPES.includes(resumeFile.type)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Invalid file type. Please upload a PDF or Word document (.pdf, .doc, .docx).'
+          },
+          { status: 400 }
+        )
+      }
+
+      // Check file extension as additional validation
+      const fileExtension = resumeFile.name.toLowerCase().match(/\.[^.]+$/)?.[0]
+      if (!fileExtension || !ALLOWED_EXTENSIONS.includes(fileExtension)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Invalid file extension. Please upload a PDF or Word document.'
+          },
+          { status: 400 }
+        )
+      }
+
+      // Check filename length
+      if (resumeFile.name.length > 255) {
+        return NextResponse.json(
+          { success: false, error: 'Filename is too long. Maximum 255 characters.' },
+          { status: 400 }
+        )
+      }
+    }
 
     // Validate required fields
     if (!jobId || !jobTitle || !applicantName || !applicantEmail) {
@@ -94,9 +151,15 @@ export async function POST(request: NextRequest) {
           },
         })
 
-        // Get public URL
-        await file.makePublic()
-        resumeUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`
+        // DON'T make public immediately - admin should review first
+        // await file.makePublic() // REMOVED for security
+
+        // Generate signed URL that expires in 7 days (for admin review)
+        const [signedUrl] = await file.getSignedUrl({
+          action: 'read',
+          expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+        })
+        resumeUrl = signedUrl
 
         // Update application with resume URL
         await applicationRef.update({

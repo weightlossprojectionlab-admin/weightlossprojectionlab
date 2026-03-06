@@ -10,6 +10,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
 import type { JobPosting, JobPostingForm } from '@/types/jobs'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,12 +28,9 @@ async function verifyAdmin(request: NextRequest) {
   const adminData = adminDoc.data()
   const adminEmail = decodedToken.email || ''
 
-  const isSuperAdmin = [
-    'perriceconsulting@gmail.com',
-    'weightlossprojectionlab@gmail.com',
-  ].includes(adminEmail)
+  const isSuper = isSuperAdmin(adminEmail)
 
-  if (!isSuperAdmin && adminData?.role !== 'admin') {
+  if (!isSuper && adminData?.role !== 'admin') {
     throw new Error('Forbidden - Admin access required')
   }
 

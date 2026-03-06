@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 interface ScanEvent {
   id: string
@@ -43,9 +44,9 @@ export async function GET(
     // Check if user is admin
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
-    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(adminEmail.toLowerCase())
+    const isSuper = isSuperAdmin(adminEmail)
 
-    if (!isSuperAdmin && adminData?.role !== 'admin' && adminData?.role !== 'moderator' && adminData?.role !== 'support') {
+    if (!isSuper && adminData?.role !== 'admin' && adminData?.role !== 'moderator' && adminData?.role !== 'support') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
@@ -207,9 +208,9 @@ export async function PUT(
     // Check if user is admin
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
-    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(adminEmail.toLowerCase())
+    const isSuper = isSuperAdmin(adminEmail)
 
-    if (!isSuperAdmin && adminData?.role !== 'admin' && adminData?.role !== 'moderator') {
+    if (!isSuper && adminData?.role !== 'admin' && adminData?.role !== 'moderator') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
     const body = await request.json()

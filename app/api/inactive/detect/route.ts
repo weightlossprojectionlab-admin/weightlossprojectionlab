@@ -19,6 +19,7 @@ import {
 } from '@/lib/inactive-detection'
 import { initAdmin } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 /**
  * POST /api/inactive/detect
@@ -55,10 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    const adminEmails = [
-      'perriceconsulting@gmail.com',
-      'weightlossprojectionlab@gmail.com'
-    ]
+    // Deprecated: Use isSuperAdmin from @/lib/admin/permissions
 
     if (!adminEmails.includes(decodedToken.email || '')) {
       return NextResponse.json(
@@ -127,10 +125,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin
-    const adminEmails = [
-      'perriceconsulting@gmail.com',
-      'weightlossprojectionlab@gmail.com'
-    ]
+    // Deprecated: Use isSuperAdmin from @/lib/admin/permissions
 
     if (!adminEmails.includes(decodedToken.email || '')) {
       return NextResponse.json(

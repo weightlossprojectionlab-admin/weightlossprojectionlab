@@ -5,6 +5,7 @@ import { useAuth } from './useAuth'
 import { db } from '@/lib/firebase'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { logger } from '@/lib/logger'
+import { isSuperAdmin as isSuperAdminCheck } from '@/lib/admin/permissions'
 
 export type AdminRole = 'admin' | 'moderator' | 'support' | null
 
@@ -15,15 +16,9 @@ interface AdminAuthState {
   loading: boolean
 }
 
-// Super admin emails with full access (cannot be revoked)
-const SUPER_ADMIN_EMAILS = [
-  'perriceconsulting@gmail.com',
-  'weightlossprojectionlab@gmail.com',
-]
-
+// Re-export for backward compatibility
 export const isSuperAdminEmail = (email: string | null | undefined): boolean => {
-  if (!email) return false
-  return SUPER_ADMIN_EMAILS.includes(email.toLowerCase())
+  return isSuperAdminCheck(email)
 }
 
 export const useAdminAuth = (): AdminAuthState => {

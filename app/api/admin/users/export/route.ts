@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 /**
  * GET /api/admin/users/export?uid=<uid>
@@ -25,9 +26,9 @@ export async function GET(request: NextRequest) {
     // Check if user is admin or support
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
-    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(adminEmail)
+    const isSuper = isSuperAdmin(adminEmail)
 
-    if (!isSuperAdmin && !['admin', 'support'].includes(adminData?.role)) {
+    if (!isSuper && !['admin', 'support'].includes(adminData?.role)) {
       return NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 })
     }
 

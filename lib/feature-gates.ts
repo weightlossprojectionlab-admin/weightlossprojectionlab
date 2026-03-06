@@ -6,8 +6,9 @@
  */
 
 import { User, UserSubscription, SubscriptionPlan, HOUSEHOLD_LIMITS, HOUSEHOLD_DUTY_LIMITS } from '@/types'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
-// Admin users with full access to all features
+// Admin users with full access to all features (deprecated - use isSuperAdmin from permissions.ts)
 export const ADMIN_EMAILS = ['weightlossprojectionlab@gmail.com', 'admin:weightlossprojectionlab@gmail.com']
 
 // Full access subscription for admins
@@ -174,7 +175,7 @@ export function getUserSubscription(user: User | null): UserSubscription | null 
   if (!user) return null
 
   // 1. Admin bypass - full access always
-  if (ADMIN_EMAILS.includes(user.email)) {
+  if (isSuperAdmin(user.email)) {
     return FULL_ACCESS_SUBSCRIPTION
   }
 
@@ -340,7 +341,7 @@ export function getPatientLimitInfo(user: User | null, currentPatientCount: numb
  */
 export function isAdmin(user: User | null): boolean {
   if (!user) return false
-  return ADMIN_EMAILS.includes(user.email)
+  return isSuperAdmin(user.email)
 }
 
 /**

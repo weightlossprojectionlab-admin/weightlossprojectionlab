@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { isSuperAdmin, SUPER_ADMIN_EMAILS } from '@/lib/admin/permissions'
 
 /**
  * GET /api/admin/settings/admin-users
@@ -23,9 +24,9 @@ export async function GET(request: NextRequest) {
     // Check if user is admin
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
-    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(adminEmail)
+    const isSuper = isSuperAdmin(adminEmail)
 
-    if (!isSuperAdmin && adminData?.role !== 'admin') {
+    if (!isSuper && adminData?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
@@ -48,8 +49,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Also add super admins if not already in list
-    const superAdminEmails = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com']
-    for (const email of superAdminEmails) {
+    for (const email of SUPER_ADMIN_EMAILS) {
       try {
         const userRecord = await adminAuth.getUserByEmail(email)
         if (!adminUsers.find(u => u.uid === userRecord.uid)) {

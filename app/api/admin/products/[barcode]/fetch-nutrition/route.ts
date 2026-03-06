@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { lookupBarcodeServer } from '@/lib/openfoodfacts-server'
 import { errorResponse } from '@/lib/api-response'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 /**
  * POST /api/admin/products/[barcode]/fetch-nutrition
@@ -34,9 +35,9 @@ export async function POST(
     // Check if user is admin
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
-    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(adminEmail.toLowerCase())
+    const isSuper = isSuperAdmin(adminEmail)
 
-    if (!isSuperAdmin && adminData?.role !== 'admin' && adminData?.role !== 'moderator') {
+    if (!isSuper && adminData?.role !== 'admin' && adminData?.role !== 'moderator') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 

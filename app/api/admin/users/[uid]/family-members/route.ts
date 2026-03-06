@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 export async function GET(
   request: NextRequest,
@@ -25,9 +26,9 @@ export async function GET(
 
     const adminDoc = await adminDb.collection('users').doc(decodedToken.uid).get()
     const adminData = adminDoc.data()
-    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(adminEmail.toLowerCase())
+    const isSuper = isSuperAdmin(adminEmail)
 
-    if (!isSuperAdmin && adminData?.role !== 'admin') {
+    if (!isSuper && adminData?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

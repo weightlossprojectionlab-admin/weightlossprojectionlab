@@ -151,6 +151,15 @@ export const adminGrantRoleLimiter = createRateLimiter(5, 1, 'h', 'admin:grant-r
 // Email endpoints: 10 requests per hour per user
 export const emailLimiter = createRateLimiter(10, 1, 'h', 'email')
 
+// Public form submissions: 5 requests per hour (contact, demo-requests, applications)
+export const publicFormLimiter = createRateLimiter(5, 1, 'h', 'public-forms')
+
+// Authenticated API: 100 requests per minute
+export const authenticatedLimiter = createRateLimiter(100, 1, 'm', 'authenticated')
+
+// Admin operations: 50 requests per minute
+export const adminLimiter = createRateLimiter(50, 1, 'm', 'admin')
+
 /**
  * Rate limit response headers
  */
@@ -179,7 +188,7 @@ export function getRateLimitHeaders(result: {
  */
 export async function rateLimit(
   request: NextRequest,
-  limiterType: 'fetch-url' | 'ai:gemini' | 'admin:grant-role' | 'email',
+  limiterType: 'fetch-url' | 'ai:gemini' | 'admin:grant-role' | 'email' | 'public-forms' | 'authenticated' | 'admin',
   identifier?: string
 ): Promise<NextResponse | null> {
   // Select the appropriate limiter
@@ -196,6 +205,15 @@ export async function rateLimit(
       break
     case 'email':
       limiter = emailLimiter
+      break
+    case 'public-forms':
+      limiter = publicFormLimiter
+      break
+    case 'authenticated':
+      limiter = authenticatedLimiter
+      break
+    case 'admin':
+      limiter = adminLimiter
       break
     default:
       logger.error('Invalid rate limiter type', new Error(`Invalid limiter type: ${limiterType}`))

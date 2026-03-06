@@ -4,6 +4,7 @@ import { logAdminAction } from '@/lib/admin/audit'
 import { Timestamp } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 /**
  * GET /api/admin/perks
@@ -26,9 +27,9 @@ export async function GET(request: NextRequest) {
     // Check if user is admin
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
-    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(adminEmail)
+    const isSuper = isSuperAdmin(adminEmail)
 
-    if (!isSuperAdmin && adminData?.role !== 'admin') {
+    if (!isSuper && adminData?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
@@ -89,9 +90,9 @@ export async function POST(request: NextRequest) {
     // Check if user is admin
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
-    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(adminEmail)
+    const isSuper = isSuperAdmin(adminEmail)
 
-    if (!isSuperAdmin && adminData?.role !== 'admin') {
+    if (!isSuper && adminData?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
@@ -181,9 +182,9 @@ export async function PUT(request: NextRequest) {
     // Check if user is admin
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
-    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(adminEmail)
+    const isSuper = isSuperAdmin(adminEmail)
 
-    if (!isSuperAdmin && adminData?.role !== 'admin') {
+    if (!isSuper && adminData?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
@@ -263,9 +264,9 @@ export async function DELETE(request: NextRequest) {
     // Check if user is admin
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
-    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(adminEmail)
+    const isSuper = isSuperAdmin(adminEmail)
 
-    if (!isSuperAdmin && adminData?.role !== 'admin') {
+    if (!isSuper && adminData?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 

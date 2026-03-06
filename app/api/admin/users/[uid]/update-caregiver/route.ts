@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 export async function PATCH(
   request: NextRequest,
@@ -29,9 +30,9 @@ export async function PATCH(
     // Check admin permissions
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
-    const isSuperAdmin = ['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(adminEmail.toLowerCase())
+    const isSuper = isSuperAdmin(adminEmail)
 
-    if (!isSuperAdmin && adminData?.role !== 'admin') {
+    if (!isSuper && adminData?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

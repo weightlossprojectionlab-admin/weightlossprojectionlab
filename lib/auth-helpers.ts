@@ -6,6 +6,7 @@
 
 import { NextRequest } from 'next/server'
 import { getAdminAuth } from './firebase-admin'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 /**
  * Verify admin access from request
@@ -35,8 +36,7 @@ export async function verifyAdmin(request: NextRequest): Promise<{
     // Check for admin custom claim or super admin email
     const isAdmin =
       decodedToken.admin === true ||
-      decodedToken.email === 'perriceconsulting@gmail.com' ||
-      decodedToken.email === 'weightlossprojectionlab@gmail.com' ||
+      isSuperAdmin(decodedToken.email) ||
       decodedToken.uid === 'Y8wSTgymg3YXWU94iJVjzoGxsMI2'
 
     return {

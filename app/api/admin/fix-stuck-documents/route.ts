@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data()
 
     // Simple admin check - you can enhance this
-    if (!userData?.email?.includes('weightlossprojectionlab@gmail.com')) {
+    if (!isSuperAdmin(userData?.email)) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized - admin only' },
         { status: 403 }

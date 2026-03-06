@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { getRoleDisplayName, getRoleBadgeColor } from '@/lib/admin/permissions'
+import { getRoleDisplayName, getRoleBadgeColor, isSuperAdmin as checkSuperAdmin, SUPER_ADMIN_EMAILS } from '@/lib/admin/permissions'
 import { logger } from '@/lib/logger'
 import { getCSRFToken } from '@/lib/csrf'
 import {
@@ -226,7 +226,7 @@ export default function AdminSettingsPage() {
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(admin.role)}`}>
                       {getRoleDisplayName(admin.role)}
                     </span>
-                    {isSuperAdmin && !['perriceconsulting@gmail.com', 'weightlossprojectionlab@gmail.com'].includes(admin.email) && (
+                    {isSuperAdmin && !checkSuperAdmin(admin.email) && (
                       <button
                         onClick={() => handleRevokeRole(admin.email)}
                         disabled={actionLoading}
@@ -245,7 +245,7 @@ export default function AdminSettingsPage() {
         {isSuperAdmin && (
           <div className="mt-4 p-4 bg-accent-light dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
             <p className="text-sm text-indigo-900 dark:text-indigo-200">
-              <strong>Super Admins:</strong> perriceconsulting@gmail.com, weightlossprojectionlab@gmail.com
+              <strong>Super Admins:</strong> {SUPER_ADMIN_EMAILS.join(', ')}
               <br />
               <span className="text-xs text-indigo-700 dark:text-indigo-300">
                 Super admin access cannot be revoked via this interface
