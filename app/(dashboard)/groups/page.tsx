@@ -13,11 +13,17 @@ import { PlusIcon } from '@heroicons/react/24/outline';
 import { logger } from '@/lib/logger'
 
 export default function GroupsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { groups, isLoading, error, mutate } = useGroups();
+
+  // Redirect if not authenticated
+  if (!authLoading && !user) {
+    router.push('/auth?redirect=/groups');
+    return null;
+  }
 
   // Filter user's groups
   const userGroupIds = groups
