@@ -81,13 +81,19 @@ async function fetchGroupsData(userId: string): Promise<Omit<GroupsData, 'loadin
 }
 
 /**
- * Simple hook to fetch all groups
+ * Simple hook to fetch all public groups
  */
 export function useGroups() {
   const { data, error, isLoading, mutate } = useSWR<Group[]>(
     'all-groups',
     async () => {
-      const groupsSnap = await getDocs(collection(db, 'groups'));
+      // Only fetch public groups to avoid permission errors
+      const groupsQuery = query(
+        collection(db, 'groups'),
+        where('privacy', '==', 'public'),
+        orderBy('createdAt', 'desc')
+      );
+      const groupsSnap = await getDocs(groupsQuery);
       return groupsSnap.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
