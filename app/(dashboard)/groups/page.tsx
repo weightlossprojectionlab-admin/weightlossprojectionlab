@@ -4,41 +4,36 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useGroups } from '@/hooks/useGroups';
 import GroupsList from '@/components/groups/GroupsList';
+import CreateGroupModal from '@/components/groups/CreateGroupModal';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { logger } from '@/lib/logger'
 
-// TODO: Create useGroups hook similar to useMissions
-// For now, using mock data structure
-
 export default function GroupsPage() {
   const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // TODO: Replace with actual useGroups hook
-  const groups: any[] = [];
-  const userGroupIds: string[] = [];
-  const error = null;
+  const { groups, isLoading, error, mutate } = useGroups();
 
-  const handleJoinGroup = async (groupId: string) => {
-    logger.debug('Join group:', { groupId });
-    // TODO: Implement Firebase function to join group
-  };
-
-  const handleLeaveGroup = async (groupId: string) => {
-    logger.debug('Leave group:', { groupId });
-    // TODO: Implement Firebase function to leave group
-  };
+  // Filter user's groups
+  const userGroupIds = groups
+    ?.filter(g => g.memberIds?.includes(user?.uid || ''))
+    .map(g => g.groupId) || [];
 
   const handleViewGroup = (groupId: string) => {
-    logger.debug('View group:', { groupId });
-    // TODO: Navigate to group detail page
+    router.push(`/groups/${groupId}`);
   };
 
   const handleCreateGroup = () => {
-    logger.debug('Create new group');
-    // TODO: Open create group modal or navigate to create page
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateSuccess = () => {
+    mutate(); // Refresh groups list
   };
 
   if (isLoading) {
@@ -106,11 +101,16 @@ export default function GroupsPage() {
 
       {/* Groups List */}
       <GroupsList
-        groups={groups}
+        groups={groups || []}
         userGroupIds={userGroupIds}
-        onJoinGroup={handleJoinGroup}
-        onLeaveGroup={handleLeaveGroup}
         onViewGroup={handleViewGroup}
+      />
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleCreateSuccess}
       />
 
       {/* Info Box */}

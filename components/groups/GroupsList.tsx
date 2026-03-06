@@ -12,16 +12,12 @@ import type { Group } from '@/schemas/firestore/groups';
 interface GroupsListProps {
   groups: Group[];
   userGroupIds?: string[];
-  onJoinGroup?: (groupId: string) => void;
-  onLeaveGroup?: (groupId: string) => void;
   onViewGroup?: (groupId: string) => void;
 }
 
 export default function GroupsList({
   groups,
   userGroupIds = [],
-  onJoinGroup,
-  onLeaveGroup,
   onViewGroup
 }: GroupsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,8 +123,6 @@ export default function GroupsList({
                 key={groupId}
                 group={group}
                 isMember={userGroupIds.includes(groupId)}
-                onJoin={onJoinGroup}
-                onLeave={onLeaveGroup}
                 onClick={onViewGroup}
               />
             );

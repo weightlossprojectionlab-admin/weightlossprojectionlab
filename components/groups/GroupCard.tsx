@@ -11,12 +11,10 @@ import type { Group } from '@/schemas/firestore/groups';
 interface GroupCardProps {
   group: Group;
   isMember?: boolean;
-  onJoin?: (groupId: string) => void;
-  onLeave?: (groupId: string) => void;
   onClick?: (groupId: string) => void;
 }
 
-export default function GroupCard({ group, isMember = false, onJoin, onLeave, onClick }: GroupCardProps) {
+export default function GroupCard({ group, isMember = false, onClick }: GroupCardProps) {
   const memberCount = group.memberIds?.length || 0;
   const maxMembers = group.maxMembers || 50;
   const isFull = memberCount >= maxMembers;
@@ -84,61 +82,15 @@ export default function GroupCard({ group, isMember = false, onJoin, onLeave, on
 
       {/* Actions */}
       <div className="flex items-center space-x-2">
-        {isMember ? (
-          <>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClick?.(groupIdToUse);
-              }}
-              className="flex-1 bg-accent-dark text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-dark transition-colors"
-            >
-              View Group
-            </button>
-            {onLeave && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onLeave(groupIdToUse);
-                }}
-                className="px-4 py-2 border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors"
-              >
-                Leave
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            {onJoin && !isFull ? (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onJoin(groupIdToUse);
-                }}
-                className="flex-1 bg-success text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-success-dark transition-colors"
-              >
-                {isPrivate ? 'Request to Join' : 'Join Group'}
-              </button>
-            ) : isFull ? (
-              <button
-                disabled
-                className="flex-1 bg-muted text-muted-foreground px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed"
-              >
-                Group Full
-              </button>
-            ) : (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClick?.(groupIdToUse);
-                }}
-                className="flex-1 bg-muted text-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-              >
-                View Details
-              </button>
-            )}
-          </>
-        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.(groupIdToUse);
+          }}
+          className="flex-1 bg-accent-dark text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-dark transition-colors"
+        >
+          {isMember ? 'View Group' : isFull ? 'Group Full' : 'View Details'}
+        </button>
       </div>
     </div>
   );
