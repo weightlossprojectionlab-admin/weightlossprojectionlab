@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import { Toaster } from 'react-hot-toast'
 import { ServiceWorkerProvider } from '@/components/ServiceWorkerProvider'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { AuthProvider } from '@/contexts/AuthContext'
 import { MenuProvider } from '@/contexts/MenuContext'
 import { AccountProvider } from '@/contexts/AccountContext'
 import { HouseholdProvider } from '@/contexts/HouseholdContext'
@@ -37,10 +38,11 @@ export function ConditionalProviders({ children }: { children: React.ReactNode }
   // All other pages: Provider stack without StepTrackingProvider (loaded per-page as needed)
   return (
     <ThemeProvider>
-      <ServiceWorkerProvider>
-        <AccountProvider>
-          <HouseholdProvider>
-            <MenuProvider>
+      <AuthProvider>
+        <ServiceWorkerProvider>
+          <AccountProvider>
+            <HouseholdProvider>
+              <MenuProvider>
               <CsrfInitializer />
               <GlobalAlertModal />
               <InactivityHandler />
@@ -72,10 +74,11 @@ export function ConditionalProviders({ children }: { children: React.ReactNode }
                 },
               }}
             />
-            </MenuProvider>
-          </HouseholdProvider>
-        </AccountProvider>
-      </ServiceWorkerProvider>
+              </MenuProvider>
+            </HouseholdProvider>
+          </AccountProvider>
+        </ServiceWorkerProvider>
+      </AuthProvider>
     </ThemeProvider>
   )
 }
