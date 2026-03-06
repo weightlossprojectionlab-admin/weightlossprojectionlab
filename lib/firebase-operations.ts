@@ -253,6 +253,7 @@ export const mealLogOperations = {
   // Create meal log
   async createMealLog(data: {
     mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+    title?: string
     photoUrl?: string
     additionalPhotos?: string[]
     aiAnalysis?: AIAnalysis

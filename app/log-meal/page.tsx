@@ -239,9 +239,15 @@ function LogMealContent() {
     if (!loadingHistory && mealHistory) {
       const existingMeal = checkForDuplicateMeal(selectedMealType)
       if (existingMeal) {
+        // Get meal description from title field or first food item
+        const mealDescription = existingMeal.title ||
+                               existingMeal.aiAnalysis?.foodItems?.[0]?.name ||
+                               existingMeal.manualEntries?.[0]?.food ||
+                               'Untitled meal'
+
         setDuplicateMeal({
           id: existingMeal.id,
-          description: existingMeal.description || 'Untitled meal',
+          description: mealDescription,
           mealType: selectedMealType.charAt(0).toUpperCase() + selectedMealType.slice(1)
         })
         setShowDuplicateModal(true)
@@ -908,6 +914,7 @@ function LogMealContent() {
       // Create manual entry meal log with nutrition data
       const response = await mealLogOperations.createMealLog({
         mealType: selectedMealType,
+        title: sanitizedMealName, // Set meal title for duplicate detection
         photoUrl,
         loggedAt: new Date().toISOString(),
         notes: sanitizedNotes || undefined,
