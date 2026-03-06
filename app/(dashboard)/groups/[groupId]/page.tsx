@@ -38,7 +38,8 @@ export default function GroupDetailPage() {
         const groupSnap = await getDoc(groupRef)
 
         if (!groupSnap.exists()) {
-          toast.error('Group not found')
+          logger.error('[GroupDetail] Group not found or no permission', { groupId })
+          toast.error('Group not found or you do not have permission to view it')
           router.push('/groups')
           return
         }
@@ -46,25 +47,31 @@ export default function GroupDetailPage() {
         const groupData = { id: groupSnap.id, ...groupSnap.data() } as Group
         setGroup(groupData)
 
-        // Fetch members
-        const membersRef = collection(db, `groups/${groupId}/members`)
-        const membersQuery = query(membersRef, orderBy('joinedAt', 'asc'), limit(50))
-        const membersSnap = await getDocs(membersQuery)
+        // Fetch members only if user is a member
+        if (groupData.memberIds?.includes(user.uid)) {
+          const membersRef = collection(db, `groups/${groupId}/members`)
+          const membersQuery = query(membersRef, orderBy('joinedAt', 'asc'), limit(50))
+          const membersSnap = await getDocs(membersQuery)
 
-        const membersData = membersSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as GroupMember[]
+          const membersData = membersSnap.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as GroupMember[]
 
-        setMembers(membersData)
+          setMembers(membersData)
+        }
 
         logger.info('[GroupDetail] Fetched group data', {
           groupId,
-          memberCount: membersData.length
+          memberCount: members.length
         })
       } catch (error) {
-        logger.error('[GroupDetail] Error fetching group', error as Error)
-        toast.error('Failed to load group')
+        const err = error as any
+        logger.error('[GroupDetail] Error fetching group', error as Error, {
+          code: err?.code,
+          message: err?.message
+        })
+        toast.error(err?.message || 'Failed to load group')
       } finally {
         setIsLoading(false)
       }
