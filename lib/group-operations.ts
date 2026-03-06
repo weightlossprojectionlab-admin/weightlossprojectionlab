@@ -56,7 +56,6 @@ export async function createGroup(data: {
       maxMembers: data.maxMembers || 50,
       tags: data.tags || [],
       memberIds: [data.creatorUid], // Creator is first member
-      activeMissionId: undefined,
       createdAt: serverTimestamp() as any,
       updatedAt: serverTimestamp() as any
     }
