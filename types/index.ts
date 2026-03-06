@@ -489,9 +489,11 @@ export interface StepLog {
   id: string
   userId: string
   steps: number
+  date: string // YYYY-MM-DD format
   loggedAt: Date
-  dataSource: 'device-sensor' | 'apple-health' | 'google-fit' | 'manual' // Data provenance
-  source?: 'manual' | 'device' | 'healthkit' | 'googlefit' // Deprecated - use dataSource
+  source: 'device' | 'manual' | 'apple-health' | 'google-fit' | 'health-app'
+  goal?: number
+  notes?: string
 }
 
 // Health Vitals Tracking (HIPAA-sensitive data)

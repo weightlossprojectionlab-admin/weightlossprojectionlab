@@ -4,10 +4,10 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 
-interface StepLog {
+interface StepLogData {
   steps: number
   date: string // YYYY-MM-DD format
-  source: 'device' | 'health-app' | 'manual' | 'apple-health' | 'google-fit'
+  source: 'device' | 'manual' | 'apple-health' | 'google-fit' | 'health-app'
   loggedAt: Timestamp
   goal?: number
   notes?: string
@@ -133,11 +133,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate source
-    const validSources = ['device', 'health-app', 'manual', 'apple-health', 'google-fit']
+    const validSources = ['device', 'manual', 'apple-health', 'google-fit', 'health-app']
     const stepSource = source || 'manual'
     if (!validSources.includes(stepSource)) {
       return NextResponse.json(
         { error: 'Invalid source. Must be one of: ' + validSources.join(', ') },
+        { status: 400 }
+      )
+    }
+
+    // Validate steps count (max 100,000 per day)
+    if (steps > 100000) {
+      return NextResponse.json(
+        { error: 'Invalid step count (maximum 100,000 steps per day)' },
+        { status: 400 }
+      )
+    }
+
+    // Validate date is not in the future
+    const logDate = new Date(date)
+    const today = new Date()
+    today.setHours(23, 59, 59, 999) // End of today
+    if (logDate > today) {
+      return NextResponse.json(
+        { error: 'Cannot log steps for future dates' },
         { status: 400 }
       )
     }
@@ -180,7 +199,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create step log data
-    const stepLogData: StepLog = {
+    const stepLogData: StepLogData = {
       steps,
       date,
       source: stepSource,

@@ -314,12 +314,25 @@ export function useStepCounter(
    */
   useEffect(() => {
     return () => {
-      // Cleanup is async but can't await in cleanup function
-      // Fire stopSensor and saveToStorage without waiting
+      // Stop sensor immediately
       stopSensor()
-      saveToStorage()
+
+      // Save to storage synchronously to prevent data loss
+      try {
+        const data = {
+          totalSteps: stateRef.current.totalSteps,
+          sessionSteps: stateRef.current.sessionSteps,
+          timestamp: Date.now()
+        }
+        // Use synchronous localStorage instead of async storage adapter
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem(STEP_COUNT_STORAGE_KEY, JSON.stringify(data))
+        }
+      } catch (err) {
+        logger.error('[Step Counter] Cleanup save failed:', err as Error)
+      }
     }
-  }, [saveToStorage])
+  }, [])
 
   return {
     // State

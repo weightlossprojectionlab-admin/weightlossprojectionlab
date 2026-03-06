@@ -27,6 +27,7 @@ interface WeightLog {
 
 interface StepLog {
   steps: number
+  date?: string // YYYY-MM-DD format
 }
 
 interface ProfileWithGoals {
@@ -117,7 +118,14 @@ export function useDashboardStats(
 
   // Calculate activity summary
   const activitySummary = useMemo(() => {
-    const todaySteps = stepsData.reduce((sum, log) => sum + (log.steps || 0), 0)
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0]
+
+    // Filter to only today's steps (in case stepsData contains multiple days)
+    const todaySteps = stepsData
+      .filter(log => !log.date || log.date === today) // Include logs without date for backwards compatibility
+      .reduce((sum, log) => sum + (log.steps || 0), 0)
+
     const goalSteps = profileWithGoals?.goals?.dailyStepGoal || 10000
 
     // For weekly average, we'd need to fetch more data - for now use today's data
