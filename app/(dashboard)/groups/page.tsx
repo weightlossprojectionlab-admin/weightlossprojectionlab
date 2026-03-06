@@ -58,7 +58,7 @@ export default function GroupsPage() {
       <div className="p-6">
         <div className="bg-error-light border border-error rounded-lg p-4">
           <h2 className="text-error-dark font-semibold mb-2">Error Loading Groups</h2>
-          <p className="text-error-dark">{error}</p>
+          <p className="text-error-dark">{error.message || 'An error occurred while loading groups'}</p>
         </div>
       </div>
     );
