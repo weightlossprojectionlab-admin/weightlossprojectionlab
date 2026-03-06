@@ -83,18 +83,18 @@ export default function GroupsPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="text-sm text-muted-foreground mb-1">Total Groups</div>
-          <div className="text-2xl font-bold text-foreground">{groups.length}</div>
+          <div className="text-2xl font-bold text-foreground">{groups?.length || 0}</div>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="text-sm text-muted-foreground mb-1">Public Groups</div>
           <div className="text-2xl font-bold text-foreground">
-            {groups.filter(g => g.privacy === 'public').length}
+            {groups?.filter(g => g.privacy === 'public').length || 0}
           </div>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="text-sm text-muted-foreground mb-1">Total Members</div>
           <div className="text-2xl font-bold text-foreground">
-            {groups.reduce((sum, g) => sum + (g.memberIds?.length || 0), 0)}
+            {groups?.reduce((sum, g) => sum + (g.memberIds?.length || 0), 0) || 0}
           </div>
         </div>
       </div>
