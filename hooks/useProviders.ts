@@ -103,7 +103,16 @@ export function useProviders({
       },
       (err) => {
         const errorMessage = err.message || 'Failed to fetch providers'
-        logger.error('[useProviders] Real-time listener error', err, { userId })
+        const firestoreError = err as any
+        const context = {
+          userId: userId || 'unknown-user',
+          errorType: typeof err,
+          errorCode: firestoreError?.code || 'no-code',
+          errorMessage: firestoreError?.message || firestoreError?.toString() || 'no-message',
+          errorName: firestoreError?.name || 'unknown-error',
+          hasError: !!err
+        }
+        logger.error('[useProviders] Real-time listener error', err, context)
         setError(errorMessage)
         setLoading(false)
       }

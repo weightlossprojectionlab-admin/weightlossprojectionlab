@@ -793,10 +793,17 @@ export const providerOperations = {
           onUpdate(providers)
         },
         (error) => {
-          logger.error('[MedicalOps] Provider listener error', error as Error, {
-            userId,
-            errorMessage: (error as any)?.message
-          })
+          // Log the full error object for debugging
+          const firestoreError = error as any
+          const context = {
+            userId: userId || 'unknown-user',
+            errorType: typeof error,
+            errorCode: firestoreError?.code || 'no-code',
+            errorMessage: firestoreError?.message || firestoreError?.toString() || 'no-message',
+            errorName: firestoreError?.name || 'unknown-error',
+            hasError: !!error
+          }
+          logger.error('[MedicalOps] Provider listener error', error as Error, context)
           if (onError) {
             onError(error as Error)
           }
@@ -1277,12 +1284,16 @@ export const medicationOperations = {
           onUpdate(medications)
         },
         (error) => {
-          logger.error('[MedicalOps] Medication listener error', error as Error, {
-            patientId,
-            errorMessage: (error as any)?.message,
-            errorCode: (error as any)?.code,
-            errorName: (error as any)?.name
-          })
+          const firestoreError = error as any
+          const context = {
+            patientId: patientId || 'unknown-patient',
+            errorType: typeof error,
+            errorCode: firestoreError?.code || 'no-code',
+            errorMessage: firestoreError?.message || firestoreError?.toString() || 'no-message',
+            errorName: firestoreError?.name || 'unknown-error',
+            hasError: !!error
+          }
+          logger.error('[MedicalOps] Medication listener error', error as Error, context)
           if (onError) {
             onError(error as Error)
           }
