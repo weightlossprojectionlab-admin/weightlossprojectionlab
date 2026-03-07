@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { medicalOperations } from '@/lib/medical-operations'
 import type { FamilyMember, FamilyMemberPermissions } from '@/types/medical'
+import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 
 interface UseFamilyMembersOptions {
@@ -49,10 +50,10 @@ export function useFamilyMembers({
       setError(null)
       const data = await medicalOperations.family.getFamilyMembers(patientId, includeAll)
       setFamilyMembers(data)
-    } catch (err: any) {
-      const errorMsg = err.message || 'Failed to fetch family members'
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to fetch family members'
       setError(errorMsg)
-      console.error('Error fetching family members:', err)
+      logger.error('[useFamilyMembers] Error fetching family members', err as Error)
     } finally {
       setLoading(false)
     }
