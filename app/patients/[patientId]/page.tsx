@@ -339,7 +339,7 @@ function PatientDetailContent() {
       try {
         setLoading(true)
         const data = await medicalOperations.patients.getPatient(patientId)
-        console.log('[PatientDetail] Fetched patient data:', {
+        logger.info('[PatientDetail] Patient data loaded', {
           patientId,
           patientName: data?.name,
           hasPreferences: !!data?.preferences,
@@ -997,18 +997,17 @@ function PatientDetailContent() {
         {/* Vital Reminder Prompt - Shows when vitals are due today */}
         {canLogVitals && user && patient && !vitalsLoading && (() => {
           // DEBUG: Log what we're passing to VitalReminderPrompt
-          console.log('[PatientPage] ==== VitalReminderPrompt Debug ====')
-          console.log('[PatientPage] Patient object:', patient)
-          console.log('[PatientPage] Patient preferences:', patient.preferences)
-          console.log('[PatientPage] Vital reminders:', patient.preferences?.vitalReminders)
-          console.log('[PatientPage] Vital reminders stringified:', JSON.stringify(patient.preferences?.vitalReminders, null, 2))
-          console.log('[PatientPage] Vitals count:', vitals.length)
-          console.log('[PatientPage] ===============================')
+          logger.debug('[PatientPage] Vital reminder check', {
+            hasPatient: !!patient,
+            hasPreferences: !!patient?.preferences,
+            vitalReminders: patient?.preferences?.vitalReminders,
+            vitalsCount: vitals.length
+          })
 
           // Check if any reminders are enabled
           const enabledReminders = Object.entries(patient.preferences?.vitalReminders || {})
             .filter(([_, config]) => (config as any)?.enabled)
-          console.log('[PatientPage] Enabled reminders:', enabledReminders)
+          logger.debug('[PatientPage] Enabled reminders', { enabledReminders })
 
           return (
             <VitalReminderPrompt
@@ -2405,9 +2404,9 @@ function PatientDetailContent() {
 
       {/* Vitals Wizard Integration */}
       {patient && showVitalsWizard && (() => {
-        console.log('[PatientDetail] Opening vitals wizard with familyMembers:', JSON.stringify(familyMembers, null, 2))
+        logger.debug('[PatientDetail] Opening vitals wizard', { familyMembersCount: familyMembers.length })
         const caregivers = familyMembers.map(member => {
-          console.log('[PatientDetail] Mapping family member:', {
+          logger.debug('[PatientDetail] Mapping family member', {
             id: member.id,
             name: member.name,
             relationship: member.relationship,
@@ -2422,7 +2421,7 @@ function PatientDetailContent() {
             userId: member.userId
           }
         })
-        console.log('[PatientDetail] Mapped caregivers:', caregivers)
+        logger.debug('[PatientDetail] Mapped caregivers', { caregiversCount: caregivers.length })
 
         return (
           <VitalsWizardRouter

@@ -136,16 +136,16 @@ function AuthContent() {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('[Auth Page] handleEmailAuth called', { email, isSignUp })
+    logger.info('[Auth Page] Email auth initiated', { email, isSignUp })
     setLoading(true)
     setError('')
 
     try {
       let user
       if (isSignUp) {
-        console.log('[Auth Page] Signing up...')
+        logger.info('[Auth Page] Starting sign up')
         user = await signUp(email, password)
-        console.log('[Auth Page] Sign up successful', { userId: user?.uid })
+        logger.info('[Auth Page] Sign up successful', { userId: user?.uid })
 
         // Create user profile in Firestore
         if (user) {
@@ -162,9 +162,9 @@ function AuthContent() {
           }
         }
       } else {
-        console.log('[Auth Page] Signing in...')
+        logger.info('[Auth Page] Starting sign in')
         user = await signIn(email, password)
-        console.log('[Auth Page] Sign in successful', { userId: user?.uid, email: user?.email })
+        logger.info('[Auth Page] Sign in successful', { userId: user?.uid, email: user?.email })
       }
 
       // For invitation flow, skip biometric setup and go directly to accept invitation
@@ -190,7 +190,7 @@ function AuthContent() {
       // No manual router.push needed - auth state change will trigger redirect
 
     } catch (error: any) {
-      console.log('[Auth Page] Auth error caught', { error: error.message, code: error.code })
+      logger.error('[Auth Page] Auth error caught', error)
       logger.error('Auth error:', error as Error)
 
       // Check if it's an invalid credential error
@@ -229,7 +229,7 @@ function AuthContent() {
         setError(error.message || 'Authentication failed. Please try again.')
       }
     } finally {
-      console.log('[Auth Page] handleEmailAuth finally block')
+      logger.debug('[Auth Page] Email auth complete')
       setLoading(false)
     }
   }
@@ -332,7 +332,7 @@ function AuthContent() {
   }
 
   const handleGoogleSignIn = async () => {
-    console.log('[Auth Page] Google sign-in clicked')
+    logger.info('[Auth Page] Google sign-in initiated')
     setLoading(true)
     setError('')
 
@@ -346,10 +346,10 @@ function AuthContent() {
         localStorage.setItem('isInvitationFlow', 'true')
       }
 
-      console.log('[Auth Page] Calling signInWithGoogle popup...')
+      logger.info('[Auth Page] Opening Google sign-in popup')
       // Use popup method - redirect is causing issues
       const user = await signInWithGoogle()
-      console.log('[Auth Page] Google sign-in successful!', { userId: user?.uid, email: user?.email })
+      logger.info('[Auth Page] Google sign-in successful', { userId: user?.uid, email: user?.email })
 
       // For invitation flow, redirect to accept invitation page
       if (isInvitationFlow) {
@@ -374,7 +374,7 @@ function AuthContent() {
       }
 
     } catch (error: any) {
-      console.log('[Auth Page] Google sign-in error', { error: error.message, code: error.code })
+      logger.error('[Auth Page] Google sign-in error', error)
       logger.error('Google sign in error:', error as Error)
       if (error.code === 'auth/popup-closed-by-user') {
         setError('Sign-in was cancelled. Please try again.')
@@ -384,7 +384,7 @@ function AuthContent() {
         setError(error.message || 'Google sign-in failed. Please try again.')
       }
     } finally {
-      console.log('[Auth Page] Google sign-in finally block')
+      logger.debug('[Auth Page] Google sign-in complete')
       setLoading(false)
     }
   }
