@@ -251,7 +251,7 @@ function generateResponsibilities(
       'Ensure consistent UX across iOS and Android',
       'Optimize app performance and battery usage',
       'Integrate with backend APIs and handle offline scenarios',
-      'Publish updates to App Store and Google Play',
+      'Deploy production updates to iOS and Android',
       'Debug platform-specific issues',
       'Write tests for mobile code',
     ],

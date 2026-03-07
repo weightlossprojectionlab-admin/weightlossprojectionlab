@@ -1782,7 +1782,7 @@ User logs meal
 **Current Implementation:**
 - Health sync UI and settings (enable/disable toggle)
 - Platform-specific setup instructions (6-step guides)
-- Deep links to health apps (x-apple-health://, Google Play Store)
+- Deep links to health apps (x-apple-health://, platform-specific health stores)
 - Clear messaging about PWA limitations
 
 #### 12.2 Components & Architecture

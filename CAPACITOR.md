@@ -6,8 +6,8 @@ This document explains how to build and run the Weight Loss Lab app as a native 
 
 Weight Loss Lab is a **progressive web app** that can run on:
 - **Web**: Standard browser (perfect Lighthouse scores: 100/98/92/100)
-- **iOS**: Native app via Capacitor (App Store ready)
-- **Android**: Native app via Capacitor (Play Store ready)
+- **iOS**: Native app via Capacitor (production ready)
+- **Android**: Native app via Capacitor (production ready)
 
 All three platforms share the **same codebase** with automatic platform detection and feature adaptation.
 
@@ -36,7 +36,7 @@ The app uses adapter pattern to provide seamless cross-platform functionality:
 
 ### For iOS Development
 - macOS (required for iOS builds)
-- Xcode 14+ (free from App Store)
+- Xcode 14+ (free download)
 - CocoaPods (install: `sudo gem install cocoapods`)
 - Apple Developer Account (for device testing/distribution)
 
@@ -239,7 +239,7 @@ npm run cap:open:android
 
 ## App Distribution
 
-### iOS (App Store)
+### iOS Production
 
 1. **Archive build:**
    - Xcode → Product → Archive
@@ -247,17 +247,17 @@ npm run cap:open:android
 
 2. **Distribute:**
    - Click "Distribute App"
-   - Choose "App Store Connect"
-   - Upload to App Store Connect
-   - Submit for review via App Store Connect
+   - Choose your distribution method
+   - Upload to distribution platform
+   - Submit for review
 
 3. **Requirements:**
-   - App Store screenshots (required sizes)
+   - Screenshots (required sizes)
    - App icon (1024x1024)
    - Privacy policy URL
    - App description & keywords
 
-### Android (Play Store)
+### Android Production
 
 1. **Generate signed AAB:**
    - Android Studio → Build → Generate Signed Bundle/APK
@@ -265,11 +265,10 @@ npm run cap:open:android
    - Create/use keystore
    - Build release bundle
 
-2. **Upload to Play Console:**
-   - https://play.google.com/console
-   - Create new app
+2. **Upload to distribution platform:**
+   - Create new app listing
    - Upload AAB
-   - Fill in store listing
+   - Fill in app details
    - Submit for review
 
 ## Troubleshooting
@@ -314,7 +313,7 @@ npm run build:mobile
 - SEO: 100
 
 ### Native App Size
-- iOS: ~15-20 MB (after App Store compression)
+- iOS: ~15-20 MB (after compression)
 - Android: ~10-15 MB (AAB bundle)
 
 ### Battery Impact
@@ -325,8 +324,8 @@ npm run build:mobile
 ## Additional Resources
 
 - [Capacitor Documentation](https://capacitorjs.com/docs)
-- [iOS App Store Guidelines](https://developer.apple.com/app-store/review/guidelines/)
-- [Google Play Store Policies](https://support.google.com/googleplay/android-developer/answer/9859455)
+- [iOS Development Guidelines](https://developer.apple.com/design/human-interface-guidelines/)
+- [Android Development Best Practices](https://developer.android.com/develop)
 - [HealthKit Documentation](https://developer.apple.com/documentation/healthkit)
 - [Health Connect Documentation](https://developer.android.com/health-and-fitness/guides/health-connect)
 

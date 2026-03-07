@@ -466,7 +466,7 @@
       "ada": "Americans with Disabilities Act compliance considerations"
     },
     "platform_requirements": {
-      "app_stores": "Compliance with Apple App Store and Google Play Store guidelines",
+      "mobile_platforms": "Compliance with iOS and Android platform guidelines",
       "web_standards": "W3C web standards compliance"
     }
   },

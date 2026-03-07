@@ -235,10 +235,10 @@ const jobPostings: Omit<JobPosting, 'id' | 'createdAt' | 'updatedAt'>[] = [
     equity: '0.25%-0.5%',
     reportsTo: 'Head of Engineering',
     status: 'published',
-    about: `We're looking for a mobile engineer to take our Capacitor-based iOS and Android apps from beta to App Store and Play Store launch. You'll own the entire mobile experience, including native integrations (HealthKit, Google Fit), push notifications, offline mode, and platform-specific UI optimizations.`,
+    about: `We're looking for a mobile engineer to take our Capacitor-based iOS and Android apps from beta to production launch. You'll own the entire mobile experience, including native integrations (HealthKit, Google Fit), push notifications, offline mode, and platform-specific UI optimizations.`,
     whyCritical: `Our platform is already built with Capacitor, but mobile launch is blocked by:
 
-1. **App Store submission:** iOS and Android apps not yet published
+1. **Production deployment:** iOS and Android apps not yet published
 2. **Native integrations:** HealthKit/Google Fit sync incomplete
 3. **Push notifications:** Firebase Cloud Messaging not configured
 4. **Offline mode:** Partial implementation, needs sync queue and conflict resolution
@@ -246,7 +246,7 @@ const jobPostings: Omit<JobPosting, 'id' | 'createdAt' | 'updatedAt'>[] = [
 
 Mobile-first users represent 60% of our target market. Launching on iOS and Android unlocks significant revenue potential.`,
     responsibilities: [
-      'Own iOS and Android app releases (submit to App Store and Play Store)',
+      'Own iOS and Android app releases and production deployment',
       'Implement native integrations via Capacitor plugins (HealthKit, Google Fit, push notifications)',
       'Optimize mobile performance (reduce bundle size, lazy loading, image compression)',
       'Fix mobile-specific bugs (gestures, navigation, keyboard handling)',
@@ -260,16 +260,15 @@ Mobile-first users represent 60% of our target market. Launching on iOS and Andr
       'Build sync queue for offline actions (log meals, weight, steps)',
       'Handle conflict resolution (e.g., weight logged offline then online)',
       'Test offline mode thoroughly (airplane mode, poor connectivity)',
-      'Write compelling App Store and Play Store descriptions',
       'Design app icons, screenshots, promo videos',
       'Implement app ratings prompts (after positive user actions)',
-      'Monitor app reviews and respond to feedback',
+      'Monitor user feedback and respond to issues',
     ],
     requiredQualifications: [
       '3+ years mobile development experience (iOS and/or Android)',
       '2+ years with hybrid frameworks (Capacitor, React Native, Ionic, or Cordova)',
       'Strong JavaScript/TypeScript skills (since app is built with React)',
-      'App Store submissions: Successfully published at least 2 apps to App Store or Play Store',
+      'Production deployment: Successfully published at least 2 mobile apps',
       'Native platform knowledge: Understand iOS and Android platform guidelines and best practices',
       'Capacitor: Experience with Capacitor (or similar hybrid framework)',
       'iOS: Swift, Xcode, CocoaPods, HealthKit APIs',
@@ -290,10 +289,10 @@ Mobile-first users represent 60% of our target market. Launching on iOS and Andr
         'Fix top 5 mobile bugs reported by beta testers',
         'Complete HealthKit integration for iOS (sync weight and steps)',
         'Complete Google Fit integration for Android (sync weight and steps)',
-        'Submit iOS app to App Store (TestFlight beta)',
+        'Submit iOS app for beta testing',
       ],
       month2: [
-        'Submit Android app to Play Store (beta track)',
+        'Submit Android app for beta testing',
         'Implement push notifications for both platforms',
         'Build offline mode with sync queue',
         'Optimize mobile performance (achieve 60 FPS, reduce bundle to <3MB)',
@@ -301,14 +300,14 @@ Mobile-first users represent 60% of our target market. Launching on iOS and Andr
       ],
       month3: [
         'Address beta tester feedback (bugs, UX issues)',
-        'Achieve App Store approval (iOS)',
-        'Achieve Play Store approval (Android)',
-        'Launch public version 1.0 on both stores',
+        'Achieve production approval (iOS)',
+        'Achieve production approval (Android)',
+        'Launch public version 1.0 on both platforms',
         'Implement in-app ratings prompt (after 7 days or 3 meal logs)',
       ],
     },
     whyJoin: [
-      '**Own mobile:** Be the mobile expert and drive App Store strategy',
+      '**Own mobile:** Be the mobile expert and drive platform strategy',
       '**Launch impact:** Take apps from beta to thousands of users',
       '**Native integrations:** Work with cutting-edge health APIs (HealthKit, Google Fit)',
       '**Hybrid stack:** Leverage web skills while learning native development',

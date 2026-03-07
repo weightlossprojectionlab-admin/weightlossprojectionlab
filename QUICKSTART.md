@@ -122,8 +122,8 @@ Run `npx tsx scripts/verify-capacitor.ts` to see:
 2. **Test on iOS** - If you have macOS + Xcode
 3. **Test on Android** - If you have Android Studio
 4. **Add app icons** - For production builds
-5. **Configure signing** - For App Store/Play Store
-6. **Deploy** - TestFlight (iOS) or Internal Testing (Android)
+5. **Configure signing** - For production distribution
+6. **Deploy** - Internal testing or production release
 
 ## 💡 Tips
 

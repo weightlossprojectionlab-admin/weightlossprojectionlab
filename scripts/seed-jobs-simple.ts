@@ -127,10 +127,10 @@ const jobs = [
     salaryMax: 160000,
     equity: '0.25%-0.5%',
     reportsTo: 'Head of Engineering',
-    about: 'Launch iOS/Android apps with HealthKit/Google Fit integrations. Own App Store submission and mobile experience.',
-    whyCritical: 'Mobile-first users represent 60% of TAM. Launch blocked by App Store submission and native integrations.',
+    about: 'Launch iOS/Android apps with HealthKit/Google Fit integrations. Own production deployment and mobile experience.',
+    whyCritical: 'Mobile-first users represent 60% of TAM. Launch blocked by production deployment and native integrations.',
     responsibilities: [
-      'Submit apps to App Store and Play Store',
+      'Deploy apps to production',
       'Implement HealthKit/Google Fit sync',
       'Build offline mode and sync',
       'Optimize mobile performance (60 FPS)',
@@ -138,7 +138,7 @@ const jobs = [
     requiredQualifications: [
       '3+ years mobile development',
       '2+ years hybrid frameworks (Capacitor, React Native)',
-      'Published 2+ apps to stores',
+      'Published 2+ mobile apps',
       'Swift/Kotlin for native code',
     ],
     niceToHave: [
@@ -147,12 +147,12 @@ const jobs = [
       'Bluetooth integrations',
     ],
     successMetrics: {
-      month1: ['Complete HealthKit integration', 'Submit to TestFlight'],
+      month1: ['Complete HealthKit integration', 'Submit for beta testing'],
       month2: ['Implement push notifications', 'Build offline mode'],
-      month3: ['App Store approval', 'Launch v1.0'],
+      month3: ['Production approval', 'Launch v1.0'],
     },
     whyJoin: [
-      'Own mobile: Drive App Store strategy',
+      'Own mobile: Drive platform strategy',
       'Launch impact: Beta to thousands of users',
       'Native integrations: HealthKit, Google Fit',
     ],

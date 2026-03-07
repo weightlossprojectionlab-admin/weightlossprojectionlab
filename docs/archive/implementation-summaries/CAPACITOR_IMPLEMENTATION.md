@@ -163,7 +163,7 @@ Created comprehensive 300+ line guide covering:
 - Permission explanations
 - Testing procedures
 - Debugging tips
-- App Store/Play Store distribution
+- Production distribution
 - Troubleshooting
 
 **Commit:** `d300a98`
@@ -282,16 +282,16 @@ const history = await health.getStepHistory(7)
 
 ---
 
-## App Store Readiness
+## Production Readiness
 
-### iOS (App Store)
+### iOS Production
 - ✅ Xcode project configured
 - ✅ HealthKit capability ready to enable
 - ✅ All required permissions configured
 - ✅ App signing ready (requires Apple Developer account)
-- ✅ Ready for TestFlight beta testing
+- ✅ Ready for beta testing
 
-### Android (Play Store)
+### Android Production
 - ✅ Gradle project configured
 - ✅ All required permissions configured
 - ✅ Ready for signed AAB generation
@@ -308,7 +308,7 @@ const history = await health.getStepHistory(7)
 - **SEO:** 100
 
 ### Native App Size (Estimated)
-- **iOS:** ~15-20 MB (after App Store compression)
+- **iOS:** ~15-20 MB (after compression)
 - **Android:** ~10-15 MB (AAB bundle)
 
 ### Battery Impact
@@ -349,15 +349,15 @@ const history = await health.getStepHistory(7)
 
 ### For Production:
 
-1. **iOS App Store:**
+1. **iOS Production:**
    - Archive build in Xcode
-   - Upload to App Store Connect
+   - Upload to distribution platform
    - Submit for review
    - See `CAPACITOR.md` for detailed steps
 
-2. **Android Play Store:**
+2. **Android Production:**
    - Generate signed AAB in Android Studio
-   - Upload to Play Console
+   - Upload to distribution platform
    - Submit for review
    - See `CAPACITOR.md` for detailed steps
 
@@ -413,8 +413,8 @@ const history = await health.getStepHistory(7)
 
 The Capacitor implementation is **complete and production-ready**. The app now supports:
 - ✅ Web deployment (existing functionality maintained)
-- ✅ iOS native app (App Store ready)
-- ✅ Android native app (Play Store ready)
+- ✅ iOS native app (production ready)
+- ✅ Android native app (production ready)
 
 All features work seamlessly across platforms with automatic detection and progressive enhancement. The codebase remains clean with a single source of truth and no platform-specific branches.
 
