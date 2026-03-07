@@ -37,10 +37,10 @@ export async function GET(request: NextRequest) {
     const reviewed = searchParams.get('reviewed') || 'unreviewed'
     const maxConfidence = parseFloat(searchParams.get('maxConfidence') || '0.8')
 
-    // Build query
-    let query = adminDb.collection('ai_decision_logs').orderBy('timestamp', 'desc')
+    // Build query - start with base collection
+    let query = adminDb.collection('ai_decision_logs')
 
-    // Filter by confidence
+    // Filter by confidence first
     query = query.where('confidence', '<', maxConfidence) as any
 
     // Filter by reviewed status
@@ -49,6 +49,9 @@ export async function GET(request: NextRequest) {
     } else if (reviewed === 'reviewed') {
       query = query.where('reviewedBy', '!=', null) as any
     }
+
+    // Then order by timestamp
+    query = query.orderBy('timestamp', 'desc') as any
 
     // Limit results
     query = query.limit(100) as any

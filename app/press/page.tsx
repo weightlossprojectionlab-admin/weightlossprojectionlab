@@ -108,12 +108,12 @@ export default function PressPage() {
                 </p>
               </div>
             </div>
-            <a
-              href="mailto:press@weightlossproglab.com"
+            <Link
+              href="/contact?subject=press"
               className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors whitespace-nowrap"
             >
               Contact Press Team
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -696,12 +696,12 @@ export default function PressPage() {
                     </svg>
                   </div>
                   <h3 className="font-semibold mb-2">Press Inquiries</h3>
-                  <a
-                    href="mailto:press@weightlossproglab.com"
+                  <Link
+                    href="/contact?subject=press"
                     className="text-blue-100 hover:text-white underline"
                   >
-                    press@weightlossproglab.com
-                  </a>
+                    Contact Press Team
+                  </Link>
                 </div>
 
                 <div className="text-center">
@@ -721,12 +721,12 @@ export default function PressPage() {
                     </svg>
                   </div>
                   <h3 className="font-semibold mb-2">Partnership Inquiries</h3>
-                  <a
-                    href="mailto:partners@weightlossproglab.com"
+                  <Link
+                    href="/contact?subject=partnership"
                     className="text-blue-100 hover:text-white underline"
                   >
-                    partners@weightlossproglab.com
-                  </a>
+                    Contact Partners Team
+                  </Link>
                 </div>
               </div>
 

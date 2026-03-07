@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { timestampToDate } from '@/lib/timestamp';
 import PerkCard from '@/components/perks/PerkCard';
@@ -12,21 +12,79 @@ import RedemptionForm from '@/components/perks/RedemptionForm';
 import EligibilityBadge from '@/components/perks/EligibilityBadge';
 import type { Perk } from '@/types/perks';
 import { logger } from '@/lib/logger'
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const PERKS_ENABLED = process.env.NEXT_PUBLIC_PERKS_ENABLED === 'true';
 const XP_THRESHOLD = 10000; // 10K XP required for perks
 
 export default function PerksPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [selectedPerk, setSelectedPerk] = useState<Perk | null>(null);
   const [showRedemptionForm, setShowRedemptionForm] = useState(false);
+  const [perks, setPerks] = useState<Perk[]>([]);
+  const [redeemedPerkIds, setRedeemedPerkIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userXP, setUserXP] = useState(0);
 
-  // TODO: Replace with actual data fetching
-  const userXP = 0; // Get from user profile
-  const perks: Perk[] = [];
-  const redeemedPerkIds: string[] = [];
-  const isLoading = false;
-  const error = null;
+  // Fetch perks and user data
+  useEffect(() => {
+    const fetchPerksAndUserData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        logger.debug('Fetching perks...', { hasUser: !!user });
+
+        // Fetch enabled perks
+        logger.debug('Building perks query...');
+        const perksQuery = query(
+          collection(db, 'perks'),
+          where('enabled', '==', true)
+        );
+
+        logger.debug('Executing getDocs...');
+        const perksSnapshot = await getDocs(perksQuery);
+
+        logger.debug('Query completed, mapping docs...', {
+          docCount: perksSnapshot.docs.length,
+          docs: perksSnapshot.docs.map(d => ({ id: d.id, enabled: d.data().enabled }))
+        });
+
+        const perksData = perksSnapshot.docs.map(doc => ({
+          perkId: doc.id,
+          ...doc.data()
+        })) as Perk[];
+
+        logger.debug('Fetched perks:', { count: perksData.length, perks: perksData });
+        setPerks(perksData);
+
+        // Fetch user's XP from profile
+        // TODO: Replace with actual XP field from user profile
+        setUserXP(0);
+
+        // Fetch user's redeemed perks
+        if (user?.uid) {
+          const redemptionsQuery = query(
+            collection(db, 'perk_redemptions'),
+            where('userId', '==', user.uid)
+          );
+          const redemptionsSnapshot = await getDocs(redemptionsQuery);
+          const redeemedIds = redemptionsSnapshot.docs.map(doc => doc.data().perkId);
+          setRedeemedPerkIds(redeemedIds);
+        }
+
+        setIsLoading(false);
+      } catch (err) {
+        logger.error('Error fetching perks:', err as Error);
+        setError(err instanceof Error ? err.message : 'Failed to load perks');
+        setIsLoading(false);
+      }
+    };
+
+    fetchPerksAndUserData();
+  }, []);
 
   const isEligible = userXP >= XP_THRESHOLD;
 
@@ -67,6 +125,18 @@ export default function PerksPage() {
         </div>
       </div>
     );
+  }
+
+  // Debug info
+  if (process.env.NODE_ENV === 'development' && !isLoading) {
+    logger.debug('Perks page state:', {
+      perksCount: perks.length,
+      perks: perks,
+      userXP: userXP,
+      isEligible: isEligible,
+      XP_THRESHOLD: XP_THRESHOLD,
+      error: error
+    });
   }
 
   if (isLoading) {
@@ -130,14 +200,14 @@ export default function PerksPage() {
         </div>
       )}
 
-      {/* Perks Grid */}
+      {/* Perks List */}
       {perks.length > 0 ? (
         <div className="space-y-6">
           {/* Available Perks */}
           {perks.some(p => !redeemedPerkIds.includes(p.perkId) && (!p.expiresAt || timestampToDate(p.expiresAt) > new Date())) && (
             <div>
               <h2 className="text-xl font-bold mb-4">Available Perks</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-4">
                 {perks
                   .filter(p => !redeemedPerkIds.includes(p.perkId) && (!p.expiresAt || timestampToDate(p.expiresAt) > new Date()))
                   .map((perk) => (
@@ -147,6 +217,7 @@ export default function PerksPage() {
                       isEligible={isEligible}
                       isRedeemed={false}
                       onRedeem={handleRedeem}
+                      layout="horizontal"
                     />
                   ))}
               </div>
@@ -157,7 +228,7 @@ export default function PerksPage() {
           {redeemedPerkIds.length > 0 && (
             <div>
               <h2 className="text-xl font-bold mb-4">Redeemed Perks</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-4">
                 {perks
                   .filter(p => redeemedPerkIds.includes(p.perkId))
                   .map((perk) => (
@@ -166,6 +237,7 @@ export default function PerksPage() {
                       perk={perk}
                       isEligible={isEligible}
                       isRedeemed={true}
+                      layout="horizontal"
                     />
                   ))}
               </div>

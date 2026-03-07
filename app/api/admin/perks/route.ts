@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
         remainingCount: data.remainingCount || data.totalAvailable || 100,
         enabled: data.enabled !== false,
         category: data.category || 'Fitness',
+        imageUrl: data.imageUrl || null,
+        partnerLogo: data.partnerLogo || null,
         expiresAt: data.expiresAt?.toDate?.() || null,
         createdAt: data.createdAt?.toDate?.() || new Date(),
       }
@@ -111,6 +113,8 @@ export async function POST(request: NextRequest) {
       totalAvailable,
       enabled,
       category,
+      imageUrl,
+      partnerLogo,
     } = body
 
     if (!partnerName || !title || !value) {
@@ -135,6 +139,8 @@ export async function POST(request: NextRequest) {
       remainingCount: totalAvailable || 100,
       enabled: enabled !== false,
       category: category || 'Fitness',
+      imageUrl: imageUrl || null,
+      partnerLogo: partnerLogo || null,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     }
@@ -220,6 +226,8 @@ export async function PUT(request: NextRequest) {
     if (body.totalAvailable !== undefined) updateData.totalAvailable = body.totalAvailable
     if (body.enabled !== undefined) updateData.enabled = body.enabled
     if (body.category !== undefined) updateData.category = body.category
+    if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl
+    if (body.partnerLogo !== undefined) updateData.partnerLogo = body.partnerLogo
 
     await adminDb.collection('perks').doc(perkId).update(updateData)
 

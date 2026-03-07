@@ -951,12 +951,12 @@ export default function SecurityPage() {
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <span className="font-semibold text-gray-900 min-w-[100px]">Email:</span>
-                  <a
-                    href="mailto:security@wellnessproglab.com"
+                  <Link
+                    href="/contact?subject=privacy"
                     className="text-blue-600 hover:text-blue-700 underline"
                   >
-                    security@wellnessproglab.com
-                  </a>
+                    Report Security Issue
+                  </Link>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="font-semibold text-gray-900 min-w-[100px]">
@@ -1003,12 +1003,12 @@ export default function SecurityPage() {
                 <span className="font-semibold text-gray-900 min-w-[140px]">
                   Security Team:
                 </span>
-                <a
-                  href="mailto:security@wellnessproglab.com"
+                <Link
+                  href="/contact?subject=privacy"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  security@wellnessproglab.com
-                </a>
+                  Report Security Issue
+                </Link>
               </div>
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[140px]">

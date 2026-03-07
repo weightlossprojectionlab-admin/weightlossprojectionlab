@@ -58,14 +58,12 @@ export default function MLAnalyticsPage() {
 
     // Auto-refresh every 5 seconds if any process is running
     const interval = setInterval(() => {
-      if (status.running || recipeStatus.running) {
-        loadStatus()
-        loadRecipeStatus()
-      }
+      loadStatus()
+      loadRecipeStatus()
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [status.running, recipeStatus.running])
+  }, []) // Only run on mount
 
   const loadStatus = async () => {
     try {

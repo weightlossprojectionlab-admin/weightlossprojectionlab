@@ -561,9 +561,25 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
                       request.resource.data.memberIds.hasAll([request.auth.uid]);
 
-      // Update: Group creator (first member) or admins can update
-      allow update: if isAuthenticated() &&
-                      (resource.data.memberIds[0] == request.auth.uid || isAdmin());
+      // Update: Allow creator/admin updates, or users joining/leaving
+      allow update: if isAuthenticated() && (
+        // Creator or admin can update anything
+        resource.data.memberIds[0] == request.auth.uid ||
+        isAdmin() ||
+        // User can add themselves to public groups (join)
+        (resource.data.privacy == 'public' &&
+         request.resource.data.memberIds.hasAll(resource.data.memberIds) &&
+         request.resource.data.memberIds.hasAny([request.auth.uid]) &&
+         request.resource.data.memberIds.size() == resource.data.memberIds.size() + 1 &&
+         // Ensure only memberIds and updatedAt are being modified
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'updatedAt'])) ||
+        // User can remove themselves (leave)
+        (request.auth.uid in resource.data.memberIds &&
+         !request.resource.data.memberIds.hasAny([request.auth.uid]) &&
+         request.resource.data.memberIds.size() == resource.data.memberIds.size() - 1 &&
+         // Ensure only memberIds and updatedAt are being modified
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'updatedAt']))
+      );
 
       // Delete: Only creator (first member) or admins
       allow delete: if isAuthenticated() &&
@@ -588,6 +604,54 @@ service cloud.firestore {
         allow read: if get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
         allow create: if isAuthenticated() && request.resource.data.fromUid == request.auth.uid;
       }
+
+      // Group posts (social feed)
+      match /posts/{postId} {
+        // Members can read all posts
+        allow read: if get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
+
+        // Members can create posts
+        allow create: if isAuthenticated() &&
+                        request.resource.data.authorId == request.auth.uid &&
+                        get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
+
+        // Author or creator can update posts
+        allow update: if isAuthenticated() && (
+          resource.data.authorId == request.auth.uid ||
+          get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds[0] == request.auth.uid
+        );
+
+        // Author, group creator, or admin can delete
+        allow delete: if isAuthenticated() && (
+          resource.data.authorId == request.auth.uid ||
+          get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds[0] == request.auth.uid ||
+          isAdmin()
+        );
+
+        // Post reactions subcollection
+        match /reactions/{reactionId} {
+          allow read: if get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
+          allow create: if isAuthenticated() &&
+                          request.resource.data.userId == request.auth.uid &&
+                          get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
+          allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+        }
+
+        // Post comments subcollection
+        match /comments/{commentId} {
+          allow read: if get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
+          allow create: if isAuthenticated() &&
+                          request.resource.data.userId == request.auth.uid &&
+                          get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
+          allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+          allow delete: if isAuthenticated() && (
+            resource.data.userId == request.auth.uid ||
+            get(/databases/$(database)/documents/groups/$(groupId)/posts/$(postId)).data.authorId == request.auth.uid ||
+            get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds[0] == request.auth.uid ||
+            isAdmin()
+          );
+        }
+      }
     }
 
     // ============================================
@@ -607,12 +671,39 @@ service cloud.firestore {
     }
 
     // ============================================
-    // PERKS (Sponsor Perks)
+    // SPONSOR PERKS
     // ============================================
 
+    // Sponsor perks collection
     match /perks/{perkId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      // Read: Anyone can read enabled perks (public), admins can read all
+      allow get: if resource.data.enabled == true || isAdmin();
+
+      // List: Anyone can query perks (public access for enabled perks)
+      // The query filters (where enabled==true) will be enforced by the application
+      allow list: if true;
+
+      // Write: Admin-only
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Perk redemptions
+    match /perk_redemptions/{redemptionId} {
+      // Read: Users can read their own redemptions, admins can read all
+      allow read: if isAuthenticated() &&
+                     (resource == null ||
+                      resource.data.userId == request.auth.uid ||
+                      isAdmin());
+
+      // List: Users can list their own redemptions
+      allow list: if isAuthenticated();
+
+      // Create: Authenticated users
+      allow create: if isAuthenticated() &&
+                       request.resource.data.userId == request.auth.uid;
+
+      // Update/Delete: Admin-only
+      allow update, delete: if isAdmin();
     }
 
     // ============================================
@@ -659,6 +750,13 @@ service cloud.firestore {
     match /ai_decision_logs/{logId} {
       allow read: if isAdmin();
       allow list: if isAdmin(); // Allow admins to query the collection
+      allow write: if false;
+    }
+
+    // Legacy AI decisions collection (backward compatibility)
+    match /ai_decisions/{logId} {
+      allow read: if isAdmin();
+      allow list: if isAdmin();
       allow write: if false;
     }
 
@@ -1417,6 +1515,45 @@ service cloud.firestore {
 
       // Update: Admin-only (for status changes)
       allow update: if isAdmin();
+
+      // Delete: Admin-only
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // HIPAA COMPLAINTS
+    // ============================================
+
+    // HIPAA privacy complaints
+    match /hipaaComplaints/{complaintId} {
+      // Read: Admins can read all complaints, users can read their own
+      allow read: if isAdmin() ||
+                     (isAuthenticated() && resource.data.userId == request.auth.uid);
+
+      // List queries: Admin-only (for admin dashboard)
+      allow list: if isAdmin();
+
+      // Create: Any authenticated user can file a complaint
+      allow create: if isAuthenticated() &&
+                      request.resource.data.keys().hasAll([
+                        'name', 'email', 'type', 'description',
+                        'status', 'priority', 'caseNumber', 'createdAt', 'updatedAt'
+                      ]) &&
+                      request.resource.data.status == 'pending' &&
+                      request.resource.data.priority in ['low', 'medium', 'high', 'critical'] &&
+                      request.resource.data.type in [
+                        'unauthorized_access', 'improper_disclosure', 'lack_of_access',
+                        'breach_notification', 'amendment_denied', 'accounting_request', 'other'
+                      ] &&
+                      // If userId is provided, it must match the authenticated user
+                      (!('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid);
+
+      // Update: Admin-only (for status changes, priority, assignment, notes)
+      allow update: if isAdmin() &&
+                       // Cannot change complainant information after submission
+                       request.resource.data.name == resource.data.name &&
+                       request.resource.data.email == resource.data.email &&
+                       request.resource.data.caseNumber == resource.data.caseNumber;
 
       // Delete: Admin-only
       allow delete: if isAdmin();

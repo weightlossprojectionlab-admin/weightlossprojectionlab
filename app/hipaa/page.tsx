@@ -5,6 +5,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import ComplaintForm from '@/components/hipaa/ComplaintForm'
 
 export const metadata: Metadata = {
   title: 'HIPAA Compliance | Wellness Projection Lab',
@@ -388,7 +389,7 @@ export default function HipaaPage() {
                 </p>
                 <p className="text-xs text-gray-600">
                   You can edit most information directly in your account. For other amendments,
-                  contact us at privacy@wellnessproglab.com.
+                  use the complaint form below.
                 </p>
               </div>
 
@@ -448,7 +449,7 @@ export default function HipaaPage() {
                   Practices, even if you have agreed to receive it electronically.
                 </p>
                 <p className="text-xs text-gray-600">
-                  Contact us at privacy@wellnessproglab.com to request a paper copy.
+                  Use the complaint form below to request a paper copy.
                 </p>
               </div>
 
@@ -487,10 +488,10 @@ export default function HipaaPage() {
                   <span>
                     Email us at{' '}
                     <a
-                      href="mailto:privacy@wellnessproglab.com"
+                      href="/contact?subject=privacy"
                       className="text-blue-600 hover:text-blue-700 underline"
                     >
-                      privacy@wellnessproglab.com
+                      Contact Privacy Team
                     </a>
                   </span>
                 </li>
@@ -735,90 +736,63 @@ export default function HipaaPage() {
           {/* Complaints */}
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Complaints and Violations
+              File a Privacy Complaint
             </h2>
 
             <div className="space-y-6">
-              <div className="bg-blue-50 rounded-lg p-6">
-                <h3 className="font-semibold text-gray-900 mb-3">
-                  How to File a Privacy Complaint
+              <p className="text-gray-700">
+                If you believe your privacy rights have been violated, you may file a complaint
+                with us using the form below, or with the U.S. Department of Health and Human
+                Services (HHS).
+              </p>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
+                  File Complaint with WPL
                 </h3>
-                <p className="text-sm text-gray-700 mb-4">
-                  If you believe your privacy rights have been violated, you may file a
-                  complaint with us or with the U.S. Department of Health and Human Services
-                  (HHS).
+                <ComplaintForm />
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                  Or File with HHS:
+                </h3>
+                <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                  <div className="flex items-start gap-3">
+                    <span className="font-medium min-w-[80px]">Online:</span>
+                    <a
+                      href="https://www.hhs.gov/hipaa/filing-a-complaint/index.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-700 underline"
+                    >
+                      HHS Office for Civil Rights Complaint Portal
+                    </a>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="font-medium min-w-[80px]">Mail:</span>
+                    <div>
+                      U.S. Department of Health and Human Services
+                      <br />
+                      Office for Civil Rights
+                      <br />
+                      200 Independence Avenue, S.W.
+                      <br />
+                      Washington, D.C. 20201
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                  No Retaliation Policy
                 </p>
-
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 text-sm mb-2">
-                      File with WPL:
-                    </h4>
-                    <div className="space-y-2 text-sm text-gray-700">
-                      <div className="flex items-start gap-3">
-                        <span className="font-medium min-w-[80px]">Email:</span>
-                        <a
-                          href="mailto:privacy@wellnessproglab.com"
-                          className="text-blue-600 hover:text-blue-700 underline"
-                        >
-                          privacy@wellnessproglab.com
-                        </a>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <span className="font-medium min-w-[80px]">Mail:</span>
-                        <div>
-                          Wellness Projection Lab
-                          <br />
-                          Attn: Privacy Officer
-                          <br />
-                          [Address to be added]
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold text-gray-900 text-sm mb-2">
-                      File with HHS:
-                    </h4>
-                    <div className="space-y-2 text-sm text-gray-700">
-                      <div className="flex items-start gap-3">
-                        <span className="font-medium min-w-[80px]">Online:</span>
-                        <a
-                          href="https://www.hhs.gov/hipaa/filing-a-complaint/index.html"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-700 underline"
-                        >
-                          HHS Office for Civil Rights Complaint Portal
-                        </a>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <span className="font-medium min-w-[80px]">Mail:</span>
-                        <div>
-                          U.S. Department of Health and Human Services
-                          <br />
-                          Office for Civil Rights
-                          <br />
-                          200 Independence Avenue, S.W.
-                          <br />
-                          Washington, D.C. 20201
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white border border-blue-200 rounded-lg p-4 mt-4">
-                  <p className="text-sm font-semibold text-gray-900 mb-1">
-                    No Retaliation Policy
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    You will NOT be retaliated against for filing a complaint. We prohibit
-                    intimidating or retaliatory acts against anyone who files a complaint or
-                    exercises their privacy rights.
-                  </p>
-                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  You will NOT be retaliated against for filing a complaint. We prohibit
+                  intimidating or retaliatory acts against anyone who files a complaint or
+                  exercises their privacy rights.
+                </p>
               </div>
             </div>
           </section>
@@ -851,22 +825,22 @@ export default function HipaaPage() {
                 <span className="font-semibold text-gray-900 min-w-[140px]">
                   Privacy Officer:
                 </span>
-                <a
-                  href="mailto:privacy@wellnessproglab.com"
+                <Link
+                  href="/contact?subject=privacy"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  privacy@wellnessproglab.com
-                </a>
+                  Contact Privacy Officer
+                </Link>
               </div>
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[140px]">
                   Security Officer:
                 </span>
                 <a
-                  href="mailto:security@wellnessproglab.com"
+                  href="/contact?subject=privacy"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  security@wellnessproglab.com
+                  Report Security Issue
                 </a>
               </div>
               <div className="flex items-start gap-3">

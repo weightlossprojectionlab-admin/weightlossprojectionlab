@@ -55,7 +55,7 @@ export default function PartnersPage() {
               business innovators to create comprehensive health solutions that improve lives.
             </p>
             <a
-              href="mailto:partners@weightlossproglab.com"
+              href="/contact?subject=partnership"
               className="inline-block bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
             >
               Become a Partner
@@ -713,7 +713,7 @@ export default function PartnersPage() {
 
                 <div className="mt-12 text-center">
                   <a
-                    href="mailto:partners@weightlossproglab.com"
+                    href="/contact?subject=partnership"
                     className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg"
                   >
                     Apply to Become a Partner
@@ -739,7 +739,7 @@ export default function PartnersPage() {
               </p>
               <div className="flex flex-wrap gap-4 justify-center">
                 <a
-                  href="mailto:partners@weightlossproglab.com"
+                  href="/contact?subject=partnership"
                   className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
                 >
                   Contact Partnership Team

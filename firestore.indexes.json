@@ -259,6 +259,38 @@
       ]
     },
     {
+      "collectionGroup": "ai_decision_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "confidence",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "reviewedBy",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "ai_decision_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "confidence",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "socialMissions",
       "queryScope": "COLLECTION",
       "fields": [

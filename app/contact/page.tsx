@@ -573,7 +573,7 @@ export default function ContactPage() {
                 <Link href="/pricing" className="text-blue-600 hover:text-blue-700 underline">
                   14-day free trial
                 </Link>
-                . For organizations requiring volume pricing, custom contracts, or enterprise features, contact sales@weightlossproglab.com.
+                . For organizations requiring volume pricing, custom contracts, or enterprise features, use the contact form below.
               </p>
             </div>
 

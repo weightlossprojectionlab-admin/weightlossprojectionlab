@@ -302,12 +302,12 @@ export default function AccessibilityPage() {
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[80px]">Email:</span>
-                <a
-                  href="mailto:accessibility@wellnessproglab.com"
+                <Link
+                  href="/contact?subject=feedback"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  accessibility@wellnessproglab.com
-                </a>
+                  Contact Accessibility Team
+                </Link>
               </div>
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[80px]">Response:</span>

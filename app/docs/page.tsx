@@ -586,7 +586,9 @@ export default function DocsPage() {
                 <div className="text-center">
                   <div className="text-2xl mb-2">📧</div>
                   <div className="text-sm text-blue-100">Email Support</div>
-                  <div className="font-semibold">support@wpl.com</div>
+                  <Link href="/contact?subject=support" className="font-semibold text-blue-100 hover:text-white underline">
+                    Contact Support
+                  </Link>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl mb-2">💬</div>

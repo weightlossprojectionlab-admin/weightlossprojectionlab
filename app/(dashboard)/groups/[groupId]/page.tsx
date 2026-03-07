@@ -8,8 +8,10 @@ import { db } from '@/lib/firebase'
 import { joinGroup, leaveGroup, sendSupportAction } from '@/lib/group-operations'
 import { logger } from '@/lib/logger'
 import type { Group, GroupMember } from '@/schemas/firestore/groups'
-import { ArrowLeft, Users, Lock, Globe, Crown, Heart, Sparkles, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Users, Lock, Globe, Crown, Heart, Sparkles, TrendingUp, MessageSquare } from 'lucide-react'
 import toast from 'react-hot-toast'
+import CreatePost from '@/components/groups/CreatePost'
+import GroupFeed from '@/components/groups/GroupFeed'
 
 export default function GroupDetailPage() {
   const params = useParams()
@@ -22,6 +24,7 @@ export default function GroupDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isJoining, setIsJoining] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
+  const [activeTab, setActiveTab] = useState<'feed' | 'members'>('feed')
 
   const isMember = user && group?.memberIds?.includes(user.uid)
   const isCreator = user && group?.memberIds?.[0] === user.uid
@@ -262,8 +265,46 @@ export default function GroupDetailPage() {
           </div>
         </div>
 
-        {/* Members List */}
+        {/* Tabs */}
         {isMember && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md mb-6">
+            <div className="flex border-b border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setActiveTab('feed')}
+                className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
+                  activeTab === 'feed'
+                    ? 'text-purple-600 border-b-2 border-purple-600'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span>Feed</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('members')}
+                className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
+                  activeTab === 'members'
+                    ? 'text-purple-600 border-b-2 border-purple-600'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <Users className="w-5 h-5" />
+                <span>Members ({members.length})</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Feed Tab */}
+        {isMember && activeTab === 'feed' && (
+          <div className="space-y-6">
+            <CreatePost groupId={groupId} />
+            <GroupFeed groupId={groupId} isCreator={!!isCreator} />
+          </div>
+        )}
+
+        {/* Members Tab */}
+        {isMember && activeTab === 'members' && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">

@@ -541,12 +541,12 @@ export default function PrivacyPage() {
               </p>
               <p className="text-sm text-gray-700">
                 To exercise any of these rights, contact us at{' '}
-                <a
-                  href="mailto:privacy@weightlossproglab.com"
+                <Link
+                  href="/contact?subject=privacy"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  privacy@weightlossproglab.com
-                </a>{' '}
+                  contact our privacy team
+                </Link>{' '}
                 or use the privacy controls in your account settings.
               </p>
             </div>
@@ -677,14 +677,13 @@ export default function PrivacyPage() {
             </p>
             <p className="text-gray-700 leading-relaxed">
               For users aged 13-17, we require parental consent before creating an account. If
-              you believe we have collected information from a child under 13, please contact
-              us immediately at{' '}
-              <a
-                href="mailto:privacy@weightlossproglab.com"
+              you believe we have collected information from a child under 13, please{' '}
+              <Link
+                href="/contact?subject=privacy"
                 className="text-blue-600 hover:text-blue-700 underline"
               >
-                privacy@weightlossproglab.com
-              </a>
+                contact our privacy team immediately
+              </Link>
               .
             </p>
           </section>
@@ -735,18 +734,18 @@ export default function PrivacyPage() {
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[120px]">Email:</span>
-                <a
-                  href="mailto:privacy@weightlossproglab.com"
+                <Link
+                  href="/contact?subject=privacy"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  privacy@weightlossproglab.com
-                </a>
+                  contact our privacy team
+                </Link>
               </div>
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[120px]">
                   Privacy Officer:
                 </span>
-                <span className="text-gray-700">privacy@weightlossproglab.com</span>
+                <Link href="/contact?subject=privacy" className="text-blue-600 hover:text-blue-700 underline">Contact Privacy Team</Link>
               </div>
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[120px]">Mail:</span>

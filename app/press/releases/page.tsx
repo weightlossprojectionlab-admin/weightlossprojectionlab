@@ -116,29 +116,12 @@ export default function PressReleasesPage() {
           <p className="text-blue-100 mb-6">
             For interviews, quotes, or additional information, contact our press team
           </p>
-          <a
-            href="mailto:press@weightlossproglab.com"
-            onClick={(e) => {
-              // Track contact attempt from releases list page
-              const csrfToken = getCSRFToken()
-              fetch('/api/press/contact', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-CSRF-Token': csrfToken,
-                },
-                body: JSON.stringify({
-                  releaseId: 'general',
-                  releaseSlug: 'general',
-                  releaseTitle: 'General Press Inquiry',
-                  source: 'release-list',
-                }),
-              }).catch((err) => console.error('Contact tracking failed:', err))
-            }}
+          <Link
+            href="/contact?subject=press"
             className="inline-block bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
           >
             Contact Press Team
-          </a>
+          </Link>
         </div>
       </div>
     </div>

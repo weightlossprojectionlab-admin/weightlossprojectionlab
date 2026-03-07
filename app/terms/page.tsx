@@ -707,14 +707,13 @@ export default function TermsPage() {
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <p className="text-sm font-semibold text-gray-900 mb-1">Copyright Infringement</p>
                 <p className="text-sm text-gray-700">
-                  If you believe content on our Services infringes your copyright, please contact
-                  us at{' '}
-                  <a
-                    href="mailto:copyright@weightlossproglab.com"
+                  If you believe content on our Services infringes your copyright, please{' '}
+                  <Link
+                    href="/contact?subject=other"
                     className="text-blue-600 hover:text-blue-700 underline"
                   >
-                    copyright@weightlossproglab.com
-                  </a>{' '}
+                    contact our copyright team
+                  </Link>{' '}
                   with a detailed notice under the DMCA.
                 </p>
               </div>
@@ -945,13 +944,13 @@ export default function TermsPage() {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Informal Resolution</h3>
                 <p className="text-gray-700">
-                  Before filing a claim, you agree to contact us at{' '}
-                  <a
-                    href="mailto:legal@weightlossproglab.com"
+                  Before filing a claim, you agree to{' '}
+                  <Link
+                    href="/contact?subject=other"
                     className="text-blue-600 hover:text-blue-700 underline"
                   >
-                    legal@weightlossproglab.com
-                  </a>{' '}
+                    contact our legal team
+                  </Link>{' '}
                   to attempt to resolve the dispute informally. We will attempt to resolve the
                   dispute within 60 days.
                 </p>
@@ -995,13 +994,13 @@ export default function TermsPage() {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Opt-Out Right</h3>
                 <p className="text-gray-700">
-                  You may opt out of this arbitration agreement by sending written notice to{' '}
-                  <a
-                    href="mailto:legal@weightlossproglab.com"
+                  You may opt out of this arbitration agreement by{' '}
+                  <Link
+                    href="/contact?subject=other"
                     className="text-blue-600 hover:text-blue-700 underline"
                   >
-                    legal@weightlossproglab.com
-                  </a>{' '}
+                    sending written notice to our legal team
+                  </Link>{' '}
                   within 30 days of first accepting these Terms.
                 </p>
               </div>
@@ -1111,22 +1110,22 @@ export default function TermsPage() {
                 <span className="text-gray-700">Wellness Projection Lab</span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="font-semibold text-gray-900 min-w-[140px]">Email:</span>
-                <a
-                  href="mailto:legal@weightlossproglab.com"
+                <span className="font-semibold text-gray-900 min-w-[140px]">Legal Inquiries:</span>
+                <Link
+                  href="/contact?subject=other"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  legal@weightlossproglab.com
-                </a>
+                  Contact Legal Team
+                </Link>
               </div>
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[140px]">Support:</span>
-                <a
-                  href="mailto:support@weightlossproglab.com"
+                <Link
+                  href="/contact?subject=support"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  support@weightlossproglab.com
-                </a>
+                  Contact Support
+                </Link>
               </div>
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[140px]">Address:</span>

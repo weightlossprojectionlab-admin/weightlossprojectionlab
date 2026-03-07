@@ -5,6 +5,8 @@ import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
 import { logger } from '@/lib/logger'
 import { getCSRFToken } from '@/lib/csrf'
+import { auth } from '@/lib/firebase'
+import { uploadPerkImage, uploadPartnerLogo } from '@/lib/perk-image-upload'
 import {
   GiftIcon,
   PlusCircleIcon,
@@ -12,6 +14,7 @@ import {
   TrashIcon,
   XMarkIcon,
   TagIcon,
+  PhotoIcon,
 } from '@heroicons/react/24/outline'
 
 interface Perk {
@@ -33,6 +36,8 @@ interface Perk {
   category: string
   expiresAt?: Date
   createdAt: Date
+  imageUrl?: string
+  partnerLogo?: string
 }
 
 export default function PerksAdminPage() {
@@ -43,6 +48,8 @@ export default function PerksAdminPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingPerk, setEditingPerk] = useState<Perk | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -59,6 +66,8 @@ export default function PerksAdminPage() {
     totalAvailable: 100,
     enabled: true,
     category: 'Fitness',
+    imageUrl: '',
+    partnerLogo: '',
   })
 
   useEffect(() => {
@@ -70,7 +79,12 @@ export default function PerksAdminPage() {
   const loadPerks = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/admin/perks')
+      const token = await auth.currentUser?.getIdToken()
+      const response = await fetch('/api/admin/perks', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
       if (!response.ok) throw new Error('Failed to load perks')
       const data = await response.json()
       setPerks(data.perks || [])
@@ -98,6 +112,8 @@ export default function PerksAdminPage() {
         totalAvailable: perk.totalAvailable,
         enabled: perk.enabled,
         category: perk.category,
+        imageUrl: perk.imageUrl || '',
+        partnerLogo: perk.partnerLogo || '',
       })
     } else {
       setEditingPerk(null)
@@ -115,9 +131,69 @@ export default function PerksAdminPage() {
         totalAvailable: 100,
         enabled: true,
         category: 'Fitness',
+        imageUrl: '',
+        partnerLogo: '',
       })
     }
     setShowModal(true)
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB')
+      return
+    }
+
+    setUploadingImage(true)
+    try {
+      const url = await uploadPerkImage(file, editingPerk?.perkId)
+      setFormData({ ...formData, imageUrl: url })
+      logger.debug('Perk image uploaded:', { url })
+    } catch (err) {
+      logger.error('Error uploading perk image:', err as Error)
+      alert(err instanceof Error ? err.message : 'Failed to upload image')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 2MB for logos)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Logo size must be less than 2MB')
+      return
+    }
+
+    setUploadingLogo(true)
+    try {
+      const url = await uploadPartnerLogo(file, formData.partnerName)
+      setFormData({ ...formData, partnerLogo: url })
+      logger.debug('Partner logo uploaded:', { url })
+    } catch (err) {
+      logger.error('Error uploading partner logo:', err as Error)
+      alert(err instanceof Error ? err.message : 'Failed to upload logo')
+    } finally {
+      setUploadingLogo(false)
+    }
   }
 
   const handleSave = async () => {
@@ -128,12 +204,18 @@ export default function PerksAdminPage() {
 
     setActionLoading(true)
     try {
+      const token = await auth.currentUser?.getIdToken()
+      const csrfToken = getCSRFToken()
       const method = editingPerk ? 'PUT' : 'POST'
       const url = editingPerk ? `/api/admin/perks?id=${editingPerk.perkId}` : '/api/admin/perks'
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify(formData),
       })
 
@@ -154,8 +236,15 @@ export default function PerksAdminPage() {
 
     setActionLoading(true)
     try {
+      const token = await auth.currentUser?.getIdToken()
+      const csrfToken = getCSRFToken()
+
       const response = await fetch(`/api/admin/perks?id=${perkId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
+        },
       })
 
       if (!response.ok) throw new Error('Failed to delete perk')
@@ -247,10 +336,33 @@ export default function PerksAdminPage() {
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {perks.map((perk) => (
               <div key={perk.perkId} className="p-6 hover:bg-background">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                <div className="flex items-start justify-between gap-6">
+                  {/* Image Preview */}
+                  {perk.imageUrl ? (
+                    <div className="relative flex-shrink-0 w-48 h-32 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                      <img
+                        src={perk.imageUrl}
+                        alt={perk.title}
+                        className="w-full h-full object-cover"
+                      />
+                      {perk.partnerLogo && (
+                        <div className="absolute top-2 right-2 bg-white rounded-lg p-1.5 shadow-md">
+                          <img
+                            src={perk.partnerLogo}
+                            alt={perk.partnerName}
+                            className="h-6 w-auto object-contain"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex-shrink-0">
+                      <GiftIcon className="h-12 w-12 text-primary" />
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <GiftIcon className="h-6 w-6 text-primary" />
                       <div>
                         <h3 className="text-lg font-semibold text-foreground">
                           {perk.title}
@@ -283,7 +395,8 @@ export default function PerksAdminPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
+
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleToggleEnabled(perk.perkId, perk.enabled)}
                       disabled={actionLoading}
@@ -388,6 +501,79 @@ export default function PerksAdminPage() {
                     rows={3}
                     className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   />
+                </div>
+
+                {/* Image Uploads Section */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Perk Image */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Perk Image
+                    </label>
+                    <div className="space-y-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary/90 file:cursor-pointer file:disabled:opacity-50 file:disabled:cursor-not-allowed"
+                      />
+                      {uploadingImage && (
+                        <p className="text-xs text-primary">Uploading image...</p>
+                      )}
+                      {formData.imageUrl && (
+                        <div className="relative">
+                          <img
+                            src={formData.imageUrl}
+                            alt="Perk preview"
+                            className="w-full h-24 object-cover rounded-lg border border-border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          >
+                            <XMarkIcon className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Partner Logo */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Partner Logo
+                    </label>
+                    <div className="space-y-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        disabled={uploadingLogo}
+                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary/90 file:cursor-pointer file:disabled:opacity-50 file:disabled:cursor-not-allowed"
+                      />
+                      {uploadingLogo && (
+                        <p className="text-xs text-primary">Uploading logo...</p>
+                      )}
+                      {formData.partnerLogo && (
+                        <div className="relative">
+                          <img
+                            src={formData.partnerLogo}
+                            alt="Partner logo preview"
+                            className="w-full h-24 object-contain rounded-lg border border-border bg-white p-2"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, partnerLogo: '' })}
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          >
+                            <XMarkIcon className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

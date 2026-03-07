@@ -562,12 +562,12 @@ export default function AboutPage() {
                     </svg>
                   </div>
                   <h3 className="font-semibold text-gray-900 mb-2">Email</h3>
-                  <a
-                    href="mailto:hello@wellnessprojectionlab.com"
-                    className="text-blue-600 hover:text-blue-700 text-sm"
+                  <Link
+                    href="/contact"
+                    className="text-blue-600 hover:text-blue-700 text-sm underline"
                   >
-                    hello@wellnessprojectionlab.com
-                  </a>
+                    Contact Us
+                  </Link>
                 </div>
 
                 <div className="text-center">

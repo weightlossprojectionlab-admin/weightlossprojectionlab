@@ -554,9 +554,9 @@ export default function SupportPage() {
                 <div className="bg-white/10 backdrop-blur rounded-lg p-6">
                   <div className="text-3xl mb-3">📧</div>
                   <div className="font-semibold mb-2">Email Support</div>
-                  <a href="mailto:support@wellnessproglab.com" className="text-blue-100 hover:text-white text-sm">
-                    support@wpl.com
-                  </a>
+                  <Link href="/contact?subject=support" className="text-blue-100 hover:text-white text-sm underline">
+                    Contact Support
+                  </Link>
                   <div className="text-xs text-blue-200 mt-2">Response in 24 hours</div>
                 </div>
 

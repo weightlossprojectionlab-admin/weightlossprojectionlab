@@ -18,7 +18,7 @@ export async function logAIDecision(
   decision: Omit<AIDecisionLog, 'decisionId' | 'timestamp'>
 ): Promise<string> {
   try {
-    const decisionRef = adminDb.collection('ai_decisions').doc();
+    const decisionRef = adminDb.collection('ai_decision_logs').doc();
     const decisionId = decisionRef.id;
 
     const logEntry: AIDecisionLog = {
@@ -48,7 +48,7 @@ export async function getAIDecision(
   decisionId: string
 ): Promise<AIDecisionLog | null> {
   try {
-    const doc = await adminDb.collection('ai_decisions').doc(decisionId).get();
+    const doc = await adminDb.collection('ai_decision_logs').doc(decisionId).get();
 
     if (!doc.exists) {
       return null;
@@ -75,7 +75,7 @@ export async function markForReview(
   notes?: string
 ): Promise<void> {
   try {
-    await adminDb.collection('ai_decisions').doc(decisionId).update({
+    await adminDb.collection('ai_decision_logs').doc(decisionId).update({
       reviewedBy,
       reviewedAt: Timestamp.now(),
       metadata: {
@@ -104,7 +104,7 @@ export async function reverseDecision(
   reviewedBy: string
 ): Promise<void> {
   try {
-    await adminDb.collection('ai_decisions').doc(decisionId).update({
+    await adminDb.collection('ai_decision_logs').doc(decisionId).update({
       reversalReason,
       reviewedBy,
       reviewedAt: Timestamp.now(),
@@ -132,7 +132,7 @@ export async function queryAIDecisions(filters: {
   limit?: number;
 }): Promise<AIDecisionLog[]> {
   try {
-    let query = adminDb.collection('ai_decisions').orderBy('timestamp', 'desc');
+    let query = adminDb.collection('ai_decision_logs').orderBy('timestamp', 'desc');
 
     if (filters.executedBy) {
       query = query.where('executedBy', '==', filters.executedBy) as any;
@@ -198,7 +198,7 @@ export async function cleanupOldDecisions(retentionDays = 365): Promise<number> 
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
     const snapshot = await adminDb
-      .collection('ai_decisions')
+      .collection('ai_decision_logs')
       .where('timestamp', '<', Timestamp.fromDate(cutoffDate))
       .limit(500)  // Batch delete
       .get();

@@ -62,21 +62,33 @@ export function useAdminStats() {
 
         // Fetch all stats in parallel
         const [
-          totalUsersSnapshot,
+          totalUsersCount,
           activeUsersTodaySnapshot,
           totalRecipesSnapshot,
           pendingRecipesSnapshot,
           openCasesSnapshot,
           lowConfidenceAISnapshot,
         ] = await Promise.all([
-          // Total users
-          getDocs(collection(db, 'users')).then(snap => {
-            logger.debug(`Successfully fetched ${snap.size} users`)
-            return snap
-          }).catch(err => {
-            logger.error('Error fetching users collection:', err instanceof Error ? err : new Error(String(err)))
-            throw err
-          }),
+          // Total users - use count API to get authenticated users only
+          fetch('/api/admin/users/count', {
+            headers: {
+              'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}`
+            }
+          })
+            .then(res => res.json())
+            .then(data => {
+              const count = data.count || 0
+              logger.debug(`Successfully fetched authenticated users count: ${count}`)
+              return count
+            })
+            .catch(err => {
+              logger.error('Error fetching authenticated users count:', err instanceof Error ? err : new Error(String(err)))
+              // Fallback to Firestore count if API fails
+              return getDocs(collection(db, 'users')).then(snap => {
+                logger.warn('Falling back to Firestore user count (may include orphaned profiles)')
+                return snap.size
+              })
+            }),
 
           // Active users today (users with lastActiveAt >= today)
           getDocs(
@@ -147,7 +159,7 @@ export function useAdminStats() {
         ])
 
         setStats({
-          totalUsers: totalUsersSnapshot.size,
+          totalUsers: totalUsersCount,
           activeUsersToday: activeUsersTodaySnapshot.size,
           totalRecipes: totalRecipesSnapshot.size,
           pendingRecipes: typeof pendingRecipesSnapshot === 'object' && 'size' in pendingRecipesSnapshot

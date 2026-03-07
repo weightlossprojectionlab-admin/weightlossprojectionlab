@@ -20,7 +20,8 @@ import {
   ArrowRightOnRectangleIcon,
   BriefcaseIcon,
   EnvelopeIcon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline'
 
 interface NavItem {
@@ -91,6 +92,11 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
       href: '/admin/trust-safety',
       icon: ShieldCheckIcon,
       badge: pendingCounts?.cases,
+    },
+    {
+      name: 'HIPAA Complaints',
+      href: '/admin/hipaa-complaints',
+      icon: DocumentTextIcon,
     },
     {
       name: 'AI Decisions',
