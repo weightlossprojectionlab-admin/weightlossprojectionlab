@@ -38,6 +38,7 @@ import MedicationDetailModal from '@/components/health/MedicationDetailModal'
 import { RecipeView } from '@/components/patients/RecipeView'
 import { PageHeader } from '@/components/ui/PageHeader'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import TextConfirmModal from '@/components/ui/TextConfirmModal'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
 import { ChartBarIcon, ShieldCheckIcon, ChevronDownIcon, ChevronUpIcon, ScaleIcon, CameraIcon, FireIcon, StarIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
@@ -247,6 +248,8 @@ function PatientDetailContent() {
   const [showAllMedications, setShowAllMedications] = useState(false)
   const [showQuickLogModal, setShowQuickLogModal] = useState(false)
   const [quickLogVitalType, setQuickLogVitalType] = useState<VitalType | null>(null)
+  const [showArchiveModal, setShowArchiveModal] = useState(false)
+  const [removingMember, setRemovingMember] = useState<FamilyMember | null>(null)
 
   const { user } = useAuth()
   const { vitals, loading: vitalsLoading, logVital, updateVital, deleteVital, refetch } = useVitals({
@@ -531,9 +534,14 @@ function PatientDetailContent() {
   }
 
   const handleRemove = async (member: FamilyMember) => {
-    if (confirm(`Remove ${member.name}'s access to ${patient?.name}?`)) {
-      await removeMember(member.id)
+    setRemovingMember(member)
+  }
+
+  const confirmRemoveMember = async () => {
+    if (removingMember) {
+      await removeMember(removingMember.id)
       toast.success('Family member access removed')
+      setRemovingMember(null)
     }
   }
 
@@ -1922,16 +1930,7 @@ function PatientDetailContent() {
                       Archiving will hide this patient from your family members list. All health data will be preserved for 30 days before permanent deletion. This action requires confirmation.
                     </p>
                     <button
-                      onClick={() => {
-                        if (confirm(`Are you sure you want to archive ${patient.name}?\n\nThis will:\n- Hide ${patient.name} from your family members list\n- Preserve all health data for 30 days\n- Allow you to restore the profile within 30 days\n\nType the patient's name to confirm.`)) {
-                          const confirmation = prompt(`Type "${patient.name}" to confirm deletion:`)
-                          if (confirmation === patient.name) {
-                            handleDeletePatient()
-                          } else if (confirmation !== null) {
-                            toast.error('Name did not match. Deletion cancelled.')
-                          }
-                        }
-                      }}
+                      onClick={() => setShowArchiveModal(true)}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
                     >
                       Archive Patient
@@ -2482,6 +2481,34 @@ function PatientDetailContent() {
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"
+      />
+
+      {/* Archive Patient Confirmation Modal */}
+      {patient && (
+        <TextConfirmModal
+          isOpen={showArchiveModal}
+          onClose={() => setShowArchiveModal(false)}
+          onConfirm={handleDeletePatient}
+          title="Archive Patient"
+          message={`Are you sure you want to archive ${patient.name}?\n\nThis will:\n- Hide ${patient.name} from your family members list\n- Preserve all health data for 30 days\n- Allow you to restore the profile within 30 days`}
+          confirmText="Archive"
+          cancelText="Cancel"
+          variant="danger"
+          requiredText={patient.name}
+          inputPlaceholder={`Type "${patient.name}" to confirm`}
+        />
+      )}
+
+      {/* Remove Family Member Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!removingMember}
+        onClose={() => setRemovingMember(null)}
+        onConfirm={confirmRemoveMember}
+        title="Remove Family Member Access"
+        message={`Remove ${removingMember?.name}'s access to ${patient?.name}?`}
+        confirmText="Remove"
+        cancelText="Cancel"
+        variant="warning"
       />
 
       {/* Vitals Wizard Integration */}
