@@ -24,19 +24,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 export async function POST(request: NextRequest) {
-  console.warn('========================================')
-  console.warn('[STRIPE WEBHOOK] /api/webhooks/stripe HIT!')
-  console.warn('========================================')
+  logger.info('[Stripe Webhook] Webhook endpoint hit')
   try {
-    console.log('🔵 [STRIPE WEBHOOK] Request received')
+    logger.info('[Stripe Webhook] Request received')
     const body = await request.text()
     const signature = request.headers.get('stripe-signature')
 
-    console.log('📝 [STRIPE WEBHOOK] Body length:', body.length)
-    console.log('📝 [STRIPE WEBHOOK] Signature:', signature ? 'present' : 'missing')
+    logger.info('[Stripe Webhook] Request details', {
+      bodyLength: body.length,
+      signaturePresent: !!signature
+    })
 
     if (!signature) {
-      console.log('❌ [STRIPE WEBHOOK] Missing signature')
       logger.error('[Stripe Webhook] Missing signature')
       return NextResponse.json(
         { error: 'Missing stripe-signature header' },
@@ -48,16 +47,15 @@ export async function POST(request: NextRequest) {
     let event: Stripe.Event
     try {
       event = verifyWebhookSignature(body, signature)
-    } catch (err: any) {
-      console.error('❌ [STRIPE WEBHOOK] Signature verification error:', err.message)
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       logger.error('[Stripe Webhook] Signature verification failed', err as Error)
       return NextResponse.json(
-        { error: `Webhook signature verification failed: ${err.message}` },
+        { error: `Webhook signature verification failed: ${errorMessage}` },
         { status: 400 }
       )
     }
 
-    console.log('✅ [STRIPE WEBHOOK] Event verified:', event.type)
     logger.info('[Stripe Webhook] Event received', {
       type: event.type,
       id: event.id
@@ -66,13 +64,13 @@ export async function POST(request: NextRequest) {
     // Handle the event
     switch (event.type) {
       case 'checkout.session.completed':
-        console.log('🔄 [STRIPE WEBHOOK] Handling checkout completion')
+        logger.info('[Stripe Webhook] Handling checkout completion')
         await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
         break
 
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
-        console.log('🔄 [STRIPE WEBHOOK] Handling subscription event')
+        logger.info('[Stripe Webhook] Handling subscription event')
         await handleSubscriptionUpdate(event.data.object as Stripe.Subscription)
         break
 
@@ -93,10 +91,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ received: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Webhook processing failed'
     logger.error('[Stripe Webhook] Error processing webhook', error as Error)
     return NextResponse.json(
-      { error: error.message || 'Webhook processing failed' },
+      { error: errorMessage },
       { status: 500 }
     )
   }
@@ -107,14 +106,15 @@ export async function POST(request: NextRequest) {
  * This fires when a user completes payment for a subscription
  */
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  console.log('📝 [STRIPE WEBHOOK] handleCheckoutCompleted called')
-  console.log('📝 [STRIPE WEBHOOK] Session metadata:', session.metadata)
+  logger.info('[Stripe Webhook] Checkout completed', {
+    sessionId: session.id,
+    metadata: session.metadata
+  })
 
   const firebaseUid = session.metadata?.firebaseUid
   const subscriptionId = session.subscription as string
 
   if (!firebaseUid) {
-    console.log('❌ [STRIPE WEBHOOK] Missing firebaseUid in checkout session metadata')
     logger.warn('[Stripe Webhook] Checkout session missing firebaseUid', {
       sessionId: session.id
     })
@@ -122,12 +122,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   if (!subscriptionId) {
-    console.log('❌ [STRIPE WEBHOOK] No subscription ID in checkout session')
+    logger.warn('[Stripe Webhook] No subscription ID in checkout session', {
+      sessionId: session.id
+    })
     return
   }
 
-  console.log('✅ [STRIPE WEBHOOK] Found firebaseUid:', firebaseUid)
-  console.log('✅ [STRIPE WEBHOOK] Subscription ID:', subscriptionId)
+  logger.info('[Stripe Webhook] Processing checkout', {
+    firebaseUid,
+    subscriptionId
+  })
 
   // Fetch the full subscription details with expanded price data
   const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
@@ -142,12 +146,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
  * Handle subscription created or updated
  */
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
-  console.log('📝 [STRIPE WEBHOOK] handleSubscriptionUpdate called')
-  console.log('📝 [STRIPE WEBHOOK] Subscription metadata:', subscription.metadata)
+  logger.info('[Stripe Webhook] Subscription update', {
+    subscriptionId: subscription.id,
+    metadata: subscription.metadata
+  })
   const firebaseUid = subscription.metadata?.firebaseUid
 
   if (!firebaseUid) {
-    console.log('❌ [STRIPE WEBHOOK] Missing firebaseUid in metadata')
     logger.warn('[Stripe Webhook] Subscription missing firebaseUid', {
       subscriptionId: subscription.id
     })
@@ -162,7 +167,6 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   if (existingSubscription?.stripeSubscriptionId &&
       existingSubscription.stripeSubscriptionId !== subscription.id &&
       (existingSubscription.status === 'active' || existingSubscription.status === 'trialing')) {
-    console.error('❌ [STRIPE WEBHOOK] User already has an active subscription')
     logger.error('[Stripe Webhook] Attempted to create multiple subscriptions', undefined, {
       userId: firebaseUid,
       existingSubscriptionId: existingSubscription.stripeSubscriptionId,
@@ -173,7 +177,6 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     return
   }
 
-  console.log('✅ [STRIPE WEBHOOK] Found firebaseUid:', firebaseUid)
   logger.info('[Stripe Webhook] Updating subscription', {
     userId: firebaseUid,
     subscriptionId: subscription.id,
@@ -186,14 +189,15 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   let billingInterval: 'monthly' | 'yearly' = 'monthly'
 
   if (!priceId) {
-    console.error('❌ [STRIPE WEBHOOK] No price ID found in subscription')
     logger.error('[Stripe Webhook] No price ID in subscription', new Error('No price ID in subscription'), { subscriptionId: subscription.id })
     return
   }
 
-  console.log('🔍 [STRIPE WEBHOOK] Price ID from Stripe:', priceId)
-  console.log('🔍 [STRIPE WEBHOOK] Expected SINGLE_MONTHLY:', process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SINGLE_MONTHLY)
-  console.log('🔍 [STRIPE WEBHOOK] Expected SINGLE_PLUS_MONTHLY:', process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SINGLE_PLUS_MONTHLY)
+  logger.info('[Stripe Webhook] Processing price ID', {
+    priceId,
+    expectedSingleMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SINGLE_MONTHLY,
+    expectedSinglePlusMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SINGLE_PLUS_MONTHLY
+  })
 
   // Determine plan and billing interval based on price ID
   // Monthly plans
@@ -270,7 +274,12 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     updatedAt: new Date().toISOString()
   }
 
-  console.log('💾 [STRIPE WEBHOOK] Saving subscription data:', JSON.stringify(subscriptionData, null, 2))
+  logger.info('[Stripe Webhook] Saving subscription data', {
+    userId: firebaseUid,
+    plan,
+    billingInterval,
+    status: subscription.status
+  })
 
   await adminDb
     .collection('users')

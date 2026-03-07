@@ -51,13 +51,13 @@ function AuthContent() {
   // Check if user is already authenticated and redirect if needed
   useEffect(() => {
     const checkAuthStatus = async () => {
-      console.log('[Auth Page] checkAuthStatus called', { authLoading, authUser: !!authUser })
+      logger.debug('[Auth Page] Checking auth status', { authLoading, authUser: !!authUser })
       if (authLoading) {
-        logger.debug('⏳ Auth page: Waiting for auth to load...')
+        logger.debug('[Auth Page] Waiting for auth to load')
         return
       }
 
-      console.log('[Auth Page] Auth loaded, setting checkingAuth to false')
+      logger.debug('[Auth Page] Auth loaded, updating state')
       if (authUser) {
         logger.debug('✅ User already authenticated on /auth page, checking destination...')
 
