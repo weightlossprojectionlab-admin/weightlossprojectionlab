@@ -26,15 +26,27 @@ export default function HouseholdDutiesPage() {
       </p>
 
       <h2 id="accessing-duties">Accessing Household Duties</h2>
-      <p>There are two ways to access duties:</p>
-      <ul>
-        <li>
-          <strong>Family Dashboard:</strong> Go to <strong>Family → Household Duties</strong> tab. Select the household to manage duties for.
-        </li>
-        <li>
-          <strong>Patient Profile:</strong> Open a patient's profile and navigate to the <strong>Duties</strong> section.
-        </li>
-      </ul>
+
+      <div className="space-y-4 my-6">
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h4 className="font-semibold text-gray-900 mb-2">📋 Family Dashboard</h4>
+          <p className="text-sm text-gray-600 mb-2">Best for managing duties across all households</p>
+          <ul className="text-sm text-gray-600 space-y-1 m-0">
+            <li>✓ Navigate to <strong>Family → Household Duties</strong> tab</li>
+            <li>✓ Select the household to manage</li>
+            <li>✓ Add, edit, complete, and delete duties</li>
+          </ul>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h4 className="font-semibold text-gray-900 mb-2">👤 Patient Profile</h4>
+          <p className="text-sm text-gray-600 mb-2">Best for viewing duties tied to a specific patient</p>
+          <ul className="text-sm text-gray-600 space-y-1 m-0">
+            <li>✓ Open a patient's profile</li>
+            <li>✓ Navigate to the <strong>Duties</strong> section</li>
+            <li>✓ Filtered automatically to that patient's tasks</li>
+          </ul>
+        </div>
+      </div>
 
       <h2 id="duty-types">Types of Household Duties</h2>
       <p>WPL includes predefined duties across multiple categories:</p>
@@ -172,16 +184,16 @@ export default function HouseholdDutiesPage() {
       <h3>From Predefined List</h3>
       <ol>
         <li>Navigate to <strong>Family → Household Duties</strong> tab and select a household</li>
-        <li>Click <strong>Add Duty</strong></li>
+        <li>Click <strong>+ Add Duty</strong></li>
         <li>Choose a category (e.g., Laundry, Grocery Shopping, Bedroom Cleaning)</li>
-        <li>Select a specific duty from the predefined options — name, description, and estimated time auto-populate</li>
-        <li>Customize as needed (frequency, priority, caregiver assignment)</li>
+        <li>Select a specific duty — name, description, and estimated time auto-populate</li>
+        <li>Customize frequency, priority, and caregiver assignment as needed</li>
         <li>Click <strong>Create Duty</strong></li>
       </ol>
 
       <h3>Creating Custom Duties</h3>
       <ol>
-        <li>Click <strong>Add Duty</strong> and select the <strong>Custom Duty</strong> category</li>
+        <li>Click <strong>+ Add Duty</strong> and select the <strong>Custom Duty</strong> category</li>
         <li>Skip the template step — you go straight to the details form</li>
         <li>Enter duty name and description</li>
         <li>Set estimated duration, frequency, and priority</li>
@@ -191,15 +203,22 @@ export default function HouseholdDutiesPage() {
       </ol>
 
       <h2 id="assigning-duties">Assigning Duties to Caregivers</h2>
+
+      <h3>Single or Multiple Assignment</h3>
       <ol>
         <li>Create or edit a duty</li>
         <li>In the <strong>Assign To</strong> section, check one or more caregivers</li>
-        <li>Only caregivers with access to the household are listed</li>
-        <li>Assigned caregivers receive a notification</li>
+        <li>Only caregivers with access to the household are shown</li>
+        <li>Assigned caregivers receive a notification immediately</li>
         <li>Duty appears in their task list</li>
       </ol>
 
-      <p>Assign to multiple caregivers when any available caregiver can complete the task — the first to complete it marks it done for all.</p>
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 my-4 rounded-r-lg">
+        <p className="font-semibold text-blue-900 mb-1">💡 Tip: Multiple Assignees</p>
+        <p className="text-blue-800 text-sm m-0">
+          Assigning to multiple caregivers works well for flexible tasks — whoever is available can complete it. The first to mark it done closes it for all.
+        </p>
+      </div>
 
       <h2 id="scheduling">Duty Scheduling & Frequency</h2>
 
@@ -210,14 +229,14 @@ export default function HouseholdDutiesPage() {
         <li><strong>Biweekly:</strong> Every two weeks (e.g., deep cleaning)</li>
         <li><strong>Monthly:</strong> Once per month (e.g., appliance deep clean)</li>
         <li><strong>As Needed:</strong> No automatic recurrence, completed on demand</li>
-        <li><strong>Custom:</strong> Define your own schedule with specific days, times, or intervals</li>
+        <li><strong>Custom:</strong> Define specific days, times, or intervals</li>
       </ul>
 
       <h3>Due Dates</h3>
       <ul>
-        <li>Automatically calculated based on frequency after each completion</li>
-        <li>Overdue duties are highlighted in the list</li>
-        <li>Stats panel shows total overdue count</li>
+        <li>Automatically recalculated after each completion based on frequency</li>
+        <li>Overdue duties are highlighted in the list view</li>
+        <li>The stats panel shows a live overdue count</li>
       </ul>
 
       <h2 id="priority">Priority Levels</h2>
@@ -253,57 +272,88 @@ export default function HouseholdDutiesPage() {
       <h2 id="completing-duties">Completing Duties</h2>
       <ol>
         <li>Navigate to the household duties list</li>
-        <li>Find the duty to complete</li>
-        <li>Click <strong>Complete</strong></li>
-        <li>Duty status updates and the completion is logged</li>
+        <li>Find the duty you want to mark done</li>
+        <li>Click the <strong>Complete</strong> button on the duty card</li>
+        <li>Duty status updates to "Completed" and the completion is logged</li>
         <li>Next due date is automatically recalculated based on frequency</li>
       </ol>
 
       <h2 id="subtasks">Working with Subtasks</h2>
       <p>
-        When creating or editing a duty, you can add subtasks to break work into smaller steps. Subtasks are displayed in the duty details and help caregivers track progress through multi-step tasks.
+        When creating or editing a duty, use the <strong>Subtasks</strong> field to break the work into smaller steps. Subtasks appear on the duty card and help caregivers track progress through multi-step tasks.
       </p>
-      <p>Example subtasks for "Clean Kitchen":</p>
+
+      <h3>Example: "Clean Kitchen" Subtasks</h3>
       <ul>
-        <li>Wash dishes</li>
-        <li>Wipe counters</li>
-        <li>Clean stovetop</li>
-        <li>Sweep floor</li>
-        <li>Empty trash</li>
+        <li>• Wash dishes</li>
+        <li>• Wipe counters</li>
+        <li>• Clean stovetop</li>
+        <li>• Clean sink</li>
+        <li>• Sweep floor</li>
+        <li>• Empty trash</li>
       </ul>
 
       <h2 id="viewing-duties">Viewing & Filtering Duties</h2>
 
       <h3>Status Tabs</h3>
-      <p>The duty list has four filter tabs:</p>
-      <ul>
-        <li><strong>All:</strong> Every duty in the household</li>
-        <li><strong>Pending:</strong> Not yet started</li>
-        <li><strong>In Progress:</strong> Currently being worked on</li>
-        <li><strong>Completed:</strong> Finished duties</li>
-      </ul>
+      <div className="space-y-3 my-4">
+        <div className="border border-gray-200 rounded-lg p-3">
+          <p className="font-semibold text-gray-900 mb-1">All</p>
+          <p className="text-sm text-gray-600 m-0">Every duty in the household regardless of status</p>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-3">
+          <p className="font-semibold text-gray-900 mb-1">Pending</p>
+          <p className="text-sm text-gray-600 m-0">Duties not yet started</p>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-3">
+          <p className="font-semibold text-gray-900 mb-1">In Progress</p>
+          <p className="text-sm text-gray-600 m-0">Duties currently being worked on</p>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-3">
+          <p className="font-semibold text-gray-900 mb-1">Completed</p>
+          <p className="text-sm text-gray-600 m-0">Finished duties and their history</p>
+        </div>
+      </div>
 
       <h3>Stats Panel</h3>
       <p>At the top of the duty list you can see at a glance:</p>
       <ul>
-        <li>Total duties</li>
-        <li>Completed this week</li>
-        <li>Pending count</li>
-        <li>Overdue count</li>
+        <li><strong>Total Duties:</strong> All active duties in this household</li>
+        <li><strong>Completed This Week:</strong> Duties finished in the past 7 days</li>
+        <li><strong>Pending:</strong> Tasks still waiting to be done</li>
+        <li><strong>Overdue:</strong> Tasks that passed their due date</li>
       </ul>
 
       <h2 id="notifications">Notifications & Reminders</h2>
 
-      <h3>Notification Types</h3>
+      <h3>Automatic Notifications</h3>
       <ul>
         <li><strong>Assignment:</strong> When a duty is assigned to you</li>
-        <li><strong>Due Soon:</strong> 24 hours before due date</li>
-        <li><strong>Overdue:</strong> When a duty passes its due date</li>
+        <li><strong>Due Soon:</strong> 24 hours before the due date</li>
+        <li><strong>Overdue:</strong> When a duty passes its due date without completion</li>
         <li><strong>Completion:</strong> When an assigned duty is completed</li>
       </ul>
 
       <h3>Per-Duty Reminders</h3>
-      <p>When creating a duty, toggle <strong>Enable Reminders</strong> and set a preferred reminder time. The caregiver will receive a notification at that time on the due date.</p>
+      <p>
+        When creating a duty, toggle <strong>Enable Reminders</strong> and set a preferred time. The assigned caregiver receives a reminder notification at that time on the due date.
+      </p>
+
+      <h2 id="coordination">Coordinating Multiple Caregivers</h2>
+
+      <h3>Avoiding Duplicate Work</h3>
+      <ul>
+        <li>Real-time duty status prevents caregivers from doubling up on the same task</li>
+        <li>When one caregiver completes a duty, all assignees are notified</li>
+        <li>The duty card clearly shows who it is assigned to</li>
+      </ul>
+
+      <h3>Accountability</h3>
+      <ul>
+        <li>Every completion is logged with timestamp and user</li>
+        <li>Completion history is visible in the duty detail</li>
+        <li>Account owner can review all duty activity</li>
+      </ul>
 
       <h2 id="tips">Household Duties Tips</h2>
 
@@ -313,7 +363,7 @@ export default function HouseholdDutiesPage() {
           <div>
             <p className="font-semibold text-gray-900 mb-1">Set Realistic Frequencies</p>
             <p className="text-sm text-gray-600 m-0">
-              Start with lower frequency and increase as needed. Better to exceed expectations than constantly miss deadlines.
+              Start with lower frequency and increase as needed. Better to exceed expectations than to constantly miss deadlines.
             </p>
           </div>
         </div>
@@ -323,7 +373,7 @@ export default function HouseholdDutiesPage() {
           <div>
             <p className="font-semibold text-gray-900 mb-1">Use Reminders Strategically</p>
             <p className="text-sm text-gray-600 m-0">
-              Enable reminders for critical duties like medication pickup, but skip reminders for routine low-stakes tasks to avoid alert fatigue.
+              Enable reminders for critical duties like medication pickup, but skip them for routine low-stakes tasks to avoid alert fatigue.
             </p>
           </div>
         </div>
@@ -333,7 +383,7 @@ export default function HouseholdDutiesPage() {
           <div>
             <p className="font-semibold text-gray-900 mb-1">Break Down Complex Tasks</p>
             <p className="text-sm text-gray-600 m-0">
-              Use subtasks for multi-step duties. Makes work less overwhelming and progress more visible.
+              Use subtasks for multi-step duties. Makes work less overwhelming and progress more visible for both caregivers and family.
             </p>
           </div>
         </div>
@@ -356,29 +406,30 @@ export default function HouseholdDutiesPage() {
         <li>Check notification settings in your profile</li>
         <li>Verify notifications are enabled for household duties</li>
         <li>Check email spam folder</li>
-        <li>Enable push notifications in browser settings</li>
+        <li>Enable push notifications in your browser settings</li>
       </ul>
 
       <h3>Can't complete a duty</h3>
       <ul>
         <li>Verify the duty is assigned to you</li>
-        <li>Check your caregiver permissions for that household</li>
+        <li>Check your caregiver permissions for this household</li>
         <li>Ensure the duty hasn't already been completed by someone else</li>
         <li>Try refreshing the page</li>
       </ul>
 
       <h3>Duty not appearing in the list</h3>
       <ul>
-        <li>Check the active filter tab — it may be filtered out by status</li>
+        <li>Check the active status tab — it may be filtered out</li>
         <li>Verify you have the correct household selected</li>
-        <li>Confirm the duty is active (not deleted)</li>
+        <li>Confirm the duty hasn't been deleted</li>
       </ul>
 
       <h3>Wrong due date showing</h3>
       <ul>
-        <li>Check the duty's frequency settings</li>
-        <li>Verify custom schedule configuration if using one</li>
+        <li>Check the duty's frequency setting</li>
+        <li>Verify custom schedule configuration if applicable</li>
         <li>Edit the duty to correct the next due date manually</li>
+        <li>Contact support if dates are consistently incorrect</li>
       </ul>
 
       <h2 id="next-steps">Next Steps</h2>
