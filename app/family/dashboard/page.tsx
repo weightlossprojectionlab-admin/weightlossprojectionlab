@@ -133,6 +133,7 @@ function FamilyDashboardContent() {
             )}
           </div>
         }
+        helpRoute={activeTab === 'duties' ? '/docs/user-guides/household-duties' : '/docs/user-guides/family-setup'}
       />
 
       <main className="container mx-auto px-4 py-8">

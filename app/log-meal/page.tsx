@@ -1655,6 +1655,7 @@ function LogMealContent() {
         title={patientProfile ? `Log Meal for ${patientProfile.name}` : "Log Meal"}
         subtitle={patientProfile ? `Logging meal for family member` : undefined}
         backHref={patientIdParam ? `/patients/${patientIdParam}` : "/dashboard"}
+        helpRoute="/docs/user-guides/meal-tracking"
       />
 
       <div className="container-narrow py-6 space-y-6">

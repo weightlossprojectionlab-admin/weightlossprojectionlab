@@ -518,6 +518,7 @@ function ProgressContent() {
             />
           </div>
         }
+        helpRoute="/docs/user-guides/progress-tracking"
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">

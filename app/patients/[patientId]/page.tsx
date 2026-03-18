@@ -576,6 +576,7 @@ function PatientDetailContent() {
           </div>
         }
         backHref="/patients"
+        helpRoute="/docs/user-guides/patient-profiles"
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">

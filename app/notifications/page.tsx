@@ -343,6 +343,7 @@ export default function NotificationsPage() {
           title={showArchived ? 'Archived Notifications' : 'Notifications'}
           subtitle={showArchived ? `${notifications.length} archived` : `${unreadCount} unread`}
           backButton
+          helpRoute="/docs/user-guides/notifications"
         />
 
         <div className="max-w-4xl mx-auto px-4 py-6">

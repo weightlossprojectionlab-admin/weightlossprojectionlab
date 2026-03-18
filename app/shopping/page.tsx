@@ -650,6 +650,7 @@ function ShoppingListContent() {
           title="Shopping List"
           subtitle={`${summary.neededItems} item${summary.neededItems !== 1 ? 's' : ''} to buy`}
           backHref={memberId ? `/patients/${memberId}` : undefined}
+          helpRoute="/docs/user-guides/shopping"
         />
 
         <main className="container mx-auto px-4 py-6 max-w-4xl">

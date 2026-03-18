@@ -107,6 +107,7 @@ function LogWeightContent() {
       <PageHeader
         title="Log Weight"
         subtitle="Track your weight progress"
+        helpRoute="/docs/user-guides/weight-logging"
         actions={
           <a
             href="/weight-history"
