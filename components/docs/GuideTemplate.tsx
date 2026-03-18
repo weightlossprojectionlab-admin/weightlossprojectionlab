@@ -14,12 +14,12 @@ export function GuideTemplate({ title, description, children }: GuideTemplatePro
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Breadcrumb */}
         <div className="mb-8">
-          <nav className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
-            <Link href="/docs" className="hover:text-blue-600 leading-none">Documentation</Link>
-            <span className="leading-none">/</span>
-            <Link href="/docs/user-guides" className="hover:text-blue-600 leading-none">User Guides</Link>
-            <span className="leading-none">/</span>
-            <span className="text-gray-900 font-medium leading-none">{title}</span>
+          <nav className="flex items-center gap-1.5 text-sm text-gray-600 whitespace-nowrap overflow-hidden">
+            <Link href="/docs" className="hover:text-blue-600 shrink-0">Documentation</Link>
+            <span className="text-gray-400 shrink-0">/</span>
+            <Link href="/docs/user-guides" className="hover:text-blue-600 shrink-0">User Guides</Link>
+            <span className="text-gray-400 shrink-0">/</span>
+            <span className="text-gray-900 font-medium truncate">{title}</span>
           </nav>
         </div>
 
