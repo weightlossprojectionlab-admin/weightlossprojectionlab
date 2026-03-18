@@ -114,7 +114,6 @@ self.addEventListener('fetch', (event) => {
   // CRITICAL: Skip service worker for navigation requests to prevent false offline detection
   // Let Next.js handle all page navigations directly
   if (event.request.mode === 'navigate') {
-    console.log('[Service Worker] Skipping navigation request:', event.request.url);
     return;
   }
 
