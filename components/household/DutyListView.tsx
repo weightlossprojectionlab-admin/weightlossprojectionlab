@@ -29,6 +29,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { DutyFormModal } from './DutyFormModal'
 import { auth } from '@/lib/firebase'
+import { getCSRFToken } from '@/lib/csrf'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import { useUser } from '@/hooks/useUser'
@@ -127,7 +128,8 @@ export function DutyListView({
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': getCSRFToken()
         },
         body: JSON.stringify({})
       })
@@ -171,7 +173,8 @@ export function DutyListView({
       const response = await fetch(`/api/household-duties/${dutyId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': getCSRFToken()
         }
       })
 

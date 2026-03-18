@@ -26,6 +26,7 @@ import {
 } from '@/types/household-duties'
 import { CaregiverProfile } from '@/types/caregiver'
 import { auth } from '@/lib/firebase'
+import { getCSRFToken } from '@/lib/csrf'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 
@@ -212,7 +213,8 @@ export function DutyFormModal({
         method,
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': getCSRFToken()
         },
         body: JSON.stringify(requestBody)
       })
