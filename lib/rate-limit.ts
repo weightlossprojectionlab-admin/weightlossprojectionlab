@@ -23,15 +23,24 @@ let Redis: any = null
 let upstashConfigured = false
 
 // Try to import Upstash dependencies
-try {
-  const upstashRatelimit = require('@upstash/ratelimit')
-  const upstashRedis = require('@upstash/redis')
-  Ratelimit = upstashRatelimit.Ratelimit
-  Redis = upstashRedis.Redis
-  upstashConfigured = true
-} catch (error) {
-  logger.warn('Upstash Redis not available, using in-memory fallback')
+async function initUpstash() {
+  try {
+    const [upstashRatelimit, upstashRedis] = await Promise.all([
+      import('@upstash/ratelimit'),
+      import('@upstash/redis')
+    ])
+    Ratelimit = upstashRatelimit.Ratelimit
+    Redis = upstashRedis.Redis
+    upstashConfigured = true
+  } catch (error) {
+    logger.warn('Upstash Redis not available, using in-memory fallback')
+  }
 }
+
+// Initialize on module load
+initUpstash().catch(() => {
+  // Initialization failures are already logged
+})
 
 // In-memory fallback for development/testing
 interface InMemoryRateLimitEntry {

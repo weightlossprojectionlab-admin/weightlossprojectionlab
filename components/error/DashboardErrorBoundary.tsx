@@ -1,6 +1,7 @@
 'use client'
 
 import { Component, ReactNode } from 'react'
+import Link from 'next/link'
 import { logger } from '@/lib/logger'
 
 interface Props {
@@ -99,12 +100,12 @@ export class DashboardErrorBoundary extends Component<Props, State> {
                 Try Again
               </button>
 
-              <a
+              <Link
                 href="/"
                 className="block w-full px-6 py-3 text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Go to Home
-              </a>
+              </Link>
             </div>
 
             <div className="mt-6 pt-6 border-t border-border">

@@ -12,7 +12,8 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon,
   CheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArchiveBoxIcon
 } from '@heroicons/react/24/outline'
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek, parseISO } from 'date-fns'
 import type { Notification, NotificationType, NotificationPriority } from '@/types/notifications'
@@ -36,7 +37,8 @@ export default function NotificationsPage() {
     getNotifications,
     markAsRead,
     markAllAsRead,
-    notificationsLoading
+    archiveNotification,
+    archiveAllRead
   } = useNotifications(user?.uid)
 
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -44,6 +46,7 @@ export default function NotificationsPage() {
   const [filterType, setFilterType] = useState<NotificationType | 'all'>('all')
   const [filterPriority, setFilterPriority] = useState<NotificationPriority | 'all'>('all')
   const [filterRead, setFilterRead] = useState<'all' | 'read' | 'unread'>('all')
+  const [showArchived, setShowArchived] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -54,7 +57,7 @@ export default function NotificationsPage() {
     const loadNotifications = async () => {
       setLoading(true)
       try {
-        const filters: any = {}
+        const filters: NotificationFilter = {}
 
         if (filterType !== 'all') {
           filters.type = filterType
@@ -70,6 +73,9 @@ export default function NotificationsPage() {
           filters.read = false
         }
 
+        // Filter archived/active notifications
+        filters.archived = showArchived
+
         const fetchedNotifications = await getNotifications(filters)
         setNotifications(fetchedNotifications)
       } catch (error) {
@@ -81,7 +87,7 @@ export default function NotificationsPage() {
     }
 
     loadNotifications()
-  }, [user?.uid, filterType, filterPriority, filterRead, getNotifications])
+  }, [user?.uid, filterType, filterPriority, filterRead, showArchived, getNotifications])
 
   // Filter notifications by search query
   const filteredNotifications = useMemo(() => {
@@ -161,6 +167,29 @@ export default function NotificationsPage() {
     }
   }
 
+  const handleArchiveNotification = async (notificationId: string) => {
+    try {
+      await archiveNotification(notificationId)
+      // Update local state to remove from list
+      setNotifications(prev => prev.filter(n => n.id !== notificationId))
+      toast.success('Notification archived')
+    } catch (error) {
+      console.error('Error archiving notification:', error)
+      toast.error('Failed to archive notification')
+    }
+  }
+
+  const handleArchiveAllRead = async () => {
+    try {
+      await archiveAllRead()
+      // Reload notifications
+      const fetchedNotifications = await getNotifications()
+      setNotifications(fetchedNotifications)
+    } catch (error) {
+      console.error('Error archiving read notifications:', error)
+    }
+  }
+
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'medication_added':
@@ -228,11 +257,9 @@ export default function NotificationsPage() {
         <h2 className="text-lg font-semibold text-foreground mb-4 px-4">{title}</h2>
         <div className="space-y-2">
           {notifications.map((notification) => (
-            <button
+            <div
               key={notification.id}
-              type="button"
-              onClick={() => handleNotificationClick(notification)}
-              className={`w-full px-4 py-4 text-left hover:bg-muted transition-colors border border-border rounded-lg ${
+              className={`relative w-full px-4 py-4 border border-border rounded-lg ${
                 !notification.read ? 'bg-primary/5 border-primary/20' : 'bg-card'
               }`}
             >
@@ -243,7 +270,11 @@ export default function NotificationsPage() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => handleNotificationClick(notification)}
+                  className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+                >
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <h3 className="font-semibold text-foreground">
                       {notification.title}
@@ -278,9 +309,24 @@ export default function NotificationsPage() {
                       </span>
                     )}
                   </div>
-                </div>
+                </button>
+
+                {/* Archive Button */}
+                {!showArchived && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleArchiveNotification(notification.id)
+                    }}
+                    className="flex-shrink-0 p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                    title="Archive notification"
+                  >
+                    <ArchiveBoxIcon className="h-5 w-5" />
+                  </button>
+                )}
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </div>
@@ -288,13 +334,14 @@ export default function NotificationsPage() {
   }
 
   const unreadCount = notifications.filter((n) => !n.read).length
+  const readCount = notifications.filter((n) => n.read && !n.archived).length
 
   return (
     <AuthGuard>
       <div className="min-h-screen bg-background pb-20">
         <PageHeader
-          title="Notifications"
-          subtitle={`${unreadCount} unread`}
+          title={showArchived ? 'Archived Notifications' : 'Notifications'}
+          subtitle={showArchived ? `${notifications.length} archived` : `${unreadCount} unread`}
           backButton
         />
 
@@ -313,8 +360,8 @@ export default function NotificationsPage() {
               />
             </div>
 
-            {/* Filter Toggle and Mark All Read */}
-            <div className="flex items-center gap-3">
+            {/* Filter Toggle and Action Buttons */}
+            <div className="flex items-center gap-3 flex-wrap">
               <button
                 type="button"
                 onClick={() => setShowFilters(!showFilters)}
@@ -324,16 +371,42 @@ export default function NotificationsPage() {
                 <span className="font-medium">Filters</span>
               </button>
 
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleMarkAllAsRead}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium ml-auto"
-                >
-                  <CheckIcon className="h-5 w-5" />
-                  <span>Mark All Read</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowArchived(!showArchived)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium ${
+                  showArchived
+                    ? 'bg-primary text-white hover:bg-primary-dark'
+                    : 'bg-card border border-border text-foreground hover:bg-muted'
+                }`}
+              >
+                <ArchiveBoxIcon className="h-5 w-5" />
+                <span>{showArchived ? 'Show Active' : 'Show Archived'}</span>
+              </button>
+
+              <div className="ml-auto flex items-center gap-3">
+                {!showArchived && unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllAsRead}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium"
+                  >
+                    <CheckIcon className="h-5 w-5" />
+                    <span>Mark All Read</span>
+                  </button>
+                )}
+
+                {!showArchived && readCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleArchiveAllRead}
+                    className="flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground rounded-lg hover:bg-muted transition-colors font-medium"
+                  >
+                    <ArchiveBoxIcon className="h-5 w-5" />
+                    <span>Archive Read</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Filter Options */}
@@ -358,7 +431,7 @@ export default function NotificationsPage() {
                     </label>
                     <select
                       value={filterRead}
-                      onChange={(e) => setFilterRead(e.target.value as any)}
+                      onChange={(e) => setFilterRead(e.target.value as 'all' | 'read' | 'unread')}
                       className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="all">All</option>
@@ -374,7 +447,7 @@ export default function NotificationsPage() {
                     </label>
                     <select
                       value={filterPriority}
-                      onChange={(e) => setFilterPriority(e.target.value as any)}
+                      onChange={(e) => setFilterPriority(e.target.value as NotificationPriority | 'all')}
                       className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="all">All</option>
@@ -392,7 +465,7 @@ export default function NotificationsPage() {
                     </label>
                     <select
                       value={filterType}
-                      onChange={(e) => setFilterType(e.target.value as any)}
+                      onChange={(e) => setFilterType(e.target.value as NotificationType | 'all')}
                       className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="all">All</option>

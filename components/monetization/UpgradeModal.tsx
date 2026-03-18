@@ -16,12 +16,12 @@ export default function UpgradeModal({
   onClose,
   onUpgrade
 }: UpgradeModalProps) {
-  if (!prompt) return null
-
-  const canDismiss = prompt.urgency === 'soft'
+  const canDismiss = prompt?.urgency === 'soft'
 
   // Handle escape key
   useEffect(() => {
+    if (!prompt) return
+
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && canDismiss) {
         onClose()
@@ -37,9 +37,9 @@ export default function UpgradeModal({
       document.removeEventListener('keydown', handleEscape)
       document.body.style.overflow = 'unset'
     }
-  }, [isOpen, canDismiss, onClose])
+  }, [isOpen, canDismiss, onClose, prompt])
 
-  if (!isOpen) return null
+  if (!isOpen || !prompt) return null
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

@@ -31,8 +31,9 @@ export function RecipeWithProductMatching({ recipe, onClose }: RecipeWithProduct
     return { name, quantity, unit }
   })
 
+  const productMatching = useProductMatching(ingredients)
   const { loading, error, result } = showProductMatches
-    ? useProductMatching(ingredients)
+    ? productMatching
     : { loading: false, error: null, result: null }
 
   const handleAddToCart = async (barcode: string, ingredientName: string) => {

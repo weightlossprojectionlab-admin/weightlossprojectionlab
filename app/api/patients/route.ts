@@ -13,6 +13,7 @@ import { patientProfileFormSchema } from '@/lib/validations/medical'
 import type { PatientProfile } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
 import { errorResponse } from '@/lib/api-response'
+import { checkCaregiverEligibility } from '@/lib/caregiver-eligibility'
 
 // GET /api/patients - List all patients for the authenticated user
 export async function GET(request: NextRequest) {
@@ -257,7 +258,6 @@ export async function POST(request: NextRequest) {
     // Determine if this patient should be a caregiver (based on age)
     const caregiverStatus = profileData.type === 'human' && profileData.dateOfBirth
       ? (() => {
-          const { checkCaregiverEligibility } = require('@/lib/caregiver-eligibility')
           const eligibility = checkCaregiverEligibility(profileData.dateOfBirth, false)
           return {
             enabled: eligibility.eligible,

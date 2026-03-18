@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react'
 import { XMarkIcon, ArrowDownTrayIcon, MagnifyingGlassPlusIcon, MagnifyingGlassMinusIcon, DocumentMagnifyingGlassIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
 import { toast } from 'react-hot-toast'
 import { useAuth } from '@/hooks/useAuth'
-import { getCSRFToken, initCSRFProtection } from '@/lib/csrf'
+import { getCSRFToken, initCSRFProtection, rotateCSRFToken } from '@/lib/csrf'
 interface DocumentPreviewModalProps {
   isOpen: boolean
   onClose: () => void
@@ -39,7 +39,6 @@ export default function DocumentPreviewModal({
   useEffect(() => {
     if (isOpen) {
       // Force rotate CSRF token to ensure fresh cookie with correct SameSite settings
-      const { rotateCSRFToken } = require('@/lib/csrf')
       rotateCSRFToken()
       console.log('[Modal] CSRF token rotated on modal open')
     }

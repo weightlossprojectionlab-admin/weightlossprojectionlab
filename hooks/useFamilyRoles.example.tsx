@@ -27,12 +27,12 @@ export function FamilyRolesManager() {
     canUserEditMember
   } = useFamilyRoles({ autoFetch: true })
 
-  if (loading) return <div>Loading family members...</div>
-  if (error) return <div>Error: {error}</div>
-
   const currentUserRole = getCurrentUserRole(familyMembers, user?.uid || '')
   const isAdmin = useIsAdmin(familyMembers, user?.uid || '')
   const hierarchy = getFamilyHierarchy()
+
+  if (loading) return <div>Loading family members...</div>
+  if (error) return <div>Error: {error}</div>
 
   return (
     <div className="space-y-4">

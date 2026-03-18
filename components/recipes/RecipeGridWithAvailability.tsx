@@ -19,8 +19,9 @@ export function RecipeGridWithAvailability({
   const [sortBy, setSortBy] = useState<'default' | 'availability' | 'price'>('default')
 
   // Fetch availability for all recipes
+  const recipeAvailability = useRecipeAvailability(recipes)
   const { availability, loading } = showAvailability
-    ? useRecipeAvailability(recipes)
+    ? recipeAvailability
     : { availability: new Map(), loading: false }
 
   // Filter and sort recipes

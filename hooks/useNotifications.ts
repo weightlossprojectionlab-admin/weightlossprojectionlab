@@ -22,8 +22,7 @@ import {
   updateDoc,
   writeBatch,
   getDocs,
-  getCountFromServer,
-  Timestamp
+  getCountFromServer
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { Notification, NotificationFilter } from '@/types/notifications'
@@ -340,6 +339,10 @@ export function useNotifications(userId: string | undefined) {
         notificationQuery = query(notificationQuery, where('read', '==', filters.read))
       }
 
+      if (filters?.archived !== undefined) {
+        notificationQuery = query(notificationQuery, where('archived', '==', filters.archived))
+      }
+
       if (filters?.priority) {
         const priorities = Array.isArray(filters.priority) ? filters.priority : [filters.priority]
         notificationQuery = query(notificationQuery, where('priority', 'in', priorities))
@@ -443,8 +446,7 @@ export function useNotifications(userId: string | undefined) {
       snapshot.docs.forEach(doc => {
         batch.update(doc.ref, {
           read: true,
-          readAt: now,
-          updatedAt: now
+          readAt: now
         })
       })
 
@@ -459,6 +461,110 @@ export function useNotifications(userId: string | undefined) {
     } catch (error) {
       logger.error('[useNotifications] Error marking all as read:', error as Error)
       toast.error('Failed to mark all as read')
+      throw error
+    }
+  }, [userId])
+
+  /**
+   * Archive notification
+   */
+  const archiveNotification = useCallback(async (notificationId: string): Promise<void> => {
+    if (!userId) return
+
+    try {
+      const notificationRef = doc(db, 'notifications', notificationId)
+      await updateDoc(notificationRef, {
+        archived: true,
+        archivedAt: new Date().toISOString()
+      })
+
+      // Update local state
+      setNotifications(prev =>
+        prev.map(n =>
+          n.id === notificationId
+            ? { ...n, archived: true, archivedAt: new Date().toISOString() }
+            : n
+        )
+      )
+    } catch (error) {
+      logger.error('[useNotifications] Error archiving notification:', error as Error)
+      throw error
+    }
+  }, [userId])
+
+  /**
+   * Unarchive notification
+   */
+  const unarchiveNotification = useCallback(async (notificationId: string): Promise<void> => {
+    if (!userId) return
+
+    try {
+      const notificationRef = doc(db, 'notifications', notificationId)
+      await updateDoc(notificationRef, {
+        archived: false,
+        archivedAt: new Date().toISOString()
+      })
+
+      // Update local state
+      setNotifications(prev =>
+        prev.map(n =>
+          n.id === notificationId
+            ? { ...n, archived: false, archivedAt: new Date().toISOString() }
+            : n
+        )
+      )
+    } catch (error) {
+      logger.error('[useNotifications] Error unarchiving notification:', error as Error)
+      throw error
+    }
+  }, [userId])
+
+  /**
+   * Archive all read notifications
+   */
+  const archiveAllRead = useCallback(async (): Promise<void> => {
+    if (!userId) return
+
+    try {
+      const readQuery = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+        where('read', '==', true),
+        where('archived', '==', false)
+      )
+
+      const snapshot = await getDocs(readQuery)
+
+      if (snapshot.empty) {
+        toast('No read notifications to archive')
+        return
+      }
+
+      const batch = writeBatch(db)
+      const now = new Date().toISOString()
+
+      snapshot.docs.forEach(doc => {
+        batch.update(doc.ref, {
+          archived: true,
+          archivedAt: now
+        })
+      })
+
+      await batch.commit()
+
+      // Update local state
+      setNotifications(prev =>
+        prev.map(n =>
+          n.read && !n.archived
+            ? { ...n, archived: true, archivedAt: now }
+            : n
+        )
+      )
+
+      toast.success(`Archived ${snapshot.size} notifications`)
+    } catch (error) {
+      logger.error('[useNotifications] Error archiving all read notifications:', error as Error)
+      toast.error('Failed to archive notifications')
       throw error
     }
   }, [userId])
@@ -507,6 +613,9 @@ export function useNotifications(userId: string | undefined) {
     getUnreadCount,
     markAsRead,
     markAllAsRead,
+    archiveNotification,
+    unarchiveNotification,
+    archiveAllRead,
     subscribeToNotifications
   }
 }

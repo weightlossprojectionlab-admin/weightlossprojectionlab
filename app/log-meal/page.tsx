@@ -1474,7 +1474,7 @@ function LogMealContent() {
     }
   }
 
-  const useTemplate = async (template: MealTemplate) => {
+  const applyTemplate = async (template: MealTemplate) => {
     setUsingTemplateId(template.id)
     try {
       // Record template usage
@@ -2002,7 +2002,7 @@ function LogMealContent() {
                         </p>
                       </div>
                       <button
-                        onClick={() => useTemplate(template)}
+                        onClick={() => applyTemplate(template)}
                         disabled={usingTemplateId === template.id}
                         className={`w-full bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-hover inline-flex items-center justify-center space-x-2 ${usingTemplateId === template.id ? 'cursor-wait opacity-60' : ''}`}
                       >

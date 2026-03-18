@@ -39,24 +39,6 @@ export function AIHealthReport({
   const [lightboxImage, setLightboxImage] = useState<{ url: string; alt: string } | null>(null)
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
 
-  // Feature gate check
-  const hasAccess = canAccessFeature(user as any, 'health-reports')
-
-  // Show upgrade prompt if no access
-  if (!hasAccess) {
-    return (
-      <UpgradePrompt
-        feature="health-reports"
-        featureName="Unlock AI Health Reports"
-        icon="🏥"
-        message="Get comprehensive health analysis and insights. Available on Single Plus or higher plans."
-        suggestedPlan="single_plus"
-        size="lg"
-        variant="card"
-      />
-    )
-  }
-
   const generateReport = async () => {
     try {
       setGenerating(true)
@@ -304,6 +286,24 @@ export function AIHealthReport({
       toast.error('Failed to copy report')
     })
   }, [report])
+
+  // Feature gate check
+  const hasAccess = canAccessFeature(user as any, 'health-reports')
+
+  // Show upgrade prompt if no access
+  if (!hasAccess) {
+    return (
+      <UpgradePrompt
+        feature="health-reports"
+        featureName="Unlock AI Health Reports"
+        icon="🏥"
+        message="Get comprehensive health analysis and insights. Available on Single Plus or higher plans."
+        suggestedPlan="single_plus"
+        size="lg"
+        variant="card"
+      />
+    )
+  }
 
   return (
     <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-700 p-6">

@@ -86,7 +86,7 @@ export function parseAAMVA(rawData: string): AAMVAData | null {
     for (const [code, fieldName] of Object.entries(AAMVA_ELEMENTS)) {
       const value = extractElement(rawData, code)
       if (value) {
-        // @ts-ignore - Dynamic field assignment
+        // @ts-expect-error - Dynamic field assignment from AAMVA elements
         result[fieldName] = value
       }
     }

@@ -18,6 +18,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 import { useAppointments } from '@/hooks/useAppointments'
 import { usePatients } from '@/hooks/usePatients'
@@ -177,7 +178,7 @@ export function AppointmentForm({
           </select>
           {patients.length === 0 && (
             <p className="text-sm text-muted-foreground mt-1">
-              No patients found. <a href="/patients/new" className="text-primary hover:underline">Add a patient first</a>
+              No patients found. <Link href="/patients/new" className="text-primary hover:underline">Add a patient first</Link>
             </p>
           )}
         </div>
@@ -202,7 +203,7 @@ export function AppointmentForm({
         </select>
         {providers.length === 0 && (
           <p className="text-sm text-muted-foreground mt-1">
-            No providers found. <a href="/providers/new" className="text-primary hover:underline">You can add one</a> or leave blank.
+            No providers found. <Link href="/providers/new" className="text-primary hover:underline">You can add one</Link> or leave blank.
           </p>
         )}
       </div>

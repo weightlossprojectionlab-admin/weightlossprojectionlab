@@ -14,9 +14,8 @@ import { useAuth } from './useAuth'
 import { useSubscription } from './useSubscription'
 import { User } from '@/types'
 
-export interface UserWithSubscription extends User {
-  // Subscription is already typed in User, but we ensure it's always present
-}
+// Type alias for User with subscription (subscription is already typed in User)
+export type UserWithSubscription = User
 
 /**
  * Get the current user with merged subscription data

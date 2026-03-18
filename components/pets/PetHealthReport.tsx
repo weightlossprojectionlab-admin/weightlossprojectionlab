@@ -41,24 +41,6 @@ export function PetHealthReport({
   const [lightboxImage, setLightboxImage] = useState<{ url: string; alt: string } | null>(null)
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
 
-  // Feature gate check
-  const hasAccess = canAccessFeature(user as any, 'pet-health-reports')
-
-  // Show upgrade prompt if no access
-  if (!hasAccess) {
-    return (
-      <UpgradePrompt
-        feature="pet-health-reports"
-        featureName="Unlock Pet Health Reports"
-        icon="🐾"
-        message="Get veterinary-grade health analysis for your pets. Available on Family Basic or higher plans."
-        suggestedPlan="family_basic"
-        size="lg"
-        variant="card"
-      />
-    )
-  }
-
   const generateReport = async () => {
     try {
       setGenerating(true)
@@ -308,6 +290,24 @@ export function PetHealthReport({
       toast.error('Failed to copy report')
     })
   }, [report])
+
+  // Feature gate check
+  const hasAccess = canAccessFeature(user as any, 'pet-health-reports')
+
+  // Show upgrade prompt if no access
+  if (!hasAccess) {
+    return (
+      <UpgradePrompt
+        feature="pet-health-reports"
+        featureName="Unlock Pet Health Reports"
+        icon="🐾"
+        message="Get veterinary-grade health analysis for your pets. Available on Family Basic or higher plans."
+        suggestedPlan="family_basic"
+        size="lg"
+        variant="card"
+      />
+    )
+  }
 
   return (
     <div className="bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-lg border-2 border-emerald-200 dark:border-emerald-700 p-6">

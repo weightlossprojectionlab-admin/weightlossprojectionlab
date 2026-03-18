@@ -252,6 +252,8 @@ export interface Notification {
   // Delivery tracking
   read: boolean
   readAt?: string // ISO 8601
+  archived: boolean
+  archivedAt?: string // ISO 8601
   emailSent: boolean
   emailSentAt?: string // ISO 8601
   pushSent: boolean
@@ -421,6 +423,7 @@ export interface NotificationFilter {
   type?: NotificationType | NotificationType[]
   priority?: NotificationPriority | NotificationPriority[]
   read?: boolean
+  archived?: boolean
   startDate?: string // ISO 8601
   endDate?: string // ISO 8601
   limit?: number

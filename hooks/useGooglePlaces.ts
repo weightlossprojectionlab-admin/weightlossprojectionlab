@@ -19,8 +19,11 @@ declare global {
   interface Window {
     google: any
   }
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace google {
+    // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace maps {
+      // eslint-disable-next-line @typescript-eslint/no-namespace
       namespace places {
         interface PlaceResult {
           address_components?: any[]

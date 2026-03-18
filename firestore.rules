@@ -1287,12 +1287,12 @@ service cloud.firestore {
       // Create: Server-side only (via API with Admin SDK)
       allow create: if false;
 
-      // Update: Users can mark their own notifications as read
+      // Update: Users can mark their own notifications as read or archived
       allow update: if isAuthenticated() &&
                       resource.data.userId == request.auth.uid &&
                       request.resource.data.userId == resource.data.userId &&
-                      // Only allow updating the 'read' field
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']);
+                      // Only allow updating the 'read', 'readAt', 'archived', and 'archivedAt' fields
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt', 'archived', 'archivedAt']);
 
       // Delete: Server-side only
       allow delete: if false;
@@ -1557,6 +1557,86 @@ service cloud.firestore {
 
       // Delete: Admin-only
       allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // HOUSEHOLD DUTIES
+    // ============================================
+
+    // Helper: Check if user is the duty creator or an assigned caregiver
+    function canAccessDuty(dutyData) {
+      return isAuthenticated() &&
+             (dutyData.userId == request.auth.uid ||
+              dutyData.assignedTo.hasAny([request.auth.uid]));
+    }
+
+    // Helper: Check if user is the duty creator
+    function isDutyCreator(dutyData) {
+      return isAuthenticated() && dutyData.userId == request.auth.uid;
+    }
+
+    // Household duties (top-level collection, keyed by duty ID)
+    match /household_duties/{dutyId} {
+      // Read: Creator or assigned caregivers can read
+      allow read: if canAccessDuty(resource.data);
+
+      // Create: Authenticated users can create duties for their households
+      allow create: if isAuthenticated() &&
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.householdId is string &&
+                      request.resource.data.name is string &&
+                      request.resource.data.assignedTo is list;
+
+      // Update: Creator can update; assigned caregivers can only update status/completion fields
+      allow update: if isDutyCreator(resource.data) ||
+                      (canAccessDuty(resource.data) &&
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'lastCompletedAt', 'lastCompletedBy',
+                                   'completionCount', 'lastModified', 'nextDueDate']));
+
+      // Delete: Creator only
+      allow delete: if isDutyCreator(resource.data);
+    }
+
+    // Duty completions (top-level collection)
+    match /duty_completions/{completionId} {
+      // Read: Duty creator or assigned caregiver (look up the parent duty)
+      allow read: if isAuthenticated() &&
+                     (resource.data.completedBy == request.auth.uid ||
+                      exists(/databases/$(database)/documents/household_duties/$(resource.data.dutyId)) &&
+                      canAccessDuty(get(/databases/$(database)/documents/household_duties/$(resource.data.dutyId)).data));
+
+      // Create: Assigned caregivers or duty creator can log completions
+      allow create: if isAuthenticated() &&
+                      request.resource.data.completedBy == request.auth.uid &&
+                      request.resource.data.dutyId is string;
+
+      // Update/Delete: Not allowed (completions are immutable)
+      allow update, delete: if false;
+    }
+
+    // Action items (tasks in caregiver task list)
+    match /action_items/{itemId} {
+      // Read: Item belongs to this user
+      allow read: if isAuthenticated() &&
+                     resource.data.userId == request.auth.uid;
+
+      // Create: Server-side only (Admin SDK in API routes)
+      allow create: if false;
+
+      // Update: User can mark their own items complete
+      allow update: if isAuthenticated() &&
+                      resource.data.userId == request.auth.uid &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['completed', 'completedAt', 'completedBy', 'lastModified']);
+
+      // Delete: Server-side only
+      allow delete: if false;
+    }
+
+    // Scheduled notifications (internal duty scheduler — server-side only)
+    match /scheduled_notifications/{notifId} {
+      allow read, write: if false; // Admin SDK only
     }
 
     // ============================================
