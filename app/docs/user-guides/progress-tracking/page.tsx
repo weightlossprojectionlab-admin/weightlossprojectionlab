@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function ProgressTrackingPage() {
   return (
     <GuideTemplate
+      appRoute="/progress"
       title="Progress Tracking"
       description="Monitor your health journey with comprehensive charts, statistics, and insights"
     >

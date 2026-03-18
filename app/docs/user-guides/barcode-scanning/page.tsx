@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function BarcodeScanningPage() {
   return (
     <GuideTemplate
+      appRoute="/log-meal"
       title="Barcode Scanning"
       description="Scan product barcodes for instant nutrition information"
     >

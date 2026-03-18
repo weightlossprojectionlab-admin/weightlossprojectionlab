@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function PatientProfilesPage() {
   return (
     <GuideTemplate
+      appRoute="/patients"
       title="Patient Profiles"
       description="Set up detailed patient profiles with medical history, medications, and providers"
     >

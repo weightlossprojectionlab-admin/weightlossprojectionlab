@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function FamilySetupPage() {
   return (
     <GuideTemplate
+      appRoute="/family/dashboard"
       title="Family Account Setup"
       description="Create and manage family members, set up patient profiles, and control access"
     >

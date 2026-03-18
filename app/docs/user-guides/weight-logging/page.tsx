@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function WeightLoggingPage() {
   return (
     <GuideTemplate
+      appRoute="/log-weight"
       title="Weight Logging"
       description="Track weight changes over time with visual charts and trend analysis"
     >

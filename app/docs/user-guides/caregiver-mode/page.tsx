@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function CaregiverModePage() {
   return (
     <GuideTemplate
+      appRoute="/family/dashboard"
       title="Caregiver Mode"
       description="Learn how to manage health data for loved ones as a caregiver"
     >

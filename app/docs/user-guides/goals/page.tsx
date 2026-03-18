@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function GoalsPage() {
   return (
     <GuideTemplate
+      appRoute="/profile"
       title="Goal Setting"
       description="Set realistic health goals and track your progress towards achieving them"
     >

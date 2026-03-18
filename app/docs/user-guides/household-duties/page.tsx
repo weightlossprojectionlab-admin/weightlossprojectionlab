@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function HouseholdDutiesPage() {
   return (
     <GuideTemplate
+      appRoute="/family/dashboard?tab=duties"
       title="Household Duties"
       description="Manage and assign household tasks like laundry, shopping, and cleaning"
     >

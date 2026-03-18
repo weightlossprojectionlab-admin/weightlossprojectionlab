@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function ShoppingPage() {
   return (
     <GuideTemplate
+      appRoute="/shopping"
       title="Shopping Lists"
       description="Create and manage shopping lists with smart suggestions"
     >

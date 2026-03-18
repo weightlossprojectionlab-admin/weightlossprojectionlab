@@ -5,10 +5,11 @@ import { ReactNode } from 'react'
 interface GuideTemplateProps {
   title: string
   description: string
+  appRoute?: string
   children: ReactNode
 }
 
-export function GuideTemplate({ title, description, children }: GuideTemplateProps) {
+export function GuideTemplate({ title, description, appRoute, children }: GuideTemplateProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -27,6 +28,17 @@ export function GuideTemplate({ title, description, children }: GuideTemplatePro
         <div className="mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">{title}</h1>
           <p className="text-xl text-gray-600">{description}</p>
+          {appRoute && (
+            <Link
+              href={appRoute}
+              className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Open in App
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          )}
         </div>
 
         {/* Content */}

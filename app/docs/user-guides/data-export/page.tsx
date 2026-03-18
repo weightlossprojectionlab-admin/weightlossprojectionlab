@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function DataExportPage() {
   return (
     <GuideTemplate
+      appRoute="/profile"
       title="Data Export"
       description="Download your complete health data for portability and backups"
     >

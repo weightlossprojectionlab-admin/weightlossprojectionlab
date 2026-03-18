@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function RecipesPage() {
   return (
     <GuideTemplate
+      appRoute="/recipes"
       title="Recipes & Meal Planning"
       description="Browse recipes and plan meals for your health journey"
     >

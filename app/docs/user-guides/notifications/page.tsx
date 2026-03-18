@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function NotificationsPage() {
   return (
     <GuideTemplate
+      appRoute="/notifications"
       title="Notifications"
       description="Manage reminders, alerts, and notification preferences"
     >
