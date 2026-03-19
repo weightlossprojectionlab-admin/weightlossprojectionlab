@@ -25,32 +25,32 @@ export function RecommendationCard({
         return {
           border: 'border-red-500',
           bg: 'bg-error-light dark:bg-red-900/10',
-          text: 'text-error-dark dark:text-red-300',
-          badge: 'bg-red-100 dark:bg-red-900/30 text-error-dark dark:text-red-300',
+          text: 'text-error-dark dark:text-red-400',
+          badge: 'bg-red-100 dark:bg-red-900/30 text-error-dark dark:text-red-400',
           button: 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-lg shadow-red-500/30'
         }
       case 'high':
         return {
           border: 'border-orange-500',
           bg: 'bg-orange-50 dark:bg-orange-900/10',
-          text: 'text-orange-700 dark:text-orange-300',
-          badge: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
+          text: 'text-orange-700 dark:text-orange-400',
+          badge: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
           button: 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 shadow-md shadow-orange-500/20'
         }
       case 'medium':
         return {
           border: 'border-yellow-500',
           bg: 'bg-warning-light dark:bg-yellow-900/10',
-          text: 'text-yellow-700 dark:text-yellow-300',
-          badge: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
+          text: 'text-yellow-700 dark:text-yellow-400',
+          badge: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
           button: 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800'
         }
       default:
         return {
           border: 'border-blue-500',
           bg: 'bg-secondary-light dark:bg-blue-900/10',
-          text: 'text-blue-700 dark:text-blue-300',
-          badge: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+          text: 'text-blue-700 dark:text-blue-400',
+          badge: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
           button: 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
         }
     }

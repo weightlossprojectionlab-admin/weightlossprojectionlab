@@ -87,7 +87,7 @@ export function OperatorsManualDrawer({ isOpen, onClose }: OperatorsManualDrawer
           <div className="flex items-center gap-2">
             <BookOpenIcon className="w-5 h-5 text-primary" />
             <span className="font-bold text-lg">Operators Manual</span>
-            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs font-semibold rounded-full">Internal</span>
+            <span className="px-2 py-0.5 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 text-xs font-semibold rounded-full">Internal</span>
           </div>
           <div className="flex items-center gap-3">
             <Link
@@ -135,13 +135,13 @@ export function OperatorsManualDrawer({ isOpen, onClose }: OperatorsManualDrawer
               <p>The <strong className="text-foreground">WPL Admin Panel</strong> is accessible only to users with an <code className="bg-muted px-1 rounded">admin</code>, <code className="bg-muted px-1 rounded">moderator</code>, or <code className="bg-muted px-1 rounded">support</code> role in Firestore.</p>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { role: 'Admin', color: 'purple', desc: 'Full access' },
-                  { role: 'Moderator', color: 'blue', desc: 'Content & cases' },
-                  { role: 'Support', color: 'green', desc: 'View & export' },
+                  { role: 'Admin', desc: 'Full access', card: 'bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-500/50', title: 'text-purple-900 dark:text-purple-300', sub: 'text-purple-700 dark:text-purple-400' },
+                  { role: 'Moderator', desc: 'Content & cases', card: 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-500/50', title: 'text-blue-900 dark:text-blue-300', sub: 'text-blue-700 dark:text-blue-400' },
+                  { role: 'Support', desc: 'View & export', card: 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-500/50', title: 'text-green-900 dark:text-green-300', sub: 'text-green-700 dark:text-green-400' },
                 ].map((r) => (
-                  <div key={r.role} className={`bg-${r.color}-50 border border-${r.color}-200 rounded-lg p-2.5`}>
-                    <div className={`font-semibold text-${r.color}-900 text-xs mb-0.5`}>{r.role}</div>
-                    <div className={`text-${r.color}-700 text-xs`}>{r.desc}</div>
+                  <div key={r.role} className={`${r.card} border rounded-lg p-2.5`}>
+                    <div className={`font-semibold ${r.title} text-xs mb-0.5`}>{r.role}</div>
+                    <div className={`${r.sub} text-xs`}>{r.desc}</div>
                   </div>
                 ))}
               </div>

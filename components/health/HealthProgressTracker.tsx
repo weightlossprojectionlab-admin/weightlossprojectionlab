@@ -132,10 +132,10 @@ export function HealthProgressTracker({
                   <span
                     className={`px-2 py-1 rounded text-xs font-semibold ${
                       vital.color === 'green'
-                        ? 'bg-green-100 text-green-800'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                         : vital.color === 'red'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                     }`}
                   >
                     {vital.improved ? 'Improved' : vital.trend === 'worsened' ? 'Worsened' : 'Stable'}

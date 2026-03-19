@@ -1631,8 +1631,8 @@ export default function FamilyMemberOnboardingWizard() {
                 key={i}
                 className={`p-3 rounded-xl text-sm ${
                   notice.type === 'warning'
-                    ? 'bg-red-500/20 border border-red-500/50 text-red-200'
-                    : 'bg-blue-500/20 border border-blue-500/50 text-blue-200'
+                    ? 'bg-red-500/20 border border-red-500/50 text-red-800 dark:text-red-200'
+                    : 'bg-blue-500/20 border border-blue-500/50 text-blue-800 dark:text-blue-200'
                 }`}
               >
                 {notice.message}

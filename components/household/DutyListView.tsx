@@ -199,28 +199,28 @@ export function DutyListView({
   const getPriorityColor = (priority: DutyPriority) => {
     switch (priority) {
       case 'urgent':
-        return 'bg-red-100 text-red-800 border-red-300'
+        return 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-500/50'
       case 'high':
-        return 'bg-orange-100 text-orange-800 border-orange-300'
+        return 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-500/50'
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300'
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-500/50'
       case 'low':
-        return 'bg-blue-100 text-blue-800 border-blue-300'
+        return 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-500/50'
     }
   }
 
   const getStatusColor = (status: DutyStatus) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800'
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
       case 'in_progress':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
       case 'pending':
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
       case 'overdue':
-        return 'bg-red-100 text-red-800'
+        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
       case 'skipped':
-        return 'bg-orange-100 text-orange-800'
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
     }
   }
 
