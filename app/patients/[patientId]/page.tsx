@@ -41,6 +41,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import TextConfirmModal from '@/components/ui/TextConfirmModal'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
 import EpisodeList from '@/components/health/EpisodeList'
+import EpisodeSummaryWidget from '@/components/health/EpisodeSummaryWidget'
 import { ChartBarIcon, ShieldCheckIcon, ChevronDownIcon, ChevronUpIcon, ScaleIcon, CameraIcon, FireIcon, StarIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -1617,6 +1618,13 @@ function PatientDetailContent() {
                 stepsData={stepsData || []}
               />
             )}
+
+            {/* Episode Summary Widget */}
+            <EpisodeSummaryWidget
+              patientId={patientId}
+              patient={patient}
+              onViewAll={() => setActiveTab('episodes')}
+            />
 
             <div className="bg-card rounded-lg shadow-sm p-6">
               <h2 className="text-lg font-bold text-foreground mb-4">
