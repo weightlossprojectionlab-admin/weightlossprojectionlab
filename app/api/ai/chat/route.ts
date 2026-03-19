@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { adminAuth } from '@/lib/firebase-admin'
+import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { checkAndIncrementUsage } from '@/lib/usage-tracking'
 import {
   fetchUserContext,
   buildContextPrompt,
@@ -70,6 +71,23 @@ export async function POST(request: NextRequest) {
           status: 429,
           headers: getRateLimitHeaders(dayLimit)
         }
+      )
+    }
+
+    // Check plan-based daily chat limit
+    const userDoc = await adminDb.collection('users').doc(userId).get()
+    const plan: string = userDoc.data()?.subscription?.plan ?? 'free'
+    const usage = await checkAndIncrementUsage(userId, 'aiChatMessages', plan)
+    if (!usage.allowed) {
+      return NextResponse.json(
+        {
+          error: `Daily AI chat limit reached (${usage.limit} messages/day on ${plan} plan). Upgrade for more.`,
+          used: usage.used,
+          limit: usage.limit,
+          upgradeRequired: true,
+          code: 'CHAT_LIMIT_REACHED'
+        },
+        { status: 429 }
       )
     }
 

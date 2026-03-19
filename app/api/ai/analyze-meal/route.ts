@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger'
 import { aiRateLimit, dailyRateLimit } from '@/lib/utils/rate-limit'
 import { ErrorHandler } from '@/lib/utils/error-handler'
 import { analyzeMealImage } from '@/lib/ai-vision-service'
+import { incrementUsageOnly } from '@/lib/usage-tracking'
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,6 +77,8 @@ export async function POST(request: NextRequest) {
         plan: subscription.plan,
         status: subscription.status
       })
+      // Track usage for analytics (paid plans are unlimited; this is for reporting)
+      void incrementUsageOnly(userId, 'aiMealScans')
     } catch (subError) {
       logger.error('❌ Subscription check failed', subError instanceof Error ? subError : new Error(String(subError)))
       ErrorHandler.handle(subError, {
