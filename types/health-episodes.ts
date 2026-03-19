@@ -8,7 +8,16 @@
  * but NEVER shown in UI. Only pets get visual "Pet" indicators in the interface.
  */
 
-export type EpisodeType = 'illness' | 'injury'
+export type EpisodeType =
+  | 'illness'        // Fever, cold, flu, stomach bug
+  | 'injury'         // Broken limb, wound, sprain
+  | 'chronic_flare'  // Asthma, eczema, allergic reaction episode
+  | 'abuse_concern'  // Sensitive — timestamped injury documentation for legal/police/insurance
+  | 'end_of_life'    // Memorial/final care documentation (people & pets)
+
+export type EpisodeSensitivity = 'standard' | 'sensitive'
+
+export type ReportableType = 'police' | 'insurance' | 'cps' | 'adult_protective_services'
 
 export type EpisodeStatus =
   | 'onset'       // Just started, initial symptoms
@@ -16,14 +25,18 @@ export type EpisodeStatus =
   | 'improving'   // Getting better, symptoms reducing
   | 'recovered'   // Fully recovered
   | 'worsened'    // Condition deteriorated, may need medical attention
+  | 'monitoring'  // Ongoing observation — chronic flare or end-of-life care
 
 export type TreatmentType =
-  | 'medication'   // Prescription or OTC medication
-  | 'therapy'      // Physical therapy, occupational therapy
-  | 'rest'         // Bed rest, restricted activity
-  | 'diet_change'  // Dietary modifications
-  | 'vet_visit'    // Veterinary appointment (pets)
-  | 'doctor_visit' // Medical appointment (humans)
+  | 'medication'       // Prescription or OTC medication
+  | 'therapy'          // Physical therapy, occupational therapy
+  | 'rest'             // Bed rest, restricted activity
+  | 'diet_change'      // Dietary modifications
+  | 'vet_visit'        // Veterinary appointment (pets)
+  | 'doctor_visit'     // Medical appointment (humans)
+  | 'emergency_visit'  // ER or urgent care visit
+  | 'hospice'          // End-of-life / palliative care
+  | 'legal_report'     // Police report, CPS, or insurance claim filed
 
 /**
  * HealthEpisode - Main episode tracking entity
@@ -65,9 +78,18 @@ export interface HealthEpisode {
   lastUpdatedBy?: string // userId of last person to update
   lastUpdatedAt: string // ISO 8601
 
+  // Access control
+  sensitivity: EpisodeSensitivity // 'standard' | 'sensitive' — abuse_concern/end_of_life default to 'sensitive'
+
+  // Legal / insurance documentation
+  reportableType?: ReportableType // Type of report this documents
+  exportedAt?: string  // ISO 8601 — when a legal/insurance report was last exported
+  exportedBy?: string  // userId who exported
+
   // Summary counts (denormalized for quick display)
   activeSymptomCount?: number // Number of unresolved symptoms
   totalMilestones?: number // Number of milestones achieved
+  photoCount?: number // Number of progress photos
 }
 
 /**

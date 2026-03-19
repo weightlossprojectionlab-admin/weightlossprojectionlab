@@ -40,6 +40,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import TextConfirmModal from '@/components/ui/TextConfirmModal'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
+import EpisodeList from '@/components/health/EpisodeList'
 import { ChartBarIcon, ShieldCheckIcon, ChevronDownIcon, ChevronUpIcon, ScaleIcon, CameraIcon, FireIcon, StarIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -128,7 +129,7 @@ function PatientDetailContent() {
   const [medications, setMedications] = useState<PatientMedication[]>([])
   const [loadingMedications, setLoadingMedications] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
-  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'settings' | 'feeding' | 'activity' | 'grooming'>(tabParam || 'vitals')
+  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'episodes' | 'settings' | 'feeding' | 'activity' | 'grooming'>(tabParam || 'vitals')
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
   const [showQuickWeightModal, setShowQuickWeightModal] = useState(false)
   const [showVitalsWizard, setShowVitalsWizard] = useState(false)
@@ -956,6 +957,17 @@ function PatientDetailContent() {
                     📅 Appointments
                   </button>
                 )}
+                <button
+                  onClick={() => setActiveTab('episodes')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === 'episodes'
+                      ? 'bg-primary text-white'
+                      : 'bg-card border border-border text-foreground'
+                  }`}
+                >
+                  🩹 Episodes
+                </button>
+
                 {visibleTabs.includes('recipes') && (
                   <button
                     onClick={() => setActiveTab('recipes')}
@@ -1571,6 +1583,13 @@ function PatientDetailContent() {
                 </h2>
                 <AppointmentList patientId={patientId} />
               </div>
+            </div>
+          )}
+
+          {/* Episodes Tab */}
+          {activeTab === 'episodes' && patient && (
+            <div className="bg-card rounded-lg shadow-sm p-6">
+              <EpisodeList patientId={patientId} patient={patient} />
             </div>
           )}
 

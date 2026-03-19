@@ -394,6 +394,30 @@ service cloud.firestore {
           // Delete: Patient owner only (only owner can delete reports)
           allow delete: if isOwner(userId);
         }
+
+        // Health Episodes (illness, injury, chronic flare, abuse concern, end of life)
+        match /health-episodes/{episodeId} {
+          // Standard episodes: owner OR caregiver with viewMedicalRecords
+          // Sensitive episodes (abuse_concern, end_of_life): owner only
+          allow read: if isOwner(userId) ||
+                      (hasFamilyPermission('viewMedicalRecords') &&
+                       resource.data.sensitivity == 'standard');
+
+          allow create: if isOwner(userId) &&
+                        request.resource.data.patientId == patientId &&
+                        request.resource.data.createdBy == request.auth.uid;
+
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+
+          // Subcollections (symptoms, treatments, milestones, photos)
+          match /{subcollection}/{docId} {
+            allow read: if isOwner(userId) ||
+                        (hasFamilyPermission('viewMedicalRecords') &&
+                         get(/databases/$(database)/documents/users/$(userId)/patients/$(patientId)/health-episodes/$(episodeId)).data.sensitivity == 'standard');
+            allow write: if isOwner(userId);
+          }
+        }
       }
 
       // ============================================

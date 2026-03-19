@@ -75,6 +75,15 @@ service firebase.storage {
       allow delete: if isOwner(userId);
     }
 
+    // Health episode photos (progress, injury recovery, abuse documentation)
+    match /health-episodes/{userId}/{patientId}/{episodeId}/{imageId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) &&
+                     request.resource.size < 20 * 1024 * 1024 &&
+                     request.resource.contentType.matches('image/.*');
+      allow delete: if isOwner(userId);
+    }
+
     // Job application resumes
     match /resumes/{applicationId}/{fileName} {
       allow read: if isAuthenticated(); // Admins and applicants can read

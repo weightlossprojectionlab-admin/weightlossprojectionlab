@@ -37,11 +37,12 @@ export interface CreateEpisodeData {
   startDate: string
   startTime?: string // Exact time in HH:MM format
   approximateStartTime?: 'morning' | 'afternoon' | 'evening' | 'night' // Approximate time if exact unknown
-  status: 'onset' | 'active'
+  status: 'onset' | 'active' | 'monitoring'
   initialSymptoms: Omit<HealthSymptom, 'id' | 'episodeId' | 'patientId' | 'createdAt' | 'lastUpdatedAt'>[]
   initialPhotos?: { file: File; caption?: string }[] // Up to 4 photos with captions
   providerName?: string
   diagnosis?: string
+  reportableType?: 'police' | 'insurance' | 'cps' | 'adult_protective_services'
 }
 
 interface SymptomInput {
@@ -68,6 +69,7 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
   const [initialPhotos, setInitialPhotos] = useState<{ file: File; caption: string; preview: string }[]>([]) // Max 4 photos
   const [providerName, setProviderName] = useState('')
   const [diagnosis, setDiagnosis] = useState('')
+  const [reportableType, setReportableType] = useState<CreateEpisodeData['reportableType']>(undefined)
 
   // Get selected patient
   const selectedPatient = useMemo(
@@ -195,6 +197,7 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
         initialPhotos: initialPhotos.map(p => ({ file: p.file, caption: p.caption || undefined })),
         providerName: providerName.trim() || undefined,
         diagnosis: diagnosis.trim() || undefined,
+        reportableType,
       }
 
       await onSubmit(episodeData)
@@ -318,29 +321,35 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
                   Type *
                 </label>
                 <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setEpisodeType('illness')}
-                    className={`px-4 py-3 rounded-lg border-2 transition-colors ${
-                      episodeType === 'illness'
-                        ? 'border-primary bg-primary/5 text-foreground'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    🤒 Illness
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEpisodeType('injury')}
-                    className={`px-4 py-3 rounded-lg border-2 transition-colors ${
-                      episodeType === 'injury'
-                        ? 'border-primary bg-primary/5 text-foreground'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    🤕 Injury
-                  </button>
+                  {([
+                    { value: 'illness',       label: '🤒 Illness',       desc: 'Fever, cold, flu, stomach bug' },
+                    { value: 'injury',        label: '🩹 Injury',        desc: 'Broken limb, wound, sprain' },
+                    { value: 'chronic_flare', label: '🔄 Flare-up',      desc: 'Asthma, eczema, allergy episode' },
+                    { value: 'abuse_concern', label: '🔒 Concern',       desc: 'Injury documentation (private)' },
+                    { value: 'end_of_life',   label: '🕊️ End of Life',  desc: 'Final care documentation' },
+                  ] as const).map(({ value, label, desc }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setEpisodeType(value as EpisodeType)}
+                      className={`px-4 py-3 rounded-lg border-2 transition-colors text-left ${
+                        episodeType === value
+                          ? 'border-primary bg-primary/5 text-foreground'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="font-medium text-sm">{label}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{desc}</div>
+                    </button>
+                  ))}
                 </div>
+
+                {/* Sensitivity warning for sensitive types */}
+                {(episodeType === 'abuse_concern' || episodeType === 'end_of_life') && (
+                  <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                    🔒 <span>This episode will be <strong>private</strong> — visible only to the account owner, not shared caregivers.</span>
+                  </div>
+                )}
               </div>
 
               {/* Title with Common Suggestions */}
@@ -747,6 +756,26 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
                   className="w-full px-4 py-3 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
+
+              {/* Reportable type for abuse/concern episodes */}
+              {episodeType === 'abuse_concern' && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Report Type (Optional)
+                  </label>
+                  <select
+                    value={reportableType || ''}
+                    onChange={e => setReportableType(e.target.value as CreateEpisodeData['reportableType'] || undefined)}
+                    className="w-full px-4 py-3 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="">Not specified</option>
+                    <option value="police">Police Report</option>
+                    <option value="insurance">Insurance Claim</option>
+                    <option value="cps">Child Protective Services (CPS)</option>
+                    <option value="adult_protective_services">Adult Protective Services</option>
+                  </select>
+                </div>
+              )}
 
               {/* Summary */}
               <div className="bg-muted rounded-lg p-4 mt-6">
