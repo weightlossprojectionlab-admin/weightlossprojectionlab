@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { db } from '@/lib/firebase'
+import { collection, onSnapshot } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
+import { getAdminAuthToken } from '@/lib/admin/api'
 import { logger } from '@/lib/logger'
-import { auth } from '@/lib/firebase'
 import { getCSRFToken } from '@/lib/csrf'
 import {
   MagnifyingGlassIcon,
@@ -16,6 +18,7 @@ import {
   TrashIcon,
   ChartBarIcon,
 } from '@heroicons/react/24/outline'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 interface UserRecord {
   uid: string
@@ -56,18 +59,10 @@ export default function AdminUsersPage() {
   const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined)
   const [hasMore, setHasMore] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<{ uid: string; email: string } | null>(null)
 
   // Ref for intersection observer
   const observerTarget = useRef<HTMLDivElement>(null)
-
-  // Helper to get auth token
-  const getAuthToken = async () => {
-    const user = auth.currentUser
-    if (!user) {
-      throw new Error('User not authenticated')
-    }
-    return await user.getIdToken()
-  }
 
   // Handler for viewing user analytics
   const handleViewUserAnalytics = (user: UserRecord) => {
@@ -89,7 +84,7 @@ export default function AdminUsersPage() {
     setError(null)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const params = new URLSearchParams()
       params.set('limit', '50')
@@ -138,7 +133,7 @@ export default function AdminUsersPage() {
     setError(null)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users?q=${encodeURIComponent(searchQuery)}`, {
         headers: {
@@ -206,11 +201,10 @@ export default function AdminUsersPage() {
 
   const handleSuspend = async (uid: string) => {
     if (!permissions.canSuspendUsers) return
-    if (!confirm('Are you sure you want to suspend this user?')) return
 
     setActionLoading(true)
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
@@ -246,7 +240,7 @@ export default function AdminUsersPage() {
 
     setActionLoading(true)
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
@@ -282,7 +276,7 @@ export default function AdminUsersPage() {
 
     setActionLoading(true)
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users/export?uid=${uid}`, {
         headers: {
@@ -311,19 +305,18 @@ export default function AdminUsersPage() {
     }
   }
 
-  const handleDelete = async (uid: string, email: string) => {
+  const handleDeleteClick = (uid: string, email: string) => {
     if (!permissions.canDeleteUsers) return
-    if (!confirm(`Are you sure you want to DELETE user ${email}? This action cannot be undone!`)) return
+    setPendingDelete({ uid, email })
+  }
 
-    const confirmDelete = prompt(`Type "${email}" to confirm deletion:`)
-    if (confirmDelete !== email) {
-      alert('Deletion cancelled - email did not match')
-      return
-    }
+  const handleDeleteConfirmed = async () => {
+    if (!pendingDelete) return
+    const { uid, email } = pendingDelete
 
     setActionLoading(true)
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch('/api/admin/users', {
         method: 'DELETE',
@@ -341,11 +334,12 @@ export default function AdminUsersPage() {
       }
 
       setUsers(prev => prev.filter(u => u.uid !== uid))
-      alert('User deleted successfully')
+      alert(`User ${email} deleted successfully`)
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete user')
     } finally {
       setActionLoading(false)
+      setPendingDelete(null)
     }
   }
 
@@ -558,7 +552,7 @@ export default function AdminUsersPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleDelete(user.uid, user.email)
+                              handleDeleteClick(user.uid, user.email)
                             }}
                             disabled={actionLoading}
                             className="p-2 bg-red-100 dark:bg-red-900/20 text-error-dark dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors"
@@ -627,6 +621,18 @@ export default function AdminUsersPage() {
         </ul>
       </div>
 
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={handleDeleteConfirmed}
+        title="Delete User"
+        message={`Are you sure you want to permanently DELETE user ${pendingDelete?.email}?\n\nThis action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
+
       {/* User Details Modal */}
       {selectedUser && (
         <UserDetailsModal
@@ -646,31 +652,94 @@ interface UserDetailsModalProps {
 }
 
 function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<'info' | 'caregivers'>('caregivers') // Default to caregivers for helpdesk
+  const [activeTab, setActiveTab] = useState<'info' | 'caregivers' | 'patients'>('caregivers') // Default to caregivers for helpdesk
   const [showAddCaregiver, setShowAddCaregiver] = useState(false)
   const [caregiverEmail, setCaregiverEmail] = useState('')
-  const [patientIds, setPatientIds] = useState('')
+  const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [familyMembers, setFamilyMembers] = useState<any[]>([])
   const [loadingMembers, setLoadingMembers] = useState(true)
   const [patients, setPatients] = useState<any[]>([])
   const [editingCaregiver, setEditingCaregiver] = useState<any | null>(null)
   const [editPermissions, setEditPermissions] = useState<Record<string, boolean>>({})
-
-  const getAuthToken = async () => {
-    return await auth.currentUser?.getIdToken()
-  }
+  const [pendingDeletePatient, setPendingDeletePatient] = useState<{ id: string; name: string } | null>(null)
+  const [pendingRestorePatient, setPendingRestorePatient] = useState<{ id: string; name: string } | null>(null)
+  // Map of accountOwnerId → their patients (for "Caregiver For" section)
+  const [caregiverForPatients, setCaregiverForPatients] = useState<Record<string, any[]>>({})
+  // Map of accountOwnerId → their user profile (household info)
+  const [caregiverForOwners, setCaregiverForOwners] = useState<Record<string, any>>({})
 
   // Load family members and patients when modal opens
   useEffect(() => {
     loadFamilyMembers()
-    loadPatients()
+    loadCaregiverForData()
+
+    // Real-time patients listener
+    const patientsRef = collection(db, 'users', user.uid, 'patients')
+    const unsubscribe = onSnapshot(patientsRef, (snapshot) => {
+      const data = snapshot.docs.map(doc => {
+        const d = doc.data()
+        return {
+          id: doc.id,
+          name: d.name,
+          type: d.type || 'human',
+          relationship: d.relationship,
+          dateOfBirth: d.dateOfBirth,
+          age: d.age,
+          gender: d.gender,
+          photo: d.photo,
+          status: d.status || 'active',
+        }
+      })
+      setPatients(data)
+    }, (error) => {
+      console.error('Error listening to patients:', error)
+    })
+
+    return () => unsubscribe()
   }, [user.uid])
+
+  const loadCaregiverForData = async () => {
+    if (!user.caregiverOf?.length) return
+    const token = await getAdminAuthToken()
+    const patientResults: Record<string, any[]> = {}
+    const ownerResults: Record<string, any> = {}
+
+    await Promise.all(
+      user.caregiverOf.map(async (ctx: any) => {
+        if (!ctx.accountOwnerId) return
+        try {
+          // Fetch patients and owner profile in parallel for each household
+          const [patientsRes, ownerRes] = await Promise.all([
+            fetch(`/api/admin/users/${ctx.accountOwnerId}/patients`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            }),
+            fetch(`/api/admin/users?q=${ctx.accountOwnerId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            }),
+          ])
+          if (patientsRes.ok) {
+            const data = await patientsRes.json()
+            patientResults[ctx.accountOwnerId] = data.patients || []
+          }
+          if (ownerRes.ok) {
+            const data = await ownerRes.json()
+            const owner = data.users?.[0]
+            if (owner) ownerResults[ctx.accountOwnerId] = owner
+          }
+        } catch {
+          // silently skip
+        }
+      })
+    )
+    setCaregiverForPatients(patientResults)
+    setCaregiverForOwners(ownerResults)
+  }
 
   const loadFamilyMembers = async () => {
     try {
       setLoadingMembers(true)
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users/${user.uid}/family-members`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -684,36 +753,6 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
       console.error('Error loading family members:', error)
     } finally {
       setLoadingMembers(false)
-    }
-  }
-
-  const loadPatients = async () => {
-    const token = await getAuthToken()
-      const csrfToken = getCSRFToken()
-    try {
-      // Use admin API to get patients
-      const response = await fetch(`/api/admin/users/${user.uid}/patients`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setPatients(data.patients || [])
-      }
-    } catch (error) {
-      console.error('Error loading patients:', error)
-      // Fallback: try to get from user endpoint
-      try {
-        const response = await fetch(`/api/patients?userId=${user.uid}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setPatients(data || [])
-        }
-      } catch (e) {
-        console.error('Fallback also failed:', e)
-      }
     }
   }
 
@@ -736,19 +775,20 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
     setLoading(true)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users/${user.uid}/add-caregiver`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           caregiverEmail,
           caregiverUserId: null, // Will be looked up by email
           caregiverName: null,
-          patientIds: patientIds.split(',').map(id => id.trim()).filter(Boolean),
+          patientIds: selectedPatientIds,
           permissions: {
             viewRecords: true,
             editRecords: true,
@@ -770,7 +810,7 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
         alert('Caregiver added successfully!')
         setShowAddCaregiver(false)
         setCaregiverEmail('')
-        setPatientIds('')
+        setSelectedPatientIds([])
         loadFamilyMembers()
         onRefresh()
       } else {
@@ -795,13 +835,14 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
     setLoading(true)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users/${user.uid}/update-caregiver`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           familyMemberId: editingCaregiver.id,
@@ -827,19 +868,16 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
   }
 
   const handleRemoveCaregiver = async (member: any) => {
-    if (!confirm(`Are you sure you want to remove ${member.name} as a caregiver? This action cannot be undone.`)) {
-      return
-    }
-
     setLoading(true)
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/users/${user.uid}/remove-caregiver`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({
           familyMemberId: member.id,
@@ -860,6 +898,68 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
       alert('Failed to remove caregiver')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleArchivePatient = async () => {
+    if (!pendingDeletePatient) return
+    const { id, name } = pendingDeletePatient
+    setPendingDeletePatient(null)
+    setLoading(true)
+    try {
+      const token = await getAdminAuthToken()
+      const csrfToken = getCSRFToken()
+      const response = await fetch(`/api/admin/users/${user.uid}/patients`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || '',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ patientId: id }),
+      })
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Failed to archive patient' }))
+        throw new Error(err.error || 'Failed to archive patient')
+      }
+      setPatients(prev => prev.map(p => p.id === id ? { ...p, status: 'deleted' } : p))
+      alert(`${name} has been archived.`)
+    } catch (error) {
+      console.error('Error archiving patient:', error)
+      alert(error instanceof Error ? error.message : 'Failed to archive patient')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRestorePatient = async () => {
+    if (!pendingRestorePatient) return
+    const { id, name } = pendingRestorePatient
+    setLoading(true)
+    try {
+      const token = await getAdminAuthToken()
+      const csrfToken = getCSRFToken()
+      const response = await fetch(`/api/admin/users/${user.uid}/patients`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || '',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ patientId: id }),
+      })
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Failed to restore patient' }))
+        throw new Error(err.error || 'Failed to restore patient')
+      }
+      setPatients(prev => prev.map(p => p.id === id ? { ...p, status: 'active' } : p))
+      alert(`${name} has been restored.`)
+    } catch (error) {
+      console.error('Error restoring patient:', error)
+      alert(error instanceof Error ? error.message : 'Failed to restore patient')
+    } finally {
+      setLoading(false)
+      setPendingRestorePatient(null)
     }
   }
 
@@ -893,18 +993,24 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-border flex">
+        <div className="border-b border-border flex overflow-x-auto shrink-0">
           <button
             onClick={() => setActiveTab('info')}
-            className={`px-6 py-3 font-medium ${activeTab === 'info' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+            className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'info' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
           >
             User Info
           </button>
           <button
             onClick={() => setActiveTab('caregivers')}
-            className={`px-6 py-3 font-medium ${activeTab === 'caregivers' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+            className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'caregivers' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
           >
-            Caregiver Relationships
+            Caregivers
+          </button>
+          <button
+            onClick={() => setActiveTab('patients')}
+            className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${activeTab === 'patients' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+          >
+            Patients ({patients.length})
           </button>
         </div>
 
@@ -940,6 +1046,79 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
             </div>
           )}
 
+          {activeTab === 'patients' && (
+            <div className="space-y-4">
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-1">🏥 Patient Records</h3>
+                <p className="text-sm text-blue-700">View and manage this user's patients. Archiving a patient hides them from the user's active list but preserves all data.</p>
+              </div>
+
+              {loadingMembers ? (
+                <div className="text-center py-8 text-muted-foreground">Loading patients...</div>
+              ) : patients.length === 0 ? (
+                <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-6 text-center">
+                  <p className="text-gray-600">No patients found for this user</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {patients.map((patient) => {
+                    const isDeleted = patient.status === 'deleted' || patient.status === 'archived'
+                    return (
+                      <div key={patient.id} className={`border-2 rounded-lg p-4 ${isDeleted ? 'bg-gray-50 border-gray-200 opacity-70' : 'bg-white border-gray-200 hover:border-primary'}`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3">
+                            <span className="text-2xl mt-0.5">{patient.type === 'pet' ? '🐾' : '🧑'}</span>
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold text-lg">{patient.name}</span>
+                                {patient.relationship && (
+                                  <span className="px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700 capitalize">
+                                    {patient.relationship}
+                                  </span>
+                                )}
+                                <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                                  isDeleted
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-green-100 text-green-700'
+                                }`}>
+                                  {isDeleted ? (patient.status === 'archived' ? 'Archived' : 'Deleted') : 'Active'}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-500 space-y-0.5">
+                                {patient.age && <span>Age: {patient.age}</span>}
+                                {patient.gender && <span className="ml-3 capitalize">Gender: {patient.gender}</span>}
+                                {patient.dateOfBirth && <div className="text-xs text-gray-400">DOB: {patient.dateOfBirth}</div>}
+                              </div>
+                            </div>
+                          </div>
+                          {isDeleted ? (
+                            <button
+                              onClick={() => setPendingRestorePatient({ id: patient.id, name: patient.name })}
+                              disabled={loading}
+                              className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm disabled:opacity-50 shrink-0"
+                              title="Restore patient"
+                            >
+                              Restore
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setPendingDeletePatient({ id: patient.id, name: patient.name })}
+                              disabled={loading}
+                              className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 text-sm disabled:opacity-50 shrink-0"
+                              title="Archive patient"
+                            >
+                              Archive
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'caregivers' && (
             <div className="space-y-6">
               {/* HELPDESK: Quick Actions */}
@@ -969,15 +1148,42 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Patient IDs (optional)</label>
-                    <input
-                      type="text"
-                      value={patientIds}
-                      onChange={(e) => setPatientIds(e.target.value)}
-                      className="w-full px-3 py-2 border-2 border-border rounded bg-background"
-                      placeholder="patient-id-1, patient-id-2"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Leave empty = access to ALL patients</p>
+                    <label className="block text-sm font-medium mb-1">
+                      Patient Access (optional)
+                    </label>
+                    {patients.filter(p => p.status === 'active').length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No active patients found — caregiver will have access to all patients.</p>
+                    ) : (
+                      <div className="border-2 border-border rounded bg-background max-h-48 overflow-y-auto divide-y divide-border">
+                        {patients.filter(p => p.status === 'active').map((patient) => (
+                          <label key={patient.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="rounded border-border"
+                              checked={selectedPatientIds.includes(patient.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedPatientIds(prev => [...prev, patient.id])
+                                } else {
+                                  setSelectedPatientIds(prev => prev.filter(id => id !== patient.id))
+                                }
+                              }}
+                            />
+                            <span className="text-sm">
+                              {patient.type === 'pet' ? '🐾' : '🧑'} {patient.name}
+                              {patient.relationship && (
+                                <span className="ml-1 text-xs text-muted-foreground">({patient.relationship})</span>
+                              )}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {selectedPatientIds.length === 0
+                        ? 'None selected = access to ALL patients'
+                        : `${selectedPatientIds.length} patient${selectedPatientIds.length !== 1 ? 's' : ''} selected`}
+                    </p>
                   </div>
                   <button
                     type="submit"
@@ -1075,19 +1281,65 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
                 )}
               </div>
 
-              {/* This User is Caregiver For */}
+              {/* This User is a Caregiver For */}
               <div className="border-t-2 border-gray-200 pt-6">
                 <h3 className="font-semibold mb-3">This User is Caregiver For ({user.caregiverOf?.length || 0})</h3>
                 {user.caregiverOf && user.caregiverOf.length > 0 ? (
                   <div className="space-y-2">
-                    {user.caregiverOf.map((ctx: any, idx: number) => (
-                      <div key={idx} className="bg-purple-50 border border-purple-200 p-3 rounded-lg">
-                        <div className="font-medium text-purple-900">{ctx.accountOwnerName}</div>
-                        <div className="text-sm text-purple-700">
-                          {ctx.patientsAccess?.length || 0} patients • {Object.values(ctx.permissions || {}).filter(Boolean).length} permissions
+                    {user.caregiverOf.map((ctx: any, idx: number) => {
+                      const ownerProfile = caregiverForOwners[ctx.accountOwnerId]
+                      // Best available name: fetched profile > stored name (if not generic) > email > UID
+                      const householdName = ownerProfile?.displayName || ownerProfile?.name
+                        || (ctx.accountOwnerName && ctx.accountOwnerName !== 'Account Owner' ? ctx.accountOwnerName : null)
+                        || ctx.accountOwnerEmail
+                        || ctx.accountOwnerId
+                        || 'Unknown Household'
+                      const householdEmail = ownerProfile?.email || ctx.accountOwnerEmail
+                      const ownerPatients = caregiverForPatients[ctx.accountOwnerId] || []
+                      const accessIds: string[] = ctx.patientsAccess || []
+                      const accessedPatients = accessIds.length > 0
+                        ? ownerPatients.filter(p => accessIds.includes(p.id) && p.status === 'active')
+                        : ownerPatients.filter(p => p.status === 'active')
+                      const permCount = Object.values(ctx.permissions || {}).filter(Boolean).length
+                      return (
+                        <div key={idx} className="bg-purple-50 border border-purple-200 p-3 rounded-lg space-y-2">
+                          {/* Household header */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="font-semibold text-purple-900">🏠 {householdName}</div>
+                              {householdEmail && householdEmail !== householdName && (
+                                <div className="text-xs text-purple-600">{householdEmail}</div>
+                              )}
+                            </div>
+                            <span className="text-xs px-2 py-0.5 bg-purple-200 text-purple-800 rounded-full shrink-0">
+                              {ctx.role || 'caregiver'}
+                            </span>
+                          </div>
+
+                          {/* Stats row */}
+                          <div className="flex gap-3 text-xs text-purple-700">
+                            <span>👥 {accessIds.length === 0 ? 'All patients' : `${accessIds.length} patient${accessIds.length !== 1 ? 's' : ''}`}</span>
+                            <span>🔑 {permCount} permissions</span>
+                            {ownerProfile?.subscription?.plan && (
+                              <span>📋 {ownerProfile.subscription.plan}</span>
+                            )}
+                          </div>
+
+                          {/* Patient name pills */}
+                          {accessedPatients.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {accessedPatients.map(p => (
+                                <span key={p.id} className="text-xs px-2 py-0.5 bg-white border border-purple-200 text-purple-800 rounded-full">
+                                  {p.type === 'pet' ? '🐾' : '🧑'} {p.name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : ownerPatients.length === 0 && (
+                            <p className="text-xs text-purple-500 italic">No active patients in this household</p>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-500">Not a caregiver for anyone</p>
@@ -1097,6 +1349,30 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
           )}
         </div>
       </div>
+
+      {/* Archive Patient Confirmation */}
+      <ConfirmModal
+        isOpen={pendingDeletePatient !== null}
+        onClose={() => setPendingDeletePatient(null)}
+        onConfirm={handleArchivePatient}
+        title="Archive Patient"
+        message={`Archive ${pendingDeletePatient?.name}?\n\nTheir data will be preserved but hidden from the user's active patient list.`}
+        confirmText="Archive"
+        cancelText="Cancel"
+        variant="warning"
+      />
+
+      {/* Restore Patient Confirmation */}
+      <ConfirmModal
+        isOpen={pendingRestorePatient !== null}
+        onClose={() => setPendingRestorePatient(null)}
+        onConfirm={handleRestorePatient}
+        title="Restore Patient"
+        message={`Restore ${pendingRestorePatient?.name}? They will become active again and appear in the user's patient list.`}
+        confirmText="Restore"
+        cancelText="Cancel"
+        variant="info"
+      />
 
       {/* Edit Permissions Modal */}
       {editingCaregiver && (

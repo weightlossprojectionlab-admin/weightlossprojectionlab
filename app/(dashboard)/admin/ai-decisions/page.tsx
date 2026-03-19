@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
 import { logger } from '@/lib/logger'
-import { auth } from '@/lib/firebase'
+import { getAdminAuthToken } from '@/lib/admin/api'
 import { getCSRFToken } from '@/lib/csrf'
 import {
   CpuChipIcon,
@@ -61,12 +61,6 @@ export default function AIDecisionsPage() {
   const [reviewNotes, setReviewNotes] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
 
-  const getAuthToken = async () => {
-    const user = auth.currentUser
-    if (!user) throw new Error('User not authenticated')
-    return await user.getIdToken()
-  }
-
   useEffect(() => {
     if (isAdmin) {
       loadDecisions()
@@ -77,7 +71,7 @@ export default function AIDecisionsPage() {
   const loadDecisions = async () => {
     setLoading(true)
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const queryParams = new URLSearchParams({
         reviewed: filterReviewed,
         maxConfidence: filterConfidence.toString()
@@ -103,7 +97,7 @@ export default function AIDecisionsPage() {
 
   const loadStats = async () => {
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const response = await fetch('/api/admin/ai-decisions/stats', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -123,7 +117,7 @@ export default function AIDecisionsPage() {
 
     setActionLoading(true)
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/ai-decisions/${decisionId}/review`, {
         method: 'POST',

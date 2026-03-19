@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { logger } from '@/lib/logger'
-import { auth } from '@/lib/firebase'
+import { getAdminAuthToken } from '@/lib/admin/api'
 import { MagnifyingGlassIcon, PencilSquareIcon, CheckBadgeIcon, FunnelIcon, ArrowPathIcon, BeakerIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -48,12 +48,6 @@ export default function BarcodesManagementPage() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
   const [showBulkActions, setShowBulkActions] = useState(false)
 
-  const getAuthToken = async () => {
-    const user = auth.currentUser
-    if (!user) throw new Error('User not authenticated')
-    return await user.getIdToken()
-  }
-
   useEffect(() => {
     if (isAdmin) {
       loadProducts()
@@ -70,7 +64,7 @@ export default function BarcodesManagementPage() {
     setError(null)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/products?limit=500`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -165,7 +159,7 @@ export default function BarcodesManagementPage() {
     setFetchingNutritionBulk(true)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const barcodes = Array.from(selectedProducts)
 

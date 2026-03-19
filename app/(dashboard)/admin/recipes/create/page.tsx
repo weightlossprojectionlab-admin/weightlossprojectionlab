@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { auth } from '@/lib/firebase'
+import { getAdminAuthToken } from '@/lib/admin/api'
 import { logger } from '@/lib/logger'
 import { ProductSelector } from '@/components/admin/ProductSelector'
 import { MealType, DietaryTag, RecipeIngredient } from '@/lib/meal-suggestions'
@@ -64,12 +64,6 @@ export default function CreateRecipePage() {
 
   // State
   const [saving, setSaving] = useState(false)
-
-  const getAuthToken = async () => {
-    const user = auth.currentUser
-    if (!user) throw new Error('User not authenticated')
-    return await user.getIdToken()
-  }
 
   // Calculate total nutrition from ingredients
   const calculateNutrition = () => {
@@ -237,7 +231,7 @@ export default function CreateRecipePage() {
     setSaving(true)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const nutrition = calculateNutrition()
 

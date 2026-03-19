@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { auth } from '@/lib/firebase'
+import { getAdminAuthToken } from '@/lib/admin/api'
 import { logger } from '@/lib/logger'
 import { ArrowPathIcon, BeakerIcon, ChartBarIcon, SparklesIcon, CubeIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
@@ -46,12 +46,6 @@ export default function MLAnalyticsPage() {
   // Modal state
   const [showConfirmModal, setShowConfirmModal] = useState(false)
 
-  const getAuthToken = async () => {
-    const user = auth.currentUser
-    if (!user) throw new Error('User not authenticated')
-    return await user.getIdToken()
-  }
-
   useEffect(() => {
     loadStatus()
     loadRecipeStatus()
@@ -67,7 +61,7 @@ export default function MLAnalyticsPage() {
 
   const loadStatus = async () => {
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const response = await fetch('/api/admin/ml/analyze-associations', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -100,7 +94,7 @@ export default function MLAnalyticsPage() {
     setTriggering(true)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const response = await fetch('/api/admin/ml/analyze-associations', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -126,7 +120,7 @@ export default function MLAnalyticsPage() {
 
   const loadRecipeStatus = async () => {
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const response = await fetch('/api/admin/ml/generate-recipes', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -170,7 +164,7 @@ export default function MLAnalyticsPage() {
     setRecipeTriggering(true)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const response = await fetch('/api/admin/ml/generate-recipes', {
         method: 'POST',
         headers: {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { logger } from '@/lib/logger'
-import { auth } from '@/lib/firebase'
+import { getAdminAuthToken } from '@/lib/admin/api'
 import { ArrowLeftIcon, CheckBadgeIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -85,12 +85,6 @@ export default function ProductEditPage() {
     }
   })
 
-  const getAuthToken = async () => {
-    const user = auth.currentUser
-    if (!user) throw new Error('User not authenticated')
-    return await user.getIdToken()
-  }
-
   useEffect(() => {
     if (isAdmin && barcode) {
       loadProduct()
@@ -102,7 +96,7 @@ export default function ProductEditPage() {
     setError(null)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/products/${barcode}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -138,7 +132,7 @@ export default function ProductEditPage() {
     setSaving(true)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/products/${barcode}`, {
         method: 'PUT',
@@ -181,7 +175,7 @@ export default function ProductEditPage() {
     setFetchingNutrition(true)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
       const response = await fetch(`/api/admin/products/${barcode}/fetch-nutrition`, {
         method: 'POST',

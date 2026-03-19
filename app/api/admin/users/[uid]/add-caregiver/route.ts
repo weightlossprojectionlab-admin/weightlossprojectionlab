@@ -164,7 +164,7 @@ export async function POST(
     const caregiverContext = {
       accountOwnerId,
       accountOwnerName: ownerName,
-      accountOwnerEmail: ownerData?.email,
+      accountOwnerEmail: ownerData?.email || null,
       role,
       patientsAccess: patientIds,
       permissions: fullPermissions,

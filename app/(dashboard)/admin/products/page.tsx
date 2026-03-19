@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { logger } from '@/lib/logger'
-import { auth } from '@/lib/firebase'
+import { getAdminAuthToken } from '@/lib/admin/api'
 import { MagnifyingGlassIcon, ChartBarIcon, ShoppingCartIcon, CheckBadgeIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
@@ -54,18 +54,12 @@ export default function AdminProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('scans')
 
-  const getAuthToken = async () => {
-    const user = auth.currentUser
-    if (!user) throw new Error('User not authenticated')
-    return await user.getIdToken()
-  }
-
   const loadProducts = useCallback(async () => {
     setLoading(true)
     setError(null)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const params = new URLSearchParams()
       params.set('limit', '100')
       if (searchQuery) params.set('search', searchQuery)

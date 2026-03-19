@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import { useParams, useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { logger } from '@/lib/logger'
-import { auth } from '@/lib/firebase'
+import { getAdminAuthToken } from '@/lib/admin/api'
 import { ArrowLeftIcon, CheckBadgeIcon, ClockIcon, MapPinIcon, ShoppingBagIcon, ChartBarIcon, UsersIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
@@ -91,12 +91,6 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const getAuthToken = async () => {
-    const user = auth.currentUser
-    if (!user) throw new Error('User not authenticated')
-    return await user.getIdToken()
-  }
-
   useEffect(() => {
     if (isAdmin && barcode) {
       loadProductDetails()
@@ -108,7 +102,7 @@ export default function ProductDetailPage() {
     setError(null)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const response = await fetch(`/api/admin/products/${barcode}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })

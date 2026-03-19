@@ -20,6 +20,7 @@ import {
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { auth } from '@/lib/firebase'
+import { getAdminAuthToken } from '@/lib/admin/api'
 import type { HealthVitalsSummary } from '@/types'
 import { AISupportAnalytics } from '@/components/admin/AISupportAnalytics'
 
@@ -233,18 +234,12 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
     loadUserAnalytics()
   }, [uid, dateRange])
 
-  const getAuthToken = async () => {
-    const user = auth.currentUser
-    if (!user) throw new Error('User not authenticated')
-    return await user.getIdToken()
-  }
-
   const loadUserAnalytics = async () => {
     setLoading(true)
     setError(null)
     const url = `/api/admin/users/${uid}/analytics?range=${dateRange}`
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
 
       // Fetch main analytics
       const response = await fetch(url, {

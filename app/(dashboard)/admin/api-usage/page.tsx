@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { logger } from '@/lib/logger'
-import { auth } from '@/lib/firebase'
+import { getAdminAuthToken } from '@/lib/admin/api'
 import { ChartBarIcon, CloudIcon, ClockIcon, CurrencyDollarIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 
 import { getCSRFToken } from '@/lib/csrf'
@@ -52,12 +52,6 @@ export default function APIUsagePage() {
   const [error, setError] = useState<string | null>(null)
   const [days, setDays] = useState(30)
 
-  const getAuthToken = async () => {
-    const user = auth.currentUser
-    if (!user) throw new Error('User not authenticated')
-    return await user.getIdToken()
-  }
-
   useEffect(() => {
     if (isAdmin) {
       loadData()
@@ -69,7 +63,7 @@ export default function APIUsagePage() {
     setError(null)
 
     try {
-      const token = await getAuthToken()
+      const token = await getAdminAuthToken()
       const response = await fetch(`/api/admin/api-usage?days=${days}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })

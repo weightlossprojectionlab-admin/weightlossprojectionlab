@@ -116,8 +116,8 @@ service cloud.firestore {
 
       // Patient profiles
       match /patients/{patientId} {
-        // Read: Owner can read their patients
-        allow read: if isOwner(userId);
+        // Read: Owner or admin can read patients
+        allow read: if isOwner(userId) || isAdmin();
 
         // Create: Owner can create patients
         allow create: if isOwner(userId) &&
