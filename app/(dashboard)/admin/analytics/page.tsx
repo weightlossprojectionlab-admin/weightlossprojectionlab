@@ -90,6 +90,16 @@ interface AnalyticsData {
     retentionRate7Day: number
     retentionRate30Day: number
   }
+  subscriptionMetrics?: {
+    activeSubscribers: number
+    trialingSubscribers: number
+    canceledTotal: number
+    mrr: number
+    arr: number
+    yearlyBillingCount: number
+    planBreakdown: Record<string, number>
+    allTimeChurnRate: number
+  }
 }
 
 interface UserAnalyticsData {
@@ -1652,6 +1662,68 @@ function PlatformAnalytics() {
           </div>
         </div>
       </div>
+
+      {/* Subscription & Revenue Metrics */}
+      {data.subscriptionMetrics && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-foreground mb-4">Subscription & Revenue</h2>
+          {/* MRR / ARR / Active */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">MRR</p>
+              <p className="text-2xl font-bold text-green-500">${data.subscriptionMetrics.mrr.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">ARR</p>
+              <p className="text-2xl font-bold text-green-400">${data.subscriptionMetrics.arr.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Active Subscribers</p>
+              <p className="text-2xl font-bold text-foreground">{data.subscriptionMetrics.activeSubscribers.toLocaleString()}</p>
+              {data.subscriptionMetrics.trialingSubscribers > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">+{data.subscriptionMetrics.trialingSubscribers} trialing</p>
+              )}
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">All-Time Churn</p>
+              <p className="text-2xl font-bold text-foreground">{(data.subscriptionMetrics.allTimeChurnRate * 100).toFixed(1)}%</p>
+              <p className="text-xs text-muted-foreground mt-1">{data.subscriptionMetrics.canceledTotal} canceled</p>
+            </div>
+          </div>
+          {/* Plan breakdown */}
+          <div className="bg-card border border-border rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Plan Breakdown (Active)</h3>
+            <div className="space-y-3">
+              {[
+                { key: 'single', label: 'Single', price: 9.99 },
+                { key: 'single_plus', label: 'Single Plus', price: 14.99 },
+                { key: 'family_basic', label: 'Family Basic', price: 19.99 },
+                { key: 'family_plus', label: 'Family Plus', price: 29.99 },
+                { key: 'family_premium', label: 'Family Premium', price: 39.99 },
+              ].map(({ key, label, price }) => {
+                const count = data.subscriptionMetrics!.planBreakdown[key] ?? 0
+                const pct = data.subscriptionMetrics!.activeSubscribers > 0
+                  ? (count / data.subscriptionMetrics!.activeSubscribers) * 100
+                  : 0
+                return (
+                  <div key={key}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-foreground">{label} <span className="text-muted-foreground text-xs">${price}/mo</span></span>
+                      <span className="text-foreground font-medium">{count} <span className="text-muted-foreground text-xs">({pct.toFixed(1)}%)</span></span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full">
+                      <div className="h-1.5 bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              {data.subscriptionMetrics.yearlyBillingCount} subscriber{data.subscriptionMetrics.yearlyBillingCount !== 1 ? 's' : ''} on yearly billing
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* AI Support Analytics */}
       <div className="mb-8">

@@ -158,6 +158,51 @@ export async function GET(request: NextRequest) {
     const retentionRate7Day = totalUsers > 0 ? wau / totalUsers : 0
     const retentionRate30Day = totalUsers > 0 ? mau / totalUsers : 0
 
+    // Subscription metrics — fetch active/trialing/canceled users with plan data
+    const PLAN_MONTHLY_PRICE: Record<string, number> = {
+      single: 9.99,
+      single_plus: 14.99,
+      family_basic: 19.99,
+      family_plus: 29.99,
+      family_premium: 39.99
+    }
+
+    const [activeSubsSnap, trialingSubsSnap, canceledSubsSnap] = await Promise.all([
+      adminDb.collection('users')
+        .where('subscription.status', '==', 'active')
+        .select('subscription.plan', 'subscription.billingInterval')
+        .get(),
+      adminDb.collection('users')
+        .where('subscription.status', '==', 'trialing')
+        .count().get(),
+      adminDb.collection('users')
+        .where('subscription.status', '==', 'canceled')
+        .count().get(),
+    ])
+
+    // Group active subscribers by plan
+    const planBreakdown: Record<string, number> = {
+      single: 0, single_plus: 0, family_basic: 0, family_plus: 0, family_premium: 0
+    }
+    let yearlyCount = 0
+
+    for (const doc of activeSubsSnap.docs) {
+      const sub = doc.data().subscription
+      const plan: string = sub?.plan ?? ''
+      if (plan in planBreakdown) planBreakdown[plan]++
+      if (sub?.billingInterval === 'yearly') yearlyCount++
+    }
+
+    const activeSubscribers = activeSubsSnap.size
+    const mrr = Object.entries(planBreakdown).reduce((sum, [plan, count]) => {
+      return sum + count * (PLAN_MONTHLY_PRICE[plan] ?? 0)
+    }, 0)
+
+    const totalPaidOrTrialing = activeSubscribers + (trialingSubsSnap.data().count)
+    const allTimeChurnRate = totalPaidOrTrialing + (canceledSubsSnap.data().count) > 0
+      ? canceledSubsSnap.data().count / (totalPaidOrTrialing + canceledSubsSnap.data().count)
+      : 0
+
     const data = {
       userMetrics: {
         totalUsers,
@@ -192,6 +237,16 @@ export async function GET(request: NextRequest) {
         avgWeightLogsPerUser,
         retentionRate7Day,
         retentionRate30Day,
+      },
+      subscriptionMetrics: {
+        activeSubscribers,
+        trialingSubscribers: trialingSubsSnap.data().count,
+        canceledTotal: canceledSubsSnap.data().count,
+        mrr: Math.round(mrr * 100) / 100,
+        arr: Math.round(mrr * 12 * 100) / 100,
+        yearlyBillingCount: yearlyCount,
+        planBreakdown,
+        allTimeChurnRate: Math.round(allTimeChurnRate * 1000) / 1000,
       },
     }
 
