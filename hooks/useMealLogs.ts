@@ -55,7 +55,6 @@ export function useMealLogsRealtime(params?: {
         try {
           if (!currentUser) return
 
-          setLoading(true)
           const queryParams = new URLSearchParams()
           if (params?.limitCount) queryParams.set('limit', params.limitCount.toString())
           if (params?.mealType) queryParams.set('mealType', params.mealType)
@@ -80,8 +79,8 @@ export function useMealLogsRealtime(params?: {
       // Initial fetch
       fetchPatientMeals()
 
-      // Poll every 5 seconds for updates (real-time simulation)
-      pollInterval = setInterval(fetchPatientMeals, 5000)
+      // Poll every 30 seconds for background updates (silent — no loading toggle)
+      pollInterval = setInterval(fetchPatientMeals, 30000)
 
       // Cleanup polling on unmount
       return () => {
