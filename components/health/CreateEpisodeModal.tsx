@@ -9,7 +9,7 @@
 
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { PatientProfile } from '@/types/medical'
 import { EpisodeType, HealthSymptom } from '@/types/health-episodes'
@@ -52,11 +52,13 @@ interface SymptomInput {
 }
 
 export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: CreateEpisodeModalProps) {
-  const [step, setStep] = useState<1 | 1.5 | 2 | 2.5 | 3>(1) // Enhanced flow with date/time and photos
+  const [step, setStep] = useState<1 | 1.5 | 2 | 2.5 | 3>(patients.length === 1 ? 1.5 : 1)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Form state
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('')
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(
+    patients.length === 1 ? patients[0].id : ''
+  )
   const [episodeType, setEpisodeType] = useState<EpisodeType>('illness')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -92,6 +94,26 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
       return getCommonInjuries(selectedPatient.type)
     }
   }, [selectedPatient, episodeType])
+
+  // Reset to initial state each time the modal opens
+  useEffect(() => {
+    if (!isOpen) return
+    setStep(patients.length === 1 ? 1.5 : 1)
+    setSelectedPatientId(patients.length === 1 ? patients[0].id : '')
+    setEpisodeType('illness')
+    setTitle('')
+    setDescription('')
+    setStartDate(new Date().toISOString().split('T')[0])
+    setStartTime('')
+    setApproximateStartTime('')
+    setTimeSelectionMode('just_now')
+    setStatus('onset')
+    setSymptoms([])
+    setInitialPhotos([])
+    setProviderName('')
+    setDiagnosis('')
+    setReportableType(undefined)
+  }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isOpen) return null
 
