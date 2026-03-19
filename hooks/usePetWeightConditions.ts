@@ -7,7 +7,7 @@ import { evaluateWeight } from '@/lib/pet-weight-ranges'
 
 interface PetWeightConditionsParams {
   weight?: string | number
-  weightUnit: 'lbs' | 'kg'
+  weightUnit: 'lbs' | 'kg' | 'oz' | 'g'
   species?: string
   breed?: string
   availableConditions: string[]
