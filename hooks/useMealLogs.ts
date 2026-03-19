@@ -3,9 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { auth, db } from '@/lib/firebase'
 import { onAuthStateChanged, type User } from 'firebase/auth'
-import { collection, query, where, orderBy, limit, onSnapshot, Unsubscribe } from 'firebase/firestore'
+import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { logger } from '@/lib/logger'
-import { medicalOperations } from '@/lib/medical-operations'
 import type { MealLog } from '@/types/medical'
 
 // Re-export MealLog as MealLogData for backward compatibility
