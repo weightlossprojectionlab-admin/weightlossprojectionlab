@@ -189,7 +189,7 @@ export function Footer() {
           {/* Social Links */}
           <div className="flex items-center gap-6">
             <a
-              href="https://twitter.com/wpl"
+              href="https://x.com/LossWeight85941"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors"
@@ -200,7 +200,7 @@ export function Footer() {
               </svg>
             </a>
             <a
-              href="https://linkedin.com/company/wpl"
+              href="https://www.linkedin.com/in/weight-loss-project-undefined-378b773b4"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors"
@@ -211,7 +211,7 @@ export function Footer() {
               </svg>
             </a>
             <a
-              href="https://youtube.com/@wpl"
+              href="https://www.youtube.com/@WellnessLossProjectLab"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors"

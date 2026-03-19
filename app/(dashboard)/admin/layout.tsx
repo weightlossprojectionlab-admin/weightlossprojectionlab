@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { AdminNav } from '@/components/admin/AdminNav'
+import { OperatorsManualDrawer } from '@/components/admin/OperatorsManualDrawer'
 import { Spinner } from '@/components/ui/Spinner'
 import { AppProgressBar as ProgressBar } from 'next-nprogress-bar'
 
@@ -14,6 +15,7 @@ export default function AdminLayout({
 }) {
   const { isAdmin, loading } = useAdminAuth()
   const router = useRouter()
+  const [manualOpen, setManualOpen] = useState(false)
 
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -57,12 +59,18 @@ export default function AdminLayout({
       />
 
       {/* Admin Sidebar Navigation */}
-      <AdminNav />
+      <AdminNav onOpenManual={() => setManualOpen(true)} />
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+
+      {/* Operators Manual Drawer */}
+      <OperatorsManualDrawer
+        isOpen={manualOpen}
+        onClose={() => setManualOpen(false)}
+      />
     </div>
   )
 }

@@ -21,7 +21,8 @@ import {
   BriefcaseIcon,
   EnvelopeIcon,
   CalendarDaysIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  BookOpenIcon,
 } from '@heroicons/react/24/outline'
 
 interface NavItem {
@@ -39,9 +40,10 @@ interface AdminNavProps {
     coaches?: number
     demoRequests?: number
   }
+  onOpenManual?: () => void
 }
 
-export function AdminNav({ pendingCounts }: AdminNavProps) {
+export function AdminNav({ pendingCounts, onOpenManual }: AdminNavProps) {
   const pathname = usePathname()
 
   const navItems: NavItem[] = [
@@ -133,7 +135,7 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
   ]
 
   return (
-    <nav className="w-64 bg-card text-foreground dark:text-white min-h-screen p-4 border-r border-border">
+    <nav className="w-64 bg-card text-foreground dark:text-white h-screen sticky top-0 overflow-y-auto p-4 border-r border-border">
       {/* Logo/Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold">WPL Admin</h1>
@@ -174,8 +176,21 @@ export function AdminNav({ pendingCounts }: AdminNavProps) {
         })}
       </ul>
 
+      {/* Operators Manual Quick-Open */}
+      {onOpenManual && (
+        <div className="mt-6">
+          <button
+            onClick={onOpenManual}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
+          >
+            <BookOpenIcon className="h-5 w-5 shrink-0" />
+            <span className="font-medium text-sm">Operators Manual</span>
+          </button>
+        </div>
+      )}
+
       {/* Back to App Link */}
-      <div className="mt-8 pt-8 border-t border-border dark:border-gray-600 space-y-2">
+      <div className="mt-4 pt-4 border-t border-border dark:border-gray-600 space-y-2">
         <Link
           href="/dashboard"
           className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground dark:hover:text-white transition-colors"
