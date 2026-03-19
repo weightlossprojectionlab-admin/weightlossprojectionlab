@@ -38,7 +38,7 @@ export function useUserPreferences() {
     }
 
     // Real-time listener for preference updates
-    logger.debug('[useUserPreferences] Setting up real-time listener for user:', user.uid)
+    logger.debug('[useUserPreferences] Setting up real-time listener for user:', { uid: user.uid })
 
     const unsubscribe = onSnapshot(
       doc(db, 'users', user.uid),

@@ -263,7 +263,7 @@ export default function MyRecipesPage() {
             recipes={recipes}
             savedRecipeIds={savedRecipeIds}
             onSaveRecipe={(id) => handleSaveRecipe(id, !savedRecipeIds.has(id))}
-            onRecipeClick={(id: string) => router.push(`/recipes/${id}`)}
+            onViewRecipe={(id: string) => router.push(`/recipes/${id}`)}
             loading={loading}
           />
         )}

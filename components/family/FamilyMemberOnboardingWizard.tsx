@@ -17,6 +17,16 @@ import { getSpeciesCategory } from '@/lib/pet-species-utils'
 import { PetWeightStatusIndicator } from '@/components/pets/PetWeightStatusIndicator'
 import { getPetWeightConditions } from '@/hooks/usePetWeightConditions'
 import { getTodayDateString, isValidBirthDate, getBirthDateErrorMessage } from '@/lib/date-utils'
+import {
+  getHumanLifeStage,
+  formatHumanAgeDisplay,
+  getHumanLifeStageNotices,
+  getPetLifeStage,
+  formatPetAgeDisplay,
+  getPetLifeStageNotices,
+  getPediatricConditions,
+  getDefaultWeightUnit,
+} from '@/lib/life-stage-utils'
 import { NameInput } from '@/components/form/NameInput'
 
 interface WizardStep {
@@ -451,7 +461,7 @@ interface FamilyMemberData {
   heightInches: string
   heightCm: string
   currentWeight: string
-  weightUnit: 'lbs' | 'kg'
+  weightUnit: 'lbs' | 'kg' | 'oz' | 'g'
   heightUnit: 'imperial' | 'metric'
   activityLevel: '' | 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active'
   targetWeight: string
@@ -670,12 +680,18 @@ export default function FamilyMemberOnboardingWizard() {
       // Prepare vitals data
       const isPet = data.memberType === 'pet' || data.relationship === 'Pet'
 
+      // Compute life stage
+      const lifeStage = isPet
+        ? getPetLifeStage(data.dateOfBirth, data.species || '').stage
+        : getHumanLifeStage(data.dateOfBirth).stage
+
       const patientData: any = {
         userId: user.uid,
         name: data.name,
         dateOfBirth: data.dateOfBirth,
         age: age,
         isMinor: isMinor,
+        lifeStage: lifeStage,
         relationship: data.relationship,
         type: isPet ? 'pet' : 'human',
         createdAt: Timestamp.now(),
@@ -839,7 +855,16 @@ export default function FamilyMemberOnboardingWizard() {
 
     if (heightInInches === 0) return []
 
-    const weightInLbs = data.weightUnit === 'kg' ? parseFloat(data.currentWeight) * 2.20462 : parseFloat(data.currentWeight)
+    // Convert weight to lbs for BMI calculation
+    const rawWeight = parseFloat(data.currentWeight)
+    let weightInLbs = rawWeight
+    if (data.weightUnit === 'kg') weightInLbs = rawWeight * 2.20462
+    else if (data.weightUnit === 'oz') weightInLbs = rawWeight / 16
+    else if (data.weightUnit === 'g') weightInLbs = rawWeight / 453.592
+
+    // BMI not meaningful for very small weights (newborns/infants)
+    if (weightInLbs < 5) return []
+
     const bmi = (weightInLbs / (heightInInches * heightInInches)) * 703
 
     const suggestions: string[] = []
@@ -1011,11 +1036,13 @@ export default function FamilyMemberOnboardingWizard() {
                         />
                         <select
                           value={data.weightUnit}
-                          onChange={(e) => setData({ ...data, weightUnit: e.target.value as 'lbs' | 'kg' })}
+                          onChange={(e) => setData({ ...data, weightUnit: e.target.value as 'lbs' | 'kg' | 'oz' | 'g' })}
                           className="px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:border-primary focus:outline-none transition-colors"
                         >
                           <option value="lbs">lbs</option>
                           <option value="kg">kg</option>
+                          <option value="oz">oz</option>
+                          <option value="g">g</option>
                         </select>
                       </div>
 
@@ -1163,8 +1190,9 @@ export default function FamilyMemberOnboardingWizard() {
       )
     }
 
+    const adultConditions = ['Arthritis', 'Asthma', 'Thyroid Disorder', 'Kidney Disease', 'Allergies', 'Other']
     const otherConditions = !isPet
-      ? ['Arthritis', 'Asthma', 'Thyroid Disorder', 'Kidney Disease', 'Allergies', 'Other']
+      ? (getPediatricConditions(data.dateOfBirth) || adultConditions)
       : commonConditions
 
     const toggleCondition = (condition: string) => {
@@ -1289,7 +1317,9 @@ export default function FamilyMemberOnboardingWizard() {
         {/* Human Conditions */}
         {!isPet && (
           <div>
-            <h3 className="font-semibold mb-3 text-foreground">Other Conditions (Optional)</h3>
+            <h3 className="font-semibold mb-3 text-foreground">
+              {getPediatricConditions(data.dateOfBirth) ? 'Pediatric Conditions (Optional)' : 'Other Conditions (Optional)'}
+            </h3>
             <div className="grid grid-cols-2 gap-3">
               {otherConditions.map(condition => {
                 const isSelected = data.conditions.includes(condition)
@@ -1346,7 +1376,11 @@ export default function FamilyMemberOnboardingWizard() {
           <input
             type="date"
             value={data.dateOfBirth}
-            onChange={(e) => setData({ ...data, dateOfBirth: e.target.value })}
+            onChange={(e) => {
+              const dob = e.target.value
+              const suggestedUnit = getDefaultWeightUnit(dob, isPet ? 'pet' : 'human', data.species)
+              setData({ ...data, dateOfBirth: dob, weightUnit: suggestedUnit })
+            }}
             max={getTodayDateString()}
             className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
           />
@@ -1532,19 +1566,18 @@ export default function FamilyMemberOnboardingWizard() {
   function renderReviewStep() {
     const isPet = data.memberType === 'pet' || data.relationship === 'Pet'
 
-    // Calculate age from DOB
-    let age = 0
-    let isMinor = false
-    if (data.dateOfBirth) {
-      const birthDate = new Date(data.dateOfBirth)
-      const today = new Date()
-      age = today.getFullYear() - birthDate.getFullYear()
-      const monthDiff = today.getMonth() - birthDate.getMonth()
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--
-      }
-      isMinor = age < 18
-    }
+    // Compute life stage and age display
+    const lifeStageResult = isPet
+      ? getPetLifeStage(data.dateOfBirth, data.species || '')
+      : getHumanLifeStage(data.dateOfBirth)
+    const ageDisplay = isPet
+      ? formatPetAgeDisplay(data.dateOfBirth)
+      : formatHumanAgeDisplay(data.dateOfBirth)
+    const lifeStageNotices = isPet
+      ? getPetLifeStageNotices(data.dateOfBirth, data.species || '')
+      : getHumanLifeStageNotices(data.dateOfBirth)
+
+    const isMinor = !isPet && ['newborn', 'infant', 'toddler', 'child', 'teen'].includes(lifeStageResult.stage)
 
     // Calculate height display
     let heightDisplay = ''
@@ -1557,20 +1590,54 @@ export default function FamilyMemberOnboardingWizard() {
     // Calculate weight display
     const weightDisplay = data.currentWeight ? `${data.currentWeight} ${data.weightUnit}` : ''
 
+    // Life stage badge color
+    const badgeColor = (() => {
+      switch (lifeStageResult.stage) {
+        case 'newborn': return 'bg-pink-500/20 text-pink-300 border-pink-500/50'
+        case 'infant': return 'bg-pink-500/20 text-pink-300 border-pink-500/50'
+        case 'toddler': return 'bg-orange-500/20 text-orange-300 border-orange-500/50'
+        case 'child': return 'bg-blue-500/20 text-blue-300 border-blue-500/50'
+        case 'teen': return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50'
+        case 'young': return 'bg-green-500/20 text-green-300 border-green-500/50'
+        case 'senior': return 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+        default: return 'bg-white/10 text-white/80 border-white/20'
+      }
+    })()
+
     return (
       <div className="space-y-6">
-        {/* Minor Warning */}
-        {!isPet && isMinor && data.relationship.toLowerCase() === 'child' && (
+        {/* Minor / Dependent Warning */}
+        {isMinor && (
           <div className="p-4 rounded-xl bg-yellow-500/20 border-2 border-yellow-500/50">
             <div className="flex items-start gap-3">
               <span className="text-2xl">⚠️</span>
               <div>
-                <div className="font-semibold mb-1 text-yellow-900 dark:text-yellow-100">Minor Detected (Age {age})</div>
+                <div className="font-semibold mb-1 text-yellow-900 dark:text-yellow-100">
+                  {lifeStageResult.label} Detected ({ageDisplay})
+                </div>
                 <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  As a parent/guardian, you're responsible for managing this child's health data and consent.
+                  As a parent/guardian, you&apos;re responsible for managing this dependent&apos;s health data and consent.
                 </p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Life Stage Health Notices */}
+        {lifeStageNotices.length > 0 && (
+          <div className="space-y-2">
+            {lifeStageNotices.map((notice, i) => (
+              <div
+                key={i}
+                className={`p-3 rounded-xl text-sm ${
+                  notice.type === 'warning'
+                    ? 'bg-red-500/20 border border-red-500/50 text-red-200'
+                    : 'bg-blue-500/20 border border-blue-500/50 text-blue-200'
+                }`}
+              >
+                {notice.message}
+              </div>
+            ))}
           </div>
         )}
 
@@ -1580,7 +1647,13 @@ export default function FamilyMemberOnboardingWizard() {
             <h3 className="font-semibold mb-2 text-white">Basic Information</h3>
             <div className="space-y-1 text-sm text-white/90">
               <p><span className="text-white/70">Name:</span> {data.name}</p>
-              <p><span className="text-white/70">Date of Birth:</span> {data.dateOfBirth} {age > 0 && `(Age ${age})`}</p>
+              <p>
+                <span className="text-white/70">Date of Birth:</span> {data.dateOfBirth}
+                {ageDisplay && ` (${ageDisplay})`}
+                <span className={`ml-2 inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${badgeColor}`}>
+                  {lifeStageResult.label}
+                </span>
+              </p>
               {!isPet && <p><span className="text-white/70">Relationship:</span> {data.relationship}</p>}
               {!isPet && <p><span className="text-white/70">Gender:</span> {data.gender}</p>}
               {isPet && <p><span className="text-white/70">Species:</span> {data.species}</p>}
@@ -1765,12 +1838,11 @@ export default function FamilyMemberOnboardingWizard() {
 
             // Auto-populate weight from pet vitals
             if (vitalsData.weight) {
-              // Convert 'g' to 'kg' for compatibility with FamilyMemberData
-              const weightUnit = vitalsData.weightUnit === 'g' ? 'kg' : (vitalsData.weightUnit || 'lbs');
+              const weightUnit = vitalsData.weightUnit || 'lbs';
               setData({
                 ...data,
                 currentWeight: vitalsData.weight.toString(),
-                weightUnit: weightUnit as 'lbs' | 'kg'
+                weightUnit: weightUnit as 'lbs' | 'kg' | 'oz' | 'g'
               });
             }
 

@@ -421,12 +421,22 @@ export interface MealLog {
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
   photoUrl?: string
   additionalPhotos?: string[] // Up to 4 additional photos for social media/documentation
-  aiAnalysis: AIAnalysis
+  aiAnalysis?: AIAnalysis
   manualAdjustments?: ManualAdjustments
+  manualEntries?: Array<{
+    food: string
+    calories: number
+    quantity: string
+    protein?: number
+    carbs?: number
+    fat?: number
+  }>
+  totalCalories?: number
+  macros?: { protein?: number; carbs?: number; fat?: number; fiber?: number }
   searchKeywords?: string[]
   loggedAt: Date
   notes?: string
-  dataSource: 'ai-vision' | 'template' // Data provenance - always from photo AI or saved template
+  dataSource?: 'ai-vision' | 'template' // Data provenance - always from photo AI or saved template
   usdaVerified?: boolean // True if all food items were USDA validated
   confidenceScore?: number // Overall confidence (0-100) from AI + USDA validation
 }

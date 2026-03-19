@@ -157,7 +157,7 @@ export async function handleDowngrade(
 ): Promise<Stripe.SubscriptionSchedule> {
   try {
     // Get current subscription
-    const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId)
+    const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId) as any
     const currentPeriodEnd = subscription.current_period_end
 
     // Create subscription schedule to change plan at period end
@@ -170,7 +170,7 @@ export async function handleDowngrade(
       phases: [
         {
           // Current phase - keep existing plan until period ends
-          items: subscription.items.data.map(item => ({
+          items: subscription.items.data.map((item: any) => ({
             price: item.price.id,
             quantity: item.quantity || 1
           })),

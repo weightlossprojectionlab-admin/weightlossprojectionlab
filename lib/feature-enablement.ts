@@ -200,6 +200,12 @@ export function getFeatureMessages(feature: FeaturePreference): {
       description: 'Plan meals with WPL Vision™, discover recipes, smart shopping lists, and pantry tracking all in one place.',
       upgradeMessage: 'Nutrition & Kitchen features are included in all plans. Enable it now!',
       successMessage: 'Nutrition & Kitchen enabled! Your meal planning tools are ready.'
+    },
+    'caregiving': {
+      title: 'Caregiving & Household Management',
+      description: 'Assign household duties, coordinate care, and keep track of tasks for your family and caregivers.',
+      upgradeMessage: 'Caregiving features are available on family plans. Upgrade to unlock!',
+      successMessage: 'Caregiving enabled! Your household management tools are ready.'
     }
   }
 
@@ -218,7 +224,8 @@ export function getRequiredPlanForFeature(feature: FeaturePreference): string {
   const planRequirements: Record<FeaturePreference, string> = {
     'health_medical': 'Single Plus',
     'body_fitness': 'All plans',
-    'nutrition_kitchen': 'All plans'
+    'nutrition_kitchen': 'All plans',
+    'caregiving': 'Family Basic'
   }
 
   return planRequirements[feature] || 'Unknown'

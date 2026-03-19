@@ -6,12 +6,23 @@
  * Used in: Family Member Creation, Onboarding, Vitals Wizard
  */
 
+type WeightUnit = 'lbs' | 'kg' | 'oz' | 'g'
+
+function convertToLbs(weight: number, unit: WeightUnit): number {
+  switch (unit) {
+    case 'kg': return weight * 2.20462
+    case 'oz': return weight / 16
+    case 'g': return weight / 453.592
+    default: return weight
+  }
+}
+
 interface VitalsFormData {
   heightFeet: string
   heightInches: string
   heightCm: string
   currentWeight: string
-  weightUnit: 'lbs' | 'kg'
+  weightUnit: WeightUnit
   heightUnit: 'imperial' | 'metric'
   activityLevel: '' | 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active'
   targetWeight: string
@@ -46,16 +57,19 @@ export function VitalsFormSection({
 
     if (heightInInches === 0) return null
 
-    const weightInLbs = data.weightUnit === 'kg' ? parseFloat(data.currentWeight) * 2.20462 : parseFloat(data.currentWeight)
+    const weightInLbs = convertToLbs(parseFloat(data.currentWeight), data.weightUnit)
     const bmi = (weightInLbs / (heightInInches * heightInInches)) * 703
 
     // Calculate healthy weight range (BMI 18.5-24.9)
     const minHealthyWeight = ((18.5 * heightInInches * heightInInches) / 703)
     const maxHealthyWeight = ((24.9 * heightInInches * heightInInches) / 703)
 
-    // Convert back to user's preferred unit
+    // Convert back to user's preferred unit (BMI is only meaningful for lbs/kg)
     const minWeight = data.weightUnit === 'kg' ? minHealthyWeight / 2.20462 : minHealthyWeight
     const maxWeight = data.weightUnit === 'kg' ? maxHealthyWeight / 2.20462 : maxHealthyWeight
+
+    // BMI not meaningful for oz/g (newborns/infants)
+    if (data.weightUnit === 'oz' || data.weightUnit === 'g') return null
 
     return { bmi, minWeight, maxWeight }
   }
@@ -206,13 +220,22 @@ export function VitalsFormSection({
             step="0.1"
             value={data.currentWeight}
             onChange={(e) => onChange({ currentWeight: e.target.value })}
-            placeholder={data.weightUnit === 'lbs' ? '150' : '68'}
+            placeholder={
+              data.weightUnit === 'oz' ? '112' : data.weightUnit === 'g' ? '3400' : data.weightUnit === 'kg' ? '68' : '150'
+            }
             required={required}
             className="flex-1 px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
           />
-          <div className="px-4 py-2 bg-muted rounded-lg flex items-center text-foreground font-medium">
-            {data.weightUnit}
-          </div>
+          <select
+            value={data.weightUnit}
+            onChange={(e) => onChange({ weightUnit: e.target.value as WeightUnit })}
+            className="px-4 py-2 bg-muted rounded-lg text-foreground font-medium border-2 border-border focus:border-primary focus:outline-none"
+          >
+            <option value="lbs">lbs</option>
+            <option value="kg">kg</option>
+            <option value="oz">oz</option>
+            <option value="g">g</option>
+          </select>
         </div>
 
         {/* AI Health Analysis */}
@@ -303,7 +326,9 @@ export function VitalsFormSection({
                   step="0.1"
                   value={data.targetWeight}
                   onChange={(e) => onChange({ targetWeight: e.target.value })}
-                  placeholder={data.weightUnit === 'lbs' ? '140' : '63'}
+                  placeholder={
+                    data.weightUnit === 'oz' ? '100' : data.weightUnit === 'g' ? '3000' : data.weightUnit === 'kg' ? '63' : '140'
+                  }
                   className="flex-1 px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
                 />
                 <div className="px-4 py-2 bg-muted rounded-lg flex items-center text-foreground font-medium">

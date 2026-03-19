@@ -275,7 +275,7 @@ export async function analyzeMealImage(
     const isQuotaError = errorMsg.includes('quota') || errorMsg.includes('429')
 
     if (isQuotaError) {
-      logger.error('Gemini quota exceeded', { error: errorMsg })
+      logger.error('Gemini quota exceeded', undefined, { error: errorMsg })
     } else {
       logger.warn('Gemini failed, trying OpenAI fallback', { error: errorMsg })
     }
@@ -291,7 +291,7 @@ export async function analyzeMealImage(
       const isOpenAIQuotaError = openaiMsg.includes('quota') || openaiMsg.includes('429')
 
       if (isOpenAIQuotaError) {
-        logger.error('OpenAI quota exceeded', { error: openaiMsg })
+        logger.error('OpenAI quota exceeded', undefined, { error: openaiMsg })
       } else {
         logger.warn('OpenAI failed, using mock data', { error: openaiMsg })
       }

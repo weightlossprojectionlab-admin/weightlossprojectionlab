@@ -244,8 +244,8 @@ export async function addOrUpdateShoppingItem(
     logger.error('[ShoppingOps] Error adding/updating shopping item', error as Error, {
       errorName: error?.name,
       errorCode: error?.code,
-      userId: item.userId,
-      householdId: item.householdId
+      userId,
+      householdId: options.householdId
     })
     throw error
   }

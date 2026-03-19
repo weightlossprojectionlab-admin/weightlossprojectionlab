@@ -336,7 +336,7 @@ function generateFacebookPost(meal: MealData): SocialMediaPost {
       textPosition: 'bottom',
       fontSize: '2xl',
       fontStyle: 'bold',
-      colorScheme: 'warm-relatable',
+      colorScheme: 'vibrant',
       includeEmojis: true
     },
     engagementHooks: {

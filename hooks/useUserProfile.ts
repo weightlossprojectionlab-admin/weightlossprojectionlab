@@ -109,7 +109,7 @@ export function useUserProfile() {
           fetchProfile()
         }
       } catch (error) {
-        logger.error('[useUserProfile] Error fetching profile:', error)
+        logger.error('[useUserProfile] Error fetching profile:', error instanceof Error ? error : new Error(String(error)))
         setError(error as Error)
         setLoading(false)
       }

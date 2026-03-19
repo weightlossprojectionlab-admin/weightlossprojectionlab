@@ -10,7 +10,7 @@ import { evaluateWeight } from '@/lib/pet-weight-ranges'
 
 interface PetWeightStatusIndicatorProps {
   weight: number
-  weightUnit: 'lbs' | 'kg'
+  weightUnit: 'lbs' | 'kg' | 'oz' | 'g'
   species?: string
   breed?: string
   size?: 'sm' | 'md' | 'lg'
@@ -25,7 +25,19 @@ export function PetWeightStatusIndicator({
   size = 'md',
   className = ''
 }: PetWeightStatusIndicatorProps) {
-  const evaluation = evaluateWeight(weight, weightUnit, species, breed)
+  // Convert oz/g to lbs for evaluation (evaluateWeight expects lbs or kg)
+  let evalWeight = weight
+  let evalUnit: 'lbs' | 'kg' = 'lbs'
+  if (weightUnit === 'oz') {
+    evalWeight = weight / 16
+    evalUnit = 'lbs'
+  } else if (weightUnit === 'g') {
+    evalWeight = weight / 1000
+    evalUnit = 'kg'
+  } else {
+    evalUnit = weightUnit
+  }
+  const evaluation = evaluateWeight(evalWeight, evalUnit, species, breed)
 
   if (evaluation.status === 'unknown') return null
 

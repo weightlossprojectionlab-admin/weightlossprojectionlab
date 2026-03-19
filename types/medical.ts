@@ -41,6 +41,7 @@ export interface PatientProfile {
   photo?: string
   dateOfBirth: string // ISO 8601
   age?: number // Computed age in years
+  lifeStage?: string // Computed: "newborn", "infant", "toddler", "child", "teen", "adult", "senior", "puppy", "kitten", etc.
   relationship: 'self' | 'spouse' | 'parent' | 'child' | 'sibling' | 'grandparent' | 'pet'
 
   // Pet-specific fields
@@ -79,7 +80,8 @@ export interface PatientProfile {
   heightUnit?: 'imperial' | 'metric'
   activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active'
   targetWeight?: number
-  targetWeightUnit?: 'lbs' | 'kg'
+  weightUnit?: 'lbs' | 'kg' | 'oz' | 'g'
+  targetWeightUnit?: 'lbs' | 'kg' | 'oz' | 'g'
   weightGoal?: 'lose-weight' | 'maintain-weight' | 'gain-muscle' | 'improve-health'
 
   // Check-in preferences (set during onboarding)
@@ -200,6 +202,24 @@ export interface MealLog {
   location?: string // Restaurant name or location
   aiAnalyzed?: boolean
   aiConfidence?: number
+  // Extended fields stored by the API
+  title?: string
+  totalCalories?: number
+  macros?: { protein?: number; carbs?: number; fat?: number; fiber?: number }
+  aiAnalysis?: {
+    foodItems?: Array<{ name: string; calories?: number; [key: string]: unknown }>
+    totalCalories?: number
+    totalMacros?: { protein?: number; carbs?: number; fat?: number }
+    [key: string]: unknown
+  }
+  manualEntries?: Array<{
+    food: string
+    calories: number
+    quantity: string
+    protein?: number
+    carbs?: number
+    fat?: number
+  }>
 }
 
 // ==================== STEP LOGS ====================

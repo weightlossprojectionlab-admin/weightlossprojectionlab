@@ -23,7 +23,8 @@
       "Bash(xargs ls:*)",
       "Read(//c/Users/percy/wlpl/weightlossprojectlab/**)",
       "Read(//c/Users/percy/wlpl/weightlossprojectlab//**)",
-      "Bash(ls -la /c/Users/percy/wlpl/weightlossprojectlab/*.config.*)"
+      "Bash(ls -la /c/Users/percy/wlpl/weightlossprojectlab/*.config.*)",
+      "Bash(node_modules/typescript/bin/tsc --noEmit)"
     ],
     "deny": [],
     "ask": [],

@@ -82,6 +82,7 @@ export async function createNotification(
       actionLabel: params.actionLabel,
       metadata: params.metadata,
       read: false,
+      archived: false,
       emailSent: false,
       pushSent: false,
       createdAt: now,

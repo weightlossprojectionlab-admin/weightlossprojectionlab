@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
+import type { Message } from 'firebase-admin/messaging'
 
 /**
  * Send a push notification via Firebase Cloud Messaging (Admin SDK)
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const messaging = admin.messaging()
 
-    const message: admin.messaging.Message = {
+    const message: Message = {
       token,
       notification: {
         title: notification.title,

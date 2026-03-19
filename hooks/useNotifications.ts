@@ -213,7 +213,7 @@ export function useNotifications(userId: string | undefined) {
         vapidKey,
         serviceWorkerRegistration: registration
       })
-      logger.debug('[useNotifications] FCM token obtained:', token ? 'success' : 'failed')
+      logger.debug('[useNotifications] FCM token obtained:', { status: token ? 'success' : 'failed' })
 
       if (!token) {
         throw new Error('Failed to get FCM token. Please refresh and try again.')
