@@ -741,7 +741,7 @@ function DashboardContent() {
                         // Use feature enablement helper
                         const { canEnableFeature, enableFeature, getFeatureMessages, getRequiredPlanForFeature } = await import('@/lib/feature-enablement')
 
-                        const result = canEnableFeature(user, 'body_fitness')
+                        const result = canEnableFeature(user as any, 'body_fitness')
                         const messages = getFeatureMessages('body_fitness')
 
                         if (result.requiresUpgrade) {
@@ -803,7 +803,7 @@ function DashboardContent() {
                                 onboardingAnswers: {
                                   ...userPrefs.preferences,
                                   featurePreferences: [...currentFeatures, 'nutrition_kitchen']
-                                }
+                                } as any
                               }
                             })
                             toast.success('Nutrition & Kitchen enabled! Refreshing...')
@@ -849,7 +849,7 @@ function DashboardContent() {
                                     onboardingAnswers: {
                                       ...userPrefs.preferences,
                                       featurePreferences: [...currentFeatures, 'health_medical']
-                                    }
+                                    } as any
                                   }
                                 })
                                 toast.success('Health & Medical enabled! Refreshing...')

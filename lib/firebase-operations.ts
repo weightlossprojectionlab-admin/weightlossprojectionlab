@@ -261,7 +261,12 @@ export const mealLogOperations = {
       food: string
       calories: number
       quantity: string
+      protein?: number
+      carbs?: number
+      fat?: number
     }>
+    totalCalories?: number
+    macros?: { protein?: number; carbs?: number; fat?: number; fiber?: number }
     notes?: string
     loggedAt?: string
   }) {

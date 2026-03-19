@@ -47,7 +47,7 @@ export function QuickWeightModal({ patient, onClose, onSuccess }: QuickWeightMod
       toast.success('Weight saved successfully!')
       onSuccess()
     } catch (error: unknown) {
-      logger.error('[QuickWeightModal] Error saving weight', error)
+      logger.error('[QuickWeightModal] Error saving weight', error instanceof Error ? error : new Error(String(error)))
       toast.error('Failed to save weight')
     } finally {
       setSaving(false)

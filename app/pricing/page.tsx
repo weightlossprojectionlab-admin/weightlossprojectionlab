@@ -141,11 +141,11 @@ export default function PricingPage() {
       if (!intent) return
 
       // Check if user can now enable the feature (after upgrade)
-      const result = canEnableFeature(user, intent.feature)
+      const result = canEnableFeature(user as any, intent.feature)
 
       if (result.canEnable) {
         // Auto-enable the feature they wanted
-        logger.info('[Pricing] Auto-enabling feature after upgrade:', intent.feature)
+        logger.info('[Pricing] Auto-enabling feature after upgrade:', { feature: intent.feature })
 
         try {
           // Get current user preferences

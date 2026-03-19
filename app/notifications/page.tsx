@@ -16,7 +16,7 @@ import {
   ArchiveBoxIcon
 } from '@heroicons/react/24/outline'
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek, parseISO } from 'date-fns'
-import type { Notification, NotificationType, NotificationPriority } from '@/types/notifications'
+import type { Notification, NotificationType, NotificationPriority, NotificationFilter } from '@/types/notifications'
 import toast from 'react-hot-toast'
 
 /**

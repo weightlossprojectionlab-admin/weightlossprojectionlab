@@ -47,7 +47,7 @@ export async function GET(
     return NextResponse.json({ success: true, photos })
 
   } catch (error: any) {
-    logger.error('[API health-episodes photos GET]', { error: error.message })
+    logger.error('[API health-episodes photos GET]', error as Error)
     return NextResponse.json({ error: error.message || 'Failed to fetch photos' }, { status: 500 })
   }
 }
@@ -115,7 +115,7 @@ export async function POST(
     return NextResponse.json({ success: true, photo: { id: photoId, ...photo } }, { status: 201 })
 
   } catch (error: any) {
-    logger.error('[API health-episodes photos POST]', { error: error.message })
+    logger.error('[API health-episodes photos POST]', error as Error)
     return NextResponse.json({ error: error.message || 'Failed to add photo' }, { status: 500 })
   }
 }

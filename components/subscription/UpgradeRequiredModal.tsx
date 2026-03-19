@@ -65,6 +65,19 @@ const FEATURE_INFO: Record<FeaturePreference, {
       'Nutrition tracking and insights',
       'Meal planning and prep reminders'
     ]
+  },
+  'caregiving': {
+    title: 'Caregiving & Household Management',
+    icon: '🤲',
+    description: 'Coordinate care and manage household duties for your family',
+    benefits: [
+      'Assign household duties to caregivers',
+      'Track completion with reminders and alerts',
+      'Invite external caregivers to your household',
+      'Get notified when duties are overdue',
+      'Manage laundry, cleaning, shopping, and more',
+      'Customizable duty categories and schedules'
+    ]
   }
 }
 

@@ -88,6 +88,28 @@ const FEATURE_ONBOARDING: Record<FeaturePreference, {
         description: 'Plan meals and generate smart shopping lists'
       }
     ]
+  },
+  'caregiving': {
+    title: 'Caregiving Enabled!',
+    icon: '🤲',
+    description: 'You can now manage household duties and coordinate care for family members.',
+    nextSteps: [
+      {
+        emoji: '📋',
+        title: 'Assign Household Duties',
+        description: 'Delegate tasks to caregivers and family members'
+      },
+      {
+        emoji: '🔔',
+        title: 'Set Reminders',
+        description: 'Get notified when duties are due or overdue'
+      },
+      {
+        emoji: '👥',
+        title: 'Invite Caregivers',
+        description: 'Add external caregivers to help manage care'
+      }
+    ]
   }
 }
 

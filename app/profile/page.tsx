@@ -364,8 +364,7 @@ function ProfileContent() {
           badge: '/icon-72x72.png',
           tag: 'test-notification',
           requireInteraction: false,
-          silent: false,
-          vibrate: [200, 100, 200] // Haptic feedback on mobile
+          silent: false
         })
 
         toast.success('Test notification sent! You should see it now.')
@@ -1001,7 +1000,7 @@ function ProfileContent() {
                   if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}))
                     const errorMsg = errorData.error || `Server returned ${response.status}`
-                    logger.error('[Profile] Failed to update patient vital reminders', {
+                    logger.error('[Profile] Failed to update patient vital reminders', undefined, {
                       status: response.status,
                       errorData,
                       patientId: currentlyViewingMember.id
@@ -1479,9 +1478,9 @@ function ProfileContent() {
                     if (!user?.uid) return
 
                     // Use feature enablement helper to check user intent
-                    const { canEnableFeature, enableFeature, getFeatureMessages, getRequiredPlan } = await import('@/lib/feature-enablement')
+                    const { canEnableFeature, enableFeature, getFeatureMessages } = await import('@/lib/feature-enablement')
 
-                    const result = canEnableFeature(user, 'health_medical')
+                    const result = canEnableFeature(user as any, 'health_medical')
                     const messages = getFeatureMessages('health_medical')
 
                     if (result.requiresUpgrade) {

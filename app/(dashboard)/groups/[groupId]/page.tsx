@@ -41,7 +41,7 @@ export default function GroupDetailPage() {
         const groupSnap = await getDoc(groupRef)
 
         if (!groupSnap.exists()) {
-          logger.error('[GroupDetail] Group not found or no permission', { groupId })
+          logger.error('[GroupDetail] Group not found or no permission', undefined, { groupId })
           toast.error('Group not found or you do not have permission to view it')
           router.push('/groups')
           return
@@ -59,7 +59,7 @@ export default function GroupDetailPage() {
           const membersData = membersSnap.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
-          })) as GroupMember[]
+          })) as unknown as GroupMember[]
 
           setMembers(membersData)
         }
@@ -328,7 +328,7 @@ export default function GroupDetailPage() {
                   >
                     <div className="flex items-center gap-3">
                       {index === 0 && (
-                        <Crown className="w-5 h-5 text-yellow-500" title="Creator" />
+                        <Crown className="w-5 h-5 text-yellow-500" aria-label="Creator" />
                       )}
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">

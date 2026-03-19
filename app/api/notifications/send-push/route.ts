@@ -34,15 +34,8 @@ export async function POST(request: NextRequest) {
 
     // Import Firebase Admin SDK
     const { default: admin } = await import('firebase-admin')
-    const { adminApp } = await import('@/lib/firebase-admin')
 
-    // Ensure messaging is initialized
-    let messaging
-    try {
-      messaging = admin.messaging(adminApp)
-    } catch {
-      messaging = admin.messaging()
-    }
+    const messaging = admin.messaging()
 
     const message: admin.messaging.Message = {
       token,

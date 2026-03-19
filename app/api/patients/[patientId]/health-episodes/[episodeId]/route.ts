@@ -67,7 +67,7 @@ export async function GET(
     })
 
   } catch (error: any) {
-    logger.error('[API health-episodes/:id GET]', { error: error.message })
+    logger.error('[API health-episodes/:id GET]', error as Error)
     return NextResponse.json({ error: error.message || 'Failed to fetch episode' }, { status: 500 })
   }
 }
@@ -113,7 +113,7 @@ export async function PATCH(
     return NextResponse.json({ success: true })
 
   } catch (error: any) {
-    logger.error('[API health-episodes/:id PATCH]', { error: error.message })
+    logger.error('[API health-episodes/:id PATCH]', error as Error)
     return NextResponse.json({ error: error.message || 'Failed to update episode' }, { status: 500 })
   }
 }
@@ -140,7 +140,7 @@ export async function DELETE(
     return NextResponse.json({ success: true })
 
   } catch (error: any) {
-    logger.error('[API health-episodes/:id DELETE]', { error: error.message })
+    logger.error('[API health-episodes/:id DELETE]', error as Error)
     return NextResponse.json({ error: error.message || 'Failed to delete episode' }, { status: 500 })
   }
 }

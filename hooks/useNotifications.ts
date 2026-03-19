@@ -179,7 +179,7 @@ export function useNotifications(userId: string | undefined) {
       // Request permission
       logger.debug('[useNotifications] Requesting notification permission...')
       const permission = await Notification.requestPermission()
-      logger.debug('[useNotifications] Permission result:', permission)
+      logger.debug('[useNotifications] Permission result:', { permission })
 
       setState(prev => ({ ...prev, permission }))
 

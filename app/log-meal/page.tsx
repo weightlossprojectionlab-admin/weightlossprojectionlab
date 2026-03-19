@@ -240,9 +240,8 @@ function LogMealContent() {
       const existingMeal = checkForDuplicateMeal(selectedMealType)
       if (existingMeal) {
         // Get meal description from title field or first food item
-        const mealDescription = existingMeal.title ||
-                               existingMeal.aiAnalysis?.foodItems?.[0]?.name ||
-                               existingMeal.manualEntries?.[0]?.food ||
+        const mealDescription = existingMeal.description ||
+                               existingMeal.foodItems?.[0] ||
                                'Untitled meal'
 
         setDuplicateMeal({
@@ -780,7 +779,11 @@ function LogMealContent() {
 
       setManualEntryForm({
         mealName,
-        notes
+        notes,
+        calories: '',
+        protein: '',
+        carbs: '',
+        fat: ''
       })
 
       toast.success(`Found: ${product.name} - Manual entry requires paid subscription for AI analysis`)
@@ -897,7 +900,7 @@ function LogMealContent() {
           logger.debug('📤 Uploading manual entry image...')
           setUploadProgress('Uploading image...')
           photoUrl = await uploadMealPhoto(manualEntryImage)
-          logger.debug('✅ Image uploaded:', photoUrl)
+          logger.debug('✅ Image uploaded:', { photoUrl })
         } catch (uploadError) {
           logger.error('Failed to upload image, saving meal without photo:', uploadError as Error)
           toast.error('Image upload failed. Saving meal without photo.')
@@ -1919,7 +1922,11 @@ function LogMealContent() {
                       setShowManualEntry(false)
                       setManualEntryForm({
                         mealName: '',
-                        notes: ''
+                        notes: '',
+                        calories: '',
+                        protein: '',
+                        carbs: '',
+                        fat: ''
                       })
                       // Clean up image state
                       if (manualEntryImageUrlRef.current) {

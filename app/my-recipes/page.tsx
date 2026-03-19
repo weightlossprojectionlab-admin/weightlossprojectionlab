@@ -262,8 +262,8 @@ export default function MyRecipesPage() {
           <RecipeGrid
             recipes={recipes}
             savedRecipeIds={savedRecipeIds}
-            onSaveRecipe={handleSaveRecipe}
-            onRecipeClick={(id) => router.push(`/recipes/${id}`)}
+            onSaveRecipe={(id) => handleSaveRecipe(id, !savedRecipeIds.has(id))}
+            onRecipeClick={(id: string) => router.push(`/recipes/${id}`)}
             loading={loading}
           />
         )}

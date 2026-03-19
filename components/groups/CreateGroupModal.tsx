@@ -60,7 +60,7 @@ export default function CreateGroupModal({
     }
 
     if (!user) {
-      logger.error('[CreateGroupModal] No user found when submitting', {
+      logger.error('[CreateGroupModal] No user found when submitting', undefined, {
         loading,
         hasUser: !!user
       })

@@ -48,7 +48,7 @@ export function SocialMediaCard({ photo, onCardClick, showShareOverlay = false, 
       macros: photo.macros,
       title: photo.title,
       notes: photo.notes
-    }, platform)
+    }, platform as any)
   }, [photo, targetPlatform])
 
   const handlePlatformSelect = async (platform: SocialPlatform) => {

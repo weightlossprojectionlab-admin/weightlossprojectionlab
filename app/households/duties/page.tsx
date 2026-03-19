@@ -133,8 +133,9 @@ function HouseholdDutiesContent() {
               } as unknown as CaregiverProfile)
             }
           } catch (err) {
-            logger.warn('[HouseholdDutiesPage] Failed to fetch caregiver', err as Error, {
-              caregiverId
+            logger.warn('[HouseholdDutiesPage] Failed to fetch caregiver', {
+              caregiverId,
+              error: (err as Error).message
             })
           }
         }

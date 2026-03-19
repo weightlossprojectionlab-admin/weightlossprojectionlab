@@ -17,7 +17,13 @@
       "Bash(sleep:*)",
       "Bash(firebase deploy:*)",
       "Bash(npm install:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(grep -E \"^\\\\-.*\\\\.\\(json|ts|js|md\\)$\")",
+      "Bash(grep -E \"\\\\.\\(json|ts|rc|yml|yaml|toml\\)$\")",
+      "Bash(xargs ls:*)",
+      "Read(//c/Users/percy/wlpl/weightlossprojectlab/**)",
+      "Read(//c/Users/percy/wlpl/weightlossprojectlab//**)",
+      "Bash(ls -la /c/Users/percy/wlpl/weightlossprojectlab/*.config.*)"
     ],
     "deny": [],
     "ask": [],

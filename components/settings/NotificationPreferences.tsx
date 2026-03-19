@@ -298,8 +298,7 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
           badge: '/icon-72x72.png',
           tag: 'test-notification',
           requireInteraction: false,
-          silent: false,
-          vibrate: [200, 100, 200] // Haptic feedback on mobile
+          silent: false
         })
 
         toast.success('Test notification sent successfully!')

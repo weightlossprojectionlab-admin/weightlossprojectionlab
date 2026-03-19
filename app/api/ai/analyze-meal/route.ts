@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         status: subscription.status
       })
     } catch (subError) {
-      logger.error('❌ Subscription check failed', subError)
+      logger.error('❌ Subscription check failed', subError instanceof Error ? subError : new Error(String(subError)))
       ErrorHandler.handle(subError, {
         operation: 'subscription_check',
         component: 'api/ai/analyze-meal',

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     // Check if user is admin
     // Deprecated: Use isSuperAdmin from @/lib/admin/permissions
 
-    if (!adminEmails.includes(decodedToken.email || '')) {
+    if (!isSuperAdmin(decodedToken.email)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
     // Check if user is admin
     // Deprecated: Use isSuperAdmin from @/lib/admin/permissions
 
-    if (!adminEmails.includes(decodedToken.email || '')) {
+    if (!isSuperAdmin(decodedToken.email)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }

@@ -50,7 +50,7 @@ export async function GET(
     return NextResponse.json({ success: true, episodes })
 
   } catch (error: any) {
-    logger.error('[API health-episodes GET]', { error: error.message })
+    logger.error('[API health-episodes GET]', error as Error)
     return NextResponse.json({ error: error.message || 'Failed to fetch episodes' }, { status: 500 })
   }
 }
@@ -131,7 +131,7 @@ export async function POST(
     return NextResponse.json({ success: true, episode: { id: episodeId, ...episode } }, { status: 201 })
 
   } catch (error: any) {
-    logger.error('[API health-episodes POST]', { error: error.message })
+    logger.error('[API health-episodes POST]', error as Error)
     return NextResponse.json({ error: error.message || 'Failed to create episode' }, { status: 500 })
   }
 }

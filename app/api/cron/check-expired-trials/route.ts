@@ -45,9 +45,9 @@ export async function GET(request: NextRequest) {
     logger.info('[Cron] Expired trials check completed', result)
 
     return NextResponse.json({
-      success: true,
       timestamp: new Date().toISOString(),
-      ...result
+      ...result,
+      success: true,
     })
   } catch (error: any) {
     logger.error('[Cron] Error checking expired trials', error)
