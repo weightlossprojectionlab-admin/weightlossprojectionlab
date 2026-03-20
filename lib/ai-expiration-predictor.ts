@@ -270,6 +270,11 @@ function getDefaultStorageRecommendations(category: ProductCategory): string[] {
       'Wipe jar rims clean',
       'Check for separation or off odors'
     ],
+    baby: [
+      'Store in cool, dry place',
+      'Check expiration dates on formula',
+      'Keep diapers and wipes sealed until use'
+    ],
     other: [
       'Follow package instructions',
       'Store in appropriate temperature',
@@ -356,6 +361,11 @@ function getDefaultSpoilageIndicators(category: ProductCategory): string[] {
       'Off color or darkening',
       'Unusual smell',
       'Excessive separation'
+    ],
+    baby: [
+      'Formula clumping or discoloration',
+      'Damaged packaging',
+      'Past expiration date'
     ],
     other: [
       'Unusual smell',

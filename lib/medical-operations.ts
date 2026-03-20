@@ -793,17 +793,14 @@ export const providerOperations = {
           onUpdate(providers)
         },
         (error) => {
-          // Log the full error object for debugging
+          // Firestore onSnapshot errors may not be standard Error objects
           const firestoreError = error as any
-          const context = {
-            userId: userId || 'unknown-user',
-            errorType: typeof error,
-            errorCode: firestoreError?.code || 'no-code',
-            errorMessage: firestoreError?.message || firestoreError?.toString() || 'no-message',
-            errorName: firestoreError?.name || 'unknown-error',
-            hasError: !!error
-          }
-          logger.error('[MedicalOps] Provider listener error', error as Error, context)
+          const code = firestoreError?.code || 'unknown'
+          const msg = firestoreError?.message || firestoreError?.toString?.() || 'Unknown error'
+
+          // Log directly to console for maximum visibility, then use logger
+          console.error(`[MedicalOps] Provider listener error: [${code}] ${msg}`, { userId })
+          logger.warn(`[MedicalOps] Provider listener: [${code}] ${msg} (userId: ${userId || 'unknown'})`)
           if (onError) {
             onError(error as Error)
           }

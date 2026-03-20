@@ -185,8 +185,22 @@ export function getUserSubscription(user: User | null): UserSubscription | null 
     if (simulated) return simulated
   }
 
-  // 3. Production - use real subscription
-  return user.subscription || null
+  // 3. Check cached subscription (populated by useSubscription hook)
+  if (_cachedSubscription) return _cachedSubscription
+
+  // 4. Fallback - check if subscription was attached to user object
+  return (user as any).subscription || null
+}
+
+// Subscription cache for client-side use (populated by useSubscription hook)
+let _cachedSubscription: UserSubscription | null = null
+
+export function setCachedSubscription(sub: UserSubscription | null) {
+  _cachedSubscription = sub
+}
+
+export function getCachedSubscription(): UserSubscription | null {
+  return _cachedSubscription
 }
 
 /**
@@ -363,8 +377,8 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
       currentHouseholds: 0,
       maxDutiesPerHousehold: HOUSEHOLD_DUTY_LIMITS.free,
       currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-      trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+      currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     },
     'Single User': {
       plan: 'single',

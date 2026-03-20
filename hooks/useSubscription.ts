@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './useAuth'
 import { UserSubscription } from '@/types'
-import { getUserSubscription, isAdmin } from '@/lib/feature-gates'
+import { getUserSubscription, isAdmin, setCachedSubscription } from '@/lib/feature-gates'
 import { db } from '@/lib/firebase'
 import { doc, onSnapshot } from 'firebase/firestore'
 
@@ -23,6 +23,7 @@ export function useSubscription() {
   useEffect(() => {
     if (!user) {
       setSubscription(null)
+      setCachedSubscription(null)
       setLoading(false)
       setIsAdminUser(false)
       return
@@ -31,18 +32,19 @@ export function useSubscription() {
     // Get effective subscription (with admin override and dev simulation)
     const effectiveSubscription = getUserSubscription(user as any)
     setSubscription(effectiveSubscription)
+    setCachedSubscription(effectiveSubscription)
     setIsAdminUser(isAdmin(user as any))
     setLoading(false)
 
     // Real-time listener for subscription changes from Firestore
     // This catches webhook updates from Stripe
-    console.log('[useSubscription] Setting up real-time Firestore listener for user:', user.uid)
+    // Real-time Firestore listener for subscription updates
     const userDocRef = doc(db, 'users', user.uid)
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnapshot) => {
       if (docSnapshot.exists()) {
         const userData = docSnapshot.data()
         const updatedSubscription = userData?.subscription as UserSubscription | undefined
-        console.log('[useSubscription] Firestore subscription updated:', updatedSubscription)
+        // Subscription updated from Firestore
         if (updatedSubscription) {
           // Convert Firestore Timestamps to Date objects for proper rendering
           const converted = {
@@ -58,6 +60,7 @@ export function useSubscription() {
               : updatedSubscription.currentPeriodStart,
           }
           setSubscription(converted)
+          setCachedSubscription(converted)
         }
       }
     }, (error) => {
@@ -66,19 +69,20 @@ export function useSubscription() {
 
     // Listen for simulation changes (works in dev mode and for admin users)
     const handleSimulationChange = () => {
-      console.log('[useSubscription] Received subscription-simulation-changed event')
+      // Simulation changed
       const updated = getUserSubscription(user as any)
-      console.log('[useSubscription] Updated subscription:', updated)
+      // Updated from simulation
       setSubscription(updated)
+      setCachedSubscription(updated)
     }
 
-    console.log('[useSubscription] Adding event listener for subscription-simulation-changed')
+    // Listen for dev simulation changes
     window.addEventListener('subscription-simulation-changed', handleSimulationChange)
 
     return () => {
-      console.log('[useSubscription] Cleaning up Firestore listener')
+      // Cleanup
       unsubscribeFirestore()
-      console.log('[useSubscription] Removing event listener for subscription-simulation-changed')
+      // Remove simulation listener
       window.removeEventListener('subscription-simulation-changed', handleSimulationChange)
     }
   }, [user])

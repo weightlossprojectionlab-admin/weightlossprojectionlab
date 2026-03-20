@@ -848,12 +848,22 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                                       <p className="text-xs text-orange-700 dark:text-orange-400 flex items-center gap-1">
                                         <span>⚠️</span>
                                         <span>{ingredientResults[idx].comparison}</span>
+                                        {isIngredientOnShoppingList(ingredient) && (
+                                          <span className="ml-1 inline-flex items-center gap-0.5 text-primary font-medium">
+                                            <span>📋</span> On Shopping List
+                                          </span>
+                                        )}
                                       </p>
                                     )}
                                     {!ingredientResults[idx].matched && (
                                       <p className="text-xs text-error-dark flex items-center gap-1">
                                         <span>❌</span>
                                         <span>{ingredientResults[idx].comparison}</span>
+                                        {isIngredientOnShoppingList(ingredient) && (
+                                          <span className="ml-1 inline-flex items-center gap-0.5 text-primary font-medium">
+                                            <span>📋</span> On Shopping List
+                                          </span>
+                                        )}
                                       </p>
                                     )}
                                     {ingredientResults[idx].hasEnough === null && ingredientResults[idx].matched && (

@@ -114,7 +114,11 @@ export function useMealLogsRealtime(params?: {
       // Set up real-time listener
       const unsubscribe = onSnapshot(
         q,
+        { includeMetadataChanges: false },
         (snapshot) => {
+          // Skip metadata-only changes to prevent unnecessary re-renders (image refresh loop)
+          if (snapshot.metadata.hasPendingWrites) return
+
           const logs = snapshot.docs.map(doc => {
             const data = doc.data()
             return {
@@ -130,15 +134,21 @@ export function useMealLogsRealtime(params?: {
             }
           }) as MealLogData[]
 
-          logger.debug(`📊 ${logs.length} meal logs loaded (real-time)`, {
-            firstMeal: logs[0] ? {
-              id: logs[0].id,
-              hasPhotoUrl: !!logs[0].photoUrl,
-              photoUrl: logs[0].photoUrl
-            } : null
+          // Only update state if data actually changed (prevents image re-fetch loop)
+          setMealLogs(prev => {
+            const prevIds = prev.map(m => m.id).join(',')
+            const newIds = logs.map(m => m.id).join(',')
+            if (prevIds === newIds && prev.length === logs.length) {
+              // Same set of meals — check if any content changed
+              const hasChanges = logs.some((log, i) => {
+                const p = prev[i]
+                return !p || p.id !== log.id || p.description !== log.description ||
+                  p.calories !== log.calories || p.photoUrl !== log.photoUrl
+              })
+              if (!hasChanges) return prev // Skip update — no actual changes
+            }
+            return logs
           })
-
-          setMealLogs(logs)
           setLoading(false)
         },
         (err) => {

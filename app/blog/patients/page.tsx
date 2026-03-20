@@ -1,8 +1,11 @@
 /**
- * Patient Management - Marketing Blog Page
+ * Health Profiles - Core Product Page
  *
- * Hybrid marketing page showcasing WPL Patient Management (for family plans)
- * Optimized for SEO with top-notch backlinks and conversion funnel
+ * Repositioned from clinical "Patient Management" to
+ * "Your Family's Health Operating System" — the central hub
+ * that powers everything WPL does.
+ *
+ * Structure: Hero → Modes → Intelligence → Stories → Profile Features → Trust → CTA
  */
 
 import Link from 'next/link'
@@ -14,27 +17,31 @@ import {
   BellAlertIcon,
   ShieldCheckIcon,
   CheckCircleIcon,
+  CheckIcon,
   SparklesIcon,
-  PlusCircleIcon
+  PlusCircleIcon,
+  ArrowRightIcon,
+  UserIcon,
+  AcademicCapIcon,
 } from '@heroicons/react/24/outline'
 import { Screenshot } from '@/components/ui/Screenshot'
 import { DemoRequestButton } from '@/components/DemoRequestButton'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Patient Management - Track Multiple Family Members | Wellness Projection Lab',
-  description: 'Manage health data for your entire family from one account. Track weight, meals, vitals, medications, and appointments for children, elderly parents, pets, and more with HIPAA-compliant patient profiles.',
-  keywords: 'patient management, family health tracking, multi-patient dashboard, caregiver tools, elderly care, pediatric tracking, pet health, family plan',
+  title: 'Health Profiles — Your Family\'s Health Operating System | Wellness Projection Lab',
+  description: 'Create intelligent health profiles for everyone you care about — children, partners, aging parents, and pets. AI-powered insights, life-stage awareness, and proactive alerts from one centralized system.',
+  keywords: 'health profiles, family health system, multi-person health tracking, AI health insights, pediatric tracking, elderly monitoring, pet health tracking, caregiver platform, health operating system',
   openGraph: {
-    title: 'Patient Management - Track Multiple Family Members',
-    description: 'Manage health data for your entire family from one account. Track weight, meals, vitals, medications, and appointments for all family members.',
+    title: 'Health Profiles — Your Family\'s Health Operating System',
+    description: 'Create intelligent health profiles for everyone you care about. AI-powered insights from newborns to seniors.',
     type: 'article',
     url: 'https://weightlossproglab.com/blog/patients',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Patient Management - Track Multiple Family Members',
-    description: 'Manage health data for your entire family from one account. Track weight, meals, vitals, medications, and appointments for all family members.',
+    title: 'Health Profiles — Your Family\'s Health Operating System',
+    description: 'Create intelligent health profiles for everyone you care about. AI-powered insights from newborns to seniors.',
   },
   alternates: {
     canonical: 'https://weightlossproglab.com/blog/patients'
@@ -44,9 +51,11 @@ export const metadata: Metadata = {
 export default function PatientsBlogPage() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
+
+      {/* ============================================ */}
+      {/* HERO                                         */}
+      {/* ============================================ */}
       <div className="relative bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 text-white overflow-hidden">
-        {/* Background Image */}
         <div
           className="absolute inset-0 opacity-20"
           style={{
@@ -59,16 +68,18 @@ export default function PatientsBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">Family Health Management</span>
+              <span className="text-sm font-medium">Health Operating System</span>
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">Manage Your Whole Family's Health in One Place</h1>
-            <p className="text-xl text-cyan-100 mb-8 leading-relaxed">
-              Track weight, meals, vitals, medications, and appointments for all family members under your care—children, elderly parents, spouses, and even pets. One HIPAA-compliant account with individual profiles for each patient and family member.
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+              Every Person You Care About.<br />One Intelligent System.
+            </h1>
+            <p className="text-xl text-cyan-100 mb-8 leading-relaxed max-w-3xl mx-auto">
+              Create a health profile for your child, your partner, your aging parent, or your pet. Each profile gets its own dashboard, AI insights, and proactive alerts — all managed from your single account.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
                 href="/pricing"
-                className="px-8 py-4 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-semibold shadow-lg"
+                className="px-8 py-4 bg-white text-blue-700 rounded-lg hover:bg-blue-50 transition-colors font-semibold shadow-lg"
               >
                 Start Free Trial
               </Link>
@@ -79,362 +90,288 @@ export default function PatientsBlogPage() {
                 View Demo
               </DemoRequestButton>
             </div>
+            <p className="text-sm text-white/70 mt-4">
+              No credit card required &bull; 7-day free trial &bull; Cancel anytime
+            </p>
           </div>
         </div>
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* What Is Patient Management */}
-        <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-8 text-center">What Is Patient Management?</h2>
-          <div className="max-w-4xl mx-auto text-lg text-muted-foreground space-y-4">
-            <p>
-              <strong>Patient Management</strong> is WPL's family plan feature that lets you track health data for multiple
-              people from one account. Create separate profiles for each patient and family member—children, elderly parents,
-              spouse, or even pets—and manage their weight, meals, vitals, medications, and appointments individually.
-            </p>
-            <p>
-              Perfect for professional caregivers, home health aides, parents managing children's health, adult children coordinating elderly parent care,
-              or anyone juggling multiple patients' and family members' health needs. Each person gets their own dashboard, goals,
-              and AI health reports while you maintain central oversight as the care coordinator.
+
+        {/* ============================================ */}
+        {/* THE MODES — Who are you tracking?            */}
+        {/* ============================================ */}
+        <section className="mb-24">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-foreground mb-4">One Platform. Four Modes.</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Tell us who you&apos;re tracking, and the system adapts instantly.
             </p>
           </div>
-        </section>
-
-        {/* Smart Vitals Reminders */}
-        <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-8 text-center">Never Miss a Health Check</h2>
-          <p className="text-center text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Smart vitals reminders popup when family members have health checks due. Track what's overdue,
-            when it was last logged, and log vitals instantly with one click or use the guided wizard.
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <ModeCard
+              icon={<UserIcon className="w-8 h-8" />}
+              title="Personal"
+              description="Track your own weight, meals, vitals, and progress with AI-powered projections."
+              color="bg-blue-500"
+            />
+            <ModeCard
+              icon={<HeartIcon className="w-8 h-8" />}
+              title="Family"
+              description="Add children, partners, and siblings. Each gets their own dashboard, goals, and insights."
+              color="bg-pink-500"
+            />
+            <ModeCard
+              icon={<ShieldCheckIcon className="w-8 h-8" />}
+              title="Caregiving"
+              description="Monitor aging parents, manage medications, coordinate duties between siblings."
+              color="bg-amber-500"
+            />
+            <ModeCard
+              icon={<AcademicCapIcon className="w-8 h-8" />}
+              title="Professional"
+              description="Coaches and providers: track client progress, generate reports, manage caseloads."
+              color="bg-purple-500"
+            />
+          </div>
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Same engine, same login — the experience changes based on who you&apos;re caring for.
           </p>
-          <div className="max-w-md mx-auto">
-            <Screenshot
-              src="/screenshots/vitals-tracking/vitals-reminder-popup-desktop-light.png"
-              alt="Time to Check Vitals popup for Barbara Rice showing 6 vitals due today: Blood Pressure (last logged 1 days ago), Blood Sugar (last logged 1 days ago), Temperature (last logged 1 days ago), Pulse Oximeter (last logged 1 days ago), Weight (last logged 3 days ago - 2 days overdue), and Mood (last logged 1 days ago). Each vital has Log Now button with snooze and dismiss options. Bottom shows Log All Vitals (Wizard) and Maybe Later buttons"
-              caption="Smart vitals reminder - Keep family members on track with automated health check notifications"
-              priority
-              zoomable
-            />
-          </div>
         </section>
 
-        {/* Key Features */}
-        <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">Patient Management Features</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <FeatureCard
-              icon={<UserGroupIcon className="w-12 h-12 text-blue-600" />}
-              title="Unlimited Patient Profiles"
-              description="Add as many family members as you need (plan-dependent). Each gets their own health data, goals, and tracking."
-            />
-            <FeatureCard
-              icon={<PlusCircleIcon className="w-12 h-12 text-green-600" />}
-              title="Human & Pet Support"
-              description="Track health for people and pets. Separate workflows optimized for each type (e.g., pets don't need calorie goals)."
-            />
-            <FeatureCard
-              icon={<ChartBarIcon className="w-12 h-12 text-purple-600" />}
-              title="Individual Dashboards"
-              description="Each patient has their own dashboard with weight trends, meal logs, vitals, and AI health insights."
-            />
-            <FeatureCard
-              icon={<ClipboardDocumentListIcon className="w-12 h-12 text-indigo-600" />}
-              title="Dedicated Medical Records"
-              description="Separate medication lists, appointment calendars, vital signs, and medical documents per patient."
-            />
-            <FeatureCard
-              icon={<BellAlertIcon className="w-12 h-12 text-red-600" />}
-              title="Smart Notifications"
-              description="Get alerted for weight check-ins, medication reminders, and appointment times for each patient separately."
-            />
-            <FeatureCard
-              icon={<ShieldCheckIcon className="w-12 h-12 text-teal-600" />}
-              title="Role-Based Access"
-              description="Grant family members view-only or edit access to specific patients. Full HIPAA-compliant access control."
-            />
-            <FeatureCard
-              icon={<HeartIcon className="w-12 h-12 text-pink-600" />}
-              title="Quick Patient Switching"
-              description="Switch between patient profiles with one tap. No logging in/out. Streamlined for busy caregivers."
-            />
-            <FeatureCard
-              icon={<SparklesIcon className="w-12 h-12 text-yellow-600" />}
-              title="AI Health Reports Per Patient"
-              description="Each patient gets personalized AI health insights based on their unique age, goals, and health data."
-            />
-            <FeatureCard
-              icon={<CheckCircleIcon className="w-12 h-12 text-green-600" />}
-              title="Centralized Oversight"
-              description="View aggregate stats across all patients or drill into individual health data. Perfect for care coordination."
-            />
-          </div>
-        </section>
-
-        {/* Patient Profile Features */}
-        <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">What Each Patient Profile Includes</h2>
-          <div className="space-y-8">
-            <PatientFeatureSection
-              title="👤 Basic Patient Info"
-              description="Foundational data that powers personalized tracking and AI recommendations."
-              features={[
-                'Full name, date of birth, gender',
-                'Height and starting weight (auto-BMI calculation)',
-                'Profile photo for easy identification',
-                'Patient type: human or pet',
-                'Relationship to account owner (child, parent, spouse, etc.)'
-              ]}
-            />
-            <PatientFeatureSection
-              title="⚖️ Weight Tracking"
-              description="Individual weight logs with goals, trends, and progress visualization."
-              features={[
-                'Separate weight goal and target date per patient',
-                'Weight check-in frequency (daily, weekly, bi-weekly)',
-                'Interactive weight trend charts',
-                'BMI tracking (humans only)',
-                'Goal progress percentage and ETA'
-              ]}
-            />
-            <PatientFeatureSection
-              title="🍽️ Meal Logging"
-              description="Photo meal tracking with patient-specific dietary needs."
-              features={[
-                'Intelligent meal analysis',
-                'Patient-specific calorie goals',
-                'Dietary preferences per patient (vegan, keto, etc.)',
-                'Food allergy warnings for unsafe foods',
-                'Meal gallery with nutritional history'
-              ]}
-            />
-            <PatientFeatureSection
-              title="💊 Medication Management"
-              description="Track prescriptions, dosages, and schedules with reminders."
-              features={[
-                'Unlimited medications per patient',
-                'Dosage, frequency, and start/end dates',
-                'Medication reminders with push notifications',
-                'Medication adherence tracking',
-                'Prescription bottle photo storage'
-              ]}
-            />
-            <PatientFeatureSection
-              title="💓 Vital Signs Monitoring"
-              description="Comprehensive vital sign tracking for medical oversight."
-              features={[
-                'Blood pressure, blood sugar, heart rate',
-                'Temperature, oxygen saturation (SpO2)',
-                'Mood and pain level tracking',
-                'Abnormal value alerts with color coding',
-                'Vital trends over time with charts'
-              ]}
-            />
-            <PatientFeatureSection
-              title="📅 Appointment Calendar"
-              description="Manage doctor visits, lab work, and specialist appointments."
-              features={[
-                'Appointment scheduling with provider info',
-                'Reminders 7, 3, and 1 day before',
-                'Transportation coordination (assign drivers)',
-                'Appointment history and visit notes',
-                'Calendar export (iCal, Google Calendar)'
-              ]}
-            />
-          </div>
-        </section>
-
-        {/* Who Benefits */}
-        <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">Who Benefits From Patient Management?</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <BenefitCard
-              emoji="👨‍👩‍👧‍👦"
-              title="Parents with Kids"
-              benefits={[
-                'Track growth and nutrition for multiple children',
-                'Manage different dietary needs per child',
-                'Coordinate pediatrician appointments',
-                'Monitor medication adherence (e.g., ADHD meds)'
-              ]}
-            />
-            <BenefitCard
-              emoji="🧓"
-              title="Adult Children with Elderly Parents"
-              benefits={[
-                'Remote monitoring of parent vitals',
-                'Medication reminder coordination across siblings',
-                'Appointment scheduling with shared calendar',
-                'Document storage for insurance and medical records'
-              ]}
-            />
-            <BenefitCard
-              emoji="🐾"
-              title="Pet Owners"
-              benefits={[
-                'Track pet weight and nutrition',
-                'Manage vet appointments and vaccinations',
-                'Store pet medical documents',
-                'Monitor chronic conditions (diabetes, kidney disease)'
-              ]}
-            />
-          </div>
-        </section>
-
-        {/* Real-World Use Cases */}
-        <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">Real-World Patient Management Use Cases</h2>
-          <div className="space-y-6">
-            <UseCaseCard
-              title="Managing Three Kids with Different Dietary Needs"
-              scenario="Sarah has three children: one with Type 1 diabetes, one with celiac disease, and one training for soccer. Each needs different meal plans and tracking."
-              solution="Sarah creates three patient profiles, each with unique dietary preferences and calorie goals. AI meal suggestions filter by patient, ensuring diabetic-friendly meals for one child, gluten-free for another, and high-protein for the athlete."
-            />
-            <UseCaseCard
-              title="Coordinating Elderly Parent Care Across Siblings"
-              scenario="Mike and his two sisters share caregiving for their 80-year-old mother across three cities. They need to track her medications, vitals, and doctor appointments."
-              solution="Mike creates a patient profile for his mother and invites his sisters as co-caregivers. All three can log vitals, update medications, and schedule appointments. Notifications keep everyone informed of changes in real-time."
-            />
-            <UseCaseCard
-              title="Joint Weight Loss Journey for Spouses"
-              scenario="Emily and her husband are both losing weight but have different goals: Emily wants to lose 40 lbs, while her husband targets 60 lbs."
-              solution="Emily creates patient profiles for both of them with separate weight goals. They can view each other's progress for accountability while maintaining individual dashboards and AI health reports."
-            />
-          </div>
-        </section>
-
-        {/* Technical Capabilities */}
-        <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">Technical Capabilities</h2>
-          <div className="bg-card rounded-xl border-2 border-border p-8">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <CheckCircleIcon className="w-6 h-6 text-green-600" />
-                  Data Isolation
-                </h3>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• Complete data separation between patients</li>
-                  <li>• No accidental cross-contamination of records</li>
-                  <li>• Individual encryption keys per patient</li>
-                  <li>• HIPAA-compliant access logging</li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <CheckCircleIcon className="w-6 h-6 text-green-600" />
-                  Collaboration
-                </h3>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• Invite family members as co-caregivers</li>
-                  <li>• Role-based permissions (Admin, Caregiver, Viewer)</li>
-                  <li>• Real-time sync across all users</li>
-                  <li>• Activity feed shows who did what</li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <CheckCircleIcon className="w-6 h-6 text-green-600" />
-                  Plan Limits
-                </h3>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• Starter: 1 patient (self only)</li>
-                  <li>• Family: Up to 5 patients</li>
-                  <li>• Pro: Up to 10 patients</li>
-                  <li>• Enterprise: Unlimited patients</li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <CheckCircleIcon className="w-6 h-6 text-green-600" />
-                  Performance
-                </h3>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• Instant patient switching (&lt;100ms)</li>
-                  <li>• Lazy loading for large families</li>
-                  <li>• Optimized queries per patient</li>
-                  <li>• Real-time data sync (Firestore)</li>
-                </ul>
+        {/* ============================================ */}
+        {/* THE INTELLIGENCE LAYER                       */}
+        {/* ============================================ */}
+        <section className="mb-24">
+          <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-12 text-white">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">
+                Profiles That Think — Not Just Store
+              </h2>
+              <p className="text-lg text-white/90 mb-10 text-center max-w-2xl mx-auto">
+                Every profile is powered by AI that learns what&apos;s normal for each person and flags what isn&apos;t.
+              </p>
+              <div className="grid md:grid-cols-3 gap-8">
+                <IntelligenceCard
+                  title="Life-Stage Aware"
+                  description="The system knows the difference between a newborn, a teenager, and a senior. Conditions, weight units, and health notices adapt automatically."
+                />
+                <IntelligenceCard
+                  title="Pattern Detection"
+                  description="AI watches for declining trends, missed check-ins, weight plateaus, and nutrition gaps — across every profile, simultaneously."
+                />
+                <IntelligenceCard
+                  title="Proactive Alerts"
+                  description="You get notified before problems happen. Low caloric intake for 3 days? Weight dropping unexpectedly? The system tells you first."
+                />
               </div>
             </div>
           </div>
         </section>
 
-        {/* Related Features */}
-        <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-8 text-center">Related Platform Features</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <RelatedLink href="/blog/family-care" title="Family Care Dashboard" description="Centralized view of all family members' health" />
-            <RelatedLink href="/blog/dashboard" title="Dashboard" description="Individual health command center per patient" />
-            <RelatedLink href="/blog/meal-tracking" title="Meal Tracking" description="Photo meal logging per patient" />
-            <RelatedLink href="/blog/medications" title="Medications" description="Track prescriptions and reminders per patient" />
-            <RelatedLink href="/blog/appointments" title="Appointments" description="Schedule doctor visits per patient" />
-            <RelatedLink href="/blog/vitals-tracking" title="Vitals Tracking" description="Monitor vital signs per patient" />
+        {/* ============================================ */}
+        {/* SMART VITALS REMINDERS                       */}
+        {/* ============================================ */}
+        <section className="mb-24">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-foreground mb-4">Never Miss a Health Check</h2>
+              <p className="text-muted-foreground mb-6 leading-relaxed">
+                Smart vitals reminders pop up when family members have checks due. See what&apos;s overdue, when it was last logged, and log vitals instantly — or use the guided wizard.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  'Automated reminders based on each person\'s schedule',
+                  'One-click logging or full vital sign wizard',
+                  'Overdue indicators with snooze options',
+                  'Separate schedules per profile',
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                    <CheckIcon className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="max-w-md mx-auto">
+              <Screenshot
+                src="/screenshots/vitals-tracking/vitals-reminder-popup-desktop-light.png"
+                alt="Smart vitals reminder popup showing 6 vitals due today with Log Now buttons"
+                caption="Smart reminders keep every family member on track"
+                priority
+                zoomable
+              />
+            </div>
           </div>
         </section>
 
-        {/* SEO-Optimized Content */}
-        <section className="mb-20 prose prose-lg max-w-4xl mx-auto">
-          <h2>Why Choose WPL for Family Health Management?</h2>
-          <p>
-            Most health apps are built for individuals. WPL's patient management system is designed from the ground up
-            for families, caregivers, and anyone managing multiple people's health.
-          </p>
-          <ul>
-            <li><strong>True Multi-Patient Support:</strong> Not just "family sharing"—full patient profiles with isolated data and individual goals</li>
-            <li><strong>HIPAA Compliance:</strong> Medical-grade security and access controls suitable for healthcare providers</li>
-            <li><strong>Pet-Friendly:</strong> One of the few platforms that supports both human and pet health tracking</li>
-            <li><strong>Collaborative Care:</strong> Invite family members to co-manage patients with role-based permissions</li>
-            <li><strong>Affordable:</strong> Family plan costs less than individual subscriptions for each person</li>
-          </ul>
-
-          <h2>How Patient Management Saves Caregivers Time</h2>
-          <p>
-            Caregivers juggle medications, appointments, meal prep, and vital monitoring for multiple family members.
-            WPL's patient management system brings everything into one app:
-          </p>
-          <ul>
-            <li><strong>No More Spreadsheets:</strong> Track medications, appointments, and vitals digitally with automated reminders</li>
-            <li><strong>Shared Access:</strong> Siblings caring for elderly parents can see the same data and coordinate seamlessly</li>
-            <li><strong>Medical Documentation:</strong> Store insurance cards, lab results, and prescriptions per patient in HIPAA-compliant cloud storage</li>
-            <li><strong>AI Insights:</strong> Get personalized health recommendations for each family member based on their age, condition, and goals</li>
-            <li><strong>Mobile Access:</strong> Log data on the go from your phone, no computer required</li>
-          </ul>
-
-          <h2>Getting Started With Patient Management</h2>
-          <p>
-            Setting up patient profiles takes just a few minutes:
-          </p>
-          <ol>
-            <li>Sign up for a Family, Pro, or Enterprise plan (patient limits vary by tier)</li>
-            <li>Create your first patient profile with basic info (name, DOB, height, weight)</li>
-            <li>Set patient-specific goals (weight target, calorie goal, dietary preferences)</li>
-            <li>Add medications, appointments, and vital signs as needed</li>
-            <li>Invite family members to collaborate (optional)</li>
-            <li>Start logging meals, weight, and vitals for each patient</li>
-          </ol>
-          <p>
-            Patients can be added or removed at any time. Data is never deleted—archived patients retain full history for
-            future reference or reactivation.
-          </p>
+        {/* ============================================ */}
+        {/* REAL STORIES — Emotional use cases            */}
+        {/* ============================================ */}
+        <section className="mb-24">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-foreground mb-4">Real Families. Real Scenarios.</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              See how different families use the same system to solve different problems.
+            </p>
+          </div>
+          <div className="space-y-6">
+            <StoryCard
+              emoji="👶"
+              title="Sarah: Three Kids, Three Different Needs"
+              scenario="One child has Type 1 diabetes, one has celiac disease, and one is training for soccer. Each needs different meal plans, different calorie goals, and different alerts."
+              solution="Three profiles, each with unique dietary preferences and AI meal suggestions. Diabetic-friendly meals for one, gluten-free for another, high-protein for the athlete. One app, zero confusion."
+            />
+            <StoryCard
+              emoji="👴"
+              title="Mike: Coordinating Mom's Care Across Three Cities"
+              scenario="Mike and his two sisters share caregiving for their 80-year-old mother. They need to track medications, vitals, and appointments — but live in different states."
+              solution="One profile for Mom. Three co-caregivers with real-time sync. Anyone can log vitals, update meds, or schedule appointments. Everyone stays informed with smart notifications."
+            />
+            <StoryCard
+              emoji="💪"
+              title="Emily & David: Joint Weight Loss, Individual Goals"
+              scenario="Emily wants to lose 40 lbs. Her husband David is targeting 60 lbs. They want accountability but different AI recommendations."
+              solution="Separate profiles with individual goals, dashboards, and AI health reports. They can view each other's progress for motivation while keeping their own targets."
+            />
+          </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-12 text-center text-white">
-          <h2 className="text-4xl font-bold mb-4">Ready to Manage Your Family's Health?</h2>
+        {/* ============================================ */}
+        {/* WHAT EACH PROFILE INCLUDES                   */}
+        {/* ============================================ */}
+        <section className="mb-24">
+          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">What Every Health Profile Includes</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <FeatureCard
+              icon={<UserGroupIcon className="w-10 h-10 text-blue-600" />}
+              title="Personal Dashboard"
+              description="Weight trends, meal logs, vitals, and AI insights — unique to each person. Switch profiles in one tap."
+            />
+            <FeatureCard
+              icon={<ChartBarIcon className="w-10 h-10 text-purple-600" />}
+              title="AI Health Reports"
+              description="Personalized insights based on age, life stage, goals, and health data. Not generic — tailored to each individual."
+            />
+            <FeatureCard
+              icon={<PlusCircleIcon className="w-10 h-10 text-green-600" />}
+              title="Humans & Pets"
+              description="Track people and pets in the same system. Species-specific vitals, breed-aware ranges, life stage labels."
+            />
+            <FeatureCard
+              icon={<ClipboardDocumentListIcon className="w-10 h-10 text-indigo-600" />}
+              title="Medical Records"
+              description="Medications, vital signs, appointments, and medical documents — isolated per profile, HIPAA compliant."
+            />
+            <FeatureCard
+              icon={<BellAlertIcon className="w-10 h-10 text-red-600" />}
+              title="Smart Notifications"
+              description="Weight check-ins, medication reminders, appointment alerts, and abnormal vital warnings — per person."
+            />
+            <FeatureCard
+              icon={<ShieldCheckIcon className="w-10 h-10 text-teal-600" />}
+              title="Role-Based Access"
+              description="Invite co-caregivers with granular permissions. Control who sees what for each profile."
+            />
+          </div>
+        </section>
+
+        {/* ============================================ */}
+        {/* SCREENSHOTS                                  */}
+        {/* ============================================ */}
+        <section className="mb-24">
+          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">See It In Action</h2>
+          <div className="grid md:grid-cols-2 gap-8">
+            <Screenshot
+              src="/screenshots/patient-care/patient-profile-vitals-desktop-light.png"
+              alt="Patient profile with vitals dashboard"
+              caption="Each profile has its own vitals dashboard with trend charts"
+              zoomable
+            />
+            <Screenshot
+              src="/screenshots/vitals-tracking/vitals-reminder-popup-desktop-light.png"
+              alt="Smart vitals reminder popup"
+              caption="Automated reminders keep everyone on schedule"
+              zoomable
+            />
+          </div>
+        </section>
+
+        {/* ============================================ */}
+        {/* TECHNICAL TRUST                              */}
+        {/* ============================================ */}
+        <section className="mb-24">
+          <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Built for Security, Speed, and Scale</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <TrustCard
+              title="Data Isolation"
+              items={['Complete separation between profiles', 'Individual encryption per person', 'HIPAA-compliant access logging']}
+            />
+            <TrustCard
+              title="Collaboration"
+              items={['Invite co-caregivers with roles', 'Admin, Caregiver, Viewer permissions', 'Real-time sync across all users']}
+            />
+            <TrustCard
+              title="Flexible Plans"
+              items={['Starter: 1 profile (you)', 'Family: Up to 5 profiles', 'Pro: Up to 10 profiles']}
+            />
+            <TrustCard
+              title="Performance"
+              items={['Profile switching < 100ms', 'Lazy loading for large families', 'Real-time data sync']}
+            />
+          </div>
+        </section>
+
+        {/* ============================================ */}
+        {/* POSITIONING STATEMENT                        */}
+        {/* ============================================ */}
+        <section className="mb-24">
+          <div className="text-center max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
+              You&apos;re Not Looking for a Weight Loss App.<br />
+              You&apos;re Looking for a Health System.
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+              Weight loss is just one output. Underneath, WPL is a centralized health tracking system for individuals, families, and caregivers. Same engine — different dashboards based on who you&apos;re caring for.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4 text-sm">
+              <Link href="/blog/family-care" className="px-4 py-2 rounded-lg bg-card border border-border hover:border-cyan-300 transition-colors">
+                Family Care Dashboard <ArrowRightIcon className="w-3 h-3 inline ml-1" />
+              </Link>
+              <Link href="/blog/meal-tracking" className="px-4 py-2 rounded-lg bg-card border border-border hover:border-cyan-300 transition-colors">
+                Meal Tracking <ArrowRightIcon className="w-3 h-3 inline ml-1" />
+              </Link>
+              <Link href="/blog/vitals-tracking" className="px-4 py-2 rounded-lg bg-card border border-border hover:border-cyan-300 transition-colors">
+                Vitals Tracking <ArrowRightIcon className="w-3 h-3 inline ml-1" />
+              </Link>
+              <Link href="/blog/medications" className="px-4 py-2 rounded-lg bg-card border border-border hover:border-cyan-300 transition-colors">
+                Medications <ArrowRightIcon className="w-3 h-3 inline ml-1" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================ */}
+        {/* FINAL CTA                                    */}
+        {/* ============================================ */}
+        <section className="bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 rounded-2xl p-12 text-center text-white">
+          <h2 className="text-4xl font-bold mb-4">
+            Stop Juggling. Start Coordinating.
+          </h2>
           <p className="text-xl text-cyan-100 mb-8 max-w-3xl mx-auto">
-            Start your free 14-day trial and create patient profiles for your entire family. No credit card required.
+            Create health profiles for everyone you care about in minutes. One system that grows with your family.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link
               href="/pricing"
-              className="px-8 py-4 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-semibold shadow-lg"
+              className="px-8 py-4 bg-white text-blue-700 rounded-lg hover:bg-blue-50 transition-colors font-semibold shadow-lg"
             >
-              Start Free Trial
+              Start Your Free Trial
             </Link>
           </div>
           <p className="text-sm text-cyan-200 mt-6">
-            Family Plan: $19.99/month • Up to 5 patients • Cancel anytime
+            No credit card required &bull; 7-day free trial &bull; Cancel anytime
           </p>
           <div className="flex items-center justify-center gap-6 mt-8 text-sm">
             <Link href="/security" className="text-white/90 hover:text-white underline">Security</Link>
@@ -448,74 +385,74 @@ export default function PatientsBlogPage() {
   )
 }
 
-// Helper Components
-function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+// ==================== HELPER COMPONENTS ====================
+
+function ModeCard({ icon, title, description, color }: { icon: React.ReactNode; title: string; description: string; color: string }) {
   return (
-    <div className="bg-card rounded-xl border-2 border-border p-6 hover:border-blue-300 hover:shadow-lg transition-all">
-      <div className="mb-4">{icon}</div>
-      <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
-      <p className="text-muted-foreground">{description}</p>
+    <div className="bg-card rounded-2xl border-2 border-border p-6 hover:border-cyan-300 hover:shadow-lg transition-all text-center">
+      <div className={`w-14 h-14 ${color} rounded-2xl flex items-center justify-center text-white mx-auto mb-4`}>
+        {icon}
+      </div>
+      <h3 className="text-lg font-bold text-foreground mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
     </div>
   )
 }
 
-function PatientFeatureSection({ title, description, features }: { title: string; description: string; features: string[] }) {
+function IntelligenceCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="bg-card rounded-xl border-2 border-border p-6">
-      <h3 className="text-2xl font-semibold text-foreground mb-3">{title}</h3>
-      <p className="text-muted-foreground mb-4">{description}</p>
-      <ul className="space-y-2">
-        {features.map((feature, idx) => (
-          <li key={idx} className="flex items-start gap-2 text-muted-foreground">
-            <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
+    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+      <h3 className="text-lg font-bold mb-2">{title}</h3>
+      <p className="text-sm text-white/80 leading-relaxed">{description}</p>
     </div>
   )
 }
 
-function BenefitCard({ emoji, title, benefits }: { emoji: string; title: string; benefits: string[] }) {
+function StoryCard({ emoji, title, scenario, solution }: { emoji: string; title: string; scenario: string; solution: string }) {
   return (
-    <div className="bg-card rounded-xl border-2 border-border p-6">
-      <div className="text-4xl mb-3">{emoji}</div>
-      <h3 className="text-xl font-semibold text-foreground mb-4">{title}</h3>
-      <ul className="space-y-2">
-        {benefits.map((benefit, idx) => (
-          <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-            <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <span>{benefit}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function UseCaseCard({ title, scenario, solution }: { title: string; scenario: string; solution: string }) {
-  return (
-    <div className="bg-card rounded-xl border-2 border-border p-6">
-      <h3 className="text-xl font-semibold text-foreground mb-3">{title}</h3>
-      <div className="space-y-3">
+    <div className="bg-card rounded-2xl border-2 border-border p-8 hover:border-cyan-300 hover:shadow-lg transition-all">
+      <div className="flex items-start gap-4">
+        <span className="text-4xl flex-shrink-0">{emoji}</span>
         <div>
-          <span className="font-semibold text-blue-600">Scenario:</span>
-          <p className="text-muted-foreground mt-1">{scenario}</p>
-        </div>
-        <div>
-          <span className="font-semibold text-green-600">Solution:</span>
-          <p className="text-muted-foreground mt-1">{solution}</p>
+          <h3 className="text-xl font-bold text-foreground mb-3">{title}</h3>
+          <div className="space-y-3">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-red-500">The Challenge</span>
+              <p className="text-muted-foreground mt-1">{scenario}</p>
+            </div>
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-green-500">The WPL Solution</span>
+              <p className="text-muted-foreground mt-1">{solution}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-function RelatedLink({ href, title, description }: { href: string; title: string; description: string }) {
+function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <Link href={href} className="bg-card rounded-lg border-2 border-border p-4 hover:border-blue-300 hover:shadow-lg transition-all block">
-      <h3 className="font-semibold text-foreground mb-1">{title}</h3>
-      <p className="text-sm text-muted-foreground">{description}</p>
-    </Link>
+    <div className="bg-card rounded-xl border-2 border-border p-6 hover:border-cyan-300 hover:shadow-lg transition-all">
+      <div className="mb-4">{icon}</div>
+      <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-muted-foreground leading-relaxed">{description}</p>
+    </div>
+  )
+}
+
+function TrustCard({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="bg-card rounded-xl border-2 border-border p-5">
+      <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+        <CheckCircleIcon className="w-5 h-5 text-green-600" />
+        {title}
+      </h3>
+      <ul className="space-y-1.5">
+        {items.map((item, i) => (
+          <li key={i} className="text-xs text-muted-foreground">&bull; {item}</li>
+        ))}
+      </ul>
+    </div>
   )
 }

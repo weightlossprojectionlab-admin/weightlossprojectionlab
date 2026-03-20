@@ -91,6 +91,8 @@ export default function DailyVitalsSummary({ vitals, patientName, patientId, car
   const todayVitals = vitals.filter(vital => {
     const vitalDate = new Date(vital.recordedAt)
     vitalDate.setHours(0, 0, 0, 0)
+    // Exclude pending/rejected vitals from daily summary
+    if (vital.approvalStatus === 'pending' || vital.approvalStatus === 'rejected') return false
     return vitalDate.getTime() === today.getTime()
   })
 

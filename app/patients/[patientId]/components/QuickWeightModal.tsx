@@ -6,6 +6,7 @@ import { useVitals } from '@/hooks/useVitals'
 import { PatientProfile } from '@/types/medical'
 import { capitalizeName } from '@/lib/utils'
 import { logger } from '@/lib/logger'
+import { getHumanLifeStage, getDefaultWeightUnit } from '@/lib/life-stage-utils'
 import toast from 'react-hot-toast'
 
 export interface QuickWeightModalProps {
@@ -18,9 +19,16 @@ export function QuickWeightModal({ patient, onClose, onSuccess }: QuickWeightMod
   const { user } = useAuth()
   const { logVital } = useVitals({ patientId: patient.id })
   const [weight, setWeight] = useState('')
-  const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg' | 'g'>(
-    patient.species && ['Hamster', 'Guinea Pig', 'Bird'].includes(patient.species) ? 'g' : 'lbs'
-  )
+
+  const isNewbornOrInfant = patient.type === 'human' && patient.dateOfBirth
+    ? (['newborn', 'infant'] as const).includes(getHumanLifeStage(patient.dateOfBirth).stage as 'newborn' | 'infant')
+    : false
+
+  const defaultUnit: 'lbs' | 'kg' | 'oz' | 'g' = patient.type === 'human' && patient.dateOfBirth
+    ? getDefaultWeightUnit(patient.dateOfBirth, 'human')
+    : patient.species && ['Hamster', 'Guinea Pig', 'Bird'].includes(patient.species) ? 'g' : 'lbs'
+
+  const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg' | 'oz' | 'g'>(defaultUnit)
   const [saving, setSaving] = useState(false)
 
   const handleSubmit = async () => {
@@ -43,12 +51,22 @@ export function QuickWeightModal({ patient, onClose, onSuccess }: QuickWeightMod
         method: 'manual' as const
       }
 
-      await logVital(vitalData)
-      toast.success('Weight saved successfully!')
+      const result = await logVital(vitalData)
+      if (result.approvalStatus === 'pending') {
+        toast.success('Weight submitted for caregiver approval')
+      } else {
+        toast.success('Weight saved successfully!')
+      }
       onSuccess()
     } catch (error: unknown) {
-      logger.error('[QuickWeightModal] Error saving weight', error instanceof Error ? error : new Error(String(error)))
-      toast.error('Failed to save weight')
+      const msg = error instanceof Error ? error.message : String(error)
+      logger.error('[QuickWeightModal] Error saving weight', error instanceof Error ? error : new Error(msg))
+      // Show user-friendly message for duplicate entries
+      if (msg.includes('already exists')) {
+        toast.error('A weight entry already exists for today. Edit the existing entry instead.')
+      } else {
+        toast.error(msg || 'Failed to save weight')
+      }
     } finally {
       setSaving(false)
     }
@@ -77,10 +95,15 @@ export function QuickWeightModal({ patient, onClose, onSuccess }: QuickWeightMod
               />
               <select
                 value={weightUnit}
-                onChange={(e) => setWeightUnit(e.target.value as 'lbs' | 'kg' | 'g')}
+                onChange={(e) => setWeightUnit(e.target.value as 'lbs' | 'kg' | 'oz' | 'g')}
                 className="px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:border-primary focus:outline-none transition-colors"
               >
-                {patient.species && ['Hamster', 'Guinea Pig', 'Bird'].includes(patient.species) ? (
+                {isNewbornOrInfant ? (
+                  <>
+                    <option value="oz">oz</option>
+                    <option value="lbs">lbs</option>
+                  </>
+                ) : patient.species && ['Hamster', 'Guinea Pig', 'Bird'].includes(patient.species) ? (
                   <>
                     <option value="g">grams</option>
                     <option value="kg">kg</option>

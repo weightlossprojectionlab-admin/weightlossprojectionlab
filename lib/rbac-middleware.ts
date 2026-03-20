@@ -27,6 +27,7 @@ export interface AssertPatientAccessResult {
   userId: string        // Authenticated user's ID
   ownerUserId: string   // Patient owner's ID (for DB queries)
   role: UserRole        // 'owner' | 'family'
+  familyRole?: FamilyRole // Account Owner, Co-Admin, Caregiver, Viewer
 }
 
 /**
@@ -380,7 +381,7 @@ export async function assertPatientAccess(
     return authResult // Return 401/403 error response
   }
 
-  const { userId, role } = authResult as AuthorizationResult
+  const { userId, role, familyRole } = authResult as AuthorizationResult
 
   // Guard: userId must exist (TypeScript + runtime check)
   if (!userId) {
@@ -426,5 +427,5 @@ export async function assertPatientAccess(
     permission: requiredPermission
   })
 
-  return { userId, ownerUserId, role }
+  return { userId, ownerUserId, role, familyRole }
 }

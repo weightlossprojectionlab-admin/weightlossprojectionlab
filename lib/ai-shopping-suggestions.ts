@@ -415,7 +415,13 @@ function analyzePatientHealth(patient: ExtendedPatientProfile, vitals: any): {
   // Age-specific needs
   if (patient.dateOfBirth) {
     const age = calculateAge(patient.dateOfBirth)
-    if (age < 18) {
+    // Check for newborn/infant (under 1 year)
+    const dobDate = new Date(patient.dateOfBirth)
+    const monthsOld = (new Date().getFullYear() - dobDate.getFullYear()) * 12 + (new Date().getMonth() - dobDate.getMonth())
+    if (monthsOld < 12) {
+      needs.push('newborn_essentials')
+      priorities.set('newborn_essentials', 'high')
+    } else if (age < 18) {
       needs.push('child_nutrition')
       priorities.set('child_nutrition', 'high')
     }
@@ -772,6 +778,215 @@ function getSuggestionsForNeed(
           generatedAt: new Date()
         }
       )
+      break
+
+    case 'newborn_essentials':
+      // Check feeding preference from patient profile
+      const feedingPref = (patient as any).feedingPreference || ''
+      const needsFormula = feedingPref === 'formula' || feedingPref === 'combination' || !feedingPref
+      const needsBreastfeeding = feedingPref === 'breastfeeding' || feedingPref === 'combination' || !feedingPref
+
+      // Core essentials every newborn needs
+      suggestions.push(
+        {
+          id: generateId(),
+          productName: 'Diapers (Newborn Size)',
+          category: 'baby',
+          reason: need,
+          reasonText: 'Newborns use 8-12 diapers per day',
+          priority: 'high',
+          benefits: ['Essential', '8-12/day for newborns', 'Stock up'],
+          suggestedProducts: ['Newborn Diapers', 'Size N Diapers', 'Preemie Diapers'],
+          confidence: 99,
+          generatedAt: new Date()
+        },
+        {
+          id: generateId(),
+          productName: 'Baby Wipes',
+          category: 'baby',
+          reason: need,
+          reasonText: 'Gentle, fragrance-free wipes for diaper changes',
+          priority: 'high',
+          benefits: ['Essential', 'Fragrance-free recommended', 'Sensitive skin safe'],
+          suggestedProducts: ['Sensitive Baby Wipes', 'Water Wipes', 'Fragrance-Free Wipes'],
+          confidence: 99,
+          generatedAt: new Date()
+        },
+        {
+          id: generateId(),
+          productName: 'Diaper Rash Cream',
+          category: 'baby',
+          reason: need,
+          reasonText: 'Protects against and treats diaper rash',
+          priority: 'high',
+          benefits: ['Prevents rash', 'Zinc oxide barrier', 'Soothes skin'],
+          suggestedProducts: ['Desitin', 'A&D Ointment', 'Aquaphor Baby'],
+          confidence: 95,
+          generatedAt: new Date()
+        },
+        {
+          id: generateId(),
+          productName: 'Baby Wash & Shampoo',
+          category: 'baby',
+          reason: need,
+          reasonText: 'Gentle, tear-free cleanser for newborn skin',
+          priority: 'medium',
+          benefits: ['Tear-free', 'Hypoallergenic', 'Gentle on skin'],
+          suggestedProducts: ['Johnson\'s Baby Wash', 'Cetaphil Baby', 'Aveeno Baby Wash'],
+          confidence: 92,
+          generatedAt: new Date()
+        },
+        {
+          id: generateId(),
+          productName: 'Baby Thermometer',
+          category: 'baby',
+          reason: need,
+          reasonText: 'Rectal thermometer is most accurate for newborns',
+          priority: 'high',
+          benefits: ['Accurate readings', 'Essential for fever checks', 'Digital recommended'],
+          suggestedProducts: ['Digital Rectal Thermometer', 'Infant Thermometer'],
+          confidence: 96,
+          generatedAt: new Date()
+        },
+        {
+          id: generateId(),
+          productName: 'Swaddle Blankets',
+          category: 'baby',
+          reason: need,
+          reasonText: 'Helps newborns sleep by mimicking womb snugness',
+          priority: 'medium',
+          benefits: ['Improves sleep', 'Reduces startle reflex', 'Soothes baby'],
+          suggestedProducts: ['Muslin Swaddle Blankets', 'Halo SleepSack Swaddle', 'SwaddleMe'],
+          confidence: 90,
+          generatedAt: new Date()
+        },
+        {
+          id: generateId(),
+          productName: 'Onesies / Bodysuits',
+          category: 'baby',
+          reason: need,
+          reasonText: 'Newborns need 4-6 outfit changes per day',
+          priority: 'medium',
+          benefits: ['Snap closure for easy changes', 'Soft cotton', 'Multiple needed'],
+          suggestedProducts: ['Newborn Onesies', 'Short-Sleeve Bodysuits', 'Side-Snap Bodysuits'],
+          confidence: 93,
+          generatedAt: new Date()
+        },
+        {
+          id: generateId(),
+          productName: 'Burp Cloths',
+          category: 'baby',
+          reason: need,
+          reasonText: 'Protects clothing during feeding and burping',
+          priority: 'medium',
+          benefits: ['Absorbent', 'Multiple needed', 'Protects clothing'],
+          suggestedProducts: ['Muslin Burp Cloths', 'Terry Cloth Burp Pads'],
+          confidence: 88,
+          generatedAt: new Date()
+        }
+      )
+
+      // Formula-specific items
+      if (needsFormula) {
+        suggestions.push(
+          {
+            id: generateId(),
+            productName: 'Infant Formula',
+            category: 'baby',
+            reason: need,
+            reasonText: 'Iron-fortified formula recommended for bottle-fed newborns',
+            priority: 'high',
+            benefits: ['Iron-fortified', 'Complete nutrition', 'Pediatrician-approved'],
+            suggestedProducts: ['Enfamil NeuroPro', 'Similac Pro-Advance', 'Kirkland Infant Formula'],
+            confidence: 97,
+            generatedAt: new Date()
+          },
+          {
+            id: generateId(),
+            productName: 'Baby Bottles',
+            category: 'baby',
+            reason: need,
+            reasonText: 'Anti-colic bottles reduce gas and fussiness',
+            priority: 'high',
+            benefits: ['Anti-colic design', 'Slow-flow nipple for newborns', 'BPA-free'],
+            suggestedProducts: ['Dr. Brown\'s Bottles', 'Philips Avent', 'Comotomo Bottles'],
+            confidence: 95,
+            generatedAt: new Date()
+          },
+          {
+            id: generateId(),
+            productName: 'Bottle Brush & Drying Rack',
+            category: 'baby',
+            reason: need,
+            reasonText: 'Proper cleaning prevents bacteria buildup',
+            priority: 'medium',
+            benefits: ['Hygiene essential', 'Reaches all bottle parts', 'Air-dry rack'],
+            suggestedProducts: ['OXO Bottle Brush', 'Boon Grass Drying Rack'],
+            confidence: 90,
+            generatedAt: new Date()
+          }
+        )
+      }
+
+      // Breastfeeding-specific items
+      if (needsBreastfeeding) {
+        suggestions.push(
+          {
+            id: generateId(),
+            productName: 'Nursing Pads',
+            category: 'baby',
+            reason: need,
+            reasonText: 'Absorbs leaking breast milk between feedings',
+            priority: 'medium',
+            benefits: ['Prevents leaks', 'Disposable or reusable', 'Comfort'],
+            suggestedProducts: ['Lansinoh Nursing Pads', 'Bamboobies Reusable Pads'],
+            confidence: 91,
+            generatedAt: new Date()
+          },
+          {
+            id: generateId(),
+            productName: 'Nipple Cream',
+            category: 'baby',
+            reason: need,
+            reasonText: 'Soothes and heals sore nipples from breastfeeding',
+            priority: 'medium',
+            benefits: ['Lanolin-based', 'Safe for baby', 'Heals cracking'],
+            suggestedProducts: ['Lansinoh Lanolin', 'Earth Mama Nipple Butter', 'Medela Tender Care'],
+            confidence: 89,
+            generatedAt: new Date()
+          }
+        )
+      }
+
+      // Preemie-specific items
+      if ((patient as any).isPreemie) {
+        suggestions.push(
+          {
+            id: generateId(),
+            productName: 'Preemie Diapers',
+            category: 'baby',
+            reason: need,
+            reasonText: 'Smaller size for premature babies under 6 lbs',
+            priority: 'high',
+            benefits: ['Sized for preemies', 'Extra gentle', 'Umbilical cord cutout'],
+            suggestedProducts: ['Pampers Preemie Diapers', 'Huggies Little Snugglers Preemie'],
+            confidence: 97,
+            generatedAt: new Date()
+          },
+          {
+            id: generateId(),
+            productName: 'Preemie Clothing',
+            category: 'baby',
+            reason: need,
+            reasonText: 'Standard newborn sizes are too large for preemies',
+            priority: 'medium',
+            benefits: ['Fits under 5 lbs', 'NICU-friendly snaps', 'Soft fabric'],
+            suggestedProducts: ['Preemie Onesies', 'NICU-Friendly Gowns', 'Preemie Sleepers'],
+            confidence: 93,
+            generatedAt: new Date()
+          }
+        )
+      }
       break
 
     case 'child_nutrition':

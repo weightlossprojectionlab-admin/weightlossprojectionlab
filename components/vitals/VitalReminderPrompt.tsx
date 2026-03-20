@@ -58,15 +58,7 @@ export default function VitalReminderPrompt({
   const [dismissedVitals, setDismissedVitals] = useState<Set<VitalType>>(new Set())
   const [confirmDisable, setConfirmDisable] = useState<{ type: VitalType; label: string } | null>(null)
 
-  // DEBUG: Log component render and props
-  console.log('[VitalReminderPrompt] Component rendering', {
-    patientId,
-    patientName,
-    vitalsCount: vitals?.length,
-    hasUserPreferences: !!userPreferences,
-    vitalReminders: userPreferences?.vitalReminders,
-    vitalsTypes: vitals?.map(v => v.type)
-  })
+  // Render logging removed — was causing excessive console noise
 
   // Define vital types with metadata
   const vitalTypes: Array<{ type: VitalType; label: string; icon: string }> = [
@@ -84,23 +76,18 @@ export default function VitalReminderPrompt({
   for (const vitalType of vitalTypes) {
     // Skip if user has dismissed this vital in current session
     if (dismissedVitals.has(vitalType.type)) {
-      console.debug(`[VitalReminderPrompt] Skipping ${vitalType.type} - dismissed in session`)
       continue
     }
 
     // Skip if reminder is not enabled in user preferences
     const reminderConfig = userPreferences?.vitalReminders?.[vitalType.type]
     if (!reminderConfig?.enabled) {
-      console.debug(`[VitalReminderPrompt] Skipping ${vitalType.type} - not enabled`, reminderConfig)
       continue
     }
-
-    console.log(`[VitalReminderPrompt] Checking ${vitalType.type}`, { reminderConfig })
 
     // Validate frequency value
     const frequency = reminderConfig.frequency as VitalFrequency
     if (!frequency) {
-      console.warn(`[VitalReminderPrompt] Invalid frequency for ${vitalType.type}:`, reminderConfig.frequency)
       continue
     }
 
@@ -109,8 +96,6 @@ export default function VitalReminderPrompt({
       .filter(v => v.type === vitalType.type)
       .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime())[0]
 
-    console.log(`[VitalReminderPrompt] ${vitalType.type} last log:`, lastLog)
-
     // Check if reminder should be shown
     const reminderResult = shouldShowVitalReminder(
       vitalType.type,
@@ -118,11 +103,8 @@ export default function VitalReminderPrompt({
       frequency
     )
 
-    console.log(`[VitalReminderPrompt] ${vitalType.type} reminder result:`, reminderResult)
-
     if (reminderResult.shouldShow) {
       const message = getVitalReminderMessage(reminderResult, frequency)
-      console.log(`[VitalReminderPrompt] Adding ${vitalType.type} to reminders:`, message)
 
       vitalsNeedingReminders.push({
         type: vitalType.type,

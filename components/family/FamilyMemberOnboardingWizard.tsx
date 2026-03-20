@@ -35,7 +35,7 @@ interface WizardStep {
   subtitle?: string
 }
 
-const getWizardSteps = (isPet: boolean, hasSelectedType: boolean): WizardStep[] => {
+const getWizardSteps = (isPet: boolean, isNewborn: boolean, hasSelectedType: boolean): WizardStep[] => {
   const steps: WizardStep[] = [];
 
   // Step 0: Type selection (human vs pet)
@@ -50,22 +50,22 @@ const getWizardSteps = (isPet: boolean, hasSelectedType: boolean): WizardStep[] 
   // Step 1: Basic info
   steps.push({
     id: 'basic_info',
-    title: isPet ? 'What type of pet?' : 'Who is this person?',
-    subtitle: isPet ? 'Species and breed information' : 'Basic information'
+    title: isPet ? 'What type of pet?' : isNewborn ? 'About the newborn' : 'Who is this person?',
+    subtitle: isPet ? 'Species and breed information' : isNewborn ? 'Basic newborn information' : 'Basic information'
   });
 
   // Step 2: Vitals
   steps.push({
     id: 'vitals',
-    title: isPet ? 'Pet vitals' : 'Health vitals',
-    subtitle: isPet ? 'Weight and activity for health tracking' : 'Height and weight for health tracking'
+    title: isPet ? 'Pet vitals' : isNewborn ? 'Newborn health check' : 'Health vitals',
+    subtitle: isPet ? 'Weight and activity for health tracking' : isNewborn ? 'Birth weight, feeding & pediatrician' : 'Height and weight for health tracking'
   });
 
   // Step 3: Conditions
   steps.push({
     id: 'conditions',
-    title: isPet ? 'Pet health conditions' : 'Health conditions',
-    subtitle: isPet ? 'Common pet health issues' : 'Confirm AI-detected conditions'
+    title: isPet ? 'Pet health conditions' : isNewborn ? 'Newborn health concerns' : 'Health conditions',
+    subtitle: isPet ? 'Common pet health issues' : isNewborn ? 'Any known conditions or concerns' : 'Confirm AI-detected conditions'
   });
 
   // Step 4: Review
@@ -278,7 +278,7 @@ const VITAL_TYPES = [
 ]
 
 const RELATIONSHIPS = [
-  'Self', 'Spouse', 'Partner', 'Parent', 'Child', 'Sibling', 'Grandparent',
+  'Self', 'Spouse', 'Partner', 'Parent', 'Child', 'Newborn', 'Sibling', 'Grandparent',
   'Grandchild', 'Other Family', 'Care Recipient', 'Pet'
 ]
 
@@ -470,6 +470,18 @@ interface FamilyMemberData {
   // Step 3: Conditions
   conditions: string[]
 
+  // Newborn-specific fields
+  feedingPreference?: 'breastfeeding' | 'formula' | 'combination' | ''
+  pediatricianName?: string
+  pediatricianPhone?: string
+  headCircumference?: string
+  apgarScore?: string
+  gestationalWeeks?: string
+  nicuStay?: boolean
+  nicuDays?: string
+  breathingSupport?: boolean
+  kangarooCare?: boolean
+
   // Pet-specific fields
   species?: string
   breed?: string
@@ -508,12 +520,23 @@ export default function FamilyMemberOnboardingWizard() {
     activityLevel: '',
     targetWeight: '',
     weightGoal: '',
-    conditions: []
+    conditions: [],
+    feedingPreference: '',
+    pediatricianName: '',
+    pediatricianPhone: '',
+    headCircumference: '',
+    apgarScore: '',
+    gestationalWeeks: '',
+    nicuStay: false,
+    nicuDays: '',
+    breathingSupport: false,
+    kangarooCare: false,
   })
 
   const isPet = data.memberType === 'pet' || data.relationship === 'Pet'
+  const isNewborn = data.relationship === 'Newborn'
   const hasSelectedType = data.memberType !== ''
-  const WIZARD_STEPS = getWizardSteps(isPet, hasSelectedType)
+  const WIZARD_STEPS = getWizardSteps(isPet, isNewborn, hasSelectedType)
   const currentStepData = WIZARD_STEPS[currentStep]
   const progress = ((currentStep + 1) / WIZARD_STEPS.length) * 100
 
@@ -586,6 +609,16 @@ export default function FamilyMemberOnboardingWizard() {
             toast.error('Please complete the health check with weight measurement')
             return
           }
+        }
+      } else if (data.relationship === 'Newborn') {
+        // Newborns: birth weight and feeding preference required
+        if (!data.currentWeight) {
+          toast.error('Please enter birth weight')
+          return
+        }
+        if (!data.feedingPreference) {
+          toast.error('Please select a feeding method')
+          return
         }
       } else {
         // For humans, weight is required
@@ -713,6 +746,34 @@ export default function FamilyMemberOnboardingWizard() {
       } else {
         // Add human-specific fields
         if (data.gender) patientData.gender = data.gender
+
+        // Add newborn-specific fields
+        if (data.relationship === 'Newborn') {
+          patientData.isNewborn = true
+          patientData.lifeStage = 'newborn'
+          if (data.feedingPreference) patientData.feedingPreference = data.feedingPreference
+          if (data.headCircumference) patientData.headCircumference = parseFloat(data.headCircumference)
+          if (data.apgarScore) patientData.apgarScore = parseInt(data.apgarScore)
+          if (data.pediatricianName) patientData.pediatricianName = data.pediatricianName
+          if (data.pediatricianPhone) patientData.pediatricianPhone = data.pediatricianPhone
+
+          // Preemie data
+          if (data.gestationalWeeks) {
+            const weeks = parseInt(data.gestationalWeeks)
+            patientData.gestationalWeeks = weeks
+            patientData.isPreemie = weeks < 37
+            if (weeks < 25) patientData.preemieType = 'extremely_preterm'
+            else if (weeks < 32) patientData.preemieType = 'very_preterm'
+            else if (weeks < 34) patientData.preemieType = 'moderately_preterm'
+            else if (weeks <= 36) patientData.preemieType = 'late_preterm'
+          }
+          if (data.nicuStay) {
+            patientData.nicuStay = true
+            if (data.nicuDays) patientData.nicuDays = parseInt(data.nicuDays)
+          }
+          if (data.breathingSupport) patientData.breathingSupport = true
+          if (data.kangarooCare) patientData.kangarooCare = true
+        }
       }
 
       // Add vitals if provided
@@ -949,8 +1010,292 @@ export default function FamilyMemberOnboardingWizard() {
     )
   }
 
+  function renderNewbornVitalsStep() {
+    // Detect low birth weight → possible preemie
+    const weightInLbs = (() => {
+      const w = parseFloat(data.currentWeight)
+      if (!w || w <= 0) return null
+      switch (data.weightUnit) {
+        case 'oz': return w / 16
+        case 'kg': return w * 2.20462
+        case 'g': return w / 453.592
+        default: return w // lbs
+      }
+    })()
+    const isLowBirthWeight = weightInLbs !== null && weightInLbs < 5.5
+
+    // Classify preemie type based on gestational weeks
+    const gestWeeks = data.gestationalWeeks ? parseInt(data.gestationalWeeks) : null
+    const preemieType = gestWeeks !== null
+      ? gestWeeks < 25 ? 'Extremely Preterm' : gestWeeks < 32 ? 'Very Preterm' : gestWeeks < 34 ? 'Moderately Preterm' : gestWeeks <= 36 ? 'Late Preterm' : 'Full Term'
+      : null
+
+    return (
+      <div className="space-y-6">
+        {/* Birth Weight */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Birth Weight *</label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              value={data.currentWeight}
+              onChange={(e) => setData({ ...data, currentWeight: e.target.value })}
+              placeholder="e.g. 7.5"
+              step="0.1"
+              min="0"
+              className="flex-1 px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none transition-colors"
+            />
+            <select
+              value={data.weightUnit}
+              onChange={(e) => setData({ ...data, weightUnit: e.target.value as 'lbs' | 'kg' | 'oz' | 'g' })}
+              className="px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground focus:border-primary focus:outline-none transition-colors"
+            >
+              <option value="lbs">lbs</option>
+              <option value="oz">oz</option>
+              <option value="kg">kg</option>
+              <option value="g">g</option>
+            </select>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Average newborn: 5 lbs 8 oz – 8 lbs 13 oz</p>
+        </div>
+
+        {/* Preemie Detection — shown when birth weight is below average */}
+        {isLowBirthWeight && (
+          <div className="p-4 rounded-xl bg-amber-500/10 border-2 border-amber-500/40 space-y-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">👶</span>
+              <div>
+                <h4 className="font-semibold text-amber-700 dark:text-amber-300">Low Birth Weight Detected</h4>
+                <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                  Birth weight is below average ({weightInLbs?.toFixed(1)} lbs). Was this baby born prematurely?
+                </p>
+              </div>
+            </div>
+
+            {/* Gestational Age */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Gestational Age at Birth (weeks)</label>
+              <input
+                type="number"
+                value={data.gestationalWeeks || ''}
+                onChange={(e) => setData({ ...data, gestationalWeeks: e.target.value })}
+                placeholder="e.g. 34 (full term = 37–42)"
+                min="22"
+                max="42"
+                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none transition-colors"
+              />
+              {preemieType && preemieType !== 'Full Term' && (
+                <div className={`mt-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                  preemieType === 'Extremely Preterm' ? 'bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/40' :
+                  preemieType === 'Very Preterm' ? 'bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/40' :
+                  preemieType === 'Moderately Preterm' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40' :
+                  'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border border-yellow-500/40'
+                }`}>
+                  {preemieType} ({gestWeeks} weeks)
+                  {preemieType === 'Extremely Preterm' && ' — Requires intensive NICU care'}
+                  {preemieType === 'Very Preterm' && ' — Typically requires extended NICU stay'}
+                  {preemieType === 'Moderately Preterm' && ' — May need NICU monitoring'}
+                  {preemieType === 'Late Preterm' && ' — Close monitoring recommended'}
+                </div>
+              )}
+            </div>
+
+            {/* NICU Stay */}
+            <div>
+              <label className="block text-sm font-medium mb-2">NICU Stay</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setData({ ...data, nicuStay: true })}
+                  className={`px-4 py-3 rounded-xl font-medium transition-all ${
+                    data.nicuStay === true
+                      ? 'bg-primary text-primary-foreground border-2 border-primary'
+                      : 'bg-accent border-2 border-transparent hover:border-primary/30'
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setData({ ...data, nicuStay: false, nicuDays: '' })}
+                  className={`px-4 py-3 rounded-xl font-medium transition-all ${
+                    data.nicuStay === false
+                      ? 'bg-primary text-primary-foreground border-2 border-primary'
+                      : 'bg-accent border-2 border-transparent hover:border-primary/30'
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+              {data.nicuStay && (
+                <input
+                  type="number"
+                  value={data.nicuDays || ''}
+                  onChange={(e) => setData({ ...data, nicuDays: e.target.value })}
+                  placeholder="Number of days in NICU"
+                  min="0"
+                  className="w-full mt-3 px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none transition-colors"
+                />
+              )}
+            </div>
+
+            {/* Breathing Support */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Breathing Support Required</p>
+                <p className="text-xs text-muted-foreground">Ventilator, CPAP, or supplemental oxygen</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setData({ ...data, breathingSupport: !data.breathingSupport })}
+                className={`w-12 h-7 rounded-full transition-colors relative ${
+                  data.breathingSupport ? 'bg-primary' : 'bg-muted'
+                }`}
+              >
+                <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
+                  data.breathingSupport ? 'translate-x-5' : 'translate-x-0.5'
+                }`} />
+              </button>
+            </div>
+
+            {/* Kangaroo Care */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Kangaroo Care (Skin-to-Skin)</p>
+                <p className="text-xs text-muted-foreground">Stabilizes heart rate and breathing</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setData({ ...data, kangarooCare: !data.kangarooCare })}
+                className={`w-12 h-7 rounded-full transition-colors relative ${
+                  data.kangarooCare ? 'bg-primary' : 'bg-muted'
+                }`}
+              >
+                <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
+                  data.kangarooCare ? 'translate-x-5' : 'translate-x-0.5'
+                }`} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Birth Length (optional) */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Birth Length <span className="text-muted-foreground">(optional)</span></label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              value={data.heightCm}
+              onChange={(e) => setData({ ...data, heightCm: e.target.value })}
+              placeholder="e.g. 20"
+              step="0.1"
+              min="0"
+              className="flex-1 px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none transition-colors"
+            />
+            <span className="px-4 py-3 rounded-xl border-2 border-border bg-accent text-muted-foreground">inches</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Average newborn: 18 – 22 inches</p>
+        </div>
+
+        {/* Head Circumference (optional) */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Head Circumference <span className="text-muted-foreground">(optional)</span></label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              value={data.headCircumference || ''}
+              onChange={(e) => setData({ ...data, headCircumference: e.target.value })}
+              placeholder="e.g. 13.5"
+              step="0.1"
+              min="0"
+              className="flex-1 px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none transition-colors"
+            />
+            <span className="px-4 py-3 rounded-xl border-2 border-border bg-accent text-muted-foreground">inches</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Average newborn: 13 – 14.5 inches</p>
+        </div>
+
+        {/* Feeding Method */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Feeding Method *</label>
+          <div className="grid grid-cols-1 gap-3">
+            {([
+              { value: 'breastfeeding', label: 'Breastfeeding', icon: '🤱', desc: 'Exclusive breastfeeding' },
+              { value: 'formula', label: 'Formula', icon: '🍼', desc: 'Formula feeding' },
+              { value: 'combination', label: 'Combination', icon: '🤱🍼', desc: 'Both breast milk and formula' },
+            ] as const).map(option => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setData({ ...data, feedingPreference: option.value })}
+                className={`
+                  flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-left
+                  ${data.feedingPreference === option.value
+                    ? 'bg-primary text-primary-foreground border-2 border-primary'
+                    : 'bg-accent border-2 border-transparent hover:border-primary/30'
+                  }
+                `}
+              >
+                <span className="text-2xl">{option.icon}</span>
+                <div>
+                  <div className="font-medium">{option.label}</div>
+                  <div className="text-xs opacity-70">{option.desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* APGAR Score (optional) */}
+        <div>
+          <label className="block text-sm font-medium mb-2">APGAR Score <span className="text-muted-foreground">(optional)</span></label>
+          <input
+            type="number"
+            value={data.apgarScore || ''}
+            onChange={(e) => setData({ ...data, apgarScore: e.target.value })}
+            placeholder="Score (0-10)"
+            min="0"
+            max="10"
+            className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none transition-colors"
+          />
+          <p className="text-xs text-muted-foreground mt-1">Scored at 1 and 5 minutes after birth (0–10). Ask your delivery team if unsure.</p>
+        </div>
+
+        {/* Pediatrician Info */}
+        <div className="pt-4 border-t border-border">
+          <h4 className="text-sm font-semibold mb-3">Pediatrician Information <span className="text-muted-foreground font-normal">(optional)</span></h4>
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={data.pediatricianName || ''}
+              onChange={(e) => setData({ ...data, pediatricianName: e.target.value })}
+              placeholder="Pediatrician name"
+              className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none transition-colors"
+            />
+            <input
+              type="tel"
+              value={data.pediatricianPhone || ''}
+              onChange={(e) => setData({ ...data, pediatricianPhone: e.target.value })}
+              placeholder="Pediatrician phone"
+              className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none transition-colors"
+            />
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground text-center">
+          All measurements can be updated later from the newborn&apos;s profile
+        </p>
+      </div>
+    )
+  }
+
   function renderVitalsStep() {
     const isPet = data.memberType === 'pet' || data.relationship === 'Pet'
+
+    // For newborns, show pediatric-specific vitals
+    if (data.relationship === 'Newborn') {
+      return renderNewbornVitalsStep()
+    }
 
     // For pets, show mode selection or vitals wizard
     if (isPet) {
@@ -1392,7 +1737,15 @@ export default function FamilyMemberOnboardingWizard() {
             <label className="block text-sm font-medium mb-2">Relationship *</label>
             <select
               value={data.relationship}
-              onChange={(e) => setData({ ...data, relationship: e.target.value })}
+              onChange={(e) => {
+                const rel = e.target.value
+                const updates: Partial<FamilyMemberData> = { relationship: rel }
+                // Auto-configure for newborns
+                if (rel === 'Newborn') {
+                  updates.weightUnit = 'lbs'
+                }
+                setData({ ...data, ...updates })
+              }}
               className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
             >
               <option value="">Select relationship</option>
@@ -1524,30 +1877,45 @@ export default function FamilyMemberOnboardingWizard() {
         {/* Gender (only for humans) */}
         {!isPet && (
           <div>
-            <label className="block text-sm font-medium mb-2">Gender *</label>
-            <div className="grid grid-cols-3 gap-3">
-              {['Male', 'Female', 'Other'].map(gender => (
-                <button
-                  key={gender}
-                  type="button"
-                  onClick={() => setData({ ...data, gender })}
-                  className={`
-                    px-4 py-3 rounded-xl font-medium transition-all
-                    ${data.gender === gender
-                      ? 'bg-primary text-primary-foreground border-2 border-primary'
-                      : 'bg-accent border-2 border-transparent hover:border-primary/30'
-                    }
-                  `}
-                >
-                  {gender}
-                </button>
-              ))}
-            </div>
+            {(() => {
+              const isYoungChild = data.dateOfBirth
+                ? ['newborn', 'infant'].includes(getHumanLifeStage(data.dateOfBirth).stage)
+                : false
+              const genderOptions = ['Male', 'Female']
+              const labelText = isYoungChild ? 'Sex *' : 'Gender *'
+              return (
+                <>
+                  <label className="block text-sm font-medium mb-2">{labelText}</label>
+                  <div className="grid grid-cols-2 gap-3">
+                      {genderOptions.map(gender => (
+                        <button
+                          key={gender}
+                          type="button"
+                          onClick={() => setData({ ...data, gender })}
+                          className={`
+                            px-4 py-3 rounded-xl font-medium transition-all
+                            ${data.gender === gender
+                              ? 'bg-primary text-primary-foreground border-2 border-primary'
+                              : 'bg-accent border-2 border-transparent hover:border-primary/30'
+                            }
+                          `}
+                        >
+                          {gender}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+              )
+            })()}
           </div>
         )}
 
-        {/* Option: Scan Driver's License (only for adults) */}
-        {!isPet && data.relationship.toLowerCase() !== 'child' && (
+        {/* Option: Scan Driver's License (only for 17+) */}
+        {!isPet && (() => {
+          if (!data.dateOfBirth) return false
+          const stage = getHumanLifeStage(data.dateOfBirth).stage
+          return !['newborn', 'infant', 'toddler', 'child', 'teen'].includes(stage)
+        })() && (
           <div className="pt-4 border-t border-white/20">
             <button
               type="button"
@@ -1686,6 +2054,49 @@ export default function FamilyMemberOnboardingWizard() {
                 {data.activityLevel && <p><span className="text-white/70">Activity Level:</span> {data.activityLevel}</p>}
                 {data.weightGoal && <p><span className="text-white/70">Goal:</span> {data.weightGoal.replace(/-/g, ' ')}</p>}
                 {data.targetWeight && <p><span className="text-white/70">Target Weight:</span> {data.targetWeight} {data.weightUnit}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Newborn-specific review */}
+          {data.relationship === 'Newborn' && (
+            <div className="pt-4 border-t border-white/20">
+              <h3 className="font-semibold mb-2 text-white">Newborn Details</h3>
+              <div className="space-y-1 text-sm text-white/90">
+                {data.feedingPreference && (
+                  <p><span className="text-white/70">Feeding:</span> {data.feedingPreference === 'breastfeeding' ? 'Breastfeeding' : data.feedingPreference === 'formula' ? 'Formula' : 'Combination'}</p>
+                )}
+                {data.headCircumference && (
+                  <p><span className="text-white/70">Head Circumference:</span> {data.headCircumference} in</p>
+                )}
+                {data.apgarScore && (
+                  <p><span className="text-white/70">APGAR Score:</span> {data.apgarScore}/10</p>
+                )}
+                {data.gestationalWeeks && (
+                  <p>
+                    <span className="text-white/70">Gestational Age:</span> {data.gestationalWeeks} weeks
+                    {parseInt(data.gestationalWeeks) < 37 && (
+                      <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/50">
+                        Preemie
+                      </span>
+                    )}
+                  </p>
+                )}
+                {data.nicuStay && (
+                  <p><span className="text-white/70">NICU Stay:</span> Yes{data.nicuDays ? ` (${data.nicuDays} days)` : ''}</p>
+                )}
+                {data.breathingSupport && (
+                  <p><span className="text-white/70">Breathing Support:</span> Required</p>
+                )}
+                {data.kangarooCare && (
+                  <p><span className="text-white/70">Kangaroo Care:</span> Yes</p>
+                )}
+                {data.pediatricianName && (
+                  <p><span className="text-white/70">Pediatrician:</span> {data.pediatricianName}</p>
+                )}
+                {data.pediatricianPhone && (
+                  <p><span className="text-white/70">Pediatrician Phone:</span> {data.pediatricianPhone}</p>
+                )}
               </div>
             </div>
           )}

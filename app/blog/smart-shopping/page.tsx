@@ -1,67 +1,83 @@
 /**
  * Smart Shopping - Marketing Blog Page
  *
- * Hybrid marketing page showcasing WPL Smart Shopping
- * Optimized for SEO with top-notch backlinks and conversion funnel
+ * "From Meal Plan to Grocery Cart — Automatically"
+ * Intelligent shopping list generation with allergen filtering and inventory awareness
  */
 
 import Link from 'next/link'
 import { Metadata } from 'next'
 import {
-  CheckCircleIcon,
   SparklesIcon,
-  UserCircleIcon,
-  ShoppingCartIcon, NoSymbolIcon, CurrencyDollarIcon, ClipboardDocumentCheckIcon, ShareIcon
+  ShoppingCartIcon,
+  NoSymbolIcon,
+  CurrencyDollarIcon,
+  ClipboardDocumentCheckIcon,
+  ShareIcon,
+  ExclamationTriangleIcon,
+  ArrowRightIcon,
+  CheckCircleIcon,
+  ListBulletIcon,
+  LightBulbIcon,
+  ArchiveBoxIcon,
 } from '@heroicons/react/24/outline'
 
 export const metadata: Metadata = {
-  title: 'Smart Shopping Lists - Intelligent Grocery Planning | Wellness Projection Lab',
-  description: 'Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WPL suggests healthy foods, excludes allergens, and helps you stay on budget.',
-  keywords: 'smart shopping, grocery list, meal planning, shopping list app, pantry inventory, grocery planning, AI shopping assistant',
+  title: 'Intelligent Shopping — From Meal Plan to Grocery Cart | Wellness Projection Lab',
+  description:
+    'Auto-generate grocery lists from your family meal plans. WPL checks pantry inventory, filters allergens per person, suggests budget-friendly alternatives, and shares lists with caregivers.',
+  keywords:
+    'smart shopping list, AI grocery list, meal plan shopping, allergen filtering, pantry inventory, budget groceries, family shopping list, caregiver grocery shopping',
   openGraph: {
-    title: 'Smart Shopping Lists - Intelligent Grocery Planning',
-    description: 'Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WPL suggests healthy foods, excludes allergens, and helps you stay on budget.',
+    title: 'From Meal Plan to Grocery Cart — Automatically',
+    description:
+      'Auto-generate grocery lists from your family meal plans. Checks inventory, filters allergens per person, and shares lists with caregivers.',
     type: 'article',
     url: 'https://weightlossproglab.com/blog/smart-shopping',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Smart Shopping Lists - Intelligent Grocery Planning',
-    description: 'Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WPL suggests healthy foods, excludes allergens, and helps you stay on budget.',
+    title: 'From Meal Plan to Grocery Cart — Automatically',
+    description:
+      'Auto-generate grocery lists from your family meal plans. Checks inventory, filters allergens per person, and shares lists with caregivers.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/smart-shopping'
-  }
+    canonical: 'https://weightlossproglab.com/blog/smart-shopping',
+  },
 }
 
-export default function SmartshoppingBlogPage() {
+export default function SmartShoppingBlogPage() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
+      {/* ── Hero ── */}
       <div className="relative bg-gradient-to-br from-lime-600 via-green-600 to-emerald-600 text-white overflow-hidden">
-        {/* Background Image */}
         <div
           className="absolute inset-0 opacity-20"
           style={{
-            backgroundImage: 'url(https://images.unsplash.com/photo-1542838132-92c53300491e?w=1920&q=80)',
+            backgroundImage:
+              'url(https://images.unsplash.com/photo-1542838132-92c53300491e?w=1920&q=80)',
             backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
           }}
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">WPL Feature</span>
+              <span className="text-sm font-medium">Intelligent Shopping</span>
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">Intelligent Grocery Planning</h1>
-            <p className="text-xl text-white/90 mb-8 leading-relaxed">
-              Generate intelligent shopping lists based on your meal plans, dietary preferences, and pantry inventory. WPL suggests healthy foods, excludes allergens, and helps you stay on budget.
+            <h1 className="text-5xl md:text-6xl font-bold mb-6">
+              From Meal Plan to Grocery Cart &mdash; Automatically
+            </h1>
+            <p className="text-xl text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
+              Your family&apos;s meal plans generate the grocery list. WPL checks what you
+              already have, filters allergens for each person, and keeps you on budget &mdash;
+              so the healthy plan actually makes it to the table.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
                 href="/pricing"
-                className="px-8 py-4 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-semibold shadow-lg"
+                className="px-8 py-4 bg-white text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors font-semibold shadow-lg"
               >
                 Start Free Trial
               </Link>
@@ -77,109 +93,202 @@ export default function SmartshoppingBlogPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Key Features */}
+        {/* ── Problem ── */}
         <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">Key Features</h2>
+          <h2 className="text-4xl font-bold text-foreground mb-4 text-center">
+            Healthy Plans Die at the Grocery Store
+          </h2>
+          <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-12">
+            The meal plan is perfect on paper. But turning it into an actual shopping trip? That&apos;s
+            where families fall off track.
+          </p>
+          <div className="grid md:grid-cols-3 gap-8">
+            <ProblemCard
+              icon={<ExclamationTriangleIcon className="w-10 h-10 text-emerald-600" />}
+              title="Plans Without Lists"
+              description="A nutritionist builds the meal plan, but nobody translates it into a grocery list. The plan sits unused."
+            />
+            <ProblemCard
+              icon={<ListBulletIcon className="w-10 h-10 text-emerald-600" />}
+              title="Manual List-Making Is Friction"
+              description="Scanning recipes, checking the fridge, writing it all down &mdash; it takes 30 minutes you don&apos;t have."
+            />
+            <ProblemCard
+              icon={<NoSymbolIcon className="w-10 h-10 text-emerald-600" />}
+              title="Allergens Get Forgotten"
+              description="When you&apos;re shopping for multiple people with different restrictions, one missed label can mean a trip to the ER."
+            />
+          </div>
+        </section>
+
+        {/* ── The Pipeline ── */}
+        <section className="mb-20">
+          <h2 className="text-4xl font-bold text-foreground mb-4 text-center">
+            The Smart Shopping Pipeline
+          </h2>
+          <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-12">
+            Four automated steps between your meal plan and a safe, budget-aware grocery list.
+          </p>
+          <div className="relative">
+            {/* Connecting line (desktop only) */}
+            <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-emerald-200 dark:bg-emerald-800 -translate-y-1/2 z-0" />
+            <div className="grid md:grid-cols-4 gap-6 relative z-10">
+              <PipelineStep
+                step="1"
+                title="Meal Plans"
+                description="Your weekly meal plans &mdash; built by you, your nutritionist, or AI &mdash; feed directly into the pipeline."
+              />
+              <PipelineStep
+                step="2"
+                title="AI Generates List"
+                description="WPL reads every recipe and ingredient, then compiles a unified shopping list with quantities."
+              />
+              <PipelineStep
+                step="3"
+                title="Checks Inventory"
+                description="Cross-references your pantry and fridge inventory &mdash; items you already have are excluded automatically."
+              />
+              <PipelineStep
+                step="4"
+                title="Filters Allergens"
+                description="Each family member&apos;s allergen profile is applied. Unsafe items are flagged or swapped with safe alternatives."
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* ── Use Cases ── */}
+        <section className="mb-20">
+          <h2 className="text-4xl font-bold text-foreground mb-4 text-center">
+            Real-World Scenarios
+          </h2>
+          <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-12">
+            Smart Shopping adapts to your family&apos;s unique needs.
+          </p>
+          <div className="grid md:grid-cols-3 gap-8">
+            <UseCaseCard
+              number="01"
+              title="Three Dietary Restrictions"
+              description="A family of five with gluten-free, nut-free, and dairy-free members. WPL auto-generates separate safe items for each person from one shared meal plan."
+            />
+            <UseCaseCard
+              number="02"
+              title="Caregiver Shopping"
+              description="A caregiver shopping for an elderly parent doesn&apos;t have to guess. The list comes straight from the meal plan the nutritionist assigned."
+            />
+            <UseCaseCard
+              number="03"
+              title="Budget-Conscious Family"
+              description="Set a weekly grocery budget and WPL prioritizes essentials, suggests affordable swaps, and flags when you&apos;re approaching the limit."
+            />
+          </div>
+        </section>
+
+        {/* ── Features ── */}
+        <section className="mb-20">
+          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">
+            Features That Make Shopping Smarter
+          </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             <FeatureCard
-              icon={<ShoppingCartIcon className="w-12 h-12 text-blue-600" />}
+              icon={<ShoppingCartIcon className="w-12 h-12 text-emerald-600" />}
               title="Auto-Generated Lists"
-              description="AI creates shopping lists from your meal plans and recipe queues"
+              description="AI reads your meal plans and compiles a ready-to-shop grocery list with exact quantities."
             />
             <FeatureCard
-              icon={<SparklesIcon className="w-12 h-12 text-blue-600" />}
-              title="Smart Suggestions"
-              description="Recommends healthy alternatives based on your dietary preferences"
-            />
-            <FeatureCard
-              icon={<NoSymbolIcon className="w-12 h-12 text-blue-600" />}
+              icon={<NoSymbolIcon className="w-12 h-12 text-emerald-600" />}
               title="Allergen Filtering"
-              description="Automatically excludes foods containing your listed allergies"
+              description="Per-person allergen profiles ensure no unsafe items make it onto the list."
             />
             <FeatureCard
-              icon={<CurrencyDollarIcon className="w-12 h-12 text-blue-600" />}
+              icon={<CurrencyDollarIcon className="w-12 h-12 text-emerald-600" />}
               title="Budget Tracking"
-              description="Set budget limits and track spending on groceries"
+              description="Set weekly limits, track spending, and get notified before you go over budget."
             />
             <FeatureCard
-              icon={<ClipboardDocumentCheckIcon className="w-12 h-12 text-blue-600" />}
+              icon={<ArchiveBoxIcon className="w-12 h-12 text-emerald-600" />}
               title="Inventory Integration"
-              description="Cross-references pantry to avoid buying duplicates"
+              description="Cross-references your pantry so you never buy what you already have."
             />
             <FeatureCard
-              icon={<ShareIcon className="w-12 h-12 text-blue-600" />}
+              icon={<ShareIcon className="w-12 h-12 text-emerald-600" />}
               title="Family Sharing"
-              description="Share lists with family members for collaborative grocery shopping"
+              description="Share the list with family members or caregivers so anyone can pick up what&apos;s needed."
+            />
+            <FeatureCard
+              icon={<LightBulbIcon className="w-12 h-12 text-emerald-600" />}
+              title="Smart Suggestions"
+              description="Recommends healthier or more affordable alternatives based on dietary goals and past purchases."
             />
           </div>
         </section>
 
-        {/* Who Benefits */}
+        {/* ── Interconnection Pipeline ── */}
         <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-12 text-center">Who Benefits?</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <BenefitCard
-              emoji="👤"
-              title="Solo Users"
-              benefits={[
-                'Personal health tracking and goal management',
-                'Intelligent insights tailored to your needs',
-                'Privacy-focused data control',
-                'Mobile and desktop access'
-              ]}
-            />
-            <BenefitCard
-              emoji="👨‍👩‍👧‍👦"
-              title="Families"
-              benefits={[
-                'Track health for multiple family members',
-                'Coordinate care between caregivers',
-                'Shared calendar and notifications',
-                'Individual privacy controls per member'
-              ]}
-            />
-            <BenefitCard
-              emoji="🩺"
-              title="Healthcare Providers"
-              benefits={[
-                'Monitor patient data between visits',
-                'Receive alerts for abnormal values',
-                'Export reports for medical records',
-                'HIPAA-compliant access and storage'
-              ]}
-            />
+          <div className="bg-gradient-to-br from-emerald-50 to-lime-50 dark:from-emerald-950/30 dark:to-lime-950/30 rounded-2xl p-10 md:p-14 border border-emerald-200 dark:border-emerald-800">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6 text-center">
+              The Whole Pipeline, Connected
+            </h2>
+            <p className="text-lg text-muted-foreground text-center max-w-3xl mx-auto mb-10">
+              Smart Shopping isn&apos;t a standalone feature. It&apos;s one link in a chain that
+              turns health goals into real outcomes.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 text-sm md:text-base">
+              <PipelineLink href="/blog/meal-tracking" label="Meals" />
+              <ArrowRightIcon className="w-5 h-5 text-emerald-500 hidden md:block" />
+              <span className="text-emerald-500 md:hidden">&rarr;</span>
+              <PipelineLink href="/blog/smart-shopping" label="Shopping" active />
+              <ArrowRightIcon className="w-5 h-5 text-emerald-500 hidden md:block" />
+              <span className="text-emerald-500 md:hidden">&rarr;</span>
+              <PipelineLink href="/blog/inventory" label="Inventory" />
+              <ArrowRightIcon className="w-5 h-5 text-emerald-500 hidden md:block" />
+              <span className="text-emerald-500 md:hidden">&rarr;</span>
+              <span className="px-4 py-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 font-medium">
+                Less Waste
+              </span>
+              <ArrowRightIcon className="w-5 h-5 text-emerald-500 hidden md:block" />
+              <span className="text-emerald-500 md:hidden">&rarr;</span>
+              <span className="px-4 py-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 font-medium">
+                Better Health
+              </span>
+            </div>
           </div>
         </section>
 
-        {/* Related Features */}
+        {/* ── Related Features ── */}
         <section className="mb-20">
-          <h2 className="text-4xl font-bold text-foreground mb-8 text-center">Related Platform Features</h2>
+          <h2 className="text-4xl font-bold text-foreground mb-8 text-center">
+            Explore Related Features
+          </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <RelatedLink href="/blog/meal-tracking" title="Meal Tracking" description="Log meals, scan barcodes, and track macros" />
+            <RelatedLink href="/blog/inventory" title="Inventory" description="Pantry and fridge tracking to reduce waste" />
+            <RelatedLink href="/blog/family-care" title="Family Care" description="Multi-patient household health management" />
+            <RelatedLink href="/blog/ai-health-reports" title="AI Health Reports" description="Personalized insights powered by AI" />
             <RelatedLink href="/blog/dashboard" title="Dashboard" description="Centralized health command center" />
-            <RelatedLink href="/blog/profile" title="Profile" description="Personalized health settings" />
-            <RelatedLink href="/blog/family-care" title="Family Care" description="Multi-patient health management" />
-            <RelatedLink href="/pricing" title="Pricing" description="Flexible plans for every need" />
-            <RelatedLink href="/support" title="Support" description="Get help when you need it" />
-            <RelatedLink href="/docs" title="Documentation" description="Comprehensive platform guides" />
+            <RelatedLink href="/blog/profile" title="Profile" description="Dietary preferences and allergen profiles" />
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-12 text-center text-white">
-          <h2 className="text-4xl font-bold mb-4">Ready to Get Started?</h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
-            Start your free 14-day trial and experience the power of comprehensive health tracking.
+        {/* ── Trust + CTA ── */}
+        <section className="bg-gradient-to-r from-emerald-600 to-green-600 rounded-2xl p-12 text-center text-white">
+          <h2 className="text-4xl font-bold mb-4">
+            Stop Making Lists. Start Checking Them Off.
+          </h2>
+          <p className="text-xl text-emerald-100 mb-8 max-w-3xl mx-auto">
+            Let WPL turn your meal plans into safe, budget-aware grocery lists &mdash;
+            automatically. More time cooking, less time planning.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link
               href="/pricing"
-              className="px-8 py-4 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-semibold shadow-lg"
+              className="px-8 py-4 bg-white text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors font-semibold shadow-lg"
             >
               Start Free Trial
             </Link>
           </div>
-          <p className="text-sm text-blue-200 mt-6">
-            No credit card required • 14-day free trial • Cancel anytime
+          <p className="text-sm text-emerald-200 mt-6">
+            No credit card required &bull; 7-day free trial &bull; Cancel anytime
           </p>
           <div className="flex items-center justify-center gap-6 mt-8 text-sm">
             <Link href="/security" className="text-white/90 hover:text-white underline">Security</Link>
@@ -193,10 +302,43 @@ export default function SmartshoppingBlogPage() {
   )
 }
 
-// Helper Components
+/* ── Helper Components ── */
+
+function ProblemCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+  return (
+    <div className="bg-card rounded-xl border-2 border-border p-6 text-center">
+      <div className="flex justify-center mb-4">{icon}</div>
+      <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-muted-foreground">{description}</p>
+    </div>
+  )
+}
+
+function PipelineStep({ step, title, description }: { step: string; title: string; description: string }) {
+  return (
+    <div className="bg-card rounded-xl border-2 border-border p-6 text-center">
+      <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-lg mb-4 mx-auto">
+        {step}
+      </div>
+      <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
+  )
+}
+
+function UseCaseCard({ number, title, description }: { number: string; title: string; description: string }) {
+  return (
+    <div className="bg-card rounded-xl border-2 border-border p-6 hover:border-emerald-300 hover:shadow-lg transition-all">
+      <span className="text-sm font-bold text-emerald-600 mb-2 block">{number}</span>
+      <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-muted-foreground">{description}</p>
+    </div>
+  )
+}
+
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <div className="bg-card rounded-xl border-2 border-border p-6 hover:border-blue-300 hover:shadow-lg transition-all">
+    <div className="bg-card rounded-xl border-2 border-border p-6 hover:border-emerald-300 hover:shadow-lg transition-all">
       <div className="mb-4">{icon}</div>
       <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
       <p className="text-muted-foreground">{description}</p>
@@ -204,27 +346,28 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode; titl
   )
 }
 
-function BenefitCard({ emoji, title, benefits }: { emoji: string; title: string; benefits: string[] }) {
+function PipelineLink({ href, label, active }: { href: string; label: string; active?: boolean }) {
   return (
-    <div className="bg-card rounded-xl border-2 border-border p-6">
-      <div className="text-4xl mb-3">{emoji}</div>
-      <h3 className="text-xl font-semibold text-foreground mb-4">{title}</h3>
-      <ul className="space-y-2">
-        {benefits.map((benefit, idx) => (
-          <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-            <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <span>{benefit}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Link
+      href={href}
+      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+        active
+          ? 'bg-emerald-600 text-white shadow-md'
+          : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-200 dark:hover:bg-emerald-800/60'
+      }`}
+    >
+      {label}
+    </Link>
   )
 }
 
 function RelatedLink({ href, title, description }: { href: string; title: string; description: string }) {
   return (
-    <Link href={href} className="bg-card rounded-lg border-2 border-border p-4 hover:border-blue-300 hover:shadow-lg transition-all block">
-      <h3 className="font-semibold text-foreground mb-1">{title}</h3>
+    <Link href={href} className="bg-card rounded-lg border-2 border-border p-4 hover:border-emerald-300 hover:shadow-lg transition-all block group">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-semibold text-foreground">{title}</h3>
+        <ArrowRightIcon className="w-4 h-4 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
+      </div>
       <p className="text-sm text-muted-foreground">{description}</p>
     </Link>
   )

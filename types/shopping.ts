@@ -20,6 +20,7 @@ export type ProductCategory =
   | 'pantry'
   | 'beverages'
   | 'condiments'
+  | 'baby'
   | 'other'
 
 export type StorageLocation =
@@ -432,6 +433,7 @@ export type HealthSuggestionReason =
   | 'senior_nutrition'         // Easy-to-digest, low-sodium
   | 'weight_loss'              // High-protein, low-calorie
   | 'weight_gain'              // Calorie-dense, protein-rich
+  | 'newborn_essentials'       // Diapers, wipes, formula, bottles, etc.
   | 'general_health'           // Balanced nutrition
 
 export interface HealthBasedSuggestion {

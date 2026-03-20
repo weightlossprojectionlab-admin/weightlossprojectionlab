@@ -420,6 +420,14 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
+      // User-level providers subcollection (aggregated view)
+      match /providers/{providerId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+
       // --- Legacy subcollections (from original rules) ---
 
       // Weight logs

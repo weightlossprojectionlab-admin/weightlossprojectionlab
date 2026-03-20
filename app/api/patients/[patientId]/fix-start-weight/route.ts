@@ -67,21 +67,47 @@ export async function POST(
         source = 'vitals'
       }
     } else {
-      // For humans, check weightLogs
-      const weightLogsSnapshot = await adminDb
+      // For humans: check vitals first (current system), then legacy weightLogs
+      // 1. Check vitals collection (primary — where QuickWeightModal and VitalsWizard write)
+      const vitalsSnapshot = await adminDb
         .collection('users')
         .doc(userId)
         .collection('patients')
         .doc(patientId)
-        .collection('weightLogs')
-        .orderBy('loggedAt', 'asc')
-        .limit(1)
+        .collection('vitals')
+        .where('type', '==', 'weight')
+        .limit(5)
         .get()
 
-      if (!weightLogsSnapshot.empty) {
-        const firstWeightLog = weightLogsSnapshot.docs[0].data()
-        firstWeight = firstWeightLog.weight
-        source = 'weightLog'
+      if (!vitalsSnapshot.empty) {
+        const weightVitals = vitalsSnapshot.docs
+          .map(d => d.data())
+          .filter(d => typeof d.value === 'number' && d.value > 0)
+          .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime())
+
+        if (weightVitals.length > 0) {
+          firstWeight = weightVitals[0].value as number
+          source = 'vitals'
+        }
+      }
+
+      // 2. Fallback: check legacy weightLogs collection
+      if (!firstWeight) {
+        const weightLogsSnapshot = await adminDb
+          .collection('users')
+          .doc(userId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('weightLogs')
+          .orderBy('loggedAt', 'asc')
+          .limit(1)
+          .get()
+
+        if (!weightLogsSnapshot.empty) {
+          const firstWeightLog = weightLogsSnapshot.docs[0].data()
+          firstWeight = firstWeightLog.weight
+          source = 'weightLog'
+        }
       }
     }
 

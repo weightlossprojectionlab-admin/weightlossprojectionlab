@@ -7,7 +7,7 @@
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { medicalOperations } from '@/lib/medical-operations'
 import { logger } from '@/lib/logger'
 import { useAuth } from '@/hooks/useAuth'
@@ -39,6 +39,9 @@ interface UseVitalsReturn {
   deleteVital: (vitalId: string) => Promise<void>
   getLatestVital: (type: VitalType) => VitalSign | null
   checkDuplicateToday: (type: VitalType) => Promise<DuplicateCheckResult>
+  approvedVitals: VitalSign[]
+  pendingVitals: VitalSign[]
+  approveVital: (vitalId: string, action: 'approve' | 'reject', reason?: string) => Promise<void>
 }
 
 export function useVitals({
@@ -243,6 +246,55 @@ export function useVitals({
     }
   }, [vitals, patientId])
 
+  // Derived state: filter by approval status
+  const approvedVitals = useMemo(
+    () => vitals.filter(v => !v.approvalStatus || v.approvalStatus === 'approved'),
+    [vitals]
+  )
+  const pendingVitals = useMemo(
+    () => vitals.filter(v => v.approvalStatus === 'pending'),
+    [vitals]
+  )
+
+  // Approve or reject a pending vital
+  const approveVital = useCallback(async (
+    vitalId: string,
+    action: 'approve' | 'reject',
+    reason?: string
+  ): Promise<void> => {
+    try {
+      const { user } = await import('@/lib/firebase').then(m => ({ user: m.auth.currentUser }))
+      if (!user) throw new Error('Not authenticated')
+      const token = await user.getIdToken()
+
+      const response = await fetch(`/api/patients/${patientId}/vitals/${vitalId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action, reason })
+      })
+
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.error || `Failed to ${action} vital`)
+      }
+
+      // Update local state
+      setVitals(prev => prev.map(v =>
+        v.id === vitalId
+          ? { ...v, approvalStatus: action === 'approve' ? 'approved' as const : 'rejected' as const }
+          : v
+      ))
+
+      logger.info(`[useVitals] Vital ${action}d`, { patientId, vitalId })
+    } catch (err: any) {
+      logger.error(`[useVitals] Error ${action}ing vital`, err, { patientId, vitalId })
+      throw err
+    }
+  }, [patientId])
+
   return {
     vitals,
     loading,
@@ -252,6 +304,9 @@ export function useVitals({
     updateVital,
     deleteVital,
     getLatestVital,
-    checkDuplicateToday
+    checkDuplicateToday,
+    approvedVitals,
+    pendingVitals,
+    approveVital
   }
 }

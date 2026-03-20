@@ -76,6 +76,7 @@ export interface PatientProfile {
   addedAt?: string
 
   // Health vitals (for both humans and pets)
+  currentWeight?: number // Latest weight (synced from vitals on approved entries)
   height?: number // in inches (imperial) or cm (metric)
   heightUnit?: 'imperial' | 'metric'
   activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active'
@@ -143,6 +144,16 @@ export type VitalType =
   | 'temperature'
   | 'weight'
   | 'mood'
+  // Newborn/infant-specific vitals
+  | 'newborn_heart_rate'
+  | 'newborn_respiratory_rate'
+  | 'newborn_oxygen_saturation'
+  | 'newborn_bilirubin'
+  | 'newborn_blood_glucose'
+  | 'newborn_head_circumference'
+  | 'newborn_diaper_output'
+  | 'newborn_fontanelle'
+  | 'newborn_umbilical_cord'
   // Pet-specific vitals
   | 'heartRate'
   | 'respiratoryRate'
@@ -255,6 +266,7 @@ export type VitalUnit =
   | '°C'
   | 'lbs'
   | 'kg'
+  | 'oz'
   | 'g'
   | 'SpO₂% / bpm'
   | 'scale'
@@ -319,6 +331,14 @@ export interface VitalSign {
   loggedBy?: string // userId who created the entry (for caregiver logging)
   isBackdated?: boolean // True if logged > 1 hour after recordedAt
   daysDifference?: number // Days between recorded and logged (audit metric)
+
+  // Approval workflow (weight entries post-onboarding)
+  approvalStatus?: 'approved' | 'pending' | 'rejected' // undefined = legacy approved
+  approvedBy?: string       // userId of approver
+  approvedAt?: string       // ISO 8601
+  rejectedBy?: string       // userId who rejected
+  rejectedAt?: string       // ISO 8601
+  rejectionReason?: string  // Why it was rejected
 
   // Audit trail
   createdAt?: string // ISO 8601 - When first created

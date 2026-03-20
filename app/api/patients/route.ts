@@ -295,6 +295,7 @@ export async function POST(request: NextRequest) {
 
     // Create initial weight log if currentWeight provided
     if (currentWeight) {
+      // Legacy: weight-logs collection (kept for backward compat)
       const weightLogRef = patientRef.collection('weight-logs').doc()
       await weightLogRef.set({
         weight: currentWeight,
@@ -303,6 +304,32 @@ export async function POST(request: NextRequest) {
         source: 'initial',
         tags: ['baseline'],
         createdAt: now
+      })
+
+      // Modern: vitals collection (so weight shows on charts from day one)
+      const { v4: uuidv4 } = await import('uuid')
+      const vitalId = uuidv4()
+      const vitalRef = patientRef.collection('vitals').doc(vitalId)
+      await vitalRef.set({
+        id: vitalId,
+        patientId,
+        type: 'weight',
+        value: currentWeight,
+        unit: weightUnit || 'lbs',
+        recordedAt: now,
+        loggedAt: now,
+        loggedBy: userId,
+        takenBy: userId,
+        method: 'manual',
+        isBackdated: false,
+        daysDifference: 0,
+        approvalStatus: 'approved',
+        approvedBy: userId,
+        approvedAt: now,
+        createdAt: now,
+        lastModifiedBy: userId,
+        lastModifiedAt: now,
+        modificationHistory: []
       })
 
       logger.info('[API /patients POST] Initial weight log created', {

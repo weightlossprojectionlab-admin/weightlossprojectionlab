@@ -20,6 +20,7 @@ import { PatientProfile, VitalType, VitalSign, VitalUnit, FamilyMember, FamilyMe
 import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
 import DailyVitalsSummary from '@/components/vitals/DailyVitalsSummary'
+import PendingVitalApprovals from '@/components/vitals/PendingVitalApprovals'
 import VitalsHistory from '@/components/vitals/VitalsHistory'
 import VitalReminderPrompt from '@/components/vitals/VitalReminderPrompt'
 import VitalQuickLogModal from '@/components/vitals/VitalQuickLogModal'
@@ -48,6 +49,8 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 import { calculateAge } from '@/lib/age-utils'
+import { getHumanLifeStage, getHumanLifeStageNotices } from '@/lib/life-stage-utils'
+import InfantFeedingLog from '@/components/patients/InfantFeedingLog'
 import { capitalizeName } from '@/lib/utils'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
@@ -96,6 +99,11 @@ function PatientDetailContent() {
   // Determine visible tabs based on patient type
   const isPet = patient?.type === 'pet'
   const visibleTabs = isPet ? getPetTabs(patient?.species) : HUMAN_TAB_VISIBILITY
+
+  // Life-stage guards for newborns/infants
+  const lifeStage = !isPet && patient?.dateOfBirth ? getHumanLifeStage(patient.dateOfBirth).stage : null
+  const isNewbornOrInfant = lifeStage === 'newborn' || lifeStage === 'infant'
+  const lifeStageNotices = !isPet && patient?.dateOfBirth ? getHumanLifeStageNotices(patient.dateOfBirth) : []
 
   // Helper to get tab label with species-specific emoji
   const getTabLabel = (tab: string): string => {
@@ -146,7 +154,7 @@ function PatientDetailContent() {
   const [removingMember, setRemovingMember] = useState<FamilyMember | null>(null)
 
   const { user } = useAuth()
-  const { vitals, loading: vitalsLoading, logVital, updateVital, deleteVital, refetch } = useVitals({
+  const { vitals, loading: vitalsLoading, logVital, updateVital, deleteVital, refetch, pendingVitals, approveVital } = useVitals({
     patientId,
     autoFetch: true
   })
@@ -209,7 +217,7 @@ function PatientDetailContent() {
   const patientProfileForStats = patient ? {
     goals: patient.goals,
     profile: {
-      currentWeight: patient.goals?.startWeight // Fallback if no weight logs
+      currentWeight: patient.currentWeight || patient.goals?.startWeight // Use currentWeight (synced from vitals), fallback to startWeight
     }
   } : null
 
@@ -272,8 +280,8 @@ function PatientDetailContent() {
       const result = await response.json()
 
       if (!response.ok) {
-        // For pets without weight data, offer to add it now
-        if (response.status === 404 && result.isPet) {
+        // No weight data found — open weight entry modal
+        if (response.status === 404) {
           setShowQuickWeightModal(true)
           return
         }
@@ -365,6 +373,13 @@ function PatientDetailContent() {
       setSelectedVitalType('weight')
     }
   }, [patient])
+
+  // Reset to 'info' tab if patient is a newborn/infant and currently on an inappropriate tab
+  useEffect(() => {
+    if (isNewbornOrInfant && ['meals', 'steps', 'recipes'].includes(activeTab)) {
+      setActiveTab('info')
+    }
+  }, [isNewbornOrInfant, activeTab])
 
   // Fetch documents
   const fetchDocuments = async () => {
@@ -522,13 +537,15 @@ function PatientDetailContent() {
     healthConditions: patient.healthConditions || []
   }) : null
 
-  // Vital types - use intelligent recommendations for pets, standard for humans
+  // Vital types - use intelligent recommendations for pets, newborn-specific for infants, standard for adults
   const vitalTypes: VitalType[] = isPet && vitalRecommendations
     ? vitalRecommendations
         .filter(r => r.priority === 'essential' || r.priority === 'recommended')
         .map(r => r.vitalType as VitalType) // Cast veterinary VitalType to medical VitalType
     : isPet
     ? ['weight', 'temperature'] // Fallback for pets without recommendations
+    : isNewbornOrInfant
+    ? ['weight', 'temperature', 'newborn_heart_rate', 'newborn_respiratory_rate', 'newborn_oxygen_saturation', 'newborn_bilirubin', 'newborn_blood_glucose', 'newborn_head_circumference', 'newborn_diaper_output']
     : ['blood_pressure', 'blood_sugar', 'pulse_oximeter', 'temperature', 'weight']
 
   if (loading) {
@@ -582,6 +599,25 @@ function PatientDetailContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Life-stage health notices (newborns/infants) */}
+        {lifeStageNotices.length > 0 && (
+          <div className="mb-6 space-y-2">
+            {lifeStageNotices.map((notice, i) => (
+              <div
+                key={i}
+                className={`flex items-start gap-3 rounded-lg px-4 py-3 text-sm ${
+                  notice.type === 'warning'
+                    ? 'bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300'
+                    : 'bg-blue-50 border border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-300'
+                }`}
+              >
+                <span className="flex-shrink-0 mt-0.5">{notice.type === 'warning' ? '⚠️' : 'ℹ️'}</span>
+                <p>{notice.message}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Sidebar - Quick Actions */}
           <aside className="w-full lg:w-64 flex-shrink-0 mb-6 lg:mb-0">
@@ -610,7 +646,7 @@ function PatientDetailContent() {
                   )}
 
                   {/* Meals (Humans) / Feeding (Pets) */}
-                  {visibleTabs.includes('meals') && !isPet && (
+                  {visibleTabs.includes('meals') && !isPet && !isNewbornOrInfant && (
                     <button
                       onClick={() => {
                         setActiveTab('meals')
@@ -646,6 +682,26 @@ function PatientDetailContent() {
                       <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Feeding</span>
                     </button>
                   )}
+                  {/* Infant Feeding (newborns/infants only) */}
+                  {isNewbornOrInfant && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('feeding')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'feeding'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">🍼</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Feeding</span>
+                    </button>
+                  )}
+
                   {/* Medications */}
                   {visibleTabs.includes('medications') && (
                     <button
@@ -693,7 +749,7 @@ function PatientDetailContent() {
                   )}
 
                   {/* Steps (Humans) / Activity (Pets) */}
-                  {visibleTabs.includes('steps') && !isPet && (
+                  {visibleTabs.includes('steps') && !isPet && !isNewbornOrInfant && (
                     <button
                       onClick={() => {
                         setActiveTab('steps')
@@ -759,7 +815,7 @@ function PatientDetailContent() {
                   </Link>
 
                   {/* Recipes (Humans only) */}
-                  {visibleTabs.includes('recipes') && (
+                  {visibleTabs.includes('recipes') && !isNewbornOrInfant && (
                     <button
                       onClick={() => {
                         setActiveTab('recipes')
@@ -809,14 +865,7 @@ function PatientDetailContent() {
                     </button>
                   )}
 
-                  {/* Duties - Always visible */}
-                  <Link
-                    href={`/patients/${patientId}/duties`}
-                    className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
-                  >
-                    <span className="text-5xl lg:text-xl">🏠</span>
-                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Duties</span>
-                  </Link>
+                  {/* Duties - accessible from /households/duties, not patient profile */}
 
                   {/* Settings - Always visible */}
                   {visibleTabs.includes('settings') && (
@@ -886,7 +935,7 @@ function PatientDetailContent() {
                     {isPet ? getPetTabLabel(patient?.species || 'Other', 'vitals') : '🩺 Vitals'}
                   </button>
                 )}
-                {visibleTabs.includes('meals') && !isPet && (
+                {visibleTabs.includes('meals') && !isPet && !isNewbornOrInfant && (
                   <button
                     onClick={() => setActiveTab('meals')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
@@ -910,7 +959,19 @@ function PatientDetailContent() {
                     {getPetTabLabel(patient?.species || 'Other', 'feeding')}
                   </button>
                 )}
-                {visibleTabs.includes('steps') && (
+                {isNewbornOrInfant && (
+                  <button
+                    onClick={() => setActiveTab('feeding')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === 'feeding'
+                        ? 'bg-primary text-white'
+                        : 'bg-card border border-border text-foreground'
+                    }`}
+                  >
+                    🍼 Feeding
+                  </button>
+                )}
+                {visibleTabs.includes('steps') && !isNewbornOrInfant && (
                   <button
                     onClick={() => setActiveTab('steps')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
@@ -969,7 +1030,7 @@ function PatientDetailContent() {
                   🩹 Episodes
                 </button>
 
-                {visibleTabs.includes('recipes') && (
+                {visibleTabs.includes('recipes') && !isNewbornOrInfant && (
                   <button
                     onClick={() => setActiveTab('recipes')}
                     className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
@@ -1010,18 +1071,9 @@ function PatientDetailContent() {
 
         {/* Vital Reminder Prompt - Shows when vitals are due today */}
         {canLogVitals && user && patient && !vitalsLoading && (() => {
-          // DEBUG: Log what we're passing to VitalReminderPrompt
-          logger.debug('[PatientPage] Vital reminder check', {
-            hasPatient: !!patient,
-            hasPreferences: !!patient?.preferences,
-            vitalReminders: patient?.preferences?.vitalReminders,
-            vitalsCount: vitals.length
-          })
-
           // Check if any reminders are enabled
           const enabledReminders = Object.entries(patient.preferences?.vitalReminders || {})
             .filter(([_, config]) => (config as any)?.enabled)
-          logger.debug('[PatientPage] Enabled reminders', { enabledReminders })
 
           return (
             <VitalReminderPrompt
@@ -1119,7 +1171,7 @@ function PatientDetailContent() {
                 <>
                   <p className="text-sm text-muted-foreground mb-2">No data yet</p>
                   {/* Show fix button if patient has no startWeight but is owner */}
-                  {isOwner && !patient?.goals?.startWeight && (
+                  {isOwner && !patient?.goals?.startWeight && !patient?.currentWeight && (
                     <button
                       onClick={handleFixStartWeight}
                       disabled={fixingStartWeight}
@@ -1308,6 +1360,15 @@ function PatientDetailContent() {
           {/* Show content based on active tab */}
           {activeTab === 'vitals' && (
             <>
+              {/* Pending Weight Approvals — visible to caregivers/admins */}
+              {(isOwner || canLogVitals) && pendingVitals.length > 0 && (
+                <PendingVitalApprovals
+                  pendingVitals={pendingVitals}
+                  onApprove={approveVital}
+                  getDisplayName={getDisplayName}
+                />
+              )}
+
               {/* Quick Action Reminder - Use wizard instead of inline form (DRY) */}
               {canLogVitals && !vitals.length && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
@@ -1396,15 +1457,15 @@ function PatientDetailContent() {
                 getDisplayName={getDisplayName}
                 onLogPreviousVital={() => {
                   // Open quick log modal with yesterday as default
-                  setQuickLogVitalType('blood_pressure') // Default vital type
+                  setQuickLogVitalType(isNewbornOrInfant ? 'weight' : 'blood_pressure') // Default vital type
                   setShowQuickLogModal(true)
                 }}
               />
             </>
           )}
 
-          {/* Meals Tab - HUMANS ONLY */}
-          {activeTab === 'meals' && canLogVitals && !isPet && (
+          {/* Meals Tab - HUMANS ONLY (not for newborns/infants) */}
+          {activeTab === 'meals' && canLogVitals && !isPet && !isNewbornOrInfant && (
             <div className="bg-card rounded-lg shadow-sm p-6">
               <h2 className="text-lg font-bold text-foreground mb-4">
                 Log Meals
@@ -1453,8 +1514,8 @@ function PatientDetailContent() {
             <FeedingDashboardWidget patient={patient} />
           )}
 
-          {/* Steps Tab - HUMANS ONLY */}
-          {activeTab === 'steps' && canLogVitals && !isPet && (
+          {/* Steps Tab - HUMANS ONLY (not for newborns/infants) */}
+          {activeTab === 'steps' && canLogVitals && !isPet && !isNewbornOrInfant && (
             <div className="bg-card rounded-lg shadow-sm p-6">
               <h2 className="text-lg font-bold text-foreground mb-4">
                 Log Steps
@@ -1594,9 +1655,18 @@ function PatientDetailContent() {
             </div>
           )}
 
-          {/* Patient Info Tab */}
-          {activeTab === 'recipes' && (
+          {/* Recipes Tab (not for newborns/infants) */}
+          {activeTab === 'recipes' && !isNewbornOrInfant && (
             <RecipeView patientId={patientId} patientName={patient.name} />
+          )}
+
+          {/* Infant Feeding Tab (newborns/infants only) */}
+          {activeTab === 'feeding' && isNewbornOrInfant && patient.userId && (
+            <InfantFeedingLog
+              patientId={patientId}
+              accountOwnerId={patient.userId}
+              patientName={capitalizeName(patient.name)}
+            />
           )}
 
           {activeTab === 'info' && (

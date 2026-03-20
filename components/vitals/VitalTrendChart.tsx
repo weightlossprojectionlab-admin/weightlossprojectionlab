@@ -20,7 +20,7 @@ export function VitalTrendChart({ vitals, type, height = 300 }: VitalTrendChartP
   // Prepare chart data
   const chartData = useMemo(() => {
     return vitals
-      .filter(v => v.type === type)
+      .filter(v => v.type === type && (!v.approvalStatus || v.approvalStatus === 'approved'))
       .reverse() // Chronological order (oldest first)
       .map(vital => {
         const date = new Date(vital.recordedAt)

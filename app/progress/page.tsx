@@ -442,13 +442,17 @@ function ProgressContent() {
 
     const currentWeight = weightData[weightData.length - 1].weight
 
-    // Use the first weight log as starting weight if startWeight is unrealistic (< 50 lbs)
-    // This handles cases where startWeight was incorrectly set during onboarding
+    // Resolve start weight: goals.startWeight → first weight log → currentWeight
     let startWeight = activeProfile.goals.startWeight
-    if (!startWeight || startWeight < 50) {
-      // Use the first weight log entry (oldest) as the starting weight
-      startWeight = weightData[0].weight
-      console.log('Using first weight log as starting weight:', startWeight)
+    if (!startWeight || startWeight <= 0) {
+      // Fallback to first weight log entry (oldest)
+      if (weightData.length > 0) {
+        startWeight = weightData[0].weight
+      }
+      // Final fallback to currentWeight from profile
+      if (!startWeight && activeProfile.profile?.currentWeight) {
+        startWeight = activeProfile.profile.currentWeight
+      }
     }
 
     // Debug logging

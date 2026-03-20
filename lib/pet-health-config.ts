@@ -188,6 +188,16 @@ export function getPetVitalName(vitalType: VitalType, species?: string): string 
     baskingTemp: 'Basking Temperature',
     coolSideTemp: 'Cool Side Temperature',
     humidity: 'Humidity',
+    // Newborn-specific vitals
+    newborn_heart_rate: 'Heart Rate',
+    newborn_respiratory_rate: 'Respiratory Rate',
+    newborn_oxygen_saturation: 'Oxygen Saturation',
+    newborn_bilirubin: 'Bilirubin',
+    newborn_blood_glucose: 'Blood Glucose',
+    newborn_head_circumference: 'Head Circumference',
+    newborn_diaper_output: 'Diaper Output',
+    newborn_fontanelle: 'Fontanelle',
+    newborn_umbilical_cord: 'Umbilical Cord',
   }
 
   return vitalNames[vitalType] || vitalType

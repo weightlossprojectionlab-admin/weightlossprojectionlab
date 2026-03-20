@@ -1,8 +1,9 @@
 /**
- * Blog Index Page
+ * Blog Index — Platform Storefront
  *
- * Main blog landing page showcasing all WPL feature articles
- * Organized by category with search and filtering
+ * Repositioned from article listing to product discovery hub.
+ * Shows the 4 modes, highlights the interconnection story,
+ * and positions WPL as a health operating system.
  */
 
 'use client'
@@ -17,7 +18,13 @@ import {
   BeakerIcon,
   HeartIcon,
   DocumentTextIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  SparklesIcon,
+  UserIcon,
+  ShieldCheckIcon,
+  AcademicCapIcon,
+  BellAlertIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline'
 
 interface BlogPost {
@@ -35,134 +42,24 @@ export default function BlogPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
 
   const blogPosts: BlogPost[] = [
-    // Platform Posts
-    {
-      slug: '/blog/dashboard',
-      title: 'Health Dashboard',
-      description: 'Your family\'s centralized health command center with Intelligent insights',
-      category: 'platform',
-      icon: <ChartBarIcon className="w-6 h-6" />,
-      readTime: '5 min read',
-      image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png'
-    },
-    {
-      slug: '/blog/profile',
-      title: 'User Profile',
-      description: 'Personalized health settings and account management',
-      category: 'platform',
-      icon: <UserGroupIcon className="w-6 h-6" />,
-      readTime: '4 min read'
-    },
-    {
-      slug: '/blog/patients',
-      title: 'Patient Management',
-      description: 'Create and manage health profiles for every family member',
-      category: 'platform',
-      icon: <HeartIcon className="w-6 h-6" />,
-      readTime: '6 min read'
-    },
-    {
-      slug: '/blog/family-care',
-      title: 'Family Care Dashboard',
-      description: 'Coordinate health for your whole family from one place',
-      category: 'platform',
-      icon: <UserGroupIcon className="w-6 h-6" />,
-      readTime: '7 min read',
-      image: '/screenshots/family-care/management-tools-desktop-light.png'
-    },
-    {
-      slug: '/blog/appointments',
-      title: 'Appointment Scheduling',
-      description: 'Manage medical appointments with reminders and driver assignment',
-      category: 'platform',
-      icon: <DocumentTextIcon className="w-6 h-6" />,
-      readTime: '5 min read'
-    },
-
-    // Features Posts
-    {
-      slug: '/blog/meal-tracking',
-      title: 'AI Meal Tracking',
-      description: 'Photo-based meal logging with AI nutritional analysis',
-      category: 'features',
-      icon: <BeakerIcon className="w-6 h-6" />,
-      readTime: '6 min read'
-    },
-    {
-      slug: '/blog/weight-tracking',
-      title: 'Weight Progress Tracking',
-      description: 'Visualize your weight loss journey with interactive charts',
-      category: 'features',
-      icon: <ChartBarIcon className="w-6 h-6" />,
-      readTime: '5 min read'
-    },
-    {
-      slug: '/blog/ai-health-reports',
-      title: 'WPL Health Reports',
-      description: 'Weekly personalized health insights powered by WPL platform',
-      category: 'features',
-      icon: <BeakerIcon className="w-6 h-6" />,
-      readTime: '7 min read'
-    },
-    {
-      slug: '/blog/smart-shopping',
-      title: 'Smart Shopping Lists',
-      description: 'Platform-generated grocery lists based on your meal plans',
-      category: 'features',
-      icon: <DocumentTextIcon className="w-6 h-6" />,
-      readTime: '5 min read'
-    },
-    {
-      slug: '/blog/inventory-management',
-      title: 'Kitchen Inventory',
-      description: 'Track pantry items with expiration alerts and waste reduction',
-      category: 'features',
-      icon: <DocumentTextIcon className="w-6 h-6" />,
-      readTime: '4 min read'
-    },
-
-    // Healthcare Posts
-    {
-      slug: '/blog/patient-care',
-      title: 'Comprehensive Patient Care',
-      description: 'Full health profiles with vitals, medications, and medical history',
-      category: 'healthcare',
-      icon: <HeartIcon className="w-6 h-6" />,
-      readTime: '8 min read',
-      image: '/screenshots/patient-care/patient-profile-vitals-desktop-light.png'
-    },
-    {
-      slug: '/blog/providers',
-      title: 'Healthcare Providers',
-      description: 'Organize your medical team with provider directory',
-      category: 'healthcare',
-      icon: <UserGroupIcon className="w-6 h-6" />,
-      readTime: '4 min read'
-    },
-    {
-      slug: '/blog/medications',
-      title: 'Medication Tracking',
-      description: 'Track prescriptions with dosage reminders and refill alerts',
-      category: 'healthcare',
-      icon: <BeakerIcon className="w-6 h-6" />,
-      readTime: '6 min read'
-    },
-    {
-      slug: '/blog/vitals-tracking',
-      title: 'Vitals Monitoring',
-      description: 'Track blood pressure, glucose, temperature, and more',
-      category: 'healthcare',
-      icon: <HeartIcon className="w-6 h-6" />,
-      readTime: '5 min read'
-    },
-    {
-      slug: '/blog/medical-documents',
-      title: 'Medical Documents',
-      description: 'Secure storage with OCR text extraction and smart organization',
-      category: 'healthcare',
-      icon: <DocumentTextIcon className="w-6 h-6" />,
-      readTime: '6 min read'
-    }
+    // Platform
+    { slug: '/blog/dashboard', title: 'Health Dashboard', description: 'See everyone\'s health in one glance — and know exactly what needs attention.', category: 'platform', icon: <ChartBarIcon className="w-6 h-6" />, readTime: '5 min read', image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png' },
+    { slug: '/blog/profile', title: 'Health Identity', description: 'The AI learns what\'s normal for each person so it can spot what isn\'t.', category: 'platform', icon: <UserGroupIcon className="w-6 h-6" />, readTime: '4 min read' },
+    { slug: '/blog/patients', title: 'Health Profiles', description: 'Every person you care about — one intelligent system.', category: 'platform', icon: <HeartIcon className="w-6 h-6" />, readTime: '6 min read' },
+    { slug: '/blog/family-care', title: 'Family Care', description: 'One place to protect your entire family\'s health.', category: 'platform', icon: <UserGroupIcon className="w-6 h-6" />, readTime: '7 min read', image: '/screenshots/family-care/management-tools-desktop-light.png' },
+    { slug: '/blog/appointments', title: 'Appointments', description: 'Never miss a visit — for anyone in your family.', category: 'platform', icon: <DocumentTextIcon className="w-6 h-6" />, readTime: '5 min read' },
+    // Features
+    { slug: '/blog/meal-tracking', title: 'AI Meal Tracking', description: 'Know what everyone\'s eating — AI does the math.', category: 'features', icon: <BeakerIcon className="w-6 h-6" />, readTime: '6 min read' },
+    { slug: '/blog/weight-tracking', title: 'Weight Projections', description: 'See where you\'re headed — not just where you\'ve been.', category: 'features', icon: <ChartBarIcon className="w-6 h-6" />, readTime: '5 min read' },
+    { slug: '/blog/ai-health-reports', title: 'AI Health Reports', description: 'Your family\'s health — interpreted, not just tracked.', category: 'features', icon: <SparklesIcon className="w-6 h-6" />, readTime: '7 min read' },
+    { slug: '/blog/smart-shopping', title: 'Smart Shopping', description: 'From meal plan to grocery cart — automatically.', category: 'features', icon: <ClipboardDocumentListIcon className="w-6 h-6" />, readTime: '5 min read' },
+    { slug: '/blog/inventory-management', title: 'Kitchen Inventory', description: 'Know what you have. Know what you need. Waste nothing.', category: 'features', icon: <DocumentTextIcon className="w-6 h-6" />, readTime: '4 min read' },
+    // Healthcare
+    { slug: '/blog/patient-care', title: 'Care Coordination', description: 'Coordinate care across caregivers — no one falls through the cracks.', category: 'healthcare', icon: <HeartIcon className="w-6 h-6" />, readTime: '8 min read', image: '/screenshots/patient-care/patient-profile-vitals-desktop-light.png' },
+    { slug: '/blog/providers', title: 'Your Medical Team', description: 'Keep your doctors in the loop — without the paperwork.', category: 'healthcare', icon: <UserGroupIcon className="w-6 h-6" />, readTime: '4 min read' },
+    { slug: '/blog/medications', title: 'Medication Safety', description: 'Every pill, every person, every reminder — handled.', category: 'healthcare', icon: <BellAlertIcon className="w-6 h-6" />, readTime: '6 min read' },
+    { slug: '/blog/vitals-tracking', title: 'Vitals Monitoring', description: 'Catch problems before they become emergencies.', category: 'healthcare', icon: <HeartIcon className="w-6 h-6" />, readTime: '5 min read' },
+    { slug: '/blog/medical-documents', title: 'Medical Documents', description: 'Insurance cards, lab results, prescriptions — always with you.', category: 'healthcare', icon: <DocumentTextIcon className="w-6 h-6" />, readTime: '6 min read' },
   ]
 
   const filteredPosts = blogPosts.filter(post => {
@@ -173,29 +70,35 @@ export default function BlogPage() {
   })
 
   const categories = [
-    { id: 'all', label: 'All Posts', count: blogPosts.length },
+    { id: 'all', label: 'All', count: blogPosts.length },
     { id: 'platform', label: 'Platform', count: blogPosts.filter(p => p.category === 'platform').length },
-    { id: 'features', label: 'Features', count: blogPosts.filter(p => p.category === 'features').length },
-    { id: 'healthcare', label: 'Healthcare', count: blogPosts.filter(p => p.category === 'healthcare').length }
+    { id: 'features', label: 'Intelligence', count: blogPosts.filter(p => p.category === 'features').length },
+    { id: 'healthcare', label: 'Healthcare', count: blogPosts.filter(p => p.category === 'healthcare').length },
   ]
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
+      {/* Hero */}
       <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">WPL Blog</h1>
-            <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-              Explore our comprehensive guides on health tracking, family care coordination, and intelligent wellness management.
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
+              <SparklesIcon className="w-5 h-5" />
+              <span className="text-sm font-medium">Health Operating System</span>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+              The Platform Built for Families Who Take Health Seriously
+            </h1>
+            <p className="text-xl text-blue-100 mb-8 leading-relaxed max-w-3xl mx-auto">
+              Track meals, weight, vitals, and medications for everyone you care about — powered by AI that detects patterns, projects trends, and alerts you before problems happen.
             </p>
 
-            {/* Search Bar */}
+            {/* Search */}
             <div className="relative max-w-2xl mx-auto">
               <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search articles..."
+                placeholder="Search features..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-lg"
@@ -206,6 +109,23 @@ export default function BlogPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+        {/* 4 Modes — Entry Points */}
+        {selectedCategory === 'all' && searchQuery === '' && (
+          <section className="mb-16">
+            <h2 className="text-3xl font-bold text-foreground mb-3 text-center">One System. Four Ways to Use It.</h2>
+            <p className="text-muted-foreground text-center mb-8 max-w-2xl mx-auto">
+              Tell us who you&apos;re tracking, and the platform adapts.
+            </p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <ModeEntry icon={<UserIcon className="w-6 h-6" />} title="Personal" description="Your own health journey" color="bg-blue-500" href="/blog/weight-tracking" />
+              <ModeEntry icon={<HeartIcon className="w-6 h-6" />} title="Family" description="Kids, partner, siblings" color="bg-pink-500" href="/blog/family-care" />
+              <ModeEntry icon={<ShieldCheckIcon className="w-6 h-6" />} title="Caregiving" description="Aging parents, duties" color="bg-amber-500" href="/blog/patient-care" />
+              <ModeEntry icon={<AcademicCapIcon className="w-6 h-6" />} title="Professional" description="Coaches, providers" color="bg-purple-500" href="/blog/providers" />
+            </div>
+          </section>
+        )}
+
         {/* Category Filter */}
         <div className="mb-12">
           <div className="flex flex-wrap gap-3 justify-center">
@@ -226,10 +146,10 @@ export default function BlogPage() {
           </div>
         </div>
 
-        {/* Featured Posts */}
+        {/* Featured */}
         {selectedCategory === 'all' && searchQuery === '' && (
           <section className="mb-16">
-            <h2 className="text-3xl font-bold text-foreground mb-8">Featured Articles</h2>
+            <h2 className="text-3xl font-bold text-foreground mb-8">Start Here</h2>
             <div className="grid md:grid-cols-3 gap-8">
               {blogPosts.filter(p => p.image).slice(0, 3).map((post) => (
                 <Link
@@ -259,7 +179,7 @@ export default function BlogPage() {
                     </h3>
                     <p className="text-muted-foreground mb-4">{post.description}</p>
                     <div className="flex items-center gap-2 text-blue-600 font-medium">
-                      Read More
+                      Explore
                       <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
@@ -269,19 +189,39 @@ export default function BlogPage() {
           </section>
         )}
 
+        {/* The Interconnection Story */}
+        {selectedCategory === 'all' && searchQuery === '' && (
+          <section className="mb-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-8 md:p-12 text-white">
+            <h2 className="text-3xl font-bold mb-4 text-center">Everything Connects</h2>
+            <p className="text-white/80 text-center mb-8 max-w-2xl mx-auto">
+              Features don&apos;t work in isolation. WPL creates an intelligent loop where each action informs the next.
+            </p>
+            <div className="flex flex-wrap justify-center items-center gap-3 text-sm">
+              {[
+                'Profiles', 'Meal Tracking', 'Shopping Lists', 'Kitchen Inventory',
+                'Weight Projections', 'AI Reports', 'Vitals', 'Medications',
+                'Appointments', 'Providers', 'Documents', 'Duties'
+              ].map((item, i) => (
+                <span key={i} className="flex items-center gap-2">
+                  <span className="px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full font-medium">{item}</span>
+                  {i < 11 && <ArrowRightIcon className="w-3 h-3 text-white/50" />}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* All Posts Grid */}
         <section>
           <h2 className="text-3xl font-bold text-foreground mb-8">
-            {searchQuery ? `Search Results (${filteredPosts.length})` : 'All Articles'}
+            {searchQuery ? `Search Results (${filteredPosts.length})` : 'Explore the Platform'}
           </h2>
 
           {filteredPosts.length === 0 ? (
             <div className="text-center py-16">
               <MagnifyingGlassIcon className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-foreground mb-2">No articles found</h3>
-              <p className="text-muted-foreground">
-                Try adjusting your search or filter to find what you're looking for.
-              </p>
+              <p className="text-muted-foreground">Try adjusting your search or filter.</p>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -298,7 +238,7 @@ export default function BlogPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="px-2 py-1 bg-secondary text-xs font-semibold rounded capitalize text-foreground">
-                          {post.category}
+                          {post.category === 'features' ? 'intelligence' : post.category}
                         </span>
                       </div>
                       <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-blue-600 transition-colors">
@@ -310,7 +250,7 @@ export default function BlogPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">{post.readTime}</span>
                     <div className="flex items-center gap-1 text-blue-600 font-medium text-sm">
-                      Read
+                      Explore
                       <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
@@ -320,25 +260,38 @@ export default function BlogPage() {
           )}
         </section>
 
-        {/* CTA Section */}
-        <section className="mt-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-12 text-center text-white">
-          <h2 className="text-4xl font-bold mb-4">Ready to Start Your Health Journey?</h2>
+        {/* CTA */}
+        <section className="mt-20 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-12 text-center text-white">
+          <h2 className="text-4xl font-bold mb-4">Your Family&apos;s Health Deserves Better Than Guesswork</h2>
           <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
-            Join thousands of families using WPL to track health, coordinate care, and achieve their wellness goals.
+            One system that tracks, analyzes, alerts, and improves — for everyone you care about.
           </p>
-          <div className="flex flex-wrap gap-4 justify-center">
-            <Link
-              href="/pricing"
-              className="px-8 py-4 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-semibold shadow-lg"
-            >
-              Start Free Trial
-            </Link>
-          </div>
+          <Link
+            href="/pricing"
+            className="inline-block px-8 py-4 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-semibold shadow-lg"
+          >
+            Start Your Free Trial
+          </Link>
           <p className="text-sm text-blue-200 mt-6">
-            No credit card required • 14-day free trial • Cancel anytime
+            No credit card required &bull; 7-day free trial &bull; Cancel anytime
           </p>
         </section>
       </main>
     </div>
+  )
+}
+
+function ModeEntry({ icon, title, description, color, href }: { icon: React.ReactNode; title: string; description: string; color: string; href: string }) {
+  return (
+    <Link href={href} className="group flex items-center gap-4 p-4 bg-card rounded-xl border-2 border-border hover:border-blue-300 hover:shadow-lg transition-all">
+      <div className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center text-white flex-shrink-0`}>
+        {icon}
+      </div>
+      <div>
+        <h3 className="font-bold text-foreground group-hover:text-blue-600 transition-colors">{title}</h3>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <ArrowRightIcon className="w-4 h-4 text-muted-foreground ml-auto group-hover:translate-x-1 transition-transform" />
+    </Link>
   )
 }

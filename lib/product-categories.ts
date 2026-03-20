@@ -119,6 +119,15 @@ export const CATEGORY_METADATA: Record<ProductCategory, CategoryMetadata> = {
     defaultLocation: 'pantry',
     expirationPriority: 'low'
   },
+  baby: {
+    name: 'baby',
+    displayName: 'Baby',
+    icon: '👶',
+    isPerishable: false,
+    defaultShelfLifeDays: 365,
+    defaultLocation: 'pantry',
+    expirationPriority: 'low'
+  },
   other: {
     name: 'other',
     displayName: 'Other',
@@ -176,6 +185,11 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, string[]> = {
     'pickle', 'hot sauce', 'bbq', 'barbecue', 'dressing', 'vinaigrette',
     'soy sauce', 'worcestershire', 'sriracha', 'aioli', 'pesto', 'hummus',
     'condiment', 'chutney', 'jam', 'jelly', 'honey', 'syrup'
+  ],
+  baby: [
+    'diaper', 'wipe', 'formula', 'baby', 'infant', 'newborn', 'onesie',
+    'pacifier', 'bottle', 'nipple', 'swaddle', 'bib', 'burp cloth',
+    'nursery', 'crib', 'bassinet', 'stroller', 'car seat'
   ],
   other: []
 }

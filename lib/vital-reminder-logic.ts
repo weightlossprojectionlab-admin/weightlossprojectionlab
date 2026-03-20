@@ -49,6 +49,16 @@ export const VITAL_DISPLAY_NAMES: Record<VitalType, string> = {
   pulse_oximeter: 'Pulse Oximeter',
   weight: 'Weight',
   mood: 'Mood',
+  // Newborn-specific vitals
+  newborn_heart_rate: 'Heart Rate',
+  newborn_respiratory_rate: 'Respiratory Rate',
+  newborn_oxygen_saturation: 'Oxygen Saturation',
+  newborn_bilirubin: 'Bilirubin',
+  newborn_blood_glucose: 'Blood Glucose',
+  newborn_head_circumference: 'Head Circumference',
+  newborn_diaper_output: 'Diaper Output',
+  newborn_fontanelle: 'Fontanelle',
+  newborn_umbilical_cord: 'Umbilical Cord',
   // Pet-specific vitals
   heartRate: 'Heart Rate',
   respiratoryRate: 'Respiratory Rate',
@@ -75,6 +85,16 @@ export const VITAL_ICONS: Record<VitalType, string> = {
   pulse_oximeter: '❤️',
   weight: '⚖️',
   mood: '😊',
+  // Newborn-specific vitals
+  newborn_heart_rate: '💓',
+  newborn_respiratory_rate: '💨',
+  newborn_oxygen_saturation: '🫁',
+  newborn_bilirubin: '🟡',
+  newborn_blood_glucose: '🩸',
+  newborn_head_circumference: '📏',
+  newborn_diaper_output: '👶',
+  newborn_fontanelle: '🧒',
+  newborn_umbilical_cord: '🩹',
   // Pet-specific vitals
   heartRate: '💗',
   respiratoryRate: '🫁',
@@ -101,6 +121,16 @@ export const DEFAULT_FREQUENCIES: Record<VitalType, VitalFrequency> = {
   pulse_oximeter: 'daily',
   weight: 'weekly',
   mood: 'daily',
+  // Newborn-specific vitals
+  newborn_heart_rate: 'daily',
+  newborn_respiratory_rate: 'daily',
+  newborn_oxygen_saturation: 'daily',
+  newborn_bilirubin: 'daily',
+  newborn_blood_glucose: 'daily',
+  newborn_head_circumference: 'weekly',
+  newborn_diaper_output: 'daily',
+  newborn_fontanelle: 'daily',
+  newborn_umbilical_cord: 'daily',
   // Pet-specific vitals
   heartRate: 'weekly',
   respiratoryRate: 'weekly',
@@ -141,6 +171,16 @@ export const FREQUENCY_OPTIONS: Record<VitalType, VitalFrequency[]> = {
   baskingTemp: ['daily', 'twice-daily'],
   coolSideTemp: ['daily', 'twice-daily'],
   humidity: ['daily', 'twice-daily'],
+  // Newborn-specific vitals
+  newborn_heart_rate: ['daily', 'twice-daily'],
+  newborn_respiratory_rate: ['daily', 'twice-daily'],
+  newborn_oxygen_saturation: ['daily', 'twice-daily'],
+  newborn_bilirubin: ['daily', 'weekly'],
+  newborn_blood_glucose: ['daily', 'twice-daily'],
+  newborn_head_circumference: ['weekly', 'biweekly', 'monthly'],
+  newborn_diaper_output: ['daily', 'twice-daily'],
+  newborn_fontanelle: ['daily', 'weekly'],
+  newborn_umbilical_cord: ['daily', 'weekly'],
 }
 
 /**

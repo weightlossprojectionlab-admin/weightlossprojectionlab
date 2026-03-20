@@ -247,7 +247,17 @@ export function getVitalTypeLabel(type: string): string {
     weight: 'Weight',
     height: 'Height',
     bmi: 'BMI',
-    mood: 'Mood'
+    mood: 'Mood',
+    // Newborn-specific
+    newborn_heart_rate: 'Heart Rate',
+    newborn_respiratory_rate: 'Respiratory Rate',
+    newborn_oxygen_saturation: 'Oxygen Saturation',
+    newborn_bilirubin: 'Bilirubin',
+    newborn_blood_glucose: 'Blood Glucose',
+    newborn_head_circumference: 'Head Circumference',
+    newborn_diaper_output: 'Diaper Output',
+    newborn_fontanelle: 'Fontanelle',
+    newborn_umbilical_cord: 'Umbilical Cord',
   }
 
   return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())

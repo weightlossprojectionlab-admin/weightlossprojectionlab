@@ -568,6 +568,16 @@ function formatVitalName(vitalType: VitalType): string {
     baskingTemp: 'Basking Temperature',
     coolSideTemp: 'Cool Side Temperature',
     humidity: 'Humidity',
+    // Newborn-specific vitals
+    newborn_heart_rate: 'Heart Rate',
+    newborn_respiratory_rate: 'Respiratory Rate',
+    newborn_oxygen_saturation: 'Oxygen Saturation',
+    newborn_bilirubin: 'Bilirubin',
+    newborn_blood_glucose: 'Blood Glucose',
+    newborn_head_circumference: 'Head Circumference',
+    newborn_diaper_output: 'Diaper Output',
+    newborn_fontanelle: 'Fontanelle',
+    newborn_umbilical_cord: 'Umbilical Cord',
   }
   return names[vitalType] || vitalType
 }
@@ -594,6 +604,16 @@ function getVitalIcon(vitalType: VitalType): string {
     baskingTemp: '🔥',
     coolSideTemp: '❄️',
     humidity: '💧',
+    // Newborn-specific vitals
+    newborn_heart_rate: '💓',
+    newborn_respiratory_rate: '💨',
+    newborn_oxygen_saturation: '🫁',
+    newborn_bilirubin: '🟡',
+    newborn_blood_glucose: '🩸',
+    newborn_head_circumference: '📏',
+    newborn_diaper_output: '👶',
+    newborn_fontanelle: '🧒',
+    newborn_umbilical_cord: '🩹',
   }
   return icons[vitalType] || '📊'
 }

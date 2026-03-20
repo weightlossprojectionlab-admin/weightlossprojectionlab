@@ -229,6 +229,97 @@ const VITAL_CONFIG: Record<VitalType, {
     getDefaultValue: () => ({ humidity: '' }),
     formatValue: (data) => Number(data.humidity),
     getDefaultUnit: () => '%'
+  },
+  // Newborn-specific vitals
+  newborn_heart_rate: {
+    label: 'Heart Rate',
+    icon: '💓',
+    fields: [
+      { name: 'heartRate', label: 'Heart Rate', type: 'number', placeholder: '140', unit: 'bpm', min: 80, max: 220 }
+    ],
+    getDefaultValue: () => ({ heartRate: '' }),
+    formatValue: (data) => Number(data.heartRate),
+    getDefaultUnit: () => 'bpm'
+  },
+  newborn_respiratory_rate: {
+    label: 'Respiratory Rate',
+    icon: '💨',
+    fields: [
+      { name: 'respiratoryRate', label: 'Breaths per Minute', type: 'number', placeholder: '40', unit: 'breaths/min', min: 20, max: 80 }
+    ],
+    getDefaultValue: () => ({ respiratoryRate: '' }),
+    formatValue: (data) => Number(data.respiratoryRate),
+    getDefaultUnit: () => 'breaths/min'
+  },
+  newborn_oxygen_saturation: {
+    label: 'Oxygen Saturation',
+    icon: '🫁',
+    fields: [
+      { name: 'spo2', label: 'SpO₂', type: 'number', placeholder: '98', unit: '%', min: 70, max: 100 }
+    ],
+    getDefaultValue: () => ({ spo2: '' }),
+    formatValue: (data) => Number(data.spo2),
+    getDefaultUnit: () => '%'
+  },
+  newborn_bilirubin: {
+    label: 'Bilirubin',
+    icon: '🟡',
+    fields: [
+      { name: 'bilirubin', label: 'Bilirubin Level', type: 'number', placeholder: '5', unit: 'mg/dL', min: 0, max: 30 }
+    ],
+    getDefaultValue: () => ({ bilirubin: '' }),
+    formatValue: (data) => Number(data.bilirubin),
+    getDefaultUnit: () => 'mg/dL'
+  },
+  newborn_blood_glucose: {
+    label: 'Blood Glucose',
+    icon: '🩸',
+    fields: [
+      { name: 'glucose', label: 'Blood Glucose', type: 'number', placeholder: '60', unit: 'mg/dL', min: 10, max: 200 }
+    ],
+    getDefaultValue: () => ({ glucose: '' }),
+    formatValue: (data) => Number(data.glucose),
+    getDefaultUnit: () => 'mg/dL'
+  },
+  newborn_head_circumference: {
+    label: 'Head Circumference',
+    icon: '📏',
+    fields: [
+      { name: 'circumference', label: 'Head Circumference', type: 'number', placeholder: '13.5', unit: 'inches', min: 10, max: 20 }
+    ],
+    getDefaultValue: () => ({ circumference: '' }),
+    formatValue: (data) => Number(data.circumference),
+    getDefaultUnit: () => 'inches'
+  },
+  newborn_diaper_output: {
+    label: 'Diaper Output',
+    icon: '👶',
+    fields: [
+      { name: 'diaperCount', label: 'Total Diapers (wet + dirty)', type: 'number', placeholder: '8', unit: 'count', min: 0, max: 30 }
+    ],
+    getDefaultValue: () => ({ diaperCount: '' }),
+    formatValue: (data) => Number(data.diaperCount),
+    getDefaultUnit: () => 'count'
+  },
+  newborn_fontanelle: {
+    label: 'Fontanelle Check',
+    icon: '🧠',
+    fields: [
+      { name: 'fontanelle', label: 'Status (1=Flat/Normal, 2=Sunken, 3=Bulging)', type: 'number', placeholder: '1', unit: 'status', min: 1, max: 3 }
+    ],
+    getDefaultValue: () => ({ fontanelle: '' }),
+    formatValue: (data) => Number(data.fontanelle),
+    getDefaultUnit: () => 'status'
+  },
+  newborn_umbilical_cord: {
+    label: 'Umbilical Cord',
+    icon: '🩹',
+    fields: [
+      { name: 'cordStatus', label: 'Status (1=Healing, 2=Moist, 3=Infected, 4=Healed)', type: 'number', placeholder: '1', unit: 'status', min: 1, max: 4 }
+    ],
+    getDefaultValue: () => ({ cordStatus: '' }),
+    formatValue: (data) => Number(data.cordStatus),
+    getDefaultUnit: () => 'status'
   }
 }
 

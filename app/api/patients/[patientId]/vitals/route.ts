@@ -138,7 +138,7 @@ export async function POST(
       return authResult // Return error response
     }
 
-    const { userId, ownerUserId, role } = authResult as AssertPatientAccessResult
+    const { userId, ownerUserId, role, familyRole } = authResult as AssertPatientAccessResult
 
     // Check rate limit (per-user)
     const rateLimitResult = await medicalApiRateLimit.limit(userId)
@@ -277,6 +277,18 @@ export async function POST(
     const normalizedRecordedAt = dateValidation.normalizedDate!.toISOString()
     const isBackdated = isVitalBackdated(recordedAtDate, new Date())
 
+    // Determine approval status for weight entries
+    // Onboarding writes directly to PatientProfile (bypasses this API)
+    // Post-onboarding: only trusted roles (owner, co_admin, caregiver) auto-approve
+    function determineApprovalStatus(): 'approved' | 'pending' {
+      if (vitalData.type !== 'weight') return 'approved'
+      if (role === 'owner') return 'approved'
+      if (familyRole === 'account_owner' || familyRole === 'co_admin') return 'approved'
+      if (familyRole === 'caregiver') return 'approved'
+      return 'pending'
+    }
+    const approvalStatus = determineApprovalStatus()
+
     const newVital: VitalSign = {
       id: vitalId,
       patientId,
@@ -288,6 +300,9 @@ export async function POST(
       daysDifference: dateValidation.daysDifference || 0, // Days between recorded and logged (HIPAA audit)
       takenBy: userId,
       method: vitalData.method || 'manual',
+      // Approval workflow
+      approvalStatus,
+      ...(approvalStatus === 'approved' ? { approvedBy: userId, approvedAt: now } : {}),
       // Audit trail
       createdAt: now,
       lastModifiedBy: userId,
@@ -298,12 +313,31 @@ export async function POST(
     const vitalRef = patientRef.collection('vitals').doc(vitalId)
     await vitalRef.set(newVital)
 
+    // Sync approved weight to patient profile (keeps currentWeight fresh)
+    if (newVital.type === 'weight' && approvalStatus === 'approved' && typeof newVital.value === 'number') {
+      const patientDoc = await patientRef.get()
+      const patientData = patientDoc.data()
+      const profileUpdate: Record<string, any> = {
+        currentWeight: newVital.value,
+        weightUnit: newVital.unit || 'lbs',
+      }
+      // Set goals.startWeight only if not already set (preserve original baseline)
+      if (!patientData?.goals?.startWeight || patientData.goals.startWeight <= 0) {
+        profileUpdate['goals.startWeight'] = newVital.value
+      }
+      await patientRef.update(profileUpdate)
+      logger.info('[API /patients/[id]/vitals POST] Patient profile weight synced', {
+        patientId, currentWeight: newVital.value
+      })
+    }
+
     logger.info('[API /patients/[id]/vitals POST] Vital sign logged successfully', {
       userId,
       ownerUserId,
       patientId,
       vitalId,
-      type: newVital.type
+      type: newVital.type,
+      approvalStatus
     })
 
     // Trigger notification to family members
