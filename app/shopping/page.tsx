@@ -244,7 +244,8 @@ function ShoppingListContent() {
       filtered = filtered.filter(item =>
         item.productName.toLowerCase().includes(query) ||
         item.brand?.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query)
+        item.category.toLowerCase().includes(query) ||
+        (item as any).manualIngredientName?.toLowerCase().includes(query)
       )
     }
 
@@ -693,6 +694,7 @@ function ShoppingListContent() {
               onSearch={setSearchQuery}
               onFilterCategory={setFilterCategory}
               selectedCategory={filterCategory}
+              searchValue={searchQuery}
             />
           </div>
 
@@ -721,6 +723,10 @@ function ShoppingListContent() {
           <PurchaseConfirmation
             pendingItems={neededItems.filter(item => !item.inStock)}
             onConfirm={refresh}
+            onRemoveItem={async (itemId: string) => {
+              await removeItem(itemId)
+              toast.success('Item removed from shopping list')
+            }}
             memberId={memberId || undefined}
             dutyId={dutyId || undefined}
           />
@@ -731,9 +737,42 @@ function ShoppingListContent() {
               <HealthSuggestions
                 patientId={memberId}
                 userId={userId}
+                searchQuery={searchQuery}
+                filterCategory={filterCategory}
+                existingItems={(() => {
+                  const items = new Map<string, number>()
+                  neededItems.forEach(item => {
+                    if (item.productName) {
+                      items.set(item.productName, item.quantity || 1)
+                    }
+                  })
+                  return items
+                })()}
                 onAddItem={async (productName: string) => {
-                  await addManualShoppingItem(userId, productName, { householdId: userId })
-                  await refresh()
+                  if (memberId) {
+                    const category = detectCategory({ product_name: productName })
+                    await memberShoppingData.addItem({
+                      productName,
+                      category,
+                      quantity: 1,
+                      source: 'manual' as any,
+                      reason: 'Health suggestion'
+                    })
+                  } else {
+                    await addManualShoppingItem(userId, productName, { householdId: userId })
+                    await refresh()
+                  }
+                }}
+                onUpdateQuantity={async (productName: string, quantity: number) => {
+                  // Find the item in the list and update its quantity
+                  const item = neededItems.find(i => i.productName === productName)
+                  if (item) {
+                    if (quantity <= 0) {
+                      await removeItem(item.id)
+                    } else {
+                      await updateItem(item.id, { quantity })
+                    }
+                  }
                 }}
               />
             </div>

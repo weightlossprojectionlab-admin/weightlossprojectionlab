@@ -69,12 +69,16 @@ export function useInfantFeeding({ patientId, accountOwnerId }: UseInfantFeeding
     if (!user || !accountOwnerId) throw new Error('Not authenticated')
 
     const feedingRef = collection(db, `users/${accountOwnerId}/patients/${patientId}/feedingLogs`)
-    await addDoc(feedingRef, {
-      ...entry,
-      patientId,
-      loggedBy: user.uid,
-      createdAt: new Date().toISOString(),
-    })
+    // Strip undefined values — Firestore rejects them
+    const docData = Object.fromEntries(
+      Object.entries({
+        ...entry,
+        patientId,
+        loggedBy: user.uid,
+        createdAt: new Date().toISOString(),
+      }).filter(([, v]) => v !== undefined)
+    )
+    await addDoc(feedingRef, docData)
   }, [user, accountOwnerId, patientId])
 
   const deleteFeeding = useCallback(async (entryId: string) => {

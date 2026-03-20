@@ -177,11 +177,15 @@ export async function addOrUpdateHouseholdItem(
     }
 
     const docRef = doc(collection(db, COLLECTIONS.SHOPPING_ITEMS))
-    await setDoc(docRef, {
-      ...newItem,
-      createdAt: Timestamp.fromDate(newItem.createdAt),
-      updatedAt: Timestamp.fromDate(newItem.updatedAt)
-    })
+    // Strip undefined values — Firestore rejects them in setDoc
+    const docData = Object.fromEntries(
+      Object.entries({
+        ...newItem,
+        createdAt: Timestamp.fromDate(newItem.createdAt),
+        updatedAt: Timestamp.fromDate(newItem.updatedAt)
+      }).filter(([, v]) => v !== undefined)
+    )
+    await setDoc(docRef, docData)
 
     return { ...newItem, id: docRef.id }
   } catch (error) {

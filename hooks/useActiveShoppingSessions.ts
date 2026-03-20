@@ -79,9 +79,11 @@ export function useActiveShoppingSessions(
         setError(null)
       },
       (err) => {
-        logger.error('[useActiveShoppingSessions] Listener error', err as Error, {
-          householdId
-        })
+        const firestoreErr = err as any
+        const code = firestoreErr?.code || 'unknown'
+        const msg = firestoreErr?.message || 'Unknown error'
+        console.error(`[useActiveShoppingSessions] Listener error: [${code}] ${msg}`)
+        logger.warn(`[useActiveShoppingSessions] Listener: [${code}] ${msg} (householdId: ${householdId})`)
         setError(err as Error)
         setLoading(false)
       }

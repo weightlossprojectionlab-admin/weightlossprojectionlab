@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { PlusIcon, SparklesIcon, HeartIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, CheckIcon, SparklesIcon, HeartIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import type {
   HealthBasedSuggestion,
   HealthSuggestionsGroup,
@@ -26,6 +26,10 @@ interface HealthSuggestionsProps {
   patientId: string
   userId: string
   onAddItem: (productName: string) => Promise<void>
+  onUpdateQuantity?: (productName: string, quantity: number) => Promise<void>
+  existingItems?: Map<string, number>
+  searchQuery?: string
+  filterCategory?: string
   className?: string
 }
 
@@ -33,13 +37,25 @@ export function HealthSuggestions({
   patientId,
   userId,
   onAddItem,
+  onUpdateQuantity,
+  existingItems,
+  searchQuery = '',
+  filterCategory = 'all',
   className = ''
 }: HealthSuggestionsProps) {
   const [loading, setLoading] = useState(true)
   const [suggestions, setSuggestions] = useState<HealthSuggestionsResponse | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [adding, setAdding] = useState<string | null>(null)
+  const [addedItems, setAddedItems] = useState<Map<string, number>>(new Map())
   const [showWarnings, setShowWarnings] = useState(true)
+
+  // Sync addedItems with existingItems from shopping list (persists across refresh)
+  useEffect(() => {
+    if (existingItems) {
+      setAddedItems(new Map(existingItems))
+    }
+  }, [existingItems])
 
   useEffect(() => {
     loadSuggestions()
@@ -84,11 +100,49 @@ export function HealthSuggestions({
     try {
       setAdding(productName)
       await onAddItem(productName)
+      setAddedItems(prev => {
+        const next = new Map(prev)
+        next.set(productName, (next.get(productName) || 0) + 1)
+        return next
+      })
       toast.success(`Added ${productName} to shopping list`)
     } catch (error) {
       toast.error(`Failed to add ${productName}`)
     } finally {
       setAdding(null)
+    }
+  }
+
+  const handleIncrement = async (productName: string) => {
+    await handleAddItem(productName)
+  }
+
+  const handleDecrement = async (productName: string) => {
+    const current = addedItems.get(productName) || 0
+    const newQty = current - 1
+
+    setAddedItems(prev => {
+      const next = new Map(prev)
+      if (newQty <= 0) {
+        next.delete(productName)
+      } else {
+        next.set(productName, newQty)
+      }
+      return next
+    })
+
+    // Persist quantity change to shopping list
+    if (onUpdateQuantity) {
+      try {
+        await onUpdateQuantity(productName, Math.max(0, newQty))
+      } catch {
+        // Revert on failure
+        setAddedItems(prev => {
+          const next = new Map(prev)
+          next.set(productName, current)
+          return next
+        })
+      }
     }
   }
 
@@ -219,12 +273,31 @@ export function HealthSuggestions({
       </div>
 
       {/* Suggestions List */}
-      {selectedGroupData && (
+      {selectedGroupData && (() => {
+        const query = searchQuery.toLowerCase().trim()
+        let filteredSuggestions = selectedGroupData.suggestions
+
+        // Apply text search
+        if (query) {
+          filteredSuggestions = filteredSuggestions.filter(s =>
+            s.productName.toLowerCase().includes(query) ||
+            s.reasonText?.toLowerCase().includes(query) ||
+            s.category?.toLowerCase().includes(query) ||
+            s.benefits?.some(b => b.toLowerCase().includes(query))
+          )
+        }
+
+        // Apply category filter
+        if (filterCategory !== 'all') {
+          filteredSuggestions = filteredSuggestions.filter(s => s.category === filterCategory)
+        }
+
+        return (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground mb-2">
-            Based on your health data
+            {query ? `${filteredSuggestions.length} of ${selectedGroupData.suggestions.length} suggestions matching "${searchQuery}"` : 'Based on your health data'}
           </p>
-          {selectedGroupData.suggestions.map((suggestion) => (
+          {filteredSuggestions.map((suggestion) => (
             <div
               key={suggestion.id}
               className="flex items-start justify-between p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-sm transition-shadow"
@@ -265,22 +338,46 @@ export function HealthSuggestions({
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => handleAddItem(suggestion.productName)}
-                disabled={adding === suggestion.productName}
-                className="flex-shrink-0 p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors disabled:opacity-50"
-                aria-label={`Add ${suggestion.productName} to shopping list`}
-              >
-                {adding === suggestion.productName ? (
-                  <Spinner size="sm" />
-                ) : (
-                  <PlusIcon className="h-5 w-5" />
-                )}
-              </button>
+              {addedItems.has(suggestion.productName) ? (
+                <div className="flex-shrink-0 flex items-center gap-1">
+                  <button
+                    onClick={() => handleDecrement(suggestion.productName)}
+                    className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-foreground hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-bold"
+                    aria-label="Decrease quantity"
+                  >
+                    −
+                  </button>
+                  <span className="w-6 text-center text-sm font-semibold text-green-600 dark:text-green-400">
+                    {addedItems.get(suggestion.productName)}
+                  </span>
+                  <button
+                    onClick={() => handleIncrement(suggestion.productName)}
+                    disabled={adding === suggestion.productName}
+                    className="w-7 h-7 flex items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors text-sm font-bold disabled:opacity-50"
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleAddItem(suggestion.productName)}
+                  disabled={adding === suggestion.productName}
+                  className="flex-shrink-0 p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors disabled:opacity-50"
+                  aria-label={`Add ${suggestion.productName} to shopping list`}
+                >
+                  {adding === suggestion.productName ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <PlusIcon className="h-5 w-5" />
+                  )}
+                </button>
+              )}
             </div>
           ))}
         </div>
-      )}
+        )
+      })()}
 
       {/* Footer */}
       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">

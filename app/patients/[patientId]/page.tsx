@@ -140,6 +140,7 @@ function PatientDetailContent() {
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
   const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'episodes' | 'settings' | 'feeding' | 'activity' | 'grooming'>(tabParam || 'vitals')
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
+  const [autoOpenFeedingModal, setAutoOpenFeedingModal] = useState(false)
   const [showQuickWeightModal, setShowQuickWeightModal] = useState(false)
   const [showVitalsWizard, setShowVitalsWizard] = useState(false)
   const [showVitalsSummary, setShowVitalsSummary] = useState(false)
@@ -1666,6 +1667,7 @@ function PatientDetailContent() {
               patientId={patientId}
               accountOwnerId={patient.userId}
               patientName={capitalizeName(patient.name)}
+              autoOpenModal={autoOpenFeedingModal}
             />
           )}
 
@@ -1936,65 +1938,85 @@ function PatientDetailContent() {
           {/* Right Sidebar - Recent Data */}
           <aside className="w-full lg:w-80 flex-shrink-0 mt-6 lg:mt-0">
           <div className="lg:sticky lg:top-4 space-y-4">
-            {/* Recent Meals - HUMANS ONLY - Hide on mobile when Meals tab is active to avoid duplication */}
+            {/* Recent Meals / Feeding - HUMANS ONLY */}
             {!isPet && (
-              <div className={`bg-card rounded-lg shadow-sm border border-border p-4 ${activeTab === 'meals' ? 'hidden lg:block' : ''}`}>
-                <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <CameraIcon className="w-5 h-5 text-primary" />
-                  Recent Meals
-                </h3>
-              {todayMeals && todayMeals.length > 0 ? (
-                <div className="space-y-2">
-                  {todayMeals.slice(0, 5).map((meal: any) => (
-                    <div
-                      key={meal.id}
-                      onClick={() => setSelectedMeal(meal)}
-                      className="flex gap-2 p-2 bg-muted rounded hover:bg-muted/80 transition-colors cursor-pointer"
+              isNewbornOrInfant ? (
+                /* Newborns: Show feeding shortcut instead of meals */
+                <div className="bg-card rounded-lg shadow-sm border border-border p-4">
+                  <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <span className="text-lg">🍼</span>
+                    Feeding
+                  </h3>
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground mb-2">Track breastfeeding and formula feeds</p>
+                    <button
+                      onClick={() => {
+                        setAutoOpenFeedingModal(true)
+                        setActiveTab('feeding')
+                      }}
+                      className="text-sm text-primary hover:text-primary-dark font-medium"
                     >
-                      {/* Meal Photo */}
-                      {meal.photoUrl && (
-                        <img
-                          src={meal.photoUrl}
-                          alt={meal.mealType}
-                          className="w-12 h-12 rounded object-cover flex-shrink-0"
-                        />
-                      )}
-
-                      {/* Meal Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium capitalize text-sm">{meal.mealType}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {meal.calories || 0} cal
-                          </span>
-                        </div>
-                        {meal.description && (
-                          <p className="text-xs text-muted-foreground truncate mt-1">
-                            {meal.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  <Link
-                    href={`/log-meal?patientId=${patientId}`}
-                    className="block text-center text-sm text-primary hover:text-primary-dark font-medium mt-3"
-                  >
-                    Log New Meal →
-                  </Link>
+                      Log Feed →
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-4">
-                  <p className="text-sm text-muted-foreground mb-2">No meals logged yet</p>
-                  <Link
-                    href={`/log-meal?patientId=${patientId}`}
-                    className="text-sm text-primary hover:text-primary-dark font-medium"
-                  >
-                    Log First Meal →
-                  </Link>
+                /* Regular: Show recent meals */
+                <div className={`bg-card rounded-lg shadow-sm border border-border p-4 ${activeTab === 'meals' ? 'hidden lg:block' : ''}`}>
+                  <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <CameraIcon className="w-5 h-5 text-primary" />
+                    Recent Meals
+                  </h3>
+                {todayMeals && todayMeals.length > 0 ? (
+                  <div className="space-y-2">
+                    {todayMeals.slice(0, 5).map((meal: any) => (
+                      <div
+                        key={meal.id}
+                        onClick={() => setSelectedMeal(meal)}
+                        className="flex gap-2 p-2 bg-muted rounded hover:bg-muted/80 transition-colors cursor-pointer"
+                      >
+                        {meal.photoUrl && (
+                          <img
+                            src={meal.photoUrl}
+                            alt={meal.mealType}
+                            className="w-12 h-12 rounded object-cover flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium capitalize text-sm">{meal.mealType}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {meal.calories || 0} cal
+                            </span>
+                          </div>
+                          {meal.description && (
+                            <p className="text-xs text-muted-foreground truncate mt-1">
+                              {meal.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <Link
+                      href={`/log-meal?patientId=${patientId}`}
+                      className="block text-center text-sm text-primary hover:text-primary-dark font-medium mt-3"
+                    >
+                      Log New Meal →
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground mb-2">No meals logged yet</p>
+                    <Link
+                      href={`/log-meal?patientId=${patientId}`}
+                      className="text-sm text-primary hover:text-primary-dark font-medium"
+                    >
+                      Log First Meal →
+                    </Link>
+                  </div>
+                )}
                 </div>
-              )}
-              </div>
+              )
             )}
 
             {/* Current Medications - Hide on mobile when Medications tab is active to avoid duplication */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useInfantFeeding } from '@/hooks/useInfantFeeding'
 import { FeedType, FEED_TYPE_LABELS, FEED_TYPE_ICONS, NewFeedingEntry } from '@/types/infant-feeding'
 import toast from 'react-hot-toast'
@@ -9,6 +9,7 @@ interface InfantFeedingLogProps {
   patientId: string
   accountOwnerId: string
   patientName: string
+  autoOpenModal?: boolean
 }
 
 const BREAST_TYPES: FeedType[] = ['breast_left', 'breast_right', 'breast_both']
@@ -29,21 +30,36 @@ function formatDateHeader(iso: string): string {
   return d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
-export default function InfantFeedingLog({ patientId, accountOwnerId, patientName }: InfantFeedingLogProps) {
+export default function InfantFeedingLog({ patientId, accountOwnerId, patientName, autoOpenModal }: InfantFeedingLogProps) {
   const { entries, loading, error, logFeeding, deleteFeeding } = useInfantFeeding({ patientId, accountOwnerId })
-  const [showModal, setShowModal] = useState(false)
+  const [showModal, setShowModal] = useState(autoOpenModal || false)
   const [saving, setSaving] = useState(false)
+
+  // Open modal when autoOpenModal prop changes to true
+  useEffect(() => {
+    if (autoOpenModal) setShowModal(true)
+  }, [autoOpenModal])
+
+  // Format date for datetime-local input (local timezone, not UTC)
+  const toLocalDateTimeString = (date: Date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    const h = String(date.getHours()).padStart(2, '0')
+    const min = String(date.getMinutes()).padStart(2, '0')
+    return `${y}-${m}-${d}T${h}:${min}`
+  }
 
   // Form state
   const [feedType, setFeedType] = useState<FeedType>('breast_left')
-  const [startedAt, setStartedAt] = useState(() => new Date().toISOString().slice(0, 16))
+  const [startedAt, setStartedAt] = useState(() => toLocalDateTimeString(new Date()))
   const [durationMinutes, setDurationMinutes] = useState('')
   const [amountOz, setAmountOz] = useState('')
   const [notes, setNotes] = useState('')
 
   const resetForm = () => {
     setFeedType('breast_left')
-    setStartedAt(new Date().toISOString().slice(0, 16))
+    setStartedAt(toLocalDateTimeString(new Date()))
     setDurationMinutes('')
     setAmountOz('')
     setNotes('')

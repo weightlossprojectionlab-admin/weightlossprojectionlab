@@ -94,25 +94,32 @@ export async function addToMemberShoppingList(
     const memberListPath = getMemberShoppingListPath(householdId, memberId)
     const docRef = doc(collection(db, memberListPath))
 
-    await setDoc(docRef, {
-      ...newItem,
-      addedAt: Timestamp.fromDate(newItem.addedAt),
-      updatedAt: Timestamp.fromDate(newItem.updatedAt)
-    })
+    // Strip undefined values — Firestore rejects them in setDoc
+    const docData = Object.fromEntries(
+      Object.entries({
+        ...newItem,
+        addedAt: Timestamp.fromDate(newItem.addedAt),
+        updatedAt: Timestamp.fromDate(newItem.updatedAt)
+      }).filter(([, v]) => v !== undefined)
+    )
+    await setDoc(docRef, docData)
 
-    // Also add/update in household inventory
-    await addOrUpdateHouseholdItem(householdId, memberId, {
-      productKey,
-      barcode: itemData.barcode,
-      productName: itemData.productName,
-      brand: itemData.brand || '',
-      imageUrl: itemData.imageUrl,
-      category: itemData.category,
-      quantity: itemData.quantity,
-      unit,
-      inStock: false,
-      needed: true
-    })
+    // Also add/update in household inventory (strip undefined values)
+    const householdItemData = Object.fromEntries(
+      Object.entries({
+        productKey,
+        barcode: itemData.barcode,
+        productName: itemData.productName,
+        brand: itemData.brand || '',
+        imageUrl: itemData.imageUrl,
+        category: itemData.category,
+        quantity: itemData.quantity,
+        unit,
+        inStock: false,
+        needed: true
+      }).filter(([, v]) => v !== undefined)
+    )
+    await addOrUpdateHouseholdItem(householdId, memberId, householdItemData as any)
 
     logger.info('[MemberShoppingOps] Added item to member list', {
       householdId,

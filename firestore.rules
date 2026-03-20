@@ -253,15 +253,16 @@ service cloud.firestore {
           allow delete: if isOwner(userId);
         }
 
-        // Feeding logs (compliance tracking)
+        // Feeding logs (infant feeding + pet compliance tracking)
         match /feedingLogs/{logId} {
-          allow read: if isOwner(userId);
+          allow read: if isOwner(userId) || hasFamilyPermission('viewVitals');
 
-          allow create: if isOwner(userId) &&
-                          request.resource.data.petId == patientId;
+          allow create: if (isOwner(userId) || hasFamilyPermission('logVitals')) &&
+                          (request.resource.data.patientId == patientId ||
+                           request.resource.data.petId == patientId);
 
-          allow update: if isOwner(userId);
-          allow delete: if isOwner(userId);
+          allow update: if isOwner(userId) || hasFamilyPermission('logVitals');
+          allow delete: if isOwner(userId) || hasFamilyPermission('logVitals');
         }
 
         // Helper function to check if user is a family member with access

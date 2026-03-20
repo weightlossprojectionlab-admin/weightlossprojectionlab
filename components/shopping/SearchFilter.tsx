@@ -14,6 +14,7 @@ interface SearchFilterProps {
   onSearch: (query: string) => void
   onFilterCategory: (category: ProductCategory | 'all') => void
   selectedCategory?: ProductCategory | 'all'
+  searchValue?: string
   className?: string
 }
 
@@ -30,6 +31,8 @@ const CATEGORIES: Array<{ value: ProductCategory | 'all'; label: string; emoji: 
   { value: 'frozen', label: 'Frozen', emoji: '🧊' },
   { value: 'pantry', label: 'Pantry', emoji: '🥫' },
   { value: 'beverages', label: 'Beverages', emoji: '🥤' },
+  { value: 'condiments', label: 'Condiments', emoji: '🧂' },
+  { value: 'baby', label: 'Baby', emoji: '👶' },
   { value: 'other', label: 'Other', emoji: '📦' },
 ]
 
@@ -37,9 +40,10 @@ export function SearchFilter({
   onSearch,
   onFilterCategory,
   selectedCategory = 'all',
+  searchValue,
   className = '',
 }: SearchFilterProps) {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(searchValue || '')
   const [showCategoryFilter, setShowCategoryFilter] = useState(false)
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {

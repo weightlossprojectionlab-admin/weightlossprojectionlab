@@ -19,17 +19,19 @@ import {
   CheckCircleIcon,
   ShoppingCartIcon,
   XMarkIcon,
+  TrashIcon,
   ArrowRightIcon
 } from '@heroicons/react/24/outline'
 
 interface PurchaseConfirmationProps {
   pendingItems: ShoppingItem[]
   onConfirm: () => void // Callback to refresh the shopping list
+  onRemoveItem?: (itemId: string) => Promise<void> // Remove item from list
   memberId?: string // Optional member/patient ID for recipe link
   dutyId?: string // Optional household duty ID to complete
 }
 
-export function PurchaseConfirmation({ pendingItems, onConfirm, memberId, dutyId }: PurchaseConfirmationProps) {
+export function PurchaseConfirmation({ pendingItems, onConfirm, onRemoveItem, memberId, dutyId }: PurchaseConfirmationProps) {
   const router = useRouter()
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
@@ -201,14 +203,29 @@ export function PurchaseConfirmation({ pendingItems, onConfirm, memberId, dutyId
           </div>
         </div>
 
-        {selectedCount > 0 && (
-          <button
-            onClick={() => setSelectedItems(new Set())}
-            className="text-sm text-secondary hover:underline"
-          >
-            Clear Selection
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {selectedCount > 0 && (
+            <button
+              onClick={() => setSelectedItems(new Set())}
+              className="text-sm text-secondary hover:underline"
+            >
+              Clear Selection
+            </button>
+          )}
+          {onRemoveItem && pendingItems.length > 0 && (
+            <button
+              onClick={async () => {
+                if (!confirm(`Remove all ${pendingItems.length} items from your shopping list?`)) return
+                for (const item of pendingItems) {
+                  await onRemoveItem(item.id)
+                }
+              }}
+              className="text-sm text-red-500 hover:text-red-700 hover:underline"
+            >
+              Remove All
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Optional Store Input */}
@@ -278,6 +295,22 @@ export function PurchaseConfirmation({ pendingItems, onConfirm, memberId, dutyId
                 {item.displayQuantity || `${item.quantity} ${item.unit || 'item'}`}
               </div>
             </div>
+
+            {/* Remove Button */}
+            {onRemoveItem && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onRemoveItem(item.id)
+                }}
+                className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors flex-shrink-0"
+                aria-label={`Remove ${item.productName}`}
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
+            )}
 
             {/* Category Badge */}
             <div className="px-2 py-1 text-xs font-medium bg-muted dark:bg-gray-700 text-foreground rounded capitalize flex-shrink-0">
