@@ -74,11 +74,11 @@ export default function EpisodeExportModal({
         {/* Modal header — hidden on print */}
         <div className="p-5 border-b border-border flex items-center justify-between print:hidden">
           <div>
-            <h2 className="text-lg font-bold">Export Episode Report</h2>
+            <h2 className="text-lg font-bold">Export Health Event Report</h2>
             <p className="text-sm text-muted-foreground">
               {isLegal
                 ? 'Legal/insurance documentation with timestamps'
-                : 'Health episode summary for medical or insurance use'}
+                : 'Health event summary for medical or insurance use'}
             </p>
           </div>
           <div className="flex gap-2">

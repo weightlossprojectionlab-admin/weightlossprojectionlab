@@ -482,6 +482,9 @@ interface FamilyMemberData {
   breathingSupport?: boolean
   kangarooCare?: boolean
 
+  // Primary caregivers (for minors)
+  primaryCaregivers?: Array<{ name: string; relationship: string; userId?: string }>
+
   // Pet-specific fields
   species?: string
   breed?: string
@@ -756,6 +759,7 @@ export default function FamilyMemberOnboardingWizard() {
           if (data.apgarScore) patientData.apgarScore = parseInt(data.apgarScore)
           if (data.pediatricianName) patientData.pediatricianName = data.pediatricianName
           if (data.pediatricianPhone) patientData.pediatricianPhone = data.pediatricianPhone
+          if (data.primaryCaregivers?.length) patientData.primaryCaregivers = data.primaryCaregivers
 
           // Preemie data
           if (data.gestationalWeeks) {
@@ -1282,6 +1286,72 @@ export default function FamilyMemberOnboardingWizard() {
           </div>
         </div>
 
+        {/* Primary Caregivers */}
+        <div className="pt-4 border-t border-border">
+          <h4 className="text-sm font-semibold mb-3">Primary Caregivers *</h4>
+          <p className="text-xs text-muted-foreground mb-3">Who will be caring for this baby? The account owner is added automatically.</p>
+          <div className="space-y-2">
+            {(data.primaryCaregivers || []).map((cg, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-2 bg-accent rounded-lg">
+                <span className="text-sm font-medium flex-1">{cg.name}</span>
+                <span className="text-xs text-muted-foreground">{cg.relationship}</span>
+                {idx > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...(data.primaryCaregivers || [])]
+                      updated.splice(idx, 1)
+                      setData({ ...data, primaryCaregivers: updated })
+                    }}
+                    className="text-xs text-red-500 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <input
+              type="text"
+              id="newCaregiverName"
+              placeholder="Caregiver name"
+              className="flex-1 px-3 py-2 rounded-xl border-2 border-border bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none transition-colors text-sm"
+            />
+            <select
+              id="newCaregiverRelationship"
+              className="px-3 py-2 rounded-xl border-2 border-border bg-background text-foreground focus:border-primary focus:outline-none transition-colors text-sm"
+            >
+              <option value="Mother">Mother</option>
+              <option value="Father">Father</option>
+              <option value="Grandparent">Grandparent</option>
+              <option value="Sibling">Sibling</option>
+              <option value="Nanny">Nanny</option>
+              <option value="Other">Other</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => {
+                const nameInput = document.getElementById('newCaregiverName') as HTMLInputElement
+                const relSelect = document.getElementById('newCaregiverRelationship') as HTMLSelectElement
+                if (nameInput?.value.trim()) {
+                  setData({
+                    ...data,
+                    primaryCaregivers: [
+                      ...(data.primaryCaregivers || []),
+                      { name: nameInput.value.trim(), relationship: relSelect.value }
+                    ]
+                  })
+                  nameInput.value = ''
+                }
+              }}
+              className="px-3 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
         <p className="text-xs text-muted-foreground text-center">
           All measurements can be updated later from the newborn&apos;s profile
         </p>
@@ -1743,6 +1813,12 @@ export default function FamilyMemberOnboardingWizard() {
                 // Auto-configure for newborns
                 if (rel === 'Newborn') {
                   updates.weightUnit = 'lbs'
+                  // Auto-add account owner as primary caregiver
+                  if (!data.primaryCaregivers?.length && user) {
+                    updates.primaryCaregivers = [
+                      { name: user.displayName || user.email || 'Account Owner', relationship: 'Parent', userId: user.uid }
+                    ]
+                  }
                 }
                 setData({ ...data, ...updates })
               }}

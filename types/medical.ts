@@ -70,6 +70,13 @@ export interface PatientProfile {
     canInviteOthers: boolean
   }
 
+  // Primary caregivers (for minors: newborns, infants, toddlers, children)
+  primaryCaregivers?: Array<{
+    name: string
+    relationship: string // Mom, Dad, Grandparent, Nanny, etc.
+    userId?: string // Firebase UID if they have an account
+  }>
+
   // Billing (always true for family members)
   countsAsSeat?: boolean
   addedBy?: string // Account owner who added them

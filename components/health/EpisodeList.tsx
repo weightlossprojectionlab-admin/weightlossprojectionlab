@@ -177,14 +177,14 @@ export default function EpisodeList({ patientId, patient }: EpisodeListProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Health Episodes</h2>
+          <h2 className="text-lg font-semibold">Health Events</h2>
           <p className="text-sm text-muted-foreground">Track illnesses, injuries, and health events with photo documentation</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
           className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
         >
-          + New Episode
+          + New Event
         </button>
       </div>
 
@@ -195,13 +195,13 @@ export default function EpisodeList({ patientId, patient }: EpisodeListProps) {
       ) : episodes.length === 0 ? (
         <div className="text-center py-12 border-2 border-dashed border-border rounded-xl">
           <div className="text-4xl mb-3">🩺</div>
-          <p className="font-medium text-foreground">No episodes recorded yet</p>
+          <p className="font-medium text-foreground">No health events recorded yet</p>
           <p className="text-sm text-muted-foreground mt-1">Track illnesses, injuries, and health concerns with photo timelines</p>
           <button
             onClick={() => setShowCreateModal(true)}
             className="mt-4 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium"
           >
-            Record First Episode
+            Record First Health Event
           </button>
         </div>
       ) : (

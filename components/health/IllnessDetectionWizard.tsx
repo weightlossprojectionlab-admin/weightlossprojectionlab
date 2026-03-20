@@ -156,7 +156,7 @@ export function IllnessDetectionWizard({
   }
 
   const handleDismiss = () => {
-    toast.success('Alert dismissed. You can create an episode manually if needed.')
+    toast.success('Alert dismissed. You can create a health event manually if needed.')
     onClose()
   }
 
@@ -252,7 +252,7 @@ export function IllnessDetectionWizard({
                 {primarySignal.recommendation.action === 'contact_doctor' &&
                   `📞 Contact ${patient.type === 'pet' ? 'veterinarian' : 'doctor'} soon`}
                 {primarySignal.recommendation.action === 'create_episode' &&
-                  '📝 Track this illness/injury episode'}
+                  '📝 Track this health event'}
                 {primarySignal.recommendation.action === 'monitor' &&
                   '👁️ Monitor symptoms closely'}
               </p>
@@ -282,7 +282,7 @@ export function IllnessDetectionWizard({
               onClick={handleCreateEpisode}
               className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
             >
-              Track This Episode
+              Track This Event
             </button>
           </div>
         </div>

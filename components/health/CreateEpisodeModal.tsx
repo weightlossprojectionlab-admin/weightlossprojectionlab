@@ -241,10 +241,10 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
       setStep(1)
 
       onClose()
-      toast.success('Health episode created successfully!')
+      toast.success('Health event created successfully!')
     } catch (error: any) {
       console.error('Error creating episode:', error)
-      toast.error(error.message || 'Failed to create health episode')
+      toast.error(error.message || 'Failed to create health event')
     } finally {
       setIsSubmitting(false)
     }
@@ -265,7 +265,12 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
     } else if (step === 1.5) {
       setStep(2) // Go to symptoms
     } else if (step === 2) {
-      setStep(2.5) // Go to photos
+      // Intelligent photo step: only show for visual conditions
+      if (shouldShowPhotoStep) {
+        setStep(2.5) // Go to photos — visual condition detected
+      } else {
+        setStep(3) // Skip photos — non-visual condition (fever, headache, etc.)
+      }
     } else if (step === 2.5) {
       setStep(3) // Go to provider
     }
@@ -275,17 +280,27 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
     if (step === 1.5) setStep(1)
     else if (step === 2) setStep(1.5)
     else if (step === 2.5) setStep(2)
-    else if (step === 3) setStep(2.5)
+    else if (step === 3) setStep(shouldShowPhotoStep ? 2.5 : 2) // Skip back over photos if not visual
   }
 
-  // Calculate current step for progress bar (5 total steps now)
-  const progressSteps = [1, 1.5, 2, 2.5, 3]
+  // Intelligent photo detection — only show for visual/injury conditions
+  const visualKeywords = ['rash', 'swelling', 'bruise', 'cut', 'wound', 'burn', 'bite', 'sting',
+    'hives', 'blister', 'bump', 'lump', 'scratch', 'scrape', 'fracture', 'sprain', 'eye',
+    'skin', 'discoloration', 'bleeding', 'eczema', 'acne', 'sore', 'infection', 'broken',
+    'red', 'inflamed', 'swollen', 'mark', 'spot', 'lesion']
+  const shouldShowPhotoStep =
+    episodeType === 'injury' ||
+    episodeType === 'abuse_concern' ||
+    symptoms.some(s => visualKeywords.some(kw => s.symptom.toLowerCase().includes(kw)))
+
+  // Calculate current step for progress bar
+  const progressSteps = shouldShowPhotoStep ? [1, 1.5, 2, 2.5, 3] : [1, 1.5, 2, 3]
   const currentStepIndex = progressSteps.indexOf(step) + 1
   const totalSteps = progressSteps.length
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full my-8">
+      <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full my-8 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
@@ -312,8 +327,8 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Content — scrollable */}
+        <div className="p-6 overflow-y-auto flex-1">
           {/* Step 1: Basic Info */}
           {step === 1 && (
             <div className="space-y-4">
@@ -346,7 +361,7 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
                   {([
                     { value: 'illness',       label: '🤒 Illness',       desc: 'Fever, cold, flu, stomach bug' },
                     { value: 'injury',        label: '🩹 Injury',        desc: 'Broken limb, wound, sprain' },
-                    { value: 'chronic_flare', label: '🔄 Flare-up',      desc: 'Asthma, eczema, allergy episode' },
+                    { value: 'chronic_flare', label: '🔄 Flare-up',      desc: 'Asthma, eczema, allergy flare-up' },
                     { value: 'abuse_concern', label: '🔒 Concern',       desc: 'Injury documentation (private)' },
                     { value: 'end_of_life',   label: '🕊️ End of Life',  desc: 'Final care documentation' },
                   ] as const).map(({ value, label, desc }) => (
@@ -369,7 +384,7 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
                 {/* Sensitivity warning for sensitive types */}
                 {(episodeType === 'abuse_concern' || episodeType === 'end_of_life') && (
                   <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                    🔒 <span>This episode will be <strong>private</strong> — visible only to the account owner, not shared caregivers.</span>
+                    🔒 <span>This event will be <strong>private</strong> — visible only to the account owner, not shared caregivers.</span>
                   </div>
                 )}
               </div>
@@ -658,7 +673,12 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
           {step === 2.5 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-1">Initial Photos (Optional)</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-1">Document with Photos</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {episodeType === 'injury' ? 'Photos help track healing progress over time.' :
+                   episodeType === 'abuse_concern' ? 'Photos provide important evidence for documentation.' :
+                   'A photo of the visible symptoms can help track changes.'}
+                </p>
                 <p className="text-sm text-muted-foreground mb-4">
                   Document the condition with up to 4 photos for baseline tracking
                 </p>
@@ -856,7 +876,7 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
                 disabled={isSubmitting}
                 className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Creating...' : 'Create Episode'}
+                {isSubmitting ? 'Creating...' : 'Create Health Event'}
               </button>
             )}
           </div>

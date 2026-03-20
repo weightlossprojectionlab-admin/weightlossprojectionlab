@@ -109,14 +109,14 @@ export default function EpisodeSummaryWidget({
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
             <span>🩹</span>
-            Health Episodes
+            Health Events
           </h2>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCreateModal(true)}
               className="text-xs px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
             >
-              + New Episode
+              + New Event
             </button>
             <button
               onClick={onViewAll}
@@ -153,12 +153,12 @@ export default function EpisodeSummaryWidget({
           </div>
         ) : recentEpisodes.length === 0 ? (
           <div className="text-center py-6">
-            <p className="text-sm text-muted-foreground mb-3">No episodes recorded yet</p>
+            <p className="text-sm text-muted-foreground mb-3">No health events recorded yet</p>
             <button
               onClick={() => setShowCreateModal(true)}
               className="text-sm text-primary hover:text-primary/80 font-medium"
             >
-              Record first episode →
+              Record first health event →
             </button>
           </div>
         ) : (
@@ -201,7 +201,7 @@ export default function EpisodeSummaryWidget({
                 onClick={onViewAll}
                 className="w-full text-xs text-center text-primary hover:text-primary/80 font-medium pt-1 transition-colors"
               >
-                +{episodes.length - 3} more episodes
+                +{episodes.length - 3} more events
               </button>
             )}
           </div>

@@ -368,12 +368,12 @@ function PatientDetailContent() {
     fetchPatient()
   }, [patientId])
 
-  // Set default vital type for pets (weight instead of blood_pressure)
+  // Set default vital type for pets and newborns (weight instead of blood_pressure)
   useEffect(() => {
-    if (patient?.type === 'pet' && selectedVitalType === 'blood_pressure') {
+    if ((patient?.type === 'pet' || isNewbornOrInfant) && selectedVitalType === 'blood_pressure') {
       setSelectedVitalType('weight')
     }
-  }, [patient])
+  }, [patient, isNewbornOrInfant])
 
   // Reset to 'info' tab if patient is a newborn/infant and currently on an inappropriate tab
   useEffect(() => {
@@ -583,7 +583,9 @@ function PatientDetailContent() {
               ) : (
                 <>
                   {patient.type && `${patient.type} • `}
-                  {patient.relationship?.replace(/-/g, ' ')}
+                  {patient.type === 'human' && patient.dateOfBirth
+                    ? getHumanLifeStage(patient.dateOfBirth).label
+                    : patient.relationship?.replace(/-/g, ' ')}
                 </>
               )}
             </span>
@@ -855,6 +857,24 @@ function PatientDetailContent() {
                     </button>
                   )}
 
+                  {/* Health Events - Always visible */}
+                  <button
+                    onClick={() => {
+                      setActiveTab('episodes')
+                      setTimeout(() => {
+                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
+                    }}
+                    className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                      activeTab === 'episodes'
+                        ? 'bg-primary text-white'
+                        : 'bg-muted hover:bg-muted/80 text-foreground'
+                    }`}
+                  >
+                    <span className="text-5xl lg:text-xl">🩹</span>
+                    <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Health Events</span>
+                  </button>
+
                   {/* Documents */}
                   {canUploadDocuments && (
                     <button
@@ -1028,7 +1048,7 @@ function PatientDetailContent() {
                       : 'bg-card border border-border text-foreground'
                   }`}
                 >
-                  🩹 Episodes
+                  🩹 Health Events
                 </button>
 
                 {visibleTabs.includes('recipes') && !isNewbornOrInfant && (
@@ -1082,6 +1102,7 @@ function PatientDetailContent() {
               patientName={patient.name}
               vitals={vitals}
               userPreferences={patient.preferences}
+              isNewbornOrInfant={isNewbornOrInfant}
               onLogVitalsClick={() => setShowVitalsWizard(true)}
               onLogSpecificVital={(vitalType) => {
                 setQuickLogVitalType(vitalType)
@@ -1185,8 +1206,8 @@ function PatientDetailContent() {
               )}
             </div>
 
-            {/* Today's Nutrition Card - HUMANS ONLY */}
-            {!isPet && (
+            {/* Today's Nutrition Card - HUMANS ONLY, not newborns */}
+            {!isPet && !isNewbornOrInfant && (
               <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-success">
                 <div className="flex items-center gap-2 mb-2">
                   <FireIcon className="w-5 h-5 text-success" />
@@ -1253,8 +1274,8 @@ function PatientDetailContent() {
               </div>
             )}
 
-            {/* Activity Summary Card - HUMANS ONLY */}
-            {!isPet && (
+            {/* Activity Summary Card - HUMANS ONLY, not newborns */}
+            {!isPet && !isNewbornOrInfant && (
               <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-accent">
                 <div className="flex items-center gap-2 mb-2">
                   <CameraIcon className="w-5 h-5 text-accent" />
@@ -1312,8 +1333,8 @@ function PatientDetailContent() {
               </div>
             )}
 
-            {/* Recent Trends Card */}
-            <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-secondary">
+            {/* Recent Trends Card - not for newborns */}
+            {!isNewbornOrInfant && <div className="bg-card rounded-lg shadow-sm p-4 border-l-4 border-secondary">
               <div className="flex items-center gap-2 mb-2">
                 <ChartBarIcon className="w-5 h-5 text-secondary" />
                 <h3 className="font-semibold text-foreground text-sm">Trends</h3>
@@ -1352,7 +1373,7 @@ function PatientDetailContent() {
               ) : (
                 <p className="text-sm text-muted-foreground">No trend data yet</p>
               )}
-            </div>
+            </div>}
           </div>
         )}
 
@@ -2547,6 +2568,7 @@ function PatientDetailContent() {
           <VitalsWizardRouter
             isOpen={showVitalsWizard}
             onClose={() => setShowVitalsWizard(false)}
+            isNewbornOrInfant={isNewbornOrInfant}
             familyMember={{
               id: patient.id,
               name: patient.name,
@@ -2555,7 +2577,8 @@ function PatientDetailContent() {
               createdAt: patient.createdAt,
               type: patient.type,
               species: patient.species,
-              breed: patient.breed
+              breed: patient.breed,
+              primaryCaregivers: patient.primaryCaregivers
             }}
             caregivers={caregivers}
             onComplete={(savedVitals) => {

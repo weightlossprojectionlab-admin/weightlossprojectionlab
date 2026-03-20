@@ -27,6 +27,7 @@ interface VitalReminderPromptProps {
   patientName: string
   vitals: VitalSign[]
   userPreferences?: PatientProfile['preferences']
+  isNewbornOrInfant?: boolean
   onLogVitalsClick: () => void
   onLogSpecificVital?: (vitalType: VitalType) => void
   onDisableReminder?: (vitalType: VitalType) => Promise<void>
@@ -51,6 +52,7 @@ export default function VitalReminderPrompt({
   patientName,
   vitals,
   userPreferences,
+  isNewbornOrInfant = false,
   onLogVitalsClick,
   onLogSpecificVital,
   onDisableReminder
@@ -58,17 +60,24 @@ export default function VitalReminderPrompt({
   const [dismissedVitals, setDismissedVitals] = useState<Set<VitalType>>(new Set())
   const [confirmDisable, setConfirmDisable] = useState<{ type: VitalType; label: string } | null>(null)
 
-  // Render logging removed — was causing excessive console noise
-
-  // Define vital types with metadata
-  const vitalTypes: Array<{ type: VitalType; label: string; icon: string }> = [
-    { type: 'blood_pressure', label: 'Blood Pressure', icon: '💓' },
-    { type: 'blood_sugar', label: 'Blood Sugar', icon: '🩸' },
-    { type: 'temperature', label: 'Temperature', icon: '🌡️' },
-    { type: 'pulse_oximeter', label: 'Pulse Oximeter', icon: '❤️' },
-    { type: 'weight', label: 'Weight', icon: '⚖️' },
-    { type: 'mood', label: 'Mood', icon: '😊' }
-  ]
+  // Define vital types based on patient age
+  const vitalTypes: Array<{ type: VitalType; label: string; icon: string }> = isNewbornOrInfant
+    ? [
+        { type: 'weight', label: 'Weight', icon: '⚖️' },
+        { type: 'temperature', label: 'Temperature', icon: '🌡️' },
+        { type: 'newborn_heart_rate', label: 'Heart Rate', icon: '💓' },
+        { type: 'newborn_respiratory_rate', label: 'Respiratory Rate', icon: '💨' },
+        { type: 'newborn_oxygen_saturation', label: 'Oxygen Saturation', icon: '🫁' },
+        { type: 'newborn_diaper_output', label: 'Diaper Output', icon: '👶' },
+      ]
+    : [
+        { type: 'blood_pressure', label: 'Blood Pressure', icon: '💓' },
+        { type: 'blood_sugar', label: 'Blood Sugar', icon: '🩸' },
+        { type: 'temperature', label: 'Temperature', icon: '🌡️' },
+        { type: 'pulse_oximeter', label: 'Pulse Oximeter', icon: '❤️' },
+        { type: 'weight', label: 'Weight', icon: '⚖️' },
+        { type: 'mood', label: 'Mood', icon: '😊' }
+      ]
 
   // Calculate which vitals need reminders today
   const vitalsNeedingReminders: VitalReminderInfo[] = []

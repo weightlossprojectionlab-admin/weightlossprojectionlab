@@ -8,6 +8,7 @@ import {
   getVitalStatus,
   type HealthSummaryInput
 } from '@/lib/health-summary-generator'
+import { formatHumanAgeDisplay, getHumanLifeStage } from '@/lib/life-stage-utils'
 
 /**
  * POST /api/patients/[patientId]/ai-health-report
@@ -155,11 +156,18 @@ function generateHealthReport(data: any): string {
   report += `| Key Metric | Current | Target | Status |\n`
   report += `|------------|---------|--------|--------|\n`
 
-  // Demographics row
+  // Demographics row — use human-readable age display for young patients
+  const ageDisplay = !isPet && patient.dateOfBirth
+    ? formatHumanAgeDisplay(patient.dateOfBirth)
+    : `${age}y`
+  const lifeStageLabel = !isPet && patient.dateOfBirth
+    ? getHumanLifeStage(patient.dateOfBirth).label
+    : (isPet ? species || 'Pet' : 'Self')
+  const genderSuffix = !isPet && patient.gender ? ` ${patient.gender.charAt(0).toUpperCase()}` : ''
   const demographics = isPet
     ? `${age}y ${species || 'Pet'}`
-    : `${age}y ${patient.gender ? patient.gender.charAt(0).toUpperCase() : ''}`
-  report += `| Patient Profile | ${demographics} | - | ${isPet ? species || 'Pet' : (patient.relationship ? patient.relationship.charAt(0).toUpperCase() + patient.relationship.slice(1) : 'Self')} |\n`
+    : `${ageDisplay}${genderSuffix}`
+  report += `| Patient Profile | ${demographics} | - | ${lifeStageLabel} |\n`
 
   // Weight
   if (weightAnalysis.current) {
@@ -232,12 +240,12 @@ function generateHealthReport(data: any): string {
   report += `## PATIENT DEMOGRAPHICS\n\n`
   report += `| Field | Value |\n`
   report += `|-------|-------|\n`
-  report += `| Age | ${age} years |\n`
+  report += `| Age | ${ageDisplay} |\n`
   if (!isPet && patient.gender) {
     report += `| Gender | ${patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)} |\n`
   }
   if (patient.relationship) {
-    report += `| Relationship | ${patient.relationship.charAt(0).toUpperCase() + patient.relationship.slice(1)} |\n`
+    report += `| Relationship | ${lifeStageLabel} |\n`
   }
   if (isPet) {
     report += `| Species | ${patient.species} |\n`

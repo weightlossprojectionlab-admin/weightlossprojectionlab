@@ -16,6 +16,7 @@ import { shouldShowWeightReminder } from '@/lib/weight-reminder-logic'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useRouter } from 'next/navigation'
 import { useAccount } from '@/contexts/AccountContext'
+import { formatHumanAgeDisplay, getHumanLifeStage } from '@/lib/life-stage-utils'
 
 interface PatientCardProps {
   patient: PatientProfile
@@ -52,6 +53,13 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
   }
 
   const age = calculateAge(patient.dateOfBirth)
+
+  // Dynamic life stage label — evolves automatically from DOB
+  // For humans: shows "Newborn", "Infant", "Toddler", "Child", "Teen", "Adult", "Senior"
+  // For adults/non-minor relationships, shows the static relationship
+  const lifeStageLabel = patient.type === 'human' && patient.dateOfBirth
+    ? getHumanLifeStage(patient.dateOfBirth).label
+    : patient.relationship
 
   // Check for overdue actions
   useEffect(() => {
@@ -238,7 +246,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
               </h3>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getRelationshipColor(patient.relationship)}`}>
-                  {patient.relationship}
+                  {['Newborn', 'Child'].includes(patient.relationship) ? lifeStageLabel : patient.relationship}
                 </span>
                 {patient.type === 'pet' && patient.species && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-foreground">
@@ -256,7 +264,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
           <div className="flex items-center gap-2">
             <CalendarIcon className="w-4 h-4" />
             <span>
-              {patient.type === 'human' ? `${age} years old` : `Born ${new Date(patient.dateOfBirth).toLocaleDateString()}`}
+              {patient.type === 'human' ? `${formatHumanAgeDisplay(patient.dateOfBirth) || age + ' years old'}` : `Born ${new Date(patient.dateOfBirth).toLocaleDateString()}`}
             </span>
           </div>
 
@@ -358,7 +366,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
               </h3>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getRelationshipColor(patient.relationship)}`}>
-                  {patient.relationship}
+                  {['Newborn', 'Child'].includes(patient.relationship) ? lifeStageLabel : patient.relationship}
                 </span>
                 {patient.type === 'pet' && patient.species && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-foreground">
@@ -376,7 +384,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
           <div className="flex items-center gap-2">
             <CalendarIcon className="w-4 h-4" />
             <span>
-              {patient.type === 'human' ? `${calculateAge(patient.dateOfBirth)} years old` : `Born ${new Date(patient.dateOfBirth).toLocaleDateString()}`}
+              {patient.type === 'human' ? `${formatHumanAgeDisplay(patient.dateOfBirth) || calculateAge(patient.dateOfBirth) + ' years old'}` : `Born ${new Date(patient.dateOfBirth).toLocaleDateString()}`}
             </span>
           </div>
 

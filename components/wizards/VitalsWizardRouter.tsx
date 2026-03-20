@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 interface VitalsWizardRouterProps {
   isOpen: boolean;
   onClose: () => void;
+  isNewbornOrInfant?: boolean;
   familyMember: {
     id: string;
     name: string;
@@ -26,6 +27,7 @@ interface VitalsWizardRouterProps {
     type?: 'human' | 'pet';
     species?: string;
     breed?: string;
+    primaryCaregivers?: Array<{ name: string; relationship: string; userId?: string }>;
   };
   recentReadings?: any[];
   onSubmit: (vitals: any) => Promise<void>;
@@ -41,6 +43,7 @@ interface VitalsWizardRouterProps {
 export default function VitalsWizardRouter({
   isOpen,
   onClose,
+  isNewbornOrInfant = false,
   familyMember,
   recentReadings = [],
   onSubmit,
@@ -292,12 +295,14 @@ export default function VitalsWizardRouter({
     <SupervisedVitalsWizard
       isOpen={isOpen}
       onClose={onClose}
+      isNewbornOrInfant={isNewbornOrInfant}
       familyMember={{
         id: familyMember.id,
         name: familyMember.name,
         age: familyMember.age,
         conditions: familyMember.conditions,
-        createdAt: familyMember.createdAt
+        createdAt: familyMember.createdAt,
+        primaryCaregivers: familyMember.primaryCaregivers
       }}
       recentReadings={recentReadings}
       onSubmit={onSubmit}

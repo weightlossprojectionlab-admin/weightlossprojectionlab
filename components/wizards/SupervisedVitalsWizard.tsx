@@ -38,12 +38,14 @@ import { useVitalDatePicker } from '@/hooks/useVitalDatePicker'
 interface SupervisedVitalsWizardProps {
   isOpen: boolean
   onClose: () => void
+  isNewbornOrInfant?: boolean
   familyMember: {
     id: string
     name: string
     age?: number
     conditions?: string[]
     createdAt?: string  // For date validation
+    primaryCaregivers?: Array<{ name: string; relationship: string; userId?: string }>
   }
   recentReadings?: VitalReading[]
   onSubmit: (vitals: any) => Promise<void>
@@ -92,6 +94,7 @@ interface VitalData {
 export default function SupervisedVitalsWizard({
   isOpen,
   onClose,
+  isNewbornOrInfant = false,
   familyMember,
   recentReadings = [],
   onSubmit,
@@ -107,6 +110,15 @@ export default function SupervisedVitalsWizard({
   const [showTrainingMode, setShowTrainingMode] = useState(false)
   const [sendingAlert, setSendingAlert] = useState(false)
   const { user } = useAuth()
+
+  // Step order based on patient age
+  const adultStepOrder: WizardStep[] = ['intro', 'date_selection', 'blood_pressure', 'temperature', 'pulse_oximeter', 'blood_sugar', 'weight', 'mood', 'review', 'schedule', 'confirmation']
+  const newbornStepOrder: WizardStep[] = ['intro', 'date_selection', 'weight', 'temperature', 'review', 'schedule', 'confirmation']
+  const stepOrder = isNewbornOrInfant ? newbornStepOrder : adultStepOrder
+  // For progress display (no schedule/confirmation)
+  const progressStepOrder = isNewbornOrInfant
+    ? (['intro', 'date_selection', 'weight', 'temperature', 'review'] as WizardStep[])
+    : (['intro', 'date_selection', 'blood_pressure', 'temperature', 'pulse_oximeter', 'blood_sugar', 'weight', 'mood', 'review'] as WizardStep[])
 
   // Use date picker hook for backdate support
   const datePicker = useVitalDatePicker({
@@ -209,7 +221,6 @@ export default function SupervisedVitalsWizard({
   }
 
   const handleNext = () => {
-    const stepOrder: WizardStep[] = ['intro', 'date_selection', 'blood_pressure', 'temperature', 'pulse_oximeter', 'blood_sugar', 'weight', 'mood', 'review', 'schedule', 'confirmation']
     const currentIndex = stepOrder.indexOf(currentStep)
     if (currentIndex < stepOrder.length - 1) {
       setCurrentStep(stepOrder[currentIndex + 1])
@@ -217,7 +228,6 @@ export default function SupervisedVitalsWizard({
   }
 
   const handleBack = () => {
-    const stepOrder: WizardStep[] = ['intro', 'date_selection', 'blood_pressure', 'temperature', 'pulse_oximeter', 'blood_sugar', 'weight', 'mood', 'review', 'schedule', 'confirmation']
     const currentIndex = stepOrder.indexOf(currentStep)
     if (currentIndex > 0) {
       setCurrentStep(stepOrder[currentIndex - 1])
@@ -440,6 +450,7 @@ export default function SupervisedVitalsWizard({
             familyMember={familyMember}
             caregivers={caregivers}
             currentUser={user}
+            isNewbornOrInfant={isNewbornOrInfant}
             selectedCaregiver={vitalData.loggedBy}
             onCaregiverSelect={(caregiver) => {
               setVitalData({ ...vitalData, loggedBy: caregiver })
@@ -582,9 +593,8 @@ export default function SupervisedVitalsWizard({
   }
 
   // Progress indicator
-  const stepOrder: WizardStep[] = ['intro', 'date_selection', 'blood_pressure', 'temperature', 'pulse_oximeter', 'blood_sugar', 'weight', 'mood', 'review']
-  const currentStepIndex = stepOrder.indexOf(currentStep)
-  const progress = ((currentStepIndex + 1) / stepOrder.length) * 100
+  const currentStepIndex = progressStepOrder.indexOf(currentStep)
+  const progress = ((Math.max(0, currentStepIndex) + 1) / progressStepOrder.length) * 100
 
   if (!isOpen) return null
 
@@ -609,7 +619,7 @@ export default function SupervisedVitalsWizard({
         {currentStep !== 'confirmation' && (
           <div className="px-6 py-4 border-b border-border">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Step {currentStepIndex + 1} of {stepOrder.length}</span>
+              <span className="text-sm font-medium">Step {currentStepIndex + 1} of {progressStepOrder.length}</span>
               <span className="text-sm text-muted-foreground capitalize">
                 {currentStep.replace('_', ' ')}
               </span>
@@ -704,9 +714,11 @@ function IntroStep({
   currentUser,
   selectedCaregiver,
   onCaregiverSelect,
-  onNext
+  onNext,
+  isNewbornOrInfant = false
 }: {
   familyMember: any
+  isNewbornOrInfant?: boolean
   caregivers: Array<{
     id: string
     name: string
@@ -722,35 +734,47 @@ function IntroStep({
   onCaregiverSelect: (caregiver: { userId: string; name: string; relationship?: string }) => void
   onNext: () => void
 }) {
-  const guidance = getTaskGuidance('blood_pressure')
+  const guidance = isNewbornOrInfant
+    ? [
+        'Ensure baby is calm and comfortable',
+        'Have a clean, warm surface ready',
+        'Digital thermometer and scale within reach',
+        'Remove heavy clothing or swaddle for accurate weight',
+        'Note the time of last feeding'
+      ]
+    : getTaskGuidance('blood_pressure')
 
-  // Build list of available caregivers including the patient and caregivers
-  console.log('IntroStep - Available caregivers prop:', caregivers)
-
-  const availableCaregivers = [
-    // Include the patient themselves as an option
-    {
-      userId: familyMember.id, // Use patient ID
-      name: `${familyMember.name} (Self)`,
-      relationship: 'self'
-    },
-    // Include all caregivers
-    ...caregivers
-      .filter(c => {
-        const hasUserId = !!c.userId
-        if (!hasUserId) {
-          console.log('Caregiver filtered out (no userId):', c)
-        }
-        return hasUserId
-      })
-      .map(c => ({
-        userId: c.userId!,
-        name: c.name,
-        relationship: c.relationship
-      }))
-  ]
-
-  console.log('IntroStep - Final available caregivers:', availableCaregivers)
+  // Build list of available caregivers
+  const availableCaregivers = isNewbornOrInfant
+    ? [
+        // For minors: use assigned primary caregivers (never "Self")
+        ...(familyMember.primaryCaregivers || []).map((cg: any) => ({
+          userId: cg.userId || cg.name, // Use userId if available, else name as key
+          name: cg.name,
+          relationship: cg.relationship
+        })),
+        // Include household caregivers with accounts
+        ...caregivers
+          .filter(c => !!c.userId && !(familyMember.primaryCaregivers || []).some((pc: any) => pc.userId === c.userId))
+          .map(c => ({ userId: c.userId!, name: c.name, relationship: c.relationship })),
+        // Fallback: current user if no caregivers assigned
+        ...(!familyMember.primaryCaregivers?.length && !caregivers.length ? [{
+          userId: currentUser?.uid || 'unknown',
+          name: currentUser?.displayName || currentUser?.email || 'Current User',
+          relationship: 'Caregiver'
+        }] : [])
+      ]
+    : [
+        // For adults: include patient (self) + caregivers
+        {
+          userId: familyMember.id,
+          name: `${familyMember.name} (Self)`,
+          relationship: 'self'
+        },
+        ...caregivers
+          .filter(c => !!c.userId)
+          .map(c => ({ userId: c.userId!, name: c.name, relationship: c.relationship }))
+      ]
 
   // Auto-select patient (self) if no caregiver selected yet
   useEffect(() => {
