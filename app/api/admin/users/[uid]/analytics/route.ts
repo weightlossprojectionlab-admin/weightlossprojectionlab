@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/users/[uid]/analytics?range=7d|30d|90d|all
@@ -21,7 +22,7 @@ export async function GET(
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
 
     if (!idToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
     // Verify token with Firebase Admin SDK
@@ -35,7 +36,7 @@ export async function GET(
     const isSuper = isSuperAdmin(adminEmail)
 
     if (!isSuper && adminData?.role !== 'admin' && adminData?.role !== 'moderator' && adminData?.role !== 'support') {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+      return forbiddenResponse('Admin access required')
     }
 
     const { uid } = params
@@ -236,10 +237,6 @@ export async function GET(
       range
     })
   } catch (error) {
-    logger.error('Error fetching user analytics', error as Error, { uid: params?.uid })
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch user analytics' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/admin/users/[uid]/analytics', operation: 'fetch', uid: params?.uid })
   }
 }

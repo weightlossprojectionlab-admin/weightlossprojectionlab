@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { logger } from '@/lib/logger'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/users?q=<query>&limit=<limit>&pageToken=<pageToken>
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
 
     if (!idToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
     // Verify token with Firebase Admin SDK
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     const isSuper = isSuperAdmin(adminEmail)
 
     if (!isSuper && adminData?.role !== 'admin' && adminData?.role !== 'moderator' && adminData?.role !== 'support') {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+      return forbiddenResponse('Admin access required')
     }
 
     const searchParams = request.nextUrl.searchParams
@@ -130,11 +131,7 @@ export async function GET(request: NextRequest) {
       ...(nextPageToken && { nextPageToken })
     })
   } catch (error) {
-    logger.error('Error searching users', error as Error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to search users' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/admin/users', operation: 'search' })
   }
 }
 
@@ -149,7 +146,7 @@ export async function PATCH(request: NextRequest) {
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
 
     if (!idToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
     const decodedToken = await adminAuth.verifyIdToken(idToken)
@@ -162,7 +159,7 @@ export async function PATCH(request: NextRequest) {
     const isSuper = isSuperAdmin(adminEmail)
 
     if (!isSuper && adminData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+      return forbiddenResponse('Admin access required')
     }
 
     const body = await request.json()
@@ -208,11 +205,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
   } catch (error) {
-    logger.error('Error updating user', error as Error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update user' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/admin/users', operation: 'update' })
   }
 }
 
@@ -227,7 +220,7 @@ export async function DELETE(request: NextRequest) {
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
 
     if (!idToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
     const decodedToken = await adminAuth.verifyIdToken(idToken)
@@ -240,7 +233,7 @@ export async function DELETE(request: NextRequest) {
     const isSuper = isSuperAdmin(adminEmail)
 
     if (!isSuper && adminData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+      return forbiddenResponse('Admin access required')
     }
 
     const body = await request.json()
@@ -274,10 +267,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'User deleted' })
   } catch (error) {
-    logger.error('Error deleting user', error as Error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete user' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/admin/users', operation: 'delete' })
   }
 }

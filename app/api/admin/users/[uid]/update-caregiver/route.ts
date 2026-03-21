@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
 
 export async function PATCH(
   request: NextRequest,
@@ -20,7 +21,7 @@ export async function PATCH(
     const idToken = authHeader?.replace('Bearer ', '')
 
     if (!idToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
     const decodedToken = await adminAuth.verifyIdToken(idToken)
@@ -33,7 +34,7 @@ export async function PATCH(
     const isSuper = isSuperAdmin(adminEmail)
 
     if (!isSuper && adminData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return forbiddenResponse('Admin access required')
     }
 
     // Parse request body
@@ -131,11 +132,7 @@ export async function PATCH(
       message: 'Caregiver permissions updated successfully'
     })
 
-  } catch (error: any) {
-    console.error('Error updating caregiver:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to update caregiver' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/admin/users/[uid]/update-caregiver', operation: 'update' })
   }
 }

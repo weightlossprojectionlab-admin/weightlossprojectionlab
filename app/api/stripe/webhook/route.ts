@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { adminDb as db } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 import { SubscriptionPlan } from '@/types'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -81,12 +82,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ received: true })
-  } catch (error: any) {
-    logger.error('[Stripe Webhook] Handler error', error as Error)
-    return NextResponse.json(
-      { error: error.message || 'Webhook handler failed' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/stripe/webhook', operation: 'handle' })
   }
 }
 

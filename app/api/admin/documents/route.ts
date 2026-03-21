@@ -8,16 +8,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import type { PatientDocument } from '@/types/medical'
+import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 
 export async function GET(request: NextRequest) {
   try {
     // Authenticate user
     const authHeader = request.headers.get('Authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      )
+      return unauthorizedResponse('Missing or invalid authorization header')
     }
 
     const token = authHeader.substring(7)
@@ -155,11 +153,7 @@ export async function GET(request: NextRequest) {
         total: allDocuments.length
       }
     })
-  } catch (error: any) {
-    console.error('Error fetching documents:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch documents' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/admin/documents', operation: 'fetch' })
   }
 }

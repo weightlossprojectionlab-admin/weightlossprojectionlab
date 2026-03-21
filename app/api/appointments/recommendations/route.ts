@@ -6,7 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyIdToken } from '@/lib/firebase-admin'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
+import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 import {
   generateRecommendations,
   getActiveRecommendations
@@ -18,20 +19,13 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get authorization header
+    // Verify authentication
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      )
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
+      return unauthorizedResponse()
     }
-
-    const idToken = authHeader.split('Bearer ')[1]
-
-    // Verify the token and get user info
-    const decodedToken = await verifyIdToken(idToken)
-    const userId = decodedToken.uid
+    const userId = authResult.userId
 
     // Get patientId from query params (optional - for family member view)
     const { searchParams } = new URL(request.url)
@@ -49,13 +43,8 @@ export async function GET(request: NextRequest) {
       data: recommendations,
       count: recommendations.length
     })
-  } catch (error: any) {
-    console.error('[API /appointments/recommendations GET] Error:', error)
-    console.error('[API /appointments/recommendations GET] Error stack:', error.stack)
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch recommendations' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/appointments/recommendations', operation: 'list' })
   }
 }
 
@@ -65,20 +54,13 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get authorization header
+    // Verify authentication
     const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      )
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
+      return unauthorizedResponse()
     }
-
-    const idToken = authHeader.split('Bearer ')[1]
-
-    // Verify the token and get user info
-    const decodedToken = await verifyIdToken(idToken)
-    const userId = decodedToken.uid
+    const userId = authResult.userId
 
     // Get patientId from query params (optional - for family member view)
     const { searchParams } = new URL(request.url)
@@ -97,12 +79,7 @@ export async function POST(request: NextRequest) {
       count: recommendations.length,
       message: `Generated ${recommendations.length} recommendation${recommendations.length !== 1 ? 's' : ''}`
     })
-  } catch (error: any) {
-    console.error('[API /appointments/recommendations POST] Error:', error)
-    console.error('[API /appointments/recommendations POST] Error stack:', error.stack)
-    return NextResponse.json(
-      { error: error.message || 'Failed to generate recommendations' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/appointments/recommendations', operation: 'generate' })
   }
 }

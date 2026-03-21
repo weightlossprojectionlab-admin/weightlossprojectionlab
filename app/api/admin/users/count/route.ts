@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
 
 /**
  * GET /api/admin/users/count
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
 
     if (!idToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
     // Verify token with Firebase Admin SDK
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     const isSuper = isSuperAdmin(adminEmail)
 
     if (!isSuper && adminData?.role !== 'admin' && adminData?.role !== 'moderator' && adminData?.role !== 'support') {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+      return forbiddenResponse('Admin access required')
     }
 
     // Count all authenticated users by iterating through all pages
@@ -47,10 +48,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ count: totalCount })
   } catch (error) {
-    logger.error('Error counting users', error as Error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to count users' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/admin/users/count', operation: 'count' })
   }
 }

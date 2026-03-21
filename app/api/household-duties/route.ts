@@ -15,6 +15,7 @@ import {
   checkPermission
 } from '@/types/household-permissions'
 import { logger } from '@/lib/logger'
+import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 import { notifyDutyAssigned } from '@/lib/duty-notification-service'
 import { scheduleDutyNotifications } from '@/lib/duty-scheduler-service'
 import { canAddDutyToHousehold } from '@/lib/feature-gates'
@@ -68,11 +69,8 @@ export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('Authorization')
     const authResult = await verifyAuthToken(authHeader)
-    if (!authResult || !authResult.userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    if (!authResult) {
+      return unauthorizedResponse()
     }
 
     const { searchParams } = new URL(request.url)
@@ -184,11 +182,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response)
   } catch (error) {
-    logger.error('Error fetching household duties', error as Error)
-    return NextResponse.json(
-      { error: 'Failed to fetch household duties' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/household-duties', operation: 'list' })
   }
 }
 
@@ -200,11 +194,8 @@ export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('Authorization')
     const authResult = await verifyAuthToken(authHeader)
-    if (!authResult || !authResult.userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    if (!authResult) {
+      return unauthorizedResponse()
     }
 
     const body: CreateDutyRequest = await request.json()
@@ -390,11 +381,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(createdDuty, { status: 201 })
   } catch (error) {
-    logger.error('Error creating household duty', error as Error)
-    return NextResponse.json(
-      { error: 'Failed to create household duty' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/household-duties', operation: 'create' })
   }
 }
 

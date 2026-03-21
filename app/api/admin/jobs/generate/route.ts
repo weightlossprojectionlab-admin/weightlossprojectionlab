@@ -11,6 +11,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { generateJobsFromCodebase } from '@/lib/ai/job-generator'
 import { logger } from '@/lib/logger'
 import type { JobPosting } from '@/types/jobs'
+import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
 
 /**
  * Generate jobs from codebase analysis
@@ -21,10 +22,7 @@ export async function POST(request: NextRequest) {
     // Verify admin authentication
     const authHeader = request.headers.get('authorization')
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return unauthorizedResponse()
     }
 
     const token = authHeader.substring(7)
@@ -32,10 +30,7 @@ export async function POST(request: NextRequest) {
     try {
       decodedToken = await adminAuth.verifyIdToken(token)
     } catch (error) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid token' },
-        { status: 401 }
-      )
+      return unauthorizedResponse('Invalid token')
     }
 
     // Verify admin role
@@ -43,10 +38,7 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data()
 
     if (!userData?.role || userData.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      )
+      return forbiddenResponse('Admin access required')
     }
 
     // Parse request body
@@ -143,13 +135,6 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    logger.error('[Admin] Job generation failed', error as Error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate jobs',
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/admin/jobs/generate', operation: 'generate' })
   }
 }

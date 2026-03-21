@@ -6,9 +6,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { orchestrateAI } from '@/lib/ai/orchestrator';
 import { AIOrchestrationRequest } from '@/types/ai';
 import { logger } from '@/lib/logger';
-import { adminAuth } from '@/lib/firebase-admin';
 import { aiRateLimit, dailyRateLimit, getRateLimitHeaders } from '@/lib/utils/rate-limit';
-import { ErrorHandler } from '@/lib/utils/error-handler';
+import { verifyAuthToken } from '@/lib/rbac-middleware';
+import { errorResponse, unauthorizedResponse } from '@/lib/api-response';
 
 /**
  * POST /api/ai/orchestrate
@@ -40,31 +40,12 @@ export async function POST(request: NextRequest) {
   try {
     // Verify authentication
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Missing authentication token' },
-        { status: 401 }
-      );
+    const authResult = await verifyAuthToken(authHeader);
+    if (!authResult) {
+      return unauthorizedResponse();
     }
-
-    const token = authHeader.split('Bearer ')[1];
-
-    // Verify the Firebase ID token
-    let userId: string;
-    try {
-      const decodedToken = await adminAuth.verifyIdToken(token);
-      userId = decodedToken.uid;
-      logger.debug('Authenticated user', { uid: userId });
-    } catch (authError) {
-      ErrorHandler.handle(authError, {
-        operation: 'ai_orchestrate_auth',
-        component: 'api/ai/orchestrate'
-      });
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid authentication token' },
-        { status: 401 }
-      );
-    }
+    const userId = authResult.userId;
+    logger.debug('Authenticated user', { uid: userId });
 
     // Check rate limits (both per-minute and daily)
     const [minuteLimit, dayLimit] = await Promise.all([
@@ -126,20 +107,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    ErrorHandler.handle(error, {
-      operation: 'ai_orchestrate',
-      component: 'api/ai/orchestrate',
-      userId: 'unknown'
-    });
-
-    const userMessage = ErrorHandler.getUserMessage(error);
-    return NextResponse.json(
-      {
-        error: userMessage,
-        details: process.env.NODE_ENV === 'development' ? error : undefined
-      },
-      { status: 500 }
-    );
+    return errorResponse(error, { route: '/api/ai/orchestrate', operation: 'orchestrate' });
   }
 }
 

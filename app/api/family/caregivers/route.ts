@@ -8,14 +8,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuthToken } from '@/lib/rbac-middleware'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
     const authHeader = request.headers.get('Authorization')
     const authResult = await verifyAuthToken(authHeader)
-    if (!authResult || !authResult.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!authResult) {
+      return unauthorizedResponse()
     }
 
     const { userId } = authResult
@@ -67,10 +68,6 @@ export async function GET(request: NextRequest) {
       filtered: caregivers.length
     })
   } catch (error) {
-    logger.error('[API /family/caregivers] Error', error as Error)
-    return NextResponse.json(
-      { error: 'Failed to fetch caregivers' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/family/caregivers', operation: 'list' })
   }
 }

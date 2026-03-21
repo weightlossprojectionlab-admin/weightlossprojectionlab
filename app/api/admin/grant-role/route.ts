@@ -5,16 +5,14 @@ import { isSuperAdmin } from '@/lib/admin/permissions'
 import { Timestamp } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
 import { ErrorHandler } from '@/lib/utils/error-handler'
+import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
 
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      )
+      return unauthorizedResponse('Missing or invalid authorization header')
     }
 
     const idToken = authHeader.split('Bearer ')[1]
@@ -24,10 +22,7 @@ export async function POST(request: NextRequest) {
 
     // Only super admins can grant roles
     if (!isSuperAdmin(adminEmail)) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Only super admins can grant roles' },
-        { status: 403 }
-      )
+      return forbiddenResponse('Only super admins can grant roles')
     }
 
     const body = await request.json()
@@ -198,19 +193,6 @@ export async function POST(request: NextRequest) {
       })
     }
   } catch (error) {
-    ErrorHandler.handle(error, {
-      operation: 'admin_grant_role',
-      component: 'api/admin/grant-role',
-      userId: 'unknown'
-    })
-
-    const userMessage = ErrorHandler.getUserMessage(error)
-    return NextResponse.json(
-      {
-        error: userMessage,
-        details: process.env.NODE_ENV === 'development' ? error : undefined
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/admin/grant-role', operation: 'grant-role' })
   }
 }

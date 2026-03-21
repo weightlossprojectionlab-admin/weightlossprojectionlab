@@ -11,6 +11,7 @@ import { appointmentFormSchema } from '@/lib/validations/medical'
 import { assertPatientAccess, verifyAuthToken, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/logger'
+import { errorResponse, unauthorizedResponse, validationError } from '@/lib/api-response'
 import type { Appointment, PatientProfile, Provider } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -18,16 +19,11 @@ export async function GET(request: NextRequest) {
   try {
     // Authenticate user
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      )
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
+      return unauthorizedResponse()
     }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    const userId = authResult.userId
 
     // Check rate limit (per-user)
     const rateLimitResult = await medicalApiRateLimit.limit(userId)
@@ -80,12 +76,8 @@ export async function GET(request: NextRequest) {
       success: true,
       data: appointments
     })
-  } catch (error: any) {
-    console.error('Error fetching appointments:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch appointments' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/appointments', operation: 'list' })
   }
 }
 
@@ -284,18 +276,10 @@ export async function POST(request: NextRequest) {
       message: 'Appointment created successfully'
     })
   } catch (error: any) {
-    console.error('Error creating appointment:', error)
-
     if (error.name === 'ZodError') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid appointment data', details: error.errors },
-        { status: 400 }
-      )
+      return validationError('Invalid appointment data', error.errors)
     }
 
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create appointment' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/appointments', operation: 'create' })
   }
 }

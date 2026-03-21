@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { errorResponse } from '@/lib/api-response'
 
 export async function GET(
   request: NextRequest,
@@ -111,11 +112,7 @@ export async function GET(
       data: mockCaregiver
     })
   } catch (error) {
-    console.error('Error fetching caregiver:', error)
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/family/caregivers/[caregiverId]', operation: 'get' })
   }
 }
 
@@ -155,10 +152,6 @@ export async function PUT(
       }
     })
   } catch (error) {
-    console.error('Error updating caregiver:', error)
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/family/caregivers/[caregiverId]', operation: 'update' })
   }
 }

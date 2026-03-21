@@ -6,7 +6,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
+import { errorResponse, unauthorizedResponse, validationError } from '@/lib/api-response'
 import { familyInvitationFormSchema } from '@/lib/validations/medical'
 import { generateInviteCode } from '@/lib/invite-code-generator'
 import { sendFamilyInvitationEmail } from '@/lib/email-service'
@@ -20,21 +22,16 @@ export async function GET(request: NextRequest) {
   try {
     // Authenticate user
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      )
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
+      return unauthorizedResponse()
     }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    const userId = authResult.userId
 
     // Get user profile for email
     const userDoc = await adminDb.collection('users').doc(userId).get()
     const userData = userDoc.data()
-    const userEmail = userData?.email || decodedToken.email || ''
+    const userEmail = userData?.email || ''
 
     // Query sent invitations
     const sentSnapshot = await adminDb
@@ -68,12 +65,8 @@ export async function GET(request: NextRequest) {
         received: receivedInvitations
       }
     })
-  } catch (error: any) {
-    console.error('Error fetching invitations:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch invitations' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/invitations', operation: 'list' })
   }
 }
 
@@ -85,16 +78,11 @@ export async function POST(request: NextRequest) {
   try {
     // Authenticate user
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      )
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
+      return unauthorizedResponse()
     }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    const userId = authResult.userId
 
     // Parse and validate request body
     const body = await request.json()
@@ -300,18 +288,10 @@ export async function POST(request: NextRequest) {
       inviteCode // Include invite code in response for easy sharing
     })
   } catch (error: any) {
-    console.error('Error creating invitation:', error)
-
     if (error.name === 'ZodError') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid invitation data', details: error.errors },
-        { status: 400 }
-      )
+      return validationError('Invalid invitation data', error.errors)
     }
 
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create invitation' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/invitations', operation: 'create' })
   }
 }

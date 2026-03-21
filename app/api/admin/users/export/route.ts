@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { logger } from '@/lib/logger'
-import { errorResponse } from '@/lib/api-response'
+import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
 
 /**
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
 
     if (!idToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
     const decodedToken = await adminAuth.verifyIdToken(idToken)
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const isSuper = isSuperAdmin(adminEmail)
 
     if (!isSuper && !['admin', 'support'].includes(adminData?.role)) {
-      return NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 })
+      return forbiddenResponse('Insufficient permissions')
     }
 
     const searchParams = request.nextUrl.searchParams

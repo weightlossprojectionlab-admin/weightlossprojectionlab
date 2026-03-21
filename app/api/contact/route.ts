@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
+import { errorResponse } from '@/lib/api-response'
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,11 +42,7 @@ export async function POST(request: NextRequest) {
         message: 'Thank you for contacting us! We will respond within 24 hours.'
       }
     })
-  } catch (error: any) {
-    console.error('Error submitting contact form:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to submit contact form', details: error?.message },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/contact', operation: 'submit' })
   }
 }

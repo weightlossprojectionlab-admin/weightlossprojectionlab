@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
+import { errorResponse } from '@/lib/api-response'
 import type { CreateDemoRequestInput } from '@/types/demo-requests'
 
 export async function POST(request: NextRequest) {
@@ -93,10 +94,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('Error creating demo request:', error)
-    return NextResponse.json(
-      { error: 'Failed to submit demo request. Please try again.' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/demo-requests', operation: 'create' })
   }
 }

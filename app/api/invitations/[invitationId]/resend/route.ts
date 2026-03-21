@@ -5,7 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
+import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 import { sendFamilyInvitationEmail } from '@/lib/email-service'
 import type { FamilyInvitation } from '@/types/medical'
 
@@ -16,16 +18,11 @@ export async function POST(
   try {
     // Authenticate user
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      )
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
+      return unauthorizedResponse()
     }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    const userId = authResult.userId
 
     const { invitationId } = await params
 
@@ -127,11 +124,7 @@ export async function POST(
         { status: 500 }
       )
     }
-  } catch (error: any) {
-    console.error('Error resending invitation:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to resend invitation' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/invitations/[invitationId]/resend', operation: 'resend' })
   }
 }

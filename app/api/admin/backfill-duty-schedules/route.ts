@@ -3,6 +3,7 @@ import { getAdminDb } from '@/lib/firebase-admin'
 import { HouseholdDuty } from '@/types/household-duties'
 import { ScheduledNotification } from '@/lib/duty-scheduler-service'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 
 /**
  * POST /api/admin/backfill-duty-schedules
@@ -146,11 +147,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(summary)
   } catch (error) {
-    logger.error('[Backfill] Error during backfill', error as Error)
-    return NextResponse.json({
-      success: false,
-      error: 'Backfill failed',
-      message: error instanceof Error ? error.message : String(error)
-    }, { status: 500 })
+    return errorResponse(error, { route: '/api/admin/backfill-duty-schedules', operation: 'backfill' })
   }
 }

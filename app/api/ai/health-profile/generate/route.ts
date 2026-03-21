@@ -9,39 +9,25 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb as db } from '@/lib/firebase-admin'
+import { adminDb as db } from '@/lib/firebase-admin'
 import { callGeminiHealthProfile, validateGeminiConfig } from '@/lib/gemini'
 import { logger } from '@/lib/logger'
 import type { AIHealthProfile } from '@/types'
 import { GenerateHealthProfileRequestSchema } from '@/lib/validations/health-vitals'
 import { z } from 'zod'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
+import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 
 export async function POST(request: NextRequest) {
   try {
     // 1. Verify authentication
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Missing authentication token' },
-        { status: 401 }
-      )
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
+      return unauthorizedResponse()
     }
-
-    const token = authHeader.split('Bearer ')[1]
-
-    // Verify the Firebase ID token
-    let userId: string
-    try {
-      const decodedToken = await adminAuth.verifyIdToken(token)
-      userId = decodedToken.uid
-      logger.debug('[Health Profile] Authenticated user', { uid: userId })
-    } catch (authError) {
-      logger.error('[Health Profile] Auth failed', authError as Error)
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid authentication token' },
-        { status: 401 }
-      )
-    }
+    const userId = authResult.userId
+    logger.debug('[Health Profile] Authenticated user', { uid: userId })
 
     // 2. Validate Gemini configuration
     const configCheck = validateGeminiConfig()
@@ -164,15 +150,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    logger.error('[Health Profile] Generation failed', error as Error)
-
-    return NextResponse.json(
-      {
-        error: 'Failed to generate health profile',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/ai/health-profile/generate', operation: 'generate' })
   }
 }
 
@@ -183,16 +161,11 @@ export async function GET(request: NextRequest) {
   try {
     // Verify authentication
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
+      return unauthorizedResponse()
     }
-
-    const token = authHeader.split('Bearer ')[1]
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    const userId = authResult.userId
 
     // Fetch health profile
     const profileDoc = await db
@@ -215,10 +188,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('[Health Profile] GET failed', error as Error)
-    return NextResponse.json(
-      { error: 'Failed to fetch health profile' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/ai/health-profile/generate', operation: 'fetch' })
   }
 }

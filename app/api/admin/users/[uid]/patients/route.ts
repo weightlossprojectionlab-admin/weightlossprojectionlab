@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { errorResponse, forbiddenResponse } from '@/lib/api-response'
 
 async function verifyAdmin(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -30,7 +31,7 @@ export async function GET(
   try {
     const { uid: userId } = await params
     const decoded = await verifyAdmin(request)
-    if (!decoded) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!decoded) return forbiddenResponse('Admin access required')
 
     const patientsSnapshot = await adminDb
       .collection('users')
@@ -55,12 +56,8 @@ export async function GET(
 
     return NextResponse.json({ success: true, patients })
 
-  } catch (error: any) {
-    console.error('Error fetching patients:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch patients' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/admin/users/[uid]/patients', operation: 'fetch' })
   }
 }
 
@@ -71,7 +68,7 @@ export async function PATCH(
   try {
     const { uid: userId } = await params
     const decoded = await verifyAdmin(request)
-    if (!decoded) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!decoded) return forbiddenResponse('Admin access required')
 
     const { patientId } = await request.json()
     if (!patientId) {
@@ -93,12 +90,8 @@ export async function PATCH(
 
     return NextResponse.json({ success: true })
 
-  } catch (error: any) {
-    console.error('Error restoring patient:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to restore patient' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/admin/users/[uid]/patients', operation: 'restore' })
   }
 }
 
@@ -109,7 +102,7 @@ export async function DELETE(
   try {
     const { uid: userId } = await params
     const decoded = await verifyAdmin(request)
-    if (!decoded) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!decoded) return forbiddenResponse('Admin access required')
 
     const { patientId } = await request.json()
     if (!patientId) {
@@ -129,11 +122,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
 
-  } catch (error: any) {
-    console.error('Error archiving patient:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to archive patient' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/admin/users/[uid]/patients', operation: 'archive' })
   }
 }

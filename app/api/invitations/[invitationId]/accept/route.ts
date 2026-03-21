@@ -5,7 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
+import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 import { logger } from '@/lib/logger'
 import type { FamilyInvitation, FamilyMember } from '@/types/medical'
 
@@ -21,21 +23,16 @@ export async function POST(
 
     // Authenticate user
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Missing or invalid authorization header' },
-        { status: 401 }
-      )
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
+      return unauthorizedResponse()
     }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    const userId = authResult.userId
 
     // Get user profile
     const userDoc = await adminDb.collection('users').doc(userId).get()
     const userData = userDoc.data()
-    const userEmail = userData?.email || decodedToken.email || ''
+    const userEmail = userData?.email || ''
     const userName = userData?.displayName || userData?.name || 'Family Member'
 
     // Get invitation
@@ -223,11 +220,7 @@ export async function POST(
       data: createdMember,
       message: 'Invitation accepted successfully'
     })
-  } catch (error: any) {
-    console.error('Error accepting invitation:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to accept invitation' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/invitations/[invitationId]/accept', operation: 'accept' })
   }
 }

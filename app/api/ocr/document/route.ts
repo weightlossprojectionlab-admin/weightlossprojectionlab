@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { errorResponse } from '@/lib/api-response'
 import { extractTextFromImageWithGemini } from '@/lib/ocr-gemini'
 
 export const maxDuration = 60 // Allow up to 60 seconds for OCR processing
@@ -154,15 +155,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Document OCR] Error:', error)
-    logger.error('[Document OCR] Processing failed', error as Error)
-
-    return NextResponse.json(
-      {
-        error: 'Failed to process document image',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/ocr/document', operation: 'process' })
   }
 }

@@ -9,37 +9,23 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb as db } from '@/lib/firebase-admin'
+import { adminDb as db } from '@/lib/firebase-admin'
 import { callGeminiMealSafety } from '@/lib/gemini'
 import { logger } from '@/lib/logger'
 import type { AIHealthProfile, MealSafetyCheck } from '@/types'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
+import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 
 export async function POST(request: NextRequest) {
   try {
     // 1. Verify authentication
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Missing authentication token' },
-        { status: 401 }
-      )
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
+      return unauthorizedResponse()
     }
-
-    const token = authHeader.split('Bearer ')[1]
-
-    // Verify the Firebase ID token
-    let userId: string
-    try {
-      const decodedToken = await adminAuth.verifyIdToken(token)
-      userId = decodedToken.uid
-      logger.debug('[Meal Safety] Authenticated user', { uid: userId })
-    } catch (authError) {
-      logger.error('[Meal Safety] Auth failed', authError as Error)
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid authentication token' },
-        { status: 401 }
-      )
-    }
+    const userId = authResult.userId
+    logger.debug('[Meal Safety] Authenticated user', { uid: userId })
 
     // 2. Parse request body
     const body = await request.json()
@@ -117,14 +103,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('[Meal Safety] Check failed', error as Error)
-
-    return NextResponse.json(
-      {
-        error: 'Failed to check meal safety',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/ai/meal-safety', operation: 'check' })
   }
 }

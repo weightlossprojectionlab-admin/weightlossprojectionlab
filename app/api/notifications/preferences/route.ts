@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
 import { logger } from '@/lib/logger'
 import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 import type { NotificationPreferences } from '@/types/notifications'
@@ -12,13 +13,11 @@ export async function GET(request: NextRequest) {
   try {
     // Verify authentication
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
       return unauthorizedResponse()
     }
-
-    const idToken = authHeader.split('Bearer ')[1]
-    const decodedToken = await adminAuth.verifyIdToken(idToken)
-    const userId = decodedToken.uid
+    const userId = authResult.userId
 
     // Fetch preferences from Firestore
     const prefsDoc = await adminDb
@@ -88,13 +87,11 @@ export async function PATCH(request: NextRequest) {
   try {
     // Verify authentication
     const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    const authResult = await verifyAuthToken(authHeader)
+    if (!authResult) {
       return unauthorizedResponse()
     }
-
-    const idToken = authHeader.split('Bearer ')[1]
-    const decodedToken = await adminAuth.verifyIdToken(idToken)
-    const userId = decodedToken.uid
+    const userId = authResult.userId
 
     // Parse request body
     const updates = await request.json()

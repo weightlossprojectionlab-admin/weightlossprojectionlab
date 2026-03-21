@@ -10,6 +10,7 @@ import { doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { verifyAdmin } from '@/lib/auth-helpers'
 import type { UpdateDemoRequestInput } from '@/types/demo-requests'
+import { errorResponse, forbiddenResponse } from '@/lib/api-response'
 
 export async function PATCH(
   request: NextRequest,
@@ -19,10 +20,7 @@ export async function PATCH(
     // Verify admin authentication
     const adminCheck = await verifyAdmin(request)
     if (!adminCheck.isAdmin) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Admin access required.' },
-        { status: 403 }
-      )
+      return forbiddenResponse('Admin access required')
     }
 
     const { id } = await params
@@ -82,11 +80,7 @@ export async function PATCH(
       updated: updateData
     })
   } catch (error) {
-    console.error('Error updating demo request:', error)
-    return NextResponse.json(
-      { error: 'Failed to update demo request' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/admin/demo-requests/[id]', operation: 'update' })
   }
 }
 
@@ -98,10 +92,7 @@ export async function DELETE(
     // Verify admin authentication
     const adminCheck = await verifyAdmin(request)
     if (!adminCheck.isAdmin) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Admin access required.' },
-        { status: 403 }
-      )
+      return forbiddenResponse('Admin access required')
     }
 
     const { id } = await params
@@ -126,10 +117,6 @@ export async function DELETE(
       message: 'Demo request deleted successfully'
     })
   } catch (error) {
-    console.error('Error deleting demo request:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete demo request' },
-      { status: 500 }
-    )
+    return errorResponse(error, { route: '/api/admin/demo-requests/[id]', operation: 'delete' })
   }
 }

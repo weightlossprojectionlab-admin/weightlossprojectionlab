@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
 
 export async function GET(
   request: NextRequest,
@@ -18,7 +19,7 @@ export async function GET(
     const idToken = authHeader?.replace('Bearer ', '')
 
     if (!idToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return unauthorizedResponse()
     }
 
     const decodedToken = await adminAuth.verifyIdToken(idToken)
@@ -29,7 +30,7 @@ export async function GET(
     const isSuper = isSuperAdmin(adminEmail)
 
     if (!isSuper && adminData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return forbiddenResponse('Admin access required')
     }
 
     // Get all family members for this user
@@ -46,11 +47,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, familyMembers })
 
-  } catch (error: any) {
-    console.error('Error fetching family members:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch family members' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, { route: '/api/admin/users/[uid]/family-members', operation: 'fetch' })
   }
 }
