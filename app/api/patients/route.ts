@@ -7,27 +7,22 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { patientProfileFormSchema } from '@/lib/validations/medical'
 import type { PatientProfile } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
-import { errorResponse } from '@/lib/api-response'
+import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
 import { checkCaregiverEligibility } from '@/lib/caregiver-eligibility'
 
 // GET /api/patients - List all patients for the authenticated user
 export async function GET(request: NextRequest) {
   try {
-    // Extract and verify auth token
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      logger.warn('[API /patients GET] Missing or invalid Authorization header')
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    // Verify auth token
+    const auth = await verifyAuthToken(request.headers.get('Authorization'))
+    if (!auth) return unauthorizedResponse()
+    const { userId } = auth
 
     logger.debug('[API /patients GET] Fetching patients', { userId })
 
@@ -148,16 +143,10 @@ export async function GET(request: NextRequest) {
 // POST /api/patients - Create a new patient profile
 export async function POST(request: NextRequest) {
   try {
-    // Extract and verify auth token
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      logger.warn('[API /patients POST] Missing or invalid Authorization header')
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    // Verify auth token
+    const auth = await verifyAuthToken(request.headers.get('Authorization'))
+    if (!auth) return unauthorizedResponse()
+    const { userId } = auth
 
     // Parse and validate request body
     const body = await request.json()

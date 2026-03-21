@@ -3,7 +3,7 @@ import { assertPatientAccess } from '@/lib/rbac-middleware'
 import { healthReportOperations } from '@/lib/provider-operations'
 import { logger } from '@/lib/logger'
 import { adminDb } from '@/lib/firebase-admin'
-import { errorResponse } from '@/lib/api-response'
+import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import { Timestamp } from 'firebase-admin/firestore'
 import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
 
@@ -142,13 +142,7 @@ export async function POST(
     const patientDoc = await patientRef.get()
 
     if (!patientDoc.exists) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Patient not found'
-        },
-        { status: 404 }
-      )
+      return notFoundResponse('Patient')
     }
 
     const patientData = patientDoc.data()

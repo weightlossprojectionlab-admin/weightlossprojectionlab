@@ -391,11 +391,10 @@ ${emailBody}
       })
 
     } catch (emailError: any) {
-      logger.error('[Send Report] Email send failed', emailError as Error)
-      return NextResponse.json(
-        { error: 'Failed to send email. Please try again later.' },
-        { status: 500 }
-      )
+      return errorResponse(emailError, {
+        route: '/api/patients/[patientId]/send-report',
+        operation: 'send-email'
+      })
     }
 
     // Log communication to providerCommunications collection

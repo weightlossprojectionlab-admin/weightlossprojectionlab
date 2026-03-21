@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { removeUndefinedValues } from '@/lib/firestore-helpers'
 import { logger } from '@/lib/logger'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
+import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import type { PatientMedication, MedicationImage, MedicationAuditLog, MedicationFieldChange } from '@/types/medical'
 import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
 
@@ -38,7 +39,7 @@ export async function PATCH(
 
     const medicationDoc = await medicationRef.get()
     if (!medicationDoc.exists) {
-      return NextResponse.json({ error: 'Medication not found' }, { status: 404 })
+      return notFoundResponse('Medication')
     }
 
     const oldMedication = medicationDoc.data() as PatientMedication
@@ -207,12 +208,11 @@ export async function PATCH(
     }
 
     return NextResponse.json({ success: true, data: medication })
-  } catch (error: any) {
-    logger.error('[Medications API] Error updating medication', error as Error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to update medication', details: error.message },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/medications/[medicationId]',
+      operation: 'update'
+    })
   }
 }
 
@@ -307,11 +307,10 @@ export async function DELETE(
     }
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
-    logger.error('[Medications API] Error deleting medication', error as Error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to delete medication', details: error.message },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/medications/[medicationId]',
+      operation: 'delete'
+    })
   }
 }

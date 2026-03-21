@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
+import { errorResponse } from '@/lib/api-response'
 import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
 import type { HealthEpisode, EpisodeType, EpisodeSensitivity } from '@/types/health-episodes'
 import { v4 as uuidv4 } from 'uuid'
@@ -50,9 +51,11 @@ export async function GET(
 
     return NextResponse.json({ success: true, episodes })
 
-  } catch (error: any) {
-    logger.error('[API health-episodes GET]', error as Error)
-    return NextResponse.json({ error: error.message || 'Failed to fetch episodes' }, { status: 500 })
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/health-episodes',
+      operation: 'list'
+    })
   }
 }
 
@@ -210,8 +213,10 @@ export async function POST(
 
     return NextResponse.json({ success: true, episode: { id: episodeId, ...episode } }, { status: 201 })
 
-  } catch (error: any) {
-    logger.error('[API health-episodes POST]', error as Error)
-    return NextResponse.json({ error: error.message || 'Failed to create episode' }, { status: 500 })
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/health-episodes',
+      operation: 'create'
+    })
   }
 }

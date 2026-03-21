@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { removeUndefinedValues } from '@/lib/firestore-helpers'
 import { logger } from '@/lib/logger'
-import { authorizePatientAccess, assertPatientAccess } from '@/lib/rbac-middleware'
+import { assertPatientAccess } from '@/lib/rbac-middleware'
+import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import type { PatientMedication } from '@/types/medical'
 import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
 
@@ -17,24 +18,16 @@ export async function GET(
   try {
     const { patientId } = await params
 
-    // Check patient access and get authorization
-    const authResult = await authorizePatientAccess(request, patientId, 'viewMedicalRecords')
+    // Check patient access with RBAC
+    const authResult = await assertPatientAccess(request, patientId, 'viewMedicalRecords')
+    if (authResult instanceof Response) return authResult
 
-    // If authResult is a Response (error), return it
-    if (authResult instanceof Response) {
-      return authResult
-    }
-
-    // Get the patient owner's userId for querying
-    const accessInfo = await assertPatientAccess(request, patientId, 'viewMedicalRecords')
-    if (accessInfo instanceof Response) {
-      return accessInfo
-    }
+    const { ownerUserId } = authResult
 
     // Fetch medications from owner's patient subcollection
     const medicationsSnapshot = await adminDb
       .collection('users')
-      .doc(accessInfo.ownerUserId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('medications')
@@ -54,12 +47,11 @@ export async function GET(
     logger.debug('[Medications API] Fetched medications', { patientId, count: medications.length })
 
     return NextResponse.json({ success: true, data: medications })
-  } catch (error: any) {
-    logger.error('[Medications API] Error fetching medications', error as Error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch medications', details: error.message },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/medications',
+      operation: 'list'
+    })
   }
 }
 
@@ -74,19 +66,11 @@ export async function POST(
   try {
     const { patientId } = await params
 
-    // Check patient access and get authorization
-    const authResult = await authorizePatientAccess(request, patientId, 'editMedications')
+    // Check patient access with RBAC
+    const authResult = await assertPatientAccess(request, patientId, 'editMedications')
+    if (authResult instanceof Response) return authResult
 
-    // If authResult is a Response (error), return it
-    if (authResult instanceof Response) {
-      return authResult
-    }
-
-    // Get the patient owner's userId for querying
-    const accessInfo = await assertPatientAccess(request, patientId, 'editMedications')
-    if (accessInfo instanceof Response) {
-      return accessInfo
-    }
+    const { userId, ownerUserId } = authResult
 
     // Parse request body
     const medicationData = await request.json()
@@ -94,20 +78,20 @@ export async function POST(
     // Verify patient exists in owner's collection
     const patientDoc = await adminDb
       .collection('users')
-      .doc(accessInfo.ownerUserId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .get()
 
     if (!patientDoc.exists) {
-      return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+      return notFoundResponse('Patient')
     }
 
     // Check for duplicate medications
     // A duplicate is defined as: same name AND same strength
     const existingMedicationsSnapshot = await adminDb
       .collection('users')
-      .doc(accessInfo.ownerUserId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('medications')
@@ -139,7 +123,7 @@ export async function POST(
     // Create medication document in owner's patient subcollection
     const medicationRef = adminDb
       .collection('users')
-      .doc(accessInfo.ownerUserId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('medications')
@@ -151,10 +135,10 @@ export async function POST(
     const medicationData_full = {
       id: medicationRef.id,
       patientId,
-      userId: accessInfo.ownerUserId,
+      userId: ownerUserId,
       ...medicationData,
       addedAt: now.toISOString(),
-      addedBy: accessInfo.userId,
+      addedBy: userId,
       lastModified: now.toISOString()
     }
 
@@ -168,7 +152,7 @@ export async function POST(
     // Trigger notification to family members
     try {
       // Get patient name and user name for notification
-      const userDoc = await adminDb.collection('users').doc(accessInfo.userId).get()
+      const userDoc = await adminDb.collection('users').doc(userId).get()
       const userName = userDoc.exists ? userDoc.data()?.name || userDoc.data()?.email : 'Unknown User'
 
       await sendNotificationToFamilyMembers({
@@ -178,11 +162,11 @@ export async function POST(
         priority: 'normal',
         title: 'New Medication Added',
         message: `${userName} added a new medication`,
-        excludeUserId: accessInfo.userId,
+        excludeUserId: userId,
         metadata: {
           medicationId: medicationRef.id,
           actionBy: userName,
-          actionByUserId: accessInfo.userId,
+          actionByUserId: userId,
           patientName: patientDoc.data()?.name || 'Patient',
           medicationName: medication.name,
           strength: medication.strength,
@@ -198,11 +182,10 @@ export async function POST(
     }
 
     return NextResponse.json({ success: true, data: medication }, { status: 201 })
-  } catch (error: any) {
-    logger.error('[Medications API] Error adding medication', error as Error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to add medication', details: error.message },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/medications',
+      operation: 'create'
+    })
   }
 }

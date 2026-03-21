@@ -12,6 +12,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { patientProfileSchema } from '@/lib/validations/medical'
 import { assertPatientAccess, authorizePatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { PatientProfile, AuthorizationResult } from '@/types/medical'
 import { mergePatientPreferences } from '@/lib/services/patient-preferences'
@@ -58,10 +59,7 @@ export async function GET(
 
     if (!patientDoc.exists) {
       logger.warn('[API /patients/[id] GET] Patient not found', { userId, ownerUserId, patientId })
-      return NextResponse.json(
-        { success: false, error: 'Patient not found' },
-        { status: 404 }
-      )
+      return notFoundResponse('Patient')
     }
 
     const patientData = patientDoc.data()
@@ -77,16 +75,11 @@ export async function GET(
       data: patient
     })
 
-  } catch (error: any) {
-    logger.error('[API /patients/[id] GET] Error fetching patient', error, {
-      patientId: await params.then(p => p.patientId),
-      errorMessage: error.message,
-      errorStack: error.stack
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]',
+      operation: 'get'
     })
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch patient', details: error.stack },
-      { status: 500 }
-    )
   }
 }
 
@@ -134,10 +127,7 @@ export async function PUT(
 
     if (!patientDoc.exists) {
       logger.warn('[API /patients/[id] PUT] Patient not found', { userId, ownerUserId, patientId })
-      return NextResponse.json(
-        { success: false, error: 'Patient not found' },
-        { status: 404 }
-      )
+      return notFoundResponse('Patient')
     }
 
     // Merge updates with existing data (using service for DRY)
@@ -208,12 +198,11 @@ export async function PUT(
       data: { ...existingPatient, ...updateData, id: patientId }
     })
 
-  } catch (error: any) {
-    logger.error('[API /patients/[id] PUT] Error updating patient', error as Error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update patient' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]',
+      operation: 'update'
+    })
   }
 }
 
@@ -259,19 +248,13 @@ export async function DELETE(
 
     if (!patientDoc.exists) {
       logger.warn('[API /patients/[id] DELETE] Patient not found', { userId, ownerUserId, patientId })
-      return NextResponse.json(
-        { success: false, error: 'Patient not found' },
-        { status: 404 }
-      )
+      return notFoundResponse('Patient')
     }
 
     const patientData = patientDoc.data()
     if (!patientData) {
       logger.error('[API /patients/[id] DELETE] Patient document exists but has no data', undefined, { userId, ownerUserId, patientId })
-      return NextResponse.json(
-        { success: false, error: 'Patient data not found' },
-        { status: 404 }
-      )
+      return notFoundResponse('Patient data')
     }
 
     // Parse request body for deletion reason (optional but recommended)
@@ -344,11 +327,10 @@ export async function DELETE(
       message: 'Patient archived successfully. Data will be retained for 30 days before permanent deletion.'
     })
 
-  } catch (error: any) {
-    logger.error('[API /patients/[id] DELETE] Error deleting patient', error as Error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to delete patient' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]',
+      operation: 'delete'
+    })
   }
 }

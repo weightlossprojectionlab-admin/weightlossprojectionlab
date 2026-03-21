@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
+import { errorResponse } from '@/lib/api-response'
 import { logger } from '@/lib/logger'
 import {
   generateHealthSummary,
@@ -105,15 +106,10 @@ export async function POST(
     })
 
   } catch (error: any) {
-    logger.error('[AI Health Report] Error generating report', error as Error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to generate health report',
-        details: error.message
-      },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/ai-health-report',
+      operation: 'generate'
+    })
   }
 }
 

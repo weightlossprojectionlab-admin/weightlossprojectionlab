@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { errorResponse, forbiddenResponse, notFoundResponse } from '@/lib/api-response'
 import { createNotification } from '@/lib/notification-service'
 import type { VitalSign, VitalModification } from '@/types/medical'
 
@@ -35,10 +36,7 @@ export async function POST(
       familyRole === 'caregiver'
 
     if (!canApprove) {
-      return NextResponse.json(
-        { error: 'Only account owners, co-admins, or caregivers can approve weight entries' },
-        { status: 403 }
-      )
+      return forbiddenResponse('Only account owners, co-admins, or caregivers can approve weight entries')
     }
 
     // Parse body
@@ -63,7 +61,7 @@ export async function POST(
 
     const vitalDoc = await vitalRef.get()
     if (!vitalDoc.exists) {
-      return NextResponse.json({ error: 'Vital not found' }, { status: 404 })
+      return notFoundResponse('Vital')
     }
 
     const vital = vitalDoc.data() as VitalSign
@@ -188,10 +186,9 @@ export async function POST(
         : 'Weight entry rejected'
     })
   } catch (error) {
-    logger.error('[API /vitals/approve] Error', error as Error)
-    return NextResponse.json(
-      { error: 'Failed to process approval' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/vitals/[vitalId]/approve',
+      operation: 'approve'
+    })
   }
 }

@@ -11,6 +11,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { vitalSignFormSchema } from '@/lib/validations/medical'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { VitalSign } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
@@ -115,12 +116,11 @@ export async function GET(
       data: vitals
     })
 
-  } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals GET] Error fetching vitals', error as Error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch vitals' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/vitals',
+      operation: 'list'
+    })
   }
 }
 
@@ -167,10 +167,7 @@ export async function POST(
     // Get patient data for date validation
     const patientDoc = await patientRef.get()
     if (!patientDoc.exists) {
-      return NextResponse.json(
-        { success: false, error: 'Patient not found' },
-        { status: 404 }
-      )
+      return notFoundResponse('Patient')
     }
 
     const patientData = patientDoc.data()
@@ -445,12 +442,11 @@ export async function POST(
       data: newVital
     }, { status: 201 })
 
-  } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals POST] Error logging vital sign', error as Error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to log vital sign' },
-      { status: 500 }
-    )
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/vitals',
+      operation: 'create'
+    })
   }
 }
 

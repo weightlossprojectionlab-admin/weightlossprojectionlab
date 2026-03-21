@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { VitalSign, VitalModification } from '@/types/medical'
 
@@ -55,10 +56,7 @@ export async function GET(
     const vitalDoc = await vitalRef.get()
 
     if (!vitalDoc.exists) {
-      return NextResponse.json(
-        { success: false, error: 'Vital sign not found' },
-        { status: 404 }
-      )
+      return notFoundResponse('Vital sign')
     }
 
     const vital: VitalSign = {
@@ -73,11 +71,10 @@ export async function GET(
     })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals/[vitalId] GET] Error fetching vital', error as Error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch vital sign' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/vitals/[vitalId]',
+      operation: 'fetch'
+    })
   }
 }
 
@@ -126,10 +123,7 @@ export async function PUT(
     const vitalDoc = await vitalRef.get()
 
     if (!vitalDoc.exists) {
-      return NextResponse.json(
-        { success: false, error: 'Vital sign not found' },
-        { status: 404 }
-      )
+      return notFoundResponse('Vital sign')
     }
 
     const existingVital = vitalDoc.data() as VitalSign
@@ -191,11 +185,10 @@ export async function PUT(
     })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals/[vitalId] PUT] Error updating vital', error as Error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update vital sign' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/vitals/[vitalId]',
+      operation: 'update'
+    })
   }
 }
 
@@ -240,10 +233,7 @@ export async function DELETE(
     const vitalDoc = await vitalRef.get()
 
     if (!vitalDoc.exists) {
-      return NextResponse.json(
-        { success: false, error: 'Vital sign not found' },
-        { status: 404 }
-      )
+      return notFoundResponse('Vital sign')
     }
 
     // Delete the vital sign
@@ -262,10 +252,9 @@ export async function DELETE(
     })
 
   } catch (error: any) {
-    logger.error('[API /patients/[id]/vitals/[vitalId] DELETE] Error deleting vital', error as Error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to delete vital sign' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/vitals/[vitalId]',
+      operation: 'delete'
+    })
   }
 }

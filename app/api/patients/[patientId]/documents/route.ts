@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { removeUndefinedValues } from '@/lib/firestore-helpers'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import type { PatientDocument } from '@/types/medical'
 import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
 import { processDocumentOCR } from '@/lib/document-ocr-pipeline'
@@ -31,7 +32,7 @@ export async function GET(
       .get()
 
     if (!patientDoc.exists) {
-      return NextResponse.json({ error: 'Family member not found' }, { status: 404 })
+      return notFoundResponse('Patient')
     }
 
     // Fetch documents for this patient
@@ -51,11 +52,10 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: documents })
   } catch (error) {
-    logger.error('[Documents API] Error fetching documents', error as Error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch documents' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/documents',
+      operation: 'list'
+    })
   }
 }
 
@@ -83,7 +83,7 @@ export async function POST(
       .get()
 
     if (!patientDoc.exists) {
-      return NextResponse.json({ error: 'Family member not found' }, { status: 404 })
+      return notFoundResponse('Patient')
     }
 
     const body = await request.json()
@@ -169,14 +169,10 @@ export async function POST(
         ...document
       }
     })
-  } catch (error: any) {
-    logger.error('[Documents API] Error uploading document', error as Error, {
-      message: error?.message,
-      code: error?.code
+  } catch (error) {
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/documents',
+      operation: 'upload'
     })
-    return NextResponse.json(
-      { success: false, error: 'Failed to upload document', details: error?.message },
-      { status: 500 }
-    )
   }
 }

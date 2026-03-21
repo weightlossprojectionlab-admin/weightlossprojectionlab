@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
-import { errorResponse } from '@/lib/api-response'
+import { adminDb } from '@/lib/firebase-admin'
+import { errorResponse, forbiddenResponse, notFoundResponse } from '@/lib/api-response'
+import { assertPatientAccess } from '@/lib/rbac-middleware'
 
 /**
  * One-time API endpoint to fix missing startWeight for a patient
@@ -11,35 +12,27 @@ export async function POST(
   { params }: { params: Promise<{ patientId: string }> }
 ) {
   if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json(
-      { error: 'Not available in production' },
-      { status: 403 }
-    );
+    return forbiddenResponse('Not available in production')
   }
 
   try {
     const { patientId } = await params
 
-    // Verify authentication
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing or invalid authorization header' }, { status: 401 })
-    }
-
-    const idToken = authHeader.split('Bearer ')[1]
-    const decodedToken = await verifyIdToken(idToken)
-    const userId = decodedToken.uid
+    // Verify authentication and patient access
+    const authResult = await assertPatientAccess(request, patientId)
+    if (authResult instanceof Response) return authResult
+    const { ownerUserId } = authResult
 
     // Get patient document
     const patientDoc = await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .get()
 
     if (!patientDoc.exists) {
-      return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+      return notFoundResponse('Patient')
     }
 
     const patientData = patientDoc.data()
@@ -53,7 +46,7 @@ export async function POST(
       // For pets, check vitals collection instead of weightLogs
       const vitalsSnapshot = await adminDb
         .collection('users')
-        .doc(userId)
+        .doc(ownerUserId)
         .collection('patients')
         .doc(patientId)
         .collection('vitals')
@@ -71,7 +64,7 @@ export async function POST(
       // 1. Check vitals collection (primary — where QuickWeightModal and VitalsWizard write)
       const vitalsSnapshot = await adminDb
         .collection('users')
-        .doc(userId)
+        .doc(ownerUserId)
         .collection('patients')
         .doc(patientId)
         .collection('vitals')
@@ -95,7 +88,7 @@ export async function POST(
       if (!firstWeight) {
         const weightLogsSnapshot = await adminDb
           .collection('users')
-          .doc(userId)
+          .doc(ownerUserId)
           .collection('patients')
           .doc(patientId)
           .collection('weightLogs')
@@ -119,10 +112,7 @@ export async function POST(
 
     // If still no weight found, return error
     if (!firstWeight) {
-      return NextResponse.json({
-        error: `No weight data found for this ${isPet ? 'pet' : 'patient'}. Please record their first weight measurement.`,
-        isPet
-      }, { status: 404 })
+      return notFoundResponse(`Weight data for this ${isPet ? 'pet' : 'patient'}`)
     }
 
     // Only update if current startWeight is missing or unrealistic
@@ -140,7 +130,7 @@ export async function POST(
     // Update the goals.startWeight
     await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .update({

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
-import { errorResponse } from '@/lib/api-response'
+import { errorResponse, notFoundResponse } from '@/lib/api-response'
 
 export async function PATCH(
   request: NextRequest,
@@ -29,7 +29,7 @@ export async function PATCH(
 
     const docSnap = await docRef.get()
     if (!docSnap.exists) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+      return notFoundResponse('Document')
     }
 
     // Parse updates
@@ -82,7 +82,7 @@ export async function DELETE(
       .get()
 
     if (!patientDoc.exists) {
-      return NextResponse.json({ error: 'Family member not found' }, { status: 404 })
+      return notFoundResponse('Family member')
     }
 
     // Delete the document

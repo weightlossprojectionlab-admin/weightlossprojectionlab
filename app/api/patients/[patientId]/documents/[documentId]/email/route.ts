@@ -5,8 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
 import { sendEmail } from '@/lib/email-service'
+import { assertPatientAccess } from '@/lib/rbac-middleware'
+import { errorResponse, validationError, notFoundResponse } from '@/lib/api-response'
 
 export async function POST(
   request: NextRequest,
@@ -18,29 +20,18 @@ export async function POST(
     const { email } = body
 
     if (!email) {
-      return NextResponse.json(
-        { success: false, error: 'Email address is required' },
-        { status: 400 }
-      )
+      return validationError('Email address is required', { email: 'Required' })
     }
 
-    // Authenticate user
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.substring(7)
-    const decodedToken = await adminAuth.verifyIdToken(token)
-    const userId = decodedToken.uid
+    // Authenticate user and verify patient access
+    const authResult = await assertPatientAccess(request, patientId)
+    if (authResult instanceof Response) return authResult
+    const { ownerUserId } = authResult
 
     // Get document from Firestore
     const docSnap = await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .collection('documents')
@@ -48,25 +39,19 @@ export async function POST(
       .get()
 
     if (!docSnap.exists) {
-      return NextResponse.json(
-        { success: false, error: 'Document not found' },
-        { status: 404 }
-      )
+      return notFoundResponse('Document')
     }
 
     const documentData = docSnap.data()
 
     if (!documentData) {
-      return NextResponse.json(
-        { success: false, error: 'Document data not found' },
-        { status: 404 }
-      )
+      return notFoundResponse('Document data')
     }
 
     // Get patient info
     const patientSnap = await adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
       .doc(patientId)
       .get()
@@ -119,10 +104,9 @@ export async function POST(
     })
 
   } catch (error: any) {
-    console.error('Error sending document email:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to send email' },
-      { status: 500 }
-    )
+    return errorResponse(error, {
+      route: '/api/patients/[patientId]/documents/[documentId]/email',
+      operation: 'send'
+    })
   }
 }
