@@ -11,10 +11,51 @@ export const dynamic = 'force-dynamic'
 export const dynamicParams = true
 
 export const metadata: Metadata = {
-  title: 'Wellness Projection Lab',
-  description: 'AI-powered wellness tracking with comprehensive health, nutrition, and fitness management',
+  title: {
+    default: 'Wellness Projection Lab — AI-Powered Family Health Tracking',
+    template: '%s | Wellness Projection Lab',
+  },
+  description: 'Track meals, vitals, medications, and weight for your entire family with AI-powered insights. From newborns to seniors — one platform for every life stage.',
   manifest: '/manifest.json',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.weightlossprojectionlab.com'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'Wellness Projection Lab',
+    title: 'Wellness Projection Lab — AI-Powered Family Health Tracking',
+    description: 'Track meals, vitals, medications, and weight for your entire family with AI-powered insights. From newborns to seniors — one platform for every life stage.',
+    images: [
+      {
+        url: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+        width: 1200,
+        height: 630,
+        alt: 'Wellness Projection Lab — Family Health Dashboard',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Wellness Projection Lab — AI-Powered Family Health Tracking',
+    description: 'Track meals, vitals, medications, and weight for your entire family with AI-powered insights.',
+    images: ['/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
+  },
+  keywords: [
+    'health tracking',
+    'family health',
+    'meal tracking',
+    'weight loss',
+    'vitals monitoring',
+    'medication management',
+    'AI health',
+    'caregiver app',
+    'newborn tracking',
+    'senior care',
+    'wellness app',
+    'health reports',
+  ],
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
@@ -27,7 +68,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default', // Light status bar for light mode
+    statusBarStyle: 'default',
     title: 'WPL',
   },
   other: {
@@ -57,6 +98,39 @@ export default function RootLayout({
         <meta name="color-scheme" content="light only" />
         <meta name="msvalidate.01" content="4AE02DCF3B27464702CC151D52D82EC7" />
         <meta name="p-domain_verify" content="b3c9f7e54cc0c3a7f9f0fb503a5859233" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'SoftwareApplication',
+              name: 'Wellness Projection Lab',
+              applicationCategory: 'HealthApplication',
+              operatingSystem: 'Web',
+              description: 'AI-powered family health tracking platform. Track meals, vitals, medications, and weight from newborns to seniors.',
+              url: 'https://www.weightlossprojectionlab.com',
+              offers: {
+                '@type': 'AggregateOffer',
+                lowPrice: '0',
+                highPrice: '14.99',
+                priceCurrency: 'USD',
+                offerCount: '4',
+              },
+              featureList: [
+                'AI meal photo analysis',
+                'Weight loss projections',
+                'Family health dashboard',
+                'Vitals monitoring',
+                'Medication management',
+                'Newborn and pediatric tracking',
+                'Senior care coordination',
+                'AI health reports',
+                'Smart shopping lists',
+                'Medical document OCR',
+              ],
+            }),
+          }}
+        />
         {/* Resource hints for third-party origins */}
         <link rel="preconnect" href="https://apis.google.com" />
         <link rel="preconnect" href="https://weightlossprojectionlab-8b284.firebaseapp.com" />
