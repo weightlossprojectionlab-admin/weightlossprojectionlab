@@ -13,6 +13,14 @@
     {
       "path": "/api/cron/check-expired-trials",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/nudges",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/duty-notifications",
+      "schedule": "0 * * * *"
     }
   ]
 }
