@@ -55,6 +55,36 @@ export default function FamilySetupPage() {
         <li>Healthcare provider information</li>
       </ul>
 
+      <h3>Adding Newborns &amp; Infants</h3>
+      <p>
+        WPL fully supports adding newborns, infants, and young children as family members. The system automatically detects the life stage based on date of birth:
+      </p>
+      <ul>
+        <li><strong>Newborn</strong> (0-1 month): Age displayed in days/weeks. Weight defaults to ounces (oz).</li>
+        <li><strong>Infant</strong> (1-12 months): Age displayed in months. Pediatric health conditions shown (Jaundice, Colic, Reflux, etc.).</li>
+        <li><strong>Toddler</strong> (1-3 years): Age displayed in years and months. Age-appropriate conditions (Asthma, Allergies, Ear Infections, etc.).</li>
+        <li><strong>Child</strong> (3-12 years): Standard age display with pediatric conditions.</li>
+      </ul>
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 my-4 rounded-r-lg">
+        <p className="font-semibold text-blue-900 mb-1">Note</p>
+        <p className="text-blue-800 text-sm m-0">
+          Calorie and dietary recommendations are not provided for newborns and infants. Always follow your pediatrician&apos;s guidance for feeding and nutrition.
+        </p>
+      </div>
+
+      <h3>Adding Pets</h3>
+      <p>
+        Pets are added through the same onboarding wizard. Select &quot;Pet&quot; as the member type, then choose species and breed. The system recognizes species-specific life stages:
+      </p>
+      <ul>
+        <li><strong>Puppy/Kitten/Foal/Chick/Kit</strong>: Species-specific young labels with vaccination and growth monitoring notices.</li>
+        <li><strong>Adult</strong>: Standard care tracking.</li>
+        <li><strong>Senior</strong>: Reminders about more frequent vet checkups and adjusted nutrition needs.</li>
+      </ul>
+      <p>
+        Small pets (hamsters, fish, birds) default to grams (g) for weight entry.
+      </p>
+
       <h2 id="roles">User Roles & Permissions</h2>
       <p>WPL uses role-based access control to protect privacy:</p>
 

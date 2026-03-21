@@ -296,23 +296,28 @@ export default function HouseholdDutiesPage() {
 
       <h2 id="viewing-duties">Viewing & Filtering Duties</h2>
 
-      <h3>Status Tabs</h3>
+      <p>The Household Duties page has five tabs for different views:</p>
+
       <div className="space-y-3 my-4">
         <div className="border border-gray-200 rounded-lg p-3">
-          <p className="font-semibold text-gray-900 mb-1">All</p>
-          <p className="text-sm text-gray-600 m-0">Every duty in the household regardless of status</p>
+          <p className="font-semibold text-gray-900 mb-1">Duties</p>
+          <p className="text-sm text-gray-600 m-0">Full duty list with status filtering (All, Pending, In Progress, Completed), quick actions, and stats panel.</p>
         </div>
         <div className="border border-gray-200 rounded-lg p-3">
-          <p className="font-semibold text-gray-900 mb-1">Pending</p>
-          <p className="text-sm text-gray-600 m-0">Duties not yet started</p>
+          <p className="font-semibold text-gray-900 mb-1">Caregivers</p>
+          <p className="text-sm text-gray-600 m-0">Duties organized by caregiver. See workload indicators (light/moderate/heavy), completion rates, overdue counts, and unassigned duties with quick-assign dropdown.</p>
         </div>
         <div className="border border-gray-200 rounded-lg p-3">
-          <p className="font-semibold text-gray-900 mb-1">In Progress</p>
-          <p className="text-sm text-gray-600 m-0">Duties currently being worked on</p>
+          <p className="font-semibold text-gray-900 mb-1">Calendar</p>
+          <p className="text-sm text-gray-600 m-0">Weekly or monthly calendar view. Duties appear as color-coded blocks by category. Click any day to see its duties. Overdue duties are highlighted in red.</p>
         </div>
         <div className="border border-gray-200 rounded-lg p-3">
-          <p className="font-semibold text-gray-900 mb-1">Completed</p>
-          <p className="text-sm text-gray-600 m-0">Finished duties and their history</p>
+          <p className="font-semibold text-gray-900 mb-1">Analytics</p>
+          <p className="text-sm text-gray-600 m-0">Completion rate ring, category breakdown chart, caregiver performance leaderboard, and weekly completion trends over the last 4 weeks.</p>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-3">
+          <p className="font-semibold text-gray-900 mb-1">Templates</p>
+          <p className="text-sm text-gray-600 m-0">Pre-built duty bundles for quick setup: New Household, Pet Care Basics, Elderly Care Package, and Newborn Care. Apply a bundle to create multiple duties at once.</p>
         </div>
       </div>
 
@@ -354,6 +359,73 @@ export default function HouseholdDutiesPage() {
         <li>Every completion is logged with timestamp and user</li>
         <li>Completion history is visible in the duty detail</li>
         <li>Account owner can review all duty activity</li>
+      </ul>
+
+      <h2 id="templates">Duty Template Bundles</h2>
+      <p>
+        Templates let you quickly set up common duty configurations without creating each one individually.
+      </p>
+
+      <h3>Available Bundles</h3>
+      <div className="grid md:grid-cols-2 gap-4 my-6">
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h4 className="font-semibold text-gray-900 mb-2">🏠 New Household Setup</h4>
+          <p className="text-sm text-gray-600 m-0">6 essential duties: kitchen cleaning, bathroom cleaning, laundry, grocery shopping, dinner prep, and living area cleaning.</p>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h4 className="font-semibold text-gray-900 mb-2">🐾 Pet Care Basics</h4>
+          <p className="text-sm text-gray-600 m-0">5 duties: morning and evening feeding, daily walk, litter box cleaning, and weekly grooming.</p>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h4 className="font-semibold text-gray-900 mb-2">👴 Elderly Care Package</h4>
+          <p className="text-sm text-gray-600 m-0">6 duties: bathing and dressing assistance, medication pickup, appointment transport, meal prep, and grooming help.</p>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h4 className="font-semibold text-gray-900 mb-2">👶 Newborn Care</h4>
+          <p className="text-sm text-gray-600 m-0">6 duties: bottle prep, baby laundry, sterilizing, nursery cleaning, baby supply shopping, and pediatrician transport.</p>
+        </div>
+      </div>
+
+      <h3>Applying a Bundle</h3>
+      <ol>
+        <li>Go to the <strong>Templates</strong> tab on the Household Duties page</li>
+        <li>Click <strong>View Duties</strong> to preview what will be created</li>
+        <li>Click <strong>Apply Bundle</strong> to create all duties at once</li>
+        <li>Customize individual duties afterward (assign caregivers, adjust schedules)</li>
+      </ol>
+
+      <h2 id="caregiver-dashboard">Caregiver Dashboard</h2>
+      <p>
+        The <strong>Caregivers</strong> tab shows duties organized by who is responsible:
+      </p>
+      <ul>
+        <li><strong>Workload indicator:</strong> Each caregiver card shows a light/moderate/heavy badge based on assigned duty count and estimated hours</li>
+        <li><strong>Completion rate:</strong> Percentage of assigned duties completed</li>
+        <li><strong>Expandable detail:</strong> Click a caregiver card to see all their assigned duties</li>
+        <li><strong>Unassigned section:</strong> Duties not yet assigned to anyone, with a quick-assign dropdown to delegate immediately</li>
+      </ul>
+
+      <h2 id="calendar">Calendar View</h2>
+      <p>
+        The <strong>Calendar</strong> tab gives a visual schedule of when duties are due:
+      </p>
+      <ul>
+        <li><strong>Week view:</strong> Shows duty names as colored blocks on each day</li>
+        <li><strong>Month view:</strong> Shows colored dots per day with duty count</li>
+        <li><strong>Click any day</strong> to see a detailed list of that day's duties</li>
+        <li><strong>Overdue indicator:</strong> Red dot on days with overdue duties</li>
+        <li><strong>Today button:</strong> Jump back to the current week/month</li>
+      </ul>
+
+      <h2 id="analytics">Duty Analytics</h2>
+      <p>
+        The <strong>Analytics</strong> tab provides insights into duty management:
+      </p>
+      <ul>
+        <li><strong>Completion rate ring:</strong> Visual progress showing overall completion percentage</li>
+        <li><strong>Category breakdown:</strong> Bar chart showing duty distribution by type</li>
+        <li><strong>Caregiver leaderboard:</strong> Ranked list of caregivers by completion count and rate</li>
+        <li><strong>Weekly trend:</strong> Bar chart showing completions over the last 4 weeks</li>
       </ul>
 
       <h2 id="tips">Household Duties Tips</h2>

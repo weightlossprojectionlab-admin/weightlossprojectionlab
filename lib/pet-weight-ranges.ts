@@ -283,7 +283,7 @@ export function getDefaultWeightUnit(species?: string, breed?: string): 'lbs' | 
  */
 export function evaluateWeight(
   weight: number,
-  weightUnit: 'lbs' | 'kg' | 'g',
+  weightUnit: 'lbs' | 'kg' | 'g' | 'oz',
   species?: string,
   breed?: string
 ): {
@@ -306,6 +306,8 @@ export function evaluateWeight(
     weightInLbs = weight * 2.20462
   } else if (weightUnit === 'g') {
     weightInLbs = weight * 0.00220462
+  } else if (weightUnit === 'oz') {
+    weightInLbs = weight / 16
   } else {
     weightInLbs = weight
   }

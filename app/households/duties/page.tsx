@@ -26,8 +26,23 @@ import { logger } from '@/lib/logger'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DutyListView } from '@/components/household/DutyListView'
+import { CaregiverDutyDashboard } from '@/components/household/CaregiverDutyDashboard'
+import { DutyCalendarView } from '@/components/household/DutyCalendarView'
+import { DutyAnalytics } from '@/components/household/DutyAnalytics'
+import { DutyTemplatesManager } from '@/components/household/DutyTemplatesManager'
+import { useHouseholdDuties } from '@/hooks/useHouseholdDuties'
 import type { Household } from '@/types/household'
 import type { CaregiverProfile } from '@/types/caregiver'
+
+type DutyTab = 'list' | 'caregivers' | 'calendar' | 'analytics' | 'templates'
+
+const DUTY_TABS: { id: DutyTab; label: string }[] = [
+  { id: 'list', label: 'Duties' },
+  { id: 'caregivers', label: 'Caregivers' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'analytics', label: 'Analytics' },
+  { id: 'templates', label: 'Templates' },
+]
 
 export default function HouseholdDutiesPage() {
   return (
@@ -49,6 +64,19 @@ function HouseholdDutiesContent() {
   const [caregivers, setCaregivers] = useState<CaregiverProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<DutyTab>('list')
+
+  // Shared duties hook for non-list tabs
+  const {
+    duties: allDuties,
+    stats,
+    refetch: refetchDuties,
+    createDuty,
+    updateDuty,
+  } = useHouseholdDuties({
+    householdId: selectedHouseholdId || '',
+    autoFetch: !!selectedHouseholdId && activeTab !== 'list',
+  })
 
   // Load user's households
   useEffect(() => {
@@ -214,6 +242,26 @@ function HouseholdDutiesContent() {
     )
   }
 
+  const handleAssignDuty = async (dutyId: string, caregiverId: string) => {
+    try {
+      const duty = allDuties.find(d => d.id === dutyId)
+      if (!duty) return
+      await updateDuty(dutyId, {
+        assignedTo: [...(duty.assignedTo || []), caregiverId],
+      })
+      await refetchDuties()
+    } catch {
+      // Error handled by hook
+    }
+  }
+
+  const handleApplyTemplate = async (dutyRequests: Parameters<typeof createDuty>[0][]) => {
+    for (const req of dutyRequests) {
+      await createDuty(req)
+    }
+    await refetchDuties()
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <PageHeader
@@ -222,13 +270,77 @@ function HouseholdDutiesContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-5xl">
-        <DutyListView
-          householdId={selectedHouseholdId!}
-          householdName={selectedHousehold?.name || 'Household'}
-          caregivers={caregivers}
-          households={households.length > 1 ? households : undefined}
-          onHouseholdChange={households.length > 1 ? setSelectedHouseholdId : undefined}
-        />
+        {/* Household Switcher (if multiple) */}
+        {households.length > 1 && (
+          <div className="mb-4">
+            <select
+              value={selectedHouseholdId || ''}
+              onChange={(e) => setSelectedHouseholdId(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-border bg-background text-foreground"
+            >
+              {households.map(h => (
+                <option key={h.id} value={h.id}>{h.name || h.id}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Tab Navigation */}
+        <div className="flex gap-1 bg-accent rounded-xl p-1 mb-6 overflow-x-auto">
+          {DUTY_TABS.map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'list' && (
+          <DutyListView
+            householdId={selectedHouseholdId!}
+            householdName={selectedHousehold?.name || 'Household'}
+            caregivers={caregivers}
+          />
+        )}
+
+        {activeTab === 'caregivers' && (
+          <CaregiverDutyDashboard
+            duties={allDuties}
+            caregivers={caregivers}
+            onAssignDuty={handleAssignDuty}
+          />
+        )}
+
+        {activeTab === 'calendar' && (
+          <DutyCalendarView
+            duties={allDuties}
+            caregivers={caregivers}
+          />
+        )}
+
+        {activeTab === 'analytics' && (
+          <DutyAnalytics
+            duties={allDuties}
+            stats={stats}
+            caregivers={caregivers}
+          />
+        )}
+
+        {activeTab === 'templates' && (
+          <DutyTemplatesManager
+            householdId={selectedHouseholdId!}
+            onApplyTemplate={handleApplyTemplate}
+          />
+        )}
       </main>
     </div>
   )

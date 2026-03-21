@@ -40,6 +40,7 @@
   ],
   "exclude": [
     "node_modules",
+    ".claude",
     "__tests__",
     "**/*.test.ts",
     "**/*.test.tsx",
