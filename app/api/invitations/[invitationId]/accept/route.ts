@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { logger } from '@/lib/logger'
 import type { FamilyInvitation, FamilyMember } from '@/types/medical'
 
 export async function POST(
@@ -120,15 +121,21 @@ export async function POST(
       familyMember.photo = photo
     }
 
+    // Strip undefined values before Firestore write
+    const cleanedMember = Object.fromEntries(
+      Object.entries(familyMember).filter(([, v]) => v !== undefined)
+    )
     const memberRef = await adminDb
       .collection('users')
       .doc(invitation.invitedByUserId)
       .collection('familyMembers')
-      .add(familyMember)
+      .add(cleanedMember)
 
-    console.log(`✅ Family member record created: ${memberRef.id} for user ${userId} in account ${invitation.invitedByUserId}`)
-    console.log(`📋 Patients shared in invitation: ${JSON.stringify(invitation.patientsShared)}`)
-    console.log(`👤 Family member status: ${familyMember.status}, role: ${familyMember.familyRole}`)
+    logger.info('[Invitations] Family member record created', {
+      memberId: memberRef.id,
+      role: familyMember.familyRole,
+      patientsShared: invitation.patientsShared?.length || 0
+    })
 
     // Create family member records for each patient in patientsShared
     const batch = adminDb.batch()

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { adminDb as db } from '@/lib/firebase-admin'
+import { logger } from '@/lib/logger'
 import { SubscriptionPlan } from '@/types'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -15,15 +16,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
 export async function POST(request: NextRequest) {
-  console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-  console.error('[STRIPE WEBHOOK] /api/stripe/webhook HIT!')
-  console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+  logger.info('[Stripe Webhook] Request received')
   try {
     const body = await request.text()
     const signature = request.headers.get('stripe-signature')
 
     if (!signature) {
-      console.error('Missing stripe-signature header')
+      logger.error('Missing stripe-signature header')
       return NextResponse.json(
         { error: 'Missing stripe-signature header' },
         { status: 400 }
@@ -35,14 +34,14 @@ export async function POST(request: NextRequest) {
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
     } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message)
+      logger.error('[Stripe Webhook] Signature verification failed', err as Error)
       return NextResponse.json(
         { error: `Webhook signature verification failed: ${err.message}` },
         { status: 400 }
       )
     }
 
-    console.log(`Received Stripe event: ${event.type}`)
+    logger.info(`Received Stripe event: ${event.type}`)
 
     // Handle different event types
     switch (event.type) {
@@ -78,12 +77,12 @@ export async function POST(request: NextRequest) {
         break
 
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        logger.info(`Unhandled event type: ${event.type}`)
     }
 
     return NextResponse.json({ received: true })
   } catch (error: any) {
-    console.error('Webhook handler error:', error)
+    logger.error('[Stripe Webhook] Handler error', error as Error)
     return NextResponse.json(
       { error: error.message || 'Webhook handler failed' },
       { status: 500 }
@@ -101,11 +100,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const billingInterval = session.metadata?.billingInterval as 'monthly' | 'yearly'
 
   if (!userId || !plan) {
-    console.error('Missing metadata in checkout session')
+    logger.error('Missing metadata in checkout session')
     return
   }
 
-  console.log(`Checkout completed for user ${userId}, plan: ${plan}`)
+  logger.info(`Checkout completed for user ${userId}, plan: ${plan}`)
 
   // Get subscription details
   const subscriptionId = session.subscription as string
@@ -123,11 +122,11 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const plan = subscription.metadata?.plan as SubscriptionPlan
 
   if (!userId || !plan) {
-    console.error('Missing metadata in subscription')
+    logger.error('Missing metadata in subscription')
     return
   }
 
-  console.log(`Subscription created for user ${userId}`)
+  logger.info(`Subscription created for user ${userId}`)
 
   // Subscription will be updated by checkout.session.completed
   // This event is mainly for logging
@@ -142,11 +141,11 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const plan = subscription.metadata?.plan as SubscriptionPlan
 
   if (!userId || !plan) {
-    console.error('Missing metadata in subscription')
+    logger.error('Missing metadata in subscription')
     return
   }
 
-  console.log(`Subscription updated for user ${userId}`)
+  logger.info(`Subscription updated for user ${userId}`)
 
   // Determine billing interval from subscription items
   const billingInterval = subscription.items.data[0]?.plan?.interval === 'year' ? 'yearly' : 'monthly'
@@ -162,11 +161,11 @@ async function handleSubscriptionCanceledAtPeriodEnd(subscription: Stripe.Subscr
   const userId = subscription.metadata?.firebaseUID
 
   if (!userId) {
-    console.error('Missing firebaseUID in subscription metadata')
+    logger.error('Missing firebaseUID in subscription metadata')
     return
   }
 
-  console.log(`Subscription set to cancel at period end for user ${userId}`)
+  logger.info(`Subscription set to cancel at period end for user ${userId}`)
 
   const currentPeriodEnd = (subscription as any).current_period_end
 
@@ -179,7 +178,7 @@ async function handleSubscriptionCanceledAtPeriodEnd(subscription: Stripe.Subscr
     updatedAt: new Date(),
   })
 
-  console.log(`User ${userId} will retain access until ${new Date(currentPeriodEnd * 1000).toISOString()}`)
+  logger.info(`User ${userId} will retain access until ${new Date(currentPeriodEnd * 1000).toISOString()}`)
 }
 
 /**
@@ -191,11 +190,11 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const userId = subscription.metadata?.firebaseUID
 
   if (!userId) {
-    console.error('Missing firebaseUID in subscription metadata')
+    logger.error('Missing firebaseUID in subscription metadata')
     return
   }
 
-  console.log(`Subscription deleted for user ${userId}`)
+  logger.info(`Subscription deleted for user ${userId}`)
 
   // Mark subscription as expired (not just canceled, since access should now be blocked)
   const currentPeriodEnd = (subscription as any).current_period_end
@@ -206,7 +205,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     updatedAt: new Date(),
   })
 
-  console.log(`Subscription access ended for user ${userId}`)
+  logger.info(`Subscription access ended for user ${userId}`)
 }
 
 /**
@@ -217,11 +216,11 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   const userId = (invoice as any).subscription_details?.metadata?.firebaseUID || invoice.metadata?.firebaseUID
 
   if (!userId) {
-    console.log('No firebaseUID in invoice metadata, skipping')
+    logger.info('No firebaseUID in invoice metadata, skipping')
     return
   }
 
-  console.log(`Payment succeeded for user ${userId}`)
+  logger.info(`Payment succeeded for user ${userId}`)
 
   // Update subscription status to active
   await db.collection('users').doc(userId).update({
@@ -238,11 +237,11 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
   const userId = (invoice as any).subscription_details?.metadata?.firebaseUID || invoice.metadata?.firebaseUID
 
   if (!userId) {
-    console.log('No firebaseUID in invoice metadata, skipping')
+    logger.info('No firebaseUID in invoice metadata, skipping')
     return
   }
 
-  console.log(`Payment failed for user ${userId}`)
+  logger.info(`Payment failed for user ${userId}`)
 
   // Mark subscription as past_due
   await db.collection('users').doc(userId).update({
@@ -311,7 +310,7 @@ async function updateUserSubscription(
     updatedAt: new Date(),
   })
 
-  console.log(`Updated subscription for user ${userId}: ${plan} (${status})`)
+  logger.info(`Updated subscription for user ${userId}: ${plan} (${status})`)
 }
 
 // Disable body parser for webhook route

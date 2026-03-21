@@ -542,6 +542,7 @@ export default function SupervisedVitalsWizard({
             }}
             validation={validationResults.weight}
             showGuidance={showGuidance}
+            isNewbornOrInfant={isNewbornOrInfant}
           />
         )
 
@@ -1435,7 +1436,7 @@ function BloodSugarStep({ value, onChange, validation, showGuidance }: StepProps
   )
 }
 
-function WeightStep({ value, onChange, validation, showGuidance }: StepProps) {
+function WeightStep({ value, onChange, validation, showGuidance, isNewbornOrInfant = false }: StepProps & { isNewbornOrInfant?: boolean }) {
   const [weight, setWeight] = useState(value || '')
 
   const handleChange = (val: string) => {
@@ -1451,7 +1452,7 @@ function WeightStep({ value, onChange, validation, showGuidance }: StepProps) {
       <div>
         <h3 className="text-sm font-bold text-foreground mb-1">Weight</h3>
         <p className="text-sm text-gray-700 font-medium">
-          Enter current weight in pounds
+          {isNewbornOrInfant ? 'Enter baby\'s current weight' : 'Enter current weight in pounds'}
         </p>
       </div>
 
@@ -1467,7 +1468,9 @@ function WeightStep({ value, onChange, validation, showGuidance }: StepProps) {
           enterKeyHint="done"
           inputMode="decimal"
         />
-        <p id="weight-hint" className="text-sm text-gray-700 mt-1 text-center font-medium">Enter weight in pounds (lbs)</p>
+        <p id="weight-hint" className="text-sm text-gray-700 mt-1 text-center font-medium">
+          {isNewbornOrInfant ? 'Enter weight in lbs or oz' : 'Enter weight in pounds (lbs)'}
+        </p>
       </div>
 
       {validation && (
@@ -1477,8 +1480,17 @@ function WeightStep({ value, onChange, validation, showGuidance }: StepProps) {
       {showGuidance && (
         <div className="bg-gray-50 rounded-md p-2 border-2 border-gray-400">
           <p className="text-sm text-gray-800 font-medium">
-            ⚖️ <strong>Tip:</strong> Weigh yourself at the same time each day for consistency<br />
-            📊 <strong>Note:</strong> Daily fluctuations of 1-2 lbs are normal
+            {isNewbornOrInfant ? (
+              <>
+                👶 <strong>Tip:</strong> Weigh baby without heavy clothing or diaper for accuracy<br />
+                📊 <strong>Note:</strong> Newborns may lose 5-10% of birth weight in the first week, then regain by 2 weeks
+              </>
+            ) : (
+              <>
+                ⚖️ <strong>Tip:</strong> Weigh yourself at the same time each day for consistency<br />
+                📊 <strong>Note:</strong> Daily fluctuations of 1-2 lbs are normal
+              </>
+            )}
           </p>
         </div>
       )}

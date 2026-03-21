@@ -1,11 +1,13 @@
 /**
  * Family Caregivers API Route
  *
- * GET /api/family/caregivers - List all caregivers with optional filters
+ * GET /api/family/caregivers - List all caregivers from familyMembers collection
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuthToken } from '@/lib/rbac-middleware'
+import { adminDb } from '@/lib/firebase-admin'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,143 +18,58 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { userId } = authResult
     const searchParams = request.nextUrl.searchParams
     const patientId = searchParams.get('patientId')
     const role = searchParams.get('role')
-    const availabilityStatus = searchParams.get('availabilityStatus')
     const search = searchParams.get('search')
 
-    // TODO: Implement actual database query with filters
-    // Example:
-    // const caregivers = await db.collection('caregivers')
-    //   .where('userId', '==', session.user.id)
-    //   .get()
+    // Fetch real family members from Firestore
+    const familyMembersRef = adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('familyMembers')
 
-    // Mock response for demonstration
-    const mockCaregivers = [
-      {
-        id: '1',
-        userId: '1',
-        name: 'John Smith',
-        email: 'john@example.com',
-        phone: '(555) 123-4567',
-        familyRole: 'account_owner',
-        relationship: 'Self',
-        availabilityStatus: 'available',
-        patientsAccess: ['patient1', 'patient2'],
-        patientRelationships: {
-          patient1: 'Mother',
-          patient2: 'Father'
-        },
-        permissions: {
-          viewPatientProfile: true,
-          viewMedicalRecords: true,
-          editMedications: true,
-          scheduleAppointments: true,
-          editAppointments: true,
-          deleteAppointments: true,
-          uploadDocuments: true,
-          deleteDocuments: true,
-          logVitals: true,
-          viewVitals: true,
-          chatAccess: true,
-          inviteOthers: true,
-          viewSensitiveInfo: true,
-          editPatientProfile: true,
-          deletePatient: true
-        },
-        preferences: {
-          notificationMethods: ['email', 'push'],
-          preferredContactMethod: 'email',
-          timezone: 'America/Chicago'
-        },
-        joinedAt: '2024-01-01T10:00:00Z',
-        lastActive: new Date().toISOString(),
-        managedBy: '1',
-        profileVisibility: 'family_only',
-        shareContactInfo: true,
-        shareAvailability: true
-      },
-      {
-        id: '2',
-        userId: '2',
-        name: 'Sarah Johnson',
-        email: 'sarah@example.com',
-        phone: '(555) 234-5678',
-        familyRole: 'co_admin',
-        relationship: 'Spouse',
-        availabilityStatus: 'busy',
-        patientsAccess: ['patient1'],
-        patientRelationships: {
-          patient1: 'Mother-in-law'
-        },
-        professionalInfo: {
-          title: 'Registered Nurse',
-          organization: 'City Hospital',
-          credentials: ['RN', 'BSN'],
-          specialties: ['Geriatric Care']
-        },
-        permissions: {
-          viewPatientProfile: true,
-          viewMedicalRecords: true,
-          editMedications: true,
-          scheduleAppointments: true,
-          editAppointments: true,
-          deleteAppointments: false,
-          uploadDocuments: true,
-          deleteDocuments: false,
-          logVitals: true,
-          viewVitals: true,
-          chatAccess: true,
-          inviteOthers: true,
-          viewSensitiveInfo: false,
-          editPatientProfile: false,
-          deletePatient: false
-        },
-        preferences: {
-          notificationMethods: ['email', 'push'],
-          preferredContactMethod: 'email',
-          timezone: 'America/Chicago'
-        },
-        joinedAt: '2024-01-15T10:00:00Z',
-        lastActive: new Date(Date.now() - 3600000).toISOString(),
-        managedBy: '1',
-        profileVisibility: 'family_only',
-        shareContactInfo: true,
-        shareAvailability: true
-      }
-    ]
+    const snapshot = await familyMembersRef.get()
+
+    let caregivers = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
 
     // Apply filters
-    let filtered = mockCaregivers
-
     if (patientId) {
-      filtered = filtered.filter((c) => c.patientsAccess.includes(patientId))
-    }
-
-    if (role) {
-      filtered = filtered.filter((c) => c.familyRole === role)
-    }
-
-    if (availabilityStatus) {
-      filtered = filtered.filter((c) => c.availabilityStatus === availabilityStatus)
-    }
-
-    if (search) {
-      filtered = filtered.filter((c) =>
-        c.name.toLowerCase().includes(search.toLowerCase())
+      caregivers = caregivers.filter((c: any) =>
+        c.patientsAccess?.includes(patientId)
       )
     }
 
+    if (role) {
+      caregivers = caregivers.filter((c: any) => c.familyRole === role)
+    }
+
+    if (search) {
+      const q = search.toLowerCase()
+      caregivers = caregivers.filter((c: any) =>
+        c.name?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q)
+      )
+    }
+
+    logger.debug('[API /family/caregivers] Fetched caregivers', {
+      userId,
+      count: caregivers.length
+    })
+
     return NextResponse.json({
-      success: true,
-      data: filtered,
-      total: filtered.length
+      caregivers,
+      total: caregivers.length,
+      filtered: caregivers.length
     })
   } catch (error) {
-    console.error('Error fetching caregivers:', error)
+    logger.error('[API /family/caregivers] Error', error as Error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { error: 'Failed to fetch caregivers' },
       { status: 500 }
     )
   }
