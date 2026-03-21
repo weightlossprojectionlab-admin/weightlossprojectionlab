@@ -28,13 +28,13 @@ import {
 } from '@heroicons/react/24/outline'
 
 export const metadata: Metadata = {
-  title: 'AI Health Reports — Your Family&apos;s Health Interpreted, Not Just Tracked | Wellness Projection Lab',
+  title: 'AI Health Reports — Your Family\'s Health Interpreted, Not Just Tracked | Wellness Projection Lab',
   description:
     'WPL delivers weekly AI-powered health reports for every family member. Meal pattern analysis, weight trend insights, vital sign correlations, and actionable recommendations — all in one place.',
   keywords:
     'AI health reports, family health tracking, weekly health insights, personalized health recommendations, meal pattern analysis, weight trend insights, vital sign monitoring, family wellness, WPL health intelligence',
   openGraph: {
-    title: 'AI Health Reports — Your Family&apos;s Health Interpreted, Not Just Tracked',
+    title: 'AI Health Reports — Your Family\'s Health Interpreted, Not Just Tracked',
     description:
       'WPL delivers weekly AI-powered health reports for every family member. Meal pattern analysis, weight trend insights, vital sign correlations, and actionable recommendations.',
     type: 'article',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AI Health Reports — Your Family&apos;s Health Interpreted, Not Just Tracked',
+    title: 'AI Health Reports — Your Family\'s Health Interpreted, Not Just Tracked',
     description:
       'WPL delivers weekly AI-powered health reports for every family member. Meal patterns, weight trends, vital correlations, and actionable recommendations.',
   },
@@ -73,12 +73,12 @@ export default function AiHealthReportsBlogPage() {
             </div>
 
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight">
-              Your Family&apos;s Health&nbsp;&mdash; <br className="hidden md:block" />
+              Your Family's Health — <br className="hidden md:block" />
               <span className="text-cyan-200">Interpreted</span>, Not Just Tracked
             </h1>
 
             <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed max-w-3xl mx-auto">
-              Every week, WPL&apos;s AI reads your family&apos;s meals, weight, and vitals&nbsp;&mdash; then
+              Every week, WPL's AI reads your family's meals, weight, and vitals — then
               tells you what it all <em>means</em>. Per person. In plain language.
             </p>
 
@@ -106,24 +106,24 @@ export default function AiHealthReportsBlogPage() {
           <SectionHeading
             overline="The Problem"
             title="Data Without Interpretation Is Just Noise"
-            subtitle="Most health apps collect numbers and leave you to figure out what they mean. That&apos;s not health management&nbsp;&mdash; that&apos;s homework."
+            subtitle="Most health apps collect numbers and leave you to figure out what they mean. That's not health management — that's homework."
           />
 
           <div className="grid md:grid-cols-3 gap-8 mt-12">
             <ProblemCard
               icon={<ChartBarIcon className="w-10 h-10 text-red-400" />}
               title="Data Without Interpretation"
-              description="You log meals, steps, and weight every day&nbsp;&mdash; but the app never tells you if those numbers are good, bad, or trending the wrong way."
+              description="You log meals, steps, and weight every day — but the app never tells you if those numbers are good, bad, or trending the wrong way."
             />
             <ProblemCard
               icon={<MagnifyingGlassCircleIcon className="w-10 h-10 text-red-400" />}
-              title="You Don&apos;t Know What Patterns Mean"
-              description="Is a 2&nbsp;lb fluctuation normal? Is skipping breakfast hurting your kid&apos;s energy? Without context, raw data creates more anxiety than clarity."
+              title="You Don't Know What Patterns Mean"
+              description="Is a 2lb fluctuation normal? Is skipping breakfast hurting your kid's energy? Without context, raw data creates more anxiety than clarity."
             />
             <ProblemCard
               icon={<ExclamationTriangleIcon className="w-10 h-10 text-red-400" />}
               title="No One Connecting the Dots"
-              description="Meals affect weight. Weight affects vitals. Vitals signal risk. But no app connects those dots across every family member&nbsp;&mdash; until now."
+              description="Meals affect weight. Weight affects vitals. Vitals signal risk. But no app connects those dots across every family member — until now."
             />
           </div>
         </section>
@@ -142,7 +142,7 @@ export default function AiHealthReportsBlogPage() {
               color="cyan"
               title="Meal Pattern Analysis"
               bullets={[
-                'Macro &amp; micro nutrient balance over the week',
+                'Macro & micro nutrient balance over the week',
                 'Meal timing consistency and skipped-meal detection',
                 'Caloric trend vs. personal goals',
               ]}
@@ -185,23 +185,23 @@ export default function AiHealthReportsBlogPage() {
           <SectionHeading
             overline="Real Examples"
             title="Sample AI Insights"
-            subtitle="Here&apos;s what an actual WPL health alert looks like in your weekly report."
+            subtitle="Here's what an actual WPL health alert looks like in your weekly report."
           />
 
           <div className="grid md:grid-cols-3 gap-8 mt-12">
             <InsightCard
               severity="warning"
-              insight="Your caloric intake dropped 15% this week. This may slow your progress if sustained&nbsp;&mdash; consider adding a protein-rich snack in the afternoon."
+              insight="Your caloric intake dropped 15% this week. This may slow your progress if sustained — consider adding a protein-rich snack in the afternoon."
               person="You"
             />
             <InsightCard
               severity="alert"
-              insight="Your child&apos;s protein intake has been below target for 5 consecutive days. This could affect growth and energy levels."
+              insight="Your child's protein intake has been below target for 5 consecutive days. This could affect growth and energy levels."
               person="Ethan (Age 9)"
             />
             <InsightCard
               severity="critical"
-              insight="Barbara&apos;s blood pressure trend is creeping upward over the last 3 weeks&nbsp;&mdash; consider scheduling a checkup with her physician."
+              insight="Barbara's blood pressure trend is creeping upward over the last 3 weeks — consider scheduling a checkup with her physician."
               person="Barbara (Age 72)"
             />
           </div>
@@ -212,24 +212,24 @@ export default function AiHealthReportsBlogPage() {
           <SectionHeading
             overline="Real Life, Real Impact"
             title="How Families Use AI Health Reports"
-            subtitle="These aren&apos;t hypothetical scenarios&nbsp;&mdash; they&apos;re the moments that matter most."
+            subtitle="These aren't hypothetical scenarios — they're the moments that matter most."
           />
 
           <div className="grid md:grid-cols-3 gap-8 mt-12">
             <UseCaseCard
               icon={<UserGroupIcon className="w-10 h-10 text-cyan-600" />}
               title="The Weekly Family Health Review"
-              description="Sunday evening, the Garcias sit down and review everyone&apos;s report together. Dad&apos;s sodium is high. Mom&apos;s weight is trending perfectly. The kids need more vegetables. One report. Five minutes. A week of better decisions."
+              description="Sunday evening, the Garcias sit down and review everyone's report together. Dad's sodium is high. Mom's weight is trending perfectly. The kids need more vegetables. One report. Five minutes. A week of better decisions."
             />
             <UseCaseCard
               icon={<ExclamationCircleIcon className="w-10 h-10 text-sky-600" />}
               title="Catching Nutritional Gaps in Kids"
-              description="Lisa didn&apos;t realize her 8-year-old was consistently low on iron until WPL flagged it three weeks in a row. A simple dietary tweak&nbsp;&mdash; more spinach and lean beef&nbsp;&mdash; and the alerts stopped."
+              description="Lisa didn't realize her 8-year-old was consistently low on iron until WPL flagged it three weeks in a row. A simple dietary tweak — more spinach and lean beef — and the alerts stopped."
             />
             <UseCaseCard
               icon={<HeartIcon className="w-10 h-10 text-blue-600" />}
-              title="Monitoring an Elderly Parent&apos;s Decline"
-              description="James lives 200 miles from his mother. WPL&apos;s weekly report alerted him that her caloric intake had dropped 20% over a month and her blood pressure was rising. He scheduled a doctor visit before it became a crisis."
+              title="Monitoring an Elderly Parent's Decline"
+              description="James lives 200 miles from his mother. WPL's weekly report alerted him that her caloric intake had dropped 20% over a month and her blood pressure was rising. He scheduled a doctor visit before it became a crisis."
             />
           </div>
         </section>
@@ -246,7 +246,7 @@ export default function AiHealthReportsBlogPage() {
             <FeatureCard
               icon={<DocumentTextIcon className="w-10 h-10 text-cyan-600" />}
               title="Weekly Automated Reports"
-              description="Delivered every Monday morning. No action required&nbsp;&mdash; your insights are waiting when you wake up."
+              description="Delivered every Monday morning. No action required — your insights are waiting when you wake up."
             />
             <FeatureCard
               icon={<UserGroupIcon className="w-10 h-10 text-cyan-600" />}
@@ -256,7 +256,7 @@ export default function AiHealthReportsBlogPage() {
             <FeatureCard
               icon={<ChartBarIcon className="w-10 h-10 text-sky-600" />}
               title="Pattern Detection"
-              description="The AI identifies recurring trends&nbsp;&mdash; like skipped breakfasts every Thursday or weekend sodium spikes&nbsp;&mdash; that you&apos;d never spot manually."
+              description="The AI identifies recurring trends — like skipped breakfasts every Thursday or weekend sodium spikes — that you'd never spot manually."
             />
             <FeatureCard
               icon={<BellAlertIcon className="w-10 h-10 text-sky-600" />}
@@ -316,7 +316,7 @@ export default function AiHealthReportsBlogPage() {
             <RelatedLink
               href="/blog/vitals-tracking"
               title="Vitals Tracking"
-              description="Blood pressure, heart rate, glucose &amp; more"
+              description="Blood pressure, heart rate, glucose & more"
             />
             <RelatedLink
               href="/blog/weight-tracking"
@@ -392,10 +392,7 @@ function SectionHeading({
         {overline}
       </span>
       <h2 className="text-4xl md:text-5xl font-extrabold text-foreground mb-4">{title}</h2>
-      <p
-        className="text-lg text-muted-foreground leading-relaxed"
-        dangerouslySetInnerHTML={{ __html: subtitle }}
-      />
+      <p className="text-lg text-muted-foreground leading-relaxed">{subtitle}</p>
     </div>
   )
 }
@@ -412,14 +409,8 @@ function ProblemCard({
   return (
     <div className="bg-red-50 dark:bg-red-950/20 rounded-2xl border border-red-200 dark:border-red-800 p-8">
       <div className="mb-4">{icon}</div>
-      <h3
-        className="text-xl font-bold text-foreground mb-3"
-        dangerouslySetInnerHTML={{ __html: title }}
-      />
-      <p
-        className="text-muted-foreground leading-relaxed"
-        dangerouslySetInnerHTML={{ __html: description }}
-      />
+      <h3 className="text-xl font-bold text-foreground mb-3">{title}</h3>
+      <p className="text-muted-foreground leading-relaxed">{description}</p>
     </div>
   )
 }
@@ -450,7 +441,7 @@ function ReportBlock({
         {bullets.map((b, i) => (
           <li key={i} className="flex items-start gap-2 text-muted-foreground">
             <CheckCircleIcon className="w-5 h-5 text-cyan-600 flex-shrink-0 mt-0.5" />
-            <span dangerouslySetInnerHTML={{ __html: b }} />
+            <span>{b}</span>
           </li>
         ))}
       </ul>
@@ -493,10 +484,7 @@ function InsightCard({
         </span>
         <span className="text-sm text-muted-foreground font-medium">{person}</span>
       </div>
-      <p
-        className="text-foreground leading-relaxed font-medium"
-        dangerouslySetInnerHTML={{ __html: insight }}
-      />
+      <p className="text-foreground leading-relaxed font-medium">{insight}</p>
     </div>
   )
 }
@@ -514,10 +502,7 @@ function UseCaseCard({
     <div className="bg-card rounded-2xl border-2 border-border p-8 hover:border-cyan-300 hover:shadow-lg transition-all">
       <div className="mb-5">{icon}</div>
       <h3 className="text-xl font-bold text-foreground mb-3">{title}</h3>
-      <p
-        className="text-muted-foreground leading-relaxed"
-        dangerouslySetInnerHTML={{ __html: description }}
-      />
+      <p className="text-muted-foreground leading-relaxed">{description}</p>
     </div>
   )
 }
@@ -535,10 +520,7 @@ function FeatureCard({
     <div className="bg-card rounded-2xl border-2 border-border p-8 hover:border-cyan-300 hover:shadow-lg transition-all">
       <div className="mb-4">{icon}</div>
       <h3 className="text-xl font-bold text-foreground mb-2">{title}</h3>
-      <p
-        className="text-muted-foreground leading-relaxed"
-        dangerouslySetInnerHTML={{ __html: description }}
-      />
+      <p className="text-muted-foreground leading-relaxed">{description}</p>
     </div>
   )
 }
@@ -589,10 +571,7 @@ function RelatedLink({
       className="bg-card rounded-xl border-2 border-border p-5 hover:border-cyan-300 hover:shadow-lg transition-all block"
     >
       <h3 className="font-bold text-foreground mb-1">{title}</h3>
-      <p
-        className="text-sm text-muted-foreground"
-        dangerouslySetInnerHTML={{ __html: description }}
-      />
+      <p className="text-sm text-muted-foreground">{description}</p>
     </Link>
   )
 }

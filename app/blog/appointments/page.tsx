@@ -69,11 +69,11 @@ export default function AppointmentsBlogPage() {
               <span className="text-sm font-medium">Family Appointment Hub</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              Never Miss a Visit &mdash; For Anyone in Your Family
+              Never Miss a Visit — For Anyone in Your Family
             </h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
               One calendar for every family member&apos;s doctor visits. Color-coded by person,
-              with driver assignments, multi-level reminders, and visit notes &mdash; so no
+              with driver assignments, multi-level reminders, and visit notes — so no
               appointment ever falls through the cracks.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
@@ -108,7 +108,7 @@ export default function AppointmentsBlogPage() {
             <ProblemCard
               icon={<ExclamationTriangleIcon className="w-10 h-10 text-rose-500" />}
               title="Multiple People, Multiple Doctors"
-              description="Pediatricians, specialists, dentists, therapists &mdash; multiply that by every family member and you&apos;re drowning in dates."
+              description="Pediatricians, specialists, dentists, therapists — multiply that by every family member and you&apos;re drowning in dates."
             />
             <ProblemCard
               icon={<TruckIcon className="w-10 h-10 text-rose-500" />}
@@ -129,7 +129,7 @@ export default function AppointmentsBlogPage() {
             How It Works
           </h2>
           <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-12">
-            A family calendar built for healthcare &mdash; not just events.
+            A family calendar built for healthcare — not just events.
           </p>
           <div className="grid md:grid-cols-3 gap-8">
             <StepCard
@@ -145,7 +145,7 @@ export default function AppointmentsBlogPage() {
             <StepCard
               step="3"
               title="Multi-Level Reminders"
-              description="Automatic notifications 7 days, 3 days, and 1 day before each visit &mdash; sent to the patient and the driver."
+              description="Automatic notifications 7 days, 3 days, and 1 day before each visit — sent to the patient and the driver."
             />
           </div>
         </section>
@@ -186,12 +186,12 @@ export default function AppointmentsBlogPage() {
             <UseCaseCard
               number="01"
               title="Three Kids, One Month"
-              description="Coordinating 3 kids&apos; pediatrician, dentist, and specialist visits across one month &mdash; all visible on a single color-coded calendar."
+              description="Coordinating 3 kids&apos; pediatrician, dentist, and specialist visits across one month — all visible on a single color-coded calendar."
             />
             <UseCaseCard
               number="02"
               title="Elderly Parent Care"
-              description="Scheduling an elderly parent&apos;s appointments and assigning which sibling drives &mdash; everyone knows their responsibility."
+              description="Scheduling an elderly parent&apos;s appointments and assigning which sibling drives — everyone knows their responsibility."
             />
             <UseCaseCard
               number="03"
@@ -220,7 +220,7 @@ export default function AppointmentsBlogPage() {
             <FeatureCard
               icon={<BellAlertIcon className="w-12 h-12 text-rose-600" />}
               title="Smart Reminders"
-              description="Tiered notifications at 7, 3, and 1 day before &mdash; sent to both the patient and the driver."
+              description="Tiered notifications at 7, 3, and 1 day before — sent to both the patient and the driver."
             />
             <FeatureCard
               icon={<ClipboardDocumentListIcon className="w-12 h-12 text-rose-600" />}
@@ -248,7 +248,7 @@ export default function AppointmentsBlogPage() {
             </h2>
             <p className="text-lg text-muted-foreground text-center max-w-3xl mx-auto mb-8">
               Google Calendar doesn&apos;t assign drivers, remind caregivers, or link to medical
-              records. It wasn&apos;t built for families managing health &mdash; WPL was.
+              records. It wasn&apos;t built for families managing health — WPL was.
             </p>
             <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
               <ComparisonItem label="Driver assignment per visit" wpl />
@@ -283,7 +283,7 @@ export default function AppointmentsBlogPage() {
           </h2>
           <p className="text-xl text-rose-100 mb-8 max-w-3xl mx-auto">
             Start coordinating your family&apos;s health visits in minutes. One calendar, every
-            person, every reminder, every driver &mdash; handled.
+            person, every reminder, every driver — handled.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link
@@ -315,7 +315,7 @@ function ProblemCard({ icon, title, description }: { icon: React.ReactNode; titl
     <div className="bg-card rounded-xl border-2 border-border p-6 text-center">
       <div className="flex justify-center mb-4">{icon}</div>
       <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
-      <p className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: description }} />
+      <p className="text-muted-foreground">{description}</p>
     </div>
   )
 }
@@ -358,7 +358,7 @@ function ComparisonItem({ label, wpl }: { label: string; wpl?: boolean }) {
       {wpl ? (
         <CheckCircleIcon className="w-6 h-6 text-rose-600 flex-shrink-0" />
       ) : (
-        <span className="w-6 h-6 flex items-center justify-center text-gray-400 flex-shrink-0">&mdash;</span>
+        <span className="w-6 h-6 flex items-center justify-center text-gray-400 flex-shrink-0">—</span>
       )}
       <span className={`text-sm ${wpl ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>{label}</span>
       {wpl && <span className="ml-auto text-xs font-bold text-rose-600">WPL</span>}

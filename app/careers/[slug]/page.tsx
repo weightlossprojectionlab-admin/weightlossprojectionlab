@@ -273,7 +273,7 @@ export default function JobPage() {
             {job.whyJoin.map((reason, i) => (
               <li key={i} className="flex gap-3 text-gray-700 dark:text-gray-300">
                 <span className="text-orange-600 dark:text-orange-400 text-xl">★</span>
-                <span dangerouslySetInnerHTML={{ __html: reason }} />
+                <span>{reason}</span>
               </li>
             ))}
           </ul>

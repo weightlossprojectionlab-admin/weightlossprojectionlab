@@ -75,59 +75,55 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get user profiles from Firestore
-    const enrichedUsers = await Promise.all(
-      users.map(async (user) => {
-        try {
-          const userDoc = await adminDb.collection('users').doc(user.uid).get()
-          const userData = userDoc.data()
+    // Batch-fetch all user profile docs in a single getAll() call
+    const userRefs = users.map(u => adminDb.collection('users').doc(u.uid))
+    const userDocs = userRefs.length > 0 ? await adminDb.getAll(...userRefs) : []
+    const userDataMap = new Map<string, FirebaseFirestore.DocumentData>()
+    for (const doc of userDocs) {
+      if (doc.exists) {
+        userDataMap.set(doc.id, doc.data()!)
+      }
+    }
 
-          // Get activity counts and family relationships
-          const [mealLogs, weightLogs, stepLogs, patientsCount, familyMembersCount] = await Promise.all([
-            adminDb.collection(`users/${user.uid}/mealLogs`).count().get(),
-            adminDb.collection(`users/${user.uid}/weightLogs`).count().get(),
-            adminDb.collection(`users/${user.uid}/stepLogs`).count().get(),
-            adminDb.collection(`users/${user.uid}/patients`).count().get(),
-            adminDb.collection(`users/${user.uid}/familyMembers`).count().get(),
-          ])
-
-          return {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName || userData?.displayName,
-            name: userData?.name,
-            createdAt: user.metadata.creationTime,
-            lastActiveAt: userData?.lastActiveAt?.toDate?.() || null,
-            role: userData?.role,
-            suspended: user.disabled,
-            mealLogsCount: mealLogs.data().count,
-            weightLogsCount: weightLogs.data().count,
-            stepLogsCount: stepLogs.data().count,
-            patientsCount: patientsCount.data().count,
-            familyMembersCount: familyMembersCount.data().count,
-            caregiverOf: userData?.caregiverOf || [],
-            onboardingCompleted: userData?.profile?.onboardingCompleted,
-            userMode: userData?.preferences?.userMode,
-            isAccountOwner: userData?.preferences?.isAccountOwner,
-            subscription: userData?.subscription || null,
-          }
-        } catch (err) {
-          logger.error('Error enriching user data', err as Error, { uid: user.uid })
-          return {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            createdAt: user.metadata.creationTime,
-            lastActiveAt: null,
-            role: null,
-            suspended: user.disabled,
-            mealLogsCount: 0,
-            weightLogsCount: 0,
-            stepLogsCount: 0,
-          }
-        }
-      })
+    // Batch all count queries in parallel (one Promise.all instead of N separate ones)
+    const countResults = await Promise.all(
+      users.map(user => Promise.all([
+        adminDb.collection(`users/${user.uid}/mealLogs`).count().get(),
+        adminDb.collection(`users/${user.uid}/weightLogs`).count().get(),
+        adminDb.collection(`users/${user.uid}/stepLogs`).count().get(),
+        adminDb.collection(`users/${user.uid}/patients`).count().get(),
+        adminDb.collection(`users/${user.uid}/familyMembers`).count().get(),
+      ]).catch(err => {
+        logger.error('Error fetching counts for user', err as Error, { uid: user.uid })
+        return null
+      }))
     )
+
+    const enrichedUsers = users.map((user, i) => {
+      const userData = userDataMap.get(user.uid)
+      const counts = countResults[i]
+
+      return {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || userData?.displayName,
+        name: userData?.name,
+        createdAt: user.metadata.creationTime,
+        lastActiveAt: userData?.lastActiveAt?.toDate?.() || null,
+        role: userData?.role,
+        suspended: user.disabled,
+        mealLogsCount: counts?.[0]?.data().count ?? 0,
+        weightLogsCount: counts?.[1]?.data().count ?? 0,
+        stepLogsCount: counts?.[2]?.data().count ?? 0,
+        patientsCount: counts?.[3]?.data().count ?? 0,
+        familyMembersCount: counts?.[4]?.data().count ?? 0,
+        caregiverOf: userData?.caregiverOf || [],
+        onboardingCompleted: userData?.profile?.onboardingCompleted,
+        userMode: userData?.preferences?.userMode,
+        isAccountOwner: userData?.preferences?.isAccountOwner,
+        subscription: userData?.subscription || null,
+      }
+    })
 
     return NextResponse.json({
       users: enrichedUsers,

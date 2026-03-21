@@ -69,12 +69,12 @@ export default function WeightTrackingBlogPage() {
               <span className="text-sm font-medium">AI Weight Projections</span>
             </div>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight">
-              See Where You&apos;re Headed&nbsp;&mdash; Not Just Where You&apos;ve Been
+              See Where You're Headed — Not Just Where You've Been
             </h1>
             <p className="text-lg sm:text-xl text-white/90 mb-10 leading-relaxed max-w-3xl mx-auto">
-              Most trackers show you yesterday&apos;s number. Wellness Projection Lab shows you
-              tomorrow&apos;s trajectory. Our AI projection engine turns raw weigh-ins into
-              actionable forecasts&nbsp;&mdash; for you, your children, or your aging parents.
+              Most trackers show you yesterday's number. Wellness Projection Lab shows you
+              tomorrow's trajectory. Our AI projection engine turns raw weigh-ins into
+              actionable forecasts — for you, your children, or your aging parents.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
@@ -108,17 +108,17 @@ export default function WeightTrackingBlogPage() {
             <ProblemCard
               icon={<ScaleIcon className="w-10 h-10 text-violet-500" />}
               title="Scales Only Show Today"
-              description="You weigh yourself, see a number, and have zero context. Up 2 lbs&nbsp;&mdash; is that water retention or a real trend? No scale can tell you."
+              description="You weigh yourself, see a number, and have zero context. Up 2 lbs — is that water retention or a real trend? No scale can tell you."
             />
             <ProblemCard
               icon={<EyeSlashIcon className="w-10 h-10 text-violet-500" />}
               title="No Trajectory Insight"
-              description="Without pattern analysis you&apos;re flying blind. You can&apos;t see whether your current habits will actually get you to your goal on time."
+              description="Without pattern analysis you're flying blind. You can't see whether your current habits will actually get you to your goal on time."
             />
             <ProblemCard
               icon={<ExclamationTriangleIcon className="w-10 h-10 text-violet-500" />}
               title="Motivation Dies in the Dark"
-              description="When you can&apos;t see the future, every plateau feels like failure. People quit not because they aren&apos;t progressing&nbsp;&mdash; but because they can&apos;t see it."
+              description="When you can't see the future, every plateau feels like failure. People quit not because they aren't progressing — but because they can't see it."
             />
           </div>
         </section>
@@ -153,7 +153,7 @@ export default function WeightTrackingBlogPage() {
                 step={3}
                 icon={<ArrowTrendingUpIcon className="w-8 h-8 text-white" />}
                 title="Projects Trajectory"
-                description="See where you&apos;ll be in 2 weeks, 1 month, or 3 months at your current pace."
+                description="See where you'll be in 2 weeks, 1 month, or 3 months at your current pace."
               />
               <ProjectionStep
                 step={4}
@@ -171,7 +171,7 @@ export default function WeightTrackingBlogPage() {
             Real-Life Projections That Matter
           </h2>
           <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-            Whether it&apos;s your milestone, your child&apos;s growth, or your parent&apos;s safety&nbsp;&mdash; projections turn data into peace of mind.
+            Whether it's your milestone, your child's growth, or your parent's safety — projections turn data into peace of mind.
           </p>
           <div className="grid md:grid-cols-3 gap-8">
             <UseCaseCard
@@ -179,23 +179,23 @@ export default function WeightTrackingBlogPage() {
               scenario="Wedding Prep"
               persona="Sarah, 32"
               story="Sarah set a goal weight 6 months before her wedding. Three months in, the projection engine told her something no scale could:"
-              alert="At this pace, you&apos;ll hit your goal 2 weeks before the big day."
+              alert="At this pace, you'll hit your goal 2 weeks before the big day."
               outcome="She stayed the course with confidence instead of crash-dieting out of panic."
             />
             <UseCaseCard
               icon={<ArrowTrendingUpIcon className="w-10 h-10 text-violet-500" />}
               scenario="Child Growth"
               persona="Marcus & Tina, parents of Leo (age 7)"
-              story="Leo&apos;s pediatrician asked about his growth trend. Instead of guessing, Marcus pulled up the projection:"
-              alert="Your child&apos;s growth curve is tracking in the 65th percentile."
-              outcome="The doctor was impressed. No extra tests needed&nbsp;&mdash; the data spoke for itself."
+              story="Leo's pediatrician asked about his growth trend. Instead of guessing, Marcus pulled up the projection:"
+              alert="Your child's growth curve is tracking in the 65th percentile."
+              outcome="The doctor was impressed. No extra tests needed — the data spoke for itself."
             />
             <UseCaseCard
               icon={<BellAlertIcon className="w-10 h-10 text-red-500" />}
               scenario="Elderly Parent"
               persona="David, caring for his mother Barbara (78)"
               story="Barbara lives alone. David logs her weight weekly during Sunday calls. One week, an alert appeared:"
-              alert="Barbara has lost 4% body weight in 2 weeks&nbsp;&mdash; this may need attention."
+              alert="Barbara has lost 4% body weight in 2 weeks — this may need attention."
               outcome="David called her doctor immediately. Early intervention caught a medication issue before it became serious."
             />
           </div>
@@ -204,7 +204,7 @@ export default function WeightTrackingBlogPage() {
         {/* ── Key Features ── */}
         <section className="mb-24">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-center">
-            Everything You Need to Project, Track &amp; Celebrate
+            Everything You Need to Project, Track & Celebrate
           </h2>
           <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
             Six powerful capabilities, each designed to keep you moving forward.
@@ -233,12 +233,12 @@ export default function WeightTrackingBlogPage() {
             <FeatureCard
               icon={<FlagIcon className="w-10 h-10 text-violet-600" />}
               title="Goal Setting"
-              description="Set a target weight and date. The projection engine continuously recalculates whether you&apos;re on pace or need to adjust."
+              description="Set a target weight and date. The projection engine continuously recalculates whether you're on pace or need to adjust."
             />
             <FeatureCard
               icon={<BellAlertIcon className="w-10 h-10 text-violet-600" />}
               title="Smart Reminders"
-              description="Custom check-in reminders&nbsp;&mdash; daily, weekly, or bi-weekly. Miss a weigh-in? The system nudges you before gaps widen."
+              description="Custom check-in reminders — daily, weekly, or bi-weekly. Miss a weigh-in? The system nudges you before gaps widen."
             />
           </div>
         </section>
@@ -271,7 +271,7 @@ export default function WeightTrackingBlogPage() {
         {/* ── Feature Descriptions (in lieu of screenshots) ── */}
         <section className="mb-24">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-center">
-            What You&apos;ll See Inside
+            What You'll See Inside
           </h2>
           <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
             A quick walkthrough of the core screens.
@@ -369,7 +369,7 @@ export default function WeightTrackingBlogPage() {
             Stop Guessing. Start Projecting.
           </h2>
           <p className="text-lg text-white/90 mb-8 max-w-3xl mx-auto">
-            Join Wellness Projection Lab and see where your health is heading&nbsp;&mdash; not just where it&apos;s been. Your first 7 days are free.
+            Join Wellness Projection Lab and see where your health is heading — not just where it's been. Your first 7 days are free.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link
@@ -403,7 +403,7 @@ function ProblemCard({ icon, title, description }: { icon: React.ReactNode; titl
     <div className="bg-card rounded-xl border-2 border-border p-6 text-center">
       <div className="flex justify-center mb-4">{icon}</div>
       <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
-      <p className="text-muted-foreground text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: description }} />
+      <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
     </div>
   )
 }
@@ -441,11 +441,11 @@ function UseCaseCard({
       <div className="mb-3">{icon}</div>
       <span className="text-xs font-bold text-violet-500 uppercase tracking-wider mb-1">{scenario}</span>
       <h3 className="text-lg font-semibold text-foreground mb-1">{persona}</h3>
-      <p className="text-muted-foreground text-sm mb-4 leading-relaxed" dangerouslySetInnerHTML={{ __html: story }} />
+      <p className="text-muted-foreground text-sm mb-4 leading-relaxed">{story}</p>
       <div className="bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 rounded-lg px-4 py-3 mb-4">
-        <p className="text-sm font-medium text-violet-700 dark:text-violet-300 italic" dangerouslySetInnerHTML={{ __html: `&ldquo;${alert}&rdquo;` }} />
+        <p className="text-sm font-medium text-violet-700 dark:text-violet-300 italic">{`\u201C${alert}\u201D`}</p>
       </div>
-      <p className="text-muted-foreground text-sm mt-auto" dangerouslySetInnerHTML={{ __html: outcome }} />
+      <p className="text-muted-foreground text-sm mt-auto">{outcome}</p>
     </div>
   )
 }

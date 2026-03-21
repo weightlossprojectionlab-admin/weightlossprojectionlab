@@ -78,33 +78,32 @@ export async function GET(request: NextRequest) {
         patientsAccessCount: patientsAccess.length
       })
 
-      // Fetch each patient in patientsAccess from the owner's patients collection
-      for (const patientId of patientsAccess) {
+      // Batch-fetch all patients in patientsAccess with getAll()
+      if (patientsAccess.length > 0) {
+        const patientRefs = patientsAccess.map((patientId: string) =>
+          adminDb.collection('users').doc(ownerUserId).collection('patients').doc(patientId)
+        )
         try {
-          const patientDoc = await adminDb
-            .collection('users')
-            .doc(ownerUserId)
-            .collection('patients')
-            .doc(patientId)
-            .get()
-
-          if (patientDoc.exists) {
-            caregiverPatients.push({
-              id: patientDoc.id,
-              ...patientDoc.data(),
-              _source: 'caregiver', // Mark as caregiver access
-              _permissions: familyMember.permissions // Include permissions
-            } as any)
-          } else {
-            logger.warn('[API /patients GET] Patient not found in owner collection', {
-              ownerUserId,
-              patientId
-            })
+          const patientDocs = await adminDb.getAll(...patientRefs)
+          for (const patientDoc of patientDocs) {
+            if (patientDoc.exists) {
+              caregiverPatients.push({
+                id: patientDoc.id,
+                ...patientDoc.data(),
+                _source: 'caregiver',
+                _permissions: familyMember.permissions
+              } as any)
+            } else {
+              logger.warn('[API /patients GET] Patient not found in owner collection', {
+                ownerUserId,
+                patientId: patientDoc.id
+              })
+            }
           }
         } catch (err) {
-          logger.warn('[API /patients GET] Failed to fetch caregiver patient', {
+          logger.warn('[API /patients GET] Failed to batch-fetch caregiver patients', {
             ownerUserId,
-            patientId,
+            patientIds: patientsAccess,
             error: err
           })
         }
