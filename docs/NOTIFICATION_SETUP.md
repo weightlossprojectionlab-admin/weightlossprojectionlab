@@ -1,5 +1,7 @@
 # Notification System Setup & Deployment Guide
 
+> **Note:** Email delivery uses **Resend** (not SendGrid). Some legacy references to SendGrid may remain in this document — ignore them. The active email service is `lib/email-service.ts` which uses the Resend SDK.
+
 Complete step-by-step guide for setting up and deploying the comprehensive notification system (in-app, email, and push notifications).
 
 ## Table of Contents
