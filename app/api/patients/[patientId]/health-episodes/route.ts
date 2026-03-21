@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
+import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
 import type { HealthEpisode, EpisodeType, EpisodeSensitivity } from '@/types/health-episodes'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -75,12 +76,14 @@ export async function POST(
       startDate,
       startTime,
       approximateStartTime,
+      timingMode,
       initialPhotos,
       providerId,
       providerName,
       diagnosis,
       reportableType,
       sensitivity: explicitSensitivity,
+      emergencyDetails,
     } = body
 
     if (!type || !title || !startDate) {
@@ -127,6 +130,83 @@ export async function POST(
       .collection('health-episodes')
       .doc(episodeId)
       .set(episode)
+
+    // Auto-create emergency visit treatment if ER details provided
+    if (emergencyDetails) {
+      try {
+        const treatmentId = uuidv4()
+        await adminDb
+          .collection('users')
+          .doc(ownerUserId)
+          .collection('patients')
+          .doc(patientId)
+          .collection('health-episodes')
+          .doc(episodeId)
+          .collection('treatments')
+          .doc(treatmentId)
+          .set({
+            episodeId,
+            patientId,
+            type: 'emergency_visit',
+            description: `ER/Urgent Care visit${emergencyDetails.facilityName ? ` at ${emergencyDetails.facilityName}` : ''}`,
+            startDate: emergencyDetails.visitDate || startDate,
+            notes: [
+              emergencyDetails.medicationsGiven && `Medications: ${emergencyDetails.medicationsGiven}`,
+              emergencyDetails.dischargeInstructions && `Discharge instructions: ${emergencyDetails.dischargeInstructions}`,
+              emergencyDetails.followUpNeeded && `Follow-up: ${emergencyDetails.followUpDate || 'Date TBD'}`,
+            ].filter(Boolean).join('\n'),
+            loggedBy: userId,
+            createdAt: now,
+            lastUpdatedAt: now,
+          })
+
+        logger.info('[API health-episodes POST] Emergency visit treatment created', {
+          episodeId,
+          treatmentId,
+          facility: emergencyDetails.facilityName
+        })
+      } catch (treatmentError) {
+        logger.error('[API health-episodes POST] Failed to create treatment (non-blocking)', treatmentError as Error)
+      }
+    }
+
+    // Notify all family members about the health event
+    try {
+      const userDoc = await adminDb.collection('users').doc(userId).get()
+      const userName = userDoc.exists ? userDoc.data()?.name || userDoc.data()?.email : 'A family member'
+      const patientDoc = await adminDb.collection('users').doc(ownerUserId).collection('patients').doc(patientId).get()
+      const patientName = patientDoc.data()?.name || 'Patient'
+
+      // Higher priority for injuries and abuse concerns
+      const priority = (['injury', 'abuse_concern'] as EpisodeType[]).includes(type)
+        ? 'high' as const
+        : 'normal' as const
+
+      await sendNotificationToFamilyMembers({
+        userId: '',
+        patientId,
+        type: 'episode_created',
+        priority,
+        title: sensitivity === 'sensitive' ? 'Sensitive Health Event Created' : `Health Event: ${title}`,
+        message: 'A new health event has been created',
+        excludeUserId: userId,
+        actionUrl: `/patients/${patientId}`,
+        metadata: {
+          episodeId,
+          episodeType: type,
+          title: sensitivity === 'sensitive' ? 'Sensitive Event' : title,
+          patientName,
+          status: 'onset',
+          sensitivity,
+          startDate,
+          description: sensitivity === 'sensitive' ? undefined : description,
+          actionBy: userName,
+          actionByUserId: userId
+        }
+      })
+    } catch (notifError) {
+      logger.error('[API health-episodes POST] Notification error (non-blocking)', notifError as Error)
+    }
 
     return NextResponse.json({ success: true, episode: { id: episodeId, ...episode } }, { status: 201 })
 

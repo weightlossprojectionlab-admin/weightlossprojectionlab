@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { createNotification } from '@/lib/notification-service'
 import type { VitalSign, VitalModification } from '@/types/medical'
 
 export async function POST(
@@ -119,6 +120,64 @@ export async function POST(
       originalLoggedBy: vital.loggedBy,
       action
     })
+
+    // Sync approved weight to patient profile
+    if (action === 'approve' && vital.type === 'weight' && typeof vital.value === 'number') {
+      try {
+        const patientRef = adminDb
+          .collection('users')
+          .doc(ownerUserId)
+          .collection('patients')
+          .doc(patientId)
+
+        await patientRef.update({
+          currentWeight: vital.value,
+          'goals.startWeight': vital.value
+        })
+
+        logger.info('[API /vitals/approve] Synced approved weight to patient profile', {
+          patientId,
+          weight: vital.value
+        })
+      } catch (syncError) {
+        logger.error('[API /vitals/approve] Failed to sync weight to profile', syncError as Error)
+      }
+    }
+
+    // Notify the original submitter about the approval/rejection
+    try {
+      if (vital.loggedBy && vital.loggedBy !== userId) {
+        const approverDoc = await adminDb.collection('users').doc(userId).get()
+        const approverName = approverDoc.exists ? approverDoc.data()?.name || approverDoc.data()?.email : 'A caregiver'
+        const patientDoc = await adminDb.collection('users').doc(ownerUserId).collection('patients').doc(patientId).get()
+        const patientName = patientDoc.data()?.name || 'Patient'
+
+        await createNotification({
+          userId: vital.loggedBy,
+          patientId,
+          type: 'weight_approval_result',
+          priority: 'normal',
+          title: action === 'approve' ? 'Weight Entry Approved' : 'Weight Entry Rejected',
+          message: `Weight entry ${action === 'approve' ? 'approved' : 'rejected'}`,
+          actionUrl: `/patients/${patientId}`,
+          metadata: {
+            vitalId,
+            patientName,
+            weight: typeof vital.value === 'number' ? vital.value : 0,
+            unit: ((vital as any).unit || 'lbs') as 'lbs' | 'kg',
+            submittedBy: 'You',
+            submittedByUserId: vital.loggedBy,
+            approvalAction: action,
+            approvedBy: approverName,
+            rejectionReason: reason,
+            actionBy: approverName,
+            actionByUserId: userId
+          }
+        })
+      }
+    } catch (notifError) {
+      logger.error('[API /vitals/approve] Notification error (non-blocking)', notifError as Error)
+    }
 
     return NextResponse.json({
       success: true,

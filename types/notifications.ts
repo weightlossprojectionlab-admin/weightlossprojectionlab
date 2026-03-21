@@ -37,6 +37,10 @@ export type NotificationType =
   | 'duty_reminder'
   | 'duty_overdue'
   | 'duty_completed'
+  | 'episode_created'
+  | 'episode_updated'
+  | 'weight_approval_needed'
+  | 'weight_approval_result'
 
 /**
  * NotificationPriority - Urgency level
@@ -213,6 +217,39 @@ export interface DutyMetadata {
 }
 
 /**
+ * EpisodeMetadata - Context for health episode (illness/injury) events
+ */
+export interface EpisodeMetadata {
+  episodeId: string
+  episodeType: string
+  title: string
+  patientName: string
+  status: string
+  sensitivity: 'standard' | 'sensitive'
+  startDate: string
+  description?: string
+  actionBy: string
+  actionByUserId: string
+}
+
+/**
+ * WeightApprovalMetadata - Context for weight entry approval workflow
+ */
+export interface WeightApprovalMetadata {
+  vitalId: string
+  patientName: string
+  weight: number
+  unit: 'lbs' | 'kg'
+  submittedBy: string
+  submittedByUserId: string
+  approvalAction?: 'approve' | 'reject'
+  approvedBy?: string
+  rejectionReason?: string
+  actionBy: string
+  actionByUserId: string
+}
+
+/**
  * NotificationMetadata - Union type for all metadata types
  */
 export type NotificationMetadata =
@@ -226,6 +263,8 @@ export type NotificationMetadata =
   | FamilyMetadata
   | PatientMetadata
   | DutyMetadata
+  | EpisodeMetadata
+  | WeightApprovalMetadata
 
 // ==================== NOTIFICATION INTERFACE ====================
 
@@ -311,6 +350,14 @@ export interface NotificationPreferences {
   vital_alert: NotificationChannelPreferences
   medication_reminder: NotificationChannelPreferences
 
+  // Health episode notifications
+  episode_created: NotificationChannelPreferences
+  episode_updated: NotificationChannelPreferences
+
+  // Weight approval notifications
+  weight_approval_needed: NotificationChannelPreferences
+  weight_approval_result: NotificationChannelPreferences
+
   // Household duty notifications
   duty_assigned: NotificationChannelPreferences
   duty_reassigned: NotificationChannelPreferences
@@ -352,6 +399,10 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   patient_added: { email: true, push: true, inApp: true },
   vital_alert: { email: true, push: true, inApp: true },
   medication_reminder: { email: true, push: true, inApp: true },
+  episode_created: { email: true, push: true, inApp: true },
+  episode_updated: { email: true, push: true, inApp: true },
+  weight_approval_needed: { email: true, push: true, inApp: true },
+  weight_approval_result: { email: true, push: true, inApp: true },
   duty_assigned: { email: true, push: true, inApp: true },
   duty_reassigned: { email: true, push: true, inApp: true },
   duty_updated: { email: true, push: false, inApp: true },

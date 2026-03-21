@@ -71,10 +71,11 @@ export async function POST(
       nutritionAnalysis: analyses.nutritionAnalysis,
       vitalsAnalysis: analyses.vitalsAnalysis,
       medicationAnalysis: analyses.medicationAnalysis,
+      documentAnalysis: analyses.documentAnalysis,
       petFeedingAnalysis: analyses.petFeedingAnalysis,
       petVaccinationAnalysis: analyses.petVaccinationAnalysis,
       documentsCount: documents?.length || 0,
-      analyses: analyses  // Add full analyses object for getCriticalAlerts and calculateHealthScore
+      analyses: analyses
     })
 
     logger.info('[Health Report] Report generated successfully', {
@@ -129,11 +130,19 @@ function generateHealthReport(data: any): string {
     nutritionAnalysis,
     vitalsAnalysis,
     medicationAnalysis,
+    documentAnalysis,
     petFeedingAnalysis,
     petVaccinationAnalysis,
     documentsCount,
     analyses
   } = data
+
+  // Determine life stage for age-appropriate content
+  const lifeStage = !isPet && patient.dateOfBirth
+    ? getHumanLifeStage(patient.dateOfBirth)
+    : null
+  const isNewbornOrInfant = lifeStage?.stage === 'newborn' || lifeStage?.stage === 'infant'
+  const isMinor = lifeStage ? ['newborn', 'infant', 'toddler', 'child', 'teen'].includes(lifeStage.stage) : age < 18
 
   const reportDate = new Date().toLocaleString('en-US', {
     year: 'numeric',
@@ -281,8 +290,8 @@ function generateHealthReport(data: any): string {
     report += `\n`
   }
 
-  // Human: Activity & Nutrition
-  if (!isPet && (activityAnalysis || nutritionAnalysis)) {
+  // Human: Activity & Nutrition (skip for newborns/infants — not applicable)
+  if (!isPet && !isNewbornOrInfant && (activityAnalysis || nutritionAnalysis)) {
     report += `### Activity & Nutrition\n\n`
     report += `| Metric | Current | Goal | Status |\n`
     report += `|--------|---------|------|--------|\n`
@@ -427,11 +436,58 @@ function generateHealthReport(data: any): string {
     }
   }
 
+  // Document Analysis (structured OCR data)
+  if (documentAnalysis && documentAnalysis.status === 'analyzed') {
+    report += `## DOCUMENT ANALYSIS\n\n`
+    report += `**${documentAnalysis.processedDocuments} of ${documentAnalysis.totalDocuments} documents analyzed**\n\n`
+
+    // Lab results from documents
+    if (documentAnalysis.labResults && documentAnalysis.labResults.length > 0) {
+      report += `### Lab Results (from uploaded documents)\n\n`
+      report += `| Test | Value | Reference Range | Status |\n`
+      report += `|------|-------|-----------------|--------|\n`
+      documentAnalysis.labResults.forEach((lr: any) => {
+        const status = lr.status ? lr.status.charAt(0).toUpperCase() + lr.status.slice(1) : '—'
+        report += `| ${lr.testName} | ${lr.value} ${lr.unit || ''} | ${lr.referenceRange || '—'} | ${status} |\n`
+      })
+      report += `\n`
+    }
+
+    // Diagnoses from documents
+    if (documentAnalysis.diagnoses && documentAnalysis.diagnoses.length > 0) {
+      report += `### Diagnoses (from documents)\n\n`
+      documentAnalysis.diagnoses.forEach((d: string) => {
+        report += `- ${d}\n`
+      })
+      report += `\n`
+    }
+
+    // Medications from documents (cross-reference with active meds)
+    if (documentAnalysis.medications && documentAnalysis.medications.length > 0) {
+      report += `### Medications Found in Documents\n\n`
+      report += `| Medication | Dosage | Frequency |\n`
+      report += `|------------|--------|-----------|\n`
+      documentAnalysis.medications.forEach((m: any) => {
+        report += `| ${m.name} | ${m.dosage || '—'} | ${m.frequency || '—'} |\n`
+      })
+      report += `\n`
+    }
+
+    // Document-specific alerts
+    if (documentAnalysis.alerts && documentAnalysis.alerts.length > 0) {
+      report += `### Document Alerts\n\n`
+      documentAnalysis.alerts.forEach((alert: any) => {
+        const icon = alert.severity === 'critical' ? '🔴' : alert.severity === 'warning' ? '🟡' : 'ℹ️'
+        report += `${icon} ${alert.message}\n\n`
+      })
+    }
+  }
+
   // Assessment
   report += `## ASSESSMENT\n\n`
 
   // Positive findings
-  const highlights = getPositiveHighlights(weightAnalysis, activityAnalysis, nutritionAnalysis, vitalsAnalysis, medicationAnalysis, documentsCount)
+  const highlights = getPositiveHighlights(weightAnalysis, activityAnalysis, nutritionAnalysis, vitalsAnalysis, medicationAnalysis, documentsCount, isNewbornOrInfant)
   if (highlights.length > 0) {
     report += `**Positive Findings:**  \n\n`
     highlights.forEach((h: string) => report += `- ${h}  \n`)
@@ -439,7 +495,7 @@ function generateHealthReport(data: any): string {
   }
 
   // Areas requiring attention
-  const recommendations = getRecommendations(weightAnalysis, activityAnalysis, nutritionAnalysis, vitalsAnalysis, medicationAnalysis)
+  const recommendations = getRecommendations(weightAnalysis, activityAnalysis, nutritionAnalysis, vitalsAnalysis, medicationAnalysis, isNewbornOrInfant, isMinor)
   if (recommendations.length > 0) {
     report += `**Areas Requiring Attention:**  \n\n`
     recommendations.forEach((r: string, i: number) => {
@@ -450,7 +506,7 @@ function generateHealthReport(data: any): string {
 
   // Plan with priorities
   report += `## RECOMMENDED PLAN\n\n`
-  const nextSteps = getNextSteps(weightAnalysis, activityAnalysis, nutritionAnalysis, vitalsAnalysis, medicationAnalysis)
+  const nextSteps = getNextSteps(weightAnalysis, activityAnalysis, nutritionAnalysis, vitalsAnalysis, medicationAnalysis, isNewbornOrInfant, isMinor)
   const immediateActions = nextSteps.filter((_, i) => i < 2)
   const weeklyGoals = nextSteps.filter((_, i) => i >= 2)
 
@@ -472,7 +528,7 @@ function generateHealthReport(data: any): string {
   report += `## CAREGIVER COORDINATION CHECKLIST\n\n`
 
   // Doctor Discussion Points
-  const doctorPoints = getDoctorDiscussionPoints(weightAnalysis, nutritionAnalysis, vitalsAnalysis, medicationAnalysis, age)
+  const doctorPoints = getDoctorDiscussionPoints(weightAnalysis, nutritionAnalysis, vitalsAnalysis, medicationAnalysis, age, isNewbornOrInfant, isMinor, lifeStage)
   if (doctorPoints.length > 0) {
     report += `### 🩺 Questions for Primary Care Doctor\n\n`
     report += `**Bring this list to the next appointment:**\n\n`
@@ -483,7 +539,7 @@ function generateHealthReport(data: any): string {
   }
 
   // Medication Management
-  const medReminders = getMedicationReminders(medicationAnalysis, patient)
+  const medReminders = getMedicationReminders(medicationAnalysis, patient, isNewbornOrInfant)
   if (medReminders.length > 0) {
     report += `### 💊 Medication Management\n\n`
     medReminders.forEach((reminder: string) => {
@@ -493,7 +549,7 @@ function generateHealthReport(data: any): string {
   }
 
   // Appointments Needed
-  const appointmentNeeds = getAppointmentNeeds(age, vitalsAnalysis, medicationAnalysis, documentsCount)
+  const appointmentNeeds = getAppointmentNeeds(age, vitalsAnalysis, medicationAnalysis, documentsCount, isNewbornOrInfant, isMinor, lifeStage)
   if (appointmentNeeds.length > 0) {
     report += `### 📅 Recommended Appointments & Screenings\n\n`
     appointmentNeeds.forEach((appt: string) => {
@@ -503,7 +559,7 @@ function generateHealthReport(data: any): string {
   }
 
   // Shopping Lists
-  const shoppingLists = getShoppingLists(nutritionAnalysis, medicationAnalysis, vitalsAnalysis)
+  const shoppingLists = getShoppingLists(nutritionAnalysis, medicationAnalysis, vitalsAnalysis, isNewbornOrInfant, isMinor)
   if (shoppingLists.groceries.length > 0 || shoppingLists.medical.length > 0) {
     report += `### 🛒 Shopping & Supply Lists\n\n`
 
@@ -525,7 +581,7 @@ function generateHealthReport(data: any): string {
   }
 
   // Caregiver Action Items
-  const caregiverActions = getCaregiverActions(weightAnalysis, nutritionAnalysis, vitalsAnalysis, medicationAnalysis, patient)
+  const caregiverActions = getCaregiverActions(weightAnalysis, nutritionAnalysis, vitalsAnalysis, medicationAnalysis, patient, isNewbornOrInfant, isMinor, lifeStage)
   if (caregiverActions.length > 0) {
     report += `### 👨‍👩‍👧‍👦 Caregiver Action Items\n\n`
     report += `**Tasks for family members and caregivers:**\n\n`
@@ -568,8 +624,17 @@ function generateHealthReport(data: any): string {
 
 // Helper functions that are report-specific (not moved to utility yet)
 
-function getPositiveHighlights(weight: any, activity: any, nutrition: any, vitals: any, medications: any, docsCount: number): string[] {
+function getPositiveHighlights(weight: any, activity: any, nutrition: any, vitals: any, medications: any, docsCount: number, isNewbornOrInfant: boolean = false): string[] {
   const highlights = []
+
+  if (isNewbornOrInfant) {
+    if (weight.logsCount >= 3) highlights.push(`Consistent weight tracking with ${weight.logsCount} measurements`)
+    if (weight.status === 'gaining') highlights.push(`Healthy weight gain observed — on track for growth`)
+    if (vitals.totalCount >= 3) highlights.push(`Regular vital signs monitoring (${vitals.totalCount} records)`)
+    if (docsCount >= 1) highlights.push(`Medical documents on file (${docsCount} documents)`)
+    if (medications.status === 'active') highlights.push(`Medications documented and tracked`)
+    return highlights.length > 0 ? highlights : ['Building a strong health record for your baby']
+  }
 
   if (weight.logsCount >= 7) highlights.push(`Consistent weight tracking with ${weight.logsCount} logs`)
   if (weight.status === 'losing') highlights.push(`Making progress toward weight goal`)
@@ -582,8 +647,31 @@ function getPositiveHighlights(weight: any, activity: any, nutrition: any, vital
   return highlights.length > 0 ? highlights : ['Starting to build healthy tracking habits']
 }
 
-function getRecommendations(weight: any, activity: any, nutrition: any, vitals: any, medications: any): string[] {
+function getRecommendations(weight: any, activity: any, nutrition: any, vitals: any, medications: any, isNewbornOrInfant: boolean = false, isMinor: boolean = false): string[] {
   const recommendations = []
+
+  if (isNewbornOrInfant) {
+    if (weight.status === 'no_data' || weight.logsCount < 2) {
+      recommendations.push('Record baby\'s weight at each pediatrician visit to track growth')
+    }
+    if (weight.status === 'losing') {
+      recommendations.push('⚠️ Weight loss detected — consult pediatrician to assess feeding adequacy')
+    }
+    if (vitals.status === 'no_data') {
+      recommendations.push('Log temperature and other vitals during well-child visits')
+    }
+    return recommendations.length > 0 ? recommendations : ['Continue regular feeding and well-child visit schedule']
+  }
+
+  if (isMinor) {
+    if (weight.status === 'no_data' || weight.logsCount < 3) {
+      recommendations.push('Record weight and height at each pediatric visit to track growth')
+    }
+    if (vitals.status === 'no_data') {
+      recommendations.push('Log vitals from pediatric checkups for a complete health record')
+    }
+    return recommendations.length > 0 ? recommendations : ['Continue regular pediatric checkups and age-appropriate activities']
+  }
 
   if (weight.status === 'no_data' || weight.logsCount < 3) {
     recommendations.push('Log weight regularly to track progress and identify trends')
@@ -609,7 +697,27 @@ function getRecommendations(weight: any, activity: any, nutrition: any, vitals: 
   return recommendations.length > 0 ? recommendations : ['Continue current healthy habits and stay consistent']
 }
 
-function getNextSteps(weight: any, activity: any, nutrition: any, vitals: any, medications: any): string[] {
+function getNextSteps(weight: any, activity: any, nutrition: any, vitals: any, medications: any, isNewbornOrInfant: boolean = false, isMinor: boolean = false): string[] {
+  if (isNewbornOrInfant) {
+    const steps = []
+    steps.push('Attend all scheduled well-child visits with pediatrician')
+    if (weight.status === 'no_data') {
+      steps.push('Record birth weight and each subsequent weight measurement')
+    }
+    steps.push('Track feeding frequency and duration for each session')
+    return steps.slice(0, 3)
+  }
+
+  if (isMinor) {
+    const steps = []
+    steps.push('Stay up to date with pediatric well-child visit schedule')
+    if (weight.status === 'no_data' || weight.logsCount < 3) {
+      steps.push('Record weight and height from each checkup')
+    }
+    steps.push('Ensure age-appropriate immunizations are current')
+    return steps.slice(0, 3)
+  }
+
   const steps = []
 
   if (weight.status === 'no_data' || weight.logsCount < 7) {
@@ -639,22 +747,51 @@ function getNextSteps(weight: any, activity: any, nutrition: any, vitals: any, m
   return steps.slice(0, 3)
 }
 
-function getDoctorDiscussionPoints(weight: any, nutrition: any, vitals: any, medications: any, age: number): string[] {
+function getDoctorDiscussionPoints(weight: any, nutrition: any, vitals: any, medications: any, age: number, isNewbornOrInfant: boolean = false, isMinor: boolean = false, lifeStage: any = null): string[] {
+  if (isNewbornOrInfant) {
+    const points = []
+    if (weight.status === 'losing') {
+      points.push('Discuss weight loss — evaluate feeding adequacy and latch/intake')
+    }
+    if (weight.status === 'no_data') {
+      points.push('Confirm birth weight and expected weight gain trajectory')
+    }
+    points.push('Review feeding schedule and confirm adequate intake for age')
+    points.push('Discuss newborn screening results (heel prick, hearing test)')
+    if (lifeStage?.stage === 'newborn') {
+      points.push('Assess umbilical cord healing and jaundice risk')
+    }
+    return points
+  }
+
+  if (isMinor) {
+    const points = []
+    if (weight.status === 'no_data') {
+      points.push('Record height and weight to track growth percentiles')
+    }
+    points.push('Review developmental milestones for age')
+    points.push('Confirm immunization schedule is up to date')
+    if (age >= 4 && age < 6) {
+      points.push('Pre-kindergarten vision and hearing screening')
+    }
+    if (age >= 11) {
+      points.push('Discuss adolescent health topics as appropriate')
+    }
+    return points
+  }
+
   const points = []
 
-  // Critical nutrition issue
   if (nutrition.status !== 'no_data' && nutrition.calories < nutrition.goal * 0.5) {
     points.push(`Discuss severely low caloric intake (${nutrition.calories} cal/day, only ${Math.round((nutrition.calories / nutrition.goal) * 100)}% of target) - assess for appetite issues, difficulty eating, or underlying conditions`)
   }
 
-  // Weight changes
   if (weight.status === 'gaining' && weight.diff && weight.diff > 20) {
     points.push(`Review ${weight.diff.toFixed(1)} lbs weight increase - check for fluid retention, medication side effects, or other causes`)
   } else if (weight.status === 'losing' && weight.diff && weight.diff < -15) {
     points.push(`Discuss ${Math.abs(weight.diff).toFixed(1)} lbs weight loss - evaluate if intentional and healthy or needs investigation`)
   }
 
-  // Vital sign abnormalities
   if (vitals.recent) {
     const highBP = vitals.recent.find((v: any) => v.type === 'blood_pressure' && getVitalStatus(v) === 'Elevated')
     if (highBP) {
@@ -667,7 +804,6 @@ function getDoctorDiscussionPoints(weight: any, nutrition: any, vitals: any, med
     }
   }
 
-  // Age-appropriate screenings
   if (age >= 65) {
     points.push(`Confirm age-appropriate screenings are up to date: bone density, vision, hearing, fall risk assessment`)
   }
@@ -675,7 +811,6 @@ function getDoctorDiscussionPoints(weight: any, nutrition: any, vitals: any, med
     points.push(`Verify preventive screenings are current: colonoscopy, mammogram (if applicable), cardiovascular assessment`)
   }
 
-  // Medication review
   if (medications.count === 0 && vitals.totalCount > 5) {
     points.push(`No medications on record despite regular vital monitoring - ensure all current medications are documented`)
   } else if (medications.count >= 5) {
@@ -685,9 +820,21 @@ function getDoctorDiscussionPoints(weight: any, nutrition: any, vitals: any, med
   return points
 }
 
-function getMedicationReminders(medicationAnalysis: any, patient: any): string[] {
+function getMedicationReminders(medicationAnalysis: any, patient: any, isNewbornOrInfant: boolean = false): string[] {
   const reminders = []
   const medications = medicationAnalysis.medications || []
+
+  if (isNewbornOrInfant) {
+    if (!medications || medications.length === 0) {
+      reminders.push('No medications on file — update if pediatrician prescribes vitamin D drops or other supplements')
+      return reminders
+    }
+    medications.forEach((m: any) => {
+      reminders.push(`${m.name}: Administer as prescribed by pediatrician`)
+    })
+    reminders.push('Store all medications out of baby\'s reach')
+    return reminders
+  }
 
   if (!medications || medications.length === 0) {
     reminders.push('No medications currently on file - ensure to add all current prescriptions for accurate tracking')
@@ -695,18 +842,15 @@ function getMedicationReminders(medicationAnalysis: any, patient: any): string[]
     return reminders
   }
 
-  // Check for medications without expiration dates
   const noExpiry = medications.filter((m: any) => !m.expirationDate)
   if (noExpiry.length > 0) {
     reminders.push(`${noExpiry.length} medication(s) missing expiration dates - check bottles and update records`)
   }
 
-  // General medication management
   reminders.push('Schedule medication review with pharmacist every 6 months')
   reminders.push('Set up pill organizer for the week every Sunday evening')
   reminders.push('Keep updated medication list in wallet/purse for emergencies')
 
-  // Check for upcoming refills needed (if we had refill data)
   if (medications.length > 0) {
     reminders.push(`Review prescription refills - call pharmacy to check remaining refills for all ${medications.length} medications`)
   }
@@ -714,14 +858,52 @@ function getMedicationReminders(medicationAnalysis: any, patient: any): string[]
   return reminders
 }
 
-function getAppointmentNeeds(age: number, vitals: any, medications: any, documentsCount: number): string[] {
+function getAppointmentNeeds(age: number, vitals: any, medications: any, documentsCount: number, isNewbornOrInfant: boolean = false, isMinor: boolean = false, lifeStage: any = null): string[] {
+  if (isNewbornOrInfant) {
+    const needs = []
+    if (lifeStage?.stage === 'newborn') {
+      needs.push('Well-child visit at 3-5 days after birth')
+      needs.push('Well-child visit at 1 month')
+      needs.push('Hepatitis B vaccine (if not given at birth)')
+    } else {
+      // Infant
+      needs.push('Well-child visits: 2, 4, 6, 9, and 12 months')
+      needs.push('Immunizations per AAP schedule (DTaP, IPV, Hib, PCV, rotavirus)')
+    }
+    needs.push('Hearing screening (if not completed)')
+    needs.push('Newborn metabolic screening follow-up')
+    return needs
+  }
+
+  if (isMinor) {
+    const needs = []
+    if (age < 3) {
+      needs.push('Well-child visits: 15, 18, 24, and 30 months')
+      needs.push('Immunizations per AAP schedule')
+      needs.push('Developmental screening at 18 and 24 months')
+    } else if (age < 6) {
+      needs.push('Annual well-child visit with pediatrician')
+      needs.push('Pre-kindergarten immunization update (DTaP, IPV, MMR, varicella)')
+      needs.push('Vision screening')
+    } else if (age < 13) {
+      needs.push('Annual well-child visit with pediatrician')
+      needs.push('Dental cleaning and exam (every 6 months)')
+      needs.push('Vision screening (annually)')
+    } else {
+      needs.push('Annual adolescent wellness visit')
+      needs.push('HPV vaccine series (if not started)')
+      needs.push('Tdap booster')
+      needs.push('Dental cleaning and exam (every 6 months)')
+    }
+    return needs
+  }
+
   const needs = []
 
-  // Age-based screenings
   if (age >= 75) {
     needs.push('Annual wellness visit with primary care physician')
     needs.push('Geriatric assessment (if not done in last year)')
-    needs.push('Vision exam with ophthalmologist (check for cataracts, glaucoma, macular degeneration)')
+    needs.push('Vision exam with ophthalmologist')
     needs.push('Hearing test with audiologist')
     needs.push('Bone density scan (if not done in last 2 years)')
   } else if (age >= 65) {
@@ -735,24 +917,20 @@ function getAppointmentNeeds(age: number, vitals: any, medications: any, documen
     needs.push('Cardiovascular risk assessment')
   }
 
-  // Based on vitals
   if (vitals.totalCount > 10) {
     const highBP = vitals.recent?.find((v: any) => v.type === 'blood_pressure' && getVitalStatus(v) === 'Elevated')
     if (highBP) {
       needs.push('Cardiology consultation for blood pressure management')
     }
-
     const highBS = vitals.recent?.find((v: any) => v.type === 'blood_sugar' && getVitalStatus(v) === 'Elevated')
     if (highBS) {
       needs.push('Endocrinology or diabetes educator consultation')
     }
   }
 
-  // Dental
   needs.push('Dental cleaning and exam (every 6 months)')
-
-  // Preventive
   needs.push('Annual flu vaccine (September-October)')
+
   if (age >= 65) {
     needs.push('Pneumonia vaccine (if not up to date)')
     needs.push('Shingles vaccine (if not completed)')
@@ -761,11 +939,48 @@ function getAppointmentNeeds(age: number, vitals: any, medications: any, documen
   return needs
 }
 
-function getShoppingLists(nutrition: any, medications: any, vitals: any): { groceries: string[], medical: string[] } {
+function getShoppingLists(nutrition: any, medications: any, vitals: any, isNewbornOrInfant: boolean = false, isMinor: boolean = false): { groceries: string[], medical: string[] } {
+  if (isNewbornOrInfant) {
+    return {
+      groceries: [
+        'Diapers (newborn/size 1)',
+        'Baby wipes (fragrance-free)',
+        'Diaper rash cream (zinc oxide based)',
+        'Gentle baby soap/shampoo',
+        'Baby laundry detergent (fragrance-free)',
+        'Burp cloths and receiving blankets'
+      ],
+      medical: [
+        'Digital rectal thermometer for accurate readings',
+        'Infant nasal aspirator (bulb syringe or NoseFrida)',
+        'Saline drops for nasal congestion',
+        'Infant gas relief drops (simethicone)',
+        'Petroleum jelly (for umbilical cord care)',
+        'Alcohol-free hand sanitizer for visitors'
+      ]
+    }
+  }
+
+  if (isMinor) {
+    return {
+      groceries: [
+        'Age-appropriate snacks and meals',
+        'Fresh fruits and vegetables',
+        'Whole grain options',
+        'Milk and dairy (or alternatives)'
+      ],
+      medical: [
+        'Children\'s pain reliever (acetaminophen or ibuprofen, age-appropriate)',
+        'Digital thermometer',
+        'Band-aids and first aid supplies',
+        'Sunscreen (SPF 30+, pediatric formula)'
+      ]
+    }
+  }
+
   const groceries = []
   const medical = []
 
-  // Nutrition-based grocery recommendations
   if (nutrition.status === 'under_goal' || nutrition.calories < nutrition.goal * 0.5) {
     groceries.push('High-calorie nutritious foods: nuts, nut butters, avocados, olive oil')
     groceries.push('Protein-rich items: eggs, Greek yogurt, cheese, lean meats, protein powder')
@@ -775,33 +990,28 @@ function getShoppingLists(nutrition: any, medications: any, vitals: any): { groc
     groceries.push('Frozen meals for convenience on difficult days')
   }
 
-  // General healthy staples
   groceries.push('Fresh fruits and vegetables (pre-cut if easier)')
   groceries.push('Whole grains: brown rice, quinoa, oatmeal')
   groceries.push('Hydration: water, herbal teas, low-sugar drinks')
 
-  // Medical supplies based on vital monitoring
   if (vitals.totalCount > 0) {
     const hasBP = vitals.recent?.some((v: any) => v.type === 'blood_pressure')
     if (hasBP) {
       medical.push('Blood pressure monitor batteries (if needed)')
       medical.push('Blood pressure log notebook or app')
     }
-
     const hasBS = vitals.recent?.some((v: any) => v.type === 'blood_sugar')
     if (hasBS) {
       medical.push('Blood glucose test strips (check supply)')
       medical.push('Lancets for glucose meter')
       medical.push('Alcohol wipes')
     }
-
     const hasTemp = vitals.recent?.some((v: any) => v.type === 'temperature')
     if (hasTemp) {
       medical.push('Thermometer probe covers (if applicable)')
     }
   }
 
-  // General medical supplies
   medical.push('7-day pill organizer (if not already have one)')
   medical.push('First aid supplies: bandages, antiseptic, pain relievers')
   medical.push('Hand sanitizer and tissues')
@@ -809,11 +1019,81 @@ function getShoppingLists(nutrition: any, medications: any, vitals: any): { groc
   return { groceries, medical }
 }
 
-function getCaregiverActions(weight: any, nutrition: any, vitals: any, medicationAnalysis: any, patient: any): any[] {
+function getCaregiverActions(weight: any, nutrition: any, vitals: any, medicationAnalysis: any, patient: any, isNewbornOrInfant: boolean = false, isMinor: boolean = false, lifeStage: any = null): any[] {
+  if (isNewbornOrInfant) {
+    const actions = []
+    actions.push({
+      priority: 'DAILY',
+      task: 'Monitor feeding and output',
+      details: [
+        'Track number of feedings per day (8-12 for newborns)',
+        'Count wet diapers (expect 6+ per day after day 4)',
+        'Count dirty diapers and note color/consistency',
+        'Note feeding duration and any latch difficulties'
+      ]
+    })
+    actions.push({
+      priority: 'DAILY',
+      task: 'Monitor baby\'s temperature and behavior',
+      details: [
+        'Check temperature if baby feels warm or is unusually fussy',
+        'Watch for signs of jaundice (yellowing of skin/eyes)',
+        'Ensure safe sleep position (back to sleep, firm surface)',
+        'Monitor umbilical cord stump for signs of infection'
+      ]
+    })
+    if (weight.status === 'no_data' || weight.logsCount < 3) {
+      actions.push({
+        priority: 'THIS WEEK',
+        task: 'Record baby\'s weight',
+        details: [
+          'Weigh at pediatrician visits and record in app',
+          'Expect 5-7% weight loss in first few days (normal)',
+          'Baby should regain birth weight by 10-14 days',
+          'Track weight gain trend (expect 5-7 oz/week after regaining birth weight)'
+        ]
+      })
+    }
+    actions.push({
+      priority: 'THIS MONTH',
+      task: 'Prepare for upcoming well-child visits',
+      details: [
+        'Schedule next pediatrician appointment',
+        'Write down questions for the doctor',
+        'Bring immunization records to each visit',
+        'Note any concerns about feeding, sleep, or behavior'
+      ]
+    })
+    return actions
+  }
+
+  if (isMinor) {
+    const actions = []
+    actions.push({
+      priority: 'ONGOING',
+      task: 'Maintain health records',
+      details: [
+        'Record height and weight from each checkup',
+        'Keep immunization records up to date',
+        'Upload any lab results or medical documents',
+        'Note developmental milestones and concerns'
+      ]
+    })
+    actions.push({
+      priority: 'THIS MONTH',
+      task: 'Schedule next pediatric checkup',
+      details: [
+        'Follow age-appropriate well-child visit schedule',
+        'Prepare list of questions or concerns',
+        'Bring current medication list if applicable'
+      ]
+    })
+    return actions
+  }
+
   const actions = []
   const medications = medicationAnalysis.medications || []
 
-  // Critical nutrition action
   if (nutrition.status !== 'no_data' && nutrition.calories < nutrition.goal * 0.5) {
     actions.push({
       priority: 'URGENT',
@@ -827,7 +1107,6 @@ function getCaregiverActions(weight: any, nutrition: any, vitals: any, medicatio
     })
   }
 
-  // Meal logging support
   if (nutrition.mealsCount < 2) {
     actions.push({
       priority: 'THIS WEEK',
@@ -840,7 +1119,6 @@ function getCaregiverActions(weight: any, nutrition: any, vitals: any, medicatio
     })
   }
 
-  // Medication organization
   if (medications.length > 0) {
     actions.push({
       priority: 'THIS WEEK',
@@ -854,7 +1132,6 @@ function getCaregiverActions(weight: any, nutrition: any, vitals: any, medicatio
     })
   }
 
-  // Vital monitoring
   if (vitals.totalCount > 0) {
     actions.push({
       priority: 'ONGOING',
@@ -868,7 +1145,6 @@ function getCaregiverActions(weight: any, nutrition: any, vitals: any, medicatio
     })
   }
 
-  // Weight tracking
   if (weight.status === 'no_data' || weight.logsCount < 5) {
     actions.push({
       priority: 'THIS WEEK',
@@ -882,7 +1158,6 @@ function getCaregiverActions(weight: any, nutrition: any, vitals: any, medicatio
     })
   }
 
-  // Emergency preparedness
   actions.push({
     priority: 'THIS MONTH',
     task: 'Update emergency information',

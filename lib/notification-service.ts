@@ -42,7 +42,9 @@ import type {
   AppointmentMetadata,
   HealthReportMetadata,
   FamilyMetadata,
-  PatientMetadata
+  PatientMetadata,
+  EpisodeMetadata,
+  WeightApprovalMetadata
 } from '@/types/notifications'
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@/types/notifications'
 import type { FamilyMember, PatientProfile } from '@/types/medical'
@@ -565,6 +567,38 @@ export function generateContextAwareMessage(
           : meta.requiresDriver
           ? ' 🚗 Transportation needed.'
           : ''
+      }`
+    }
+
+    case 'episode_created': {
+      const meta = metadata as EpisodeMetadata
+      const typeLabel = meta.episodeType.replace(/_/g, ' ')
+      if (meta.sensitivity === 'sensitive') {
+        return `${meta.actionBy} created a sensitive health event for ${meta.patientName}. Please check the app for details.`
+      }
+      return `${meta.actionBy} created a health event for ${meta.patientName}: "${meta.title}" (${typeLabel}).${
+        meta.description ? ` ${meta.description}` : ''
+      }`
+    }
+
+    case 'episode_updated': {
+      const meta = metadata as EpisodeMetadata
+      if (meta.sensitivity === 'sensitive') {
+        return `${meta.actionBy} updated a sensitive health event for ${meta.patientName}. Status: ${meta.status}.`
+      }
+      return `${meta.actionBy} updated health event "${meta.title}" for ${meta.patientName}. Status: ${meta.status}.`
+    }
+
+    case 'weight_approval_needed': {
+      const meta = metadata as WeightApprovalMetadata
+      return `${meta.submittedBy} submitted a weight entry for ${meta.patientName}: ${meta.weight} ${meta.unit}. This entry requires your approval.`
+    }
+
+    case 'weight_approval_result': {
+      const meta = metadata as WeightApprovalMetadata
+      const actionWord = meta.approvalAction === 'approve' ? 'approved' : 'rejected'
+      return `Your weight entry for ${meta.patientName} (${meta.weight} ${meta.unit}) has been ${actionWord} by ${meta.actionBy}.${
+        meta.rejectionReason ? ` Reason: ${meta.rejectionReason}` : ''
       }`
     }
 

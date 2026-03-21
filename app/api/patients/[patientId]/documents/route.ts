@@ -4,6 +4,7 @@ import { removeUndefinedValues } from '@/lib/firestore-helpers'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import type { PatientDocument } from '@/types/medical'
 import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
+import { processDocumentOCR } from '@/lib/document-ocr-pipeline'
 import { logger } from '@/lib/logger'
 
 export async function GET(
@@ -50,7 +51,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: documents })
   } catch (error) {
-    console.error('Error fetching patient documents:', error)
+    logger.error('[Documents API] Error fetching documents', error as Error)
     return NextResponse.json(
       { success: false, error: 'Failed to fetch documents' },
       { status: 500 }
@@ -151,6 +152,16 @@ export async function POST(
       })
     }
 
+    // Auto-trigger OCR pipeline (fire-and-forget — don't block upload response)
+    if (document.fileType === 'image' || document.originalUrl) {
+      processDocumentOCR(ownerUserId, patientId, docRef.id).catch(ocrError => {
+        logger.error('[Documents API] Auto-OCR failed (non-blocking)', ocrError as Error, {
+          documentId: docRef.id,
+          patientId
+        })
+      })
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -159,10 +170,8 @@ export async function POST(
       }
     })
   } catch (error: any) {
-    console.error('Error uploading document:', error)
-    console.error('Error details:', {
+    logger.error('[Documents API] Error uploading document', error as Error, {
       message: error?.message,
-      stack: error?.stack,
       code: error?.code
     })
     return NextResponse.json(

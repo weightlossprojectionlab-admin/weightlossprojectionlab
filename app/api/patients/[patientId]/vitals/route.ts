@@ -383,6 +383,55 @@ export async function POST(
           unit: newVital.unit || ''
         }
       })
+      // Vital Alert — send urgent notification for abnormal readings
+      const isAbnormal = detectAbnormalVital(newVital)
+      if (isAbnormal) {
+        await sendNotificationToFamilyMembers({
+          userId: '',
+          patientId,
+          type: 'vital_alert',
+          priority: 'urgent',
+          title: `Vital Alert: ${newVital.type.replace(/_/g, ' ')}`,
+          message: 'Abnormal reading detected',
+          excludeUserId: userId,
+          actionUrl: `/patients/${patientId}`,
+          metadata: {
+            vitalId: vitalRef.id,
+            actionBy: userName,
+            actionByUserId: userId,
+            patientName: patientSnapshot.data()?.name || 'Patient',
+            vitalType: newVital.type,
+            value: formattedValue,
+            unit: newVital.unit || '',
+            isAbnormal: true,
+            abnormalReason: isAbnormal
+          }
+        })
+      }
+
+      // Weight Approval — notify family when entry needs approval
+      if (approvalStatus === 'pending') {
+        await sendNotificationToFamilyMembers({
+          userId: '',
+          patientId,
+          type: 'weight_approval_needed',
+          priority: 'normal',
+          title: 'Weight Entry Needs Approval',
+          message: 'A weight entry requires approval',
+          excludeUserId: userId,
+          actionUrl: `/patients/${patientId}`,
+          metadata: {
+            vitalId: vitalRef.id,
+            patientName: patientSnapshot.data()?.name || 'Patient',
+            weight: typeof newVital.value === 'number' ? newVital.value : 0,
+            unit: ((newVital as any).unit || 'lbs') as 'lbs' | 'kg',
+            submittedBy: userName,
+            submittedByUserId: userId,
+            actionBy: userName,
+            actionByUserId: userId
+          }
+        })
+      }
     } catch (notificationError) {
       // Log error but don't fail the main operation
       logger.error('[API /patients/[id]/vitals POST] Error sending notification', notificationError as Error, {
@@ -402,5 +451,45 @@ export async function POST(
       { success: false, error: error.message || 'Failed to log vital sign' },
       { status: 500 }
     )
+  }
+}
+
+/**
+ * Detect abnormal vital readings using standard reference ranges.
+ * Returns a human-readable reason string if abnormal, or null if normal.
+ */
+function detectAbnormalVital(vital: any): string | null {
+  const value = vital.value
+
+  switch (vital.type) {
+    case 'blood_pressure': {
+      const systolic = vital.systolic || value?.systolic
+      const diastolic = vital.diastolic || value?.diastolic
+      if (systolic >= 140 || diastolic >= 90) return `reading is elevated (${systolic}/${diastolic} mmHg)`
+      if (systolic < 90 || diastolic < 60) return `reading is low (${systolic}/${diastolic} mmHg)`
+      return null
+    }
+    case 'blood_sugar':
+      if (value > 125) return 'reading is elevated'
+      if (value < 70) return 'reading is low'
+      return null
+    case 'temperature': {
+      const unit = vital.unit === 'celsius' ? 'C' : 'F'
+      if (unit === 'F' && value > 100.4) return 'fever detected'
+      if (unit === 'F' && value < 95) return 'reading is low (hypothermia risk)'
+      if (unit === 'C' && value > 38) return 'fever detected'
+      if (unit === 'C' && value < 35) return 'reading is low (hypothermia risk)'
+      return null
+    }
+    case 'pulse_oximeter':
+      if (value < 90) return 'oxygen saturation is critically low'
+      if (value < 95) return 'oxygen saturation is below normal'
+      return null
+    case 'heart_rate':
+      if (value > 100) return 'heart rate is elevated (tachycardia)'
+      if (value < 60) return 'heart rate is low (bradycardia)'
+      return null
+    default:
+      return null
   }
 }

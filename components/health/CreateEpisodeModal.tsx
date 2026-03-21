@@ -10,7 +10,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, PhoneIcon, ClockIcon, CalendarDaysIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import { PatientProfile } from '@/types/medical'
 import { EpisodeType, HealthSymptom } from '@/types/health-episodes'
 import {
@@ -37,12 +37,21 @@ export interface CreateEpisodeData {
   startDate: string
   startTime?: string // Exact time in HH:MM format
   approximateStartTime?: 'morning' | 'afternoon' | 'evening' | 'night' // Approximate time if exact unknown
+  timingMode?: 'happening_now' | 'already_happened'
   status: 'onset' | 'active' | 'monitoring'
   initialSymptoms: Omit<HealthSymptom, 'id' | 'episodeId' | 'patientId' | 'createdAt' | 'lastUpdatedAt'>[]
   initialPhotos?: { file: File; caption?: string }[] // Up to 4 photos with captions
   providerName?: string
   diagnosis?: string
   reportableType?: 'police' | 'insurance' | 'cps' | 'adult_protective_services'
+  emergencyDetails?: {
+    facilityName?: string
+    visitDate?: string
+    medicationsGiven?: string
+    dischargeInstructions?: string
+    followUpNeeded?: boolean
+    followUpDate?: string
+  }
 }
 
 interface SymptomInput {
@@ -72,6 +81,17 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
   const [providerName, setProviderName] = useState('')
   const [diagnosis, setDiagnosis] = useState('')
   const [reportableType, setReportableType] = useState<CreateEpisodeData['reportableType']>(undefined)
+
+  // Emergency safety state
+  const [timingMode, setTimingMode] = useState<'happening_now' | 'already_happened'>('happening_now')
+  const [visitedER, setVisitedER] = useState(false)
+  const [erFacilityName, setERFacilityName] = useState('')
+  const [erVisitDate, setERVisitDate] = useState('')
+  const [erMedications, setERMedications] = useState('')
+  const [dischargeInstructions, setDischargeInstructions] = useState('')
+  const [followUpNeeded, setFollowUpNeeded] = useState(false)
+  const [followUpDate, setFollowUpDate] = useState('')
+  const [erSectionOpen, setERSectionOpen] = useState(false)
 
   // Get selected patient
   const selectedPatient = useMemo(
@@ -113,6 +133,15 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
     setProviderName('')
     setDiagnosis('')
     setReportableType(undefined)
+    setTimingMode('happening_now')
+    setVisitedER(false)
+    setERFacilityName('')
+    setERVisitDate('')
+    setERMedications('')
+    setDischargeInstructions('')
+    setFollowUpNeeded(false)
+    setFollowUpDate('')
+    setERSectionOpen(false)
   }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isOpen) return null
@@ -211,15 +240,23 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
         title: title.trim(),
         description: description.trim() || undefined,
         startDate,
-        // Add time data based on selection mode
         startTime: timeSelectionMode === 'exact' ? startTime : undefined,
         approximateStartTime: timeSelectionMode === 'approximate' ? (approximateStartTime || undefined) : undefined,
+        timingMode,
         status,
         initialSymptoms: validSymptoms,
         initialPhotos: initialPhotos.map(p => ({ file: p.file, caption: p.caption || undefined })),
         providerName: providerName.trim() || undefined,
         diagnosis: diagnosis.trim() || undefined,
         reportableType,
+        emergencyDetails: visitedER ? {
+          facilityName: erFacilityName.trim() || undefined,
+          visitDate: erVisitDate || undefined,
+          medicationsGiven: erMedications.trim() || undefined,
+          dischargeInstructions: dischargeInstructions.trim() || undefined,
+          followUpNeeded,
+          followUpDate: followUpNeeded ? followUpDate || undefined : undefined,
+        } : undefined,
       }
 
       await onSubmit(episodeData)
@@ -238,6 +275,15 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
       setInitialPhotos([])
       setProviderName('')
       setDiagnosis('')
+      setTimingMode('happening_now')
+      setVisitedER(false)
+      setERFacilityName('')
+      setERVisitDate('')
+      setERMedications('')
+      setDischargeInstructions('')
+      setFollowUpNeeded(false)
+      setFollowUpDate('')
+      setERSectionOpen(false)
       setStep(1)
 
       onClose()
@@ -388,6 +434,68 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
                   </div>
                 )}
               </div>
+
+              {/* Timing Toggle: Happening now vs Already happened */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  When did this happen?
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTimingMode('happening_now')
+                      setStartDate(new Date().toISOString().split('T')[0])
+                      setTimeSelectionMode('just_now')
+                    }}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
+                      timingMode === 'happening_now'
+                        ? 'border-primary bg-primary/5 text-foreground'
+                        : 'border-border hover:border-primary/50 text-muted-foreground'
+                    }`}
+                  >
+                    <ClockIcon className="w-4 h-4" />
+                    <span className="font-medium text-sm">Happening now</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTimingMode('already_happened')
+                      setTimeSelectionMode('approximate')
+                    }}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
+                      timingMode === 'already_happened'
+                        ? 'border-primary bg-primary/5 text-foreground'
+                        : 'border-border hover:border-primary/50 text-muted-foreground'
+                    }`}
+                  >
+                    <CalendarDaysIcon className="w-4 h-4" />
+                    <span className="font-medium text-sm">Already happened</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Emergency Safety Banner */}
+              {timingMode === 'happening_now' && ['injury', 'illness', 'abuse_concern'].includes(episodeType) && (
+                <div className="flex items-start gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 transition-all duration-200">
+                  <PhoneIcon className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-red-800 dark:text-red-300">
+                      If this is happening right now, call 911 first.
+                    </p>
+                    <p className="text-sm text-red-700 dark:text-red-400 mt-1">
+                      You can come back to log the details after everyone is safe.
+                    </p>
+                    <a
+                      href="tel:911"
+                      className="inline-flex items-center gap-1.5 mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                    >
+                      <PhoneIcon className="w-4 h-4" />
+                      Call 911
+                    </a>
+                  </div>
+                </div>
+              )}
 
               {/* Title with Common Suggestions */}
               <div>
@@ -798,6 +906,153 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
                   className="w-full px-4 py-3 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
+
+              {/* Post-Emergency Quick Capture */}
+              {timingMode === 'already_happened' && ['injury', 'illness'].includes(episodeType) && (
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setERSectionOpen(!erSectionOpen)}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <span className="text-sm font-medium text-foreground">Emergency / Urgent Care Visit</span>
+                    <ChevronDownIcon className={`w-4 h-4 text-muted-foreground transition-transform ${erSectionOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {erSectionOpen && (
+                    <div className="p-4 space-y-4 border-t border-border">
+                      {/* ER Visit Toggle */}
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Did you visit the ER or urgent care?
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setVisitedER(true)}
+                            className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                              visitedER
+                                ? 'border-primary bg-primary/5 text-foreground'
+                                : 'border-border hover:border-primary/50 text-muted-foreground'
+                            }`}
+                          >
+                            Yes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setVisitedER(false); setERFacilityName(''); setERVisitDate(''); setERMedications(''); setDischargeInstructions(''); setFollowUpNeeded(false); setFollowUpDate('') }}
+                            className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                              !visitedER
+                                ? 'border-primary bg-primary/5 text-foreground'
+                                : 'border-border hover:border-primary/50 text-muted-foreground'
+                            }`}
+                          >
+                            No
+                          </button>
+                        </div>
+                      </div>
+
+                      {visitedER && (
+                        <div className="space-y-4 pt-2">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-foreground mb-1">
+                                Facility Name
+                              </label>
+                              <input
+                                type="text"
+                                value={erFacilityName}
+                                onChange={(e) => setERFacilityName(e.target.value)}
+                                placeholder="e.g., Memorial Hospital ER"
+                                className="w-full px-3 py-2 border-2 border-border rounded-lg bg-background text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-foreground mb-1">
+                                Visit Date
+                              </label>
+                              <input
+                                type="date"
+                                value={erVisitDate || startDate}
+                                onChange={(e) => setERVisitDate(e.target.value)}
+                                max={new Date().toISOString().split('T')[0]}
+                                className="w-full px-3 py-2 border-2 border-border rounded-lg bg-background text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-1">
+                              Medications Given at Facility
+                            </label>
+                            <textarea
+                              value={erMedications}
+                              onChange={(e) => setERMedications(e.target.value)}
+                              placeholder="List any medications administered or prescribed..."
+                              rows={2}
+                              className="w-full px-3 py-2 border-2 border-border rounded-lg bg-background text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-1">
+                              Discharge Instructions
+                            </label>
+                            <textarea
+                              value={dischargeInstructions}
+                              onChange={(e) => setDischargeInstructions(e.target.value)}
+                              placeholder="Key instructions from discharge paperwork..."
+                              rows={2}
+                              className="w-full px-3 py-2 border-2 border-border rounded-lg bg-background text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-1">
+                              Follow-up appointment needed?
+                            </label>
+                            <div className="flex items-center gap-4">
+                              <div className="grid grid-cols-2 gap-3 flex-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setFollowUpNeeded(true)}
+                                  className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                                    followUpNeeded
+                                      ? 'border-primary bg-primary/5 text-foreground'
+                                      : 'border-border hover:border-primary/50 text-muted-foreground'
+                                  }`}
+                                >
+                                  Yes
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setFollowUpNeeded(false); setFollowUpDate('') }}
+                                  className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                                    !followUpNeeded
+                                      ? 'border-primary bg-primary/5 text-foreground'
+                                      : 'border-border hover:border-primary/50 text-muted-foreground'
+                                  }`}
+                                >
+                                  No
+                                </button>
+                              </div>
+                              {followUpNeeded && (
+                                <input
+                                  type="date"
+                                  value={followUpDate}
+                                  onChange={(e) => setFollowUpDate(e.target.value)}
+                                  min={new Date().toISOString().split('T')[0]}
+                                  className="flex-1 px-3 py-2 border-2 border-border rounded-lg bg-background text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Reportable type for abuse/concern episodes */}
               {episodeType === 'abuse_concern' && (

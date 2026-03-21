@@ -156,6 +156,19 @@ export interface TreatmentAction {
 }
 
 /**
+ * EmergencyVisitDetails - Post-emergency quick capture data
+ * Created when user logs a health event "after the fact" with ER/urgent care visit
+ */
+export interface EmergencyVisitDetails {
+  facilityName?: string
+  visitDate?: string
+  medicationsGiven?: string
+  dischargeInstructions?: string
+  followUpNeeded?: boolean
+  followUpDate?: string
+}
+
+/**
  * RecoveryMilestone - Significant recovery progress markers
  *
  * Stored at: /users/{uid}/patients/{patientId}/health-episodes/{episodeId}/milestones/{milestoneId}

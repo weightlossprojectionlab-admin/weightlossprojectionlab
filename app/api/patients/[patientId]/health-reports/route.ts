@@ -559,6 +559,45 @@ async function generateHealthReport(data: {
     report += `**Logs Recorded:** ${stepsData.length}  \n\n`
   }
 
+  // Medical Documents (structured data from OCR)
+  const processedDocs = documents.filter((d: any) => d.ocrStatus === 'completed' && d.structuredData)
+  if (processedDocs.length > 0) {
+    report += `## MEDICAL DOCUMENTS\n\n`
+    report += `**Documents Analyzed:** ${processedDocs.length} of ${documents.length}\n\n`
+
+    // Aggregate lab results from all documents
+    const allLabResults: any[] = []
+    const allDiagnoses: Set<string> = new Set()
+
+    for (const doc of processedDocs) {
+      const data = doc.structuredData
+      if (data?.labResults) allLabResults.push(...data.labResults)
+      if (data?.diagnoses) data.diagnoses.forEach((d: string) => allDiagnoses.add(d))
+    }
+
+    if (allLabResults.length > 0) {
+      report += `### Lab Results (from documents)\n\n`
+      report += `| Test | Value | Reference Range | Status |\n`
+      report += `|------|-------|-----------------|--------|\n`
+      allLabResults.forEach((lr: any) => {
+        const status = lr.status ? lr.status.charAt(0).toUpperCase() + lr.status.slice(1) : '—'
+        report += `| ${lr.testName} | ${lr.value} ${lr.unit || ''} | ${lr.referenceRange || '—'} | ${status} |\n`
+      })
+      report += `\n`
+    }
+
+    if (allDiagnoses.size > 0) {
+      report += `### Diagnoses (from documents)\n\n`
+      Array.from(allDiagnoses).forEach(d => {
+        report += `- ${d}\n`
+      })
+      report += `\n`
+    }
+  } else if (documents.length > 0) {
+    report += `## MEDICAL DOCUMENTS\n\n`
+    report += `**${documents.length} document(s) uploaded** — OCR processing pending or in progress.\n\n`
+  }
+
   // Disclaimer
   report += `---\n\n`
   report += `**DISCLAIMER:** This report is generated from patient health data for informational and tracking purposes only. It does not constitute medical advice, diagnosis, or treatment. All medical decisions should be made in consultation with qualified healthcare providers.\n`

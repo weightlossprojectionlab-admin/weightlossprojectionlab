@@ -865,6 +865,40 @@ export interface DocumentMetadata {
   [key: string]: any
 }
 
+/**
+ * Structured data extracted from OCR text via AI parsing.
+ * Separation of concerns: raw OCR text → structured extraction → report integration.
+ */
+export interface DocumentStructuredData {
+  documentType: 'lab_result' | 'prescription' | 'discharge_summary' | 'imaging_report' | 'insurance' | 'vaccination' | 'other'
+  labResults?: LabResultEntry[]
+  medications?: ExtractedMedicationEntry[]
+  diagnoses?: string[]
+  procedures?: string[]
+  providerName?: string
+  facilityName?: string
+  documentDate?: string
+  confidence: number
+  extractedAt: string
+}
+
+export interface LabResultEntry {
+  testName: string
+  value: string
+  unit?: string
+  referenceRange?: string
+  status?: 'normal' | 'high' | 'low' | 'critical'
+  category?: string
+}
+
+export interface ExtractedMedicationEntry {
+  name: string
+  dosage?: string
+  frequency?: string
+  prescribedFor?: string
+  prescribedBy?: string
+}
+
 export interface PatientDocument {
   id: string
   patientId: string
@@ -878,6 +912,7 @@ export interface PatientDocument {
   images?: DocumentImage[]
   metadata?: DocumentMetadata
   extractedText?: string
+  structuredData?: DocumentStructuredData
   ocrStatus?: OcrStatus
   uploadedAt: string
   uploadedBy: string

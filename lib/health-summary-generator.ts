@@ -15,7 +15,10 @@ import type {
   PatientMedication,
   WeightLog,
   StepLog,
-  MealLog
+  MealLog,
+  PatientDocument,
+  DocumentStructuredData,
+  LabResultEntry
 } from '@/types/medical'
 
 // ==================== CORE INTERFACES ====================
@@ -134,6 +137,24 @@ export interface NutritionAnalysis {
 }
 
 /**
+ * Document analysis results
+ */
+export interface DocumentAnalysis {
+  status: 'no_data' | 'no_ocr' | 'analyzed'
+  message: string
+  totalDocuments: number
+  processedDocuments: number
+  labResults: LabResultEntry[]
+  medications: Array<{ name: string; dosage?: string; frequency?: string }>
+  diagnoses: string[]
+  alerts: Array<{
+    type: string
+    severity: 'info' | 'warning' | 'critical'
+    message: string
+  }>
+}
+
+/**
  * Combined analysis results
  */
 export interface AnalysisResults {
@@ -145,6 +166,7 @@ export interface AnalysisResults {
   medicationAnalysis: MedicationAnalysis
   activityAnalysis?: ActivityAnalysis
   nutritionAnalysis?: NutritionAnalysis
+  documentAnalysis?: DocumentAnalysis
   petFeedingAnalysis?: any
   petVaccinationAnalysis?: any
 }
@@ -635,6 +657,110 @@ export function analyzePetVaccinations(
   }
 }
 
+// ==================== DOCUMENT ANALYSIS ====================
+
+/**
+ * Analyze documents with structured OCR data.
+ * Aggregates lab results, medications, and diagnoses from processed documents.
+ *
+ * @param documents - Array of patient documents (may include structuredData)
+ * @returns Document analysis with aggregated insights and alerts
+ */
+export function analyzeDocuments(
+  documents: PatientDocument[] | any[]
+): DocumentAnalysis {
+  if (!documents || documents.length === 0) {
+    return {
+      status: 'no_data',
+      message: 'No documents uploaded',
+      totalDocuments: 0,
+      processedDocuments: 0,
+      labResults: [],
+      medications: [],
+      diagnoses: [],
+      alerts: []
+    }
+  }
+
+  const processedDocs = documents.filter(
+    (d: any) => d.ocrStatus === 'completed' && d.structuredData
+  )
+
+  if (processedDocs.length === 0) {
+    return {
+      status: 'no_ocr',
+      message: `${documents.length} documents uploaded, none processed yet`,
+      totalDocuments: documents.length,
+      processedDocuments: 0,
+      labResults: [],
+      medications: [],
+      diagnoses: [],
+      alerts: []
+    }
+  }
+
+  // Aggregate data from all processed documents
+  const allLabResults: LabResultEntry[] = []
+  const allMedications: Array<{ name: string; dosage?: string; frequency?: string }> = []
+  const allDiagnoses: Set<string> = new Set()
+  const alerts: Array<{ type: string; severity: 'info' | 'warning' | 'critical'; message: string }> = []
+
+  for (const doc of processedDocs) {
+    const data = doc.structuredData as DocumentStructuredData
+
+    // Collect lab results
+    if (data.labResults) {
+      for (const lr of data.labResults) {
+        allLabResults.push(lr)
+
+        // Generate alerts for abnormal results
+        if (lr.status === 'critical') {
+          alerts.push({
+            type: 'lab_critical',
+            severity: 'critical',
+            message: `Critical lab result: ${lr.testName} = ${lr.value} ${lr.unit || ''} (ref: ${lr.referenceRange || 'N/A'})`
+          })
+        } else if (lr.status === 'high' || lr.status === 'low') {
+          alerts.push({
+            type: 'lab_abnormal',
+            severity: 'warning',
+            message: `Abnormal lab result: ${lr.testName} = ${lr.value} ${lr.unit || ''} (${lr.status})`
+          })
+        }
+      }
+    }
+
+    // Collect medications (deduplicate by name)
+    if (data.medications) {
+      for (const med of data.medications) {
+        if (!allMedications.some(m => m.name.toLowerCase() === med.name.toLowerCase())) {
+          allMedications.push({
+            name: med.name,
+            dosage: med.dosage,
+            frequency: med.frequency
+          })
+        }
+      }
+    }
+
+    // Collect diagnoses
+    if (data.diagnoses) {
+      data.diagnoses.forEach(d => allDiagnoses.add(d))
+    }
+  }
+
+  return {
+    status: 'analyzed',
+    message: `${processedDocs.length} of ${documents.length} documents analyzed`,
+    totalDocuments: documents.length,
+    processedDocuments: processedDocs.length,
+    labResults: allLabResults,
+    medications: allMedications,
+    diagnoses: Array.from(allDiagnoses),
+    alerts
+  }
+}
+
 // ==================== ALERTS & SCORING ====================
 
 /**
@@ -724,6 +850,22 @@ export function calculateHealthScore(
   analyses: Partial<AnalysisResults>,
   patient: PatientProfile
 ): { score: number; message: string } {
+  // Life-stage appropriate messaging for newborns/infants
+  const age = calculateAge(patient.dateOfBirth)
+  if (age < 1 && patient.type !== 'pet') {
+    // For newborns/infants, weight gain is positive (not negative like adults)
+    if (analyses.weightAnalysis?.status === 'gaining') {
+      return { score: 3, message: 'Baby is gaining weight — healthy growth trend observed.' }
+    }
+    if (analyses.weightAnalysis?.status === 'losing') {
+      return { score: 1, message: 'Weight loss detected — consult pediatrician to assess feeding adequacy.' }
+    }
+    if (analyses.vitalsAnalysis?.totalCount && analyses.vitalsAnalysis.totalCount > 0) {
+      return { score: 3, message: 'Health tracking is underway. Continue regular pediatric visits and feeding monitoring.' }
+    }
+    return { score: 2, message: 'Health record is being established. Log vitals from pediatric visits and track feedings regularly.' }
+  }
+
   const scores: number[] = []
 
   // Weight progress
@@ -795,6 +937,8 @@ export function generateHumanHealthSummary(input: HealthSummaryInput): AnalysisR
     isPet
   )
 
+  const documentAnalysis = analyzeDocuments(input.documents || [])
+
   return {
     age,
     isPet,
@@ -802,7 +946,8 @@ export function generateHumanHealthSummary(input: HealthSummaryInput): AnalysisR
     activityAnalysis,
     nutritionAnalysis,
     vitalsAnalysis,
-    medicationAnalysis
+    medicationAnalysis,
+    documentAnalysis
   }
 }
 
