@@ -9,7 +9,7 @@ import { useRecipes } from '@/hooks/useRecipes'
 import { AdminModeToggle } from '@/components/admin/AdminModeToggle'
 import { RecipeMediaUpload } from '@/components/admin/RecipeMediaUpload'
 import { RecipeImageCarousel } from '@/components/RecipeImageCarousel'
-import { PencilSquareIcon, VideoCameraIcon, PlusCircleIcon, ShieldCheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { PencilSquareIcon, VideoCameraIcon, PlusCircleIcon, ShieldCheckIcon, ExclamationTriangleIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { RecipeImportModal } from '@/components/admin/RecipeImportModal'
 import { getMemberRecipeSuggestions, type MemberRecipeSuggestion } from '@/lib/member-recipe-engine'
 import { medicalOperations } from '@/lib/medical-operations'
@@ -33,6 +33,31 @@ export default function RecipeIndexPage() {
   const [selectedMealType, setSelectedMealType] = useState<MealType | 'all'>('all')
   const [selectedDietaryTags, setSelectedDietaryTags] = useState<DietaryTag[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [deletingRecipeId, setDeletingRecipeId] = useState<string | null>(null)
+
+  const handleDeleteRecipe = async (recipeId: string, recipeName: string) => {
+    if (!confirm(`Delete "${recipeName}"? This cannot be undone.`)) return
+    setDeletingRecipeId(recipeId)
+    try {
+      const { getAdminAuthToken } = await import('@/lib/admin/api')
+      const { getCSRFToken } = await import('@/lib/csrf')
+      const token = await getAdminAuthToken()
+      const response = await fetch(`/api/admin/recipes/${recipeId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': getCSRFToken()
+        }
+      })
+      if (!response.ok) throw new Error('Failed to delete recipe')
+      toast.success('Recipe deleted')
+      window.location.reload()
+    } catch (err) {
+      toast.error('Failed to delete recipe')
+    } finally {
+      setDeletingRecipeId(null)
+    }
+  }
 
   // Member-specific state
   const [memberProfile, setMemberProfile] = useState<PatientProfile | null>(null)
@@ -453,25 +478,35 @@ export default function RecipeIndexPage() {
                     </div>
                   )}
 
-                  {/* Admin Edit Button */}
+                  {/* Admin Edit & Delete Buttons */}
                   {isAdminMode && (
-                    <button
-                      onClick={() => setSelectedRecipeForEdit(recipe)}
-                      className="w-full bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-hover flex items-center justify-center gap-2"
-                    >
-                      <PencilSquareIcon className="h-5 w-5" />
-                      Edit Media
-                      {!recipe.imageUrls?.length && !recipe.videoUrl && (
-                        <span className="ml-2 bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded text-xs">
-                          No media
-                        </span>
-                      )}
-                      {recipe.imageUrls && recipe.imageUrls.length > 0 && (
-                        <span className="ml-2 bg-green-400 text-green-900 px-2 py-0.5 rounded text-xs">
-                          {recipe.imageUrls.length} {recipe.imageUrls.length === 1 ? 'image' : 'images'}
-                        </span>
-                      )}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => setSelectedRecipeForEdit(recipe)}
+                        className="w-full bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-hover flex items-center justify-center gap-2"
+                      >
+                        <PencilSquareIcon className="h-5 w-5" />
+                        Edit Media
+                        {!recipe.imageUrls?.length && !recipe.videoUrl && (
+                          <span className="ml-2 bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded text-xs">
+                            No media
+                          </span>
+                        )}
+                        {recipe.imageUrls && recipe.imageUrls.length > 0 && (
+                          <span className="ml-2 bg-green-400 text-green-900 px-2 py-0.5 rounded text-xs">
+                            {recipe.imageUrls.length} {recipe.imageUrls.length === 1 ? 'image' : 'images'}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRecipe(recipe.id, recipe.name)}
+                        disabled={deletingRecipeId === recipe.id}
+                        className="w-full bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 disabled:bg-red-300 flex items-center justify-center gap-2"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                        {deletingRecipeId === recipe.id ? 'Deleting...' : 'Delete Recipe'}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

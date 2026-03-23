@@ -2,6 +2,40 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { MEAL_SUGGESTIONS, MealSuggestion } from '@/lib/meal-suggestions'
 import { notFound } from 'next/navigation'
+import { adminDb } from '@/lib/firebase-admin'
+
+async function getRecipe(id: string): Promise<MealSuggestion | null> {
+  // Check hardcoded recipes first
+  const local = MEAL_SUGGESTIONS.find(r => r.id === id)
+  if (local) return local
+
+  // Fallback to Firestore for admin-created recipes
+  try {
+    const doc = await adminDb.collection('recipes').doc(id).get()
+    if (!doc.exists) return null
+    const data = doc.data()!
+    return {
+      id: doc.id,
+      name: data.name || '',
+      description: data.description || '',
+      mealType: data.mealType || 'lunch',
+      calories: data.calories || 0,
+      macros: data.macros || { protein: 0, carbs: 0, fat: 0, fiber: 0 },
+      prepTime: data.prepTime || 30,
+      servingSize: data.servingSize || 1,
+      dietaryTags: data.dietaryTags || [],
+      allergens: data.allergens || [],
+      ingredients: data.ingredients || [],
+      recipeSteps: data.recipeSteps || [],
+      cookingTips: data.cookingTips || [],
+      requiresCooking: data.requiresCooking ?? true,
+      imageUrls: data.imageUrls,
+      videoUrl: data.videoUrl,
+    } as MealSuggestion
+  } catch {
+    return null
+  }
+}
 
 interface PageProps {
   params: Promise<{
@@ -20,7 +54,7 @@ interface PageProps {
 // Generate metadata for SEO
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params
-  const recipe = MEAL_SUGGESTIONS.find(r => r.id === id)
+  const recipe = await getRecipe(id)
 
   if (!recipe) {
     return {
@@ -55,9 +89,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function RecipeDetailPage({ params }: PageProps) {
   const { id } = await params
-  const recipe = MEAL_SUGGESTIONS.find(r => r.id === id)
+  const recipe = await getRecipe(id)
 
   if (!recipe) {
     notFound()
@@ -86,6 +122,29 @@ export default async function RecipeDetailPage({ params }: PageProps) {
 
         {/* Recipe Card */}
         <div className="bg-card rounded-lg shadow-xl overflow-hidden">
+          {/* Hero Image */}
+          {recipe.imageUrls && recipe.imageUrls.length > 0 && (
+            <div className="relative w-full h-64 md:h-80">
+              <img
+                src={recipe.imageUrls[0]}
+                alt={recipe.name}
+                className="w-full h-full object-cover"
+              />
+              {recipe.imageUrls && recipe.imageUrls.length > 1 && (
+                <div className="absolute bottom-3 right-3 flex gap-2">
+                  {recipe.imageUrls.slice(1).map((url: string, i: number) => (
+                    <img
+                      key={i}
+                      src={url}
+                      alt={`${recipe.name} ${i + 2}`}
+                      className="h-16 w-16 object-cover rounded-lg border-2 border-white shadow-md"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Header */}
           <div className="p-8 border-b border-border">
             <h1 className="text-4xl font-bold text-foreground mb-2">{recipe.name}</h1>

@@ -273,7 +273,7 @@ async function extractRecipeWithAI(html: string, sourceUrl: string): Promise<Imp
   }
 
   const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
   const prompt = `Extract the recipe from this HTML page. Return a JSON object with:
 {
@@ -324,7 +324,7 @@ export async function calculateRecipeNutrition(recipe: ImportedRecipe): Promise<
   }
 
   const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
   const prompt = `Calculate the total nutrition for this recipe (for all servings combined). Return JSON:
 {

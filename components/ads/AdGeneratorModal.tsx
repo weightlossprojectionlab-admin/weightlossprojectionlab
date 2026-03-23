@@ -10,7 +10,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { ResponsiveModal, ModalFooter, ModalButton } from '@/components/ui/ResponsiveModal'
 import {
   AdPersona,
@@ -48,7 +48,29 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
   const [showPricing, setShowPricing] = useState(false)
   const [pricingText, setPricingText] = useState('$9.99/mo')
   const [backgroundImage, setBackgroundImage] = useState('')
-  const [backgroundMethod, setBackgroundMethod] = useState<'gradient' | 'abstract' | 'stock' | 'ai' | 'custom'>('gradient')
+  const [backgroundMethod, setBackgroundMethod] = useState<'gradient' | 'abstract' | 'stock' | 'ai' | 'custom' | 'upload'>('gradient')
+  const [isDragging, setIsDragging] = useState(false)
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageUpload = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5MB')
+      return
+    }
+    // Convert to data URL for direct canvas use (avoids CORS issues)
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      setUploadPreview(dataUrl)
+      setBackgroundImage(dataUrl)
+    }
+    reader.readAsDataURL(file)
+  }, [])
   const [generatingBackground, setGeneratingBackground] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [previewBlobs, setPreviewBlobs] = useState<Map<AdPlatform, Blob>>(new Map())
@@ -148,7 +170,7 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
   const generatePreview = async () => {
     if (!selectedTemplate) return
 
-    // Validate custom background URL if provided
+    // Validate custom background URL if provided (skip for upload — already validated)
     if (backgroundMethod === 'custom' && backgroundImage) {
       const validImageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
       const isValidUrl = validImageExtensions.some(ext =>
@@ -166,6 +188,12 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
         toast.error('This appears to be a search page. Please use "Stock Photo" option instead, or find a direct image URL.')
         return
       }
+    }
+
+    // Validate upload has finished
+    if (backgroundMethod === 'upload' && !backgroundImage) {
+      toast.error('Please upload an image first')
+      return
     }
 
     setGenerating(true)
@@ -426,7 +454,8 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
                     { value: 'abstract', label: '🎨 Abstract', desc: 'Artistic patterns' },
                     { value: 'stock', label: '📸 Stock Photo', desc: 'Free from Unsplash' },
                     { value: 'ai', label: '🤖 AI Generated', desc: 'DALL-E (requires API key)' },
-                    { value: 'custom', label: '🔗 Custom URL', desc: 'Your own image' }
+                    { value: 'upload', label: '📤 Upload Image', desc: 'Drag & drop or browse' },
+                    { value: 'custom', label: '🔗 Custom URL', desc: 'Paste image link' }
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -442,6 +471,45 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
                     </button>
                   ))}
                 </div>
+
+                {/* Upload Image */}
+                {backgroundMethod === 'upload' && (
+                  <div className="space-y-2">
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+                      onDragLeave={(e) => { e.preventDefault(); setIsDragging(false) }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        setIsDragging(false)
+                        if (e.dataTransfer.files?.[0]) handleImageUpload(e.dataTransfer.files[0])
+                      }}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                        isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                      }`}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
+                      />
+                      {uploadPreview ? (
+                        <div className="relative">
+                          <img src={uploadPreview} alt="Preview" className="max-h-32 mx-auto rounded" />
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-medium text-primary">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP up to 5MB</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Custom URL Input */}
                 {backgroundMethod === 'custom' && (
@@ -464,7 +532,7 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
                 )}
 
                 {/* Generate Button for AI/Stock/Abstract */}
-                {backgroundMethod !== 'gradient' && backgroundMethod !== 'custom' && (
+                {backgroundMethod !== 'gradient' && backgroundMethod !== 'custom' && backgroundMethod !== 'upload' && (
                   <button
                     onClick={handleGenerateBackground}
                     disabled={generatingBackground}
