@@ -121,7 +121,7 @@ export default function RecipeIndexPage() {
     // Filter by dietary tags
     if (selectedDietaryTags.length > 0) {
       const hasAllTags = selectedDietaryTags.every(tag =>
-        recipe.dietaryTags.includes(tag)
+        recipe.dietaryTags?.includes(tag)
       )
       if (!hasAllTags) return false
     }
@@ -361,12 +361,12 @@ export default function RecipeIndexPage() {
                   {/* Quick Stats */}
                   <div className="flex justify-between text-xs text-muted-foreground mb-4">
                     <span>{recipe.calories} cal</span>
-                    <span>{recipe.macros.protein}g protein</span>
+                    <span>{recipe.macros?.protein ?? 0}g protein</span>
                     <span>{recipe.prepTime} min</span>
                   </div>
 
                   {/* Dietary Tags */}
-                  {recipe.dietaryTags.length > 0 && (
+                  {recipe.dietaryTags?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-4">
                       {recipe.dietaryTags.slice(0, 3).map(tag => (
                         <span

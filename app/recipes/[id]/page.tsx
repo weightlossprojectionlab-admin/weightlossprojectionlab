@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
-  const description = `${recipe.description} - ${recipe.calories} calories, ${recipe.macros.protein}g protein, ready in ${recipe.prepTime} minutes.`
+  const description = `${recipe.description} - ${recipe.calories} calories, ${recipe.macros?.protein ?? 0}g protein, ready in ${recipe.prepTime} minutes.`
 
   return {
     title: `${recipe.name} Recipe | Weight Loss Project Lab`,
@@ -98,7 +98,7 @@ export default async function RecipeDetailPage({ params }: PageProps) {
                 <p className="text-xs text-muted-foreground">calories</p>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-3xl font-bold text-primary">{recipe.macros.protein}g</p>
+                <p className="text-3xl font-bold text-primary">{recipe.macros?.protein}g</p>
                 <p className="text-xs text-muted-foreground">protein</p>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
@@ -120,15 +120,15 @@ export default async function RecipeDetailPage({ params }: PageProps) {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="flex justify-between p-3 bg-muted rounded">
                   <span className="text-muted-foreground">Carbs:</span>
-                  <span className="font-medium">{recipe.macros.carbs}g</span>
+                  <span className="font-medium">{recipe.macros?.carbs}g</span>
                 </div>
                 <div className="flex justify-between p-3 bg-muted rounded">
                   <span className="text-muted-foreground">Fat:</span>
-                  <span className="font-medium">{recipe.macros.fat}g</span>
+                  <span className="font-medium">{recipe.macros?.fat}g</span>
                 </div>
                 <div className="flex justify-between p-3 bg-muted rounded">
                   <span className="text-muted-foreground">Fiber:</span>
-                  <span className="font-medium">{recipe.macros.fiber}g</span>
+                  <span className="font-medium">{recipe.macros?.fiber}g</span>
                 </div>
               </div>
             </div>
