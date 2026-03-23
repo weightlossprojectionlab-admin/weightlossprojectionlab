@@ -20,6 +20,9 @@ import {
   ListBulletIcon,
   LightBulbIcon,
   ArchiveBoxIcon,
+  QrCodeIcon,
+  MapPinIcon,
+  EyeIcon,
 } from '@heroicons/react/24/outline'
 
 export const metadata: Metadata = {
@@ -220,6 +223,56 @@ export default function SmartShoppingBlogPage() {
               title="Smart Suggestions"
               description="Recommends healthier or more affordable alternatives based on dietary goals and past purchases."
             />
+            <FeatureCard
+              icon={<QrCodeIcon className="w-12 h-12 text-emerald-600" />}
+              title="Scan While You Shop"
+              description="Start a guided shopping session and scan barcodes as items go in your cart. Items check off the list automatically."
+            />
+            <FeatureCard
+              icon={<MapPinIcon className="w-12 h-12 text-emerald-600" />}
+              title="Location-Aware Reminders"
+              description="Get notified when you&apos;re near stores you frequent &mdash; Walmart, Target, Kroger &mdash; with a summary of items you need."
+            />
+            <FeatureCard
+              icon={<EyeIcon className="w-12 h-12 text-emerald-600" />}
+              title="Live Shopping Visibility"
+              description="Family members see your shopping progress in real-time, so nobody makes a duplicate run for the same items."
+            />
+          </div>
+        </section>
+
+        {/* ── Guided Shopping Session ── */}
+        <section className="mb-20">
+          <h2 className="text-4xl font-bold text-foreground mb-4 text-center">
+            Guided Shopping: Scan as You Go
+          </h2>
+          <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-12">
+            Start an active shopping session and let WPL guide you through the store.
+          </p>
+          <div className="relative">
+            <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-emerald-200 dark:bg-emerald-800 -translate-y-1/2 z-0" />
+            <div className="grid md:grid-cols-4 gap-6 relative z-10">
+              <PipelineStep
+                step="1"
+                title="Start Session"
+                description="Tap &ldquo;Start Shopping&rdquo; on your list. Family members are notified you&apos;re at the store."
+              />
+              <PipelineStep
+                step="2"
+                title="Scan &amp; Check Off"
+                description="Scan each barcode as it goes in the cart. The item checks off automatically and updates inventory."
+              />
+              <PipelineStep
+                step="3"
+                title="Add On the Fly"
+                description="Spot something not on the list? Scan or manually add it mid-session &mdash; no need to leave the flow."
+              />
+              <PipelineStep
+                step="4"
+                title="Done &amp; Synced"
+                description="End the session. Purchased items move to inventory, and family sees the final haul."
+              />
+            </div>
           </div>
         </section>
 

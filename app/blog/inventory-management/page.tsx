@@ -19,13 +19,18 @@ import {
   SparklesIcon,
   ArrowRightIcon,
   CheckCircleIcon,
+  MapPinIcon,
+  CameraIcon,
+  DevicePhoneMobileIcon,
+  UserGroupIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline'
 import { Screenshot } from '@/components/ui/Screenshot'
 
 export const metadata: Metadata = {
   title: 'Smart Kitchen Inventory Management - Stop Wasting $1,500/Year in Food | Wellness Projection Lab',
-  description: 'The average family wastes $1,500 per year in food. Track your pantry and fridge, get expiration alerts, auto-deplete items when used in meals, and cut food waste by up to 40%.',
-  keywords: 'kitchen inventory management, food waste reduction, pantry tracking, expiration alerts, barcode scanning, grocery savings, fridge tracker, smart kitchen',
+  description: 'The average family wastes $1,500 per year in food. Track your pantry and fridge, scan items while you shop, get expiration alerts, location-aware reminders near stores, and cut food waste by up to 40%.',
+  keywords: 'kitchen inventory management, food waste reduction, pantry tracking, expiration alerts, barcode scanning, grocery savings, fridge tracker, smart kitchen, scan while shopping, location reminders, OCR expiration scanning',
   openGraph: {
     title: 'Smart Kitchen Inventory Management - Stop Wasting $1,500/Year in Food',
     description: 'The average family wastes $1,500 per year in food. Track your pantry and fridge, get expiration alerts, auto-deplete items when used in meals, and cut food waste by up to 40%.',
@@ -167,6 +172,98 @@ export default function InventoryManagementBlogPage() {
           />
         </section>
 
+        {/* Shop Smarter Section */}
+        <section className="mb-20">
+          <h2 className="text-4xl font-bold text-foreground mb-4 text-center">Shop Smarter, Not Harder</h2>
+          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
+            Your phone becomes your shopping assistant. Scan items as you shop, add things on the fly,
+            and your family sees your progress in real time.
+          </p>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="bg-card rounded-xl border-2 border-border p-8">
+              <div className="flex items-center gap-3 mb-4">
+                <QrCodeIcon className="w-8 h-8 text-amber-600" />
+                <h3 className="text-xl font-semibold text-foreground">Scan As You Shop</h3>
+              </div>
+              <p className="text-muted-foreground mb-4">
+                Open a guided shopping session and scan each item&apos;s barcode as it goes in your cart.
+                The app checks it off your list, pulls nutritional data, and logs it to your inventory automatically.
+              </p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2"><CheckCircleIcon className="w-4 h-4 text-amber-600 flex-shrink-0" /> Barcode scanning with product lookup</li>
+                <li className="flex items-center gap-2"><CheckCircleIcon className="w-4 h-4 text-amber-600 flex-shrink-0" /> Auto-checks items off your list</li>
+                <li className="flex items-center gap-2"><CheckCircleIcon className="w-4 h-4 text-amber-600 flex-shrink-0" /> Add items on the fly &mdash; scan or type</li>
+              </ul>
+            </div>
+            <div className="bg-card rounded-xl border-2 border-border p-8">
+              <div className="flex items-center gap-3 mb-4">
+                <UserGroupIcon className="w-8 h-8 text-amber-600" />
+                <h3 className="text-xl font-semibold text-foreground">Family Knows What You&apos;re Buying</h3>
+              </div>
+              <p className="text-muted-foreground mb-4">
+                Your active shopping session is visible to household members. They can see what you&apos;ve picked up,
+                what&apos;s still on the list, and even add items while you&apos;re in the store.
+              </p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2"><CheckCircleIcon className="w-4 h-4 text-amber-600 flex-shrink-0" /> Real-time session tracking</li>
+                <li className="flex items-center gap-2"><CheckCircleIcon className="w-4 h-4 text-amber-600 flex-shrink-0" /> Family member badges on each item</li>
+                <li className="flex items-center gap-2"><CheckCircleIcon className="w-4 h-4 text-amber-600 flex-shrink-0" /> Prevents duplicate purchases</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* Location-Aware Shopping */}
+        <section className="mb-20">
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-2xl border-2 border-amber-200 dark:border-amber-800 p-10">
+            <div className="flex flex-col md:flex-row items-center gap-8">
+              <div className="flex-shrink-0">
+                <div className="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <MapPinIcon className="w-10 h-10 text-amber-600" />
+                </div>
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold text-foreground mb-3">Location-Aware Reminders</h2>
+                <p className="text-muted-foreground text-lg mb-4">
+                  Out running errands and drive past Target? WPL knows you frequent that store and reminds you
+                  that you need milk, eggs, and diapers. No more &ldquo;I forgot to stop&rdquo; moments.
+                </p>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-center gap-2"><CheckCircleIcon className="w-4 h-4 text-amber-600 flex-shrink-0" /> Detects when you&apos;re near stores you frequent (Walmart, Target, Kroger, and more)</li>
+                  <li className="flex items-center gap-2"><CheckCircleIcon className="w-4 h-4 text-amber-600 flex-shrink-0" /> Shows what items you need from that store</li>
+                  <li className="flex items-center gap-2"><CheckCircleIcon className="w-4 h-4 text-amber-600 flex-shrink-0" /> Tap to start a shopping session right from the notification</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Scan Out / Deplete Section */}
+        <section className="mb-20">
+          <h2 className="text-4xl font-bold text-foreground mb-4 text-center">Scan It In. Scan It Out.</h2>
+          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
+            Your inventory stays accurate because the same scanner that adds items also removes them.
+            Used up the last of the olive oil? Scan the barcode and it&apos;s gone from inventory &mdash; and optionally added right back to your shopping list.
+          </p>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-card rounded-xl border-2 border-border p-6 text-center">
+              <DevicePhoneMobileIcon className="w-10 h-10 text-amber-600 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">Scan to Deplete</h3>
+              <p className="text-sm text-muted-foreground">Finished a product? Scan the barcode to remove it from inventory instantly.</p>
+            </div>
+            <div className="bg-card rounded-xl border-2 border-border p-6 text-center">
+              <CameraIcon className="w-10 h-10 text-amber-600 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">OCR Expiration Scanning</h3>
+              <p className="text-sm text-muted-foreground">Snap a photo of the expiration date and AI reads it for you. No manual date entry needed.</p>
+            </div>
+            <div className="bg-card rounded-xl border-2 border-border p-6 text-center">
+              <CalendarDaysIcon className="w-10 h-10 text-amber-600 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">Expiration Calendar</h3>
+              <p className="text-sm text-muted-foreground">Visual calendar view shows exactly when each item expires, color-coded by urgency.</p>
+            </div>
+          </div>
+        </section>
+
         {/* Use Cases */}
         <section className="mb-20">
           <h2 className="text-4xl font-bold text-foreground mb-4 text-center">Real Families. Real Results.</h2>
@@ -183,6 +280,11 @@ export default function InventoryManagementBlogPage() {
               scenario="Scanning Barcodes After a Grocery Trip"
               description="You get home from the store, pull out your phone, and scan each item as you put it away. In under 30 seconds, everything is tracked with expiration dates."
               outcome="Full inventory in seconds, not spreadsheets"
+            />
+            <UseCaseCard
+              scenario="Scanning Through Target"
+              description="You open a shopping session in the app as you walk in. Each item gets scanned into your cart. Your spouse sees you already grabbed the paper towels and removes them from their errand list. When you get home, everything is already in your inventory."
+              outcome="Zero duplicate purchases, inventory updated before you unpack"
             />
             <UseCaseCard
               scenario="Reducing Food Waste by 40%"
@@ -225,6 +327,26 @@ export default function InventoryManagementBlogPage() {
               icon={<ShoppingBagIcon className="w-12 h-12 text-amber-600" />}
               title="Restock Suggestions"
               description="AI learns what you use regularly and suggests items for your next shopping list when stock runs low."
+            />
+            <FeatureCard
+              icon={<DevicePhoneMobileIcon className="w-12 h-12 text-amber-600" />}
+              title="Scan While You Shop"
+              description="Open a guided shopping session with barcode scanning. Check items off as they go in your cart. Add items on the fly."
+            />
+            <FeatureCard
+              icon={<MapPinIcon className="w-12 h-12 text-amber-600" />}
+              title="Location Reminders"
+              description="Get notified when you're near a store you frequent. See what items you need from that location before you drive past."
+            />
+            <FeatureCard
+              icon={<CameraIcon className="w-12 h-12 text-amber-600" />}
+              title="OCR Expiration Scanning"
+              description="Snap a photo of any expiration date and AI reads it instantly. Supports all date formats — no manual entry needed."
+            />
+            <FeatureCard
+              icon={<MinusCircleIcon className="w-12 h-12 text-amber-600" />}
+              title="Scan Items Out"
+              description="Used up a product? Scan its barcode to remove it from inventory. Optionally add it right back to your shopping list."
             />
           </div>
         </section>

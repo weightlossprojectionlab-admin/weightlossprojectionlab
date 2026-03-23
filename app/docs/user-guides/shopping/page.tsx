@@ -133,6 +133,42 @@ export default function ShoppingPage() {
         <li>Add alternatives if primary choice unavailable</li>
       </ul>
 
+      <h2 id="guided-shopping">Guided Shopping Flow</h2>
+      <p>
+        Start an active shopping session to scan items as they go in your cart. WPL tracks your progress in real-time.
+      </p>
+
+      <h3>Starting a Session</h3>
+      <ol>
+        <li>Open your shopping list and tap <strong>Start Shopping</strong></li>
+        <li>Your list switches to guided mode with a barcode scanner ready</li>
+        <li>Family members are notified that you are actively shopping</li>
+      </ol>
+
+      <h3>Scanning As You Shop</h3>
+      <ol>
+        <li>Scan each product barcode as it goes in your cart</li>
+        <li>The item checks off automatically and matches to your list</li>
+        <li>If the item is not on the list, you can add it on the fly via barcode or manual entry</li>
+        <li>End the session when done — purchased items sync to your kitchen inventory</li>
+      </ol>
+
+      <h3>Location-Aware Reminders</h3>
+      <p>WPL can remind you when you are near stores you shop at frequently:</p>
+      <ul>
+        <li>Enable location reminders in <strong>Settings &gt; Notifications</strong></li>
+        <li>When you are near a saved store (Walmart, Target, Kroger, etc.), WPL shows a notification with items you need</li>
+        <li>Tap the notification to open your shopping list, ready to go</li>
+      </ul>
+
+      <h3>Family Visibility</h3>
+      <p>During an active shopping session, family members can see:</p>
+      <ul>
+        <li>Which items you have already picked up</li>
+        <li>Which items are still remaining on the list</li>
+        <li>This prevents duplicate purchases when multiple people are out shopping</li>
+      </ul>
+
       <h2 id="smart-features">Smart Features</h2>
 
       <h3>Nutrition Insights</h3>

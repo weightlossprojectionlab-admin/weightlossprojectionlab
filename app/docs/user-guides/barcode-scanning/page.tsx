@@ -268,6 +268,44 @@ export default function BarcodeScanningPage() {
         <li>Use manual entry for accurate tracking</li>
       </ul>
 
+      <h2 id="scan-out-of-inventory">Scanning Items Out of Inventory</h2>
+      <p>Use the barcode scanner to deplete or remove items from your kitchen inventory:</p>
+      <ol>
+        <li>Open the <strong>Inventory</strong> page and tap the scan icon</li>
+        <li>Scan the barcode of the item you used up or finished</li>
+        <li>Confirm the quantity to remove (defaults to 1)</li>
+        <li>The item is decremented or removed from inventory</li>
+        <li>Optionally, WPL adds it back to your shopping list automatically</li>
+      </ol>
+      <p className="text-sm text-gray-600">
+        This keeps your inventory accurate without manual counting and ensures you never forget to restock.
+      </p>
+
+      <h2 id="ocr-expiration-scanning">OCR Expiration Date Scanning</h2>
+      <p>Snap a photo of an expiration or best-by date and let AI read it for you:</p>
+      <ol>
+        <li>Open the item in your inventory and tap <strong>Scan Expiration</strong></li>
+        <li>Point your camera at the expiration date on the package</li>
+        <li>Tesseract.js reads the date and attaches it to the inventory item</li>
+        <li>WPL alerts you before items expire so you can use them in time</li>
+      </ol>
+      <p className="text-sm text-gray-600">
+        Works with most printed date formats. If the AI misreads the date, you can correct it manually.
+      </p>
+
+      <h2 id="scan-while-shopping">Scanning While Shopping</h2>
+      <p>
+        During an active shopping session, the barcode scanner works in a streamlined flow:
+      </p>
+      <ul>
+        <li>Scan items as they go in your cart — they check off the list automatically</li>
+        <li>Spot something not on the list? Scan it to add on the fly</li>
+        <li>The scanner stays open between scans for a fast, continuous experience</li>
+      </ul>
+      <p className="text-sm text-gray-600">
+        Learn more: <Link href="/docs/user-guides/shopping" className="text-blue-600 underline">Shopping Lists Guide</Link>
+      </p>
+
       <h2 id="advanced-features">Advanced Features</h2>
 
       <h3>Batch Scanning</h3>

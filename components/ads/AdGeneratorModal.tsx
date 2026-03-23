@@ -151,7 +151,7 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
           persona: selectedPersona,
           template: selectedTemplate
         },
-        backgroundMethod === 'custom' ? 'gradient' : backgroundMethod,
+        backgroundMethod === 'custom' || backgroundMethod === 'upload' ? 'gradient' : backgroundMethod,
         { width: spec.width, height: spec.height }
       )
 
