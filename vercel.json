@@ -16,11 +16,11 @@
     },
     {
       "path": "/api/cron/nudges",
-      "schedule": "0 * * * *"
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/duty-notifications",
-      "schedule": "0 * * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
