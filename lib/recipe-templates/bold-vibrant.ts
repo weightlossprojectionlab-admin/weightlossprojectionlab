@@ -187,7 +187,7 @@ export const renderBoldVibrantTemplate = (context: TemplateRenderContext): void 
   const gridItemWidth = (width - 200) / 3
   const nutritionItems = [
     { label: 'Calories', value: recipe.calories, color: '#EF4444' },
-    { label: 'Protein', value: `${recipe.macros.protein}g`, color: '#10B981' },
+    { label: 'Protein', value: `${recipe.macros?.protein ?? 0}g`, color: '#10B981' },
     { label: 'Prep Time', value: `${recipe.prepTime} min`, color: '#F59E0B' }
   ]
 
@@ -225,7 +225,7 @@ export const renderBoldVibrantTemplate = (context: TemplateRenderContext): void 
   // Macros with bold emojis
   ctx.font = 'bold 48px system-ui, -apple-system, sans-serif'
   ctx.fillStyle = '#111827'
-  const macrosText = `🔥 C: ${recipe.macros.carbs}g  •  🥑 F: ${recipe.macros.fat}g  •  🌾 Fiber: ${recipe.macros.fiber}g`
+  const macrosText = `🔥 C: ${recipe.macros?.carbs ?? 0}g  •  🥑 F: ${recipe.macros?.fat ?? 0}g  •  🌾 Fiber: ${recipe.macros?.fiber ?? 0}g`
   ctx.fillText(macrosText, width / 2, textY)
 
   // Dietary tags with vibrant gradient pills

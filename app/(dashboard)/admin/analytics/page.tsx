@@ -1258,7 +1258,7 @@ function UserAnalytics({ uid, email }: { uid: string; email: string }) {
                           {log.calories.toLocaleString()} cal
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                          {log.macros.protein}g / {log.macros.carbs}g / {log.macros.fat}g
+                          {log.macros?.protein ?? 0}g / {log.macros?.carbs ?? 0}g / {log.macros?.fat ?? 0}g
                         </td>
                         <td className="px-6 py-4 text-sm text-foreground max-w-xs truncate">
                           {log.title || '-'}

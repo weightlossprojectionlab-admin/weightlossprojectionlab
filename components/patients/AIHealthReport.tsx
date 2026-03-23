@@ -6,6 +6,7 @@ import { SparklesIcon, ArrowPathIcon, PrinterIcon, ClipboardDocumentIcon } from 
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import { auth } from '@/lib/firebase'
+import { getCSRFToken } from '@/lib/csrf'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ImageLightbox from '@/components/ui/ImageLightbox'
@@ -44,40 +45,31 @@ export function AIHealthReport({
       setGenerating(true)
       logger.info('[AI Health Report] Generating report', { patientId: patient.id })
 
-      // Get auth token
       const user = auth.currentUser
-      if (!user) {
-        throw new Error('Not authenticated')
-      }
+      if (!user) throw new Error('Not authenticated')
       const token = await user.getIdToken()
 
       const response = await fetch(`/api/patients/${patient.id}/ai-health-report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': getCSRFToken()
         },
         body: JSON.stringify({
           patient,
           medications,
-          vitals: vitals.slice(0, 20), // Last 20 vitals
-          documents: documents.slice(0, 10), // Last 10 documents
+          vitals: vitals.slice(0, 20),
+          documents: documents.slice(0, 10),
           todayMeals,
-          weightData: weightData.slice(0, 30), // Last 30 days
-          stepsData: stepsData.slice(0, 30) // Last 30 days
+          weightData: weightData.slice(0, 30),
+          stepsData: stepsData.slice(0, 30)
         })
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        console.error('[AI Health Report] API Error Details:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorData
-        })
-        const error = new Error(errorData.details || errorData.error || `API Error: ${response.status} ${response.statusText}`)
-        logger.error('[AI Health Report] API Error', error)
-        throw error
+        throw new Error(errorData.error || `API Error: ${response.status}`)
       }
 
       const data = await response.json()

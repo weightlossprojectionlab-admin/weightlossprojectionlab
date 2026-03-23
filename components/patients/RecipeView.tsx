@@ -567,7 +567,7 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
                 {/* Quick Stats */}
                 <div className="flex justify-between text-xs text-muted-foreground mb-4">
                   <span>{recipe.calories} cal</span>
-                  <span>{recipe.macros.protein}g protein</span>
+                  <span>{recipe.macros?.protein ?? 0}g protein</span>
                   <span>{recipe.prepTime} min</span>
                 </div>
 

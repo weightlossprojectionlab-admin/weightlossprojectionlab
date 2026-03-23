@@ -246,7 +246,7 @@ export const getRecommendedBadge = (
   }
 
   // High protein (> 30g)
-  if (recipe.macros.protein > 30) {
+  if ((recipe.macros?.protein ?? 0) > 30) {
     return 'high-protein'
   }
 

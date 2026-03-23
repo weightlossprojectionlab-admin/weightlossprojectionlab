@@ -1987,9 +1987,9 @@ function LogMealContent() {
                           </div>
                           <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                             <span>{template.calories} cal</span>
-                            <span>P: {template.macros.protein}g</span>
-                            <span>C: {template.macros.carbs}g</span>
-                            <span>F: {template.macros.fat}g</span>
+                            <span>P: {template.macros?.protein ?? 0}g</span>
+                            <span>C: {template.macros?.carbs ?? 0}g</span>
+                            <span>F: {template.macros?.fat ?? 0}g</span>
                           </div>
                           {template.usageCount > 0 && (
                             <p className="text-xs text-muted-foreground mt-1">Used {template.usageCount} time{template.usageCount !== 1 ? 's' : ''}</p>

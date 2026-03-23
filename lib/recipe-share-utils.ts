@@ -86,7 +86,7 @@ export const generateRecipeShareCaption = (recipe: MealSuggestion | PublicRecipe
 
   let caption = `${randomHook}\n\n`
   caption += `🍽️ ${recipe.name}\n`
-  caption += `📊 ${recipe.calories} cal | ${recipe.macros.protein}g protein | ${recipe.prepTime} min\n\n`
+  caption += `📊 ${recipe.calories} cal | ${recipe.macros?.protein ?? 0}g protein | ${recipe.prepTime} min\n\n`
 
   if (recipe.description) {
     caption += `${recipe.description}\n\n`

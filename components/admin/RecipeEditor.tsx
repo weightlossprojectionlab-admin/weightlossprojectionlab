@@ -183,7 +183,7 @@ export function RecipeEditor({ recipe: initialRecipe, onClose, onSuccess }: Reci
                 <label className="block text-xs text-muted-foreground mb-1">Protein (g)</label>
                 <input
                   type="number"
-                  value={recipe.macros.protein}
+                  value={recipe.macros?.protein ?? 0}
                   onChange={(e) =>
                     setRecipe({
                       ...recipe,
@@ -197,7 +197,7 @@ export function RecipeEditor({ recipe: initialRecipe, onClose, onSuccess }: Reci
                 <label className="block text-xs text-muted-foreground mb-1">Carbs (g)</label>
                 <input
                   type="number"
-                  value={recipe.macros.carbs}
+                  value={recipe.macros?.carbs ?? 0}
                   onChange={(e) =>
                     setRecipe({
                       ...recipe,
@@ -211,7 +211,7 @@ export function RecipeEditor({ recipe: initialRecipe, onClose, onSuccess }: Reci
                 <label className="block text-xs text-muted-foreground mb-1">Fat (g)</label>
                 <input
                   type="number"
-                  value={recipe.macros.fat}
+                  value={recipe.macros?.fat ?? 0}
                   onChange={(e) =>
                     setRecipe({
                       ...recipe,
@@ -225,7 +225,7 @@ export function RecipeEditor({ recipe: initialRecipe, onClose, onSuccess }: Reci
                 <label className="block text-xs text-muted-foreground mb-1">Fiber (g)</label>
                 <input
                   type="number"
-                  value={recipe.macros.fiber}
+                  value={recipe.macros?.fiber ?? 0}
                   onChange={(e) =>
                     setRecipe({
                       ...recipe,

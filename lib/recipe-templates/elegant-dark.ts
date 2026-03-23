@@ -188,7 +188,7 @@ export const renderElegantDarkTemplate = (context: TemplateRenderContext): void 
   const gridItemWidth = (width - 200) / 3
   const nutritionItems = [
     { label: 'Calories', value: recipe.calories, accent: '#FFD700' },
-    { label: 'Protein', value: `${recipe.macros.protein}g`, accent: '#C0A080' },
+    { label: 'Protein', value: `${recipe.macros?.protein ?? 0}g`, accent: '#C0A080' },
     { label: 'Prep Time', value: `${recipe.prepTime} min`, accent: '#B8860B' }
   ]
 
@@ -244,7 +244,7 @@ export const renderElegantDarkTemplate = (context: TemplateRenderContext): void 
   // Macros with elegant styling
   ctx.font = '42px system-ui, -apple-system, sans-serif'
   ctx.fillStyle = '#E5E7EB'
-  const macrosText = `Carbs: ${recipe.macros.carbs}g  •  Fat: ${recipe.macros.fat}g  •  Fiber: ${recipe.macros.fiber}g`
+  const macrosText = `Carbs: ${recipe.macros?.carbs ?? 0}g  •  Fat: ${recipe.macros?.fat ?? 0}g  •  Fiber: ${recipe.macros?.fiber ?? 0}g`
   ctx.fillText(macrosText, width / 2, textY)
 
   // Dietary tags with dark elegant pills

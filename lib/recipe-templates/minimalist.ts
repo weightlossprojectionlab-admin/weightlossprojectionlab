@@ -127,7 +127,7 @@ export const renderMinimalistTemplate = (context: TemplateRenderContext): void =
   const gridItemWidth = (width - 200) / 3
   const nutritionItems = [
     { label: 'Calories', value: recipe.calories },
-    { label: 'Protein', value: `${recipe.macros.protein}g` },
+    { label: 'Protein', value: `${recipe.macros?.protein ?? 0}g` },
     { label: 'Prep Time', value: `${recipe.prepTime} min` }
   ]
 
@@ -156,7 +156,7 @@ export const renderMinimalistTemplate = (context: TemplateRenderContext): void =
   // Macros with icons
   ctx.font = 'bold 42px system-ui, -apple-system, sans-serif'
   ctx.fillStyle = '#1F2937'
-  const macrosText = `C: ${recipe.macros.carbs}g  •  F: ${recipe.macros.fat}g  •  Fiber: ${recipe.macros.fiber}g`
+  const macrosText = `C: ${recipe.macros?.carbs ?? 0}g  •  F: ${recipe.macros?.fat ?? 0}g  •  Fiber: ${recipe.macros?.fiber ?? 0}g`
   ctx.fillText(macrosText, width / 2, textY)
 
   // Dietary tags with colored pills

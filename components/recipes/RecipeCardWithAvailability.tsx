@@ -116,7 +116,7 @@ export function RecipeCardWithAvailability({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              <span>{recipe.macros.protein}g protein</span>
+              <span>{recipe.macros?.protein ?? 0}g protein</span>
             </span>
           </div>
         </div>
@@ -126,28 +126,28 @@ export function RecipeCardWithAvailability({
           <div className="flex-1">
             <div className="flex justify-between mb-1">
               <span className="text-muted-foreground">C</span>
-              <span className="text-foreground">{recipe.macros.carbs}g</span>
+              <span className="text-foreground">{recipe.macros?.carbs ?? 0}g</span>
             </div>
             <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div className="h-full bg-secondary-light0" style={{ width: `${(recipe.macros.carbs / (recipe.macros.carbs + recipe.macros.protein + recipe.macros.fat)) * 100}%` }}></div>
+              <div className="h-full bg-secondary-light0" style={{ width: `${((recipe.macros?.carbs ?? 0) / ((recipe.macros?.carbs ?? 0) + (recipe.macros?.protein ?? 0) + (recipe.macros?.fat ?? 0)) || 1) * 100}%` }}></div>
             </div>
           </div>
           <div className="flex-1">
             <div className="flex justify-between mb-1">
               <span className="text-muted-foreground">P</span>
-              <span className="text-foreground">{recipe.macros.protein}g</span>
+              <span className="text-foreground">{recipe.macros?.protein ?? 0}g</span>
             </div>
             <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div className="h-full bg-success-light0" style={{ width: `${(recipe.macros.protein / (recipe.macros.carbs + recipe.macros.protein + recipe.macros.fat)) * 100}%` }}></div>
+              <div className="h-full bg-success-light0" style={{ width: `${((recipe.macros?.protein ?? 0) / ((recipe.macros?.carbs ?? 0) + (recipe.macros?.protein ?? 0) + (recipe.macros?.fat ?? 0)) || 1) * 100}%` }}></div>
             </div>
           </div>
           <div className="flex-1">
             <div className="flex justify-between mb-1">
               <span className="text-muted-foreground">F</span>
-              <span className="text-foreground">{recipe.macros.fat}g</span>
+              <span className="text-foreground">{recipe.macros?.fat ?? 0}g</span>
             </div>
             <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div className="h-full bg-orange-500" style={{ width: `${(recipe.macros.fat / (recipe.macros.carbs + recipe.macros.protein + recipe.macros.fat)) * 100}%` }}></div>
+              <div className="h-full bg-orange-500" style={{ width: `${((recipe.macros?.fat ?? 0) / ((recipe.macros?.carbs ?? 0) + (recipe.macros?.protein ?? 0) + (recipe.macros?.fat ?? 0)) || 1) * 100}%` }}></div>
             </div>
           </div>
         </div>

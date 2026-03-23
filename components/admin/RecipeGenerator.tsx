@@ -278,7 +278,7 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
                       <p className="text-sm text-muted-foreground mt-1">{recipe.description}</p>
                       <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
                         <span>{recipe.calories} cal</span>
-                        <span>{recipe.macros.protein}g protein</span>
+                        <span>{recipe.macros?.protein ?? 0}g protein</span>
                         <span>{recipe.prepTime} min</span>
                       </div>
                     </div>
