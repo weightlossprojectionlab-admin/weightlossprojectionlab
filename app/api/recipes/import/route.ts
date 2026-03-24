@@ -222,7 +222,7 @@ async function extractRecipeWithAI(html: string, sourceUrl: string): Promise<Imp
   if (!apiKey) throw new Error('Gemini API key not configured')
 
   const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const prompt = `Extract the recipe from this HTML page. Return a JSON object with:
 {
@@ -256,7 +256,7 @@ async function calculateNutritionForRecipe(recipe: ImportedRecipe): Promise<{
   if (!apiKey) throw new Error('Gemini API key not configured')
 
   const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const prompt = `Calculate the total nutrition for this recipe (for all servings combined). Return JSON:
 {

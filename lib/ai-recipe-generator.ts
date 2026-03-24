@@ -9,7 +9,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { MealSuggestion } from './meal-suggestions'
 import { logger } from '@/lib/logger'
 
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '')
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '')
 
 export interface GenerateRecipeStepsOptions {
   recipe: MealSuggestion
@@ -20,6 +20,16 @@ export interface GenerateRecipeStepsResult {
   recipeSteps: string[]
   cookingTips?: string[]
   requiresCooking: boolean
+  suggestedMealTypes?: string[]
+  suggestedIngredients?: string[]
+  nutrition?: {
+    calories: number
+    protein: number
+    carbs: number
+    fat: number
+    fiber: number
+    sodium?: number
+  }
 }
 
 /**
@@ -31,37 +41,69 @@ export async function generateRecipeSteps(
   const { recipe, servingSize = recipe.servingSize } = options
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash-lite',
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 1000,
+      maxOutputTokens: 2000,
+      responseMimeType: 'application/json',
     }
   })
 
-  const prompt = `You are a professional chef assistant. Generate clear, step-by-step cooking instructions for this recipe.
+  const tags = (recipe.dietaryTags || [])
+  const dietaryConstraints = tags.length > 0
+    ? `\nDIETARY REQUIREMENTS (MUST follow these strictly):
+${tags.map((t: string) => {
+  switch (t) {
+    case 'vegan': return '- VEGAN: No animal products whatsoever (no meat, dairy, eggs, honey)'
+    case 'vegetarian': return '- VEGETARIAN: No meat or fish. Dairy and eggs are OK'
+    case 'keto': return '- KETO: Very low carb (under 20g net carbs). High fat. No sugar, grains, or starchy vegetables'
+    case 'paleo': return '- PALEO: No grains, legumes, dairy, refined sugar, or processed foods'
+    case 'gluten-free': return '- GLUTEN-FREE: No wheat, barley, rye, or cross-contaminated ingredients. Suggest GF substitutes'
+    case 'dairy-free': return '- DAIRY-FREE: No milk, cheese, butter, cream, or whey. Suggest dairy-free alternatives'
+    case 'high-protein': return '- HIGH-PROTEIN: Emphasize protein-rich ingredients. Target 30g+ protein per serving'
+    case 'low-carb': return '- LOW-CARB: Keep carbs under 30g per serving. Suggest low-carb substitutes for starchy items'
+    default: return `- ${t.toUpperCase()}`
+  }
+}).join('\n')}
+If any ingredient conflicts with these dietary requirements, suggest a compliant substitute in the steps.`
+    : ''
 
-Recipe Details:
-- Name: ${recipe.name}
-- Description: ${recipe.description}
-- Meal Type: ${recipe.mealType}
+  const prompt = `Create detailed cooking steps for "${recipe.name}".
+
+Based on these ingredients: ${(recipe.ingredients || []).join(', ')}
+
+Recipe context:
+- Description: ${recipe.description || 'N/A'}
+- Meal Type: ${recipe.mealType || 'N/A'}
 - Servings: ${servingSize}
-- Prep Time: ${recipe.prepTime} minutes
-- Ingredients: ${recipe.ingredients.join(', ')}
-- Dietary Tags: ${recipe.dietaryTags.join(', ')}
+- Prep Time: ${recipe.prepTime || 30} minutes
+${dietaryConstraints}
 
-IMPORTANT INSTRUCTIONS:
-1. If this recipe requires COOKING (heat, stove, oven, grill, etc.), include specific cooking verbs like: cook, bake, fry, boil, grill, simmer, roast, sauté, toast, poach, heat, broil, sear, steam
-2. If this is just PREPARATION (mixing, assembling, no cooking), use verbs like: mix, blend, combine, assemble, layer, top, arrange, stir
-3. Keep instructions clear, concise, and easy to follow
-4. Number each step
-5. Include timing when relevant
-6. Return ONLY the JSON, no markdown formatting
+Write step-by-step cooking instructions that a home cook can follow. Be specific about:
+- Exact temperatures and cooking times
+- How to prep each ingredient (dice, mince, slice, etc.)
+- When to add each ingredient and why
+- Visual cues for doneness (golden brown, sizzling, etc.)
+- Include 2-3 helpful cooking tips
+- Calculate estimated nutrition per serving based on the ingredients and serving size
+- Determine which meal types this recipe is commonly served as (can be multiple: breakfast, lunch, dinner, snack)
+- Enhance the ingredients list: add measurements for the given serving size, include prep notes (e.g., "minced", "thinly sliced"), and substitute any ingredients that conflict with the dietary requirements
 
 Return a JSON object with this exact structure:
 {
   "recipeSteps": ["step 1", "step 2", ...],
-  "cookingTips": ["tip 1", "tip 2", ...] (optional, 2-3 helpful tips),
-  "requiresCooking": true/false (true if recipe needs heat/cooking equipment)
+  "cookingTips": ["tip 1", "tip 2", ...],
+  "suggestedIngredients": ["2 lbs chicken breast, diced", "1 cup brown rice", ...] (enhanced ingredients with measurements for the serving size, prep notes, and dietary substitutions),
+  "nutrition": {
+    "calories": number,
+    "protein": number (grams),
+    "carbs": number (grams),
+    "fat": number (grams),
+    "fiber": number (grams),
+    "sodium": number (milligrams)
+  },
+  "requiresCooking": true/false (true if recipe needs heat/cooking equipment),
+  "suggestedMealTypes": ["lunch", "dinner"] (array of applicable meal types from: breakfast, lunch, dinner, snack — based on what this recipe is commonly served as)
 }
 
 Examples:
@@ -105,8 +147,12 @@ Now generate the recipe instructions:`
     const response = result.response
     const text = response.text()
 
-    // Remove markdown code blocks if present
-    const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    // Remove markdown code blocks and extract JSON
+    let cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+
+    // Try to extract JSON object if surrounded by other text
+    const jsonMatch = cleanText.match(/\{[\s\S]*\}/)
+    if (jsonMatch) cleanText = jsonMatch[0]
 
     const generated = JSON.parse(cleanText) as GenerateRecipeStepsResult
 
@@ -115,28 +161,28 @@ Now generate the recipe instructions:`
       throw new Error('Invalid response: missing recipeSteps array')
     }
 
+    // Default requiresCooking to true if not provided
     if (typeof generated.requiresCooking !== 'boolean') {
-      throw new Error('Invalid response: missing requiresCooking boolean')
+      generated.requiresCooking = true
     }
 
     return {
       recipeSteps: generated.recipeSteps,
       cookingTips: generated.cookingTips || [],
-      requiresCooking: generated.requiresCooking
+      requiresCooking: generated.requiresCooking,
+      suggestedMealTypes: generated.suggestedMealTypes,
+      suggestedIngredients: generated.suggestedIngredients,
+      nutrition: generated.nutrition,
     }
   } catch (error) {
-    logger.error('Error generating recipe steps', error as Error)
+    logger.error('Error generating recipe steps', error as Error, {
+      recipeName: recipe.name,
+      hasApiKey: !!(process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY),
+      errorMessage: error instanceof Error ? error.message : String(error)
+    })
 
-    // Fallback: Return basic steps
-    return {
-      recipeSteps: [
-        'Gather all ingredients',
-        `Prepare ${recipe.name} according to your preference`,
-        'Serve and enjoy'
-      ],
-      cookingTips: [],
-      requiresCooking: false // Default to false to be safe
-    }
+    // Re-throw so the API route returns the actual error instead of hiding it
+    throw error
   }
 }
 

@@ -11,11 +11,13 @@ import {
   TrashIcon,
   EyeIcon,
   LinkIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { getCSRFToken } from '@/lib/csrf'
 import { clearRecipeCache } from '@/hooks/useRecipes'
+import { mergeRecipesWithMedia } from '@/lib/recipe-merge'
 
 interface Recipe {
   id: string
@@ -39,7 +41,11 @@ export default function AdminRecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'draft' | 'published' | 'archived'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [mealTypeFilter, setMealTypeFilter] = useState<string>('all')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchRecipes()
@@ -48,13 +54,18 @@ export default function AdminRecipesPage() {
   const fetchRecipes = async () => {
     setLoading(true)
     try {
+      // Always fetch all docs (need media-only docs for image overlay)
       const token = await getAdminAuthToken()
-      const res = await fetch(`/api/admin/recipes?status=${filter}`, {
+      const res = await fetch('/api/admin/recipes?status=all', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (!res.ok) throw new Error('Failed to fetch recipes')
       const data = await res.json()
-      setRecipes(data.recipes || [])
+      const firestoreRecipes = data.recipes || []
+
+      // DRY: shared merge utility handles media overlay + hardcoded recipes
+      const merged = mergeRecipesWithMedia(firestoreRecipes, filter) as any[]
+      setRecipes(merged)
     } catch (error) {
       logger.error('Error fetching recipes:', error as Error)
       toast.error('Failed to fetch recipes')
@@ -86,6 +97,31 @@ export default function AdminRecipesPage() {
     }
   }
 
+  const handleToggleStatus = async (recipe: Recipe) => {
+    const newStatus = recipe.status === 'published' ? 'draft' : 'published'
+    setTogglingId(recipe.id)
+    try {
+      const token = await getAdminAuthToken()
+      const res = await fetch(`/api/admin/recipes/${recipe.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': getCSRFToken()
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+      if (!res.ok) throw new Error('Failed to update status')
+      toast.success(`Recipe ${newStatus === 'published' ? 'published' : 'unpublished'}`)
+      clearRecipeCache()
+      setRecipes(prev => prev.map(r => r.id === recipe.id ? { ...r, status: newStatus } : r))
+    } catch {
+      toast.error('Failed to update status')
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
   if (!isAdmin) {
     return (
       <div className="p-8">
@@ -114,6 +150,17 @@ export default function AdminRecipesPage() {
         </Link>
       </div>
 
+      {/* Search */}
+      <div className="mb-4">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search recipes by name, type, or ingredient..."
+          className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </div>
+
       {/* Filter Tabs */}
       <div className="mb-6 border-b border-border">
         <nav className="-mb-px flex space-x-8">
@@ -131,6 +178,23 @@ export default function AdminRecipesPage() {
             </button>
           ))}
         </nav>
+      </div>
+
+      {/* Meal Type Filter */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        {(['all', 'breakfast', 'lunch', 'dinner', 'snack'] as const).map((type) => (
+          <button
+            key={type}
+            onClick={() => setMealTypeFilter(type)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors capitalize ${
+              mealTypeFilter === type
+                ? 'bg-primary text-white'
+                : 'bg-muted text-foreground hover:bg-muted/80'
+            }`}
+          >
+            {type}
+          </button>
+        ))}
       </div>
 
       {/* Recipe List */}
@@ -152,82 +216,84 @@ export default function AdminRecipesPage() {
           </Link>
         </div>
       ) : (
-        <div className="bg-card rounded-lg shadow overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Recipe</th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Type</th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Calories</th>
-                <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Status</th>
-                <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recipes.map((recipe) => (
-                <tr key={recipe.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      {recipe.imageUrls?.[0] ? (
-                        <img src={recipe.imageUrls[0]} alt={recipe.name} className="h-10 w-10 rounded object-cover" />
-                      ) : (
-                        <div className="h-10 w-10 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                          No img
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium text-foreground">{recipe.name}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{recipe.description}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm text-foreground capitalize">{recipe.mealType}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm text-foreground">{recipe.calories || 0} cal</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                      recipe.status === 'published'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                        : recipe.status === 'draft'
-                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                    }`}>
-                      {recipe.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/recipes/${recipe.id}`}
-                        className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                        title="View"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                      </Link>
-                      <Link
-                        href={`/admin/recipes/${recipe.id}/edit`}
-                        className="p-1.5 text-muted-foreground hover:text-primary transition-colors"
-                        title="Edit"
-                      >
-                        <PencilSquareIcon className="h-4 w-4" />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(recipe)}
-                        disabled={deletingId === recipe.id}
-                        className="p-1.5 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
-                        title="Delete"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {recipes.filter(r => {
+            // Meal type filter
+            if (mealTypeFilter !== 'all' && r.mealType !== mealTypeFilter) return false
+            // Search filter
+            if (!searchQuery.trim()) return true
+            const q = searchQuery.toLowerCase()
+            return (
+              r.name?.toLowerCase().includes(q) ||
+              r.description?.toLowerCase().includes(q) ||
+              r.mealType?.toLowerCase().includes(q) ||
+              r.ingredients?.some(i => i.toLowerCase().includes(q))
+            )
+          }).map((recipe) => (
+            <div key={recipe.id} className="bg-card rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
+              {/* Image */}
+              <div className="relative h-48 bg-muted">
+                {recipe.imageUrls?.[0] ? (
+                  <img src={recipe.imageUrls[0]} alt={recipe.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No image</div>
+                )}
+                {/* Status Badge */}
+                <button
+                  onClick={() => handleToggleStatus(recipe)}
+                  disabled={togglingId === recipe.id || !recipe.createdAt}
+                  title={recipe.createdAt ? `Click to ${recipe.status === 'published' ? 'unpublish' : 'publish'}` : 'Hardcoded recipe'}
+                  className={`absolute top-2 right-2 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm hover:opacity-90 transition-opacity disabled:cursor-default disabled:opacity-60 ${
+                    recipe.status === 'published'
+                      ? 'bg-green-500 text-white'
+                      : recipe.status === 'draft'
+                      ? 'bg-yellow-500 text-white'
+                      : 'bg-gray-500 text-white'
+                  }`}
+                >
+                  {togglingId === recipe.id ? '...' : recipe.status}
+                </button>
+                {/* Meal Type */}
+                <span className="absolute top-2 left-2 bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm capitalize">
+                  {recipe.mealType}
+                </span>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 flex-1 flex flex-col">
+                <h3 className="font-semibold text-foreground mb-1">{recipe.name}</h3>
+                <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{recipe.description}</p>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+                  <span>{recipe.calories || 0} cal</span>
+                  <span>{recipe.macros?.protein ?? 0}g protein</span>
+                  <span>{recipe.prepTime || 30} min</span>
+                </div>
+
+                {/* Actions */}
+                <div className="mt-auto grid grid-cols-3 gap-1.5">
+                  <Link
+                    href={`/recipes/${recipe.id}`}
+                    className="flex items-center justify-center text-xs py-2 bg-muted text-foreground rounded hover:bg-muted/80 transition-colors font-medium"
+                  >
+                    View
+                  </Link>
+                  <Link
+                    href={`/admin/recipes/${recipe.id}/edit`}
+                    className="flex items-center justify-center text-xs py-2 bg-primary text-white rounded hover:bg-primary-hover transition-colors font-medium"
+                  >
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(recipe)}
+                    disabled={deletingId === recipe.id}
+                    className="flex items-center justify-center text-xs py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-red-300 transition-colors font-medium"
+                  >
+                    {deletingId === recipe.id ? '...' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

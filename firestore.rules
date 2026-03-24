@@ -807,7 +807,7 @@ service cloud.firestore {
       // NOTE: Firebase App Check should be enabled to protect against automated abuse
       //       Setup: Firebase Console > Build > App Check > Register your app
       allow list: if isAdmin() ||
-                  (isAuthenticated() && request.query.limit <= 50);
+                  (request.query.limit <= 50);
 
       // Create: Admin-only, with required recipe fields
       allow create: if isAdmin() &&

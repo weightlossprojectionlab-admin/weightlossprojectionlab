@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { MEAL_SUGGESTIONS, MealSuggestion } from '@/lib/meal-suggestions'
 import { notFound } from 'next/navigation'
 import { adminDb } from '@/lib/firebase-admin'
+import RecipeActions from '@/components/recipes/RecipeActions'
 
 async function getRecipe(id: string): Promise<MealSuggestion | null> {
   // Check hardcoded recipes first
@@ -275,6 +276,19 @@ export default async function RecipeDetailPage({ params }: PageProps) {
               </div>
             )}
           </div>
+
+          {/* Action Buttons */}
+          <RecipeActions
+            recipeId={recipe.id}
+            recipeName={recipe.name}
+            ingredients={(recipe.ingredients || []).map((text: string) => ({
+              name: text,
+              quantity: 1,
+            }))}
+            calories={recipe.calories || 0}
+            prepTime={recipe.prepTime || 30}
+            hasSteps={!!recipe.recipeSteps?.length && recipe.recipeSteps.some((s: string) => s.trim().length > 10)}
+          />
         </div>
 
         {/* Marketing CTA Section */}

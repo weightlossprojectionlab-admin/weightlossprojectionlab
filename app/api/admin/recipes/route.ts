@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { removeUndefinedValues } from '@/lib/firestore-helpers'
 
 /**
  * GET /api/admin/recipes?status=&limit=
@@ -38,13 +39,12 @@ export async function GET(request: NextRequest) {
     // Build query
     let query = adminDb.collection('recipes')
 
-    // Filter by status
+    // Filter by status (no orderBy to avoid composite index requirement)
     if (statusFilter !== 'all') {
       query = query.where('status', '==', statusFilter) as any
     }
 
-    // Order by creation date
-    query = query.orderBy('createdAt', 'desc').limit(limit) as any
+    query = query.limit(limit) as any
 
     const snapshot = await query.get()
 
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Validate required fields
-    if (!body.name || !body.mealType || !body.ingredientsV2 || !body.recipeSteps) {
+    if (!body.name || !body.mealType || (!body.ingredientsV2 && !body.ingredients) || !body.recipeSteps) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -126,6 +126,10 @@ export async function POST(request: NextRequest) {
       cookingTips: body.cookingTips || [],
       requiresCooking: body.requiresCooking !== false,
 
+      // Media
+      ...(body.imageUrls?.length ? { imageUrls: body.imageUrls } : {}),
+      ...(body.videoUrl ? { videoUrl: body.videoUrl } : {}),
+
       // Status
       status: body.status || 'draft',
       generatedByAI: false,
@@ -137,7 +141,7 @@ export async function POST(request: NextRequest) {
       popularity: 0
     }
 
-    await adminDb.collection('recipes').doc(recipeId).set(recipeData)
+    await adminDb.collection('recipes').doc(recipeId).set(removeUndefinedValues(recipeData))
 
     logger.info(`Recipe created: ${recipeId} by ${adminEmail}`)
 

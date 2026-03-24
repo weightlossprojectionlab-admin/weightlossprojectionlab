@@ -15,8 +15,12 @@ export function removeUndefinedValues<T extends Record<string, any>>(obj: T): Pa
   const result: any = {}
 
   Object.keys(obj).forEach(key => {
-    if (obj[key] !== undefined) {
-      result[key] = obj[key]
+    const value = obj[key]
+    if (value === undefined) return
+    if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+      result[key] = removeUndefinedValues(value)
+    } else {
+      result[key] = value
     }
   })
 

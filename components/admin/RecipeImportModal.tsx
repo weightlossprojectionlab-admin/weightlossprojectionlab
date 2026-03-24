@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import { ImportedRecipe } from '@/lib/recipe-import'
 import { MealSuggestion, MealType } from '@/lib/meal-suggestions'
-import { addDoc, collection } from 'firebase/firestore'
-import { db, auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
 import { Spinner } from '@/components/ui/Spinner'
 import { logger } from '@/lib/logger'
+import { removeUndefinedValues } from '@/lib/firestore-helpers'
+import { getAdminAuthToken } from '@/lib/admin/api'
+import { getCSRFToken } from '@/lib/csrf'
+import { clearRecipeCache } from '@/hooks/useRecipes'
 
 interface RecipeImportModalProps {
   isOpen: boolean
@@ -20,7 +22,7 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<'url' | 'preview' | 'saving'>('url')
   const [importedRecipe, setImportedRecipe] = useState<ImportedRecipe | null>(null)
-  const [mealType, setMealType] = useState<MealType>('lunch')
+  const [mealTypes, setMealTypes] = useState<MealType[]>(['lunch'])
 
   const handleImport = async () => {
     if (!url.trim()) {
@@ -30,21 +32,13 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
 
     setLoading(true)
     try {
-      // Get auth token
-      const user = auth.currentUser
-      if (!user) {
-        toast.error('You must be logged in to import recipes')
-        return
-      }
-
-      const idToken = await user.getIdToken()
-
       // Call API to import recipe
+      const token = await getAdminAuthToken()
       const response = await fetch('/api/recipes/import', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ url })
       })
@@ -81,7 +75,7 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
       const perServingFat = Math.round(((importedRecipe.fat || 0) / (importedRecipe.servings || 1)) * 10) / 10
       const perServingFiber = Math.round(((importedRecipe.fiber || 0) / (importedRecipe.servings || 1)) * 10) / 10
 
-      const recipe: Partial<MealSuggestion> = {
+      const recipe: Partial<MealSuggestion> & { mealTypes?: string[] } = {
         name: importedRecipe.name,
         description: importedRecipe.description || importedRecipe.name,
         ingredients: importedRecipe.ingredients,
@@ -105,16 +99,32 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
         },
         prepTime: importedRecipe.prepTime || 30,
         servingSize: importedRecipe.servings || 4,
-        mealType,
+        mealType: mealTypes[0],
+        mealTypes,
         dietaryTags: importedRecipe.dietaryTags || [],
         imageUrls: importedRecipe.imageUrl ? [importedRecipe.imageUrl] : [],
         videoUrl: '',
         allergens: []
       }
 
-      // Save to Firestore
-      await addDoc(collection(db, 'recipes'), recipe)
+      // Save via admin API (handles auth + Firestore server-side)
+      const token = await getAdminAuthToken()
+      const response = await fetch('/api/admin/recipes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': getCSRFToken()
+        },
+        body: JSON.stringify(removeUndefinedValues(recipe))
+      })
 
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to save recipe')
+      }
+
+      clearRecipeCache()
       toast.success(`Recipe "${importedRecipe.name}" saved successfully!`)
       onSuccess?.()
       handleClose()
@@ -292,15 +302,19 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
                 {/* Meal Type Selector */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Meal Type
+                    Meal Type <span className="text-xs text-muted-foreground">(select all that apply)</span>
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(type => (
                       <button
                         key={type}
-                        onClick={() => setMealType(type)}
+                        onClick={() => setMealTypes(prev =>
+                          prev.includes(type)
+                            ? prev.length > 1 ? prev.filter(t => t !== type) : prev
+                            : [...prev, type]
+                        )}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                          mealType === type
+                          mealTypes.includes(type)
                             ? 'bg-primary text-white'
                             : 'bg-muted text-foreground hover:bg-gray-200'
                         }`}

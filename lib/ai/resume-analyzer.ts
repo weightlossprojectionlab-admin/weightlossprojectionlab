@@ -97,7 +97,7 @@ Be thorough, honest, and data-driven. Focus on match with the specific requireme
 
     // Add metadata
     analysis.analyzedAt = new Date()
-    analysis.model = model === 'gemini' ? 'gemini-2.0-flash' : 'claude-3.5-sonnet'
+    analysis.model = model === 'gemini' ? 'gemini-2.5-flash' : 'claude-3.5-sonnet'
     analysis.confidence = calculateConfidence(analysis)
 
     logger.info(
@@ -122,7 +122,7 @@ async function analyzeWithGemini(prompt: string): Promise<AIResumeAnalysis> {
   }
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: {

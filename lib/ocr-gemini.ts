@@ -46,7 +46,7 @@ export async function extractTextFromImageWithGemini(imageData: string): Promise
 
     // Initialize Gemini model for OCR
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.1, // Very low temperature for factual text extraction
         topK: 32,

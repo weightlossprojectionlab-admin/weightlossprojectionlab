@@ -16,7 +16,7 @@ export interface ShareContent {
 }
 
 export interface ShareOptions {
-  type: 'meal' | 'progress' | 'achievement' | 'streak' | 'chart' | 'gallery'
+  type: 'meal' | 'progress' | 'achievement' | 'streak' | 'chart' | 'gallery' | 'recipe'
   data: any
 }
 
@@ -101,6 +101,13 @@ export function generateShareContent(options: ShareOptions): ShareContent {
         title: 'My Meal Photo Gallery',
         text: `${data.photoCount} meals logged and counting! 📸 Visualizing my healthy eating journey. #FoodDiary #HealthyLifestyle`,
         url: `${appUrl}/gallery`
+      }
+
+    case 'recipe':
+      return {
+        title: `${data.name} Recipe | Weight Loss Project Lab`,
+        text: `Check out this recipe: ${data.name} — ${data.calories} cal, ${data.prepTime} min prep! #HealthyRecipes`,
+        url: `${appUrl}/recipes/${data.id}`
       }
 
     default:

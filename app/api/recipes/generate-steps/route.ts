@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger'
 import { rateLimit } from '@/lib/rate-limit'
 import { errorResponse } from '@/lib/api-response'
 
-export const runtime = 'edge'
+export const maxDuration = 30
 
 export async function POST(request: NextRequest) {
   // Apply rate limiting FIRST (SEC-006)

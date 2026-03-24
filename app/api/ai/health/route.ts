@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   if (process.env.GEMINI_API_KEY) {
     try {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
       await Promise.race([
         model.generateContent('Test connection'),
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
       diagnostics.tests.geminiConnectivity = {
         status: 'PASSED',
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         message: 'Successfully connected to Gemini API'
       }
     } catch (error: any) {

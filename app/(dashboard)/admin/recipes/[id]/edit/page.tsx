@@ -9,7 +9,8 @@ import { logger } from '@/lib/logger'
 import { uploadRecipeImages } from '@/lib/recipe-upload'
 import RecipeForm, { RecipeFormData } from '@/components/admin/RecipeForm'
 import { clearRecipeCache } from '@/hooks/useRecipes'
-import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
+import { ArrowLeftIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
@@ -22,6 +23,94 @@ export default function EditRecipePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  const [generating, setGenerating] = useState(false)
+
+  const handleGenerateSteps = async () => {
+    if (!initialData) return
+    setGenerating(true)
+    try {
+      const ingredients = (initialData.ingredients || []).map(i => i.ingredientText || '')
+      const res = await fetch('/api/recipes/generate-steps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipe: {
+            name: initialData.recipeName,
+            description: initialData.description || '',
+            mealType: initialData.mealType || 'lunch',
+            prepTime: initialData.prepTime || 30,
+            ingredients,
+            dietaryTags: initialData.dietaryTags || [],
+            servingSize: initialData.servingSize || 1,
+          }
+        })
+      })
+      if (!res.ok) throw new Error('Failed to generate')
+      const data = await res.json()
+
+      // Save to Firestore
+      const token = await getAdminAuthToken()
+      await fetch(`/api/admin/recipes/${recipeId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': getCSRFToken()
+        },
+        body: JSON.stringify({
+          recipeSteps: data.recipeSteps || [],
+          cookingTips: data.cookingTips || [],
+          requiresCooking: data.requiresCooking ?? true,
+          ...(data.suggestedMealTypes?.length ? {
+            mealType: data.suggestedMealTypes[0],
+            mealTypes: data.suggestedMealTypes,
+          } : {}),
+          ...(data.suggestedIngredients?.length ? {
+            ingredients: data.suggestedIngredients,
+            ingredientsV2: data.suggestedIngredients.map((text: string) => ({
+              ingredientText: text,
+              quantity: 1,
+              unit: 'serving',
+            })),
+          } : {}),
+          ...(data.nutrition ? {
+            calories: data.nutrition.calories,
+            macros: {
+              protein: data.nutrition.protein,
+              carbs: data.nutrition.carbs,
+              fat: data.nutrition.fat,
+              fiber: data.nutrition.fiber,
+              sodium: data.nutrition.sodium || 0,
+            }
+          } : {}),
+        })
+      })
+
+      // Update form with new steps
+      setInitialData(prev => prev ? {
+        ...prev,
+        recipeSteps: data.recipeSteps || [''],
+        cookingTips: data.cookingTips || [''],
+        ...(data.suggestedIngredients?.length ? {
+          ingredients: data.suggestedIngredients.map((text: string) => ({
+            ingredientText: text,
+            quantity: 1,
+            unit: 'serving',
+          })),
+        } : {}),
+        ...(data.suggestedMealTypes?.length ? {
+          mealType: data.suggestedMealTypes[0],
+        } : {}),
+      } : prev)
+
+      clearRecipeCache()
+      toast.success('Recipe steps generated!')
+    } catch {
+      toast.error('Failed to generate steps')
+    } finally {
+      setGenerating(false)
+    }
+  }
   const [initialData, setInitialData] = useState<Partial<RecipeFormData> & { existingImageUrls?: string[] } | undefined>(undefined)
   const [recipeFetchName, setRecipeFetchName] = useState('')
 
@@ -44,7 +133,20 @@ export default function EditRecipePage() {
         throw new Error('Failed to fetch recipe')
       }
 
-      const { recipe } = await response.json()
+      const { recipe: firestoreRecipe } = await response.json()
+
+      // If media-only doc (no name), try to merge with hardcoded recipe
+      let recipe = firestoreRecipe
+      if (!firestoreRecipe.name) {
+        const hardcoded = MEAL_SUGGESTIONS.find(r => r.id === recipeId)
+        if (hardcoded) {
+          recipe = { ...hardcoded, ...firestoreRecipe }
+        } else {
+          toast.error('This recipe has no content. Redirecting to create.')
+          router.push('/admin/recipes/create')
+          return
+        }
+      }
 
       setRecipeFetchName(recipe.name || '')
 
@@ -241,10 +343,22 @@ export default function EditRecipePage() {
           <ArrowLeftIcon className="h-5 w-5" />
           Back to Recipes
         </Link>
-        <h1 className="text-3xl font-bold text-foreground">Edit Recipe</h1>
-        {recipeFetchName && (
-          <p className="text-muted-foreground mt-1">Editing: {recipeFetchName}</p>
-        )}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Edit Recipe</h1>
+            {recipeFetchName && (
+              <p className="text-muted-foreground mt-1">Editing: {recipeFetchName}</p>
+            )}
+          </div>
+          <button
+            onClick={handleGenerateSteps}
+            disabled={generating || !initialData}
+            className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors font-medium"
+          >
+            <SparklesIcon className="h-5 w-5" />
+            {generating ? 'Generating...' : initialData?.recipeSteps?.some(s => s.trim().length > 10) ? 'Regenerate Steps' : 'Generate Steps'}
+          </button>
+        </div>
       </div>
 
       {/* Recipe Form */}

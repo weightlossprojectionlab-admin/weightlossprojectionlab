@@ -14,7 +14,7 @@
 export type AdminRole = 'admin' | 'moderator' | 'support'
 
 // Super admin emails from environment variable (comma-separated)
-export const SUPER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAILS ?? '')
+export const SUPER_ADMIN_EMAILS = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS ?? process.env.SUPER_ADMIN_EMAILS ?? '')
   .split(',')
   .map(e => e.trim().toLowerCase())
   .filter(Boolean)

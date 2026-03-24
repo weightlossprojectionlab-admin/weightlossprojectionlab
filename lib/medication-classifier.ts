@@ -71,7 +71,7 @@ export async function classifyMedicationConditions(
     })
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-002',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: medicationClassificationSchema,

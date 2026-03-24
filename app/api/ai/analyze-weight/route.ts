@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use Gemini Pro Vision model
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     // Craft prompt for scale reading
     const prompt = `You are a precise scale reading assistant. Analyze this image and extract the weight measurement shown on the scale display.

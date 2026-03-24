@@ -27,7 +27,7 @@ export default function RecipeIndexPage() {
   const { recipes, loading: recipesLoading } = useRecipes()
   const { items: inventoryItems } = useShopping() // Household inventory
 
-  const [isAdminMode, setIsAdminMode] = useState(false)
+  const isAdminMode = isAdmin
   const [selectedRecipeForEdit, setSelectedRecipeForEdit] = useState<MealSuggestion | null>(null)
   const [showImportModal, setShowImportModal] = useState(false)
   const [selectedMealType, setSelectedMealType] = useState<MealType | 'all'>('all')
@@ -250,23 +250,12 @@ export default function RecipeIndexPage() {
                   d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </Link>
-            {isAdmin && (
-              <AdminModeToggle
-                isAdminMode={isAdminMode}
-                onToggle={setIsAdminMode}
-              />
-            )}
           </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Browse 28 delicious, macro-friendly recipes. Track them automatically with our WPL-powered app.
           </p>
           {isAdminMode && (
             <div className="mt-4 space-y-3">
-              <div className="bg-primary-light dark:bg-purple-900/20 border border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-200 px-4 py-2 rounded-lg inline-block">
-                <p className="text-sm font-medium">
-                  🔓 Admin Mode Active - Click "Edit Media" on any recipe to upload images/videos
-                </p>
-              </div>
               <div>
                 <button
                   onClick={() => setShowImportModal(true)}
@@ -355,7 +344,7 @@ export default function RecipeIndexPage() {
             {filteredRecipes.map(recipe => (
               <div
                 key={recipe.id}
-                className="bg-card rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                className="bg-card rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow flex flex-col"
               >
                 {/* Recipe Image Carousel */}
                 <div className="relative">
@@ -373,7 +362,7 @@ export default function RecipeIndexPage() {
                 </div>
 
                 {/* Recipe Content */}
-                <div className="p-6">
+                <div className="p-6 flex flex-col flex-1">
                   <Link href={`/recipes/${recipe.id}`}>
                     <h3 className="text-xl font-bold text-foreground mb-2 hover:text-primary cursor-pointer">
                       {recipe.name}
@@ -478,12 +467,21 @@ export default function RecipeIndexPage() {
                     </div>
                   )}
 
+                  {/* Action Buttons */}
+                  <div className="mt-auto pt-2 space-y-1.5">
+                    <Link
+                      href={`/recipes/${recipe.id}`}
+                      className="w-full inline-block text-center bg-primary text-white px-3 py-2 rounded-lg font-medium hover:bg-primary-hover transition-colors text-sm"
+                    >
+                      Try This Recipe →
+                    </Link>
+
                   {/* Admin Edit & Delete Buttons */}
                   {isAdminMode && (
                     <>
                       <button
                         onClick={() => setSelectedRecipeForEdit(recipe)}
-                        className="w-full bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-hover flex items-center justify-center gap-2"
+                        className="w-full bg-primary text-white px-3 py-1.5 rounded-lg font-medium hover:bg-primary-hover flex items-center justify-center gap-2 text-sm"
                       >
                         <PencilSquareIcon className="h-5 w-5" />
                         Edit Media
@@ -501,13 +499,14 @@ export default function RecipeIndexPage() {
                       <button
                         onClick={() => handleDeleteRecipe(recipe.id, recipe.name)}
                         disabled={deletingRecipeId === recipe.id}
-                        className="w-full bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 disabled:bg-red-300 flex items-center justify-center gap-2"
+                        className="w-full bg-red-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-red-600 disabled:bg-red-300 flex items-center justify-center gap-2 text-sm"
                       >
                         <TrashIcon className="h-5 w-5" />
                         {deletingRecipeId === recipe.id ? 'Deleting...' : 'Delete Recipe'}
                       </button>
                     </>
                   )}
+                  </div>
                 </div>
               </div>
             ))}

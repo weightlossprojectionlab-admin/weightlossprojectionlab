@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       textLength: labelText.length
     })
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     const prompt = `You are a medical information extraction expert. Extract structured medication information from the following prescription label text.
 
