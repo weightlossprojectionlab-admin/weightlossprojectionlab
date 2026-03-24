@@ -52,12 +52,11 @@ async function analyzeWithGemini(
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash', // Stable version with vision capabilities
+    model: 'gemini-2.5-pro', // Pro for accurate vision + reliable JSON
     generationConfig: {
       temperature: 0.4,
-      topK: 32,
-      topP: 1,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 4096,
+      responseMimeType: 'application/json',
     }
   })
 
@@ -111,23 +110,23 @@ Guidelines:
 - User specified this as: ${mealType || 'unspecified'}, but analyze independently
 - For mixed dishes (e.g., stir-fry, casserole), break down into main components when possible`
 
-  // Add 8-second timeout
-  const result = await Promise.race([
-    model.generateContent([prompt, imagePart]),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Gemini API timeout after 8 seconds')), 8000)
-    )
-  ]) as any
+  const result = await model.generateContent([prompt, imagePart])
 
   const response = result.response
   const text = response.text()
 
+  logger.debug('Gemini raw response length', { length: text.length, preview: text.substring(0, 200) })
+
   // Remove markdown code blocks if present
-  const jsonContent = text
+  let jsonContent = text
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/i, '')
     .replace(/\s*```$/i, '')
     .trim()
+
+  // Extract JSON object if surrounded by other text
+  const jsonMatch = jsonContent.match(/\{[\s\S]*\}/)
+  if (jsonMatch) jsonContent = jsonMatch[0]
 
   return JSON.parse(jsonContent)
 }
@@ -274,44 +273,13 @@ export async function analyzeMealImage(
     const errorMsg = geminiError instanceof Error ? geminiError.message : String(geminiError)
     const isQuotaError = errorMsg.includes('quota') || errorMsg.includes('429')
 
-    if (isQuotaError) {
-      logger.error('Gemini quota exceeded', undefined, { error: errorMsg })
-    } else {
-      logger.warn('Gemini failed, trying OpenAI fallback', { error: errorMsg })
-    }
+    logger.error('Gemini vision failed', undefined, { error: errorMsg, isQuota: isQuotaError })
 
-    // Try OpenAI fallback
-    try {
-      logger.info('Attempting analysis with OpenAI')
-      const analysis = await analyzeWithOpenAI(imageData, mealType)
-      logger.info('✅ OpenAI analysis successful')
-      return { analysis, provider: 'openai' }
-    } catch (openaiError) {
-      const openaiMsg = openaiError instanceof Error ? openaiError.message : String(openaiError)
-      const isOpenAIQuotaError = openaiMsg.includes('quota') || openaiMsg.includes('429')
-
-      if (isOpenAIQuotaError) {
-        logger.error('OpenAI quota exceeded', undefined, { error: openaiMsg })
-      } else {
-        logger.warn('OpenAI failed, using mock data', { error: openaiMsg })
-      }
-
-      // Build user-friendly error message
-      let userErrorMsg = 'AI analysis temporarily unavailable'
-      if (isQuotaError && isOpenAIQuotaError) {
-        userErrorMsg = 'AI service quota exceeded. Please try again later or contact support.'
-      } else if (isQuotaError) {
-        userErrorMsg = 'Gemini quota exceeded. OpenAI also unavailable.'
-      } else if (isOpenAIQuotaError) {
-        userErrorMsg = 'OpenAI quota exceeded. Gemini also unavailable.'
-      }
-
-      // Return mock data as final fallback
-      return {
-        analysis: getMockAnalysis(),
-        provider: 'mock',
-        error: userErrorMsg
-      }
+    // Return error — no fallback to fake data
+    return {
+      analysis: getMockAnalysis(),
+      provider: 'mock',
+      error: `Gemini vision failed: ${errorMsg}`
     }
   }
 }

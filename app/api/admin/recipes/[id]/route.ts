@@ -84,19 +84,14 @@ export async function PUT(
 
     const body = await request.json()
     const recipeRef = adminDb.collection('recipes').doc(params.id)
-    const recipeDoc = await recipeRef.get()
 
-    if (!recipeDoc.exists) {
-      return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
-    }
-
-    // Update recipe
+    // Use set with merge to create doc if it doesn't exist (e.g., hardcoded recipe getting AI data)
     const updateData = {
       ...body,
       updatedAt: new Date()
     }
 
-    await recipeRef.update(updateData)
+    await recipeRef.set(updateData, { merge: true })
 
     logger.info(`Recipe updated: ${params.id} by ${adminEmail}`)
 

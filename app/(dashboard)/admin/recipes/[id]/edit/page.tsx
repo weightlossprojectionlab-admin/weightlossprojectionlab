@@ -50,7 +50,7 @@ export default function EditRecipePage() {
 
       // Save to Firestore
       const token = await getAdminAuthToken()
-      await fetch(`/api/admin/recipes/${recipeId}`, {
+      const saveRes = await fetch(`/api/admin/recipes/${recipeId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +86,12 @@ export default function EditRecipePage() {
         })
       })
 
-      // Update form with new steps
+      if (!saveRes.ok) {
+        const err = await saveRes.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to save regenerated recipe')
+      }
+
+      // Update form with new data
       setInitialData(prev => prev ? {
         ...prev,
         recipeSteps: data.recipeSteps || [''],
@@ -100,6 +105,15 @@ export default function EditRecipePage() {
         } : {}),
         ...(data.suggestedMealTypes?.length ? {
           mealType: data.suggestedMealTypes[0],
+        } : {}),
+        ...(data.nutrition ? {
+          aiNutrition: {
+            calories: data.nutrition.calories,
+            protein: data.nutrition.protein,
+            carbs: data.nutrition.carbs,
+            fat: data.nutrition.fat,
+            fiber: data.nutrition.fiber,
+          }
         } : {}),
       } : prev)
 
@@ -133,7 +147,8 @@ export default function EditRecipePage() {
         throw new Error('Failed to fetch recipe')
       }
 
-      const { recipe: firestoreRecipe } = await response.json()
+      const responseData = await response.json()
+      const firestoreRecipe = responseData.recipe
 
       // If media-only doc (no name), try to merge with hardcoded recipe
       let recipe = firestoreRecipe
@@ -151,7 +166,7 @@ export default function EditRecipePage() {
       setRecipeFetchName(recipe.name || '')
 
       // Map API recipe data to RecipeFormData
-      const formData: Partial<RecipeFormData> & { existingImageUrls?: string[] } = {
+      const formData: Partial<RecipeFormData> & { existingImageUrls?: string[]; aiNutrition?: { calories: number; protein: number; carbs: number; fat: number; fiber: number } } = {
         recipeName: recipe.name || '',
         description: recipe.description || '',
         mealType: recipe.mealType || 'lunch',
@@ -165,7 +180,16 @@ export default function EditRecipePage() {
         })),
         recipeSteps: recipe.recipeSteps?.length ? recipe.recipeSteps : [''],
         cookingTips: recipe.cookingTips?.length ? recipe.cookingTips : [''],
-        existingImageUrls: recipe.imageUrls || []
+        existingImageUrls: recipe.imageUrls || [],
+        ...(recipe.macros || recipe.calories ? {
+          aiNutrition: {
+            calories: recipe.calories || 0,
+            protein: recipe.macros?.protein || 0,
+            carbs: recipe.macros?.carbs || 0,
+            fat: recipe.macros?.fat || 0,
+            fiber: recipe.macros?.fiber || 0,
+          }
+        } : {})
       }
 
       setInitialData(formData)
@@ -202,6 +226,22 @@ export default function EditRecipePage() {
       })
 
       const servingSize = data.servingSize || 1
+      const hasProductNutrition = totalCalories > 0
+
+      // Use product nutrition if available, otherwise preserve AI/existing nutrition
+      const nutrition = hasProductNutrition
+        ? {
+            calories: Math.round(totalCalories / servingSize),
+            macros: {
+              protein: Math.round((totalProtein / servingSize) * 10) / 10,
+              carbs: Math.round((totalCarbs / servingSize) * 10) / 10,
+              fat: Math.round((totalFat / servingSize) * 10) / 10,
+              fiber: Math.round((totalFiber / servingSize) * 10) / 10
+            }
+          }
+        : initialData?.aiNutrition
+          ? { calories: initialData.aiNutrition.calories, macros: { protein: initialData.aiNutrition.protein, carbs: initialData.aiNutrition.carbs, fat: initialData.aiNutrition.fat, fiber: initialData.aiNutrition.fiber } }
+          : {}
 
       const recipePayload: Record<string, unknown> = {
         name: data.recipeName,
@@ -210,13 +250,7 @@ export default function EditRecipePage() {
         prepTime: data.prepTime,
         servingSize: data.servingSize,
         dietaryTags: data.dietaryTags,
-        calories: Math.round(totalCalories / servingSize),
-        macros: {
-          protein: Math.round((totalProtein / servingSize) * 10) / 10,
-          carbs: Math.round((totalCarbs / servingSize) * 10) / 10,
-          fat: Math.round((totalFat / servingSize) * 10) / 10,
-          fiber: Math.round((totalFiber / servingSize) * 10) / 10
-        },
+        ...nutrition,
         ingredientsV2: data.ingredients,
         ingredients: data.ingredients.map(i => i.ingredientText),
         autoCalculatedNutrition: true,
@@ -356,7 +390,7 @@ export default function EditRecipePage() {
             className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors font-medium"
           >
             <SparklesIcon className="h-5 w-5" />
-            {generating ? 'Generating...' : initialData?.recipeSteps?.some(s => s.trim().length > 10) ? 'Regenerate Steps' : 'Generate Steps'}
+            {generating ? 'Generating...' : 'Regenerate Recipe'}
           </button>
         </div>
       </div>

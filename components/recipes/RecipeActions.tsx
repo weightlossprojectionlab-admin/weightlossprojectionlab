@@ -122,7 +122,7 @@ export default function RecipeActions({
           className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors font-medium"
         >
           <SparklesIcon className="h-5 w-5" />
-          {generating ? 'Generating...' : hasSteps ? 'Regenerate Steps' : 'Generate Recipe'}
+          {generating ? 'Generating...' : 'Regenerate Recipe'}
         </button>
       )}
     </div>

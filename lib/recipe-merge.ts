@@ -41,10 +41,11 @@ export function mergeRecipesWithMedia(
   statusFilter?: string
 ): MealSuggestion[] {
   // Build media overlay map from ALL docs that have image/video data
+  // Build overlay map from ALL Firestore docs (media, nutrition, steps, etc.)
   const mediaMap = new Map<string, FirestoreDoc>()
   for (const doc of firestoreDocs) {
     const docKey = doc.docId || doc.id
-    if (docKey && (doc.imageUrls || doc.imageUrl || doc.videoUrl)) {
+    if (docKey) {
       mediaMap.set(docKey, doc)
     }
   }
@@ -86,6 +87,7 @@ export function mergeRecipesWithMedia(
 
       return {
         ...recipe,
+        // Media overlay
         imageUrls,
         imageStoragePaths,
         videoUrl: media.videoUrl,
@@ -93,6 +95,14 @@ export function mergeRecipesWithMedia(
         videoStoragePath: media.videoStoragePath,
         imageUrl: imageUrls?.[0],
         imageStoragePath: imageStoragePaths?.[0],
+        // AI-generated data overlay (from regeneration)
+        ...(media.calories ? { calories: media.calories } : {}),
+        ...(media.macros ? { macros: media.macros } : {}),
+        ...(media.recipeSteps?.length ? { recipeSteps: media.recipeSteps } : {}),
+        ...(media.cookingTips?.length ? { cookingTips: media.cookingTips } : {}),
+        ...(media.ingredients?.length ? { ingredients: media.ingredients } : {}),
+        ...(media.mealTypes?.length ? { mealTypes: media.mealTypes } : {}),
+        ...(media.mealType ? { mealType: media.mealType } : {}),
       }
     })
 

@@ -48,7 +48,7 @@ export interface RecipeFormData {
 }
 
 interface RecipeFormProps {
-  initialData?: Partial<RecipeFormData> & { existingImageUrls?: string[] }
+  initialData?: Partial<RecipeFormData> & { existingImageUrls?: string[]; aiNutrition?: { calories: number; protein: number; carbs: number; fat: number; fiber: number } }
   onSave: (data: RecipeFormData, imageFiles: File[], status: 'draft' | 'published', existingImageUrls?: string[]) => Promise<void>
   saving: boolean
   uploadProgress: number | null
@@ -147,30 +147,45 @@ export default function RecipeForm({ initialData, onSave, saving, uploadProgress
   }, [handleImageFiles])
 
   // Calculate total nutrition from ingredients
-  const calculateNutrition = () => {
-    let totalCalories = 0
-    let totalProtein = 0
-    let totalCarbs = 0
-    let totalFat = 0
-    let totalFiber = 0
+  const [nutritionOverride, setNutritionOverride] = useState<{ calories: number; protein: number; carbs: number; fat: number; fiber: number } | null>(
+    initialData?.aiNutrition || null
+  )
 
-    ingredients.forEach(ingredient => {
-      if (ingredient.nutrition) {
-        totalCalories += ingredient.nutrition.calories * ingredient.quantity
-        totalProtein += ingredient.nutrition.protein * ingredient.quantity
-        totalCarbs += ingredient.nutrition.carbs * ingredient.quantity
-        totalFat += ingredient.nutrition.fat * ingredient.quantity
-        totalFiber += ingredient.nutrition.fiber * ingredient.quantity
-      }
-    })
-
-    return {
-      calories: Math.round(totalCalories / servingSize),
-      protein: Math.round((totalProtein / servingSize) * 10) / 10,
-      carbs: Math.round((totalCarbs / servingSize) * 10) / 10,
-      fat: Math.round((totalFat / servingSize) * 10) / 10,
-      fiber: Math.round((totalFiber / servingSize) * 10) / 10
+  // Update nutrition override when initialData changes (e.g., after regeneration or page load)
+  useEffect(() => {
+    if (initialData?.aiNutrition) {
+      setNutritionOverride(initialData.aiNutrition)
     }
+  }, [initialData?.aiNutrition?.calories, initialData?.aiNutrition?.protein])
+
+  const calculateNutrition = () => {
+    // Product-level nutrition from database matches takes priority
+    const hasProductNutrition = ingredients.some(i => i.nutrition && i.nutrition.calories > 0)
+
+    if (hasProductNutrition) {
+      let totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFiber = 0
+      ingredients.forEach(ingredient => {
+        if (ingredient.nutrition) {
+          totalCalories += ingredient.nutrition.calories * ingredient.quantity
+          totalProtein += ingredient.nutrition.protein * ingredient.quantity
+          totalCarbs += ingredient.nutrition.carbs * ingredient.quantity
+          totalFat += ingredient.nutrition.fat * ingredient.quantity
+          totalFiber += ingredient.nutrition.fiber * ingredient.quantity
+        }
+      })
+      return {
+        calories: Math.round(totalCalories / servingSize),
+        protein: Math.round((totalProtein / servingSize) * 10) / 10,
+        carbs: Math.round((totalCarbs / servingSize) * 10) / 10,
+        fat: Math.round((totalFat / servingSize) * 10) / 10,
+        fiber: Math.round((totalFiber / servingSize) * 10) / 10
+      }
+    }
+
+    // Fallback: AI-generated or saved nutrition
+    if (nutritionOverride) return nutritionOverride
+
+    return { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
   }
 
   const handleAddProduct = (product: SelectedProduct) => {

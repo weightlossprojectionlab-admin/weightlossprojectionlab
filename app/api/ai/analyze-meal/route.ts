@@ -45,11 +45,11 @@ export async function POST(request: NextRequest) {
       const userData = userDoc.data()
       const subscription = userData?.subscription
 
-      // Only allow active paid subscriptions (NOT trialing, NOT free)
+      // Allow active paid subscriptions AND trials
       const hasActivePaidSubscription =
         subscription &&
         subscription.plan !== 'free' &&
-        subscription.status === 'active'
+        (subscription.status === 'active' || subscription.status === 'trialing')
 
       if (!hasActivePaidSubscription) {
         logger.info('Blocking image analysis - active paid subscription required', {

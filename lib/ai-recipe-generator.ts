@@ -85,7 +85,7 @@ Write step-by-step cooking instructions that a home cook can follow. Be specific
 - When to add each ingredient and why
 - Visual cues for doneness (golden brown, sizzling, etc.)
 - Include 2-3 helpful cooking tips
-- Calculate estimated nutrition per serving based on the ingredients and serving size
+- Calculate estimated nutrition PER SINGLE SERVING (divide total recipe nutrition by ${servingSize} servings). Default to 1 serving if not specified
 - Determine which meal types this recipe is commonly served as (can be multiple: breakfast, lunch, dinner, snack)
 - Enhance the ingredients list: add measurements for the given serving size, include prep notes (e.g., "minced", "thinly sliced"), and substitute any ingredients that conflict with the dietary requirements
 
@@ -95,12 +95,12 @@ Return a JSON object with this exact structure:
   "cookingTips": ["tip 1", "tip 2", ...],
   "suggestedIngredients": ["2 lbs chicken breast, diced", "1 cup brown rice", ...] (enhanced ingredients with measurements for the serving size, prep notes, and dietary substitutions),
   "nutrition": {
-    "calories": number,
-    "protein": number (grams),
-    "carbs": number (grams),
-    "fat": number (grams),
-    "fiber": number (grams),
-    "sodium": number (milligrams)
+    "calories": number (PER SINGLE SERVING — total divided by servings),
+    "protein": number (grams per serving),
+    "carbs": number (grams per serving),
+    "fat": number (grams per serving),
+    "fiber": number (grams per serving),
+    "sodium": number (milligrams per serving)
   },
   "requiresCooking": true/false (true if recipe needs heat/cooking equipment),
   "suggestedMealTypes": ["lunch", "dinner"] (array of applicable meal types from: breakfast, lunch, dinner, snack — based on what this recipe is commonly served as)
