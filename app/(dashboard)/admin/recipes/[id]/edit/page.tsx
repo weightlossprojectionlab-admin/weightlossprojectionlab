@@ -61,6 +61,8 @@ export default function EditRecipePage() {
           recipeSteps: data.recipeSteps || [],
           cookingTips: data.cookingTips || [],
           requiresCooking: data.requiresCooking ?? true,
+          ...(data.description ? { description: data.description } : {}),
+          ...(data.suggestedDietaryTags?.length ? { dietaryTags: data.suggestedDietaryTags } : {}),
           ...(data.suggestedMealTypes?.length ? {
             mealType: data.suggestedMealTypes[0],
             mealTypes: data.suggestedMealTypes,
@@ -96,6 +98,8 @@ export default function EditRecipePage() {
         ...prev,
         recipeSteps: data.recipeSteps || [''],
         cookingTips: data.cookingTips || [''],
+        ...(data.description ? { description: data.description } : {}),
+        ...(data.suggestedDietaryTags?.length ? { dietaryTags: data.suggestedDietaryTags as any } : {}),
         ...(data.suggestedIngredients?.length ? {
           ingredients: data.suggestedIngredients.map((text: string) => ({
             ingredientText: text,
@@ -118,7 +122,7 @@ export default function EditRecipePage() {
       } : prev)
 
       clearRecipeCache()
-      toast.success('Recipe steps generated!')
+      toast.success('Recipe generated!')
     } catch {
       toast.error('Failed to generate steps')
     } finally {

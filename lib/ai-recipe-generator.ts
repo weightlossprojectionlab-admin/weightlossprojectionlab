@@ -22,6 +22,8 @@ export interface GenerateRecipeStepsResult {
   requiresCooking: boolean
   suggestedMealTypes?: string[]
   suggestedIngredients?: string[]
+  description?: string
+  suggestedDietaryTags?: string[]
   nutrition?: {
     calories: number
     protein: number
@@ -88,12 +90,15 @@ Write step-by-step cooking instructions that a home cook can follow. Be specific
 - Calculate estimated nutrition PER SINGLE SERVING (divide total recipe nutrition by ${servingSize} servings). Default to 1 serving if not specified
 - Determine which meal types this recipe is commonly served as (can be multiple: breakfast, lunch, dinner, snack)
 - Enhance the ingredients list: add measurements for the given serving size, include prep notes (e.g., "minced", "thinly sliced"), and substitute any ingredients that conflict with the dietary requirements
+- Write an SEO-friendly description (2-3 sentences) that captures the essence of the recipe, includes key ingredients and cooking method, and is optimized for search engines and NLP indexing
+- Detect applicable dietary tags from: vegan, vegetarian, keto, paleo, gluten-free, dairy-free, high-protein, low-carb. Only include tags that genuinely apply based on the ingredients
 
 Return a JSON object with this exact structure:
 {
   "recipeSteps": ["step 1", "step 2", ...],
   "cookingTips": ["tip 1", "tip 2", ...],
   "suggestedIngredients": ["2 lbs chicken breast, diced", "1 cup brown rice", ...] (enhanced ingredients with measurements for the serving size, prep notes, and dietary substitutions),
+  "description": "SEO-friendly description (2-3 sentences with key ingredients, cooking method, and appeal)",
   "nutrition": {
     "calories": number (PER SINGLE SERVING — total divided by servings),
     "protein": number (grams per serving),
@@ -103,7 +108,8 @@ Return a JSON object with this exact structure:
     "sodium": number (milligrams per serving)
   },
   "requiresCooking": true/false (true if recipe needs heat/cooking equipment),
-  "suggestedMealTypes": ["lunch", "dinner"] (array of applicable meal types from: breakfast, lunch, dinner, snack — based on what this recipe is commonly served as)
+  "suggestedMealTypes": ["lunch", "dinner"] (array of applicable meal types from: breakfast, lunch, dinner, snack — based on what this recipe is commonly served as),
+  "suggestedDietaryTags": ["high-protein", "gluten-free"] (array from: vegan, vegetarian, keto, paleo, gluten-free, dairy-free, high-protein, low-carb — only tags that genuinely apply)
 }
 
 Examples:
@@ -172,6 +178,8 @@ Now generate the recipe instructions:`
       requiresCooking: generated.requiresCooking,
       suggestedMealTypes: generated.suggestedMealTypes,
       suggestedIngredients: generated.suggestedIngredients,
+      description: generated.description,
+      suggestedDietaryTags: generated.suggestedDietaryTags,
       nutrition: generated.nutrition,
     }
   } catch (error) {

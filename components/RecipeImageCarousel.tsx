@@ -60,8 +60,8 @@ export function RecipeImageCarousel({
         )}
       </div>
 
-      {/* Thumbnail Navigation - Only show if multiple images */}
-      {hasMultipleImages && (
+      {/* Thumbnail Navigation */}
+      {hasMultipleImages ? (
         <div className="flex gap-2 p-2 bg-background rounded-b-lg overflow-x-auto">
           {displayImages.map((image, index) => (
             <button
@@ -91,6 +91,8 @@ export function RecipeImageCarousel({
             </button>
           ))}
         </div>
+      ) : (
+        <div className="h-[84px]" />
       )}
 
       {/* Image Counter */}

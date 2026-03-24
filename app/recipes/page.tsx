@@ -9,6 +9,7 @@ import { useRecipes } from '@/hooks/useRecipes'
 import { AdminModeToggle } from '@/components/admin/AdminModeToggle'
 import { RecipeMediaUpload } from '@/components/admin/RecipeMediaUpload'
 import { RecipeImageCarousel } from '@/components/RecipeImageCarousel'
+import { SearchInput } from '@/components/ui/SearchInput'
 import { PencilSquareIcon, VideoCameraIcon, PlusCircleIcon, ShieldCheckIcon, ExclamationTriangleIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { RecipeImportModal } from '@/components/admin/RecipeImportModal'
 import { getMemberRecipeSuggestions, type MemberRecipeSuggestion } from '@/lib/member-recipe-engine'
@@ -139,7 +140,7 @@ export default function RecipeIndexPage() {
   // Filter recipes
   const filteredRecipes = displayRecipes.filter(recipe => {
     // Filter by meal type
-    if (selectedMealType !== 'all' && recipe.mealType !== selectedMealType) {
+    if (selectedMealType !== 'all' && recipe.mealType !== selectedMealType && !(recipe as any).mealTypes?.includes(selectedMealType)) {
       return false
     }
 
@@ -272,15 +273,12 @@ export default function RecipeIndexPage() {
         {/* Filters */}
         <div className="bg-card rounded-lg shadow-lg p-6 mb-8">
           {/* Search */}
-          <div className="mb-6">
-            <input
-              type="text"
-              placeholder="Search recipes, ingredients..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 border border-border bg-background text-foreground placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search recipes, ingredients..."
+            className="mb-6"
+          />
 
           {/* Meal Type Filter */}
           <div className="mb-4">
@@ -364,11 +362,11 @@ export default function RecipeIndexPage() {
                 {/* Recipe Content */}
                 <div className="p-6 flex flex-col flex-1">
                   <Link href={`/recipes/${recipe.id}`}>
-                    <h3 className="text-xl font-bold text-foreground mb-2 hover:text-primary cursor-pointer">
+                    <h3 className="text-xl font-bold text-foreground mb-2 hover:text-primary cursor-pointer line-clamp-2 min-h-[56px]">
                       {recipe.name}
                     </h3>
                   </Link>
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-[40px]">
                     {recipe.description}
                   </p>
 
@@ -380,23 +378,27 @@ export default function RecipeIndexPage() {
                   </div>
 
                   {/* Dietary Tags */}
-                  {recipe.dietaryTags?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {recipe.dietaryTags.slice(0, 3).map(tag => (
-                        <span
-                          key={tag}
-                          className="text-xs bg-primary-light dark:bg-purple-900/20 text-primary px-2 py-1 rounded"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {recipe.dietaryTags.length > 3 && (
-                        <span className="text-xs text-muted-foreground px-2 py-1">
-                          +{recipe.dietaryTags.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap gap-1 mb-4 min-h-[28px]">
+                    {recipe.dietaryTags?.length > 0 ? (
+                      <>
+                        {recipe.dietaryTags.slice(0, 3).map(tag => (
+                          <span
+                            key={tag}
+                            className="text-xs bg-primary-light dark:bg-purple-900/20 text-primary px-2 py-1 rounded"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {recipe.dietaryTags.length > 3 && (
+                          <span className="text-xs text-muted-foreground px-2 py-1">
+                            +{recipe.dietaryTags.length - 3} more
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground px-2 py-1">&nbsp;</span>
+                    )}
+                  </div>
 
                   {/* Medical Safety & Inventory Badges (Member-specific) */}
                   {memberId && 'safetyResult' in recipe && recipe.safetyResult && (

@@ -18,6 +18,7 @@ import toast from 'react-hot-toast'
 import { getCSRFToken } from '@/lib/csrf'
 import { clearRecipeCache } from '@/hooks/useRecipes'
 import { mergeRecipesWithMedia } from '@/lib/recipe-merge'
+import { SearchInput } from '@/components/ui/SearchInput'
 
 interface Recipe {
   id: string
@@ -151,15 +152,12 @@ export default function AdminRecipesPage() {
       </div>
 
       {/* Search */}
-      <div className="mb-4">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search recipes by name, type, or ingredient..."
-          className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-      </div>
+      <SearchInput
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search recipes by name, type, or ingredient..."
+        className="mb-4"
+      />
 
       {/* Filter Tabs */}
       <div className="mb-6 border-b border-border">
@@ -218,8 +216,12 @@ export default function AdminRecipesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {recipes.filter(r => {
-            // Meal type filter
-            if (mealTypeFilter !== 'all' && r.mealType !== mealTypeFilter) return false
+            // Meal type filter (check both mealType and mealTypes array)
+            if (mealTypeFilter !== 'all') {
+              const matchesPrimary = r.mealType === mealTypeFilter
+              const matchesArray = (r as any).mealTypes?.includes(mealTypeFilter)
+              if (!matchesPrimary && !matchesArray) return false
+            }
             // Search filter
             if (!searchQuery.trim()) return true
             const q = searchQuery.toLowerCase()
@@ -255,7 +257,7 @@ export default function AdminRecipesPage() {
                 </button>
                 {/* Meal Type */}
                 <span className="absolute top-2 left-2 bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm capitalize">
-                  {recipe.mealType}
+                  {(recipe as any).mealTypes?.length > 1 ? (recipe as any).mealTypes.join(' · ') : recipe.mealType}
                 </span>
               </div>
 

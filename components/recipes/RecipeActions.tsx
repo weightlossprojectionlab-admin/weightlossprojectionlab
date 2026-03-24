@@ -87,7 +87,7 @@ export default function RecipeActions({
         })
       })
 
-      toast.success('Recipe steps generated!')
+      toast.success('Recipe generated!')
       window.location.reload()
     } catch {
       toast.error('Failed to generate recipe steps')
