@@ -43,7 +43,7 @@ function getAppUrl(): string {
   if (!appUrl) {
     if (process.env.NODE_ENV === 'production') {
       // Production fallback
-      return 'https://www.weightlossprojectionlab.com'
+      return 'https://www.wellnessprojectionlab.com'
     }
     // Development fallback
     console.warn('[Email Service] NEXT_PUBLIC_APP_URL not set, using localhost (development only)')
@@ -141,7 +141,7 @@ export async function sendFamilyInvitationEmail(params: {
       <div style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 28px;">Family Health Access</h1>
-          <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">Weight Loss Projection Lab</p>
+          <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">Wellness Projection Lab</p>
         </div>
 
       <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
@@ -194,7 +194,7 @@ export async function sendFamilyInvitationEmail(params: {
 
         <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px; background-color: #f9fafb;">
           <p style="margin: 0;">
-            © ${new Date().getFullYear()} Weight Loss Projection Lab. All rights reserved.
+            © ${new Date().getFullYear()} Wellness Projection Lab. All rights reserved.
           </p>
           <p style="margin: 10px 0 0 0;">
             This is an automated message. Please do not reply to this email.
@@ -222,7 +222,7 @@ This invitation expires on ${expiryDate}.
 If you didn't expect this invitation, you can safely ignore this email.
 
 ---
-© ${new Date().getFullYear()} Weight Loss Projection Lab
+© ${new Date().getFullYear()} Wellness Projection Lab
   `.trim()
 
   await sendEmail({

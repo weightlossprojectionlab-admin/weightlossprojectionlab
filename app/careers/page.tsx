@@ -361,7 +361,7 @@ export default function CareersPage() {
             us what you're passionate about!
           </p>
           <a
-            href="mailto:careers@weightlossprojectionlab.com?subject=Career Opportunity"
+            href="mailto:careers@wellnessprojectionlab.com?subject=Career Opportunity"
             className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium px-8 py-3 rounded-lg transition-colors"
           >
             Send Us Your Resume

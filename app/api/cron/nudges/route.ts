@@ -198,7 +198,7 @@ function getMealReminder(hour: number): { mealType: string; title: string; body:
 
 async function sendPush(token: string, title: string, body: string, data?: Record<string, string>): Promise<boolean> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.weightlossprojectionlab.com'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.wellnessprojectionlab.com'
     const res = await fetch(`${baseUrl}/api/notifications/send-push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

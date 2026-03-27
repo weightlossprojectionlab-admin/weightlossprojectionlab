@@ -27,7 +27,8 @@ import {
   UserCircleIcon,
   HeartIcon,
   BeakerIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  UserPlusIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -84,6 +85,7 @@ export function AppMenu() {
       items: [
         { name: 'Progress', href: '/progress', icon: ChartBarIcon },
         { name: 'Gallery', href: '/gallery', icon: PhotoIcon },
+        { name: 'Journal', href: '/journal', icon: HeartIcon },
       ],
     },
     {
@@ -101,6 +103,7 @@ export function AppMenu() {
         { name: 'Missions', href: '/missions', icon: ChartBarIcon },
         { name: 'Groups', href: '/groups', icon: UserGroupIcon },
         { name: 'Perks', href: '/perks', icon: GiftIcon },
+        { name: 'Referrals', href: '/referrals', icon: UserPlusIcon },
         { name: 'Coaching', href: '/coaching', icon: AcademicCapIcon },
       ],
     },

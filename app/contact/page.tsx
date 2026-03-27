@@ -521,7 +521,7 @@ export default function ContactPage() {
                 </a>
 
                 <a
-                  href="https://www.instagram.com/weightlossprojectionlab/"
+                  href="https://www.instagram.com/wellnessprojectionlab/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-12 h-12 flex items-center justify-center rounded-full bg-pink-100 hover:bg-pink-200 transition-colors"

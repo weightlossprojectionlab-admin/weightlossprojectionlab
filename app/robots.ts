@@ -23,6 +23,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: 'https://www.weightlossprojectionlab.com/sitemap.xml',
+    sitemap: 'https://www.wellnessprojectionlab.com/sitemap.xml',
   }
 }

@@ -201,6 +201,32 @@ export async function PATCH(request: NextRequest) {
       })
 
       return NextResponse.json({ success: true, message: 'User unsuspended' })
+    } else if (action === 'update_name') {
+      const { displayName } = body
+      if (!displayName || typeof displayName !== 'string' || displayName.trim().length === 0) {
+        return NextResponse.json({ error: 'Display name is required' }, { status: 400 })
+      }
+
+      const trimmedName = displayName.trim()
+
+      // Update Firebase Auth displayName
+      await adminAuth.updateUser(uid, { displayName: trimmedName })
+      // Update Firestore profile
+      await adminDb.collection('users').doc(uid).update({
+        displayName: trimmedName,
+        name: trimmedName,
+      })
+
+      await logAdminAction({
+        adminUid,
+        adminEmail,
+        action: 'user_update_name',
+        targetType: 'user',
+        targetId: uid,
+        reason: `Name updated to "${trimmedName}" via admin panel`,
+      })
+
+      return NextResponse.json({ success: true, message: 'Name updated', displayName: trimmedName })
     } else {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }

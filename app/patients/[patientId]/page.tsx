@@ -1928,6 +1928,13 @@ function PatientDetailContent() {
                   Manage {patient.name}'s profile settings and data
                 </p>
 
+                {/* Edit Name */}
+                <PatientNameEditor
+                  patientId={patientId}
+                  currentName={patient.name}
+                  onNameUpdated={(newName) => setPatient({ ...patient, name: newName })}
+                />
+
                 {/* Danger Zone - Delete Patient */}
                 <div className="border-t border-border pt-6">
                   <h3 className="text-md font-semibold text-foreground mb-2 flex items-center gap-2">
@@ -2826,6 +2833,98 @@ function PatientDetailContent() {
             await handleFixStartWeight()
           }}
         />
+      )}
+    </div>
+  )
+}
+
+/** Inline patient name editor for the Settings tab */
+function PatientNameEditor({ patientId, currentName, onNameUpdated }: {
+  patientId: string
+  currentName: string
+  onNameUpdated: (name: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(currentName)
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    const trimmed = name.trim()
+    if (!trimmed || trimmed === currentName) {
+      setEditing(false)
+      setName(currentName)
+      return
+    }
+
+    setSaving(true)
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      const csrfToken = getCSRFToken()
+      const res = await fetch(`/api/patients/${patientId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({ name: trimmed }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Failed to update name' }))
+        throw new Error(err.error || 'Failed to update name')
+      }
+
+      onNameUpdated(trimmed)
+      setEditing(false)
+      toast.success('Name updated')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update name')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mb-6">
+      <label className="block text-sm font-semibold text-foreground mb-2">Patient Name</label>
+      {editing ? (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave()
+              if (e.key === 'Escape') { setEditing(false); setName(currentName) }
+            }}
+            autoFocus
+            className="flex-1 px-3 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+          <button
+            onClick={() => { setEditing(false); setName(currentName) }}
+            className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 text-sm font-medium"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <span className="text-foreground">{currentName}</span>
+          <button
+            onClick={() => setEditing(true)}
+            className="text-sm text-primary hover:text-primary/80 font-medium"
+          >
+            Edit
+          </button>
+        </div>
       )}
     </div>
   )

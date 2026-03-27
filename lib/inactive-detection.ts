@@ -324,7 +324,7 @@ Just one meal logged today will get you back on track.
 
 Ready to continue your journey?
 
-[Log a Meal Now] → https://app.weightlossprojectlab.com/log-meal
+[Log a Meal Now] → https://www.wellnessprojectionlab.com/log-meal
 
 Keep crushing it,
 The Weight Loss Project Lab Team
@@ -349,7 +349,7 @@ Here's what you've accomplished so far:
 
 You're closer to your target than you think. Let's keep that momentum going!
 
-[Continue Your Journey] → https://app.weightlossprojectlab.com/dashboard
+[Continue Your Journey] → https://www.wellnessprojectionlab.com/dashboard
 
 Your AI coach has personalized tips waiting for you.
 
@@ -381,7 +381,7 @@ Premium includes:
 
 You've already made amazing progress with ${user.totalMealsLogged} meals logged. Don't let that hard work go to waste!
 
-[Claim Your Free Month] → https://app.weightlossprojectlab.com/premium?code=COMEBACK30
+[Claim Your Free Month] → https://www.wellnessprojectionlab.com/premium?code=COMEBACK30
 
 This offer expires in 7 days.
 
@@ -413,11 +413,11 @@ Weight loss journeys have ups and downs—that's completely normal. But giving u
 - Reset your goals with a fresh start
 - Priority support from our team
 
-[I'm Ready to Come Back] → https://app.weightlossprojectlab.com/comeback
+[I'm Ready to Come Back] → https://www.wellnessprojectionlab.com/comeback
 
-If you're done with Weight Loss Project Lab, we understand. But before you go, can you tell us why? Your feedback helps us improve for others.
+If you're done with Wellness Projection Lab, we understand. But before you go, can you tell us why? Your feedback helps us improve for others.
 
-[Give Feedback] → https://app.weightlossprojectlab.com/feedback
+[Give Feedback] → https://www.wellnessprojectionlab.com/feedback
 
 Rooting for you always,
 The WPL Team
@@ -662,7 +662,7 @@ export async function sendReEngagementEmail(campaign: ReEngagementCampaign): Pro
     // Send email via Resend
     const client = getResendClient()
     const { data, error } = await client.emails.send({
-      from: 'Weight Loss Project Lab <noreply@weightlossprojectlab.com>',
+      from: 'Wellness Projection Lab <noreply@wellnessprojectionlab.com>',
       to: userEmail,
       subject: campaign.emailSubject,
       html: campaign.emailBody,

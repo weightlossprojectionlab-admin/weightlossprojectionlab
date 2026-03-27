@@ -32,7 +32,15 @@ function AuthContent() {
   const { user: authUser, loading: authLoading } = useAuth()
   const searchParams = useSearchParams()
   const isInvitationFlow = searchParams.get('invitation') === 'true'
+  const refCode = searchParams.get('ref')
   const [isSignUp, setIsSignUp] = useState(isInvitationFlow) // Default to signup for invitations
+
+  // Store referral code for attribution after signup
+  useEffect(() => {
+    if (refCode) {
+      localStorage.setItem('pendingReferralCode', refCode)
+    }
+  }, [refCode])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')

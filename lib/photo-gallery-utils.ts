@@ -211,12 +211,25 @@ export async function fetchRecentPhotos(
     limit: 100
   }
 
-  // If patients provided, use family-aware fetching
+  // If patients provided, fetch BOTH personal meals and patient meals
   if (patients && patients.length > 0) {
-    return fetchGalleryPhotosForFamily(patients, filters)
+    const [personalPhotos, patientPhotos] = await Promise.all([
+      fetchGalleryPhotos(filters),
+      fetchGalleryPhotosForFamily(patients, filters),
+    ])
+
+    // Merge and deduplicate by id, then sort by date descending
+    const seen = new Set<string>()
+    const merged = [...personalPhotos, ...patientPhotos].filter(photo => {
+      if (seen.has(photo.id)) return false
+      seen.add(photo.id)
+      return true
+    })
+    merged.sort((a, b) => b.loggedAt.getTime() - a.loggedAt.getTime())
+    return merged
   }
 
-  // Otherwise, fall back to user-level fetching (backward compatibility)
+  // No patients — just fetch user's own meals
   return fetchGalleryPhotos(filters)
 }
 

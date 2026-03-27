@@ -118,6 +118,11 @@ export function AdminNav({ pendingCounts, onOpenManual }: AdminNavProps) {
       icon: GiftIcon,
     },
     {
+      name: 'Referrals',
+      href: '/admin/referrals',
+      icon: MegaphoneIcon,
+    },
+    {
       name: 'Analytics',
       href: '/admin/analytics',
       icon: ChartBarIcon,

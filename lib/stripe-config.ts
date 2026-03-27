@@ -27,9 +27,9 @@ function getStripeClient(): Stripe {
       apiVersion: '2025-11-17.clover',
       typescript: true,
       appInfo: {
-        name: 'WeightLoss Shop & Deliver',
+        name: 'Wellness Projection Lab',
         version: '1.0.0',
-        url: 'https://weightlossprojectlab.com',
+        url: 'https://www.wellnessprojectionlab.com',
       },
       maxNetworkRetries: 2,
     });

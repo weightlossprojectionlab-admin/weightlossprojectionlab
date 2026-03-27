@@ -17,6 +17,7 @@ import type { PatientProfile, PatientMedication, VitalSign } from '@/types/medic
 import type { ShoppingItem } from '@/types/shopping'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { RecipeSuggestions } from '@/components/inventory/RecipeSuggestions'
+import { SearchInput } from '@/components/ui/SearchInput'
 import { RecipeModal } from '@/components/ui/RecipeModal'
 import { generateRecipeFromInventory } from '@/lib/inventory-recipe-generator'
 
@@ -336,12 +337,10 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
       <div className="bg-card rounded-lg shadow-sm border border-border p-6">
         {/* Search */}
         <div className="mb-6">
-          <input
-            type="text"
-            placeholder="Search recipes, ingredients..."
+          <SearchInput
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 border border-border bg-background text-foreground placeholder-gray-500 dark:placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            onChange={setSearchQuery}
+            placeholder="Search recipes, ingredients..."
           />
         </div>
 
@@ -511,7 +510,7 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
             <div
               key={recipe.id}
               onClick={() => setSelectedRecipe(recipe)}
-              className="bg-card rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-border cursor-pointer"
+              className="bg-card rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-border cursor-pointer flex flex-col"
             >
               {/* Recipe Image Carousel */}
               <div className="relative">
@@ -529,7 +528,7 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
               </div>
 
               {/* Recipe Content */}
-              <div className="p-6">
+              <div className="p-6 flex-1 flex flex-col">
                 {/* READY TO COOK/MAKE BADGE - Show prominently at top */}
                 {hasInventory && memberRecipes.length > 0 && 'inventoryAvailability' in recipe && recipe.inventoryAvailability && (
                   <div className="mb-3">
@@ -592,7 +591,7 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
 
                 {/* No Inventory Alert - Show on every card when inventory is empty */}
                 {!hasInventory && (
-                  <div className="mb-4 bg-gradient-to-r from-orange-100 to-yellow-100 dark:from-orange-900/30 dark:to-yellow-900/30 border-2 border-orange-400 dark:border-orange-600 rounded-lg p-3 shadow-sm">
+                  <div className="mt-auto mb-4 bg-gradient-to-r from-orange-100 to-yellow-100 dark:from-orange-900/30 dark:to-yellow-900/30 border-2 border-orange-400 dark:border-orange-600 rounded-lg p-3 shadow-sm">
                     <div className="flex items-start gap-2 mb-2">
                       <span className="text-2xl">📦</span>
                       <div className="flex-1">
@@ -616,7 +615,7 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
 
                 {/* Medical Safety & Inventory Badges */}
                 {'safetyResult' in recipe && recipe.safetyResult && (
-                  <div className="space-y-2 mb-4">
+                  <div className={`space-y-2 mb-4 ${hasInventory ? 'mt-auto' : ''}`}>
                     {/* Medical Safety Badges */}
                     {recipe.safetyResult.badges && recipe.safetyResult.badges.length > 0 && (
                       <div className="flex flex-wrap gap-1">

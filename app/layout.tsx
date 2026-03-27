@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   description: 'Track meals, vitals, medications, and weight for your entire family with AI-powered insights. From newborns to seniors — one platform for every life stage.',
   manifest: '/manifest.json',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.weightlossprojectionlab.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.wellnessprojectionlab.com'),
   alternates: {
     canonical: '/',
   },
@@ -108,7 +108,7 @@ export default function RootLayout({
               applicationCategory: 'HealthApplication',
               operatingSystem: 'Web',
               description: 'AI-powered family health tracking platform. Track meals, vitals, medications, and weight from newborns to seniors.',
-              url: 'https://www.weightlossprojectionlab.com',
+              url: 'https://www.wellnessprojectionlab.com',
               offers: {
                 '@type': 'AggregateOffer',
                 lowPrice: '0',

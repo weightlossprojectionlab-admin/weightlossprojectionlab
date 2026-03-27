@@ -109,6 +109,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // Update user's subscription in Firestore
   await updateUserSubscription(userId, subscription, plan, billingInterval)
+
+  // Confirm referral conversion if this user was referred
+  const referralCode = session.metadata?.referralCode
+  const referrerUserId = session.metadata?.referrerUserId
+  if (referralCode && referrerUserId) {
+    try {
+      const { confirmConversion } = await import('@/lib/referral-service')
+      const priceCents = session.amount_total || 0
+      await confirmConversion(userId, plan, priceCents)
+      logger.info('[Webhook] Referral conversion confirmed', { userId, referralCode, referrerUserId, priceCents })
+    } catch (refError) {
+      logger.error('[Webhook] Failed to confirm referral conversion', refError as Error)
+    }
+  }
 }
 
 /**

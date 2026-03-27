@@ -66,6 +66,7 @@ export function Footer() {
     ] as FooterLink[],
     resources: [
       { href: '/pricing', label: 'Pricing', public: true },
+      { href: '/referrals', label: 'Referrals', public: true },
       { href: '/docs', label: 'Documentation', public: true },
       { href: '/blog', label: 'Blog', public: true },
       { href: '/support', label: 'Help Center', public: true },

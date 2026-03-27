@@ -17,6 +17,9 @@ import {
   DocumentArrowDownIcon,
   TrashIcon,
   ChartBarIcon,
+  PencilIcon,
+  CheckIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 
@@ -664,6 +667,86 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
   const [editPermissions, setEditPermissions] = useState<Record<string, boolean>>({})
   const [pendingDeletePatient, setPendingDeletePatient] = useState<{ id: string; name: string } | null>(null)
   const [pendingRestorePatient, setPendingRestorePatient] = useState<{ id: string; name: string } | null>(null)
+  const [editingPatientId, setEditingPatientId] = useState<string | null>(null)
+  const [editingPatientName, setEditingPatientName] = useState('')
+  const [savingPatientName, setSavingPatientName] = useState(false)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [editedName, setEditedName] = useState(user.displayName || user.name || '')
+  const [savingName, setSavingName] = useState(false)
+  const [currentDisplayName, setCurrentDisplayName] = useState(user.displayName || user.name || '')
+
+  const handleSaveName = async () => {
+    if (!editedName.trim() || editedName.trim() === currentDisplayName) {
+      setIsEditingName(false)
+      setEditedName(currentDisplayName)
+      return
+    }
+
+    setSavingName(true)
+    try {
+      const token = await getAdminAuthToken()
+      const csrfToken = getCSRFToken()
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ uid: user.uid, action: 'update_name', displayName: editedName.trim() }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to update name' }))
+        throw new Error(errorData.error || 'Failed to update name')
+      }
+
+      setCurrentDisplayName(editedName.trim())
+      setIsEditingName(false)
+      onRefresh()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update name')
+    } finally {
+      setSavingName(false)
+    }
+  }
+
+  const handleSavePatientName = async (patientId: string) => {
+    const trimmed = editingPatientName.trim()
+    if (!trimmed) {
+      setEditingPatientId(null)
+      return
+    }
+
+    setSavingPatientName(true)
+    try {
+      const token = await getAdminAuthToken()
+      const csrfToken = getCSRFToken()
+      const response = await fetch(`/api/admin/users/${user.uid}/patients/${patientId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: trimmed }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to update patient name' }))
+        throw new Error(errorData.error || 'Failed to update patient name')
+      }
+
+      // Update local state
+      setPatients(prev => prev.map(p => p.id === patientId ? { ...p, name: trimmed } : p))
+      setEditingPatientId(null)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update patient name')
+    } finally {
+      setSavingPatientName(false)
+    }
+  }
+
   // Map of accountOwnerId → their patients (for "Caregiver For" section)
   const [caregiverForPatients, setCaregiverForPatients] = useState<Record<string, any[]>>({})
   // Map of accountOwnerId → their user profile (household info)
@@ -969,7 +1052,47 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
         {/* Header */}
         <div className="p-6 border-b border-border flex items-center justify-between">
           <div className="flex-1">
-            <h2 className="text-2xl font-bold">{user.displayName || user.name || 'User'}</h2>
+            {isEditingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveName()
+                    if (e.key === 'Escape') { setIsEditingName(false); setEditedName(currentDisplayName) }
+                  }}
+                  autoFocus
+                  className="text-2xl font-bold bg-background border border-border rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-primary w-full max-w-md"
+                />
+                <button
+                  onClick={handleSaveName}
+                  disabled={savingName}
+                  className="p-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                  title="Save"
+                >
+                  <CheckIcon className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => { setIsEditingName(false); setEditedName(currentDisplayName) }}
+                  className="p-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                  title="Cancel"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 group">
+                <h2 className="text-2xl font-bold">{currentDisplayName || 'No name'}</h2>
+                <button
+                  onClick={() => setIsEditingName(true)}
+                  className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  title="Edit name"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             <p className="text-sm text-muted-foreground">{user.email}</p>
             <div className="flex items-center gap-4 mt-2">
               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
@@ -1070,7 +1193,51 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
                             <span className="text-2xl mt-0.5">{patient.type === 'pet' ? '🐾' : '🧑'}</span>
                             <div>
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-semibold text-lg">{patient.name}</span>
+                                {editingPatientId === patient.id ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <input
+                                      type="text"
+                                      value={editingPatientName}
+                                      onChange={(e) => setEditingPatientName(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSavePatientName(patient.id)
+                                        if (e.key === 'Escape') setEditingPatientId(null)
+                                      }}
+                                      autoFocus
+                                      className="font-semibold text-lg bg-background border border-border rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-primary w-48"
+                                    />
+                                    <button
+                                      onClick={() => handleSavePatientName(patient.id)}
+                                      disabled={savingPatientName}
+                                      className="p-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                                      title="Save"
+                                    >
+                                      <CheckIcon className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingPatientId(null)}
+                                      className="p-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                                      title="Cancel"
+                                    >
+                                      <XMarkIcon className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1.5 group/name">
+                                    <span className="font-semibold text-lg">{patient.name}</span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setEditingPatientId(patient.id)
+                                        setEditingPatientName(patient.name)
+                                      }}
+                                      className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded opacity-0 group-hover/name:opacity-100 transition-opacity"
+                                      title="Edit name"
+                                    >
+                                      <PencilIcon className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                )}
                                 {patient.relationship && (
                                   <span className="px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700 capitalize">
                                     {patient.relationship}

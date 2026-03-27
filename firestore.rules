@@ -1632,6 +1632,34 @@ service cloud.firestore {
     }
 
     // ============================================
+    // CAREGIVER MENTAL HEALTH JOURNAL
+    // ============================================
+
+    // Private journal entries — owner read/write only
+    match /users/{userId}/journal/{entryId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ============================================
+    // REFERRAL / AFFILIATE PROGRAM
+    // ============================================
+
+    // Click tracking — written by API (public endpoint), read by admin SDK only
+    match /referral_clicks/{clickId} {
+      allow read, write: if false; // Admin SDK only
+    }
+
+    // Conversions — admin SDK only
+    match /referral_conversions/{conversionId} {
+      allow read, write: if false; // Admin SDK only
+    }
+
+    // Program settings — admin SDK only
+    match /referral_settings/{docId} {
+      allow read, write: if false; // Admin SDK only
+    }
+
+    // ============================================
     // DEFAULT DENY
     // ============================================
 

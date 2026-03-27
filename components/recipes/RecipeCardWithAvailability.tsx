@@ -69,7 +69,7 @@ export function RecipeCardWithAvailability({
   return (
     <Link
       href={`/recipes/${recipe.id}`}
-      className="group block bg-card rounded-lg shadow-md hover:shadow-xl transition-all overflow-hidden border border-border"
+      className="group block bg-card rounded-lg shadow-md hover:shadow-xl transition-all overflow-hidden border border-border flex flex-col"
     >
       {/* Recipe Header */}
       <div className="p-4 border-b border-border">
@@ -97,7 +97,7 @@ export function RecipeCardWithAvailability({
       )}
 
       {/* Quick Stats */}
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 flex-1 flex flex-col">
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1 text-muted-foreground">
@@ -169,7 +169,7 @@ export function RecipeCardWithAvailability({
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-auto">
           <button
             onClick={handleAddToCart}
             disabled={addingToCart}

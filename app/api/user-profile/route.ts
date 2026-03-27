@@ -271,6 +271,21 @@ export async function POST(request: NextRequest) {
       subscription: trialSubscription  // Add trial subscription
     }
 
+    // Generate unique referral code for every new user (non-blocking — signup must not fail)
+    try {
+      const { generateReferralCode } = await import('@/lib/referral-service')
+      const referralCode = generateReferralCode()
+      ;(profileWithOnboarding as any).referral = {
+        code: referralCode,
+        totalEarningsCents: 0,
+        totalClicks: 0,
+        totalConversions: 0,
+        createdAt: new Date(),
+      }
+    } catch (refError) {
+      logger.error('[API /user-profile POST] Referral code generation failed (non-blocking)', refError as Error)
+    }
+
     // Save to Firestore with onboarding fields and trial subscription
     await adminDb.collection('users').doc(userId).set(profileWithOnboarding)
 

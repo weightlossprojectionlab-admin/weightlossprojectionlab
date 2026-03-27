@@ -57,7 +57,7 @@ export async function shareViaWebAPI(content: ShareContent): Promise<boolean> {
  */
 export function generateShareContent(options: ShareOptions): ShareContent {
   const { type, data } = options
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://weightlossprojectlab.com'
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.wellnessprojectionlab.com'
 
   switch (type) {
     case 'meal':

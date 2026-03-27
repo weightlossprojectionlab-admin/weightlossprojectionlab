@@ -90,6 +90,20 @@ export async function POST(request: NextRequest) {
       logger.info('[Stripe Checkout] New customer created', { customerId })
     }
 
+    // Check if user was referred — apply affiliate discount
+    const { adminDb: refAdminDb } = await import('@/lib/firebase-admin')
+    const userDoc = await refAdminDb.collection('users').doc(userId).get()
+    const referralData = userDoc.data()?.referral
+    const discounts: any[] = []
+
+    if (referralData?.referredBy) {
+      const { getReferralSettings } = await import('@/lib/referral-service')
+      const refSettings = await getReferralSettings()
+      if (refSettings.enabled && refSettings.stripeCouponId) {
+        discounts.push({ coupon: refSettings.stripeCouponId })
+      }
+    }
+
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -101,13 +115,18 @@ export async function POST(request: NextRequest) {
           quantity: 1
         }
       ],
+      ...(discounts.length > 0 ? { discounts } : { allow_promotion_codes: true }),
       automatic_tax: {
         enabled: true, // Enable automatic tax calculation
       },
       success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/profile?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/profile`,
       metadata: {
-        firebaseUid: userId
+        firebaseUid: userId,
+        ...(referralData?.referredBy ? {
+          referralCode: referralData.referredBy,
+          referrerUserId: referralData.referredByUserId,
+        } : {})
       },
       subscription_data: {
         metadata: {
