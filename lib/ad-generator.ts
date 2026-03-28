@@ -195,83 +195,75 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
     // Research: image should be the hero, text ~15% coverage
     let currentY = padding
 
-    if (isVertical) {
-      // Editorial style: headline at TOP, centered. Image is the hero below.
-      // Like Pinterest/Instagram editorial posts.
+    // === EDITORIAL TEXT LAYOUT (shared for vertical + horizontal) ===
+    // Style: oversized quotation marks, stacked headline (3-4 words/line),
+    // clear visual hierarchy, centered, no CTA on image.
 
-      currentY = safeZone * 1.5
-
-      // Headline — centered, bold, white with text shadow
-      ctx.fillStyle = 'white'
-      ctx.font = `800 ${headlineFontSize}px system-ui, -apple-system, sans-serif`
-      ctx.textAlign = 'center'
+    const textShadowSetup = () => {
       ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
       ctx.shadowBlur = 6
       ctx.shadowOffsetX = 1
       ctx.shadowOffsetY = 2
-
-      // Wrap headline with quotation marks for editorial feel
-      const headlineText = template.headline.startsWith('"') ? template.headline : `"${template.headline}"`
-      const headlineLines = wrapText(ctx, headlineText, contentWidth * 0.85)
-      headlineLines.forEach((line, i) => {
-        ctx.fillText(line, width / 2, currentY + (i * headlineFontSize * 1.2))
-      })
-      currentY += (headlineLines.length * headlineFontSize * 1.2) + safeZone * 0.4
-
-      // Subheadline — smaller, centered, below headline
-      if (template.subheadline && template.subheadline.length < 60) {
-        ctx.font = `500 ${subheadlineFontSize}px system-ui, -apple-system, sans-serif`
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-        ctx.shadowBlur = 4
-        const subLines = wrapText(ctx, template.subheadline, contentWidth * 0.8)
-        subLines.forEach((line, i) => {
-          ctx.fillText(line, width / 2, currentY + (i * subheadlineFontSize * 1.3))
-        })
-      }
-
-      // Reset — no CTA on image (goes in caption instead)
-      ctx.shadowColor = 'transparent'
-      ctx.shadowBlur = 0
-      ctx.textAlign = 'left'
-
-    } else {
-      // Horizontal or square layout (LinkedIn 1.91:1, Twitter 16:9, Facebook 1:1)
-      // Editorial style: headline centered, upper portion
-
-      currentY = safeZone * 1.5
-
-      // Headline — centered, bold
-      ctx.fillStyle = 'white'
-      ctx.font = `800 ${headlineFontSize}px system-ui, -apple-system, sans-serif`
-      ctx.textAlign = 'center'
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-      ctx.shadowBlur = 6
-      ctx.shadowOffsetX = 1
-      ctx.shadowOffsetY = 2
-
-      const headlineText = template.headline.startsWith('"') ? template.headline : `"${template.headline}"`
-      const headlineLines = wrapText(ctx, headlineText, contentWidth * 0.75)
-      headlineLines.forEach((line, i) => {
-        ctx.fillText(line, width / 2, currentY + (i * headlineFontSize * 1.2))
-      })
-      currentY += (headlineLines.length * headlineFontSize * 1.2) + safeZone * 0.3
-
-      // Subheadline
-      if (template.subheadline && template.subheadline.length < 60) {
-        ctx.font = `500 ${subheadlineFontSize}px system-ui, -apple-system, sans-serif`
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-        ctx.shadowBlur = 4
-        const subLines = wrapText(ctx, template.subheadline, contentWidth * 0.7)
-        subLines.forEach((line, i) => {
-          ctx.fillText(line, width / 2, currentY + (i * subheadlineFontSize * 1.3))
-        })
-      }
-
-      // No CTA on image — goes in caption
-      ctx.shadowColor = 'transparent'
-      ctx.shadowBlur = 0
-      ctx.textAlign = 'left'
     }
+
+    const textShadowReset = () => {
+      ctx.shadowColor = 'transparent'
+      ctx.shadowBlur = 0
+      ctx.shadowOffsetX = 0
+      ctx.shadowOffsetY = 0
+    }
+
+    // Strip existing quotes, we'll add our own styled ones
+    const rawHeadline = template.headline.replace(/^[""\u201C]+|[""\u201D]+$/g, '').trim()
+
+    // Force short lines: wrap at ~55% of content width for poster-style stacking (3-4 words/line)
+    const headlineWrapWidth = isVertical ? contentWidth * 0.55 : contentWidth * 0.5
+    ctx.font = `800 ${headlineFontSize}px Georgia, "Times New Roman", serif`
+    const headlineLines = wrapText(ctx, rawHeadline, headlineWrapWidth)
+
+    // --- Oversized opening quotation mark ---
+    currentY = safeZone * (isVertical ? 1.8 : 1.2)
+    const quoteMarkSize = headlineFontSize * 2.2
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'
+    ctx.font = `800 ${quoteMarkSize}px Georgia, "Times New Roman", serif`
+    ctx.textAlign = 'center'
+    // No shadow on the decorative quote mark
+    ctx.fillText('\u201C', width / 2, currentY)
+    currentY += quoteMarkSize * 0.35
+
+    // --- Headline lines ---
+    ctx.fillStyle = 'white'
+    ctx.font = `800 ${headlineFontSize}px Georgia, "Times New Roman", serif`
+    textShadowSetup()
+
+    headlineLines.forEach((line, i) => {
+      ctx.fillText(line, width / 2, currentY + (i * headlineFontSize * 1.25))
+    })
+    currentY += (headlineLines.length * headlineFontSize * 1.25)
+
+    // --- Closing quotation mark (inline with last line) ---
+    textShadowReset()
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'
+    ctx.font = `800 ${quoteMarkSize * 0.6}px Georgia, "Times New Roman", serif`
+    ctx.fillText('\u201D', width / 2 + ctx.measureText(headlineLines[headlineLines.length - 1] || '').width / 2 + quoteMarkSize * 0.15, currentY - headlineFontSize * 0.3)
+
+    currentY += safeZone * 0.6
+
+    // --- Subtitle line (smaller, different weight — "and Why That's Okay" style) ---
+    if (template.subheadline && template.subheadline.length < 80) {
+      const subtitleSize = headlineFontSize * 0.45
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+      ctx.font = `500 ${subtitleSize}px system-ui, -apple-system, sans-serif`
+      textShadowSetup()
+      ctx.shadowBlur = 3
+
+      // Render with slight letter spacing feel by adding spaces
+      ctx.fillText(template.subheadline, width / 2, currentY)
+      textShadowReset()
+    }
+
+    // No CTA on image — goes in caption
+    ctx.textAlign = 'left'
 
     // Convert to blob
     return new Promise((resolve, reject) => {

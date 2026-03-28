@@ -147,11 +147,15 @@ export default function ContentStrategy() {
     setComposing(key)
     try {
       const adPlatform = platformMap[post.platform] || 'instagram-feed'
-      // Extract a short headline for the image overlay (max ~40 chars)
+      // Extract headline + subtitle for editorial layout
       const fullText = post.caption || post.text || post.headline || ''
-      // Try: first clause (split on – — , or .), then cap at 40 chars
-      const firstClause = fullText.split(/[.!?\u2013\u2014]\s?/)[0].split(/,\s/)[0]
+      // Split into two parts: main hook (first clause) and subtitle (second clause)
+      const clauses = fullText.split(/[.!?\u2013\u2014]\s?/)
+      const firstClause = (clauses[0] || '').split(/,\s/)[0]
       const headline = firstClause.length > 40 ? firstClause.slice(0, 37) + '...' : firstClause
+      // Second clause becomes the subtitle (like "and Why That's Okay")
+      const secondClause = clauses[1]?.trim().split(/[.!?]/)[0]?.trim() || ''
+      const subtitle = secondClause.length > 50 ? '' : secondClause
 
       // Convert Firebase Storage URL to data URL to avoid CORS issues on canvas
       let bgDataUrl: string | undefined
@@ -193,9 +197,9 @@ export default function ContentStrategy() {
           persona: 'family-health-manager',
           type: 'feature-highlight',
           headline,
-          subheadline: '',
+          subheadline: subtitle,
           bodyText: '',
-          cta: 'wellnessprojectionlab.com',
+          cta: '',
           visualHint: '',
           emotionalHook: '',
           colors: { primary: '#2563eb', secondary: '#16a34a', accent: '#7c3aed' },
