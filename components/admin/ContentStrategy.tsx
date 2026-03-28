@@ -143,18 +143,38 @@ export default function ContentStrategy() {
       const adPlatform = platformMap[post.platform] || 'instagram-feed'
       const headline = (post.caption || post.text || post.headline || '').slice(0, 80)
 
-      // Convert Firebase Storage URL to data URL to avoid CORS issues
+      // Convert Firebase Storage URL to data URL to avoid CORS issues on canvas
       let bgDataUrl: string | undefined
       try {
-        const imgRes = await fetch(mediaItem.url)
-        const imgBlob = await imgRes.blob()
-        bgDataUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.readAsDataURL(imgBlob)
+        // Use no-cors proxy approach: create an img, draw to temp canvas, extract data URL
+        bgDataUrl = await new Promise<string>((resolve, reject) => {
+          const img = new Image()
+          img.crossOrigin = 'anonymous'
+          img.onload = () => {
+            const tempCanvas = document.createElement('canvas')
+            tempCanvas.width = img.naturalWidth
+            tempCanvas.height = img.naturalHeight
+            const tempCtx = tempCanvas.getContext('2d')
+            if (!tempCtx) { reject('No canvas context'); return }
+            tempCtx.drawImage(img, 0, 0)
+            resolve(tempCanvas.toDataURL('image/png'))
+          }
+          img.onerror = () => {
+            console.warn('crossOrigin load failed, trying fetch fallback')
+            // Fallback: fetch as blob
+            fetch(mediaItem.url)
+              .then(r => r.blob())
+              .then(blob => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result as string)
+                reader.readAsDataURL(blob)
+              })
+              .catch(reject)
+          }
+          img.src = mediaItem.url
         })
-      } catch {
-        console.warn('Failed to fetch background image, using gradient fallback')
+      } catch (imgErr) {
+        console.warn('Failed to load background image:', imgErr)
       }
 
       const blob = await generateAdvertisement({
