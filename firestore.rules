@@ -1660,6 +1660,14 @@ service cloud.firestore {
     }
 
     // ============================================
+    // ADMIN SETTINGS (marketing progress, etc.)
+    // ============================================
+
+    match /admin/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ============================================
     // DEFAULT DENY
     // ============================================
 

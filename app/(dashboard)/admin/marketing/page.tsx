@@ -14,10 +14,11 @@ import { LandingPageManager } from '@/components/admin/LandingPageManager'
 import { PERSONA_INFO } from '@/lib/ad-templates'
 import { AD_PLATFORM_SPECS } from '@/lib/ad-generator'
 import { getAllLandingPagePersonas } from '@/lib/landing-page-personas'
+import ContentStrategy from '@/components/admin/ContentStrategy'
 
 export default function MarketingPage() {
   const [showAdGenerator, setShowAdGenerator] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'landing-pages'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'landing-pages' | 'content-strategy'>('content-strategy')
 
   const landingPagePersonas = getAllLandingPagePersonas()
   const liveCount = landingPagePersonas.filter(p => p.status === 'live').length
@@ -45,6 +46,16 @@ export default function MarketingPage() {
               }`}
             >
               📊 Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('content-strategy')}
+              className={`px-6 py-3 font-medium transition-all ${
+                activeTab === 'content-strategy'
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              🚀 Content Strategy
             </button>
             <button
               onClick={() => setActiveTab('landing-pages')}
@@ -225,6 +236,11 @@ export default function MarketingPage() {
             </div>
           </div>
             </div>
+          )}
+
+          {/* Content Strategy Tab */}
+          {activeTab === 'content-strategy' && (
+            <ContentStrategy />
           )}
 
           {/* Landing Pages Tab */}
