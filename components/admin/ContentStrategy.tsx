@@ -409,8 +409,17 @@ export default function ContentStrategy() {
                           <ClipboardDocumentIcon className="h-3 w-3" /> Copy All
                         </button>
                       </div>
-                      {item.imageDescription && (
-                        <div className="text-xs text-blue-600 dark:text-blue-400 mb-2 italic">Image idea: {item.imageDescription}</div>
+                      {(item.imagePrompt || item.imageDescription) && (
+                        <div className="relative group/imgprompt bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-lg p-3 mb-2">
+                          <div className="text-xs font-medium text-purple-600 dark:text-purple-400 mb-1">Whisk Prompt ({item.aspectRatio || '1:1'}):</div>
+                          <div className="text-xs text-purple-800 dark:text-purple-300">{item.imagePrompt || item.imageDescription}</div>
+                          <button
+                            onClick={() => handleCopyText(item.imagePrompt || item.imageDescription || '')}
+                            className="absolute top-2 right-2 opacity-0 group-hover/imgprompt:opacity-100 flex items-center gap-1 px-2 py-1 bg-purple-600 text-white rounded text-xs transition-opacity"
+                          >
+                            <ClipboardDocumentIcon className="h-3 w-3" /> Copy
+                          </button>
+                        </div>
                       )}
                       {item.hashtags && item.hashtags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-2">
@@ -595,6 +604,32 @@ export default function ContentStrategy() {
                           ))}
                         </div>
                       )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+            {/* Standalone Image Prompts for Whisk */}
+            {ideas.imagePrompts && (
+              <div>
+                <h4 className="font-semibold text-foreground mb-3">Image Prompts for Whisk (Batch Generation)</h4>
+                <p className="text-xs text-muted-foreground mb-3">Copy these prompts into Whisk to generate images. Upload results to your Media Library.</p>
+                <div className="space-y-3">
+                  {ideas.imagePrompts.map((item: any, i: number) => (
+                    <div key={i} className="relative group/whisk bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{item.aspectRatio}</span>
+                        {item.scene && <span className="text-xs text-muted-foreground">{item.scene}</span>}
+                      </div>
+                      <div className="text-sm text-purple-800 dark:text-purple-300">{item.prompt}</div>
+                      <button
+                        onClick={() => handleCopyText(item.prompt)}
+                        className="absolute top-3 right-3 opacity-0 group-hover/whisk:opacity-100 flex items-center gap-1 px-2 py-1 bg-purple-600 text-white rounded text-xs transition-opacity"
+                      >
+                        <ClipboardDocumentIcon className="h-3 w-3" /> Copy
+                      </button>
                     </div>
                   ))}
                 </div>

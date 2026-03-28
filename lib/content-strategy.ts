@@ -172,7 +172,17 @@ PLATFORM CONSTRAINTS (follow these strictly):
 - Pinterest: max 500 char description, use 10-15 hashtags, 2:3 vertical pin
 - TikTok: 15-30 sec, 9:16 vertical
 
-EVERY post must include: hashtags, keywords, suggested image description (for ad generator), and platform-specific formatting.
+EVERY post must include: hashtags, keywords, and platform-specific formatting.
+
+IMAGE PROMPTS: For each post, generate an "imagePrompt" field — a detailed AI image generation prompt (for tools like Google Whisk, Midjourney, DALL-E). The prompt should:
+- Describe a photorealistic scene (not illustrations or cartoons)
+- Include the setting, people, lighting, mood, and camera angle
+- Specify the aspect ratio (1:1, 9:16, or 16:9) matching the platform
+- NOT include any text, logos, watermarks, or UI elements in the scene
+- Focus on authentic, emotional, everyday caregiver/family moments
+Example: "A warm-lit living room, a woman in her 40s sitting on a couch reviewing a tablet showing health data, her elderly mother beside her smiling, soft afternoon light through curtains, photorealistic, 4:5 aspect ratio"
+
+Also generate a standalone "imagePrompts" array with 5 additional image prompts (mix of 1:1, 9:16, 16:9) for batch generation in Whisk. These should cover common caregiver scenarios usable across multiple posts.
 `.trim()
 
   if (stage.id === 'stage1') {
@@ -182,16 +192,18 @@ STAGE: Pre-launch, 0 real users. Goal is to start conversations and get first 10
 
 Generate:
 1. Five YouTube Short scripts (30-40 seconds each). Hook (2 sec) → Pain point → Quick solution → CTA. Do NOT mention the product by name in the hook.
-2. Five social media posts (mix of LinkedIn, Twitter, Instagram, Pinterest). Include full caption, hashtags, keywords, and a description of what the image should look like.
+2. Five social media posts (mix of LinkedIn, Twitter, Instagram, Pinterest). Include full caption, hashtags, keywords, imagePrompt, and aspectRatio.
 3. Three Loom outreach script templates for reaching out to caregiver community admins/influencers.
 4. Three Reddit/Facebook community post templates.
+5. Five standalone AI image prompts for batch generation (mix of 1:1, 9:16, 16:9).
 
 Return as JSON:
 {
   "shorts": [{"title": "", "hook": "", "script": "", "cta": "", "hashtags": [], "keywords": []}],
-  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imageDescription": "", "aspectRatio": ""}],
+  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imagePrompt": "", "aspectRatio": ""}],
   "looms": [{"subject": "", "script": ""}],
-  "community": [{"title": "", "body": ""}]
+  "community": [{"title": "", "body": ""}],
+  "imagePrompts": [{"prompt": "", "aspectRatio": "", "scene": ""}]
 }`
   }
 
@@ -202,16 +214,18 @@ STAGE: 1-10 early adopters. Goal is to collect feedback, get testimonials, and i
 
 Generate:
 1. Five YouTube Short scripts with storytelling angle ("I asked 10 caregivers what frustrates them most...").
-2. Five social media posts (mix of LinkedIn, Twitter, Instagram, Pinterest). Include full caption, hashtags, keywords, and image description.
+2. Five social media posts (mix of LinkedIn, Twitter, Instagram, Pinterest). Include full caption, hashtags, keywords, imagePrompt, and aspectRatio.
 3. Three email templates: testimonial request, feature feedback, referral invitation.
 4. Three A/B test headline ideas for the homepage.
+5. Five standalone AI image prompts for batch generation (mix of 1:1, 9:16, 16:9).
 
 Return as JSON:
 {
   "shorts": [{"title": "", "hook": "", "script": "", "cta": "", "hashtags": [], "keywords": []}],
-  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imageDescription": "", "aspectRatio": ""}],
+  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imagePrompt": "", "aspectRatio": ""}],
   "emails": [{"subject": "", "body": "", "purpose": ""}],
-  "headlines": [{"variant": "", "reasoning": ""}]
+  "headlines": [{"variant": "", "reasoning": ""}],
+  "imagePrompts": [{"prompt": "", "aspectRatio": "", "scene": ""}]
 }`
   }
 
@@ -222,16 +236,18 @@ STAGE: 11-50 users. Goal is to scale outreach, build case studies, run first pai
 
 Generate:
 1. Five YouTube Short scripts featuring transformation stories.
-2. Five social media posts with data-driven insights. Include full caption, hashtags, keywords, and image description.
+2. Five social media posts with data-driven insights. Include full caption, hashtags, keywords, imagePrompt, and aspectRatio.
 3. Three case study outlines (problem → solution → results format).
-4. Three paid ad copy variants for Facebook/Instagram. Include headline, body, CTA, hashtags, and image description.
+4. Three paid ad copy variants for Facebook/Instagram. Include headline, body, CTA, hashtags, imagePrompt, and aspectRatio.
+5. Five standalone AI image prompts for batch generation (mix of 1:1, 9:16, 16:9).
 
 Return as JSON:
 {
   "shorts": [{"title": "", "hook": "", "script": "", "cta": "", "hashtags": [], "keywords": []}],
-  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imageDescription": "", "aspectRatio": ""}],
+  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imagePrompt": "", "aspectRatio": ""}],
   "caseStudies": [{"title": "", "problem": "", "solution": "", "results": ""}],
-  "ads": [{"platform": "", "headline": "", "body": "", "cta": "", "hashtags": [], "imageDescription": "", "aspectRatio": ""}]
+  "ads": [{"platform": "", "headline": "", "body": "", "cta": "", "hashtags": [], "imagePrompt": "", "aspectRatio": ""}],
+  "imagePrompts": [{"prompt": "", "aspectRatio": "", "scene": ""}]
 }`
   }
 
@@ -242,15 +258,17 @@ STAGE: 50+ users, scaling to 100+. Goal is thought leadership, brand building, a
 
 Generate:
 1. Five YouTube long-form video ideas (5-10 min each).
-2. Five social media posts (thought leadership). Include full caption, hashtags, keywords, and image description.
+2. Five social media posts (thought leadership). Include full caption, hashtags, keywords, imagePrompt, and aspectRatio.
 3. Three blog post outlines for SEO.
 4. Three partnership outreach templates.
+5. Five standalone AI image prompts for batch generation (mix of 1:1, 9:16, 16:9).
 
 Return as JSON:
 {
   "videos": [{"title": "", "outline": "", "duration": ""}],
-  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imageDescription": "", "aspectRatio": ""}],
+  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imagePrompt": "", "aspectRatio": ""}],
   "blogs": [{"title": "", "outline": "", "targetKeyword": ""}],
-  "partnerships": [{"target": "", "subject": "", "pitch": ""}]
+  "partnerships": [{"target": "", "subject": "", "pitch": ""}],
+  "imagePrompts": [{"prompt": "", "aspectRatio": "", "scene": ""}]
 }`
 }
