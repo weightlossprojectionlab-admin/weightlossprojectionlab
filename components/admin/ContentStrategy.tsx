@@ -143,6 +143,20 @@ export default function ContentStrategy() {
       const adPlatform = platformMap[post.platform] || 'instagram-feed'
       const headline = (post.caption || post.text || post.headline || '').slice(0, 80)
 
+      // Convert Firebase Storage URL to data URL to avoid CORS issues
+      let bgDataUrl: string | undefined
+      try {
+        const imgRes = await fetch(mediaItem.url)
+        const imgBlob = await imgRes.blob()
+        bgDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.readAsDataURL(imgBlob)
+        })
+      } catch {
+        console.warn('Failed to fetch background image, using gradient fallback')
+      }
+
       const blob = await generateAdvertisement({
         template: {
           id: `content-${key}`,
@@ -157,7 +171,7 @@ export default function ContentStrategy() {
           colors: { primary: '#2563eb', secondary: '#16a34a', accent: '#7c3aed' },
         },
         platform: adPlatform,
-        backgroundImage: mediaItem.url,
+        backgroundImage: bgDataUrl,
       })
 
       const url = URL.createObjectURL(blob)
