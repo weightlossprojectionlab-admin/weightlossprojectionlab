@@ -119,6 +119,13 @@ service firebase.storage {
       allow delete: if isAuthenticated();
     }
 
+    // Media library images (admin marketing content)
+    match /admin/media-library/{imageId} {
+      allow read: if true; // Public read for marketing images
+      allow write: if isAuthenticated() && isValidImage() && isValidImageSize();
+      allow delete: if isAuthenticated();
+    }
+
     // Default deny
     match /{allPaths=**} {
       allow read, write: if false;
