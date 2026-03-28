@@ -539,12 +539,12 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
                       </div>
                     ) : recipe.inventoryAvailability.percentage >= 80 ? (
                       <div className="flex items-center justify-between bg-yellow-50 dark:bg-yellow-900/30 border-2 border-yellow-400 dark:border-yellow-600 text-yellow-900 dark:text-yellow-100 px-3 py-2 rounded-lg font-semibold text-xs">
-                        <span>Missing {recipe.inventoryAvailability.missingCount || 0} ingredient{(recipe.inventoryAvailability.missingCount || 0) !== 1 ? 's' : ''}</span>
+                        <span>Missing {recipe.inventoryAvailability.missingIngredients?.length || 0} ingredient{(recipe.inventoryAvailability.missingIngredients?.length || 0) !== 1 ? 's' : ''}</span>
                         <span className="text-yellow-600 dark:text-yellow-400">{recipe.inventoryAvailability.percentage}%</span>
                       </div>
                     ) : recipe.inventoryAvailability.percentage >= 50 ? (
                       <div className="flex items-center justify-between bg-orange-50 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 text-orange-900 dark:text-orange-100 px-3 py-1.5 rounded-lg font-medium text-xs">
-                        <span>Need {recipe.inventoryAvailability.missingCount || 0} more items</span>
+                        <span>Need {recipe.inventoryAvailability.missingIngredients?.length || 0} more items</span>
                         <span className="text-orange-600 dark:text-orange-400">{recipe.inventoryAvailability.percentage}%</span>
                       </div>
                     ) : (
