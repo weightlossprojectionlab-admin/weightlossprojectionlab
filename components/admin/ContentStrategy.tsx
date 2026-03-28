@@ -141,7 +141,10 @@ export default function ContentStrategy() {
     setComposing(key)
     try {
       const adPlatform = platformMap[post.platform] || 'instagram-feed'
-      const headline = (post.caption || post.text || post.headline || '').slice(0, 80)
+      // Extract a short headline — first sentence or first 60 chars, whichever is shorter
+      const fullText = post.caption || post.text || post.headline || ''
+      const firstSentence = fullText.split(/[.!?]\s/)[0]
+      const headline = firstSentence.length > 60 ? firstSentence.slice(0, 57) + '...' : firstSentence
 
       // Convert Firebase Storage URL to data URL to avoid CORS issues on canvas
       let bgDataUrl: string | undefined
