@@ -29,6 +29,7 @@ import {
   type IngredientMatchResult
 } from '@/lib/ingredient-matcher'
 import { addManualShoppingItem, findExistingIngredientByName, appendRecipeToIngredient } from '@/lib/shopping-operations'
+import { addToMemberShoppingList } from '@/lib/member-shopping-operations'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
@@ -69,9 +70,10 @@ interface RecipeModalProps {
   onClose: () => void
   userDietaryPreferences?: string[]
   userAllergies?: string[]
+  patientId?: string
 }
 
-export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreferences, userAllergies }: RecipeModalProps) {
+export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreferences, userAllergies, patientId }: RecipeModalProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'recipe' | 'shopping'>('recipe')
   const [showShareMenu, setShowShareMenu] = useState(false)
@@ -420,23 +422,35 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
       // Multi-recipe linking: Check if each ingredient already exists on shopping list
       let newItemsCount = 0
       let linkedItemsCount = 0
+      const userId = auth.currentUser!.uid
 
       for (const { ingredient } of itemsToAdd) {
-        // Check if ingredient already exists on shopping list
-        const existingItem = await findExistingIngredientByName(auth.currentUser!.uid, ingredient)
-
-        if (existingItem) {
-          // Item exists - append current recipe ID to its recipeIds array
-          await appendRecipeToIngredient(existingItem.id, suggestion.id)
-          linkedItemsCount++
-        } else {
-          // Item doesn't exist - create new item with recipeIds array
-          await addManualShoppingItem(auth.currentUser!.uid, ingredient, {
-            recipeId: suggestion.id, // This will be converted to recipeIds: [id]
+        if (patientId) {
+          // Member-specific shopping list (stored under user's member_shopping_lists subcollection)
+          await addToMemberShoppingList(userId, patientId, {
+            productName: ingredient,
+            category: 'other',
             quantity: 1,
-            priority: 'medium'
+            priority: 'medium',
+            recipeIds: [suggestion.id],
+            source: 'recipe',
           })
           newItemsCount++
+        } else {
+          // Household shopping list (old path)
+          const existingItem = await findExistingIngredientByName(userId, ingredient)
+
+          if (existingItem) {
+            await appendRecipeToIngredient(existingItem.id, suggestion.id)
+            linkedItemsCount++
+          } else {
+            await addManualShoppingItem(userId, ingredient, {
+              recipeId: suggestion.id,
+              quantity: 1,
+              priority: 'medium'
+            })
+            newItemsCount++
+          }
         }
       }
 

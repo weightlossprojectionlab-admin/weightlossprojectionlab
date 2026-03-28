@@ -701,6 +701,7 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
           onClose={() => setSelectedRecipe(null)}
           userDietaryPreferences={undefined}
           userAllergies={undefined}
+          patientId={patientId}
         />
       )}
     </div>
