@@ -609,7 +609,6 @@ export default function ContentStrategy() {
                 </div>
               </div>
             )}
-          </div>
 
             {/* Standalone Image Prompts for Whisk */}
             {ideas.imagePrompts && (
