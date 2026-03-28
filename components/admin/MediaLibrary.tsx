@@ -29,6 +29,7 @@ export default function MediaLibrary({ selectionMode = false, onSelect, filterTa
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [filterTag, setFilterTag] = useState<string>('all')
   const [editingItem, setEditingItem] = useState<MediaItem | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -42,37 +43,58 @@ export default function MediaLibrary({ selectionMode = false, onSelect, filterTa
     setLoading(false)
   }
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files?.length) return
-
+  const processFiles = async (files: File[]) => {
     if (selectedTags.length === 0) {
       toast.error('Select at least one tag before uploading')
       return
     }
 
+    const imageFiles = files.filter(f => {
+      if (!f.type.startsWith('image/')) { toast.error(`${f.name} is not an image`); return false }
+      if (f.size > 10 * 1024 * 1024) { toast.error(`${f.name} exceeds 10MB limit`); return false }
+      return true
+    })
+    if (!imageFiles.length) return
+
     setUploading(true)
     try {
-      for (const file of Array.from(files)) {
-        if (!file.type.startsWith('image/')) {
-          toast.error(`${file.name} is not an image`)
-          continue
-        }
-        if (file.size > 10 * 1024 * 1024) {
-          toast.error(`${file.name} exceeds 10MB limit`)
-          continue
-        }
+      for (const file of imageFiles) {
         const item = await uploadMediaImage(file, selectedTags)
         setItems(prev => [item, ...prev])
       }
-      toast.success(`Uploaded ${files.length} image${files.length > 1 ? 's' : ''}`)
+      toast.success(`Uploaded ${imageFiles.length} image${imageFiles.length > 1 ? 's' : ''}`)
       setSelectedTags([])
-    } catch (err) {
+    } catch {
       toast.error('Upload failed')
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
+  }
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return
+    await processFiles(Array.from(e.target.files))
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length) await processFiles(files)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
   }
 
   const handleDelete = async (item: MediaItem) => {
@@ -134,13 +156,18 @@ export default function MediaLibrary({ selectionMode = false, onSelect, filterTa
             </div>
           </div>
 
-          {/* Upload Area */}
+          {/* Upload Area — Click or Drag & Drop */}
           <div
             onClick={() => selectedTags.length > 0 && fileInputRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              selectedTags.length > 0
-                ? 'border-primary/50 hover:border-primary cursor-pointer'
-                : 'border-border opacity-50 cursor-not-allowed'
+              isDragging
+                ? 'border-primary bg-primary/5'
+                : selectedTags.length > 0
+                  ? 'border-primary/50 hover:border-primary cursor-pointer'
+                  : 'border-border opacity-50 cursor-not-allowed'
             }`}
           >
             <PhotoIcon className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
@@ -149,9 +176,11 @@ export default function MediaLibrary({ selectionMode = false, onSelect, filterTa
                 <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
                 <span className="text-sm text-muted-foreground">Uploading...</span>
               </div>
+            ) : isDragging ? (
+              <p className="text-sm text-primary font-medium">Drop images here</p>
             ) : selectedTags.length > 0 ? (
               <>
-                <p className="text-sm text-foreground font-medium">Click to upload images</p>
+                <p className="text-sm text-foreground font-medium">Click or drag & drop images here</p>
                 <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WebP up to 10MB. Multiple files supported.</p>
               </>
             ) : (
