@@ -161,12 +161,12 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
 
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight)
 
-        // Gradient overlay — lighter at top (show image), darker at bottom (text readability)
-        // Research: 50% opacity is the sweet spot for dark overlays
+        // Bottom-only gradient — image is fully visible in upper 65%, dark strip at bottom for text
         const overlayGradient = ctx.createLinearGradient(0, 0, 0, height)
-        overlayGradient.addColorStop(0, 'rgba(0, 0, 0, 0.15)')   // Top: mostly transparent — show the image
-        overlayGradient.addColorStop(0.4, 'rgba(0, 0, 0, 0.3)')  // Middle: gentle darken
-        overlayGradient.addColorStop(1, 'rgba(0, 0, 0, 0.65)')   // Bottom: strong for CTA readability
+        overlayGradient.addColorStop(0, 'rgba(0, 0, 0, 0)')       // Top: fully transparent
+        overlayGradient.addColorStop(0.55, 'rgba(0, 0, 0, 0)')    // Upper 55%: fully transparent
+        overlayGradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.4)')   // Transition zone
+        overlayGradient.addColorStop(1, 'rgba(0, 0, 0, 0.8)')     // Bottom: strong for text
         ctx.fillStyle = overlayGradient
         ctx.fillRect(0, 0, width, height)
       } catch (error) {
@@ -197,8 +197,8 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
 
     if (isVertical) {
       // Vertical layout (9:16, 4:5, 2:3)
-      // Start text at 55% down — top half is pure image
-      currentY = height * 0.55
+      // Start text at 68% down — upper 2/3 is pure image
+      currentY = height * 0.68
 
       // Logo (if provided)
       if (logoUrl) {
@@ -304,8 +304,8 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
         }
       }
 
-      // For horizontal: text in lower 35% — let the image dominate
-      currentY = height * 0.58
+      // For horizontal: text in lower 30% — let the image dominate
+      currentY = height * 0.65
 
       // Headline
       ctx.fillStyle = 'white'
