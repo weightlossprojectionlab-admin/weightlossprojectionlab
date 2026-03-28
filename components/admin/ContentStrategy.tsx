@@ -85,8 +85,12 @@ export default function ContentStrategy() {
         body: JSON.stringify({ userCount }),
       })
 
-      if (!res.ok) throw new Error('Failed to generate')
       const data = await res.json()
+      if (!res.ok || !data.success) {
+        console.error('Content generation failed:', data)
+        throw new Error(data.error || 'Failed to generate')
+      }
+      console.log('Generated ideas:', data.ideas)
       setIdeas(data.ideas)
       toast.success('Content ideas generated!')
     } catch {

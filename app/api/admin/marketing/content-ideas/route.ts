@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       model: 'gemini-2.5-flash-lite',
       generationConfig: {
         temperature: 0.8,
-        maxOutputTokens: 3000,
+        maxOutputTokens: 8000,
         responseMimeType: 'application/json',
       },
     })
@@ -46,13 +46,31 @@ export async function POST(request: NextRequest) {
     const result = await model.generateContent(prompt)
     const text = result.response.text()
 
+    logger.info('[ContentIdeas] Raw AI response length:', { length: text.length })
+
     let ideas: any
     try {
       ideas = JSON.parse(text)
-    } catch {
+    } catch (parseErr) {
+      logger.error('[ContentIdeas] JSON parse failed, trying code block extraction', parseErr as Error)
       // Try extracting JSON from markdown code block
       const match = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-      ideas = match ? JSON.parse(match[1]) : { error: 'Failed to parse AI response' }
+      if (match) {
+        ideas = JSON.parse(match[1])
+      } else {
+        // Return raw text so we can debug
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to parse AI response',
+          rawText: text.slice(0, 2000),
+        }, { status: 500 })
+      }
+    }
+
+    // Validate we got actual content
+    const hasContent = ideas.shorts || ideas.posts || ideas.videos || ideas.looms || ideas.community
+    if (!hasContent) {
+      logger.warn('[ContentIdeas] Parsed JSON but no expected keys found', { keys: Object.keys(ideas) })
     }
 
     return NextResponse.json({
