@@ -161,10 +161,12 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
 
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight)
 
-        // Add dark overlay for text readability
+        // Gradient overlay — lighter at top (show image), darker at bottom (text readability)
+        // Research: 50% opacity is the sweet spot for dark overlays
         const overlayGradient = ctx.createLinearGradient(0, 0, 0, height)
-        overlayGradient.addColorStop(0, 'rgba(0, 0, 0, 0.6)')
-        overlayGradient.addColorStop(1, 'rgba(0, 0, 0, 0.4)')
+        overlayGradient.addColorStop(0, 'rgba(0, 0, 0, 0.15)')   // Top: mostly transparent — show the image
+        overlayGradient.addColorStop(0.4, 'rgba(0, 0, 0, 0.3)')  // Middle: gentle darken
+        overlayGradient.addColorStop(1, 'rgba(0, 0, 0, 0.65)')   // Bottom: strong for CTA readability
         ctx.fillStyle = overlayGradient
         ctx.fillRect(0, 0, width, height)
       } catch (error) {
@@ -176,25 +178,27 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
       drawGradientBackground(ctx, width, height, template.colors)
     }
 
-    // Calculate responsive font sizes based on canvas size
+    // Research-backed font sizes: headline ~6.5% of width, body ~3%, CTA ~4%
+    // Min 24px at 1080px canvas. Bold 700+ for headlines.
     const baseFontSize = Math.min(width, height) / 20
-    const headlineFontSize = isVertical ? baseFontSize * 2.2 : baseFontSize * 1.8
-    const subheadlineFontSize = baseFontSize * 1.1
-    const bodyFontSize = baseFontSize * 0.85
-    const ctaFontSize = baseFontSize * 1
+    const headlineFontSize = Math.max(24, width * 0.055) // ~60px at 1080w
+    const subheadlineFontSize = Math.max(20, width * 0.030)
+    const bodyFontSize = Math.max(18, width * 0.025)
+    const ctaFontSize = Math.max(20, width * 0.035)
     const pricingFontSize = baseFontSize * 1.5
 
-    // Layout positioning (padding already defined above for image calculations)
-    const contentWidth = width - (padding * 2)
+    // 10% safe zone inset on all sides (universal best practice)
+    const safeZone = width * 0.10
+    const contentWidth = width - (safeZone * 2)
 
-    // Vertical layout: top 60% for text, bottom 40% for CTA
-    // Horizontal/Square: left 60% for text, right 40% for CTA
+    // Text positioned in lower 40% of image — let the photo breathe
+    // Research: image should be the hero, text ~15% coverage
     let currentY = padding
 
     if (isVertical) {
       // Vertical layout (9:16, 4:5, 2:3)
-      // Add extra top padding for breathing room
-      currentY = padding * 2
+      // Start text at 55% down — top half is pure image
+      currentY = height * 0.55
 
       // Logo (if provided)
       if (logoUrl) {
@@ -209,50 +213,76 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
         }
       }
 
-      // Headline
+      // Headline — bold, white, text-shadow for readability
       ctx.fillStyle = 'white'
-      ctx.font = `bold ${headlineFontSize}px system-ui, -apple-system, sans-serif`
+      ctx.font = `800 ${headlineFontSize}px system-ui, -apple-system, sans-serif`
       ctx.textAlign = 'left'
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-      ctx.shadowBlur = 10
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
+      ctx.shadowBlur = 8
+      ctx.shadowOffsetX = 2
+      ctx.shadowOffsetY = 2
       const headlineLines = wrapText(ctx, template.headline, contentWidth)
       headlineLines.forEach((line, i) => {
-        ctx.fillText(line, padding, currentY + (i * headlineFontSize * 1.2))
+        ctx.fillText(line, safeZone, currentY + (i * headlineFontSize * 1.15))
       })
-      currentY += (headlineLines.length * headlineFontSize * 1.2) + padding * 0.5
+      currentY += (headlineLines.length * headlineFontSize * 1.15) + safeZone * 0.3
 
-      // Subheadline
-      ctx.font = `600 ${subheadlineFontSize}px system-ui, -apple-system, sans-serif`
-      ctx.fillStyle = template.colors.accent
-      const subheadlineLines = wrapText(ctx, template.subheadline, contentWidth)
-      subheadlineLines.forEach((line, i) => {
-        ctx.fillText(line, padding, currentY + (i * subheadlineFontSize * 1.3))
-      })
-      currentY += (subheadlineLines.length * subheadlineFontSize * 1.3) + padding
+      // Subheadline — only show if provided and short
+      ctx.shadowBlur = 4
+      ctx.shadowOffsetX = 1
+      ctx.shadowOffsetY = 1
+      if (template.subheadline && template.subheadline.length < 60) {
+        ctx.font = `600 ${subheadlineFontSize}px system-ui, -apple-system, sans-serif`
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
+        const subheadlineLines = wrapText(ctx, template.subheadline, contentWidth)
+        subheadlineLines.forEach((line, i) => {
+          ctx.fillText(line, safeZone, currentY + (i * subheadlineFontSize * 1.3))
+        })
+        currentY += (subheadlineLines.length * subheadlineFontSize * 1.3) + safeZone * 0.5
+      }
 
-      // Body text
-      ctx.font = `${bodyFontSize}px system-ui, -apple-system, sans-serif`
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-      const bodyLines = wrapText(ctx, template.bodyText, contentWidth)
+      // Body text — skip if empty (keep image clean)
+      ctx.font = `500 ${bodyFontSize}px system-ui, -apple-system, sans-serif`
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
+      const bodyLines = template.bodyText ? wrapText(ctx, template.bodyText, contentWidth) : []
       bodyLines.forEach((line, i) => {
-        ctx.fillText(line, padding, currentY + (i * bodyFontSize * 1.5))
+        ctx.fillText(line, safeZone, currentY + (i * bodyFontSize * 1.5))
       })
-      currentY += (bodyLines.length * bodyFontSize * 1.5) + padding * 1.5
+      if (bodyLines.length > 0) {
+        currentY += (bodyLines.length * bodyFontSize * 1.5) + safeZone * 0.5
+      }
 
       // Pricing (if shown)
       if (showPricing && pricingText) {
         ctx.font = `bold ${pricingFontSize}px system-ui, -apple-system, sans-serif`
         ctx.fillStyle = template.colors.accent
-        ctx.fillText(pricingText, padding, currentY)
-        currentY += pricingFontSize + padding * 0.5
+        ctx.fillText(pricingText, safeZone, currentY)
+        currentY += pricingFontSize + safeZone * 0.3
       }
 
-      // CTA Button (bottom section)
-      const ctaY = height - padding * 3
-      const ctaWidth = contentWidth
-      const ctaHeight = baseFontSize * 2.5
+      // CTA — compact pill button at bottom (not full-width)
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+      ctx.shadowBlur = 6
+      const ctaY = height - safeZone * 2.5
+      ctx.font = `700 ${ctaFontSize}px system-ui, -apple-system, sans-serif`
+      const ctaTextWidth = ctx.measureText(template.cta).width
+      const ctaPadH = ctaFontSize * 0.8
+      const ctaPadV = ctaFontSize * 0.4
+      const ctaBtnWidth = ctaTextWidth + ctaPadH * 2
+      const ctaBtnHeight = ctaFontSize + ctaPadV * 2
+      const ctaX = safeZone
 
-      drawCTAButton(ctx, padding, ctaY, ctaWidth, ctaHeight, template.cta, ctaFontSize, template.colors.accent)
+      // Rounded pill button
+      ctx.fillStyle = template.colors.accent
+      roundRect(ctx, ctaX, ctaY, ctaBtnWidth, ctaBtnHeight, ctaBtnHeight / 2)
+      ctx.fill()
+
+      // CTA text
+      ctx.fillStyle = 'white'
+      ctx.shadowColor = 'transparent'
+      ctx.shadowBlur = 0
+      ctx.textAlign = 'left'
+      ctx.fillText(template.cta, ctaX + ctaPadH, ctaY + ctaPadV + ctaFontSize * 0.82)
 
       // Reset shadow
       ctx.shadowColor = 'transparent'
