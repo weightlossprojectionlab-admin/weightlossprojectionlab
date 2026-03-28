@@ -5,7 +5,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { getAdminAuthToken } from '@/lib/admin/api'
 import { GROWTH_STAGES, getCurrentStage, getStageProgress, CONTENT_PLATFORM_SPECS, type GrowthStage } from '@/lib/content-strategy'
-import { AD_PLATFORM_SPECS } from '@/lib/ad-generator'
+import { generateAdvertisement, downloadAd, AD_PLATFORM_SPECS, type AdPlatform } from '@/lib/ad-generator'
 import { getMediaLibrary, findMatchingMedia, type MediaItem } from '@/lib/media-library'
 import MediaLibrary from '@/components/admin/MediaLibrary'
 import { SparklesIcon, CheckCircleIcon, PhotoIcon, XMarkIcon as XIcon } from '@heroicons/react/24/outline'
@@ -103,22 +103,89 @@ export default function ContentStrategy() {
   }
 
   const [selectedImages, setSelectedImages] = useState<Record<string, MediaItem>>({})
+  const [composedPreviews, setComposedPreviews] = useState<Record<string, { url: string; blob: Blob }>>({})
+  const [composing, setComposing] = useState<string | null>(null)
   const [showMediaPicker, setShowMediaPicker] = useState<string | null>(null)
+  const [pickerPostData, setPickerPostData] = useState<any>(null)
   const [mediaLibraryItems, setMediaLibraryItems] = useState<MediaItem[]>([])
+
+  const platformMap: Record<string, AdPlatform> = {
+    'Instagram': 'instagram-feed',
+    'Instagram Feed': 'instagram-feed',
+    'Instagram Story': 'instagram-story',
+    'Instagram Reel': 'instagram-story',
+    'LinkedIn': 'linkedin',
+    'Twitter': 'twitter',
+    'Twitter/X': 'twitter',
+    'X': 'twitter',
+    'Pinterest': 'pinterest',
+    'Facebook': 'facebook-feed',
+  }
 
   // Load media library for suggestions
   useEffect(() => {
     getMediaLibrary().then(setMediaLibraryItems).catch(() => {})
   }, [])
 
-  const handleSelectImage = (key: string, item: MediaItem) => {
+  const handleSelectImage = async (key: string, item: MediaItem, post?: any) => {
     setSelectedImages(prev => ({ ...prev, [key]: item }))
     setShowMediaPicker(null)
+
+    // Auto-compose the preview with text overlay
+    if (post) {
+      await composeImage(key, item, post)
+    }
+  }
+
+  const composeImage = async (key: string, mediaItem: MediaItem, post: any) => {
+    setComposing(key)
+    try {
+      const adPlatform = platformMap[post.platform] || 'instagram-feed'
+      const headline = (post.caption || post.text || post.headline || '').slice(0, 80)
+
+      const blob = await generateAdvertisement({
+        template: {
+          id: `content-${key}`,
+          persona: 'family-health-manager',
+          type: 'feature-highlight',
+          headline,
+          subheadline: '',
+          bodyText: '',
+          cta: 'wellnessprojectionlab.com',
+          visualHint: '',
+          emotionalHook: '',
+          colors: { primary: '#2563eb', secondary: '#16a34a', accent: '#7c3aed' },
+        },
+        platform: adPlatform,
+        backgroundImage: mediaItem.url,
+      })
+
+      const url = URL.createObjectURL(blob)
+      setComposedPreviews(prev => ({ ...prev, [key]: { url, blob } }))
+    } catch (err) {
+      console.error('Compose failed:', err)
+      toast.error('Failed to compose image')
+    } finally {
+      setComposing(null)
+    }
+  }
+
+  const handleDownloadComposed = (key: string, platform: string) => {
+    const preview = composedPreviews[key]
+    if (!preview) return
+    downloadAd(preview.blob, `wpl-${platform.toLowerCase().replace(/[\s/]/g, '-')}-${Date.now()}.png`)
+    toast.success('Image downloaded')
   }
 
   const handleRemoveImage = (key: string) => {
     setSelectedImages(prev => {
       const updated = { ...prev }
+      delete updated[key]
+      return updated
+    })
+    setComposedPreviews(prev => {
+      const updated = { ...prev }
+      if (updated[key]?.url) URL.revokeObjectURL(updated[key].url)
       delete updated[key]
       return updated
     })
@@ -318,7 +385,7 @@ export default function ContentStrategy() {
                           )}
                         </div>
                         <button
-                          onClick={() => setShowMediaPicker(`post-${i}`)}
+                          onClick={() => { setShowMediaPicker(`post-${i}`); setPickerPostData(item) }}
                           className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
                         >
                           <PhotoIcon className="h-3.5 w-3.5" />
@@ -326,28 +393,44 @@ export default function ContentStrategy() {
                         </button>
                       </div>
 
-                      {/* Selected Image Preview */}
-                      {selectedImages[`post-${i}`] && (
-                        <div className="mb-3 relative border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden">
+                      {/* Composed Image Preview */}
+                      {composing === `post-${i}` && (
+                        <div className="mb-3 flex items-center justify-center p-8 bg-muted rounded-lg">
+                          <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+                          <span className="ml-2 text-sm text-muted-foreground">Composing image...</span>
+                        </div>
+                      )}
+                      {composedPreviews[`post-${i}`] && (
+                        <div className="mb-3 border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden">
                           <img
-                            src={selectedImages[`post-${i}`].url}
-                            alt="Selected media"
-                            className="w-full max-h-60 object-cover"
+                            src={composedPreviews[`post-${i}`].url}
+                            alt={`Composed for ${item.platform}`}
+                            className="w-full max-h-80 object-contain bg-gray-100 dark:bg-gray-900"
                           />
-                          <button
-                            onClick={() => handleRemoveImage(`post-${i}`)}
-                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                          >
-                            <XIcon className="h-4 w-4" />
-                          </button>
-                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-xs text-blue-700 dark:text-blue-300">
-                            {selectedImages[`post-${i}`].tags.join(', ')}
+                          <div className="flex items-center justify-between p-2 bg-blue-100 dark:bg-blue-900/30">
+                            <span className="text-xs text-blue-700 dark:text-blue-300">
+                              {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.name} — {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.width}x{AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.height}
+                            </span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleRemoveImage(`post-${i}`)}
+                                className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-foreground rounded text-xs font-medium hover:bg-gray-300"
+                              >
+                                Remove
+                              </button>
+                              <button
+                                onClick={() => handleDownloadComposed(`post-${i}`, item.platform)}
+                                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium"
+                              >
+                                Download
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}
 
                       {/* Suggested Images from Library */}
-                      {!selectedImages[`post-${i}`] && mediaLibraryItems.length > 0 && item.keywords && (
+                      {!selectedImages[`post-${i}`] && mediaLibraryItems.length > 0 && (item.keywords || item.hashtags) && (
                         <div className="mb-3">
                           <div className="text-xs text-muted-foreground mb-1">Suggested from your library:</div>
                           <div className="flex gap-2 overflow-x-auto pb-1">
@@ -356,7 +439,7 @@ export default function ContentStrategy() {
                                 key={media.id}
                                 src={media.url}
                                 alt={media.filename}
-                                onClick={() => handleSelectImage(`post-${i}`, media)}
+                                onClick={() => handleSelectImage(`post-${i}`, media, item)}
                                 className="h-16 w-16 object-cover rounded-lg cursor-pointer border-2 border-transparent hover:border-primary transition-colors flex-shrink-0"
                               />
                             ))}
@@ -503,7 +586,7 @@ export default function ContentStrategy() {
                           )}
                         </div>
                         <button
-                          onClick={() => setShowMediaPicker(`ad-${i}`)}
+                          onClick={() => { setShowMediaPicker(`ad-${i}`); setPickerPostData(item) }}
                           className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium transition-colors"
                         >
                           <PhotoIcon className="h-3.5 w-3.5" />
@@ -511,20 +594,39 @@ export default function ContentStrategy() {
                         </button>
                       </div>
 
-                      {/* Selected Ad Image */}
-                      {selectedImages[`ad-${i}`] && (
-                        <div className="mb-3 relative border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden">
+                      {/* Composed Ad Image Preview */}
+                      {composing === `ad-${i}` && (
+                        <div className="mb-3 flex items-center justify-center p-8 bg-muted rounded-lg">
+                          <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+                          <span className="ml-2 text-sm text-muted-foreground">Composing image...</span>
+                        </div>
+                      )}
+                      {composedPreviews[`ad-${i}`] && (
+                        <div className="mb-3 border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden">
                           <img
-                            src={selectedImages[`ad-${i}`].url}
-                            alt="Selected media"
-                            className="w-full max-h-60 object-cover"
+                            src={composedPreviews[`ad-${i}`].url}
+                            alt={`Ad preview for ${item.platform}`}
+                            className="w-full max-h-80 object-contain bg-gray-100 dark:bg-gray-900"
                           />
-                          <button
-                            onClick={() => handleRemoveImage(`ad-${i}`)}
-                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                          >
-                            <XIcon className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center justify-between p-2 bg-amber-100 dark:bg-amber-900/30">
+                            <span className="text-xs text-amber-700 dark:text-amber-300">
+                              {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.name} — {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.width}x{AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.height}
+                            </span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleRemoveImage(`ad-${i}`)}
+                                className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-foreground rounded text-xs font-medium hover:bg-gray-300"
+                              >
+                                Remove
+                              </button>
+                              <button
+                                onClick={() => handleDownloadComposed(`ad-${i}`, item.platform)}
+                                className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-medium"
+                              >
+                                Download
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -626,7 +728,7 @@ export default function ContentStrategy() {
             </div>
             <MediaLibrary
               selectionMode
-              onSelect={(item) => handleSelectImage(showMediaPicker, item)}
+              onSelect={(item) => handleSelectImage(showMediaPicker, item, pickerPostData)}
             />
           </div>
         </div>
