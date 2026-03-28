@@ -1435,3 +1435,53 @@ export async function clearAllShoppingItems(
     throw error
   }
 }
+
+/**
+ * DRY: Add recipe ingredients to the correct shopping list
+ *
+ * Routes to member-specific or household list based on whether memberId is provided.
+ * Used by RecipeModal, RecipeCardWithAvailability, RecipeQueue, and RecipeWithProductMatching.
+ */
+export async function addRecipeIngredientsToShoppingList(
+  householdId: string,
+  ingredients: string[],
+  recipeId: string,
+  memberId?: string
+): Promise<{ newCount: number; linkedCount: number }> {
+  let newCount = 0
+  let linkedCount = 0
+
+  if (memberId) {
+    // Member-specific shopping list
+    const { addToMemberShoppingList } = await import('@/lib/member-shopping-operations')
+    for (const ingredient of ingredients) {
+      await addToMemberShoppingList(householdId, memberId, {
+        productName: ingredient,
+        category: 'other',
+        quantity: 1,
+        priority: 'medium',
+        recipeIds: [recipeId],
+        source: 'recipe',
+      })
+      newCount++
+    }
+  } else {
+    // Household shopping list with dedup/linking
+    for (const ingredient of ingredients) {
+      const existingItem = await findExistingIngredientByName(householdId, ingredient)
+      if (existingItem) {
+        await appendRecipeToIngredient(existingItem.id, recipeId)
+        linkedCount++
+      } else {
+        await addManualShoppingItem(householdId, ingredient, {
+          recipeId,
+          quantity: 1,
+          priority: 'medium',
+        })
+        newCount++
+      }
+    }
+  }
+
+  return { newCount, linkedCount }
+}

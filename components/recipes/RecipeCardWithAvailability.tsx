@@ -6,7 +6,7 @@ import type { MealSuggestion } from '@/lib/meal-suggestions'
 import { RecipeAvailabilityBadge } from './RecipeAvailabilityBadge'
 import { ShoppingCartIcon } from '@heroicons/react/24/outline'
 import { auth } from '@/lib/firebase'
-import { addManualShoppingItem } from '@/lib/shopping-operations'
+import { addRecipeIngredientsToShoppingList } from '@/lib/shopping-operations'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 
@@ -47,16 +47,10 @@ export function RecipeCardWithAvailability({
 
     setAddingToCart(true)
     try {
-      // Add all ingredients to shopping list
-      const promises = recipe.ingredients.map(ingredient =>
-        addManualShoppingItem(user.uid, ingredient, {
-          recipeId: recipe.id,
-          quantity: 1
-        })
+      const { newCount } = await addRecipeIngredientsToShoppingList(
+        user.uid, recipe.ingredients, recipe.id
       )
-
-      await Promise.all(promises)
-      toast.success(`Added ${recipe.ingredients.length} ingredients to shopping list`)
+      toast.success(`Added ${newCount} ingredients to shopping list`)
       onAddToCart?.(recipe.id)
     } catch (error) {
       logger.error('Error adding recipe to cart', error as Error, { recipeId: recipe.id })

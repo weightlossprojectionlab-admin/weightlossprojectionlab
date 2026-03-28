@@ -8,7 +8,7 @@ import { MEAL_SUGGESTIONS, getRecipeActionLabel } from '@/lib/meal-suggestions'
 import { createStepTimers } from '@/lib/recipe-timer-parser'
 import { scaleRecipe } from '@/lib/recipe-scaler'
 import { Spinner } from '@/components/ui/Spinner'
-import { addManualShoppingItem } from '@/lib/shopping-operations'
+import { addRecipeIngredientsToShoppingList } from '@/lib/shopping-operations'
 import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
@@ -122,18 +122,26 @@ export const RecipeQueue = memo(function RecipeQueue() {
         return
       }
 
-      // Add all ingredients to shopping list
-      const addPromises = Array.from(allIngredients).map((ingredient) =>
-        addManualShoppingItem(auth.currentUser!.uid, ingredient, {
-          recipeId: ingredientRecipeMap.get(ingredient),
-          quantity: 1,
-          priority: 'medium'
-        })
-      )
+      // Add all ingredients to shopping list (grouped by recipe for proper linking)
+      let totalNew = 0
+      let totalLinked = 0
+      const recipeIngredients = new Map<string, string[]>()
+      allIngredients.forEach(ingredient => {
+        const rid = ingredientRecipeMap.get(ingredient) || ''
+        if (!recipeIngredients.has(rid)) recipeIngredients.set(rid, [])
+        recipeIngredients.get(rid)!.push(ingredient)
+      })
 
-      await Promise.all(addPromises)
+      for (const [rid, ingredients] of recipeIngredients) {
+        const { newCount, linkedCount } = await addRecipeIngredientsToShoppingList(
+          auth.currentUser!.uid, ingredients, rid
+        )
+        totalNew += newCount
+        totalLinked += linkedCount
+      }
 
-      toast.success(`✓ Added ${allIngredients.size} ingredient${allIngredients.size > 1 ? 's' : ''} to shopping list!`)
+      const totalAdded = totalNew + totalLinked
+      toast.success(`✓ Added ${totalAdded} ingredient${totalAdded > 1 ? 's' : ''} to shopping list!`)
     } catch (error) {
       logger.error('Error adding queue ingredients to shopping list:', error as Error)
       toast.error('Failed to add ingredients')

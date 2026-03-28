@@ -28,8 +28,7 @@ import {
   calculateRecipeReadiness,
   type IngredientMatchResult
 } from '@/lib/ingredient-matcher'
-import { addManualShoppingItem, findExistingIngredientByName, appendRecipeToIngredient } from '@/lib/shopping-operations'
-import { addToMemberShoppingList } from '@/lib/member-shopping-operations'
+import { addRecipeIngredientsToShoppingList } from '@/lib/shopping-operations'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
@@ -419,40 +418,11 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
         return
       }
 
-      // Multi-recipe linking: Check if each ingredient already exists on shopping list
-      let newItemsCount = 0
-      let linkedItemsCount = 0
       const userId = auth.currentUser!.uid
-
-      for (const { ingredient } of itemsToAdd) {
-        if (patientId) {
-          // Member-specific shopping list (stored under user's member_shopping_lists subcollection)
-          await addToMemberShoppingList(userId, patientId, {
-            productName: ingredient,
-            category: 'other',
-            quantity: 1,
-            priority: 'medium',
-            recipeIds: [suggestion.id],
-            source: 'recipe',
-          })
-          newItemsCount++
-        } else {
-          // Household shopping list (old path)
-          const existingItem = await findExistingIngredientByName(userId, ingredient)
-
-          if (existingItem) {
-            await appendRecipeToIngredient(existingItem.id, suggestion.id)
-            linkedItemsCount++
-          } else {
-            await addManualShoppingItem(userId, ingredient, {
-              recipeId: suggestion.id,
-              quantity: 1,
-              priority: 'medium'
-            })
-            newItemsCount++
-          }
-        }
-      }
+      const ingredientTexts = itemsToAdd.map(({ ingredient }) => ingredient)
+      const { newCount: newItemsCount, linkedCount: linkedItemsCount } = await addRecipeIngredientsToShoppingList(
+        userId, ingredientTexts, suggestion.id, patientId
+      )
 
       // Track recently added items for visual feedback
       const addedSet = new Set(itemsToAdd.map(({ ingredient }) => ingredient))

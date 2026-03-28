@@ -5,7 +5,7 @@ import { MealSuggestion } from '@/lib/meal-suggestions'
 import { useProductMatching } from '@/hooks/useProductMatching'
 import { ProductMatchesView } from './ProductMatchesView'
 import { ShoppingCartIcon, SparklesIcon } from '@heroicons/react/24/outline'
-import { addManualShoppingItem } from '@/lib/shopping-operations'
+import { addRecipeIngredientsToShoppingList } from '@/lib/shopping-operations'
 import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
 
@@ -45,11 +45,7 @@ export function RecipeWithProductMatching({ recipe, onClose }: RecipeWithProduct
 
     setAddingToCart(true)
     try {
-      await addManualShoppingItem(user.uid, ingredientName, {
-        recipeId: recipe.id,
-        quantity: 1
-      })
-
+      await addRecipeIngredientsToShoppingList(user.uid, [ingredientName], recipe.id)
       toast.success(`Added ${ingredientName} to shopping list`)
     } catch (error) {
       toast.error('Failed to add to shopping list')
@@ -69,17 +65,12 @@ export function RecipeWithProductMatching({ recipe, onClose }: RecipeWithProduct
 
     setAddingToCart(true)
     try {
-      const promises = result.matches
+      const ingredientNames = result.matches
         .filter(match => match.matches.length > 0)
-        .map(match => {
-          return addManualShoppingItem(user.uid, match.ingredient, {
-            recipeId: recipe.id,
-            quantity: match.quantity || 1
-          })
-        })
+        .map(match => match.ingredient)
 
-      await Promise.all(promises)
-      toast.success(`Added ${promises.length} items to shopping list`)
+      const { newCount } = await addRecipeIngredientsToShoppingList(user.uid, ingredientNames, recipe.id)
+      toast.success(`Added ${newCount} items to shopping list`)
     } catch (error) {
       toast.error('Failed to add items to shopping list')
     } finally {
