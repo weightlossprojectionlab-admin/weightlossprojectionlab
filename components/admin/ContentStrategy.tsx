@@ -5,8 +5,10 @@ import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { getAdminAuthToken } from '@/lib/admin/api'
 import { GROWTH_STAGES, getCurrentStage, getStageProgress, CONTENT_PLATFORM_SPECS, type GrowthStage } from '@/lib/content-strategy'
-import { generateAdvertisement, downloadAd, AD_PLATFORM_SPECS, type AdPlatform } from '@/lib/ad-generator'
-import { SparklesIcon, CheckCircleIcon, PhotoIcon } from '@heroicons/react/24/outline'
+import { AD_PLATFORM_SPECS } from '@/lib/ad-generator'
+import { getMediaLibrary, findMatchingMedia, type MediaItem } from '@/lib/media-library'
+import MediaLibrary from '@/components/admin/MediaLibrary'
+import { SparklesIcon, CheckCircleIcon, PhotoIcon, XMarkIcon as XIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
 export default function ContentStrategy() {
@@ -100,59 +102,26 @@ export default function ContentStrategy() {
     }
   }
 
-  const [generatingImage, setGeneratingImage] = useState<string | null>(null)
-  const [imagePreviews, setImagePreviews] = useState<Record<string, { url: string; blob: Blob; platform: string }>>({})
+  const [selectedImages, setSelectedImages] = useState<Record<string, MediaItem>>({})
+  const [showMediaPicker, setShowMediaPicker] = useState<string | null>(null)
+  const [mediaLibraryItems, setMediaLibraryItems] = useState<MediaItem[]>([])
 
-  const platformMap: Record<string, AdPlatform> = {
-    'Instagram': 'instagram-feed',
-    'Instagram Feed': 'instagram-feed',
-    'Instagram Story': 'instagram-story',
-    'Instagram Reel': 'instagram-story',
-    'LinkedIn': 'linkedin',
-    'Twitter': 'twitter',
-    'Twitter/X': 'twitter',
-    'X': 'twitter',
-    'Pinterest': 'pinterest',
-    'Facebook': 'facebook-feed',
+  // Load media library for suggestions
+  useEffect(() => {
+    getMediaLibrary().then(setMediaLibraryItems).catch(() => {})
+  }, [])
+
+  const handleSelectImage = (key: string, item: MediaItem) => {
+    setSelectedImages(prev => ({ ...prev, [key]: item }))
+    setShowMediaPicker(null)
   }
 
-  const handleGenerateImage = async (post: any, index: number) => {
-    const key = `${post.platform}-${index}`
-    setGeneratingImage(key)
-    try {
-      const adPlatform = platformMap[post.platform] || 'instagram-feed'
-
-      const blob = await generateAdvertisement({
-        template: {
-          id: `content-${index}`,
-          persona: 'family-health-manager',
-          type: 'feature-highlight',
-          headline: (post.caption || post.text || '').slice(0, 60),
-          subheadline: post.imageDescription || '',
-          bodyText: '',
-          cta: 'Learn More at wellnessprojectionlab.com',
-          visualHint: post.imageDescription || 'family health caregiver',
-          emotionalHook: 'peace of mind',
-          colors: { primary: '#2563eb', secondary: '#16a34a', accent: '#7c3aed' },
-        },
-        platform: adPlatform,
-      })
-
-      const url = URL.createObjectURL(blob)
-      setImagePreviews(prev => ({ ...prev, [key]: { url, blob, platform: post.platform } }))
-    } catch (err) {
-      console.error('Image generation failed:', err)
-      toast.error('Failed to generate image')
-    } finally {
-      setGeneratingImage(null)
-    }
-  }
-
-  const handleDownloadImage = (key: string) => {
-    const preview = imagePreviews[key]
-    if (!preview) return
-    downloadAd(preview.blob, `wpl-${preview.platform?.toLowerCase().replace(/\s/g, '-')}-${Date.now()}.png`)
-    toast.success('Image downloaded')
+  const handleRemoveImage = (key: string) => {
+    setSelectedImages(prev => {
+      const updated = { ...prev }
+      delete updated[key]
+      return updated
+    })
   }
 
   const stageColor = (s: GrowthStage) => {
@@ -349,37 +318,48 @@ export default function ContentStrategy() {
                           )}
                         </div>
                         <button
-                          onClick={() => handleGenerateImage(item, i)}
-                          disabled={generatingImage === `${item.platform}-${i}`}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-xs font-medium transition-colors"
+                          onClick={() => setShowMediaPicker(`post-${i}`)}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
                         >
-                          {generatingImage === `${item.platform}-${i}` ? (
-                            <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent" />
-                          ) : (
-                            <PhotoIcon className="h-3.5 w-3.5" />
-                          )}
-                          {imagePreviews[`${item.platform}-${i}`] ? 'Regenerate' : 'Generate Image'}
+                          <PhotoIcon className="h-3.5 w-3.5" />
+                          {selectedImages[`post-${i}`] ? 'Change Image' : 'Attach Image'}
                         </button>
                       </div>
 
-                      {/* Image Preview */}
-                      {imagePreviews[`${item.platform}-${i}`] && (
-                        <div className="mb-3 border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden">
+                      {/* Selected Image Preview */}
+                      {selectedImages[`post-${i}`] && (
+                        <div className="mb-3 relative border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden">
                           <img
-                            src={imagePreviews[`${item.platform}-${i}`].url}
-                            alt={`Preview for ${item.platform}`}
-                            className="w-full max-h-80 object-contain bg-gray-100 dark:bg-gray-900"
+                            src={selectedImages[`post-${i}`].url}
+                            alt="Selected media"
+                            className="w-full max-h-60 object-cover"
                           />
-                          <div className="flex items-center justify-between p-2 bg-blue-100 dark:bg-blue-900/30">
-                            <span className="text-xs text-blue-700 dark:text-blue-300">
-                              {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.name} &mdash; {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.width}x{AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.height}
-                            </span>
-                            <button
-                              onClick={() => handleDownloadImage(`${item.platform}-${i}`)}
-                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium"
-                            >
-                              Download
-                            </button>
+                          <button
+                            onClick={() => handleRemoveImage(`post-${i}`)}
+                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          >
+                            <XIcon className="h-4 w-4" />
+                          </button>
+                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-xs text-blue-700 dark:text-blue-300">
+                            {selectedImages[`post-${i}`].tags.join(', ')}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Suggested Images from Library */}
+                      {!selectedImages[`post-${i}`] && mediaLibraryItems.length > 0 && item.keywords && (
+                        <div className="mb-3">
+                          <div className="text-xs text-muted-foreground mb-1">Suggested from your library:</div>
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {findMatchingMedia(mediaLibraryItems, item.keywords || item.hashtags || []).slice(0, 4).map(media => (
+                              <img
+                                key={media.id}
+                                src={media.url}
+                                alt={media.filename}
+                                onClick={() => handleSelectImage(`post-${i}`, media)}
+                                className="h-16 w-16 object-cover rounded-lg cursor-pointer border-2 border-transparent hover:border-primary transition-colors flex-shrink-0"
+                              />
+                            ))}
                           </div>
                         </div>
                       )}
@@ -523,38 +503,28 @@ export default function ContentStrategy() {
                           )}
                         </div>
                         <button
-                          onClick={() => handleGenerateImage(item, i + 100)}
-                          disabled={generatingImage === `${item.platform}-${i + 100}`}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white rounded-lg text-xs font-medium transition-colors"
+                          onClick={() => setShowMediaPicker(`ad-${i}`)}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium transition-colors"
                         >
-                          {generatingImage === `${item.platform}-${i + 100}` ? (
-                            <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent" />
-                          ) : (
-                            <PhotoIcon className="h-3.5 w-3.5" />
-                          )}
-                          {imagePreviews[`${item.platform}-${i + 100}`] ? 'Regenerate' : 'Generate Image'}
+                          <PhotoIcon className="h-3.5 w-3.5" />
+                          {selectedImages[`ad-${i}`] ? 'Change Image' : 'Attach Image'}
                         </button>
                       </div>
 
-                      {/* Ad Image Preview */}
-                      {imagePreviews[`${item.platform}-${i + 100}`] && (
-                        <div className="mb-3 border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden">
+                      {/* Selected Ad Image */}
+                      {selectedImages[`ad-${i}`] && (
+                        <div className="mb-3 relative border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden">
                           <img
-                            src={imagePreviews[`${item.platform}-${i + 100}`].url}
-                            alt={`Ad preview for ${item.platform}`}
-                            className="w-full max-h-80 object-contain bg-gray-100 dark:bg-gray-900"
+                            src={selectedImages[`ad-${i}`].url}
+                            alt="Selected media"
+                            className="w-full max-h-60 object-cover"
                           />
-                          <div className="flex items-center justify-between p-2 bg-amber-100 dark:bg-amber-900/30">
-                            <span className="text-xs text-amber-700 dark:text-amber-300">
-                              {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.name} &mdash; {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.width}x{AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.height}
-                            </span>
-                            <button
-                              onClick={() => handleDownloadImage(`${item.platform}-${i + 100}`)}
-                              className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-medium"
-                            >
-                              Download
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => handleRemoveImage(`ad-${i}`)}
+                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          >
+                            <XIcon className="h-4 w-4" />
+                          </button>
                         </div>
                       )}
 
@@ -643,6 +613,24 @@ export default function ContentStrategy() {
           ))}
         </div>
       </div>
+
+      {/* Media Picker Modal */}
+      {showMediaPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowMediaPicker(null)}>
+          <div className="bg-card rounded-xl max-w-4xl w-full max-h-[80vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-foreground">Select Image from Library</h3>
+              <button onClick={() => setShowMediaPicker(null)} className="p-2 hover:bg-muted rounded-lg">
+                <XIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <MediaLibrary
+              selectionMode
+              onSelect={(item) => handleSelectImage(showMediaPicker, item)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -15,10 +15,11 @@ import { PERSONA_INFO } from '@/lib/ad-templates'
 import { AD_PLATFORM_SPECS } from '@/lib/ad-generator'
 import { getAllLandingPagePersonas } from '@/lib/landing-page-personas'
 import ContentStrategy from '@/components/admin/ContentStrategy'
+import MediaLibrary from '@/components/admin/MediaLibrary'
 
 export default function MarketingPage() {
   const [showAdGenerator, setShowAdGenerator] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'landing-pages' | 'content-strategy'>('content-strategy')
+  const [activeTab, setActiveTab] = useState<'overview' | 'landing-pages' | 'content-strategy' | 'media-library'>('content-strategy')
 
   const landingPagePersonas = getAllLandingPagePersonas()
   const liveCount = landingPagePersonas.filter(p => p.status === 'live').length
@@ -56,6 +57,16 @@ export default function MarketingPage() {
               }`}
             >
               🚀 Content Strategy
+            </button>
+            <button
+              onClick={() => setActiveTab('media-library')}
+              className={`px-6 py-3 font-medium transition-all ${
+                activeTab === 'media-library'
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              🖼️ Media Library
             </button>
             <button
               onClick={() => setActiveTab('landing-pages')}
@@ -241,6 +252,11 @@ export default function MarketingPage() {
           {/* Content Strategy Tab */}
           {activeTab === 'content-strategy' && (
             <ContentStrategy />
+          )}
+
+          {/* Media Library Tab */}
+          {activeTab === 'media-library' && (
+            <MediaLibrary />
           )}
 
           {/* Landing Pages Tab */}
