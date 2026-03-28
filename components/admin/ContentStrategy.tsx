@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { getAdminAuthToken } from '@/lib/admin/api'
-import { GROWTH_STAGES, getCurrentStage, getStageProgress, type GrowthStage } from '@/lib/content-strategy'
-import { SparklesIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { GROWTH_STAGES, getCurrentStage, getStageProgress, CONTENT_PLATFORM_SPECS, type GrowthStage } from '@/lib/content-strategy'
+import { generateAdvertisement, downloadAd, AD_PLATFORM_SPECS, type AdPlatform } from '@/lib/ad-generator'
+import { SparklesIcon, CheckCircleIcon, PhotoIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
 export default function ContentStrategy() {
@@ -92,6 +93,53 @@ export default function ContentStrategy() {
       toast.error('Failed to generate content ideas')
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const [generatingImage, setGeneratingImage] = useState<string | null>(null)
+
+  const handleGenerateImage = async (post: any, index: number) => {
+    const key = `${post.platform}-${index}`
+    setGeneratingImage(key)
+    try {
+      // Map platform string to ad platform
+      const platformMap: Record<string, AdPlatform> = {
+        'Instagram': 'instagram-feed',
+        'Instagram Feed': 'instagram-feed',
+        'Instagram Story': 'instagram-story',
+        'Instagram Reel': 'instagram-story',
+        'LinkedIn': 'linkedin',
+        'Twitter': 'twitter',
+        'Twitter/X': 'twitter',
+        'X': 'twitter',
+        'Pinterest': 'pinterest',
+        'Facebook': 'facebook-feed',
+      }
+      const adPlatform = platformMap[post.platform] || 'instagram-feed'
+
+      const blob = await generateAdvertisement({
+        template: {
+          id: `content-${index}`,
+          persona: 'family-health-manager',
+          type: 'feature-highlight',
+          headline: (post.caption || post.text || '').slice(0, 60),
+          subheadline: post.imageDescription || '',
+          bodyText: '',
+          cta: 'Learn More at wellnessprojectionlab.com',
+          visualHint: post.imageDescription || 'family health caregiver',
+          emotionalHook: 'peace of mind',
+          colors: { primary: '#2563eb', secondary: '#16a34a', accent: '#7c3aed' },
+        },
+        platform: adPlatform,
+      })
+
+      downloadAd(blob, `wpl-${post.platform?.toLowerCase().replace(/\s/g, '-')}-${index + 1}.png`)
+      toast.success(`Image downloaded for ${post.platform}`)
+    } catch (err) {
+      console.error('Image generation failed:', err)
+      toast.error('Failed to generate image')
+    } finally {
+      setGeneratingImage(null)
     }
   }
 
@@ -239,7 +287,12 @@ export default function ContentStrategy() {
             {/* YouTube Shorts */}
             {(ideas.shorts || ideas.videos) && (
               <div>
-                <h4 className="font-semibold text-foreground mb-3">YouTube {ideas.shorts ? 'Shorts' : 'Videos'}</h4>
+                <h4 className="font-semibold text-foreground mb-3">
+                  YouTube {ideas.shorts ? 'Shorts' : 'Videos'}
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    {ideas.shorts ? '9:16 • 1080x1920 • 30-40s' : '16:9 • 1920x1080 • 5-10min'}
+                  </span>
+                </h4>
                 <div className="space-y-3">
                   {(ideas.shorts || ideas.videos || []).map((item: any, i: number) => (
                     <div key={i} className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4">
@@ -247,6 +300,22 @@ export default function ContentStrategy() {
                       {item.hook && <div className="text-sm text-red-700 dark:text-red-300 mb-1">Hook: {item.hook}</div>}
                       <div className="text-sm text-muted-foreground">{item.script || item.outline}</div>
                       {item.cta && <div className="text-sm font-medium text-red-600 dark:text-red-400 mt-1">CTA: {item.cta}</div>}
+                      {item.hashtags && item.hashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {item.hashtags.map((tag: string, j: number) => (
+                            <span key={j} className="text-xs bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded">
+                              {tag.startsWith('#') ? tag : `#${tag}`}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {item.keywords && item.keywords.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {item.keywords.map((kw: string, j: number) => (
+                            <span key={j} className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">{kw}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -257,11 +326,51 @@ export default function ContentStrategy() {
             {ideas.posts && (
               <div>
                 <h4 className="font-semibold text-foreground mb-3">Social Media Posts</h4>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {ideas.posts.map((item: any, i: number) => (
                     <div key={i} className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                      <div className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">{item.platform}</div>
-                      <div className="text-sm text-foreground">{item.text}</div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">{item.platform}</span>
+                          {item.aspectRatio && (
+                            <span className="text-xs bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded">{item.aspectRatio}</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleGenerateImage(item, i)}
+                          disabled={generatingImage === `${item.platform}-${i}`}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-xs font-medium transition-colors"
+                        >
+                          {generatingImage === `${item.platform}-${i}` ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent" />
+                          ) : (
+                            <PhotoIcon className="h-3.5 w-3.5" />
+                          )}
+                          Generate Image
+                        </button>
+                      </div>
+                      <div className="text-sm text-foreground mb-2 whitespace-pre-line">{item.caption || item.text}</div>
+                      {item.imageDescription && (
+                        <div className="text-xs text-blue-600 dark:text-blue-400 mb-2 italic">Image: {item.imageDescription}</div>
+                      )}
+                      {item.hashtags && item.hashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {item.hashtags.map((tag: string, j: number) => (
+                            <span key={j} className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                              {tag.startsWith('#') ? tag : `#${tag}`}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {item.keywords && item.keywords.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {item.keywords.map((kw: string, j: number) => (
+                            <span key={j} className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">
+                              {kw}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -368,13 +477,44 @@ export default function ContentStrategy() {
             {ideas.ads && (
               <div>
                 <h4 className="font-semibold text-foreground mb-3">Paid Ad Copy</h4>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {ideas.ads.map((item: any, i: number) => (
                     <div key={i} className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                      <div className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">{item.platform}</div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase">{item.platform}</span>
+                          {item.aspectRatio && (
+                            <span className="text-xs bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded">{item.aspectRatio}</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleGenerateImage(item, i + 100)}
+                          disabled={generatingImage === `${item.platform}-${i + 100}`}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white rounded-lg text-xs font-medium transition-colors"
+                        >
+                          {generatingImage === `${item.platform}-${i + 100}` ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent" />
+                          ) : (
+                            <PhotoIcon className="h-3.5 w-3.5" />
+                          )}
+                          Generate Image
+                        </button>
+                      </div>
                       <div className="font-medium text-foreground mb-1">{item.headline}</div>
                       <div className="text-sm text-muted-foreground">{item.body}</div>
                       <div className="text-sm font-medium text-amber-600 dark:text-amber-400 mt-1">CTA: {item.cta}</div>
+                      {item.imageDescription && (
+                        <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 italic">Image: {item.imageDescription}</div>
+                      )}
+                      {item.hashtags && item.hashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {item.hashtags.map((tag: string, j: number) => (
+                            <span key={j} className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded">
+                              {tag.startsWith('#') ? tag : `#${tag}`}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

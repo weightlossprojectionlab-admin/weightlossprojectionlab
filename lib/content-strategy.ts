@@ -139,12 +139,40 @@ export function getStageProgress(userCount: number, stage: GrowthStage): number 
   return Math.min(100, Math.max(0, ((userCount - min) / range) * 100))
 }
 
+/**
+ * Platform specs for content generation — character limits, dimensions, best practices
+ */
+export const CONTENT_PLATFORM_SPECS = {
+  youtube_short: { maxDuration: '60s', idealDuration: '30-40s', aspectRatio: '9:16', dimensions: '1080x1920' },
+  youtube_long: { idealDuration: '5-10min', aspectRatio: '16:9', dimensions: '1920x1080' },
+  instagram_feed: { maxCaption: 2200, idealCaption: '150-200 chars', aspectRatio: '4:5', dimensions: '1080x1350', maxHashtags: 30 },
+  instagram_story: { maxText: '200 chars', aspectRatio: '9:16', dimensions: '1080x1920' },
+  instagram_reel: { maxDuration: '90s', idealDuration: '30-60s', aspectRatio: '9:16', dimensions: '1080x1920' },
+  linkedin: { maxPost: 3000, idealPost: '150-300 chars', aspectRatio: '1.91:1', dimensions: '1200x627', maxHashtags: 5 },
+  twitter: { maxPost: 280, aspectRatio: '16:9', dimensions: '1200x675', maxHashtags: 3 },
+  pinterest: { maxDescription: 500, aspectRatio: '2:3', dimensions: '1000x1500', maxHashtags: 20 },
+  facebook: { maxPost: 63206, idealPost: '40-80 chars', aspectRatio: '1:1', dimensions: '1200x1200' },
+  tiktok: { maxDuration: '60s', idealDuration: '15-30s', aspectRatio: '9:16', dimensions: '1080x1920' },
+}
+
 export function buildContentPrompt(stage: GrowthStage): string {
   const icpContext = `
 ICP: Family caregivers (sandwich generation, ages 30-55).
 Pain points: Scattered health records, missed medications, can't share medical info with spouse/sitter, managing health for kids + aging parents + pets.
-Product: Wellness Projection Lab — one app for the whole family's health (vitals, meds, meals, appointments, caregiver sharing).
+Product: Wellness Projection Lab (WPL) — one app for the whole family's health (vitals, meds, meals, appointments, caregiver sharing).
+Website: wellnessprojectionlab.com
 Tone: Empathetic, practical, not salesy. Speak to their overwhelm and offer relief.
+
+PLATFORM CONSTRAINTS (follow these strictly):
+- YouTube Shorts: 30-40 sec, 9:16 vertical, hook in first 2 sec
+- Instagram Feed: caption max 2200 chars, use 15-20 hashtags, 4:5 image
+- Instagram Reels: 30-60 sec, 9:16 vertical
+- LinkedIn: max 3000 chars, use 3-5 hashtags, 1.91:1 image
+- Twitter/X: max 280 chars, use 2-3 hashtags, 16:9 image
+- Pinterest: max 500 char description, use 10-15 hashtags, 2:3 vertical pin
+- TikTok: 15-30 sec, 9:16 vertical
+
+EVERY post must include: hashtags, keywords, suggested image description (for ad generator), and platform-specific formatting.
 `.trim()
 
   if (stage.id === 'stage1') {
@@ -153,12 +181,18 @@ Tone: Empathetic, practical, not salesy. Speak to their overwhelm and offer reli
 STAGE: Pre-launch, 0 real users. Goal is to start conversations and get first 10 signups.
 
 Generate:
-1. Five YouTube Short scripts (30-40 seconds each). Format: Hook (2 sec) → Pain point → Quick solution → CTA. Do NOT mention the product by name in the hook — lead with the pain.
-2. Five LinkedIn/Twitter post ideas that provide value to caregivers without selling anything. Each should be 2-3 sentences max.
-3. Three Loom outreach script templates for reaching out to caregiver community admins or influencers. Frame as "I built something and want feedback" not "buy my product."
-4. Three Reddit/Facebook community post templates that answer a common caregiver question and subtly mention you're building a tool to help.
+1. Five YouTube Short scripts (30-40 seconds each). Hook (2 sec) → Pain point → Quick solution → CTA. Do NOT mention the product by name in the hook.
+2. Five social media posts (mix of LinkedIn, Twitter, Instagram, Pinterest). Include full caption, hashtags, keywords, and a description of what the image should look like.
+3. Three Loom outreach script templates for reaching out to caregiver community admins/influencers.
+4. Three Reddit/Facebook community post templates.
 
-Return as JSON: { shorts: [{title, hook, script, cta}], posts: [{platform, text}], looms: [{subject, script}], community: [{title, body}] }`
+Return as JSON:
+{
+  "shorts": [{"title": "", "hook": "", "script": "", "cta": "", "hashtags": [], "keywords": []}],
+  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imageDescription": "", "aspectRatio": ""}],
+  "looms": [{"subject": "", "script": ""}],
+  "community": [{"title": "", "body": ""}]
+}`
   }
 
   if (stage.id === 'stage2') {
@@ -167,12 +201,18 @@ Return as JSON: { shorts: [{title, hook, script, cta}], posts: [{platform, text}
 STAGE: 1-10 early adopters. Goal is to collect feedback, get testimonials, and iterate messaging.
 
 Generate:
-1. Five YouTube Short scripts that address specific pain points you've heard from users. Format: "I asked 10 caregivers what frustrates them most..." storytelling angle.
-2. Five LinkedIn/Twitter posts sharing insights from user feedback (anonymized). Position yourself as learning in public.
-3. Three email templates: one for asking for testimonials, one for asking for feature feedback, one for referral invitation.
+1. Five YouTube Short scripts with storytelling angle ("I asked 10 caregivers what frustrates them most...").
+2. Five social media posts (mix of LinkedIn, Twitter, Instagram, Pinterest). Include full caption, hashtags, keywords, and image description.
+3. Three email templates: testimonial request, feature feedback, referral invitation.
 4. Three A/B test headline ideas for the homepage.
 
-Return as JSON: { shorts: [{title, hook, script, cta}], posts: [{platform, text}], emails: [{subject, body, purpose}], headlines: [{variant, reasoning}] }`
+Return as JSON:
+{
+  "shorts": [{"title": "", "hook": "", "script": "", "cta": "", "hashtags": [], "keywords": []}],
+  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imageDescription": "", "aspectRatio": ""}],
+  "emails": [{"subject": "", "body": "", "purpose": ""}],
+  "headlines": [{"variant": "", "reasoning": ""}]
+}`
   }
 
   if (stage.id === 'stage3') {
@@ -181,12 +221,18 @@ Return as JSON: { shorts: [{title, hook, script, cta}], posts: [{platform, text}
 STAGE: 11-50 users. Goal is to scale outreach, build case studies, run first paid ad.
 
 Generate:
-1. Five YouTube Short scripts featuring transformation stories ("Before WPL, Sarah used 4 apps...").
-2. Five LinkedIn/Twitter posts with data-driven insights from your user base.
+1. Five YouTube Short scripts featuring transformation stories.
+2. Five social media posts with data-driven insights. Include full caption, hashtags, keywords, and image description.
 3. Three case study outlines (problem → solution → results format).
-4. Three paid ad copy variants for Facebook/Instagram targeting caregivers.
+4. Three paid ad copy variants for Facebook/Instagram. Include headline, body, CTA, hashtags, and image description.
 
-Return as JSON: { shorts: [{title, hook, script, cta}], posts: [{platform, text}], caseStudies: [{title, problem, solution, results}], ads: [{platform, headline, body, cta}] }`
+Return as JSON:
+{
+  "shorts": [{"title": "", "hook": "", "script": "", "cta": "", "hashtags": [], "keywords": []}],
+  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imageDescription": "", "aspectRatio": ""}],
+  "caseStudies": [{"title": "", "problem": "", "solution": "", "results": ""}],
+  "ads": [{"platform": "", "headline": "", "body": "", "cta": "", "hashtags": [], "imageDescription": "", "aspectRatio": ""}]
+}`
   }
 
   // stage4
@@ -195,10 +241,16 @@ Return as JSON: { shorts: [{title, hook, script, cta}], posts: [{platform, text}
 STAGE: 50+ users, scaling to 100+. Goal is thought leadership, brand building, and automated growth.
 
 Generate:
-1. Five YouTube long-form video ideas (5-10 min each) on caregiver health management topics.
-2. Five LinkedIn/Twitter thought leadership posts positioning you as an expert in family health tech.
-3. Three blog post outlines for SEO (targeting "caregiver app", "family health management", "medication tracker for family").
-4. Three partnership outreach templates (for health bloggers, caregiver organizations, pediatrician offices).
+1. Five YouTube long-form video ideas (5-10 min each).
+2. Five social media posts (thought leadership). Include full caption, hashtags, keywords, and image description.
+3. Three blog post outlines for SEO.
+4. Three partnership outreach templates.
 
-Return as JSON: { videos: [{title, outline, duration}], posts: [{platform, text}], blogs: [{title, outline, targetKeyword}], partnerships: [{target, subject, pitch}] }`
+Return as JSON:
+{
+  "videos": [{"title": "", "outline": "", "duration": ""}],
+  "posts": [{"platform": "", "caption": "", "hashtags": [], "keywords": [], "imageDescription": "", "aspectRatio": ""}],
+  "blogs": [{"title": "", "outline": "", "targetKeyword": ""}],
+  "partnerships": [{"target": "", "subject": "", "pitch": ""}]
+}`
 }
