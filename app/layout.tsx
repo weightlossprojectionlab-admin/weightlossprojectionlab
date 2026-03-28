@@ -12,10 +12,10 @@ export const dynamicParams = true
 
 export const metadata: Metadata = {
   title: {
-    default: 'Wellness Projection Lab — AI-Powered Family Health Tracking',
+    default: 'Wellness Projection Lab — Family Health Tracking for Caregivers',
     template: '%s | Wellness Projection Lab',
   },
-  description: 'Track meals, vitals, medications, and weight for your entire family with AI-powered insights. From newborns to seniors — one platform for every life stage.',
+  description: 'Track vitals, medications, meals, and appointments for your entire family. From newborns to seniors to pets — one HIPAA-compliant platform. Share access with caregivers instantly.',
   manifest: '/manifest.json',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.wellnessprojectionlab.com'),
   alternates: {
@@ -25,8 +25,8 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     siteName: 'Wellness Projection Lab',
-    title: 'Wellness Projection Lab — AI-Powered Family Health Tracking',
-    description: 'Track meals, vitals, medications, and weight for your entire family with AI-powered insights. From newborns to seniors — one platform for every life stage.',
+    title: 'Wellness Projection Lab — Family Health Tracking for Caregivers',
+    description: 'Track vitals, medications, meals, and appointments for your entire family. From newborns to seniors to pets — one HIPAA-compliant platform.',
     images: [
       {
         url: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
@@ -38,23 +38,25 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Wellness Projection Lab — AI-Powered Family Health Tracking',
-    description: 'Track meals, vitals, medications, and weight for your entire family with AI-powered insights.',
+    title: 'Wellness Projection Lab — Family Health Tracking for Caregivers',
+    description: 'Track vitals, medications, meals, and appointments for your entire family. Share access with caregivers instantly.',
     images: ['/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
   },
   keywords: [
-    'health tracking',
-    'family health',
-    'meal tracking',
-    'weight loss',
-    'vitals monitoring',
-    'medication management',
-    'AI health',
+    'family health tracking',
     'caregiver app',
+    'medication tracker for family',
+    'family health management',
+    'vitals monitoring',
+    'senior care app',
+    'pet health tracking',
+    'health records app',
+    'meal tracking',
     'newborn tracking',
-    'senior care',
+    'family medical records',
+    'health dashboard',
+    'HIPAA compliant health app',
     'wellness app',
-    'health reports',
   ],
   icons: {
     icon: [
