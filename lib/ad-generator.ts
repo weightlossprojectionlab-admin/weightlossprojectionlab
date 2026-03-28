@@ -178,13 +178,13 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
       drawGradientBackground(ctx, width, height, template.colors)
     }
 
-    // Research-backed font sizes: headline ~6.5% of width, body ~3%, CTA ~4%
-    // Min 24px at 1080px canvas. Bold 700+ for headlines.
+    // Research-backed font sizes. For vertical: scale from width. For horizontal: scale from height.
     const baseFontSize = Math.min(width, height) / 20
-    const headlineFontSize = Math.max(24, width * 0.055) // ~60px at 1080w
-    const subheadlineFontSize = Math.max(20, width * 0.030)
-    const bodyFontSize = Math.max(18, width * 0.025)
-    const ctaFontSize = Math.max(20, width * 0.035)
+    const sizeRef = isVertical ? width : height // Horizontal images are short — scale from height
+    const headlineFontSize = Math.max(24, sizeRef * (isVertical ? 0.055 : 0.075))
+    const subheadlineFontSize = Math.max(18, sizeRef * 0.035)
+    const bodyFontSize = Math.max(16, sizeRef * 0.028)
+    const ctaFontSize = Math.max(16, sizeRef * (isVertical ? 0.035 : 0.04))
     const pricingFontSize = baseFontSize * 1.5
 
     // 10% safe zone inset on all sides (universal best practice)
@@ -304,8 +304,8 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
         }
       }
 
-      // For horizontal: vertically center text in the lower 50% of the image
-      currentY = height * 0.45
+      // For horizontal: text in lower 35% — let the image dominate
+      currentY = height * 0.58
 
       // Headline
       ctx.fillStyle = 'white'
