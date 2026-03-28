@@ -14,6 +14,8 @@ import toast from 'react-hot-toast'
 export default function ContentStrategy() {
   const [userCount, setUserCount] = useState<number>(0)
   const [loadingCount, setLoadingCount] = useState(true)
+  const [totalAccounts, setTotalAccounts] = useState(0)
+  const [testAccountCount, setTestAccountCount] = useState(10) // default: all current accounts are test
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({})
   const [loadingChecklist, setLoadingChecklist] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -32,8 +34,12 @@ export default function ContentStrategy() {
         })
         if (res.ok) {
           const data = await res.json()
-          // Subtract test accounts (roughly 10)
-          setUserCount(Math.max(0, (data.count || 0) - 10))
+          const total = data.count || 0
+          setTotalAccounts(total)
+          // Load saved test account count from localStorage
+          const savedTestCount = parseInt(localStorage.getItem('wpl_test_account_count') || '0', 10)
+          if (savedTestCount > 0) setTestAccountCount(savedTestCount)
+          setUserCount(Math.max(0, total - (savedTestCount || testAccountCount)))
         }
       } catch {
         // ignore
@@ -273,6 +279,23 @@ export default function ContentStrategy() {
           <div className="text-right">
             <div className="text-3xl font-bold text-foreground">{userCount}</div>
             <div className="text-sm text-muted-foreground">real users</div>
+            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+              <span>{totalAccounts} total</span>
+              <span>-</span>
+              <input
+                type="number"
+                value={testAccountCount}
+                onChange={(e) => {
+                  const val = Math.max(0, parseInt(e.target.value) || 0)
+                  setTestAccountCount(val)
+                  setUserCount(Math.max(0, totalAccounts - val))
+                  localStorage.setItem('wpl_test_account_count', String(val))
+                }}
+                className="w-12 px-1 py-0.5 border border-border rounded text-center text-xs bg-background"
+                min={0}
+              />
+              <span>test</span>
+            </div>
           </div>
         </div>
 
