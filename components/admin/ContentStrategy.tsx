@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { db, auth } from '@/lib/firebase'
 import { getAdminAuthToken } from '@/lib/admin/api'
 import { GROWTH_STAGES, getCurrentStage, getStageProgress, type GrowthStage } from '@/lib/content-strategy'
 import { SparklesIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
@@ -41,33 +39,25 @@ export default function ContentStrategy() {
     loadCount()
   }, [])
 
-  // Load checklist progress from Firestore
+  // Load checklist progress from localStorage
   useEffect(() => {
-    const loadProgress = async () => {
-      try {
-        const docRef = doc(db, 'admin', 'marketing_progress')
-        const snap = await getDoc(docRef)
-        if (snap.exists()) {
-          setCheckedItems(snap.data() || {})
-        }
-      } catch {
-        // ignore
-      } finally {
-        setLoadingChecklist(false)
-      }
+    try {
+      const saved = localStorage.getItem('wpl_marketing_checklist')
+      if (saved) setCheckedItems(JSON.parse(saved))
+    } catch {
+      // ignore
+    } finally {
+      setLoadingChecklist(false)
     }
-    loadProgress()
   }, [])
 
-  const toggleCheckItem = async (itemId: string) => {
+  const toggleCheckItem = (itemId: string) => {
     const updated = { ...checkedItems, [itemId]: !checkedItems[itemId] }
     setCheckedItems(updated)
-
     try {
-      const docRef = doc(db, 'admin', 'marketing_progress')
-      await setDoc(docRef, updated, { merge: true })
+      localStorage.setItem('wpl_marketing_checklist', JSON.stringify(updated))
     } catch {
-      toast.error('Failed to save progress')
+      // ignore
     }
   }
 
