@@ -5,10 +5,9 @@ import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { getAdminAuthToken } from '@/lib/admin/api'
 import { GROWTH_STAGES, getCurrentStage, getStageProgress, CONTENT_PLATFORM_SPECS, type GrowthStage } from '@/lib/content-strategy'
-import { generateAdvertisement, downloadAd, AD_PLATFORM_SPECS, type AdPlatform } from '@/lib/ad-generator'
 import { getMediaLibrary, findMatchingMedia, type MediaItem } from '@/lib/media-library'
 import MediaLibrary from '@/components/admin/MediaLibrary'
-import { SparklesIcon, CheckCircleIcon, PhotoIcon, XMarkIcon as XIcon } from '@heroicons/react/24/outline'
+import { SparklesIcon, CheckCircleIcon, PhotoIcon, XMarkIcon as XIcon, ClipboardDocumentIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
 export default function ContentStrategy() {
@@ -109,120 +108,16 @@ export default function ContentStrategy() {
   }
 
   const [selectedImages, setSelectedImages] = useState<Record<string, MediaItem>>({})
-  const [composedPreviews, setComposedPreviews] = useState<Record<string, { url: string; blob: Blob }>>({})
-  const [composing, setComposing] = useState<string | null>(null)
   const [showMediaPicker, setShowMediaPicker] = useState<string | null>(null)
-  const [pickerPostData, setPickerPostData] = useState<any>(null)
   const [mediaLibraryItems, setMediaLibraryItems] = useState<MediaItem[]>([])
 
-  const platformMap: Record<string, AdPlatform> = {
-    'Instagram': 'instagram-feed',
-    'Instagram Feed': 'instagram-feed',
-    'Instagram Story': 'instagram-story',
-    'Instagram Reel': 'instagram-story',
-    'LinkedIn': 'linkedin',
-    'Twitter': 'twitter',
-    'Twitter/X': 'twitter',
-    'X': 'twitter',
-    'Pinterest': 'pinterest',
-    'Facebook': 'facebook-feed',
-  }
-
-  // Load media library for suggestions
   useEffect(() => {
     getMediaLibrary().then(setMediaLibraryItems).catch(() => {})
   }, [])
 
-  const handleSelectImage = async (key: string, item: MediaItem, post?: any) => {
+  const handleSelectImage = (key: string, item: MediaItem) => {
     setSelectedImages(prev => ({ ...prev, [key]: item }))
     setShowMediaPicker(null)
-
-    // Auto-compose the preview with text overlay
-    if (post) {
-      await composeImage(key, item, post)
-    }
-  }
-
-  const composeImage = async (key: string, mediaItem: MediaItem, post: any) => {
-    setComposing(key)
-    try {
-      const adPlatform = platformMap[post.platform] || 'instagram-feed'
-      // Extract headline + subtitle for editorial layout
-      const fullText = post.caption || post.text || post.headline || ''
-      // Split into two parts: main hook (first clause) and subtitle (second clause)
-      const clauses = fullText.split(/[.!?\u2013\u2014]\s?/)
-      const firstClause = (clauses[0] || '').split(/,\s/)[0]
-      const headline = firstClause.length > 40 ? firstClause.slice(0, 37) + '...' : firstClause
-      // Second clause becomes the subtitle (like "and Why That's Okay")
-      const secondClause = clauses[1]?.trim().split(/[.!?]/)[0]?.trim() || ''
-      const subtitle = secondClause.length > 50 ? '' : secondClause
-
-      // Convert Firebase Storage URL to data URL to avoid CORS issues on canvas
-      let bgDataUrl: string | undefined
-      try {
-        // Use no-cors proxy approach: create an img, draw to temp canvas, extract data URL
-        bgDataUrl = await new Promise<string>((resolve, reject) => {
-          const img = new Image()
-          img.crossOrigin = 'anonymous'
-          img.onload = () => {
-            const tempCanvas = document.createElement('canvas')
-            tempCanvas.width = img.naturalWidth
-            tempCanvas.height = img.naturalHeight
-            const tempCtx = tempCanvas.getContext('2d')
-            if (!tempCtx) { reject('No canvas context'); return }
-            tempCtx.drawImage(img, 0, 0)
-            resolve(tempCanvas.toDataURL('image/png'))
-          }
-          img.onerror = () => {
-            console.warn('crossOrigin load failed, trying fetch fallback')
-            // Fallback: fetch as blob
-            fetch(mediaItem.url)
-              .then(r => r.blob())
-              .then(blob => {
-                const reader = new FileReader()
-                reader.onloadend = () => resolve(reader.result as string)
-                reader.readAsDataURL(blob)
-              })
-              .catch(reject)
-          }
-          img.src = mediaItem.url
-        })
-      } catch (imgErr) {
-        console.warn('Failed to load background image:', imgErr)
-      }
-
-      const blob = await generateAdvertisement({
-        template: {
-          id: `content-${key}`,
-          persona: 'family-health-manager',
-          type: 'feature-highlight',
-          headline,
-          subheadline: subtitle,
-          bodyText: '',
-          cta: '',
-          visualHint: '',
-          emotionalHook: '',
-          colors: { primary: '#2563eb', secondary: '#16a34a', accent: '#7c3aed' },
-        },
-        platform: adPlatform,
-        backgroundImage: bgDataUrl,
-      })
-
-      const url = URL.createObjectURL(blob)
-      setComposedPreviews(prev => ({ ...prev, [key]: { url, blob } }))
-    } catch (err) {
-      console.error('Compose failed:', err)
-      toast.error('Failed to compose image')
-    } finally {
-      setComposing(null)
-    }
-  }
-
-  const handleDownloadComposed = (key: string, platform: string) => {
-    const preview = composedPreviews[key]
-    if (!preview) return
-    downloadAd(preview.blob, `wpl-${platform.toLowerCase().replace(/[\s/]/g, '-')}-${Date.now()}.png`)
-    toast.success('Image downloaded')
   }
 
   const handleRemoveImage = (key: string) => {
@@ -231,12 +126,19 @@ export default function ContentStrategy() {
       delete updated[key]
       return updated
     })
-    setComposedPreviews(prev => {
-      const updated = { ...prev }
-      if (updated[key]?.url) URL.revokeObjectURL(updated[key].url)
-      delete updated[key]
-      return updated
-    })
+  }
+
+  const handleDownloadImage = (item: MediaItem) => {
+    const a = document.createElement('a')
+    a.href = item.url
+    a.download = item.filename || 'wpl-image.jpg'
+    a.target = '_blank'
+    a.click()
+    toast.success('Image download started')
+  }
+
+  const handleCopyText = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => toast.success('Copied to clipboard')).catch(() => toast.error('Failed to copy'))
   }
 
   const stageColor = (s: GrowthStage) => {
@@ -459,35 +361,20 @@ export default function ContentStrategy() {
                       </div>
 
                       {/* Composed Image Preview */}
-                      {composing === `post-${i}` && (
-                        <div className="mb-3 flex items-center justify-center p-8 bg-muted rounded-lg">
-                          <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
-                          <span className="ml-2 text-sm text-muted-foreground">Composing image...</span>
-                        </div>
-                      )}
-                      {composedPreviews[`post-${i}`] && (
+                      {/* Selected Image — raw, no text overlay */}
+                      {selectedImages[`post-${i}`] && (
                         <div className="mb-3 border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden">
                           <img
-                            src={composedPreviews[`post-${i}`].url}
-                            alt={`Composed for ${item.platform}`}
-                            className="w-full max-h-80 object-contain bg-gray-100 dark:bg-gray-900"
+                            src={selectedImages[`post-${i}`].url}
+                            alt="Selected media"
+                            className="w-full max-h-64 object-cover"
                           />
-                          <div className="flex items-center justify-between p-2 bg-blue-100 dark:bg-blue-900/30">
-                            <span className="text-xs text-blue-700 dark:text-blue-300">
-                              {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.name} — {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.width}x{AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.height}
-                            </span>
+                          <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20">
+                            <span className="text-xs text-muted-foreground">{selectedImages[`post-${i}`].tags.join(', ')}</span>
                             <div className="flex gap-2">
-                              <button
-                                onClick={() => handleRemoveImage(`post-${i}`)}
-                                className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-foreground rounded text-xs font-medium hover:bg-gray-300"
-                              >
-                                Remove
-                              </button>
-                              <button
-                                onClick={() => handleDownloadComposed(`post-${i}`, item.platform)}
-                                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium"
-                              >
-                                Download
+                              <button onClick={() => handleRemoveImage(`post-${i}`)} className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground">Remove</button>
+                              <button onClick={() => handleDownloadImage(selectedImages[`post-${i}`])} className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium">
+                                <ArrowDownTrayIcon className="h-3 w-3" /> Download
                               </button>
                             </div>
                           </div>
@@ -504,7 +391,7 @@ export default function ContentStrategy() {
                                 key={media.id}
                                 src={media.url}
                                 alt={media.filename}
-                                onClick={() => handleSelectImage(`post-${i}`, media, item)}
+                                onClick={() => handleSelectImage(`post-${i}`, media)}
                                 className="h-16 w-16 object-cover rounded-lg cursor-pointer border-2 border-transparent hover:border-primary transition-colors flex-shrink-0"
                               />
                             ))}
@@ -512,9 +399,18 @@ export default function ContentStrategy() {
                         </div>
                       )}
 
-                      <div className="text-sm text-foreground mb-2 whitespace-pre-line">{item.caption || item.text}</div>
+                      {/* Caption — copyable */}
+                      <div className="relative group/caption">
+                        <div className="text-sm text-foreground mb-2 whitespace-pre-line">{item.caption || item.text}</div>
+                        <button
+                          onClick={() => handleCopyText((item.caption || item.text || '') + '\n\n' + (item.hashtags || []).map((t: string) => t.startsWith('#') ? t : `#${t}`).join(' '))}
+                          className="absolute top-0 right-0 opacity-0 group-hover/caption:opacity-100 flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded text-xs transition-opacity"
+                        >
+                          <ClipboardDocumentIcon className="h-3 w-3" /> Copy All
+                        </button>
+                      </div>
                       {item.imageDescription && (
-                        <div className="text-xs text-blue-600 dark:text-blue-400 mb-2 italic">Image: {item.imageDescription}</div>
+                        <div className="text-xs text-blue-600 dark:text-blue-400 mb-2 italic">Image idea: {item.imageDescription}</div>
                       )}
                       {item.hashtags && item.hashtags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-2">
@@ -651,7 +547,7 @@ export default function ContentStrategy() {
                           )}
                         </div>
                         <button
-                          onClick={() => { setShowMediaPicker(`ad-${i}`); setPickerPostData(item) }}
+                          onClick={() => setShowMediaPicker(`ad-${i}`)}
                           className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium transition-colors"
                         >
                           <PhotoIcon className="h-3.5 w-3.5" />
@@ -659,47 +555,36 @@ export default function ContentStrategy() {
                         </button>
                       </div>
 
-                      {/* Composed Ad Image Preview */}
-                      {composing === `ad-${i}` && (
-                        <div className="mb-3 flex items-center justify-center p-8 bg-muted rounded-lg">
-                          <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
-                          <span className="ml-2 text-sm text-muted-foreground">Composing image...</span>
-                        </div>
-                      )}
-                      {composedPreviews[`ad-${i}`] && (
+                      {/* Selected Ad Image — raw */}
+                      {selectedImages[`ad-${i}`] && (
                         <div className="mb-3 border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden">
-                          <img
-                            src={composedPreviews[`ad-${i}`].url}
-                            alt={`Ad preview for ${item.platform}`}
-                            className="w-full max-h-80 object-contain bg-gray-100 dark:bg-gray-900"
-                          />
-                          <div className="flex items-center justify-between p-2 bg-amber-100 dark:bg-amber-900/30">
-                            <span className="text-xs text-amber-700 dark:text-amber-300">
-                              {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.name} — {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.width}x{AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.height}
-                            </span>
+                          <img src={selectedImages[`ad-${i}`].url} alt="Selected media" className="w-full max-h-64 object-cover" />
+                          <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-900/20">
+                            <span className="text-xs text-muted-foreground">{selectedImages[`ad-${i}`].tags.join(', ')}</span>
                             <div className="flex gap-2">
-                              <button
-                                onClick={() => handleRemoveImage(`ad-${i}`)}
-                                className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-foreground rounded text-xs font-medium hover:bg-gray-300"
-                              >
-                                Remove
-                              </button>
-                              <button
-                                onClick={() => handleDownloadComposed(`ad-${i}`, item.platform)}
-                                className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-medium"
-                              >
-                                Download
+                              <button onClick={() => handleRemoveImage(`ad-${i}`)} className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground">Remove</button>
+                              <button onClick={() => handleDownloadImage(selectedImages[`ad-${i}`])} className="flex items-center gap-1 px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-medium">
+                                <ArrowDownTrayIcon className="h-3 w-3" /> Download
                               </button>
                             </div>
                           </div>
                         </div>
                       )}
 
-                      <div className="font-medium text-foreground mb-1">{item.headline}</div>
-                      <div className="text-sm text-muted-foreground">{item.body}</div>
-                      <div className="text-sm font-medium text-amber-600 dark:text-amber-400 mt-1">CTA: {item.cta}</div>
+                      {/* Ad copy — copyable */}
+                      <div className="relative group/adcopy">
+                        <div className="font-medium text-foreground mb-1">{item.headline}</div>
+                        <div className="text-sm text-muted-foreground">{item.body}</div>
+                        <div className="text-sm font-medium text-amber-600 dark:text-amber-400 mt-1">CTA: {item.cta}</div>
+                        <button
+                          onClick={() => handleCopyText(`${item.headline}\n\n${item.body}\n\n${item.cta}\n\n${(item.hashtags || []).map((t: string) => t.startsWith('#') ? t : `#${t}`).join(' ')}`)}
+                          className="absolute top-0 right-0 opacity-0 group-hover/adcopy:opacity-100 flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded text-xs transition-opacity"
+                        >
+                          <ClipboardDocumentIcon className="h-3 w-3" /> Copy All
+                        </button>
+                      </div>
                       {item.imageDescription && (
-                        <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 italic">Image: {item.imageDescription}</div>
+                        <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 italic">Image idea: {item.imageDescription}</div>
                       )}
                       {item.hashtags && item.hashtags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
@@ -793,7 +678,7 @@ export default function ContentStrategy() {
             </div>
             <MediaLibrary
               selectionMode
-              onSelect={(item) => handleSelectImage(showMediaPicker, item, pickerPostData)}
+              onSelect={(item) => handleSelectImage(showMediaPicker, item)}
             />
           </div>
         </div>
