@@ -39,6 +39,12 @@ const MEDIA_TAGS = [
   'food',
   'exercise',
   'general',
+  // Aspect ratios — for platform filtering
+  '1:1',
+  '9:16',
+  '16:9',
+  '4:5',
+  '2:3',
 ] as const
 
 export type MediaTag = typeof MEDIA_TAGS[number]
