@@ -161,12 +161,12 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
 
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight)
 
-        // Bottom-only gradient — image is fully visible in upper 65%, dark strip at bottom for text
+        // Subtle top gradient for headline readability — no heavy overlay
         const overlayGradient = ctx.createLinearGradient(0, 0, 0, height)
-        overlayGradient.addColorStop(0, 'rgba(0, 0, 0, 0)')       // Top: fully transparent
-        overlayGradient.addColorStop(0.55, 'rgba(0, 0, 0, 0)')    // Upper 55%: fully transparent
-        overlayGradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.4)')   // Transition zone
-        overlayGradient.addColorStop(1, 'rgba(0, 0, 0, 0.8)')     // Bottom: strong for text
+        overlayGradient.addColorStop(0, 'rgba(0, 0, 0, 0.45)')    // Top: semi-dark for text
+        overlayGradient.addColorStop(0.35, 'rgba(0, 0, 0, 0.1)')  // Fade out quickly
+        overlayGradient.addColorStop(0.5, 'rgba(0, 0, 0, 0)')     // Middle: fully transparent
+        overlayGradient.addColorStop(1, 'rgba(0, 0, 0, 0)')       // Bottom: fully transparent
         ctx.fillStyle = overlayGradient
         ctx.fillRect(0, 0, width, height)
       } catch (error) {
@@ -196,173 +196,81 @@ export async function generateAdvertisement(options: AdGenerationOptions): Promi
     let currentY = padding
 
     if (isVertical) {
-      // Vertical layout (9:16, 4:5, 2:3)
-      // Start text at 68% down — upper 2/3 is pure image
-      currentY = height * 0.68
+      // Editorial style: headline at TOP, centered. Image is the hero below.
+      // Like Pinterest/Instagram editorial posts.
 
-      // Logo (if provided)
-      if (logoUrl) {
-        try {
-          const logo = await loadImage(logoUrl)
-          const logoHeight = height * 0.08
-          const logoWidth = (logo.width / logo.height) * logoHeight
-          ctx.drawImage(logo, padding, currentY, logoWidth, logoHeight)
-          currentY += logoHeight + padding
-        } catch (error) {
-          logger.warn('Failed to load logo', { error })
-        }
-      }
+      currentY = safeZone * 1.5
 
-      // Headline — bold, white, text-shadow for readability
+      // Headline — centered, bold, white with text shadow
       ctx.fillStyle = 'white'
       ctx.font = `800 ${headlineFontSize}px system-ui, -apple-system, sans-serif`
-      ctx.textAlign = 'left'
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
-      ctx.shadowBlur = 8
-      ctx.shadowOffsetX = 2
-      ctx.shadowOffsetY = 2
-      const headlineLines = wrapText(ctx, template.headline, contentWidth)
-      headlineLines.forEach((line, i) => {
-        ctx.fillText(line, safeZone, currentY + (i * headlineFontSize * 1.15))
-      })
-      currentY += (headlineLines.length * headlineFontSize * 1.15) + safeZone * 0.3
-
-      // Subheadline — only show if provided and short
-      ctx.shadowBlur = 4
-      ctx.shadowOffsetX = 1
-      ctx.shadowOffsetY = 1
-      if (template.subheadline && template.subheadline.length < 60) {
-        ctx.font = `600 ${subheadlineFontSize}px system-ui, -apple-system, sans-serif`
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
-        const subheadlineLines = wrapText(ctx, template.subheadline, contentWidth)
-        subheadlineLines.forEach((line, i) => {
-          ctx.fillText(line, safeZone, currentY + (i * subheadlineFontSize * 1.3))
-        })
-        currentY += (subheadlineLines.length * subheadlineFontSize * 1.3) + safeZone * 0.5
-      }
-
-      // Body text — skip if empty (keep image clean)
-      ctx.font = `500 ${bodyFontSize}px system-ui, -apple-system, sans-serif`
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
-      const bodyLines = template.bodyText ? wrapText(ctx, template.bodyText, contentWidth) : []
-      bodyLines.forEach((line, i) => {
-        ctx.fillText(line, safeZone, currentY + (i * bodyFontSize * 1.5))
-      })
-      if (bodyLines.length > 0) {
-        currentY += (bodyLines.length * bodyFontSize * 1.5) + safeZone * 0.5
-      }
-
-      // Pricing (if shown)
-      if (showPricing && pricingText) {
-        ctx.font = `bold ${pricingFontSize}px system-ui, -apple-system, sans-serif`
-        ctx.fillStyle = template.colors.accent
-        ctx.fillText(pricingText, safeZone, currentY)
-        currentY += pricingFontSize + safeZone * 0.3
-      }
-
-      // CTA — compact pill button at bottom (not full-width)
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+      ctx.textAlign = 'center'
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
       ctx.shadowBlur = 6
-      const ctaY = height - safeZone * 2.5
-      ctx.font = `700 ${ctaFontSize}px system-ui, -apple-system, sans-serif`
-      const ctaTextWidth = ctx.measureText(template.cta).width
-      const ctaPadH = ctaFontSize * 0.8
-      const ctaPadV = ctaFontSize * 0.4
-      const ctaBtnWidth = ctaTextWidth + ctaPadH * 2
-      const ctaBtnHeight = ctaFontSize + ctaPadV * 2
-      const ctaX = safeZone
+      ctx.shadowOffsetX = 1
+      ctx.shadowOffsetY = 2
 
-      // Rounded pill button
-      ctx.fillStyle = template.colors.accent
-      roundRect(ctx, ctaX, ctaY, ctaBtnWidth, ctaBtnHeight, ctaBtnHeight / 2)
-      ctx.fill()
+      // Wrap headline with quotation marks for editorial feel
+      const headlineText = template.headline.startsWith('"') ? template.headline : `"${template.headline}"`
+      const headlineLines = wrapText(ctx, headlineText, contentWidth * 0.85)
+      headlineLines.forEach((line, i) => {
+        ctx.fillText(line, width / 2, currentY + (i * headlineFontSize * 1.2))
+      })
+      currentY += (headlineLines.length * headlineFontSize * 1.2) + safeZone * 0.4
 
-      // CTA text
-      ctx.fillStyle = 'white'
+      // Subheadline — smaller, centered, below headline
+      if (template.subheadline && template.subheadline.length < 60) {
+        ctx.font = `500 ${subheadlineFontSize}px system-ui, -apple-system, sans-serif`
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+        ctx.shadowBlur = 4
+        const subLines = wrapText(ctx, template.subheadline, contentWidth * 0.8)
+        subLines.forEach((line, i) => {
+          ctx.fillText(line, width / 2, currentY + (i * subheadlineFontSize * 1.3))
+        })
+      }
+
+      // Reset — no CTA on image (goes in caption instead)
       ctx.shadowColor = 'transparent'
       ctx.shadowBlur = 0
       ctx.textAlign = 'left'
-      ctx.fillText(template.cta, ctaX + ctaPadH, ctaY + ctaPadV + ctaFontSize * 0.82)
-
-      // Reset shadow
-      ctx.shadowColor = 'transparent'
-      ctx.shadowBlur = 0
 
     } else {
       // Horizontal or square layout (LinkedIn 1.91:1, Twitter 16:9, Facebook 1:1)
-      // Full-width image with text centered vertically in lower half
+      // Editorial style: headline centered, upper portion
 
-      // Logo
-      if (logoUrl) {
-        try {
-          const logo = await loadImage(logoUrl)
-          const logoHeight = height * 0.1
-          const logoWidth = (logo.width / logo.height) * logoHeight
-          ctx.drawImage(logo, safeZone, safeZone, logoWidth, logoHeight)
-        } catch (error) {
-          logger.warn('Failed to load logo', { error })
-        }
-      }
+      currentY = safeZone * 1.5
 
-      // For horizontal: text in lower 30% — let the image dominate
-      currentY = height * 0.65
-
-      // Headline
+      // Headline — centered, bold
       ctx.fillStyle = 'white'
       ctx.font = `800 ${headlineFontSize}px system-ui, -apple-system, sans-serif`
-      ctx.textAlign = 'left'
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
-      ctx.shadowBlur = 8
-      ctx.shadowOffsetX = 2
-      ctx.shadowOffsetY = 2
-      const headlineLines = wrapText(ctx, template.headline, contentWidth * 0.7)
-      headlineLines.forEach((line, i) => {
-        ctx.fillText(line, safeZone, currentY + (i * headlineFontSize * 1.15))
-      })
-      currentY += (headlineLines.length * headlineFontSize * 1.15) + safeZone * 0.3
-
-      // Subheadline — only if short
-      ctx.shadowBlur = 4
-      ctx.shadowOffsetX = 1
-      ctx.shadowOffsetY = 1
-      if (template.subheadline && template.subheadline.length < 60) {
-        ctx.font = `600 ${subheadlineFontSize}px system-ui, -apple-system, sans-serif`
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
-        const subheadlineLines = wrapText(ctx, template.subheadline, contentWidth * 0.7)
-        subheadlineLines.forEach((line, i) => {
-          ctx.fillText(line, safeZone, currentY + (i * subheadlineFontSize * 1.3))
-        })
-        currentY += (subheadlineLines.length * subheadlineFontSize * 1.3) + safeZone * 0.3
-      }
-
-      // Pricing
-      if (showPricing && pricingText) {
-        ctx.font = `bold ${pricingFontSize}px system-ui, -apple-system, sans-serif`
-        ctx.fillStyle = template.colors.accent
-        ctx.fillText(pricingText, safeZone, currentY)
-        currentY += pricingFontSize + safeZone * 0.3
-      }
-
-      // CTA — compact pill button at bottom-left
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+      ctx.textAlign = 'center'
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
       ctx.shadowBlur = 6
-      const ctaY = height - safeZone * 2
-      ctx.font = `700 ${ctaFontSize}px system-ui, -apple-system, sans-serif`
-      const ctaTextW = ctx.measureText(template.cta).width
-      const ctaPH = ctaFontSize * 0.8
-      const ctaPV = ctaFontSize * 0.4
-      const ctaBW = ctaTextW + ctaPH * 2
-      const ctaBH = ctaFontSize + ctaPV * 2
+      ctx.shadowOffsetX = 1
+      ctx.shadowOffsetY = 2
 
-      ctx.fillStyle = template.colors.accent
-      roundRect(ctx, safeZone, ctaY, ctaBW, ctaBH, ctaBH / 2)
-      ctx.fill()
+      const headlineText = template.headline.startsWith('"') ? template.headline : `"${template.headline}"`
+      const headlineLines = wrapText(ctx, headlineText, contentWidth * 0.75)
+      headlineLines.forEach((line, i) => {
+        ctx.fillText(line, width / 2, currentY + (i * headlineFontSize * 1.2))
+      })
+      currentY += (headlineLines.length * headlineFontSize * 1.2) + safeZone * 0.3
 
-      ctx.fillStyle = 'white'
+      // Subheadline
+      if (template.subheadline && template.subheadline.length < 60) {
+        ctx.font = `500 ${subheadlineFontSize}px system-ui, -apple-system, sans-serif`
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+        ctx.shadowBlur = 4
+        const subLines = wrapText(ctx, template.subheadline, contentWidth * 0.7)
+        subLines.forEach((line, i) => {
+          ctx.fillText(line, width / 2, currentY + (i * subheadlineFontSize * 1.3))
+        })
+      }
+
+      // No CTA on image — goes in caption
       ctx.shadowColor = 'transparent'
       ctx.shadowBlur = 0
       ctx.textAlign = 'left'
-      ctx.fillText(template.cta, safeZone + ctaPH, ctaY + ctaPV + ctaFontSize * 0.82)
     }
 
     // Convert to blob
