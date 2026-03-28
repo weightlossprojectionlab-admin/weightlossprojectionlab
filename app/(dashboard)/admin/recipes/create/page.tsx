@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger'
 import { uploadRecipeImages } from '@/lib/recipe-upload'
 import RecipeForm, { RecipeFormData } from '@/components/admin/RecipeForm'
 import { clearRecipeCache } from '@/hooks/useRecipes'
-import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
@@ -23,8 +23,76 @@ export default function CreateRecipePage() {
   // URL Import state
   const [importUrl, setImportUrl] = useState('')
   const [importing, setImporting] = useState(false)
-  const [importedData, setImportedData] = useState<Partial<RecipeFormData> & { existingImageUrls?: string[] } | undefined>(undefined)
+  const [importedData, setImportedData] = useState<Partial<RecipeFormData> & { existingImageUrls?: string[]; aiNutrition?: { calories: number; protein: number; carbs: number; fat: number; fiber: number } } | undefined>(undefined)
   const [importedSource, setImportedSource] = useState<string | undefined>(undefined)
+
+  // AI Generate state
+  const [aiRecipeName, setAiRecipeName] = useState('')
+  const [generating, setGenerating] = useState(false)
+
+  const handleAIGenerate = async () => {
+    const name = aiRecipeName.trim()
+    if (!name) {
+      toast.error('Enter a recipe name')
+      return
+    }
+
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/recipes/generate-steps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipe: {
+            name,
+            description: '',
+            mealType: 'lunch',
+            prepTime: 30,
+            ingredients: [],
+            dietaryTags: [],
+            servingSize: 1,
+          }
+        })
+      })
+
+      if (!res.ok) throw new Error('Failed to generate recipe')
+      const data = await res.json()
+
+      const formData: Partial<RecipeFormData> & { existingImageUrls?: string[]; aiNutrition?: { calories: number; protein: number; carbs: number; fat: number; fiber: number } } = {
+        recipeName: name,
+        description: data.description || '',
+        mealType: data.suggestedMealTypes?.[0] || 'lunch',
+        prepTime: 30,
+        servingSize: 1,
+        dietaryTags: data.suggestedDietaryTags || [],
+        ingredients: (data.suggestedIngredients || []).map((text: string) => ({
+          ingredientText: text,
+          quantity: 1,
+          unit: 'serving',
+        })),
+        recipeSteps: data.recipeSteps || [''],
+        cookingTips: data.cookingTips || [],
+        ...(data.nutrition ? {
+          aiNutrition: {
+            calories: data.nutrition.calories,
+            protein: data.nutrition.protein,
+            carbs: data.nutrition.carbs,
+            fat: data.nutrition.fat,
+            fiber: data.nutrition.fiber,
+          }
+        } : {}),
+      }
+
+      setImportedData(formData)
+      setImportedSource(undefined)
+      toast.success(`Recipe generated: ${name}`)
+    } catch (err) {
+      logger.error('AI generate error:', err as Error)
+      toast.error(err instanceof Error ? err.message : 'Failed to generate recipe')
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   const handleImport = async () => {
     const cleanUrl = importUrl.trim()
@@ -62,7 +130,7 @@ export default function CreateRecipePage() {
         : recipe.category === 'snack' ? 'snack'
         : 'lunch'
 
-      const formData: Partial<RecipeFormData> & { existingImageUrls?: string[] } = {
+      const formData: Partial<RecipeFormData> & { existingImageUrls?: string[]; aiNutrition?: { calories: number; protein: number; carbs: number; fat: number; fiber: number } } = {
         recipeName: recipe.name || '',
         description: recipe.description || '',
         mealType,
@@ -105,7 +173,7 @@ export default function CreateRecipePage() {
       const token = await getAdminAuthToken()
       const csrfToken = getCSRFToken()
 
-      // Calculate nutrition from ingredients
+      // Calculate nutrition from ingredients (product database)
       let totalCalories = 0
       let totalProtein = 0
       let totalCarbs = 0
@@ -123,6 +191,24 @@ export default function CreateRecipePage() {
       })
 
       const servingSize = data.servingSize || 1
+      const hasProductNutrition = totalCalories > 0
+
+      // Fallback to AI-generated nutrition when no product nutrition available
+      const aiNutrition = importedData?.aiNutrition
+      const finalCalories = hasProductNutrition ? Math.round(totalCalories / servingSize) : (aiNutrition?.calories || 0)
+      const finalMacros = hasProductNutrition
+        ? {
+            protein: Math.round((totalProtein / servingSize) * 10) / 10,
+            carbs: Math.round((totalCarbs / servingSize) * 10) / 10,
+            fat: Math.round((totalFat / servingSize) * 10) / 10,
+            fiber: Math.round((totalFiber / servingSize) * 10) / 10,
+          }
+        : {
+            protein: aiNutrition?.protein || 0,
+            carbs: aiNutrition?.carbs || 0,
+            fat: aiNutrition?.fat || 0,
+            fiber: aiNutrition?.fiber || 0,
+          }
 
       const recipePayload = {
         name: data.recipeName,
@@ -131,13 +217,8 @@ export default function CreateRecipePage() {
         prepTime: data.prepTime,
         servingSize: data.servingSize,
         dietaryTags: data.dietaryTags,
-        calories: Math.round(totalCalories / servingSize),
-        macros: {
-          protein: Math.round((totalProtein / servingSize) * 10) / 10,
-          carbs: Math.round((totalCarbs / servingSize) * 10) / 10,
-          fat: Math.round((totalFat / servingSize) * 10) / 10,
-          fiber: Math.round((totalFiber / servingSize) * 10) / 10
-        },
+        calories: finalCalories,
+        macros: finalMacros,
         ingredientsV2: data.ingredients,
         ingredients: data.ingredients.map(i => i.ingredientText),
         autoCalculatedNutrition: true,
@@ -253,6 +334,44 @@ export default function CreateRecipePage() {
             className="px-6 py-2 bg-primary hover:bg-primary-hover disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors"
           >
             {importing ? 'Importing...' : 'Import'}
+          </button>
+        </div>
+      </div>
+
+      {/* AI Generate Section */}
+      <div className="bg-card rounded-lg shadow p-6 mb-6 border border-purple-200 dark:border-purple-800">
+        <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+          <SparklesIcon className="h-5 w-5 text-purple-500" />
+          AI Generate from Name
+        </h2>
+        <p className="text-sm text-muted-foreground mb-3">
+          Just enter a recipe name and AI will generate the full recipe — ingredients, steps, nutrition, and tags.
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={aiRecipeName}
+            onChange={(e) => setAiRecipeName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAIGenerate()}
+            placeholder="e.g. Chicken Alfredo, Vegan Buddha Bowl, Banana Pancakes..."
+            className="flex-1 px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+          />
+          <button
+            onClick={handleAIGenerate}
+            disabled={generating}
+            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            {generating ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <SparklesIcon className="h-4 w-4" />
+                Generate
+              </>
+            )}
           </button>
         </div>
       </div>
