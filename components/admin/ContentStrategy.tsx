@@ -101,24 +101,25 @@ export default function ContentStrategy() {
   }
 
   const [generatingImage, setGeneratingImage] = useState<string | null>(null)
+  const [imagePreviews, setImagePreviews] = useState<Record<string, { url: string; blob: Blob; platform: string }>>({})
+
+  const platformMap: Record<string, AdPlatform> = {
+    'Instagram': 'instagram-feed',
+    'Instagram Feed': 'instagram-feed',
+    'Instagram Story': 'instagram-story',
+    'Instagram Reel': 'instagram-story',
+    'LinkedIn': 'linkedin',
+    'Twitter': 'twitter',
+    'Twitter/X': 'twitter',
+    'X': 'twitter',
+    'Pinterest': 'pinterest',
+    'Facebook': 'facebook-feed',
+  }
 
   const handleGenerateImage = async (post: any, index: number) => {
     const key = `${post.platform}-${index}`
     setGeneratingImage(key)
     try {
-      // Map platform string to ad platform
-      const platformMap: Record<string, AdPlatform> = {
-        'Instagram': 'instagram-feed',
-        'Instagram Feed': 'instagram-feed',
-        'Instagram Story': 'instagram-story',
-        'Instagram Reel': 'instagram-story',
-        'LinkedIn': 'linkedin',
-        'Twitter': 'twitter',
-        'Twitter/X': 'twitter',
-        'X': 'twitter',
-        'Pinterest': 'pinterest',
-        'Facebook': 'facebook-feed',
-      }
       const adPlatform = platformMap[post.platform] || 'instagram-feed'
 
       const blob = await generateAdvertisement({
@@ -137,14 +138,21 @@ export default function ContentStrategy() {
         platform: adPlatform,
       })
 
-      downloadAd(blob, `wpl-${post.platform?.toLowerCase().replace(/\s/g, '-')}-${index + 1}.png`)
-      toast.success(`Image downloaded for ${post.platform}`)
+      const url = URL.createObjectURL(blob)
+      setImagePreviews(prev => ({ ...prev, [key]: { url, blob, platform: post.platform } }))
     } catch (err) {
       console.error('Image generation failed:', err)
       toast.error('Failed to generate image')
     } finally {
       setGeneratingImage(null)
     }
+  }
+
+  const handleDownloadImage = (key: string) => {
+    const preview = imagePreviews[key]
+    if (!preview) return
+    downloadAd(preview.blob, `wpl-${preview.platform?.toLowerCase().replace(/\s/g, '-')}-${Date.now()}.png`)
+    toast.success('Image downloaded')
   }
 
   const stageColor = (s: GrowthStage) => {
@@ -350,9 +358,32 @@ export default function ContentStrategy() {
                           ) : (
                             <PhotoIcon className="h-3.5 w-3.5" />
                           )}
-                          Generate Image
+                          {imagePreviews[`${item.platform}-${i}`] ? 'Regenerate' : 'Generate Image'}
                         </button>
                       </div>
+
+                      {/* Image Preview */}
+                      {imagePreviews[`${item.platform}-${i}`] && (
+                        <div className="mb-3 border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden">
+                          <img
+                            src={imagePreviews[`${item.platform}-${i}`].url}
+                            alt={`Preview for ${item.platform}`}
+                            className="w-full max-h-80 object-contain bg-gray-100 dark:bg-gray-900"
+                          />
+                          <div className="flex items-center justify-between p-2 bg-blue-100 dark:bg-blue-900/30">
+                            <span className="text-xs text-blue-700 dark:text-blue-300">
+                              {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.name} &mdash; {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.width}x{AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.height}
+                            </span>
+                            <button
+                              onClick={() => handleDownloadImage(`${item.platform}-${i}`)}
+                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium"
+                            >
+                              Download
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="text-sm text-foreground mb-2 whitespace-pre-line">{item.caption || item.text}</div>
                       {item.imageDescription && (
                         <div className="text-xs text-blue-600 dark:text-blue-400 mb-2 italic">Image: {item.imageDescription}</div>
@@ -501,9 +532,32 @@ export default function ContentStrategy() {
                           ) : (
                             <PhotoIcon className="h-3.5 w-3.5" />
                           )}
-                          Generate Image
+                          {imagePreviews[`${item.platform}-${i + 100}`] ? 'Regenerate' : 'Generate Image'}
                         </button>
                       </div>
+
+                      {/* Ad Image Preview */}
+                      {imagePreviews[`${item.platform}-${i + 100}`] && (
+                        <div className="mb-3 border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden">
+                          <img
+                            src={imagePreviews[`${item.platform}-${i + 100}`].url}
+                            alt={`Ad preview for ${item.platform}`}
+                            className="w-full max-h-80 object-contain bg-gray-100 dark:bg-gray-900"
+                          />
+                          <div className="flex items-center justify-between p-2 bg-amber-100 dark:bg-amber-900/30">
+                            <span className="text-xs text-amber-700 dark:text-amber-300">
+                              {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.name} &mdash; {AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.width}x{AD_PLATFORM_SPECS[platformMap[item.platform] || 'instagram-feed']?.height}
+                            </span>
+                            <button
+                              onClick={() => handleDownloadImage(`${item.platform}-${i + 100}`)}
+                              className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-medium"
+                            >
+                              Download
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="font-medium text-foreground mb-1">{item.headline}</div>
                       <div className="text-sm text-muted-foreground">{item.body}</div>
                       <div className="text-sm font-medium text-amber-600 dark:text-amber-400 mt-1">CTA: {item.cta}</div>
