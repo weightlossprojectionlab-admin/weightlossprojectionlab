@@ -91,8 +91,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user was referred — apply affiliate discount
-    const { adminDb: refAdminDb } = await import('@/lib/firebase-admin')
-    const userDoc = await refAdminDb.collection('users').doc(userId).get()
     const referralData = userDoc.data()?.referral
     const discounts: any[] = []
 
