@@ -32,8 +32,8 @@ export function ReferralShareSection({ referralUrl, discountPercent = 7 }: Refer
   }
 
   const shareContent = {
-    title: 'WeightLossProjectLab',
-    text: `Track your health, meals, and fitness with WeightLossProjectLab. Use my link to get ${discountPercent}% off!`,
+    title: 'Wellness Projection Lab',
+    text: `Track your family's health, medications, and meals with Wellness Projection Lab. Use my link to get ${discountPercent}% off!`,
     url: referralUrl,
   }
 
