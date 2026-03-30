@@ -7,7 +7,8 @@ import { getAdminAuthToken } from '@/lib/admin/api'
 import { GROWTH_STAGES, getCurrentStage, getStageProgress, CONTENT_PLATFORM_SPECS, type GrowthStage } from '@/lib/content-strategy'
 import { getMediaLibrary, findMatchingMedia, type MediaItem } from '@/lib/media-library'
 import MediaLibrary from '@/components/admin/MediaLibrary'
-import { SparklesIcon, CheckCircleIcon, PhotoIcon, XMarkIcon as XIcon, ClipboardDocumentIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
+import { SparklesIcon, CheckCircleIcon, PhotoIcon, XMarkIcon as XIcon, ClipboardDocumentIcon, ArrowDownTrayIcon, EnvelopeIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import { ACQUISITION_TEMPLATES, type AcquisitionEmailTemplate } from '@/lib/email-templates/acquisition-emails'
 import toast from 'react-hot-toast'
 
 export default function ContentStrategy() {
@@ -638,6 +639,9 @@ export default function ContentStrategy() {
         )}
       </div>
 
+      {/* Email Templates */}
+      <EmailTemplatesSection />
+
       {/* Weekly Calendar */}
       <div className="bg-card rounded-xl border border-border p-6">
         <h3 className="text-lg font-bold text-foreground mb-4">Weekly Content Calendar</h3>
@@ -714,6 +718,154 @@ export default function ContentStrategy() {
               selectionMode
               onSelect={(item) => handleSelectImage(showMediaPicker, item)}
             />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Email Templates Section — preview + send via Resend */
+function EmailTemplatesSection() {
+  const [selectedTemplate, setSelectedTemplate] = useState<AcquisitionEmailTemplate | null>(null)
+  const [sendTo, setSendTo] = useState('')
+  const [variables, setVariables] = useState<Record<string, string>>({})
+  const [sending, setSending] = useState(false)
+  const [previewHtml, setPreviewHtml] = useState('')
+
+  const handleSelectTemplate = (template: AcquisitionEmailTemplate) => {
+    setSelectedTemplate(template)
+    const defaultVars: Record<string, string> = {}
+    template.variables.forEach(v => { defaultVars[v] = '' })
+    setVariables(defaultVars)
+    setPreviewHtml(template.generateHtml(defaultVars))
+  }
+
+  const handleUpdateVariable = (key: string, value: string) => {
+    const updated = { ...variables, [key]: value }
+    setVariables(updated)
+    if (selectedTemplate) {
+      setPreviewHtml(selectedTemplate.generateHtml(updated))
+    }
+  }
+
+  const handleSend = async () => {
+    if (!sendTo.trim() || !selectedTemplate) {
+      toast.error('Enter a recipient email')
+      return
+    }
+    setSending(true)
+    try {
+      const token = await getAdminAuthToken()
+      const res = await fetch('/api/admin/marketing/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          templateId: selectedTemplate.id,
+          to: sendTo.trim(),
+          variables,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send')
+      toast.success(`Email sent to ${sendTo}`)
+      setSendTo('')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send email')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="bg-card rounded-xl border border-border p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <EnvelopeIcon className="h-5 w-5 text-primary" />
+        <h3 className="text-lg font-bold text-foreground">Email Templates</h3>
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Preview and send acquisition emails via Resend. All templates are caregiver ICP-focused.
+      </p>
+
+      {/* Template Selector */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+        {ACQUISITION_TEMPLATES.map(template => (
+          <button
+            key={template.id}
+            onClick={() => handleSelectTemplate(template)}
+            className={`text-left p-4 rounded-lg border-2 transition-colors ${
+              selectedTemplate?.id === template.id
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <div className="font-semibold text-foreground text-sm mb-1">{template.name}</div>
+            <div className="text-xs text-muted-foreground">{template.description}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Selected Template */}
+      {selectedTemplate && (
+        <div className="space-y-4">
+          {/* Variables */}
+          <div className="flex flex-wrap gap-3">
+            {selectedTemplate.variables.map(varName => (
+              <div key={varName} className="flex-1 min-w-[200px]">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">{varName}</label>
+                <input
+                  type="text"
+                  value={variables[varName] || ''}
+                  onChange={(e) => handleUpdateVariable(varName, e.target.value)}
+                  placeholder={varName === 'FirstName' ? 'Sarah' : varName === 'referrerName' ? 'Percy' : varName}
+                  className="w-full px-3 py-2 border border-border bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Subject Line */}
+          <div className="bg-muted rounded-lg p-3">
+            <span className="text-xs font-medium text-muted-foreground">Subject: </span>
+            <span className="text-sm text-foreground">{
+              selectedTemplate.subject.replace(/\{\{(\w+)\}\}/g, (_, key) => variables[key] || `{{${key}}}`)
+            }</span>
+          </div>
+
+          {/* Preview */}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <div className="bg-muted px-4 py-2 text-xs font-medium text-muted-foreground border-b border-border">Preview</div>
+            <div
+              className="bg-white"
+              style={{ maxHeight: '500px', overflow: 'auto' }}
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
+          </div>
+
+          {/* Send */}
+          <div className="flex items-center gap-3">
+            <input
+              type="email"
+              value={sendTo}
+              onChange={(e) => setSendTo(e.target.value)}
+              placeholder="recipient@example.com"
+              className="flex-1 px-3 py-2 border border-border bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <button
+              onClick={handleSend}
+              disabled={sending || !sendTo.trim()}
+              className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary/90 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              {sending ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+              ) : (
+                <PaperAirplaneIcon className="h-4 w-4" />
+              )}
+              Send Email
+            </button>
           </div>
         </div>
       )}
