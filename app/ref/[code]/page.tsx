@@ -1,42 +1,41 @@
 /**
  * Referral Landing Page
- * Tracks the click, sets a cookie, and redirects to /auth
+ * Stores the referral code in localStorage via client-side redirect
  */
 
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
+'use client'
 
-interface Props {
-  params: Promise<{ code: string }>
-}
+import { useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 
-export default async function ReferralLandingPage({ params }: Props) {
-  const { code } = await params
+export default function ReferralLandingPage() {
+  const params = useParams()
+  const router = useRouter()
+  const code = params.code as string
 
-  // Track the click server-side
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  useEffect(() => {
+    if (!code) return
 
-  try {
-    await fetch(`${baseUrl}/api/referrals/click`, {
+    // Store referral code for attribution after signup
+    localStorage.setItem('pendingReferralCode', code)
+
+    // Track the click
+    fetch('/api/referrals/click', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code }),
-    })
-  } catch {
-    // Don't block redirect if click tracking fails
-  }
+    }).catch(() => {})
 
-  // Set referral code cookie (30 days)
-  const cookieStore = await cookies()
-  cookieStore.set('ref_code', code, {
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-    path: '/',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-  })
+    // Redirect to auth with ref param
+    router.replace(`/auth?ref=${encodeURIComponent(code)}`)
+  }, [code, router])
 
-  // Redirect to auth with ref param
-  redirect(`/auth?ref=${encodeURIComponent(code)}`)
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4" />
+        <p className="text-muted-foreground">Redirecting...</p>
+      </div>
+    </div>
+  )
 }
