@@ -121,8 +121,12 @@ export async function determineUserDestination(
     }
 
     // Step 4: Check subscription status (block expired/canceled users)
+    // Skip for super admins / test accounts — they should never be locked out
+    const superAdminEmails = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+    const isSuperAdmin = user.email && superAdminEmails.includes(user.email.toLowerCase())
+
     const subscription = profile.subscription
-    if (subscription && (subscription.status === 'expired' || subscription.status === 'canceled')) {
+    if (!isSuperAdmin && subscription && (subscription.status === 'expired' || subscription.status === 'canceled')) {
       logger.warn('[AuthRouter] User has expired/canceled subscription - BLOCKING ACCESS', {
         userId: user.uid,
         status: subscription.status,
