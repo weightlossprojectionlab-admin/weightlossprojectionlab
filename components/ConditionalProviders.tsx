@@ -9,6 +9,7 @@ import { MenuProvider } from '@/contexts/MenuContext'
 import { AccountProvider } from '@/contexts/AccountContext'
 import { HouseholdProvider } from '@/contexts/HouseholdContext'
 import { TenantProvider } from '@/contexts/TenantContext'
+import TenantBranding from '@/components/TenantBranding'
 import { AppMenu } from '@/components/ui/AppMenu'
 import { CsrfInitializer } from '@/components/CsrfInitializer'
 import { GlobalAlertModal } from '@/components/GlobalAlertModal'
@@ -40,6 +41,7 @@ export function ConditionalProviders({ children, tenantSlug }: { children: React
   return (
     <ThemeProvider>
       <TenantProvider tenantSlug={tenantSlug || null}>
+      <TenantBranding />
       <AuthProvider>
         <ServiceWorkerProvider>
           <AccountProvider>

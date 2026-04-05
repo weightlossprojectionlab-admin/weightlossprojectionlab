@@ -9,6 +9,7 @@
 import Link from 'next/link'
 import { useUser } from '@/hooks/useUser'
 import { useFeatureGates } from '@/hooks/useFeatureGate'
+import { useTenant } from '@/contexts/TenantContext'
 import { useMemo } from 'react'
 
 interface FooterLink {
@@ -37,6 +38,7 @@ const GATED_FEATURES = [
 export function Footer() {
   const currentYear = new Date().getFullYear()
   const { user, loading, isAdmin } = useUser()
+  const { branding: tenantBranding, isFranchise } = useTenant()
 
   // Check all features that have gated links
   const featureGates = useFeatureGates(GATED_FEATURES as unknown as string[])
@@ -177,13 +179,13 @@ export function Footer() {
                   <path d="M 80 -70 L 80 60 L 140 60" stroke="#9FE870" strokeWidth="20" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
                 </g>
               </svg>
-              <span className="text-white font-bold text-lg">Wellness Projection Lab</span>
+              <span className="text-white font-bold text-lg">{tenantBranding?.companyName || 'Wellness Projection Lab'}</span>
             </div>
             <p className="text-sm text-gray-400">
-              &copy; {currentYear} Wellness Projection Lab. All rights reserved.
+              &copy; {currentYear} {tenantBranding?.companyName || 'Wellness Projection Lab'}. All rights reserved.
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Intelligent wellness tracking with proprietary ML. HIPAA compliant.
+              {tenantBranding?.tagline || 'Intelligent wellness tracking with proprietary ML. HIPAA compliant.'}
             </p>
           </div>
 
