@@ -1660,6 +1660,24 @@ service cloud.firestore {
     }
 
     // ============================================
+    // TENANTS (franchise system)
+    // ============================================
+
+    match /tenants/{tenantId} {
+      // Anyone can read tenant data (needed for branding on subdomain)
+      allow read: if true;
+      // Only super admins can create/edit tenants
+      allow write: if isAdmin();
+
+      match /invitations/{invitationId} {
+        allow read: if isAdmin() ||
+                    (isAuthenticated() && request.auth.token.tenantId == tenantId);
+        allow write: if isAdmin() ||
+                     (isAuthenticated() && request.auth.token.tenantRole == 'franchise_admin' && request.auth.token.tenantId == tenantId);
+      }
+    }
+
+    // ============================================
     // ADMIN SETTINGS (marketing progress, etc.)
     // ============================================
 

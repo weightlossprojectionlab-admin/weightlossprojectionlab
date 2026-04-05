@@ -50,6 +50,8 @@ export interface User {
   preferences: UserPreferences
   subscription?: UserSubscription  // Subscription plan and features
   caregiverOf?: CaregiverContext[]  // Accounts where this user is a caregiver (family plan only)
+  tenantId?: string | null          // Franchise tenant ID (null = WPL direct user)
+  tenantRole?: 'franchise_admin' | 'staff' | 'user' | null  // Role within franchise
   createdAt: Date
   lastActiveAt: Date
 }

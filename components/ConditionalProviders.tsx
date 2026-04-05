@@ -8,6 +8,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { MenuProvider } from '@/contexts/MenuContext'
 import { AccountProvider } from '@/contexts/AccountContext'
 import { HouseholdProvider } from '@/contexts/HouseholdContext'
+import { TenantProvider } from '@/contexts/TenantContext'
 import { AppMenu } from '@/components/ui/AppMenu'
 import { CsrfInitializer } from '@/components/CsrfInitializer'
 import { GlobalAlertModal } from '@/components/GlobalAlertModal'
@@ -22,7 +23,7 @@ import { InactivityHandler } from '@/components/InactivityHandler'
  * Note: StepTrackingProvider removed from global providers (performance optimization)
  * Pages that need step tracking should wrap themselves with StepTrackingProvider
  */
-export function ConditionalProviders({ children }: { children: React.ReactNode }) {
+export function ConditionalProviders({ children, tenantSlug }: { children: React.ReactNode; tenantSlug?: string | null }) {
   const pathname = usePathname()
 
   // Home page: Only ThemeProvider (for dark mode support)
@@ -38,6 +39,7 @@ export function ConditionalProviders({ children }: { children: React.ReactNode }
   // All other pages: Provider stack without StepTrackingProvider (loaded per-page as needed)
   return (
     <ThemeProvider>
+      <TenantProvider tenantSlug={tenantSlug || null}>
       <AuthProvider>
         <ServiceWorkerProvider>
           <AccountProvider>
@@ -79,6 +81,7 @@ export function ConditionalProviders({ children }: { children: React.ReactNode }
           </AccountProvider>
         </ServiceWorkerProvider>
       </AuthProvider>
+      </TenantProvider>
     </ThemeProvider>
   )
 }

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { headers } from 'next/headers'
 import { ConditionalProviders } from '@/components/ConditionalProviders'
 import { CsrfInitializer } from '@/components/CsrfInitializer'
 import { ConditionalFooter } from '@/components/ConditionalFooter'
@@ -88,11 +89,15 @@ export const viewport: Viewport = {
   viewportFit: 'cover', // Enable safe area insets for notched devices
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // Read tenant slug from middleware header (set by subdomain detection)
+  const headersList = await headers()
+  const tenantSlug = headersList.get('x-tenant-slug') || null
+
   return (
     <html lang="en" className="h-full light" suppressHydrationWarning>
       <head>
@@ -143,7 +148,7 @@ export default function RootLayout({
         <CsrfInitializer />
         <UpdateChecker />
         <div className="flex-grow">
-          <ConditionalProviders>{children}</ConditionalProviders>
+          <ConditionalProviders tenantSlug={tenantSlug}>{children}</ConditionalProviders>
         </div>
         <ConditionalFooter />
         <SpeedInsights />
