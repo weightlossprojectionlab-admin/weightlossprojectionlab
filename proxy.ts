@@ -25,6 +25,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 
+// ============================================
+// MULTI-TENANT SUBDOMAIN DETECTION
+// ============================================
+const ROOT_DOMAIN = process.env.NEXT_PUBLIC_DOMAIN || 'wellnessprojectionlab.com'
+
+function extractSubdomain(hostname: string): string | null {
+  const host = hostname.split(':')[0]
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return process.env.NEXT_PUBLIC_DEV_TENANT_SLUG || null
+  }
+  if (host.endsWith('.localhost')) {
+    return host.replace('.localhost', '') || null
+  }
+  if (host.endsWith(`.${ROOT_DOMAIN}`)) {
+    const subdomain = host.replace(`.${ROOT_DOMAIN}`, '')
+    return subdomain && subdomain !== 'www' ? subdomain : null
+  }
+  return null
+}
+
+// ============================================
+// CSRF PROTECTION
+// ============================================
+
 // Unsafe HTTP methods that require CSRF protection
 const UNSAFE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
 
@@ -79,6 +103,18 @@ function shouldBypassCsrf(pathname: string): boolean {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const method = request.method
+
+  // Detect tenant subdomain and inject header for all requests
+  const hostname = request.headers.get('host') || ''
+  const tenantSlug = extractSubdomain(hostname)
+  if (tenantSlug) {
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-tenant-slug', tenantSlug)
+    // For non-API routes, just pass through with tenant header
+    if (!pathname.startsWith('/api')) {
+      return NextResponse.next({ request: { headers: requestHeaders } })
+    }
+  }
 
   // Development bypass (from sec-005)
   if (isDevelopmentBypass) {
@@ -180,7 +216,7 @@ export function proxy(request: NextRequest) {
   return NextResponse.next()
 }
 
-// Apply proxy only to API routes
+// Apply to all routes (subdomain detection needs all, CSRF only checks /api)
 export const config = {
-  matcher: '/api/:path*',
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf)$).*)'],
 }
