@@ -23,6 +23,7 @@ import {
   CalendarDaysIcon,
   DocumentTextIcon,
   BookOpenIcon,
+  BuildingOffice2Icon,
 } from '@heroicons/react/24/outline'
 
 interface NavItem {
@@ -51,6 +52,11 @@ export function AdminNav({ pendingCounts, onOpenManual }: AdminNavProps) {
       name: 'Dashboard',
       href: '/admin',
       icon: HomeIcon,
+    },
+    {
+      name: 'Franchises',
+      href: '/admin/tenants',
+      icon: BuildingOffice2Icon,
     },
     {
       name: 'Demo Requests',
