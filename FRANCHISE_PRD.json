@@ -1,0 +1,666 @@
+{
+  "$schema": "feature-prd@1",
+  "product": {
+    "name": "Wellness Projection Lab — Franchise / White-Label Multi-Tenancy",
+    "version": "0.2.0",
+    "lastUpdated": "2026-04-06",
+    "status": "Active Development — Phase A shipped, Phase B/C planned",
+    "vision": "Sell the 'pipes and wires' that let independent health practitioners (nurses, wellness coaches, concierge doctors, home care agencies, patient advocates) launch a HIPAA-compliant, AI-powered, fully branded family-health platform under their own name in 48 hours — without writing code or buying infrastructure.",
+    "positioning": "A white-label 'business-in-a-box' for the missing middle between off-the-shelf consumer apps (cheap, generic, not BAA-eligible) and custom builds ($100k+, 6-12 months). WPL's franchise tier gives the polish of a custom app at the price point of premium SaaS.",
+    "targetUsers": [
+      "Solo nurses and home-care providers who need a HIPAA-compliant client management platform",
+      "Wellness coaches scaling beyond 10 clients without hiring developers",
+      "Concierge physicians who want a branded patient portal without enterprise EHR cost",
+      "Home care agencies managing multiple caregivers and client families",
+      "Patient advocates digitizing their practice"
+    ],
+    "keyDifferentiators": [
+      "48-hour launch — automated tenant provisioning end-to-end",
+      "True white-label — branded subdomain, logo, colors, company name",
+      "HIPAA + BAA — most no-code platforms cannot offer this",
+      "AI-augmented client management — one provider can manage 50+ families",
+      "$3,000 setup fee acts as a quality filter — no hobbyists, only serious practices",
+      "Premium boutique pricing tiers ($750–$2,000/mo) align with high-touch services"
+    ],
+    "successMetrics": {
+      "applicationToActivationTime": "median <48 hours from POST /api/franchise/apply to status:paid",
+      "paidActivationTime": "<5 seconds from Stripe checkout.session.completed to tenant status:paid + activation email",
+      "ownerFirstSignInTime": "<60 seconds from clicking magic link to landing in /dashboard signed in",
+      "subdomainTtfb": "<200ms p95 for the branded landing page (statically cached where possible)",
+      "applicationConversionRate": ">25% of /franchise marketing visitors who reach /franchise/apply submit the form",
+      "activationDropoff": "<10% of payment-link sends fail to complete payment within 7 days",
+      "operationalLoadPerCustomer": "<15 minutes/month of admin time per active franchise (Phase A) — drops to <5 minutes once Phase B ships"
+    },
+    "outOfBandConsiderations": [
+      "MASTER_PRD.md feature totals (line ~228) currently sum to 287 but the header says 157 — pre-existing inconsistency unrelated to franchise; flagged but not fixed here",
+      "docs/UNIFIED_PRD.json is named 'unified' but is actually the onboarding flow config; the franchise reference does NOT belong there"
+    ]
+  },
+
+  "userTypes": [
+    {
+      "id": "super_admin",
+      "label": "WPL Super Admin",
+      "description": "Internal staff managing the franchise program. Creates tenants in the back office, sends payment links, monitors activations, can edit any tenant.",
+      "claims": "{ role: 'admin' }",
+      "auth": "Firebase Auth + super-admin email allowlist + role custom claim",
+      "implementedAt": "lib/admin-auth.ts",
+      "status": "shipped"
+    },
+    {
+      "id": "franchise_owner",
+      "label": "Franchise Admin / Owner",
+      "description": "The practitioner who paid the setup fee. Owns one tenant. Self-service editing of branding (Phase A); will eventually invite staff and review managed-family requests.",
+      "claims": "{ tenantId: <id>, tenantRole: 'franchise_admin' }",
+      "auth": "Firebase Auth, currently magic-link only (no password yet)",
+      "provisionedBy": "Stripe webhook on first checkout.session.completed for the tenant",
+      "implementedAt": "app/api/webhooks/stripe/route.ts handleFranchiseSetupPaid",
+      "status": "shipped"
+    },
+    {
+      "id": "franchise_staff",
+      "label": "Franchise Staff",
+      "description": "Nurses, assistants, or coaches employed by the franchise. Invited by the franchise owner. Manage assigned client families. Counts against the tenant's seat allowance.",
+      "claims": "{ tenantId: <id>, tenantRole: 'franchise_staff' }",
+      "status": "planned (Phase B)"
+    },
+    {
+      "id": "managed_family",
+      "label": "Managed Client Family",
+      "description": "An existing WPL consumer family that has chosen to be managed by a franchise. Their data becomes visible to the franchise's staff with permission scoping. Linked via user.managedBy[] containing the tenantId. Family-initiated relationship — never created from a tenant subdomain self-signup.",
+      "claims": "(no tenant claims; relationship lives in user.managedBy[])",
+      "status": "planned (Phase B)"
+    }
+  ],
+
+  "dataModels": {
+    "Tenant": {
+      "description": "Top-level franchise entity. One document per tenant in the `tenants` Firestore collection. Document id is auto-generated; the `slug` field is the URL-safe subdomain identifier.",
+      "definedAt": "types/tenant.ts",
+      "schema": {
+        "id": "string (Firestore doc id)",
+        "slug": "string (lowercase a-z0-9-, indexed; the subdomain identifier)",
+        "name": "string",
+        "status": "'pending' | 'pending_payment' | 'paid' | 'active' | 'suspended' | 'canceled'",
+        "branding": "TenantBranding",
+        "billing": "TenantBilling",
+        "contact": "TenantContact",
+        "billingAddress": "TenantBillingAddress",
+        "emergencyContact": "TenantEmergencyContact",
+        "features": "TenantFeatures (per-tenant feature flags)",
+        "ein": "string",
+        "legalName": "string",
+        "entityType": "'Sole Proprietorship' | 'LLC' | 'Corporation' | 'Partnership' | 'Non-Profit' | 'Other'",
+        "stateOfIncorporation": "string",
+        "practiceType": "string",
+        "licenseNumber": "string",
+        "npiNumber": "string",
+        "staffCount": "string",
+        "familyCount": "number",
+        "expectedLaunchDate": "ISO date string",
+        "leadSource": "string",
+        "notes": "string",
+        "ownerUid": "string (Firebase Auth uid of provisioned owner) — set on first webhook activation",
+        "ownerProvisionedAt": "ISO timestamp",
+        "onboardingCompleted": "boolean",
+        "createdAt": "ISO timestamp",
+        "updatedAt": "ISO timestamp"
+      }
+    },
+    "TenantBranding": {
+      "schema": {
+        "logoUrl": "string (hosted image URL; direct upload deferred)",
+        "faviconUrl": "string?",
+        "primaryColor": "string (BARE HSL triplet, e.g. '262 83% 58%' — must be wrapped as hsl(...) when applied as a CSS color)",
+        "secondaryColor": "string (HSL triplet)",
+        "accentColor": "string (HSL triplet)",
+        "companyName": "string",
+        "tagline": "string?",
+        "supportEmail": "string",
+        "supportPhone": "string?",
+        "websiteUrl": "string?"
+      },
+      "notes": "The HSL-triplet storage convention is intentional (Tailwind / shadcn-style) but NOT a valid CSS color on its own. Three render sites currently inline a small toCss() helper: app/tenant-shell/page.tsx, app/tenant-shell/layout.tsx, app/tenant-shell/dashboard/BrandingEditor.tsx. Extracting to lib/tenant-color.ts is the next reuse-driven refactor (rule of three reached)."
+    },
+    "TenantBilling": {
+      "schema": {
+        "plan": "'starter' | 'professional' | 'enterprise'",
+        "billingTerm": "'monthly' | 'annual'",
+        "maxSeats": "number",
+        "currentSeats": "number (hardcoded 0 today; will auto-increment in Phase B)",
+        "monthlyBaseRate": "number (cents)",
+        "perSeatRate": "number (cents)",
+        "billingEmail": "string",
+        "invoiceDay": "number (1-28)",
+        "nextInvoiceDate": "ISO date?",
+        "setupFeePaid": "boolean",
+        "setupFeeAmount": "number (cents) — defaults to 300000 ($3000)",
+        "setupFeePaidAt": "ISO timestamp (set by webhook)",
+        "stripeCheckoutSessionId": "string (set by webhook)",
+        "paymentLinkUrl": "string (set when admin sends payment link)",
+        "paymentLinkId": "string",
+        "paymentLinkSentAt": "ISO timestamp"
+      }
+    },
+    "TenantFeatures": {
+      "description": "Per-tenant feature flags. Currently metadata only (not enforced at API/rules layer); enforcement is Phase C work.",
+      "schema": {
+        "aiCoaching": "boolean",
+        "appointmentScheduling": "boolean",
+        "familySharing": "boolean",
+        "healthReports": "boolean",
+        "mealTracking": "boolean",
+        "medicalRecords": "boolean",
+        "medicationManagement": "boolean",
+        "recipeSystem": "boolean",
+        "shoppingList": "boolean",
+        "vitalTracking": "boolean",
+        "maxFamiliesTotal": "number",
+        "maxPatientsPerUser": "number"
+      }
+    },
+    "FranchiseApplication": {
+      "description": "Public-facing application form submission. Lives in the `franchise_applications` collection separate from `tenants` so we can track lead funnel without polluting the active-tenant set.",
+      "definedAt": "app/api/franchise/apply/route.ts",
+      "schema": {
+        "businessName": "string",
+        "contactName": "string",
+        "email": "string",
+        "phone": "string",
+        "website": "string",
+        "practiceType": "string",
+        "staffCount": "string",
+        "familyCount": "number",
+        "plan": "'starter' | 'professional' | 'enterprise'",
+        "subdomain": "string (must pass uniqueness check)",
+        "status": "'pending' | 'reviewed' | 'approved' | 'paid' | 'active'",
+        "createdAt": "ISO timestamp"
+      }
+    },
+    "FranchisePlan": {
+      "description": "Single source of truth for the three pricing tiers. Imported by both the marketing page and the application form.",
+      "definedAt": "lib/franchise-plans.ts",
+      "constants": {
+        "SETUP_FEE_USD": 3000,
+        "SETUP_FEE_CENTS": 300000,
+        "ANNUAL_DISCOUNT_PCT": 15
+      },
+      "tiers": [
+        { "id": "starter", "monthlyBase": 750, "perSeat": 35, "maxSeats": 5, "maxClients": 50 },
+        { "id": "professional", "monthlyBase": 1250, "perSeat": 35, "maxSeats": 15, "maxClients": 200, "popular": true },
+        { "id": "enterprise", "monthlyBase": 2000, "perSeat": 25, "maxSeats": -1, "maxClients": -1 }
+      ]
+    },
+    "ManagementRequest": {
+      "description": "PLANNED (Phase B). A WPL consumer family asking to be managed by a specific franchise. Created from inside the family's existing dashboard, NOT from the tenant subdomain.",
+      "plannedCollection": "tenantManagementRequests",
+      "schema": {
+        "tenantId": "string",
+        "userId": "string (Firebase Auth uid of the requesting family head)",
+        "userEmail": "string",
+        "userName": "string",
+        "message": "string?",
+        "status": "'pending' | 'approved' | 'declined' | 'revoked'",
+        "createdAt": "ISO timestamp",
+        "respondedAt": "ISO timestamp?",
+        "respondedByUid": "string?"
+      },
+      "status": "planned (Phase B)"
+    }
+  },
+
+  "lifecycles": {
+    "tenantStatus": {
+      "description": "State machine for the `tenants/{id}.status` field.",
+      "states": {
+        "pending": "Tenant doc created via the public application form (/api/franchise/apply) — not yet reviewed by an admin.",
+        "pending_payment": "Admin reviewed and sent the Stripe payment link via /api/admin/tenants/[id]/payment-link. Owner has been emailed but has not yet paid. Subdomain shows the branded 'Confirming your payment' waiting page.",
+        "paid": "Stripe webhook fired and tenant was activated. Owner Firebase Auth account provisioned with custom claims, magic sign-in link sent. Branded subdomain is fully live.",
+        "active": "Equivalent to 'paid' for runtime purposes — accepted as a synonym so back-office tools can flip status manually if needed. tenant-shell layout treats both as 'render normally'.",
+        "suspended": "Admin suspended the tenant (e.g. non-payment, ToS violation). Subdomain shows the 'not currently active' page. Reactivation flips back to 'active'.",
+        "canceled": "Tenant terminated. Same UX as suspended. Data retention follows the franchise agreement."
+      },
+      "transitions": [
+        { "from": "(none)", "to": "pending", "trigger": "POST /api/franchise/apply (public form)" },
+        { "from": "(none)", "to": "active", "trigger": "POST /api/admin/tenants (admin manual create) — bypasses payment for internal demo tenants" },
+        { "from": "pending", "to": "pending_payment", "trigger": "Admin clicks 'Send payment link'" },
+        { "from": "pending_payment", "to": "paid", "trigger": "Stripe checkout.session.completed webhook (idempotent)" },
+        { "from": "active|paid", "to": "suspended", "trigger": "Admin manual action" },
+        { "from": "suspended", "to": "active", "trigger": "Admin manual action" },
+        { "from": "active|paid", "to": "canceled", "trigger": "Admin manual action" }
+      ]
+    },
+    "ownerProvisioning": {
+      "description": "Sequence of operations inside handleFranchiseSetupPaid() when the Stripe webhook fires for a tenant. All steps are idempotent so Stripe retries are safe.",
+      "implementedAt": "app/api/webhooks/stripe/route.ts",
+      "sequence": [
+        "1. Load tenants/{id}, abort if missing",
+        "2. Idempotency check: if status already paid/active OR billing.setupFeePaid===true → log and return",
+        "3. Update tenant: status='paid', billing.setupFeePaid=true, billing.setupFeePaidAt, billing.stripeCheckoutSessionId, updatedAt",
+        "4. Look up Firebase Auth user by tenant.contact.adminEmail. If not found → createUser() helper",
+        "5. setCustomUserClaims(uid, { tenantId, tenantRole: 'franchise_admin' })",
+        "6. Update tenant: ownerUid, ownerProvisionedAt",
+        "7. generateSignInWithEmailLink with action URL https://{slug}.wellnessprojectionlab.com/auth/finish-sign-in?email=...",
+        "8. Send single activation email via Resend (sendEmail) — CTA is the magic link, fallback CTA if link generation failed"
+      ],
+      "errorHandling": "All provisioning steps are wrapped in try/catch. If steps 4-7 fail, the tenant is still marked paid (step 3 already succeeded) and the activation email is sent with the bare subdomain URL as fallback. Admins can re-trigger from the back office."
+    }
+  },
+
+  "userFlows": [
+    {
+      "id": "marketing_to_application",
+      "name": "Marketing funnel → application",
+      "status": "shipped",
+      "steps": [
+        "1. Prospect lands on apex marketing page wellnessprojectionlab.com",
+        "2. Clicks 'Are you a nurse or care provider? License our platform →' footer link",
+        "3. Lands on /franchise (static marketing page with hero, pricing, FAQ)",
+        "4. Clicks any 'Apply Now' CTA → /franchise/apply (5-step form)",
+        "5. Submits form → POST /api/franchise/apply → doc in franchise_applications collection + admin notification email",
+        "6. 'Application received' confirmation page"
+      ]
+    },
+    {
+      "id": "admin_review_to_payment_link",
+      "name": "Admin review → send payment link",
+      "status": "shipped",
+      "steps": [
+        "1. Super admin reviews application in /admin/tenants (or directly creates a tenant in /admin/tenants/create for white-glove customers)",
+        "2. Tenant doc lands in tenants/ collection with status='pending' or 'active'",
+        "3. Admin clicks 'Send payment link' → POST /api/admin/tenants/[id]/payment-link",
+        "4. Stripe Price + PaymentLink created on the fly with metadata { tenantId }",
+        "5. Branded HTML email sent via Resend with the payment link CTA",
+        "6. Tenant flipped to status='pending_payment'"
+      ]
+    },
+    {
+      "id": "payment_to_activation",
+      "name": "Payment → automatic activation",
+      "status": "shipped",
+      "steps": [
+        "1. Owner clicks payment link in email, lands on Stripe-hosted checkout",
+        "2. Pays with card",
+        "3. Stripe sends checkout.session.completed webhook to /api/webhooks/stripe",
+        "4. Webhook detects session.metadata.tenantId → branches into handleFranchiseSetupPaid",
+        "5. See lifecycles.ownerProvisioning sequence above",
+        "6. Owner receives 'Sign in to your dashboard' email with magic link",
+        "7. Total time from successful charge to email arrival: <5 seconds"
+      ]
+    },
+    {
+      "id": "magic_link_first_signin",
+      "name": "Magic link → first sign-in",
+      "status": "shipped",
+      "steps": [
+        "1. Owner clicks magic link in email",
+        "2. Lands on https://{slug}.wellnessprojectionlab.com/auth/finish-sign-in?email=... (rewritten via proxy.ts to /tenant-shell/auth/finish-sign-in)",
+        "3. Client-side signInWithEmailLink completes the Firebase handshake",
+        "4. ID token force-refreshed to pick up tenantId + tenantRole custom claims",
+        "5. router.replace('/dashboard') → branded dashboard with the BrandingEditor"
+      ]
+    },
+    {
+      "id": "branding_self_serve",
+      "name": "Self-serve branding edit",
+      "status": "shipped",
+      "steps": [
+        "1. Owner edits company name / logo URL / primary color (HSL triplet) / support email in BrandingEditor",
+        "2. Live HSL preview swatch updates as they type",
+        "3. Submit → PATCH /api/tenant/branding with Bearer token",
+        "4. Server: verifyTenantAdminAuth → tenant id match check → field sanitization → Firestore update branding.* + updatedAt",
+        "5. Audit log entry written via logAdminAction with action='tenant_branding_updated', tenantId, changes",
+        "6. revalidatePath('/tenant-shell') so the public landing page reflects the new branding immediately",
+        "7. Success toast in editor"
+      ]
+    },
+    {
+      "id": "family_request_management",
+      "name": "Family requests franchise management",
+      "status": "planned (Phase B)",
+      "steps": [
+        "1. Existing WPL consumer family logged in to apex /dashboard",
+        "2. Visits new /find-a-provider directory (filter by practice type, location)",
+        "3. Clicks a franchise to view its public profile (read from tenants/{id}, branded preview)",
+        "4. Clicks 'Request to be managed by {Company}' → modal with optional message",
+        "5. Submit → POST /api/tenant/[id]/management-request → doc in tenantManagementRequests collection",
+        "6. Resend email to franchise owner notifying of the new request",
+        "7. Family sees 'Request pending' status in their /providers panel"
+      ]
+    },
+    {
+      "id": "owner_review_management_request",
+      "name": "Owner reviews and approves management request",
+      "status": "planned (Phase B)",
+      "steps": [
+        "1. Owner sees pending requests count in dashboard sidebar",
+        "2. Clicks Pending Requests → list view with family name, message, request date",
+        "3. Clicks Approve → server appends tenantId to user.managedBy[] + flips request to 'approved' + sends acceptance email",
+        "4. Family appears in 'Managed Families' tab",
+        "5. Approving increments tenant.billing.currentSeats (counted against the family-seat allowance, not staff seats)"
+      ]
+    },
+    {
+      "id": "staff_invitation",
+      "name": "Owner invites staff member",
+      "status": "planned (Phase B)",
+      "steps": [
+        "1. Owner clicks 'Invite Staff' in dashboard",
+        "2. Enters email + role",
+        "3. POST /api/tenant/[id]/invitations → doc in tenants/{id}/invitations subcollection (already supported by firestore.rules) + Resend email with one-click activation link",
+        "4. Staff clicks link → finish-sign-in flow → claims set { tenantId, tenantRole: 'franchise_staff' } → land in dashboard",
+        "5. Increments tenant.billing.currentSeats against the staff allowance"
+      ]
+    }
+  ],
+
+  "apiContracts": {
+    "shipped": [
+      {
+        "method": "POST",
+        "path": "/api/franchise/apply",
+        "auth": "public",
+        "purpose": "Submit franchise application from /franchise/apply",
+        "implementedAt": "app/api/franchise/apply/route.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/tenants",
+        "auth": "super admin",
+        "purpose": "Create a tenant directly (admin white-glove path)",
+        "implementedAt": "app/api/admin/tenants/route.ts"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/admin/tenants/[tenantId]",
+        "auth": "super admin",
+        "purpose": "Update tenant fields including status (suspend/reactivate)"
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/tenants/[tenantId]/payment-link",
+        "auth": "super admin",
+        "purpose": "Generate Stripe Payment Link, email it, flip status to pending_payment",
+        "implementedAt": "app/api/admin/tenants/[tenantId]/payment-link/route.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/api/webhooks/stripe",
+        "auth": "Stripe signature (STRIPE_WEBHOOK_SECRET)",
+        "purpose": "Handle checkout.session.completed for both consumer subscriptions AND franchise setup-fee payments. Distinguished by session.metadata.tenantId.",
+        "implementedAt": "app/api/webhooks/stripe/route.ts handleFranchiseSetupPaid"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/tenant/branding",
+        "auth": "verifyTenantAdminAuth (franchise_admin claim or super admin)",
+        "purpose": "Update tenant branding fields (logoUrl, primaryColor, companyName, supportEmail)",
+        "implementedAt": "app/api/tenant/branding/route.ts"
+      }
+    ],
+    "planned": [
+      { "method": "POST", "path": "/api/tenant/[tenantId]/invitations", "purpose": "Owner invites staff", "phase": "B" },
+      { "method": "POST", "path": "/api/tenant/[tenantId]/management-request", "purpose": "Family requests to be managed by a tenant", "phase": "B" },
+      { "method": "POST", "path": "/api/tenant/[tenantId]/management-request/[reqId]/approve", "purpose": "Owner approves a management request", "phase": "B" },
+      { "method": "DELETE", "path": "/api/tenant/[tenantId]/managed-families/[userId]", "purpose": "Revoke management of a family", "phase": "B" },
+      { "method": "GET", "path": "/api/find-a-provider", "purpose": "Family-side directory of active tenants (search/filter)", "phase": "B" },
+      { "method": "POST", "path": "/api/tenant/[tenantId]/billing/portal-session", "purpose": "Create a Stripe Customer Portal session for self-serve billing", "phase": "C" }
+    ]
+  },
+
+  "routes": {
+    "publicApex": [
+      { "path": "/", "purpose": "Family-end-user marketing homepage with For Practitioners footer", "status": "shipped" },
+      { "path": "/franchise", "purpose": "Franchise sales/marketing page (force-static)", "status": "shipped" },
+      { "path": "/franchise/apply", "purpose": "5-step franchise application form", "status": "shipped" },
+      { "path": "/franchise-agreement", "purpose": "Legal: franchise service agreement", "status": "shipped" },
+      { "path": "/baa", "purpose": "Legal: HIPAA Business Associate Agreement", "status": "shipped" },
+      { "path": "/data-policy", "purpose": "Legal: data ownership policy", "status": "shipped" },
+      { "path": "/find-a-provider", "purpose": "Family-side franchise directory", "status": "planned (Phase B)" }
+    ],
+    "tenantSubdomain": [
+      { "path": "/", "rewrittenTo": "/tenant-shell", "purpose": "Branded sign-in landing", "status": "shipped" },
+      { "path": "/auth/finish-sign-in", "rewrittenTo": "/tenant-shell/auth/finish-sign-in", "purpose": "Magic link handshake completion", "status": "shipped" },
+      { "path": "/dashboard", "rewrittenTo": "/tenant-shell/dashboard", "purpose": "Franchise owner dashboard (Phase A: branding only)", "status": "shipped" },
+      { "path": "/dashboard/staff", "purpose": "Staff invitation + management", "status": "planned (Phase B)" },
+      { "path": "/dashboard/families", "purpose": "Managed families list + pending requests queue", "status": "planned (Phase B)" },
+      { "path": "/dashboard/billing", "purpose": "Self-serve billing summary + Stripe portal link", "status": "planned (Phase C)" }
+    ],
+    "apexOnlyOnSubdomain": [
+      "/api/*",
+      "/admin/*",
+      "/login",
+      "/franchise",
+      "/franchise-agreement",
+      "/baa",
+      "/data-policy"
+    ],
+    "routingMechanism": "proxy.ts extractSubdomain → injects x-tenant-slug header → rewrites non-apex paths to /tenant-shell/<path> via NextResponse.rewrite"
+  },
+
+  "security": {
+    "authentication": {
+      "ownerAccount": "Firebase Auth, magic-link only at first (no password). Account auto-provisioned by Stripe webhook.",
+      "customClaims": {
+        "shape": "{ tenantId: string, tenantRole: 'franchise_admin' }",
+        "setBy": "app/api/webhooks/stripe/route.ts handleFranchiseSetupPaid",
+        "verifiedBy": "lib/tenant-auth.ts verifyTenantAdminAuth",
+        "checkedInRulesBy": "firestore.rules isTenantAdmin(tenantId) helper"
+      },
+      "sessionRefresh": "After magic link sign-in, the client calls user.getIdToken(true) to force-refresh and pick up the new claims before navigating to /dashboard"
+    },
+    "authorization": {
+      "tenantAdmin": "lib/tenant-auth.ts verifyTenantAdminAuth — Bearer token → adminAuth.verifyIdToken → check claims.tenantRole === 'franchise_admin' AND claims.tenantId matches the requested tenant. Super admins (claims.role === 'admin') bypass the tenantId check.",
+      "writeBoundary": "All tenant writes go through PATCH /api/tenant/branding which sanitizes the payload to ONLY the four allowed branding fields. No privilege escalation by writing arbitrary fields.",
+      "firestoreDefenseInDepth": "firestore.rules tenants/{tenantId} write rule: allow write: if isAdmin() || isTenantAdmin(tenantId). The API route is the canonical enforcement point; the rule prevents direct-from-client writes."
+    },
+    "firestoreRules": {
+      "tenants/{tenantId}": {
+        "read": "allow read: if true; (public — needed for branded landing page when visitor is anonymous)",
+        "write": "allow write: if isAdmin() || isTenantAdmin(tenantId);",
+        "knownLooseness": "allow read: if true is intentional for Phase A but means any authenticated user can enumerate tenant docs. TODO(phase-b) tighten to expose only branding/name/slug/status publicly."
+      },
+      "tenants/{tenantId}/invitations/{invitationId}": {
+        "read": "allow read: if isAdmin() || (isAuthenticated() && request.auth.token.tenantId == tenantId);",
+        "write": "allow write: if isAdmin() || (isAuthenticated() && request.auth.token.tenantRole == 'franchise_admin' && request.auth.token.tenantId == tenantId);",
+        "status": "rules already in place from a prior session; staff invitation flow that uses them is Phase B"
+      }
+    },
+    "hipaa": {
+      "BAA": "Signed with every franchise partner. Document at /baa.",
+      "encryption": "Firestore at rest + TLS in transit (Firebase default, sufficient for BAA-eligibility on Google Cloud).",
+      "dataIsolation": "PHASE A LIMITATION: managed-family data isolation is not yet enforced at the rules layer because the management-request flow does not exist. Phase C work. Today, all consumer family data lives in user-owned Firestore docs gated by isOwner(userId); franchises cannot read it because no staff accounts exist yet.",
+      "auditLogging": "All tenant-affecting actions (super admin and franchise owner) write to admin_audit_logs via logAdminAction. tenantId is now an indexed field on the log doc for queryability."
+    }
+  },
+
+  "implementationStatus": {
+    "phaseA": {
+      "label": "Phase A — Make the 48-Hour Promise True",
+      "status": "shipped",
+      "shippedIn": "branch following commit cc67da6",
+      "deliverables": [
+        "Tenant subdomain routing via proxy.ts",
+        "Branded tenant landing page (sign-in only, no public account creation)",
+        "Branded 'payment processing' waiting page for pending_payment status",
+        "Stripe webhook auto-activates franchise on checkout.session.completed",
+        "Owner Firebase Auth account auto-provisioned with tenantRole custom claim",
+        "Magic sign-in link emailed via Resend",
+        "Magic link finish page on the tenant subdomain",
+        "Branded /dashboard with self-serve branding editor (logo, color, name, support email)",
+        "PATCH /api/tenant/branding with auth + sanitization + audit logging + revalidatePath",
+        "firestore.rules isTenantAdmin helper + tenant write rule widened to franchise admins",
+        "Static franchise marketing page at /franchise + relocated 5-step form at /franchise/apply",
+        "lib/franchise-plans.ts as single source of truth for plan tiers + setup fee"
+      ]
+    },
+    "phaseB": {
+      "label": "Phase B — Make the 'AI-Augmented Multi-Client' Promise True",
+      "status": "planned",
+      "deliverables": [
+        "Family-side /find-a-provider directory (apex)",
+        "POST /api/tenant/[id]/management-request from inside family dashboard",
+        "Franchise dashboard 'Pending Requests' queue + approve/decline UI",
+        "user.managedBy[] field + Firestore rules update for staff-can-read-managed-families",
+        "Franchise dashboard 'Managed Families' list view",
+        "Staff invitation flow: POST /api/tenant/[id]/invitations + acceptance page + claim setting",
+        "currentSeats automatic increment/decrement (split into family-seats and staff-seats counters)",
+        "Tenant public profile page on the subdomain (currently the landing page IS the only public page)"
+      ],
+      "openQuestions": [
+        "Can a family be managed by multiple franchises simultaneously? Recommendation: NO for MVP (single tenantId in user.managedBy, not array). Relax later if needed.",
+        "What happens to a family's existing data when a franchise gets revoked? Recommendation: family retains everything; tenant loses access immediately."
+      ]
+    },
+    "phaseC": {
+      "label": "Phase C — Recurring Billing + Hardened Security",
+      "status": "planned",
+      "deliverables": [
+        "Stripe Subscription Products + Prices for the three plan tiers (6 prices: starter/pro/enterprise × monthly/annual)",
+        "Subscription auto-creation on tenant activation",
+        "Stripe Customer Portal link in dashboard for self-serve plan changes",
+        "Per-seat usage metering (additional staff/families above plan allowance auto-billed)",
+        "Failed payment handling + dunning emails",
+        "Tenant-scoped Firestore rules for managed-family data — staff of tenant X can read user data only when tenantId in user.managedBy",
+        "Tighten tenants/{id} read rule to expose only public branding fields publicly",
+        "Branded transactional emails (currently the activation email has tenant name but not tenant colors)",
+        "Branded /login page (apex login currently shows WPL branding even when accessed from a tenant subdomain)"
+      ]
+    },
+    "phaseD": {
+      "label": "Phase D — Polish + Scale",
+      "status": "deferred",
+      "deliverables": [
+        "Direct logo file upload (Cloudinary or Firebase Storage)",
+        "Custom domain support (e.g. care.maria-rn.com instead of maria.wellnessprojectionlab.com)",
+        "Branding editor: secondary color, accent color, font choices, custom CSS escape hatch",
+        "Branded mobile push notifications",
+        "Per-tenant analytics dashboard",
+        "Tenant-side audit log viewer ('who edited what')",
+        "Multi-language support per tenant",
+        "ROI calculator on /franchise marketing page",
+        "Real testimonials (currently placeholder)"
+      ]
+    }
+  },
+
+  "outOfScope": [
+    "WPL operating its own clinical practice — WPL sells infrastructure only, not health advice",
+    "Replacing electronic health record systems (EHR) — franchises that need full EHR integration are referred to enterprise vendors",
+    "Direct-to-consumer franchise marketing (Facebook ads, etc.) — franchises must do their own family acquisition; WPL provides the infrastructure and the family-side directory in Phase B",
+    "Per-tenant deployment isolation — all tenants share one Next.js app, one Firestore project, one Stripe account. Multi-region or per-tenant infra is out of scope indefinitely.",
+    "Custom feature development for individual franchises — feature flags are per-tenant but new features ship to all tenants together"
+  ],
+
+  "openQuestions": [
+    {
+      "id": "billing_model_for_phase_c",
+      "question": "Should monthly recurring use Stripe Subscriptions (cleaner reporting) or stay on the dynamic Price-creation pattern that the setup fee uses (zero dashboard setup)?",
+      "currentLeaning": "Subscriptions — six pre-created Prices in env vars give clean MRR reporting in Stripe dashboard. Worth the 10-minute setup."
+    },
+    {
+      "id": "owner_password_management",
+      "question": "Do owners ever need to set a password, or is magic-link-forever sufficient?",
+      "currentLeaning": "Add a 'Set password' option in dashboard Settings tab once Phase A is in production. Magic link covers the first ~10 sign-ins per owner reliably."
+    },
+    {
+      "id": "multi_tenant_per_family",
+      "question": "Can a family be managed by multiple franchises at once?",
+      "currentLeaning": "No for MVP. Single tenantId in user.managedBy[]. Relax later if data shows demand."
+    },
+    {
+      "id": "tenant_subdomain_seo",
+      "question": "Should tenant subdomains be indexed by Google? Today they all return tenant content but the apex marketing site is the canonical brand.",
+      "currentLeaning": "noindex tenant subdomains for Phase A — they're for direct visitors only. Phase B may need a /robots policy per tenant once franchises start sharing their own URLs."
+    },
+    {
+      "id": "managed_family_consent_audit",
+      "question": "When a family approves franchise management, what consent record is required for HIPAA?",
+      "currentLeaning": "Click-through consent stored in tenantManagementRequests doc with timestamp + IP + user agent. Phase B work."
+    }
+  ],
+
+  "files": {
+    "code": {
+      "types": "types/tenant.ts",
+      "proxy": "proxy.ts",
+      "tenantShellLayout": "app/tenant-shell/layout.tsx",
+      "tenantShellLanding": "app/tenant-shell/page.tsx",
+      "tenantShellNotFound": "app/tenant-shell/not-found.tsx",
+      "magicLinkFinish": "app/tenant-shell/auth/finish-sign-in/page.tsx",
+      "tenantDashboard": "app/tenant-shell/dashboard/page.tsx",
+      "brandingEditor": "app/tenant-shell/dashboard/BrandingEditor.tsx",
+      "marketingPage": "app/franchise/page.tsx",
+      "applicationForm": "app/franchise/apply/page.tsx",
+      "franchiseAgreement": "app/franchise-agreement/page.tsx",
+      "franchisePlans": "lib/franchise-plans.ts",
+      "tenantServer": "lib/tenant-server.ts",
+      "tenantAuth": "lib/tenant-auth.ts",
+      "stripeWebhook": "app/api/webhooks/stripe/route.ts",
+      "publicApplyApi": "app/api/franchise/apply/route.ts",
+      "adminTenantsApi": "app/api/admin/tenants/route.ts",
+      "adminTenantApi": "app/api/admin/tenants/[tenantId]/route.ts",
+      "paymentLinkApi": "app/api/admin/tenants/[tenantId]/payment-link/route.ts",
+      "tenantBrandingApi": "app/api/tenant/branding/route.ts",
+      "auditLog": "lib/admin/audit.ts",
+      "firestoreRules": "firestore.rules"
+    },
+    "adminUI": {
+      "tenantsList": "app/(dashboard)/admin/tenants/page.tsx",
+      "tenantCreate": "app/(dashboard)/admin/tenants/create/page.tsx",
+      "tenantEdit": "app/(dashboard)/admin/tenants/[tenantId]/page.tsx"
+    },
+    "docs": {
+      "thisFile": "FRANCHISE_PRD.json",
+      "platformIndex": "MASTER_PRD.md",
+      "legacyPlatformPRD": "docs/PRD.md (overlapping with MASTER_PRD.md — pre-existing duplication, not addressed by this PRD)"
+    }
+  },
+
+  "knownDebt": [
+    {
+      "id": "hsl_helper_duplicated_thrice",
+      "description": "The toCss(hslOrHex) helper now lives in 3 files: app/tenant-shell/page.tsx, app/tenant-shell/layout.tsx, app/tenant-shell/dashboard/BrandingEditor.tsx. Rule of three reached. Extract to lib/tenant-color.ts.",
+      "priority": "low",
+      "addedIn": "Phase A"
+    },
+    {
+      "id": "tenants_read_rule_too_open",
+      "description": "firestore.rules tenants/{id} allow read: if true exposes all tenant fields including billing/contact/EIN. Tighten in Phase B/C.",
+      "priority": "high",
+      "addedIn": "pre-existing"
+    },
+    {
+      "id": "current_seats_never_increments",
+      "description": "tenant.billing.currentSeats is hardcoded to 0 and never updated. Breaks billing math at customer #2. Fix in Phase B alongside staff invitations.",
+      "priority": "high",
+      "addedIn": "pre-existing"
+    },
+    {
+      "id": "two_overlapping_platform_prds",
+      "description": "MASTER_PRD.md and docs/PRD.md both claim to be the live platform PRD. Pick one. Not addressed by this franchise PRD.",
+      "priority": "medium",
+      "addedIn": "pre-existing"
+    },
+    {
+      "id": "master_prd_total_inconsistency",
+      "description": "MASTER_PRD.md header says 157 features but the category summary table sums to 287. Pre-existing.",
+      "priority": "low",
+      "addedIn": "pre-existing"
+    }
+  ],
+
+  "verificationChecklist": {
+    "phaseA": [
+      "npm run build passes with /tenant-shell/dashboard and /tenant-shell/auth/finish-sign-in in the route table",
+      "Stripe webhook with test card 4242 4242 4242 4242 activates a fresh tenant within 5s",
+      "Owner receives single email with magic link CTA",
+      "Magic link click → finish-sign-in → /dashboard signed in, custom claims present",
+      "BrandingEditor save → success toast → public landing reflects new branding without redeploy",
+      "Audit log entry visible in admin_audit_logs with action='tenant_branding_updated' and tenantId",
+      "Wrong-tenant access attempt is blocked (403 from API + redirect from page)",
+      "Webhook idempotency: Stripe replay does not double-create owner or double-email",
+      "Firestore rules deployed and rejecting cross-tenant writes from a logged-in franchise admin"
+    ]
+  }
+}

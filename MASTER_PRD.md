@@ -225,7 +225,10 @@ if (primaryRole === 'parent' || 'partner' || 'child' || 'pet' || 'multiple') →
 | Admin Portal | 18 | 18 | 0 | 0 |
 | Performance & Technical | 14 | 14 | 0 | 0 |
 | Subscription & Monetization | 8 | 0 | 8 | 0 |
-| **TOTAL** | **287** | **269** | **13** | **5** |
+| Franchise / White-Label Multi-Tenancy | 12 | 12 | 9 | 0 |
+| **TOTAL** | **299** | **281** | **22** | **5** |
+
+> **Franchise category:** Phase A shipped (12 features: tenant subdomains, Stripe webhook activation, magic-link onboarding, branded dashboard, branding editor, etc.). Phase B/C planned (9 features: family directory, management requests, staff invitations, recurring billing, hardened tenant data isolation). Full spec in [`FRANCHISE_PRD.json`](FRANCHISE_PRD.json).
 
 ### Detailed Feature List
 
@@ -409,7 +412,8 @@ Unlike traditional paywalls, upgrades are triggered at **natural decision points
 - ✅ **Advanced medical reports**
 - ✅ **Caregiver tools** (driver assignments, etc.)
 - ✅ **API access** (future)
-- ✅ **White-label options** (future)
+
+> **Note:** White-label / branded subdomain capability is **not** part of the Family+ consumer tier. It is a separate franchise/B2B offering with its own pricing ($3,000 setup + $750–$2,000/mo). See [`FRANCHISE_PRD.json`](FRANCHISE_PRD.json).
 
 **Target Conversion:** 5-10% of caregivers
 
@@ -945,7 +949,7 @@ User Action
 - 📋 Care notes and handoffs
 - 📋 Reporting for insurance/medicare
 - 📋 API access for EHR integration
-- 📋 White-label options
+- ✅ **White-label franchise system** (Phase A shipped — see [`FRANCHISE_PRD.json`](FRANCHISE_PRD.json))
 
 **Success Metrics:**
 - 100 professional caregivers using platform
@@ -976,6 +980,7 @@ User Action
 - **Implementation Status:** [`docs/UNIFIED_PRD_IMPLEMENTATION_COMPLETE.md`](docs/UNIFIED_PRD_IMPLEMENTATION_COMPLETE.md) - v3.0 implementation checklist
 - **Onboarding Config:** [`docs/UNIFIED_PRD.json`](docs/UNIFIED_PRD.json) - Used by onboarding code
 - **Medical Specs:** [`MEDICAL_RECORDS_PRD.json`](MEDICAL_RECORDS_PRD.json) - Detailed medical data models
+- **Franchise Specs:** [`FRANCHISE_PRD.json`](FRANCHISE_PRD.json) - White-label / multi-tenancy data models, lifecycles, API contracts, Phase A–C roadmap
 - **Archived PRDs:** [`docs/PRD_ARCHIVE/`](docs/PRD_ARCHIVE/) - Historical versions
 
 ### Contact & Support
