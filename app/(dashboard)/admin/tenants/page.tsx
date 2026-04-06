@@ -165,9 +165,12 @@ export default function AdminTenantsPage() {
                 >
                   Visit
                 </a>
-                <button className="flex-1 py-2 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted/80">
+                <a
+                  href={`/admin/tenants/${tenant.id}`}
+                  className="flex-1 text-center py-2 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted/80"
+                >
                   Edit
-                </button>
+                </a>
               </div>
             </div>
           ))}
