@@ -14,7 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyWebhookSignature } from '@/lib/stripe-config'
-import { adminDb } from '@/lib/firebase-admin'
+import { adminDb, getAdminAuth, createUser } from '@/lib/firebase-admin'
 import { sendEmail } from '@/lib/email-service'
 import { logger } from '@/lib/logger'
 import Stripe from 'stripe'
@@ -195,12 +195,66 @@ async function handleFranchiseSetupPaid(session: Stripe.Checkout.Session, tenant
       sessionId: session.id,
     })
 
-    // Send "your subdomain is live" email — reuses Resend via lib/email-service
+    // Provision the franchise owner's Firebase Auth account + custom claims
+    // and generate a magic sign-in link. All wrapped in best-effort try/catch
+    // because the tenant is already marked paid above; if provisioning fails
+    // here, an admin can re-trigger from the back-office tenant page.
     const adminEmail = tenant.contact?.adminEmail
+    let magicLinkUrl: string | null = null
+    if (adminEmail) {
+      try {
+        const auth = getAdminAuth()
+        let ownerUid: string
+        try {
+          const existing = await auth.getUserByEmail(adminEmail)
+          ownerUid = existing.uid
+          logger.info('[Stripe Webhook] Owner already exists, reusing', { tenantId, ownerUid })
+        } catch (lookupErr: any) {
+          if (lookupErr?.code === 'auth/user-not-found') {
+            const created = await createUser({
+              email: adminEmail,
+              displayName: tenant.contact?.adminName || tenant.name,
+              emailVerified: true,
+            })
+            ownerUid = created.uid
+            logger.info('[Stripe Webhook] Owner provisioned', { tenantId, ownerUid })
+          } else {
+            throw lookupErr
+          }
+        }
+
+        // Set custom claims so firestore.rules isTenantAdmin() recognizes them.
+        // Pattern matches lib/admin-auth.ts:81 setCustomUserClaims call.
+        await auth.setCustomUserClaims(ownerUid, {
+          tenantId,
+          tenantRole: 'franchise_admin',
+        })
+
+        await tenantRef.update({
+          ownerUid,
+          ownerProvisionedAt: nowIso,
+        })
+
+        // First-ever use of generateSignInWithEmailLink in this codebase.
+        // Action URL must be allowlisted in Firebase Console → Auth → Authorized domains.
+        const finishUrl = `https://${tenant.slug}.wellnessprojectionlab.com/auth/finish-sign-in?email=${encodeURIComponent(adminEmail)}`
+        magicLinkUrl = await auth.generateSignInWithEmailLink(adminEmail, {
+          url: finishUrl,
+          handleCodeInApp: true,
+        })
+        logger.info('[Stripe Webhook] Magic sign-in link generated', { tenantId })
+      } catch (provisionErr) {
+        logger.error('[Stripe Webhook] Owner provisioning failed', provisionErr as Error, { tenantId })
+        // fall through — still send the activation email with the bare subdomain link
+      }
+    }
+
     if (adminEmail) {
       const adminName = tenant.contact?.adminName || 'there'
       const businessName = tenant.name
       const subdomainUrl = `https://${tenant.slug}.wellnessprojectionlab.com`
+      const ctaUrl = magicLinkUrl || subdomainUrl
+      const ctaLabel = magicLinkUrl ? 'Sign In to Your Dashboard →' : 'Visit Your Platform →'
 
       try {
         await sendEmail({
@@ -224,14 +278,14 @@ async function handleFranchiseSetupPaid(session: Stripe.Checkout.Session, tenant
 
 <table cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
 <tr><td align="center" style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);border-radius:8px;padding:16px 40px;">
-<a href="${subdomainUrl}" style="color:#ffffff;text-decoration:none;font-size:18px;font-weight:600;">Visit Your Platform →</a>
+<a href="${ctaUrl}" style="color:#ffffff;text-decoration:none;font-size:18px;font-weight:600;">${ctaLabel}</a>
 </td></tr>
 </table>
 
 <p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0 0 8px;">Your subdomain:</p>
 <p style="font-size:16px;color:#10b981;font-weight:600;margin:0 0 24px;">${tenant.slug}.wellnessprojectionlab.com</p>
 
-<p style="font-size:14px;color:#6b7280;line-height:1.6;">Next steps: log in with the email you used to apply, invite your staff, and start onboarding families. Questions? Reply to this email.</p>
+<p style="font-size:14px;color:#6b7280;line-height:1.6;">${magicLinkUrl ? "Click the button above to sign in instantly — no password needed. The link is valid for one use." : "Next steps: log in with the email you used to apply, invite your staff, and start onboarding families. Questions? Reply to this email."}</p>
 </td></tr>
 <tr><td style="padding:24px 40px;background-color:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
 <p style="font-size:12px;color:#9ca3af;margin:0;">&copy; 2026 Wellness Projection Lab. All rights reserved.</p>

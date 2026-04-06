@@ -47,6 +47,15 @@ service cloud.firestore {
               isModerator());
     }
 
+    // SECURITY: Franchise tenant administrator. Custom claims
+    // { tenantId, tenantRole: 'franchise_admin' } are set by the Stripe
+    // webhook in app/api/webhooks/stripe/route.ts on tenant activation.
+    function isTenantAdmin(tenantId) {
+      return isAuthenticated() &&
+             request.auth.token.tenantId == tenantId &&
+             request.auth.token.tenantRole == 'franchise_admin';
+    }
+
     // ============================================
     // USERS COLLECTION
     // ============================================
@@ -1664,10 +1673,14 @@ service cloud.firestore {
     // ============================================
 
     match /tenants/{tenantId} {
-      // Anyone can read tenant data (needed for branding on subdomain)
+      // Anyone can read tenant data (needed for public branding on subdomain).
+      // TODO(phase-b): tighten so only `branding`, `name`, `slug`, `status` are
+      // publicly readable; everything else requires isTenantAdmin or isAdmin.
       allow read: if true;
-      // Only super admins can create/edit tenants
-      allow write: if isAdmin();
+      // Super admins can create/edit any tenant. Franchise owners can edit
+      // only their own tenant doc (the API route at /api/tenant/branding is
+      // the canonical write path and validates which fields can change).
+      allow write: if isAdmin() || isTenantAdmin(tenantId);
 
       match /invitations/{invitationId} {
         allow read: if isAdmin() ||

@@ -50,14 +50,19 @@ export type AdminAction =
   | 'admin_role_grant'
   | 'admin_role_revoke'
   | 'settings_update'
+  // Tenant / franchise actions
+  | 'tenant_payment_link_sent'
+  | 'tenant_branding_updated'
 
 export interface AdminAuditLog {
   logId: string
   adminUid: string
   adminEmail: string
   action: AdminAction
-  targetType: 'user' | 'recipe' | 'case' | 'decision' | 'coach' | 'perk' | 'system'
+  targetType: 'user' | 'recipe' | 'case' | 'decision' | 'coach' | 'perk' | 'system' | 'tenant'
   targetId: string
+  /** When the action was performed against a tenant, the tenantId for queryability. */
+  tenantId?: string
   changes?: Record<string, any> // Before/after for edits
   reason?: string
   metadata?: Record<string, any>
@@ -75,6 +80,7 @@ export async function logAdminAction(params: {
   action: AdminAction
   targetType: AdminAuditLog['targetType']
   targetId: string
+  tenantId?: string
   changes?: Record<string, any>
   reason?: string
   metadata?: Record<string, any>
@@ -82,7 +88,7 @@ export async function logAdminAction(params: {
   userAgent?: string
 }): Promise<void> {
   try {
-    const logData = {
+    const logData: Record<string, any> = {
       adminUid: params.adminUid,
       adminEmail: params.adminEmail,
       action: params.action,
@@ -94,6 +100,9 @@ export async function logAdminAction(params: {
       timestamp: Timestamp.now(),
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
+    }
+    if (params.tenantId) {
+      logData.tenantId = params.tenantId
     }
 
     // Add to admin_audit_logs collection
