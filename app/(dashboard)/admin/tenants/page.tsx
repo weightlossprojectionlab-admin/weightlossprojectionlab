@@ -53,13 +53,13 @@ export default function AdminTenantsPage() {
           <h1 className="text-3xl font-bold text-foreground">Franchise Management</h1>
           <p className="text-muted-foreground mt-1">Create and manage franchise partners</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
+        <a
+          href="/admin/tenants/create"
           className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors"
         >
           <PlusIcon className="h-5 w-5" />
           New Franchise
-        </button>
+        </a>
       </div>
 
       {/* Stats */}
@@ -109,12 +109,12 @@ export default function AdminTenantsPage() {
           <BuildingOffice2Icon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-bold text-foreground mb-2">No Franchises Yet</h2>
           <p className="text-muted-foreground mb-4">Create your first franchise partner to get started.</p>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium"
+          <a
+            href="/admin/tenants/create"
+            className="inline-block px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium"
           >
             Create First Franchise
-          </button>
+          </a>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
