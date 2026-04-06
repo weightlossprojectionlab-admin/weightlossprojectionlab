@@ -10,7 +10,6 @@ import { isSuperAdmin } from '@/lib/admin/permissions'
 import { logAdminAction } from '@/lib/admin/audit'
 import { logger } from '@/lib/logger'
 import { errorResponse, forbiddenResponse, unauthorizedResponse } from '@/lib/api-response'
-import type { Tenant, DEFAULT_TENANT_FEATURES } from '@/types/tenant'
 
 async function verifyAdmin(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -57,12 +56,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'name, slug, and adminEmail are required' }, { status: 400 })
     }
 
-    // Validate slug format (lowercase, alphanumeric, hyphens only)
     if (!/^[a-z0-9-]+$/.test(slug)) {
       return NextResponse.json({ error: 'Slug must be lowercase letters, numbers, and hyphens only' }, { status: 400 })
     }
 
-    // Check slug uniqueness
     const existing = await adminDb.collection('tenants').where('slug', '==', slug).limit(1).get()
     if (!existing.empty) {
       return NextResponse.json({ error: `Slug "${slug}" is already taken` }, { status: 409 })
@@ -70,10 +67,16 @@ export async function POST(request: NextRequest) {
 
     const now = new Date().toISOString()
 
-    const tenantData: Omit<Tenant, 'id'> = {
+    const tenantData = {
       slug,
       name,
-      status: 'active',
+      status: body.status || 'pending_payment',
+      // Legal
+      legalName: body.legalName || name,
+      entityType: body.entityType || '',
+      ein: body.ein || '',
+      stateOfIncorporation: body.stateOfIncorporation || '',
+      // Branding
       branding: {
         logoUrl: branding?.logoUrl || '',
         primaryColor: branding?.primaryColor || '262 83% 58%',
@@ -83,25 +86,55 @@ export async function POST(request: NextRequest) {
         tagline: branding?.tagline || '',
         supportEmail: adminEmail,
         supportPhone: branding?.supportPhone || '',
-        websiteUrl: branding?.websiteUrl || '',
+        websiteUrl: body.website || branding?.websiteUrl || '',
       },
+      // Billing
       billing: {
         plan: billing?.plan || 'starter',
         maxSeats: billing?.maxSeats || 5,
         currentSeats: 0,
         monthlyBaseRate: billing?.monthlyBaseRate || 75000,
         perSeatRate: billing?.perSeatRate || 3500,
-        billingEmail: adminEmail,
+        billingEmail: billing?.billingEmail || adminEmail,
         invoiceDay: 1,
         setupFeePaid: false,
         setupFeeAmount: billing?.setupFeeAmount || 300000,
+        billingTerm: body.billingTerm || 'monthly',
       },
+      // Contact
       contact: {
         adminName: adminName || '',
         adminEmail,
+        contactTitle: body.contactTitle || '',
         phone: body.phone || '',
         address: body.address || '',
+        city: body.city || '',
+        state: body.state || '',
+        zip: body.zip || '',
       },
+      // Billing address
+      billingAddress: {
+        sameAsAddress: body.billingSameAsAddress !== false,
+        address: body.billingAddress || body.address || '',
+        city: body.billingCity || body.city || '',
+        state: body.billingState || body.state || '',
+        zip: body.billingZip || body.zip || '',
+        contact: body.billingContact || adminName || '',
+        email: body.billingEmail || adminEmail,
+      },
+      // Practice
+      practiceType: body.practiceType || '',
+      licenseNumber: body.licenseNumber || '',
+      npiNumber: body.npiNumber || '',
+      staffCount: body.staffCount || '',
+      familyCount: body.familyCount || 0,
+      // Emergency contact
+      emergencyContact: body.emergencyContact || { name: '', email: '', phone: '' },
+      // Additional
+      expectedLaunchDate: body.expectedLaunchDate || '',
+      leadSource: body.leadSource || '',
+      notes: body.notes || '',
+      // Features
       features: features || {
         aiCoaching: true,
         medicalRecords: true,
