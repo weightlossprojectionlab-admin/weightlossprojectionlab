@@ -79,7 +79,7 @@ export function TenantProvider({ tenantSlug, children }: TenantProviderProps) {
         const data = doc.data() as Omit<Tenant, 'id'>
         const tenantData: Tenant = { ...data, id: doc.id }
 
-        if (tenantData.status !== 'active' && tenantData.status !== 'trial') {
+        if (tenantData.status !== 'active' && tenantData.status !== 'paid') {
           logger.warn('[TenantContext] Tenant is not active', { slug: tenantSlug, status: tenantData.status })
           setError('This organization is not currently active')
           setTenant(null)

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getAdminAuthToken } from '@/lib/admin/api'
 import { getCSRFToken } from '@/lib/csrf'
-import { BuildingOffice2Icon, PlusIcon, UserGroupIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
+import { BuildingOffice2Icon, PlusIcon, UserGroupIcon, CurrencyDollarIcon, NoSymbolIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import type { Tenant } from '@/types/tenant'
 
@@ -32,6 +32,32 @@ export default function AdminTenantsPage() {
       toast.error('Failed to load tenants')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleStatusChange = async (tenantId: string, tenantName: string, newStatus: string) => {
+    const action = newStatus === 'suspended' ? 'suspend' : 'reactivate'
+    if (!confirm(`Are you sure you want to ${action} "${tenantName}"?${newStatus === 'suspended' ? '\n\nThis will immediately block all users from accessing the platform.' : ''}`)) return
+
+    try {
+      const token = await getAdminAuthToken()
+      const csrfToken = getCSRFToken()
+      const res = await fetch(`/api/admin/tenants/${tenantId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!res.ok) throw new Error('Failed to update status')
+
+      setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, status: newStatus as any } : t))
+      toast.success(`${tenantName} ${action === 'suspend' ? 'suspended' : 'reactivated'}`)
+    } catch {
+      toast.error(`Failed to ${action} franchise`)
     }
   }
 
@@ -127,7 +153,7 @@ export default function AdminTenantsPage() {
                 </div>
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                   tenant.status === 'active' ? 'bg-green-100 text-green-700' :
-                  tenant.status === 'trial' ? 'bg-blue-100 text-blue-700' :
+                  tenant.status === 'pending_payment' ? 'bg-yellow-100 text-yellow-700' :
                   tenant.status === 'suspended' ? 'bg-red-100 text-red-700' :
                   'bg-gray-100 text-gray-700'
                 }`}>
@@ -156,21 +182,40 @@ export default function AdminTenantsPage() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-border flex gap-2">
-                <a
-                  href={`https://${tenant.slug}.wellnessprojectionlab.com`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 text-center py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20"
-                >
-                  Visit
-                </a>
-                <a
-                  href={`/admin/tenants/${tenant.id}`}
-                  className="flex-1 text-center py-2 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted/80"
-                >
-                  Edit
-                </a>
+              <div className="mt-4 pt-4 border-t border-border space-y-2">
+                <div className="flex gap-2">
+                  <a
+                    href={`https://${tenant.slug}.wellnessprojectionlab.com`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 text-center py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20"
+                  >
+                    Visit
+                  </a>
+                  <a
+                    href={`/admin/tenants/${tenant.id}`}
+                    className="flex-1 text-center py-2 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted/80"
+                  >
+                    Edit
+                  </a>
+                </div>
+                {tenant.status === 'active' ? (
+                  <button
+                    onClick={() => handleStatusChange(tenant.id, tenant.name, 'suspended')}
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+                  >
+                    <NoSymbolIcon className="h-4 w-4" />
+                    Suspend for Non-Payment
+                  </button>
+                ) : tenant.status === 'suspended' ? (
+                  <button
+                    onClick={() => handleStatusChange(tenant.id, tenant.name, 'active')}
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-green-50 text-green-600 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
+                  >
+                    <CheckCircleIcon className="h-4 w-4" />
+                    Reactivate
+                  </button>
+                ) : null}
               </div>
             </div>
           ))}

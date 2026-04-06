@@ -61,7 +61,7 @@ export interface Tenant {
   id: string
   slug: string               // subdomain: "gentletouch" (unique, indexed)
   name: string               // "Gentle Touch Care"
-  status: 'active' | 'suspended' | 'trial' | 'canceled' | 'pending'
+  status: 'active' | 'suspended' | 'canceled' | 'pending_payment' | 'paid'
   branding: TenantBranding
   billing: TenantBilling
   contact: TenantContact

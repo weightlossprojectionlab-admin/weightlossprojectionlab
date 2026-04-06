@@ -178,8 +178,7 @@ export default function EditTenantPage() {
                 <option value="pending_payment">Pending Payment</option>
                 <option value="paid">Paid</option>
                 <option value="active">Active</option>
-                <option value="trial">Trial</option>
-                <option value="suspended">Suspended</option>
+                <option value="suspended">Suspended (Non-Payment)</option>
                 <option value="canceled">Canceled</option>
               </select>
             </div>

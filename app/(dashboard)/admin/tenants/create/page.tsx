@@ -233,8 +233,7 @@ export default function AdminCreateTenantPage() {
           <FormField label="Initial Status">
             <select value={initialStatus} onChange={e => setInitialStatus(e.target.value)} className={selectClass}>
               <option value="pending_payment">Pending Payment</option>
-              <option value="active">Active (skip payment)</option>
-              <option value="trial">Trial</option>
+              <option value="active">Active (payment received)</option>
             </select>
           </FormField>
         </div>
