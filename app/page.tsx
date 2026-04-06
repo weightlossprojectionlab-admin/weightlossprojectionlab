@@ -124,6 +124,16 @@ export default function HomePage() {
             </span>
           </div>
         </div>
+
+        {/* For Practitioners */}
+        <div className="text-center pt-6 border-t border-gray-200 dark:border-gray-700">
+          <p className="text-sm text-muted-foreground">
+            Are you a nurse or care provider?{' '}
+            <Link href="/franchise" className="text-blue-600 dark:text-blue-400 font-medium underline hover:no-underline">
+              License our platform &rarr;
+            </Link>
+          </p>
+        </div>
       </div>
     </main>
   )

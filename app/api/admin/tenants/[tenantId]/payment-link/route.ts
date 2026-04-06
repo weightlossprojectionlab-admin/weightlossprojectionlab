@@ -11,6 +11,7 @@ import stripe from '@/lib/stripe-config'
 import { sendEmail } from '@/lib/email-service'
 import { logger } from '@/lib/logger'
 import { errorResponse, forbiddenResponse } from '@/lib/api-response'
+import { SETUP_FEE_CENTS } from '@/lib/franchise-plans'
 
 async function verifyAdmin(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -40,7 +41,7 @@ export async function POST(
     }
 
     const tenant = tenantDoc.data()!
-    const setupFeeAmount = tenant.billing?.setupFeeAmount || 300000 // $3,000 in cents
+    const setupFeeAmount = tenant.billing?.setupFeeAmount || SETUP_FEE_CENTS
     const adminEmail = tenant.contact?.adminEmail
     const businessName = tenant.name
 

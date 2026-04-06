@@ -1,581 +1,338 @@
-'use client'
+/**
+ * Franchise Marketing / Sales Page
+ *
+ * Top-of-funnel page for nurses, wellness coaches, concierge doctors,
+ * home care agencies, and patient advocates considering licensing the
+ * WPL platform under their own brand.
+ *
+ * The application form lives at /franchise/apply.
+ */
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { CheckIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
-import toast from 'react-hot-toast'
+import type { Metadata } from 'next'
+import { CheckIcon } from '@heroicons/react/24/outline'
+import { FRANCHISE_PLANS, SETUP_FEE_USD, ANNUAL_DISCOUNT_PCT } from '@/lib/franchise-plans'
 
-const PRACTICE_TYPES = [
-  'Solo Nurse / Caregiver',
-  'Wellness Coach',
-  'Concierge Doctor',
-  'Home Care Agency',
-  'Patient Advocate',
-  'Other',
-]
+export const dynamic = 'force-static'
+export const revalidate = false
 
-const ENTITY_TYPES = [
-  'Sole Proprietorship',
-  'LLC',
-  'Corporation',
-  'Partnership',
-  'Non-Profit',
-  'Other',
-]
+const CURRENT_YEAR = new Date().getFullYear()
 
-const LEAD_SOURCES = [
-  'LinkedIn',
-  'Google Search',
-  'Referral',
-  'Social Media',
-  'Conference/Event',
-  'Other',
-]
-
-const PLANS = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    monthlyBase: 750,
-    perSeat: 35,
-    maxSeats: 5,
-    maxClients: 50,
-    ai: 'Basic AI',
-    support: 'Email support',
-    popular: false,
-  },
-  {
-    id: 'professional',
-    name: 'Professional',
-    monthlyBase: 1250,
-    perSeat: 35,
-    maxSeats: 15,
-    maxClients: 200,
-    ai: 'Full AI Suite',
-    support: 'Priority support',
-    popular: true,
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    monthlyBase: 2000,
-    perSeat: 25,
-    maxSeats: -1,
-    maxClients: -1,
-    ai: 'Full AI Suite',
-    support: 'Dedicated account manager',
-    popular: false,
-  },
-]
-
-function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label} {required && <span className="text-red-500">*</span>}</label>
-      {children}
-    </div>
-  )
+export const metadata: Metadata = {
+  title: 'License Wellness Projection Lab — Launch Your Branded Health Practice',
+  description:
+    'White-label the HIPAA-compliant family health platform under your own brand. AI-powered tracking, your subdomain, your colors, your clients. Launch in 48 hours.',
 }
 
-const inputClass = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
-const selectClass = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 bg-white"
+const PROBLEMS = [
+  {
+    title: 'Drowning in spreadsheets',
+    body:
+      'Tracking client vitals, meds, appointments and meals across notebooks, group texts, and shared docs. Nothing connects, nothing scales.',
+  },
+  {
+    title: 'No HIPAA-compliant tools',
+    body:
+      "Off-the-shelf consumer apps aren't BAA-eligible. Building your own would cost six figures and a year you don't have.",
+  },
+  {
+    title: "Can't grow past 10 clients",
+    body:
+      'Your hands-on care is brilliant — but every new family means more paperwork, more late nights, and a hard ceiling on revenue.',
+  },
+]
 
-export default function FranchisePage() {
-  // Step 1: Business info
-  const [businessName, setBusinessName] = useState('')
-  const [legalName, setLegalName] = useState('')
-  const [entityType, setEntityType] = useState('')
-  const [ein, setEin] = useState('')
-  const [stateOfIncorporation, setStateOfIncorporation] = useState('')
-  const [contactName, setContactName] = useState('')
-  const [contactTitle, setContactTitle] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [website, setWebsite] = useState('')
+const FEATURES = [
+  'AI-powered meal logging and nutrition coaching',
+  'Vital tracking — BP, glucose, weight, oxygen, more',
+  'Medication management with refill reminders',
+  'Family sharing across caregivers, spouses, doctors',
+  'Secure document storage for medical records',
+  'Branded subdomain — yourname.wellnessprojectionlab.com',
+  'Appointment scheduling and reminders',
+  'AI-generated health reports',
+  'HIPAA-compliant infrastructure with BAA',
+  'Email + chat support',
+]
 
-  // Address
-  const [address, setAddress] = useState('')
-  const [city, setCity] = useState('')
-  const [state, setState] = useState('')
-  const [zip, setZip] = useState('')
+const STEPS = [
+  { num: 1, title: 'Apply', body: 'Fill out a 5-minute application with your business details and pick a plan.' },
+  { num: 2, title: 'Review', body: 'We review your application within 48 hours and send a Stripe payment link.' },
+  { num: 3, title: 'Pay setup fee', body: `One-time $${SETUP_FEE_USD.toLocaleString()} setup fee covers white-label config and onboarding.` },
+  { num: 4, title: 'Go live', body: 'Your branded subdomain activates automatically. Invite staff and onboard families.' },
+]
 
-  // Billing address
-  const [billingSame, setBillingSame] = useState(true)
-  const [billingAddress, setBillingAddress] = useState('')
-  const [billingCity, setBillingCity] = useState('')
-  const [billingState, setBillingState] = useState('')
-  const [billingZip, setBillingZip] = useState('')
-  const [billingContact, setBillingContact] = useState('')
-  const [billingEmail, setBillingEmail] = useState('')
+const FAQ = [
+  {
+    q: 'Is the platform really HIPAA compliant?',
+    a: 'Yes — we sign a Business Associate Agreement (BAA) with every franchise partner. All data is encrypted at rest and in transit, hosted on SOC 2 Type II certified infrastructure.',
+  },
+  {
+    q: 'Who owns the client data?',
+    a: 'You do. WPL provides the infrastructure. Upon termination, all your data is exported and returned to you within 30 days per the Data Ownership Policy.',
+  },
+  {
+    q: 'How much customization do I get?',
+    a: 'Your logo, primary brand colors, company name, support email, and a dedicated subdomain. Your clients see your brand throughout.',
+  },
+  {
+    q: 'What if I need to cancel?',
+    a: 'Month-to-month service with 30-day cancellation notice. No long-term contracts. Annual billing is available at a 15% discount if you prefer.',
+  },
+  {
+    q: "What's the support SLA?",
+    a: '99.9% uptime guarantee. Email support on Starter, priority support on Professional, dedicated account manager on Enterprise. If we fall below 99.9% in any calendar month, you receive a prorated credit.',
+  },
+  {
+    q: 'Can I add seats later?',
+    a: "Yes — add staff seats anytime from your admin dashboard. Each additional seat is billed at your plan's per-seat rate.",
+  },
+]
 
-  // Step 2: Practice type
-  const [practiceType, setPracticeType] = useState('')
-  const [otherPractice, setOtherPractice] = useState('')
-  const [licenseNumber, setLicenseNumber] = useState('')
-  const [npiNumber, setNpiNumber] = useState('')
-  const [staffCount, setStaffCount] = useState('1-5')
-  const [familyCount, setFamilyCount] = useState('')
-
-  // Emergency contact
-  const [emergencyName, setEmergencyName] = useState('')
-  const [emergencyEmail, setEmergencyEmail] = useState('')
-  const [emergencyPhone, setEmergencyPhone] = useState('')
-
-  // Step 3: Plan
-  const [selectedPlan, setSelectedPlan] = useState('professional')
-  const [billingTerm, setBillingTerm] = useState<'monthly' | 'annual'>('monthly')
-
-  // Step 4: Subdomain
-  const [subdomain, setSubdomain] = useState('')
-  const [subdomainAvailable, setSubdomainAvailable] = useState<boolean | null>(null)
-  const [checkingSubdomain, setCheckingSubdomain] = useState(false)
-
-  // Step 5: Additional
-  const [launchDate, setLaunchDate] = useState('')
-  const [leadSource, setLeadSource] = useState('')
-  const [notes, setNotes] = useState('')
-
-  // Agreements
-  const [agreeFranchise, setAgreeFranchise] = useState(false)
-  const [agreeBaa, setAgreeBaa] = useState(false)
-  const [agreeBilling, setAgreeBilling] = useState(false)
-  const [agreeData, setAgreeData] = useState(false)
-
-  const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-
-  const handleBusinessNameChange = (value: string) => {
-    setBusinessName(value)
-    const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    setSubdomain(slug)
-    setSubdomainAvailable(null)
-  }
-
-  const checkSubdomain = async () => {
-    if (!subdomain) return
-    setCheckingSubdomain(true)
-    try {
-      const res = await fetch(`/api/admin/tenants/check-slug?slug=${subdomain}`)
-      const data = await res.json()
-      setSubdomainAvailable(data.available)
-    } catch {
-      setSubdomainAvailable(null)
-    } finally {
-      setCheckingSubdomain(false)
-    }
-  }
-
-  const handleSubmit = async () => {
-    if (!businessName || !contactName || !email || !practiceType || !selectedPlan || !subdomain || !address || !city || !state || !zip) {
-      toast.error('Please complete all required fields')
-      return
-    }
-    if (!agreeFranchise || !agreeBaa || !agreeBilling || !agreeData) {
-      toast.error('Please agree to all terms')
-      return
-    }
-
-    setSubmitting(true)
-    try {
-      const res = await fetch('/api/franchise/apply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // Business
-          businessName,
-          legalName: legalName || businessName,
-          entityType,
-          ein,
-          stateOfIncorporation,
-          // Contact
-          contactName,
-          contactTitle,
-          email,
-          phone,
-          website,
-          // Address
-          address,
-          city,
-          state,
-          zip,
-          // Billing
-          billingSameAsAddress: billingSame,
-          billingAddress: billingSame ? address : billingAddress,
-          billingCity: billingSame ? city : billingCity,
-          billingState: billingSame ? state : billingState,
-          billingZip: billingSame ? zip : billingZip,
-          billingContact: billingSame ? contactName : billingContact,
-          billingEmail: billingEmail || email,
-          // Practice
-          practiceType: practiceType === 'Other' ? otherPractice : practiceType,
-          licenseNumber,
-          npiNumber,
-          staffCount,
-          familyCount: parseInt(familyCount) || 0,
-          // Emergency
-          emergencyContact: { name: emergencyName, email: emergencyEmail, phone: emergencyPhone },
-          // Plan
-          plan: selectedPlan,
-          billingTerm,
-          subdomain,
-          // Additional
-          expectedLaunchDate: launchDate,
-          leadSource,
-          notes,
-        }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to submit')
-      }
-
-      setSubmitted(true)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Something went wrong')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  if (submitted) {
-    return (
-      <main className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center px-4">
-        <div className="max-w-lg text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircleIcon className="h-10 w-10 text-green-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Application Received!</h1>
-          <p className="text-lg text-gray-600 mb-6">
-            Thank you for your interest in partnering with Wellness Projection Lab. We'll review your application and reach out within 48 hours.
-          </p>
-          <p className="text-sm text-gray-500 mb-8">
-            Check your email at <strong>{email}</strong> for confirmation and next steps.
-          </p>
-          <Link href="/" className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium">
-            Back to Home
-          </Link>
-        </div>
-      </main>
-    )
-  }
-
+export default function FranchiseMarketingPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
+    <main className="min-h-screen bg-white">
       {/* Hero */}
-      <div className="bg-gradient-to-r from-purple-700 to-indigo-800 text-white py-16 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Launch Your Digital Health Practice</h1>
-          <p className="text-xl text-purple-100 mb-8">
-            Get the AI-powered platform that lets you manage 50 families from one dashboard.
+      <section className="bg-gradient-to-br from-purple-700 via-indigo-700 to-blue-700 text-white py-20 px-4">
+        <div className="max-w-4xl mx-auto text-center space-y-6">
+          <div className="inline-block px-4 py-1 rounded-full bg-white/10 text-sm font-medium border border-white/20">
+            For nurses, wellness coaches & care providers
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+            Launch Your Branded Digital Health Practice in 48 Hours
+          </h1>
+          <p className="text-xl text-purple-100 max-w-2xl mx-auto">
+            White-label the HIPAA-compliant family health platform under your own brand.
+            Your subdomain. Your colors. Your clients. Zero infrastructure to build.
           </p>
-          <div className="flex flex-wrap justify-center gap-6 text-sm">
-            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-400" /> HIPAA Compliant</span>
-            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-400" /> White-Label</span>
-            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-400" /> AI-Powered</span>
-            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-400" /> Launch in 48 Hours</span>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+            <Link
+              href="/franchise/apply"
+              className="px-8 py-4 bg-white text-purple-700 rounded-xl font-bold text-lg shadow-lg hover:scale-105 transition-transform"
+            >
+              Apply Now
+            </Link>
+            <a
+              href="#pricing"
+              className="px-8 py-4 border-2 border-white/40 rounded-xl font-semibold text-lg hover:bg-white/10 transition-colors"
+            >
+              See Pricing
+            </a>
+          </div>
+          <div className="flex flex-wrap justify-center gap-6 text-sm pt-6">
+            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> HIPAA Compliant</span>
+            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> White-Label</span>
+            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> AI-Powered</span>
+            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> Launch in 48 Hours</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="max-w-3xl mx-auto px-4 py-12 space-y-10">
-
-        {/* Step 1: Business & Legal Info */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Step 1: Business Information</h2>
-          <p className="text-sm text-gray-500 mb-6">Legal and contact information for the franchise agreement.</p>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="Business Name (DBA)" required>
-                <input type="text" value={businessName} onChange={e => handleBusinessNameChange(e.target.value)} placeholder="Gentle Touch Care" className={inputClass} />
-              </FormField>
-              <FormField label="Legal Business Name">
-                <input type="text" value={legalName} onChange={e => setLegalName(e.target.value)} placeholder="Gentle Touch Care LLC" className={inputClass} />
-              </FormField>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <FormField label="Entity Type">
-                <select value={entityType} onChange={e => setEntityType(e.target.value)} className={selectClass}>
-                  <option value="">Select...</option>
-                  {ENTITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </FormField>
-              <FormField label="EIN / Tax ID">
-                <input type="text" value={ein} onChange={e => setEin(e.target.value)} placeholder="XX-XXXXXXX" className={inputClass} />
-              </FormField>
-              <FormField label="State of Incorporation">
-                <input type="text" value={stateOfIncorporation} onChange={e => setStateOfIncorporation(e.target.value)} placeholder="New Jersey" className={inputClass} />
-              </FormField>
-            </div>
-
-            <hr className="my-4" />
-            <h3 className="text-sm font-semibold text-gray-900">Primary Contact</h3>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="Full Name" required>
-                <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Maria Rodriguez" className={inputClass} />
-              </FormField>
-              <FormField label="Title / Role">
-                <input type="text" value={contactTitle} onChange={e => setContactTitle(e.target.value)} placeholder="Owner, RN" className={inputClass} />
-              </FormField>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <FormField label="Email" required>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="maria@gentletouch.com" className={inputClass} />
-              </FormField>
-              <FormField label="Phone">
-                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(555) 123-4567" className={inputClass} />
-              </FormField>
-              <FormField label="Website">
-                <input type="url" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://..." className={inputClass} />
-              </FormField>
-            </div>
-
-            <hr className="my-4" />
-            <h3 className="text-sm font-semibold text-gray-900">Business Address</h3>
-
-            <FormField label="Street Address" required>
-              <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St, Suite 200" className={inputClass} />
-            </FormField>
-            <div className="grid grid-cols-3 gap-4">
-              <FormField label="City" required>
-                <input type="text" value={city} onChange={e => setCity(e.target.value)} className={inputClass} />
-              </FormField>
-              <FormField label="State" required>
-                <input type="text" value={state} onChange={e => setState(e.target.value)} className={inputClass} />
-              </FormField>
-              <FormField label="ZIP" required>
-                <input type="text" value={zip} onChange={e => setZip(e.target.value)} className={inputClass} />
-              </FormField>
-            </div>
-
-            <hr className="my-4" />
-            <h3 className="text-sm font-semibold text-gray-900">Billing Address</h3>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={billingSame} onChange={e => setBillingSame(e.target.checked)} className="h-4 w-4 text-purple-600 rounded" />
-              <span className="text-sm text-gray-700">Same as business address</span>
-            </label>
-            {!billingSame && (
-              <div className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Billing Contact">
-                    <input type="text" value={billingContact} onChange={e => setBillingContact(e.target.value)} className={inputClass} />
-                  </FormField>
-                  <FormField label="Billing Email">
-                    <input type="email" value={billingEmail} onChange={e => setBillingEmail(e.target.value)} className={inputClass} />
-                  </FormField>
-                </div>
-                <FormField label="Billing Address">
-                  <input type="text" value={billingAddress} onChange={e => setBillingAddress(e.target.value)} className={inputClass} />
-                </FormField>
-                <div className="grid grid-cols-3 gap-4">
-                  <FormField label="City">
-                    <input type="text" value={billingCity} onChange={e => setBillingCity(e.target.value)} className={inputClass} />
-                  </FormField>
-                  <FormField label="State">
-                    <input type="text" value={billingState} onChange={e => setBillingState(e.target.value)} className={inputClass} />
-                  </FormField>
-                  <FormField label="ZIP">
-                    <input type="text" value={billingZip} onChange={e => setBillingZip(e.target.value)} className={inputClass} />
-                  </FormField>
-                </div>
+      {/* Problem */}
+      <section className="py-20 px-4 bg-gray-50">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              The infrastructure problem every solo provider hits
+            </h2>
+            <p className="text-lg text-gray-600">
+              You&apos;re a great caregiver. You shouldn&apos;t also have to be a software company.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {PROBLEMS.map(p => (
+              <div key={p.title} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-2">{p.title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{p.body}</p>
               </div>
-            )}
-          </div>
-        </section>
-
-        {/* Step 2: Practice Type & Credentials */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Step 2: Practice Details</h2>
-          <p className="text-sm text-gray-500 mb-6">Help us customize the platform and verify your credentials.</p>
-          <div className="space-y-3 mb-6">
-            {PRACTICE_TYPES.map(type => (
-              <label key={type} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${practiceType === type ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <input type="radio" name="practiceType" value={type} checked={practiceType === type} onChange={() => setPracticeType(type)} className="text-purple-600" />
-                <span className="text-gray-900">{type}</span>
-              </label>
             ))}
-            {practiceType === 'Other' && (
-              <input type="text" value={otherPractice} onChange={e => setOtherPractice(e.target.value)} placeholder="Describe your practice" className={`${inputClass} ml-8`} />
-            )}
           </div>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <FormField label="License / Certification Number">
-              <input type="text" value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} placeholder="RN-12345678" className={inputClass} />
-            </FormField>
-            <FormField label="NPI Number (if applicable)">
-              <input type="text" value={npiNumber} onChange={e => setNpiNumber(e.target.value)} placeholder="1234567890" className={inputClass} />
-            </FormField>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="How many staff?">
-              <select value={staffCount} onChange={e => setStaffCount(e.target.value)} className={selectClass}>
-                <option value="1">Just me</option>
-                <option value="1-5">1-5</option>
-                <option value="6-15">6-15</option>
-                <option value="16+">16+</option>
-              </select>
-            </FormField>
-            <FormField label="How many families do you manage?">
-              <input type="number" value={familyCount} onChange={e => setFamilyCount(e.target.value)} placeholder="e.g. 25" className={inputClass} />
-            </FormField>
-          </div>
-
-          <hr className="my-6" />
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Emergency / Secondary Contact</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <FormField label="Name">
-              <input type="text" value={emergencyName} onChange={e => setEmergencyName(e.target.value)} className={inputClass} />
-            </FormField>
-            <FormField label="Email">
-              <input type="email" value={emergencyEmail} onChange={e => setEmergencyEmail(e.target.value)} className={inputClass} />
-            </FormField>
-            <FormField label="Phone">
-              <input type="tel" value={emergencyPhone} onChange={e => setEmergencyPhone(e.target.value)} className={inputClass} />
-            </FormField>
-          </div>
-        </section>
-
-        {/* Step 3: Plan Selection */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Step 3: Choose Your Plan</h2>
-          <p className="text-sm text-gray-500 mb-6">All plans include a $3,000 one-time setup fee.</p>
-
-          {/* Billing term toggle */}
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <button onClick={() => setBillingTerm('monthly')} className={`px-4 py-2 rounded-lg text-sm font-medium ${billingTerm === 'monthly' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Monthly</button>
-            <button onClick={() => setBillingTerm('annual')} className={`px-4 py-2 rounded-lg text-sm font-medium ${billingTerm === 'annual' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Annual <span className="text-xs opacity-75">(Save 15%)</span></button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {PLANS.map(plan => {
-              const displayPrice = billingTerm === 'annual' ? Math.round(plan.monthlyBase * 0.85) : plan.monthlyBase
-              return (
-                <button
-                  key={plan.id}
-                  onClick={() => setSelectedPlan(plan.id)}
-                  className={`relative text-left p-6 rounded-xl border-2 transition-all ${selectedPlan === plan.id ? 'border-purple-500 bg-purple-50 shadow-md' : 'border-gray-200 hover:border-gray-300'} ${plan.popular ? 'md:scale-105' : ''}`}
-                >
-                  {plan.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">POPULAR</span>
-                  )}
-                  <h3 className="font-bold text-lg text-gray-900 mb-1">{plan.name}</h3>
-                  <div className="text-2xl font-bold text-purple-700 mb-1">${displayPrice}<span className="text-sm font-normal text-gray-500">/mo</span></div>
-                  <div className="text-sm text-gray-500 mb-4">+${plan.perSeat}/seat/mo</div>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" /> {plan.maxSeats === -1 ? 'Unlimited seats' : `${plan.maxSeats} seats`}</li>
-                    <li className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" /> {plan.maxClients === -1 ? 'Unlimited clients' : `${plan.maxClients} clients`}</li>
-                    <li className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" /> {plan.ai}</li>
-                    <li className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" /> {plan.support}</li>
-                    <li className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" /> White-label branding</li>
-                    <li className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" /> HIPAA compliant</li>
-                  </ul>
-                </button>
-              )
-            })}
-          </div>
-          <p className="text-center text-sm text-gray-500 mt-4">Setup Fee: <strong>$3,000</strong> (one-time) | Billing: <strong>{billingTerm === 'annual' ? 'Annual (15% off)' : 'Month-to-month'}</strong></p>
-        </section>
-
-        {/* Step 4: Subdomain */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Step 4: Your Subdomain</h2>
-          <p className="text-sm text-gray-500 mb-6">This will be your branded platform URL.</p>
-          <div className="flex items-center gap-2">
-            <input type="text" value={subdomain} onChange={e => { setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); setSubdomainAvailable(null) }} placeholder="gentletouch" className={`flex-1 ${inputClass} text-lg`} />
-            <span className="text-gray-500 whitespace-nowrap text-sm">.wellnessprojectionlab.com</span>
-            <button onClick={checkSubdomain} disabled={!subdomain || checkingSubdomain} className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium disabled:opacity-50">{checkingSubdomain ? '...' : 'Check'}</button>
-          </div>
-          {subdomainAvailable === true && <p className="mt-2 text-sm text-green-600 flex items-center gap-1"><CheckCircleIcon className="h-4 w-4" /> Available!</p>}
-          {subdomainAvailable === false && <p className="mt-2 text-sm text-red-600">Already taken. Try another.</p>}
-        </section>
-
-        {/* Step 5: Additional */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Step 5: Additional Information</h2>
-          <p className="text-sm text-gray-500 mb-6">Optional details to help us serve you better.</p>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <FormField label="Expected Launch Date">
-              <input type="date" value={launchDate} onChange={e => setLaunchDate(e.target.value)} className={inputClass} />
-            </FormField>
-            <FormField label="How did you hear about us?">
-              <select value={leadSource} onChange={e => setLeadSource(e.target.value)} className={selectClass}>
-                <option value="">Select...</option>
-                {LEAD_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </FormField>
-          </div>
-          <FormField label="Notes / Questions">
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Anything else you'd like us to know..." className={inputClass} />
-          </FormField>
-        </section>
-
-        {/* Agreements */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Agreements & Terms</h2>
-          <div className="space-y-3">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" checked={agreeFranchise} onChange={e => setAgreeFranchise(e.target.checked)} className="mt-1 h-4 w-4 text-purple-600 rounded" />
-              <span className="text-sm text-gray-700">I agree to the <a href="/franchise-agreement" className="text-purple-600 underline">Franchise Service Agreement</a>, including the month-to-month service term, 30-day cancellation policy, and intellectual property provisions.</span>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" checked={agreeBaa} onChange={e => setAgreeBaa(e.target.checked)} className="mt-1 h-4 w-4 text-purple-600 rounded" />
-              <span className="text-sm text-gray-700">I agree to the <a href="/baa" className="text-purple-600 underline">Business Associate Agreement (BAA)</a> for HIPAA compliance, including PHI handling, breach notification procedures, and data security requirements.</span>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" checked={agreeBilling} onChange={e => setAgreeBilling(e.target.checked)} className="mt-1 h-4 w-4 text-purple-600 rounded" />
-              <span className="text-sm text-gray-700">I understand and accept the billing terms: <strong>$3,000 setup fee</strong> (one-time), <strong>${PLANS.find(p => p.id === selectedPlan)?.monthlyBase}/mo base</strong> + <strong>${PLANS.find(p => p.id === selectedPlan)?.perSeat}/seat/mo</strong> per staff member.</span>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" checked={agreeData} onChange={e => setAgreeData(e.target.checked)} className="mt-1 h-4 w-4 text-purple-600 rounded" />
-              <span className="text-sm text-gray-700">I understand that client data belongs to me and my practice. WPL provides the infrastructure and will return all data upon termination per the <a href="/data-policy" className="text-purple-600 underline">Data Ownership Policy</a>.</span>
-            </label>
-          </div>
-        </section>
-
-        {/* Submit */}
-        <div className="text-center">
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || !businessName || !contactName || !email || !practiceType || !selectedPlan || !subdomain || !address || !city || !state || !zip || !agreeFranchise || !agreeBaa || !agreeBilling || !agreeData}
-            className="px-10 py-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white text-lg font-bold rounded-xl shadow-lg transition-all transform hover:scale-105 disabled:hover:scale-100"
-          >
-            {submitting ? 'Submitting...' : 'Submit Application & Pay Setup Fee'}
-          </button>
-          <p className="text-sm text-gray-500 mt-4 max-w-md mx-auto">
-            After payment, your branded platform will be live within 48 hours. We'll send your admin login and onboarding guide.
-          </p>
         </div>
+      </section>
 
-        {/* FAQ */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
-          <div className="space-y-4">
+      {/* Solution */}
+      <section className="py-20 px-4">
+        <div className="max-w-5xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Your platform, our infrastructure
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-12">
+            Get the complete WPL platform — vitals, meds, meals, AI coaching, family sharing —
+            served on your own subdomain, branded with your name and colors.
+            Families see your brand, not ours.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3 text-left max-w-3xl mx-auto">
+            {FEATURES.map(f => (
+              <div key={f} className="flex items-start gap-3">
+                <CheckIcon className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
+                <span className="text-gray-700">{f}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="py-20 px-4 bg-gray-50">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              From application to live in 4 steps
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-4 gap-6">
+            {STEPS.map(s => (
+              <div key={s.num} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm relative">
+                <div className="absolute -top-4 -left-2 h-10 w-10 bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow">
+                  {s.num}
+                </div>
+                <h3 className="font-bold text-gray-900 mb-2 mt-2">{s.title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{s.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="py-20 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Simple, transparent pricing</h2>
+            <p className="text-lg text-gray-600">
+              All plans include a one-time <strong>${SETUP_FEE_USD.toLocaleString()}</strong> setup fee.
+              Save {ANNUAL_DISCOUNT_PCT}% with annual billing.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {FRANCHISE_PLANS.map(plan => (
+              <div
+                key={plan.id}
+                className={`relative bg-white rounded-2xl border-2 p-8 ${
+                  plan.popular
+                    ? 'border-purple-500 shadow-xl md:scale-105'
+                    : 'border-gray-200 shadow-sm'
+                }`}
+              >
+                {plan.popular && (
+                  <span className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-purple-600 text-white text-xs font-bold rounded-full uppercase tracking-wide">
+                    Most Popular
+                  </span>
+                )}
+                <h3 className="text-xl font-bold text-gray-900 mb-1">{plan.name}</h3>
+                <div className="text-4xl font-bold text-purple-700 mb-1">
+                  ${plan.monthlyBase}
+                  <span className="text-base font-normal text-gray-500">/mo</span>
+                </div>
+                <div className="text-sm text-gray-500 mb-6">+${plan.perSeat}/seat/mo</div>
+                <ul className="space-y-3 text-sm text-gray-700 mb-8">
+                  <li className="flex items-center gap-2">
+                    <CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    {plan.maxSeats === -1 ? 'Unlimited staff seats' : `Up to ${plan.maxSeats} staff seats`}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    {plan.maxClients === -1 ? 'Unlimited client families' : `Up to ${plan.maxClients} client families`}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    {plan.ai}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    {plan.support}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    Full white-label branding
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    HIPAA compliant + BAA
+                  </li>
+                </ul>
+                <Link
+                  href="/franchise/apply"
+                  className={`block text-center py-3 rounded-lg font-semibold transition-colors ${
+                    plan.popular
+                      ? 'bg-purple-600 text-white hover:bg-purple-700'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                  }`}
+                >
+                  Apply for {plan.name}
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TODO: real testimonials — placeholder copy below */}
+      <section className="py-16 px-4 bg-gradient-to-br from-purple-50 to-blue-50">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8">Built for providers like you</h2>
+          <div className="grid md:grid-cols-3 gap-6 text-left">
             {[
-              { q: "What's included in the platform?", a: "Vitals tracking, medication management, meal logging with AI, appointment scheduling, family sharing, caregiver coordination, AI health reports, shopping lists, and more — all branded to your practice." },
-              { q: "Can I customize the branding?", a: "Yes — your logo, colors, company name, and subdomain. Your clients see your brand, not ours." },
-              { q: "What if I need more seats later?", a: "Add seats anytime from your admin dashboard. Each additional seat is billed at your plan's per-seat rate." },
-              { q: "Is there a contract?", a: "Month-to-month by default. Annual billing available at 15% discount. Cancel anytime with 30 days notice." },
-              { q: "What about HIPAA compliance?", a: "Fully HIPAA compliant. We sign a BAA with every franchise partner. All data encrypted at rest and in transit. SOC 2 Type II certified infrastructure." },
-              { q: "Who owns the client data?", a: "You do. We provide the infrastructure. Upon termination, all your data is exported and returned to you within 30 days." },
-              { q: "What's the SLA?", a: "99.9% uptime guarantee. If we fall below that in any calendar month, you receive a prorated credit." },
-            ].map(({ q, a }, i) => (
-              <details key={i} className="group">
-                <summary className="cursor-pointer font-medium text-gray-900 hover:text-purple-700 list-none flex items-center justify-between">
+              { name: 'Maria R., RN', title: 'Solo home care nurse', quote: 'I used to juggle three apps and a notebook. Now everything for my 30 families lives in one place — branded as my practice.' },
+              { name: 'James T.', title: 'Wellness coach', quote: 'My clients used to text me their meals. Now they log them in my app, and I get AI summaries every Monday morning.' },
+              { name: 'Dr. Patel', title: 'Concierge physician', quote: 'The HIPAA compliance and BAA were non-negotiable. WPL handled both before I even asked.' },
+            ].map(t => (
+              <div key={t.name} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <p className="text-sm text-gray-700 italic mb-4">&ldquo;{t.quote}&rdquo;</p>
+                <div className="text-sm font-semibold text-gray-900">{t.name}</div>
+                <div className="text-xs text-gray-500">{t.title}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-20 px-4">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Frequently asked questions</h2>
+          <div className="space-y-3">
+            {FAQ.map(({ q, a }) => (
+              <details key={q} className="group bg-white border border-gray-200 rounded-lg p-5">
+                <summary className="cursor-pointer font-semibold text-gray-900 list-none flex items-center justify-between">
                   {q}
                   <span className="text-purple-500 group-open:rotate-180 transition-transform">&#x25BC;</span>
                 </summary>
-                <p className="mt-2 text-sm text-gray-600">{a}</p>
+                <p className="mt-3 text-sm text-gray-600 leading-relaxed">{a}</p>
               </details>
             ))}
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
 
-      <div className="bg-gray-900 text-white py-8 px-4 text-center text-sm">
-        <p>&copy; {new Date().getFullYear()} Wellness Projection Lab. All rights reserved.</p>
-        <p className="text-gray-500 mt-1">HIPAA Compliant | SOC 2 Type II | ISO 27001</p>
-      </div>
+      {/* Final CTA */}
+      <section className="py-20 px-4 bg-gradient-to-br from-purple-700 to-indigo-800 text-white">
+        <div className="max-w-3xl mx-auto text-center space-y-6">
+          <h2 className="text-3xl md:text-4xl font-bold">Ready to launch?</h2>
+          <p className="text-lg text-purple-100">
+            Your branded platform can be live within 48 hours of application approval.
+          </p>
+          <Link
+            href="/franchise/apply"
+            className="inline-block px-10 py-4 bg-white text-purple-700 rounded-xl font-bold text-lg shadow-lg hover:scale-105 transition-transform"
+          >
+            Start Your Application
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-gray-400 py-10 px-4">
+        <div className="max-w-5xl mx-auto text-center text-sm space-y-3">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+            <Link href="/franchise-agreement" className="hover:text-white">Franchise Agreement</Link>
+            <Link href="/baa" className="hover:text-white">BAA</Link>
+            <Link href="/data-policy" className="hover:text-white">Data Policy</Link>
+            <Link href="/" className="hover:text-white">Main site</Link>
+          </div>
+          <p>&copy; {CURRENT_YEAR} Wellness Projection Lab. HIPAA Compliant | SOC 2 Type II.</p>
+        </div>
+      </footer>
     </main>
   )
 }

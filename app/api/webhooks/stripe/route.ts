@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyWebhookSignature } from '@/lib/stripe-config'
 import { adminDb } from '@/lib/firebase-admin'
+import { sendEmail } from '@/lib/email-service'
 import { logger } from '@/lib/logger'
 import Stripe from 'stripe'
 
@@ -111,6 +112,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     metadata: session.metadata
   })
 
+  // Franchise setup-fee payment branch — distinguished by tenantId metadata
+  // set when the Payment Link is created in
+  // app/api/admin/tenants/[tenantId]/payment-link/route.ts
+  const tenantId = session.metadata?.tenantId
+  if (tenantId) {
+    await handleFranchiseSetupPaid(session, tenantId)
+    return
+  }
+
   const firebaseUid = session.metadata?.firebaseUid
   const subscriptionId = session.subscription as string
 
@@ -140,6 +150,108 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // Update the subscription in Firebase using the existing handler
   await handleSubscriptionUpdate(subscription)
+}
+
+/**
+ * Handle franchise setup-fee payment completion.
+ * Idempotent — replays from Stripe are common and must not double-email.
+ */
+async function handleFranchiseSetupPaid(session: Stripe.Checkout.Session, tenantId: string) {
+  try {
+    const tenantRef = adminDb.collection('tenants').doc(tenantId)
+    const tenantDoc = await tenantRef.get()
+
+    if (!tenantDoc.exists) {
+      logger.error('[Stripe Webhook] Franchise tenant not found', undefined, {
+        tenantId,
+        sessionId: session.id,
+      })
+      return
+    }
+
+    const tenant = tenantDoc.data()!
+
+    // Idempotency: if already activated, no-op. Stripe retries are normal.
+    if (tenant.billing?.setupFeePaid === true || tenant.status === 'active' || tenant.status === 'paid') {
+      logger.info('[Stripe Webhook] Franchise tenant already activated, skipping', {
+        tenantId,
+        currentStatus: tenant.status,
+      })
+      return
+    }
+
+    const nowIso = new Date().toISOString()
+    await tenantRef.update({
+      status: 'paid',
+      'billing.setupFeePaid': true,
+      'billing.setupFeePaidAt': nowIso,
+      'billing.stripeCheckoutSessionId': session.id,
+      updatedAt: nowIso,
+    })
+
+    logger.info('[Stripe Webhook] Franchise tenant activated', {
+      tenantId,
+      slug: tenant.slug,
+      sessionId: session.id,
+    })
+
+    // Send "your subdomain is live" email — reuses Resend via lib/email-service
+    const adminEmail = tenant.contact?.adminEmail
+    if (adminEmail) {
+      const adminName = tenant.contact?.adminName || 'there'
+      const businessName = tenant.name
+      const subdomainUrl = `https://${tenant.slug}.wellnessprojectionlab.com`
+
+      try {
+        await sendEmail({
+          to: adminEmail,
+          subject: `Your ${businessName} platform is live!`,
+          html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;">
+<tr><td style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:40px;text-align:center;">
+<h1 style="color:#ffffff;font-size:26px;margin:0 0 8px;">You're Live! 🎉</h1>
+<p style="color:rgba(255,255,255,0.95);font-size:16px;margin:0;">Payment confirmed — your platform is ready.</p>
+</td></tr>
+<tr><td style="padding:40px;">
+<p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 20px;">Hi ${adminName},</p>
+<p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 20px;">Your setup payment for <strong>${businessName}</strong> has been received and your branded platform is now active.</p>
+
+<table cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
+<tr><td align="center" style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);border-radius:8px;padding:16px 40px;">
+<a href="${subdomainUrl}" style="color:#ffffff;text-decoration:none;font-size:18px;font-weight:600;">Visit Your Platform →</a>
+</td></tr>
+</table>
+
+<p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0 0 8px;">Your subdomain:</p>
+<p style="font-size:16px;color:#10b981;font-weight:600;margin:0 0 24px;">${tenant.slug}.wellnessprojectionlab.com</p>
+
+<p style="font-size:14px;color:#6b7280;line-height:1.6;">Next steps: log in with the email you used to apply, invite your staff, and start onboarding families. Questions? Reply to this email.</p>
+</td></tr>
+<tr><td style="padding:24px 40px;background-color:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
+<p style="font-size:12px;color:#9ca3af;margin:0;">&copy; 2026 Wellness Projection Lab. All rights reserved.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`,
+        })
+      } catch (emailErr) {
+        // Don't fail the webhook on email errors — activation already succeeded
+        logger.error('[Stripe Webhook] Activation email failed', emailErr as Error, { tenantId })
+      }
+    }
+  } catch (err) {
+    // Log but swallow — we never want Stripe to retry once the session has been parsed,
+    // to avoid duplicate activations / emails. The activation is idempotent on retry anyway.
+    logger.error('[Stripe Webhook] Franchise activation failed', err as Error, { tenantId })
+  }
 }
 
 /**

@@ -110,8 +110,35 @@ export function proxy(request: NextRequest) {
   if (tenantSlug) {
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-tenant-slug', tenantSlug)
-    // For non-API routes, just pass through with tenant header
-    if (!pathname.startsWith('/api')) {
+
+    // Apex-only routes: admin, login, and API stay on the apex marketing app
+    // even when reached via a tenant subdomain. They get the header but no rewrite.
+    const isApexOnlyRoute =
+      pathname.startsWith('/api') ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/login') ||
+      pathname.startsWith('/franchise') ||
+      pathname.startsWith('/franchise-agreement') ||
+      pathname.startsWith('/baa') ||
+      pathname.startsWith('/data-policy') ||
+      pathname.startsWith('/tenant-shell') // prevent rewrite loops
+
+    if (!isApexOnlyRoute) {
+      // Internal rewrite to the tenant route group. URL bar stays {slug}.domain/path.
+      const url = request.nextUrl.clone()
+      url.pathname = `/tenant-shell${pathname === '/' ? '' : pathname}`
+      return NextResponse.rewrite(url, { request: { headers: requestHeaders } })
+    }
+
+    // Apex-only path on a tenant subdomain — pass through with header attached
+    if (
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/login') ||
+      pathname.startsWith('/franchise') ||
+      pathname.startsWith('/franchise-agreement') ||
+      pathname.startsWith('/baa') ||
+      pathname.startsWith('/data-policy')
+    ) {
       return NextResponse.next({ request: { headers: requestHeaders } })
     }
   }
