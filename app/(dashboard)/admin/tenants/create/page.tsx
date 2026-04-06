@@ -205,7 +205,29 @@ export default function AdminCreateTenantPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create')
 
-      toast.success(`Franchise "${businessName}" created!`)
+      // Send payment link
+      const tenantId = data.tenant?.id
+      if (tenantId && initialStatus === 'pending_payment') {
+        try {
+          const plRes = await fetch(`/api/admin/tenants/${tenantId}/payment-link`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'X-CSRF-Token': csrfToken,
+            },
+          })
+          if (plRes.ok) {
+            toast.success(`Franchise created & payment link sent to ${email}!`)
+          } else {
+            toast.success('Franchise created but payment link failed — send manually from edit page')
+          }
+        } catch {
+          toast.success('Franchise created but payment link failed — send manually from edit page')
+        }
+      } else {
+        toast.success(`Franchise "${businessName}" created!`)
+      }
+
       router.push('/admin/tenants')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create franchise')
@@ -450,7 +472,7 @@ export default function AdminCreateTenantPage() {
         <div className="flex gap-4">
           <Link href="/admin/tenants" className="flex-1 text-center py-3 bg-muted text-foreground rounded-lg font-medium hover:bg-muted/80">Cancel</Link>
           <button onClick={handleCreate} disabled={saving || !businessName || !contactName || !email || !subdomain} className="flex-1 py-3 bg-primary hover:bg-primary/90 disabled:bg-gray-400 text-white rounded-lg font-bold text-lg">
-            {saving ? 'Creating...' : 'Create Franchise'}
+            {saving ? 'Saving & Sending...' : 'Save & Send Payment Link'}
           </button>
         </div>
       </div>

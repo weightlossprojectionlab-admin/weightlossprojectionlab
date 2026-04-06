@@ -284,6 +284,51 @@ export default function EditTenantPage() {
           )}
         </div>
 
+        {/* Payment Link (for pending_payment tenants) */}
+        {(status === 'pending_payment' || status === 'paid') && (
+          <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg p-6">
+            <h2 className="text-lg font-bold text-foreground mb-2">Payment</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              {status === 'pending_payment' ? 'Setup fee has not been paid yet.' : 'Setup fee has been paid. Ready to activate.'}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    const token = await getAdminAuthToken()
+                    const csrfToken = getCSRFToken()
+                    const res = await fetch(`/api/admin/tenants/${tenantId}/payment-link`, {
+                      method: 'POST',
+                      headers: { 'Authorization': `Bearer ${token}`, 'X-CSRF-Token': csrfToken },
+                    })
+                    if (!res.ok) throw new Error('Failed')
+                    const data = await res.json()
+                    toast.success(`Payment link sent to ${adminEmail}`)
+                  } catch {
+                    toast.error('Failed to send payment link')
+                  }
+                }}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium"
+              >
+                {status === 'pending_payment' ? 'Send Payment Link' : 'Resend Payment Link'}
+              </button>
+              {status === 'paid' && (
+                <button
+                  onClick={async () => {
+                    const updated = { ...tenant!, status: 'active' as const }
+                    setStatus('active')
+                    await handleSave()
+                    toast.success('Franchise activated!')
+                  }}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium"
+                >
+                  Activate Franchise
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Save */}
         <div className="flex justify-end gap-3">
           <Link href="/admin/tenants" className="px-5 py-2.5 bg-muted text-foreground rounded-lg font-medium hover:bg-muted/80">
