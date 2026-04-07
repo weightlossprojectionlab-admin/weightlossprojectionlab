@@ -70,11 +70,14 @@ const STATIC_EXTENSIONS = [
   '.otf',
 ]
 
-// Paths that should bypass CSRF protection
+// Paths that should bypass CSRF protection.
+// Only for genuinely public, unauthenticated endpoints where the caller
+// has no session/cookies (so there's nothing for CSRF to protect against).
 const BYPASS_PATTERNS = [
   /^\/_next\//,              // Next.js static assets
   /^\/api\/webhooks\//,      // Webhook endpoints (e.g., Stripe)
   /^\/api\/auth\/webhook$/,  // Auth webhooks
+  /^\/api\/franchise\//,     // Public franchise application form (anonymous)
 ]
 
 // Development bypass flag
