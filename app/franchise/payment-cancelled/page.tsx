@@ -24,12 +24,13 @@
 
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { LockClosedIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import { LockClosedIcon, XCircleIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
 import { getTenantById } from '@/lib/tenant-server'
 import {
   FRANCHISE_PRACTICE_TYPES,
   type FranchisePracticeType,
 } from '@/lib/franchise-plans'
+import { DemoRequestButton } from '@/components/DemoRequestButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -194,10 +195,41 @@ export default async function PaymentCancelledPage({ searchParams }: PageProps) 
           </ul>
         </div>
 
-        {/* Primary CTA */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 sm:p-8 text-center">
+        {/* Talk-to-a-human CTA — co-equal with Return-to-Checkout below.
+            For a $3000 B2B product, a scheduled call is often the highest-value
+            rescue path for prospects in a moment of doubt. The DemoRequestButton
+            opens the same multi-step DemoRequestModal already in use on
+            /blog/patients and /blog/dashboard — DRY reuse, no new infra. */}
+        <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-2xl border-2 border-purple-200 dark:border-purple-800/50 p-6 sm:p-8 text-center">
+          <div className="mx-auto w-12 h-12 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center justify-center mb-4">
+            <CalendarDaysIcon className="h-6 w-6 text-purple-700 dark:text-purple-300" />
+          </div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            Ready to try again?
+            Have questions before you commit?
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            Schedule a free 1-on-1 call with our team. We&apos;ll walk you through
+            the platform, answer your questions, and help you decide if WPL is the
+            right fit for {businessName}.
+          </p>
+          <DemoRequestButton
+            source="payment-cancelled"
+            className="inline-block px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-semibold text-base shadow-md transition-colors"
+          >
+            Schedule a Free Demo
+          </DemoRequestButton>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+            No commitment. Most calls take 15&ndash;20 minutes.
+          </p>
+        </div>
+
+        {/* Return-to-Checkout CTA — for prospects who just want to complete the
+            existing payment without a call. Secondary in visual weight to the
+            demo CTA above because the demo path is more likely to close a $3K
+            B2B sale at the moment of cancellation doubt. */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 sm:p-8 text-center">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+            Or just complete your payment
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
             Your original payment link is still valid for 24 hours
@@ -216,7 +248,7 @@ export default async function PaymentCancelledPage({ searchParams }: PageProps) 
             disabled
             aria-disabled="true"
             title="Click the same payment link in your email"
-            className="inline-block px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold text-base shadow-md cursor-default"
+            className="inline-block px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold text-base shadow-md cursor-default opacity-90"
           >
             Return to Checkout
           </button>
