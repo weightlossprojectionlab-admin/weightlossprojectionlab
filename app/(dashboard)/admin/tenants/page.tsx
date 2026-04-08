@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getAdminAuthToken } from '@/lib/admin/api'
 import { getCSRFToken } from '@/lib/csrf'
-import { BuildingOffice2Icon, PlusIcon, UserGroupIcon, CurrencyDollarIcon, NoSymbolIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { BuildingOffice2Icon, PlusIcon, UserGroupIcon, CurrencyDollarIcon, NoSymbolIcon, CheckCircleIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import type { Tenant } from '@/types/tenant'
 
@@ -79,13 +79,22 @@ export default function AdminTenantsPage() {
           <h1 className="text-3xl font-bold text-foreground">Franchise Management</h1>
           <p className="text-muted-foreground mt-1">Create and manage franchise partners</p>
         </div>
-        <a
-          href="/admin/tenants/create"
-          className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors"
-        >
-          <PlusIcon className="h-5 w-5" />
-          New Franchise
-        </a>
+        <div className="flex gap-2">
+          <a
+            href="/admin/franchise-requests"
+            className="flex items-center gap-2 px-5 py-2.5 bg-card hover:bg-muted/50 border border-border text-foreground rounded-lg font-medium transition-colors"
+          >
+            <ClipboardDocumentListIcon className="h-5 w-5" />
+            Applications
+          </a>
+          <a
+            href="/admin/tenants/create"
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors"
+          >
+            <PlusIcon className="h-5 w-5" />
+            New Franchise
+          </a>
+        </div>
       </div>
 
       {/* Stats */}

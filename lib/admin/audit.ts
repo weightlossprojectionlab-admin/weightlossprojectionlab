@@ -51,8 +51,12 @@ export type AdminAction =
   | 'admin_role_revoke'
   | 'settings_update'
   // Tenant / franchise actions
+  | 'tenant_create'
   | 'tenant_payment_link_sent'
   | 'tenant_branding_updated'
+  | 'franchise_application_reviewed'
+  | 'franchise_application_approved'
+  | 'franchise_application_rejected'
 
 export interface AdminAuditLog {
   logId: string

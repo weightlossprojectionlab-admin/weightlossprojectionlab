@@ -10,6 +10,7 @@ import { isSuperAdmin } from '@/lib/admin/permissions'
 import { logAdminAction } from '@/lib/admin/audit'
 import { logger } from '@/lib/logger'
 import { errorResponse, forbiddenResponse, unauthorizedResponse } from '@/lib/api-response'
+import { createTenant, isCreateTenantError } from '@/lib/tenant-create'
 
 async function verifyAdmin(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -50,126 +51,27 @@ export async function POST(request: NextRequest) {
     if (!decoded) return forbiddenResponse('Admin access required')
 
     const body = await request.json()
-    const { name, slug, adminEmail, adminName, branding, billing, features } = body
+    const result = await createTenant(body)
 
-    if (!name || !slug || !adminEmail) {
-      return NextResponse.json({ error: 'name, slug, and adminEmail are required' }, { status: 400 })
+    if (isCreateTenantError(result)) {
+      return NextResponse.json({ error: result.error }, { status: result.status })
     }
-
-    if (!/^[a-z0-9-]+$/.test(slug)) {
-      return NextResponse.json({ error: 'Slug must be lowercase letters, numbers, and hyphens only' }, { status: 400 })
-    }
-
-    const existing = await adminDb.collection('tenants').where('slug', '==', slug).limit(1).get()
-    if (!existing.empty) {
-      return NextResponse.json({ error: `Slug "${slug}" is already taken` }, { status: 409 })
-    }
-
-    const now = new Date().toISOString()
-
-    const tenantData = {
-      slug,
-      name,
-      status: body.status || 'pending_payment',
-      // Legal
-      legalName: body.legalName || name,
-      entityType: body.entityType || '',
-      ein: body.ein || '',
-      stateOfIncorporation: body.stateOfIncorporation || '',
-      // Branding
-      branding: {
-        logoUrl: branding?.logoUrl || '',
-        primaryColor: branding?.primaryColor || '262 83% 58%',
-        secondaryColor: branding?.secondaryColor || '217 91% 60%',
-        accentColor: branding?.accentColor || '239 84% 67%',
-        companyName: name,
-        tagline: branding?.tagline || '',
-        supportEmail: adminEmail,
-        supportPhone: branding?.supportPhone || '',
-        websiteUrl: body.website || branding?.websiteUrl || '',
-      },
-      // Billing
-      billing: {
-        plan: billing?.plan || 'starter',
-        maxSeats: billing?.maxSeats || 5,
-        currentSeats: 0,
-        monthlyBaseRate: billing?.monthlyBaseRate || 75000,
-        perSeatRate: billing?.perSeatRate || 3500,
-        billingEmail: billing?.billingEmail || adminEmail,
-        invoiceDay: 1,
-        setupFeePaid: false,
-        setupFeeAmount: billing?.setupFeeAmount || 300000,
-        billingTerm: body.billingTerm || 'monthly',
-      },
-      // Contact
-      contact: {
-        adminName: adminName || '',
-        adminEmail,
-        contactTitle: body.contactTitle || '',
-        phone: body.phone || '',
-        address: body.address || '',
-        city: body.city || '',
-        state: body.state || '',
-        zip: body.zip || '',
-      },
-      // Billing address
-      billingAddress: {
-        sameAsAddress: body.billingSameAsAddress !== false,
-        address: body.billingAddress || body.address || '',
-        city: body.billingCity || body.city || '',
-        state: body.billingState || body.state || '',
-        zip: body.billingZip || body.zip || '',
-        contact: body.billingContact || adminName || '',
-        email: body.billingEmail || adminEmail,
-      },
-      // Practice
-      practiceType: body.practiceType || '',
-      licenseNumber: body.licenseNumber || '',
-      npiNumber: body.npiNumber || '',
-      staffCount: body.staffCount || '',
-      familyCount: body.familyCount || 0,
-      // Emergency contact
-      emergencyContact: body.emergencyContact || { name: '', email: '', phone: '' },
-      // Additional
-      expectedLaunchDate: body.expectedLaunchDate || '',
-      leadSource: body.leadSource || '',
-      notes: body.notes || '',
-      // Features
-      features: features || {
-        aiCoaching: true,
-        medicalRecords: true,
-        mealTracking: true,
-        vitalTracking: true,
-        medicationManagement: true,
-        appointmentScheduling: true,
-        familySharing: true,
-        recipeSystem: true,
-        shoppingList: true,
-        healthReports: true,
-        maxPatientsPerUser: 10,
-        maxFamiliesTotal: 100,
-      },
-      createdAt: now,
-      updatedAt: now,
-      onboardingCompleted: false,
-    }
-
-    const docRef = await adminDb.collection('tenants').add(tenantData)
 
     await logAdminAction({
       adminUid: decoded.uid,
       adminEmail: decoded.email || 'unknown',
       action: 'tenant_create',
       targetType: 'tenant',
-      targetId: docRef.id,
-      reason: `Created franchise "${name}" (${slug})`,
+      targetId: result.id,
+      tenantId: result.id,
+      reason: `Created franchise "${result.data.name}" (${result.data.slug})`,
     })
 
-    logger.info('[Tenants] Franchise created', { tenantId: docRef.id, slug, name })
+    logger.info('[Tenants] Franchise created', { tenantId: result.id, slug: result.data.slug, name: result.data.name })
 
     return NextResponse.json({
       success: true,
-      tenant: { id: docRef.id, ...tenantData },
+      tenant: { id: result.id, ...result.data },
     }, { status: 201 })
   } catch (error) {
     return errorResponse(error, { route: '/api/admin/tenants', operation: 'create' })
