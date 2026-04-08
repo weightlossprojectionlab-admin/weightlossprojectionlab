@@ -113,7 +113,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   })
 
   // Franchise setup-fee payment branch — distinguished by tenantId metadata
-  // set when the Payment Link is created in
+  // set when the Stripe Checkout Session is created in
   // app/api/admin/tenants/[tenantId]/payment-link/route.ts
   const tenantId = session.metadata?.tenantId
   if (tenantId) {
