@@ -4,16 +4,12 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { CheckIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
-import { FRANCHISE_PLANS as PLANS } from '@/lib/franchise-plans'
+import { FRANCHISE_PLANS as PLANS, FRANCHISE_PRACTICE_TYPES } from '@/lib/franchise-plans'
 
-const PRACTICE_TYPES = [
-  'Solo Nurse / Caregiver',
-  'Wellness Coach',
-  'Concierge Doctor',
-  'Home Care Agency',
-  'Patient Advocate',
-  'Other',
-]
+// Form picker uses the canonical practice types plus an "Other" branch that
+// reveals a free-text input. The canonical list is the single source of truth
+// in lib/franchise-plans.ts; "Other" is appended only here at the form layer.
+const PRACTICE_TYPES = [...FRANCHISE_PRACTICE_TYPES, 'Other'] as const
 
 const ENTITY_TYPES = [
   'Sole Proprietorship',

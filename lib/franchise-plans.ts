@@ -63,3 +63,26 @@ export const SETUP_FEE_CENTS = SETUP_FEE_USD * 100
 
 /** Annual billing discount, as a percentage. */
 export const ANNUAL_DISCOUNT_PCT = 15
+
+/**
+ * Canonical list of practice types prospects can select on the franchise
+ * application form. Single source of truth — referenced by:
+ *  - app/franchise/apply/page.tsx (radio buttons in the application form)
+ *  - app/franchise/payment-cancelled/page.tsx (personalized re-engagement
+ *    value-prop block keyed by this list)
+ *  - the FranchisePracticeType type union below for compile-time safety
+ *
+ * "Other" is intentionally NOT in this array because it's a special form
+ * branch that lets the prospect type a free-text description. Anywhere
+ * that needs to handle "Other" should treat any value not in this array
+ * as the fallback case.
+ */
+export const FRANCHISE_PRACTICE_TYPES = [
+  'Solo Nurse / Caregiver',
+  'Wellness Coach',
+  'Concierge Doctor',
+  'Home Care Agency',
+  'Patient Advocate',
+] as const
+
+export type FranchisePracticeType = (typeof FRANCHISE_PRACTICE_TYPES)[number]

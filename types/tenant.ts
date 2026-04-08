@@ -69,6 +69,15 @@ export interface Tenant {
   createdAt: string          // ISO date
   updatedAt: string          // ISO date
   onboardingCompleted: boolean
+  // Fields written by lib/tenant-create.ts but not strictly part of the
+  // type yet — added as optional so consumers can read them safely.
+  // TODO(types): the Firestore tenant doc has many more fields than this
+  // interface (legalName, entityType, ein, stateOfIncorporation,
+  // licenseNumber, npiNumber, staffCount, familyCount, expectedLaunchDate,
+  // leadSource, notes, emergencyContact, billingAddress, ownerUid,
+  // ownerProvisionedAt, etc.). Type drift accumulated as the franchise
+  // system grew. Worth a focused type-completion pass.
+  practiceType?: string
 }
 
 /** Role within a franchise tenant */
