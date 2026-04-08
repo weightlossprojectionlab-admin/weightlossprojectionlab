@@ -71,13 +71,17 @@ export interface Tenant {
   onboardingCompleted: boolean
   // Fields written by lib/tenant-create.ts but not strictly part of the
   // type yet — added as optional so consumers can read them safely.
-  // TODO(types): the Firestore tenant doc has many more fields than this
-  // interface (legalName, entityType, ein, stateOfIncorporation,
-  // licenseNumber, npiNumber, staffCount, familyCount, expectedLaunchDate,
-  // leadSource, notes, emergencyContact, billingAddress, ownerUid,
-  // ownerProvisionedAt, etc.). Type drift accumulated as the franchise
-  // system grew. Worth a focused type-completion pass.
+  // TODO(types): the Firestore tenant doc still has fields not yet on this
+  // interface — ein, stateOfIncorporation, staffCount, familyCount,
+  // expectedLaunchDate, leadSource, notes, emergencyContact, billingAddress,
+  // ownerUid, ownerProvisionedAt. Added incrementally as consumers need
+  // them; the cancel page v3 (commit pending) consumes the credential
+  // fields below.
   practiceType?: string
+  legalName?: string
+  entityType?: string
+  licenseNumber?: string
+  npiNumber?: string
 }
 
 /** Role within a franchise tenant */

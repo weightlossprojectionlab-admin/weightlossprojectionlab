@@ -714,8 +714,8 @@
     },
     {
       "id": "tenant_type_drift",
-      "description": "types/tenant.ts Tenant interface is missing many fields that lib/tenant-create.ts actually writes: legalName, entityType, ein, stateOfIncorporation, licenseNumber, npiNumber, staffCount, familyCount, expectedLaunchDate, leadSource, notes, emergencyContact, billingAddress, ownerUid, ownerProvisionedAt. Only practiceType was added (commit 6011a0b) as the minimum to compile the cancel page. Worth a focused type-completion pass.",
-      "priority": "medium",
+      "description": "types/tenant.ts Tenant interface is partially complete. Added so far: practiceType (6011a0b), then legalName + entityType + licenseNumber + npiNumber (cancel page v3, commit pending). Still missing: ein, stateOfIncorporation, staffCount, familyCount, expectedLaunchDate, leadSource, notes, emergencyContact, billingAddress, ownerUid, ownerProvisionedAt. The cancel page only needs the credential fields conceptually (acknowledges the FACT they exist, never displays values), so the additional drift is not blocking. Add additional fields incrementally as new consumers need them.",
+      "priority": "low",
       "addedIn": "0.3.0"
     },
     {
@@ -747,6 +747,26 @@
       "description": "support@wellnessprojectionlab.com is referenced in the activation email body but no real inbox exists at that address — replies would bounce. Fix: set up Cloudflare Email Routing (free) to forward support@ → wellnessprojectionlab@gmail.com. ~10 min, no infrastructure cost.",
       "priority": "medium",
       "addedIn": "0.3.0"
+    },
+    {
+      "id": "marketing_copy_voice_drift",
+      "description": "All customer-facing franchise marketing copy currently reads in BUILDER VOICE (HIPAA-compliant client management, BAA-eligible, branded subdomain, AI-augmented, $100k+ custom builds, scaling without hiring developers). Real prospects are nurses, wellness coaches, concierge doctors, home care agency owners, patient advocates — they speak in PRACTITIONER VOICE: the families they care for, working from their phone in someone's living room and their laptop at the kitchen table after the kids go to bed, getting their Sunday afternoons back, starting their own thing without learning code. The save-the-cancel v2 page (commit c2c965b) is structurally correct but voiced wrong; same applies to /franchise marketing page, application form prompts, payment-success page, payment-cancelled page, and the activation email body. PRD itself stays in builder voice (engineering accuracy wins there) — but every customer-facing surface needs a translation pass. The PRD's claim/number constraints still apply: every claim must trace to a PRD line; only the WORDING gets translated. Critical positioning fix before broader marketing launch.",
+      "priority": "high",
+      "addedIn": "0.3.0",
+      "appliesTo": [
+        "app/franchise/page.tsx",
+        "app/franchise/apply/page.tsx",
+        "app/franchise/payment-success/page.tsx",
+        "app/franchise/payment-cancelled/page.tsx",
+        "app/api/admin/tenants/[tenantId]/payment-link/route.ts (activation email body)",
+        "future Phase B family-side / find-a-provider pages"
+      ],
+      "doesNotApplyTo": [
+        "/admin/* (internal tools — builder voice is appropriate for admins)",
+        "FRANCHISE_PRD.json itself (engineering precision wins there)",
+        "code comments and commit messages"
+      ],
+      "capturedFromUserFeedback": "2026-04-08, on c2c965b: 'the copy is ok but it sounds like its speaking to a tech savvy professional. when it needs to speak to their pain of starting that business or management style or patients, families they care for, the ease of use based on they can work from anywhere from their smartphone, tablet, desktop, laptop on the go.'"
     }
   ],
 
