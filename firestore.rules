@@ -1694,6 +1694,18 @@ service cloud.firestore {
     // ADMIN SETTINGS (marketing progress, etc.)
     // ============================================
 
+    // Platform-wide settings (e.g. inactivity timeout). All authenticated
+    // users need to READ this so client-side enforcement (e.g. the
+    // InactivityHandler component) can apply the configured value. Only
+    // super-admins can WRITE — enforced both here and at the API layer.
+    // This rule must come BEFORE the general /admin/{docId} rule because
+    // Firestore evaluates rules in source order and a more-specific match
+    // wins.
+    match /admin/platform_settings {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
     match /admin/{docId} {
       allow read, write: if isAdmin();
     }

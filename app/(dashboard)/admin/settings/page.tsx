@@ -12,7 +12,15 @@ import {
   MagnifyingGlassIcon,
   PlusCircleIcon,
   XMarkIcon,
+  LockClosedIcon,
 } from '@heroicons/react/24/outline'
+import {
+  INACTIVITY_TIMEOUT_MIN_MINUTES,
+  INACTIVITY_TIMEOUT_MAX_MINUTES,
+  INACTIVITY_TIMEOUT_DEFAULT_MINUTES,
+} from '@/lib/platform-settings'
+import { usePlatformSettings } from '@/hooks/usePlatformSettings'
+import { getAdminAuthToken } from '@/lib/admin/api'
 
 interface AdminUser {
   uid: string
@@ -35,6 +43,7 @@ interface AuditLog {
 
 export default function AdminSettingsPage() {
   const { isAdmin, role, isSuperAdmin } = useAdminAuth()
+  const { settings: platformSettings } = usePlatformSettings()
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,6 +51,62 @@ export default function AdminSettingsPage() {
   const [grantRoleEmail, setGrantRoleEmail] = useState('')
   const [grantRoleType, setGrantRoleType] = useState<'admin' | 'moderator' | 'support'>('moderator')
   const [actionLoading, setActionLoading] = useState(false)
+
+  // Inactivity timeout setting (HIPAA security control — see lib/platform-settings.ts)
+  const [inactivityInput, setInactivityInput] = useState<number>(INACTIVITY_TIMEOUT_DEFAULT_MINUTES)
+  const [savingInactivity, setSavingInactivity] = useState(false)
+  const [inactivityMessage, setInactivityMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Sync local input with the live settings value once it loads
+  useEffect(() => {
+    if (platformSettings.inactivityTimeoutMinutes) {
+      setInactivityInput(platformSettings.inactivityTimeoutMinutes)
+    }
+  }, [platformSettings.inactivityTimeoutMinutes])
+
+  const handleSaveInactivity = async () => {
+    if (!isSuperAdmin) {
+      setInactivityMessage({ type: 'error', text: 'Only super admins can change platform settings.' })
+      return
+    }
+    if (
+      inactivityInput < INACTIVITY_TIMEOUT_MIN_MINUTES ||
+      inactivityInput > INACTIVITY_TIMEOUT_MAX_MINUTES
+    ) {
+      setInactivityMessage({
+        type: 'error',
+        text: `Timeout must be between ${INACTIVITY_TIMEOUT_MIN_MINUTES} and ${INACTIVITY_TIMEOUT_MAX_MINUTES} minutes (HIPAA compliance bounds).`,
+      })
+      return
+    }
+    setSavingInactivity(true)
+    setInactivityMessage(null)
+    try {
+      const token = await getAdminAuthToken()
+      const csrfToken = getCSRFToken()
+      const res = await fetch('/api/admin/settings/inactivity', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({ inactivityTimeoutMinutes: inactivityInput }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to save')
+      }
+      setInactivityMessage({
+        type: 'success',
+        text: `Inactivity timeout saved (${inactivityInput} minutes). All sessions will use the new value within seconds.`,
+      })
+    } catch (e) {
+      setInactivityMessage({ type: 'error', text: e instanceof Error ? e.message : 'Save failed' })
+    } finally {
+      setSavingInactivity(false)
+    }
+  }
 
   useEffect(() => {
     if (isAdmin) {
@@ -253,6 +318,87 @@ export default function AdminSettingsPage() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Inactivity Timeout (HIPAA security control) */}
+      <div className="bg-card rounded-lg shadow p-6 mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <LockClosedIcon className="h-6 w-6 text-primary" />
+          <h2 className="text-xl font-semibold text-foreground">Session Security</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-6">
+          Automatic logout after a period of inactivity. This is a HIPAA Security Rule
+          § 164.312(a)(2)(iii) control and applies to <strong>all authenticated users</strong>,
+          including administrators. Allowed range:{' '}
+          <strong>{INACTIVITY_TIMEOUT_MIN_MINUTES}–{INACTIVITY_TIMEOUT_MAX_MINUTES} minutes</strong>.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="inactivityTimeout" className="block text-sm font-medium text-foreground mb-2">
+              Inactivity Timeout (minutes)
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                id="inactivityTimeout"
+                type="number"
+                min={INACTIVITY_TIMEOUT_MIN_MINUTES}
+                max={INACTIVITY_TIMEOUT_MAX_MINUTES}
+                step={1}
+                value={inactivityInput}
+                onChange={e => setInactivityInput(Number(e.target.value))}
+                disabled={!isSuperAdmin || savingInactivity}
+                className="w-32 px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+              <span className="text-sm text-muted-foreground">minutes of inactivity before logout</span>
+            </div>
+          </div>
+
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>
+              <strong>Current active value:</strong> {platformSettings.inactivityTimeoutMinutes} minutes
+              {platformSettings.updatedBy && (
+                <span className="ml-2">
+                  · last updated by {platformSettings.updatedBy}
+                  {platformSettings.updatedAt && (
+                    <> at {new Date(platformSettings.updatedAt).toLocaleString()}</>
+                  )}
+                </span>
+              )}
+            </div>
+            <div className="text-yellow-700 dark:text-yellow-400">
+              <strong>Note:</strong> This setting cannot be disabled and cannot exceed{' '}
+              {INACTIVITY_TIMEOUT_MAX_MINUTES} minutes due to HIPAA PHI access requirements.
+              Changes propagate to all open sessions within seconds.
+            </div>
+          </div>
+
+          {inactivityMessage && (
+            <div
+              className={`rounded-lg px-4 py-3 text-sm ${
+                inactivityMessage.type === 'success'
+                  ? 'bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                  : 'bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-200'
+              }`}
+            >
+              {inactivityMessage.text}
+            </div>
+          )}
+
+          {isSuperAdmin ? (
+            <button
+              onClick={handleSaveInactivity}
+              disabled={savingInactivity || inactivityInput === platformSettings.inactivityTimeoutMinutes}
+              className="px-5 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-lg font-medium"
+            >
+              {savingInactivity ? 'Saving…' : 'Save Inactivity Timeout'}
+            </button>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              Only super-admins can change this setting.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Audit Logs Section */}

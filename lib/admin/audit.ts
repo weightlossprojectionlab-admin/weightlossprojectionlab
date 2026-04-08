@@ -50,6 +50,7 @@ export type AdminAction =
   | 'admin_role_grant'
   | 'admin_role_revoke'
   | 'settings_update'
+  | 'platform_setting_updated'
   // Tenant / franchise actions
   | 'tenant_create'
   | 'tenant_payment_link_sent'

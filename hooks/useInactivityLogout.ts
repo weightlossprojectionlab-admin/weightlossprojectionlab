@@ -6,11 +6,22 @@ import { signOut, onAuthStateChanged } from 'firebase/auth'
 import { logger } from '@/lib/logger'
 
 /**
- * Hook to automatically log out users after a period of inactivity
+ * Hook to automatically log out users after a period of inactivity.
  *
- * @param timeoutMinutes - Minutes of inactivity before auto-logout (default: 30)
+ * The timeout is a HIPAA security control (§ 164.312(a)(2)(iii)). It applies
+ * to ALL authenticated users equally — there is no admin exemption, because
+ * privileged sessions are higher-value targets and must not have weaker
+ * session controls.
+ *
+ * The timeout value is sourced from platform settings (Firestore doc at
+ * admin/platform_settings) by the InactivityHandler component, which then
+ * passes it down. Settings are subject to compliance bounds enforced both
+ * client-side and server-side (5–30 minutes per industry HIPAA standard
+ * for PHI access).
+ *
+ * @param timeoutMinutes - Minutes of inactivity before auto-logout
  */
-export function useInactivityLogout(timeoutMinutes: number = 30) {
+export function useInactivityLogout(timeoutMinutes: number = 15) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const throttleTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastActivityRef = useRef<number>(Date.now())
