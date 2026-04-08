@@ -169,7 +169,7 @@ export default function EditTenantPage() {
               <label className="block text-sm font-medium text-foreground mb-1">Subdomain</label>
               <div className="flex items-center gap-1">
                 <input type="text" value={slug} onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} className="flex-1 px-3 py-2 border border-border bg-background text-foreground rounded-lg" />
-                <span className="text-xs text-muted-foreground">.wpl.com</span>
+                <span className="text-xs text-muted-foreground">.wellnessprojectionlab.com</span>
               </div>
             </div>
             <div>

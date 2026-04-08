@@ -151,7 +151,7 @@ export async function POST(
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;">
 <tr><td style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:40px 40px 30px;text-align:center;">
-<h1 style="color:#ffffff;font-size:24px;margin:0 0 8px;">Welcome to the WPL Family</h1>
+<h1 style="color:#ffffff;font-size:24px;margin:0 0 8px;">Welcome to the Wellness Projection Lab Family</h1>
 <p style="color:rgba(255,255,255,0.9);font-size:16px;margin:0;">Your franchise platform is almost ready!</p>
 </td></tr>
 <tr><td style="padding:40px;">
