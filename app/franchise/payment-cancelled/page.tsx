@@ -189,7 +189,7 @@ export default async function PaymentCancelledPage({ searchParams }: PageProps) 
           </p>
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
             {nameCapPrefix && <>{nameCapPrefix}</>}
-            three thousand dollars is a lot.
+            ${SETUP_FEE_USD.toLocaleString()}.00 is a lot.
             <br />
             <span className="text-amber-600 dark:text-amber-400">
               We know.
