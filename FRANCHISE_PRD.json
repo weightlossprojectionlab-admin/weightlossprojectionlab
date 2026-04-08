@@ -2,9 +2,31 @@
   "$schema": "feature-prd@1",
   "product": {
     "name": "Wellness Projection Lab — Franchise / White-Label Multi-Tenancy",
-    "version": "0.2.0",
-    "lastUpdated": "2026-04-06",
-    "status": "Active Development — Phase A shipped, Phase B/C planned",
+    "version": "0.3.0",
+    "lastUpdated": "2026-04-08",
+    "status": "Active Development — Phase A shipped + hardened, Phase B/C planned",
+    "changelog": [
+      {
+        "version": "0.3.0",
+        "date": "2026-04-08",
+        "summary": "Reconcile PRD with everything that shipped after the original 0.2.0 commit on 2026-04-06. Adds CSRF fix for public application form, admin franchise-requests review queue, Stripe Checkout Sessions refactor (replaces Payment Links — locks customer email), configurable HIPAA-compliant inactivity timeout, post-checkout success/cancelled landing pages, and the personalized save-the-cancel re-engagement page with practice-type-specific value props. Phase A is now considered fully shipped AND hardened — every customer-facing touchpoint in the franchise launch funnel is verified live in production against real tenants.",
+        "shippedCommits": [
+          "3f26a27 — Bypass CSRF for public franchise application endpoint (real production bug — no prospect could submit before this)",
+          "24e36e5 — Admin franchise application review queue at /admin/franchise-requests + DRY refactor of tenant creation into lib/tenant-create.ts",
+          "b68b980 — HIPAA-compliant configurable inactivity timeout (5–30 min, super-admin tunable, NO admin exemption)",
+          "e25ad44 — Stripe Checkout Sessions replace Payment Links (locks customer email, prevents the wrong-owner-provisioned bug)",
+          "976522b — Polish: brand-clean activation email header + admin tenant edit page subdomain label",
+          "da61093 — /franchise/payment-success and /franchise/payment-cancelled landing pages (prevent 404s after Stripe redirect)",
+          "6011a0b — Save-the-cancel re-engagement page personalized by practice type with credible reserved-subdomain FOMO + extracted FRANCHISE_PRACTICE_TYPES to shared lib",
+          "a714745 — Schedule a Free Demo CTA on cancel page (DRY reuse of existing DemoRequestButton)"
+        ]
+      },
+      {
+        "version": "0.2.0",
+        "date": "2026-04-06",
+        "summary": "Initial PRD covering Phase A franchise dashboard MVP — tenant subdomains, Stripe webhook activation, magic-link onboarding, branding editor."
+      }
+    ],
     "vision": "Sell the 'pipes and wires' that let independent health practitioners (nurses, wellness coaches, concierge doctors, home care agencies, patient advocates) launch a HIPAA-compliant, AI-powered, fully branded family-health platform under their own name in 48 hours — without writing code or buying infrastructure.",
     "positioning": "A white-label 'business-in-a-box' for the missing middle between off-the-shelf consumer apps (cheap, generic, not BAA-eligible) and custom builds ($100k+, 6-12 months). WPL's franchise tier gives the polish of a custom app at the price point of premium SaaS.",
     "targetUsers": [
@@ -476,9 +498,9 @@
 
   "implementationStatus": {
     "phaseA": {
-      "label": "Phase A — Make the 48-Hour Promise True",
+      "label": "Phase A — Make the 48-Hour Promise True (+ hardening)",
       "status": "shipped",
-      "shippedIn": "branch following commit cc67da6",
+      "shippedIn": "commits e3fa9d7 (initial) through a714745 (current)",
       "deliverables": [
         "Tenant subdomain routing via proxy.ts",
         "Branded tenant landing page (sign-in only, no public account creation)",
@@ -492,6 +514,24 @@
         "firestore.rules isTenantAdmin helper + tenant write rule widened to franchise admins",
         "Static franchise marketing page at /franchise + relocated 5-step form at /franchise/apply",
         "lib/franchise-plans.ts as single source of truth for plan tiers + setup fee"
+      ],
+      "phaseAHardeningShipped": [
+        "CSRF bypass for /api/franchise/* — fixed silent 403 that was blocking ALL public application submissions (commit 3f26a27)",
+        "/admin/franchise-requests review queue: list page + filter tabs + detail page + Approve/Reject/Mark Reviewed actions, all backed by GET/PATCH/POST APIs (commit 24e36e5)",
+        "lib/tenant-create.ts shared helper — 130 lines of tenant doc shaping extracted from /api/admin/tenants/route.ts so both the manual create form AND the franchise-requests Approve flow share the same source of truth (commit 24e36e5)",
+        "Configurable inactivity timeout — runtime platform setting at admin/platform_settings, super-admin tunable from /admin/settings, range 5–30 min, default 15. NO admin exemption (HIPAA Security Rule § 164.312(a)(2)(iii) compliance — privileged sessions get the same timeout as regular users). lib/platform-settings.ts (server-safe constants/validator) + hooks/usePlatformSettings.ts (client React hook with onSnapshot for real-time propagation) (commit b68b980)",
+        "/api/admin/settings/inactivity API (GET + PATCH) with compliance bound enforcement and audit-logged change tracking (commit b68b980)",
+        "firestore.rules: new admin/platform_settings rule before the general /admin/{docId} rule — readable by any authenticated user, writable only by super-admins (commit b68b980)",
+        "Stripe Checkout Sessions REPLACE Payment Links for franchise setup fee. New flow: get-or-create stripe.customers + stripe.checkout.sessions.create with `customer: <id>` (locks email field read-only on Stripe checkout page). Fixes a real bug where Payment Links let customers type any email at checkout, which would have provisioned the wrong owner via the webhook. Webhook compatibility unchanged — same metadata.tenantId on session.completed event. (commit e25ad44)",
+        "Stripe Customer record persisted as tenant.billing.stripeCustomerId — Phase C recurring billing will reuse this",
+        "checkout session expires_at = 24 hours so old un-paid links auto-expire",
+        "Activation email subject + footer brand-cleaned: 'Welcome to the Wellness Projection Lab Family' (was 'WPL Family')",
+        "Admin tenant edit page subdomain label brand-cleaned: '.wellnessprojectionlab.com' (was '.wpl.com')",
+        "/franchise/payment-success and /franchise/payment-cancelled landing pages — replaced 404s after Stripe redirects with branded, tenant-personalized confirmation/recovery pages (commit da61093)",
+        "Save-the-cancel re-engagement page at /franchise/payment-cancelled — personalized 'Why {practice-type}s choose WPL' value-prop block keyed by tenant.practiceType, credible reserved-subdomain FOMO banner ({slug}.wellnessprojectionlab.com reserved for 24h), and a Schedule-a-Free-Demo CTA reusing the existing DemoRequestButton modal pattern (commits 6011a0b + a714745)",
+        "FRANCHISE_PRACTICE_TYPES extracted to lib/franchise-plans.ts — third caller (cancel page) reached the rule of three, so the canonical list now lives in a shared module imported by the apply form, the cancel page, and the type union",
+        "lib/tenant-server.ts: new getTenantById() helper mirroring getTenantBySlug() — used by post-checkout pages which receive the Firestore doc id from Stripe redirects, not the slug",
+        "End-to-end production validation: real franchise application from 'Little Care Bears' submitted via the form, reviewed via /admin/franchise-requests, approved → tenant doc → 'Send Payment Link' → branded Stripe checkout session with locked email → tenant subdomain renders branded 'pending_payment' waiting page. The entire customer-facing funnel is verified live."
       ]
     },
     "phaseB": {
@@ -556,7 +596,7 @@
     {
       "id": "billing_model_for_phase_c",
       "question": "Should monthly recurring use Stripe Subscriptions (cleaner reporting) or stay on the dynamic Price-creation pattern that the setup fee uses (zero dashboard setup)?",
-      "currentLeaning": "Subscriptions — six pre-created Prices in env vars give clean MRR reporting in Stripe dashboard. Worth the 10-minute setup."
+      "currentLeaning": "Subscriptions — six pre-created Prices in env vars give clean MRR reporting in Stripe dashboard. Worth the 10-minute setup. Note: stripeCustomerId is now persisted on the tenant doc as of e25ad44, which is the prerequisite for subscription creation."
     },
     {
       "id": "owner_password_management",
@@ -577,6 +617,16 @@
       "id": "managed_family_consent_audit",
       "question": "When a family approves franchise management, what consent record is required for HIPAA?",
       "currentLeaning": "Click-through consent stored in tenantManagementRequests doc with timestamp + IP + user agent. Phase B work."
+    },
+    {
+      "id": "auto_release_reserved_subdomain",
+      "question": "The save-the-cancel page tells prospects 'Your subdomain is reserved for you for 24 hours' but we don't actually have a cron that releases held slugs after 24h — admins would need to manually release them. Should we build the auto-release cron, or accept the soft promise as-is?",
+      "currentLeaning": "Build the cron in Phase B alongside the management-request flow. Until then the copy is honest because admins CAN manually release a held slug if a serious applicant comes along — we just don't guarantee the timing."
+    },
+    {
+      "id": "save_the_cancel_narrative_lift",
+      "question": "The current save-the-cancel page has the right structure (reassurance + reserved-subdomain FOMO + personalized value prop + demo CTA + return-to-checkout) but the copy is functional rather than emotionally compelling. User feedback was 'this does not inspire too much.' Worth a copy-only redesign pass to make it feel like a confident company talking to a hesitant buyer, not a status report from a database?",
+      "currentLeaning": "Yes — but with the constraint that the new narrative must be sourced FROM THIS PRD's positioning ('the missing middle' between off-the-shelf consumer apps and custom builds at $100k+/6-12 months) and targetUsers entries, not invented from scratch. The PRD is the source of truth for the cost-anchor and pain points. NEXT WORK ITEM after this PRD update commits."
     }
   ],
 
@@ -592,23 +642,37 @@
       "brandingEditor": "app/tenant-shell/dashboard/BrandingEditor.tsx",
       "marketingPage": "app/franchise/page.tsx",
       "applicationForm": "app/franchise/apply/page.tsx",
+      "paymentSuccessPage": "app/franchise/payment-success/page.tsx",
+      "paymentCancelledPage": "app/franchise/payment-cancelled/page.tsx (save-the-cancel layout with practice-type personalization, reserved-subdomain FOMO banner, and DemoRequestButton CTA)",
       "franchiseAgreement": "app/franchise-agreement/page.tsx",
-      "franchisePlans": "lib/franchise-plans.ts",
-      "tenantServer": "lib/tenant-server.ts",
+      "franchisePlans": "lib/franchise-plans.ts (FRANCHISE_PLANS, SETUP_FEE_*, FRANCHISE_PRACTICE_TYPES, FranchisePracticeType type)",
+      "tenantServer": "lib/tenant-server.ts (getTenantBySlug + getTenantById)",
       "tenantAuth": "lib/tenant-auth.ts",
-      "stripeWebhook": "app/api/webhooks/stripe/route.ts",
-      "publicApplyApi": "app/api/franchise/apply/route.ts",
-      "adminTenantsApi": "app/api/admin/tenants/route.ts",
+      "tenantCreate": "lib/tenant-create.ts (DRY shared helper used by both manual /admin/tenants/create AND franchise-requests Approve flow)",
+      "platformSettings": "lib/platform-settings.ts (server-safe: types, defaults, validator, compliance bounds)",
+      "platformSettingsHook": "hooks/usePlatformSettings.ts (client React hook with onSnapshot real-time propagation)",
+      "demoRequestButton": "components/DemoRequestButton.tsx + components/DemoRequestModal.tsx (REUSED from /blog/* by the cancel page — no new modal infrastructure)",
+      "stripeWebhook": "app/api/webhooks/stripe/route.ts (handleFranchiseSetupPaid)",
+      "stripeConfig": "lib/stripe-config.ts (single Stripe client + verifyWebhookSignature)",
+      "publicApplyApi": "app/api/franchise/apply/route.ts (CSRF-bypassed per proxy.ts)",
+      "adminTenantsApi": "app/api/admin/tenants/route.ts (refactored to call lib/tenant-create.ts)",
       "adminTenantApi": "app/api/admin/tenants/[tenantId]/route.ts",
-      "paymentLinkApi": "app/api/admin/tenants/[tenantId]/payment-link/route.ts",
+      "paymentLinkApi": "app/api/admin/tenants/[tenantId]/payment-link/route.ts (uses Checkout Sessions, NOT Payment Links — locks customer email)",
       "tenantBrandingApi": "app/api/tenant/branding/route.ts",
-      "auditLog": "lib/admin/audit.ts",
-      "firestoreRules": "firestore.rules"
+      "franchiseRequestsListApi": "app/api/admin/franchise-requests/route.ts",
+      "franchiseRequestsDetailApi": "app/api/admin/franchise-requests/[applicationId]/route.ts (GET + PATCH for Mark Reviewed / Reject)",
+      "franchiseRequestsApproveApi": "app/api/admin/franchise-requests/[applicationId]/approve/route.ts (idempotent — calls lib/tenant-create.ts)",
+      "platformSettingsApi": "app/api/admin/settings/inactivity/route.ts (GET + PATCH, super-admin only, validates compliance bounds)",
+      "auditLog": "lib/admin/audit.ts (extended with tenantId field + tenant_*, franchise_application_*, platform_setting_updated actions)",
+      "firestoreRules": "firestore.rules (isTenantAdmin helper + tenants write rule + admin/platform_settings rule)"
     },
     "adminUI": {
       "tenantsList": "app/(dashboard)/admin/tenants/page.tsx",
       "tenantCreate": "app/(dashboard)/admin/tenants/create/page.tsx",
-      "tenantEdit": "app/(dashboard)/admin/tenants/[tenantId]/page.tsx"
+      "tenantEdit": "app/(dashboard)/admin/tenants/[tenantId]/page.tsx",
+      "franchiseRequestsList": "app/(dashboard)/admin/franchise-requests/page.tsx",
+      "franchiseRequestsDetail": "app/(dashboard)/admin/franchise-requests/[applicationId]/page.tsx",
+      "settingsPage": "app/(dashboard)/admin/settings/page.tsx (Session Security section — inactivity timeout)"
     },
     "docs": {
       "thisFile": "FRANCHISE_PRD.json",
@@ -644,9 +708,45 @@
     },
     {
       "id": "master_prd_total_inconsistency",
-      "description": "MASTER_PRD.md header says 157 features but the category summary table sums to 287. Pre-existing.",
+      "description": "MASTER_PRD.md header says 157 features but the category summary table sums to 287 (now 299 after adding the franchise category row). Header value is stale.",
       "priority": "low",
       "addedIn": "pre-existing"
+    },
+    {
+      "id": "tenant_type_drift",
+      "description": "types/tenant.ts Tenant interface is missing many fields that lib/tenant-create.ts actually writes: legalName, entityType, ein, stateOfIncorporation, licenseNumber, npiNumber, staffCount, familyCount, expectedLaunchDate, leadSource, notes, emergencyContact, billingAddress, ownerUid, ownerProvisionedAt. Only practiceType was added (commit 6011a0b) as the minimum to compile the cancel page. Worth a focused type-completion pass.",
+      "priority": "medium",
+      "addedIn": "0.3.0"
+    },
+    {
+      "id": "no_admin_users_panel_empty",
+      "description": "The 'Admin Users' panel on /admin/settings shows 'No admin users found' even though super-admins exist. Likely cause: the /api/admin/settings/admin-users endpoint queries Firestore users/{uid}.role === 'admin' but super-admins are recognized by email allowlist in lib/admin/permissions.ts, so they don't have a Firestore role field. Cosmetic — doesn't affect access control, just the display panel.",
+      "priority": "low",
+      "addedIn": "0.3.0"
+    },
+    {
+      "id": "recent_admin_activity_panel_empty",
+      "description": "The 'Recent Admin Activity' panel on /admin/settings shows 'No audit logs found' even when fresh entries exist (verified after saving an inactivity timeout change). Cause TBD — likely a query / serialization issue in /api/admin/settings/audit-logs. Cosmetic — audit logs ARE being written correctly to admin_audit_logs collection.",
+      "priority": "low",
+      "addedIn": "0.3.0"
+    },
+    {
+      "id": "manifest_404_on_tenant_subdomains",
+      "description": "Browser console shows manifest.json 404 on tenant subdomains because proxy.ts rewrites /manifest.json into /tenant-shell/manifest.json, which doesn't exist. PWA features (install prompt, service worker) are broken on tenant subdomains. Fix: either generate a tenant-aware manifest at app/tenant-shell/manifest.ts OR add /manifest.json to proxy.ts apex-only allowlist.",
+      "priority": "low",
+      "addedIn": "0.3.0"
+    },
+    {
+      "id": "marketing_link_prefetches_leak_to_tenant_subdomains",
+      "description": "On tenant subdomains, Next.js prefetches for /blog/*, /pricing, /docs, /referrals (apex marketing pages) all 404 because they're rewritten into /tenant-shell/* paths that don't exist. Caused by a shared component that includes <Link href='/blog/...'> tags rendered inside the tenant-shell layout. Fix: figure out which footer/nav component is leaking and either render a different one for tenant subdomains, or use plain <a> tags for cross-host links.",
+      "priority": "low",
+      "addedIn": "0.3.0"
+    },
+    {
+      "id": "support_email_no_inbox",
+      "description": "support@wellnessprojectionlab.com is referenced in the activation email body but no real inbox exists at that address — replies would bounce. Fix: set up Cloudflare Email Routing (free) to forward support@ → wellnessprojectionlab@gmail.com. ~10 min, no infrastructure cost.",
+      "priority": "medium",
+      "addedIn": "0.3.0"
     }
   ],
 
