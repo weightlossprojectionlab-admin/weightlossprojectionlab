@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import stripe from '@/lib/stripe-config'
 import { adminAuth as auth, adminDb as db } from '@/lib/firebase-admin'
 import { SubscriptionPlan } from '@/types'
 import {
@@ -18,10 +18,6 @@ import {
   type BillingInterval,
   type TransitionParams
 } from '@/lib/services/subscription-service'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-11-17.clover',
-})
 
 // Stripe Price IDs - Using your existing configuration from .env.local
 const STRIPE_PRICE_IDS: Record<SubscriptionPlan, { monthly: string; yearly: string }> = {

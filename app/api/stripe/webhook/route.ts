@@ -4,17 +4,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
+import stripe from '@/lib/stripe-config'
 import { adminDb as db } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { SubscriptionPlan } from '@/types'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-11-17.clover',
-})
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+// Read at request time, not module load — Vercel build env doesn't have it.
+function getWebhookSecret(): string {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!secret) throw new Error('STRIPE_WEBHOOK_SECRET is not configured')
+  return secret
+}
 
 export async function POST(request: NextRequest) {
   logger.info('[Stripe Webhook] Request received')
@@ -33,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Verify webhook signature
     let event: Stripe.Event
     try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+      event = stripe.webhooks.constructEvent(body, signature, getWebhookSecret())
     } catch (err: any) {
       logger.error('[Stripe Webhook] Signature verification failed', err as Error)
       return NextResponse.json(

@@ -14,15 +14,11 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyWebhookSignature } from '@/lib/stripe-config'
+import stripe from '@/lib/stripe-config'
 import { adminDb, getAdminAuth, createUser } from '@/lib/firebase-admin'
 import { sendEmail } from '@/lib/email-service'
 import { logger } from '@/lib/logger'
-import Stripe from 'stripe'
-
-// Initialize Stripe client for webhook handler
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-11-17.clover',
-})
+import type Stripe from 'stripe'
 
 export async function POST(request: NextRequest) {
   logger.info('[Stripe Webhook] Webhook endpoint hit')
