@@ -35,11 +35,19 @@ export default function FinishSignInPage() {
           setError('This sign-in link is invalid or has expired.')
           return
         }
-        // Email is included as a query param when the magic link is generated
-        // by the Stripe webhook. Fall back to localStorage for cross-device flow.
-        const email =
+        // Email lookup, in priority order:
+        //   1. ?email= query param (set by webhook/provision script)
+        //   2. localStorage 'emailForSignIn' (set when generating link from same browser)
+        //   3. window.prompt() asking the user — bulletproof fallback for cross-device
+        //      magic-link clicks where the link generator and clicker are different sessions.
+        // The prompt fallback is the production-correct pattern per Firebase docs:
+        // https://firebase.google.com/docs/auth/web/email-link-auth#completing_sign-in_in_a_web_page
+        let email: string | null =
           searchParams?.get('email') ||
           (typeof window !== 'undefined' ? window.localStorage.getItem('emailForSignIn') : null)
+        if (!email && typeof window !== 'undefined') {
+          email = window.prompt('Please enter your email to complete sign-in:')
+        }
         if (!email) {
           setError('We could not determine the email address for this sign-in link.')
           return

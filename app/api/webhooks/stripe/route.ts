@@ -237,7 +237,14 @@ async function handleFranchiseSetupPaid(session: Stripe.Checkout.Session, tenant
 
         // First-ever use of generateSignInWithEmailLink in this codebase.
         // Action URL must be allowlisted in Firebase Console → Auth → Authorized domains.
-        const finishUrl = `https://${tenant.slug}.wellnessprojectionlab.com/auth/finish-sign-in?email=${encodeURIComponent(adminEmail)}`
+        // IMPORTANT: do NOT put `email` in the continueUrl. Firebase double-encodes
+        // the entire continueUrl when wrapping it in its own action URL, which turns
+        // ?email=foo@bar into ?email%3Dfoo%2540bar — broken on the receiving page.
+        // Instead, the finish-sign-in page reads the email from localStorage OR
+        // prompts the user as a bulletproof fallback (the Firebase-recommended
+        // production pattern). For production, the prospect will recognize their
+        // own email and type it correctly.
+        const finishUrl = `https://${tenant.slug}.wellnessprojectionlab.com/auth/finish-sign-in`
         magicLinkUrl = await auth.generateSignInWithEmailLink(adminEmail, {
           url: finishUrl,
           handleCodeInApp: true,
