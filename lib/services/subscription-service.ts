@@ -10,12 +10,9 @@
  * - Reactivations
  */
 
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
+import stripe from '@/lib/stripe-config'
 import { SubscriptionPlan } from '@/types'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-11-17.clover'
-})
 
 // Plan tier hierarchy for upgrade/downgrade detection
 export const PLAN_TIERS: Record<SubscriptionPlan, number> = {

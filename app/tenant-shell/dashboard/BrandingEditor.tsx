@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { logger } from '@/lib/logger'
+import { getCSRFToken } from '@/lib/csrf'
 
 interface BrandingState {
   logoUrl: string
@@ -85,11 +86,13 @@ export default function BrandingEditor({ tenantId, initial }: Props) {
     setMessage(null)
     try {
       const token = await auth.currentUser.getIdToken()
+      const csrfToken = getCSRFToken()
       const res = await fetch('/api/tenant/branding', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
         },
         body: JSON.stringify({ tenantId, branding: state }),
       })
