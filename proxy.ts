@@ -127,6 +127,7 @@ export function proxy(request: NextRequest) {
       pathname.startsWith('/data-policy') ||
       pathname.startsWith('/find-a-provider') || // Phase B: family-side directory
       pathname.startsWith('/onboarding') || // consumer onboarding (auth-router may redirect here)
+      pathname.startsWith('/patients') || // consumer patients (auth-router may redirect here)
       pathname.startsWith('/dev') || // dev-only helpers (e.g. /dev/sign-in)
       pathname.startsWith('/tenant-shell') // prevent rewrite loops
 
@@ -148,6 +149,7 @@ export function proxy(request: NextRequest) {
       pathname.startsWith('/data-policy') ||
       pathname.startsWith('/find-a-provider') ||
       pathname.startsWith('/onboarding') ||
+      pathname.startsWith('/patients') ||
       pathname.startsWith('/dev')
     ) {
       return NextResponse.next({ request: { headers: requestHeaders } })

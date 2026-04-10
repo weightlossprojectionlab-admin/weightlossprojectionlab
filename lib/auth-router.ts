@@ -50,6 +50,18 @@ export async function determineUserDestination(
     return { type: 'stay', reason: 'Admin page - handled by admin layout' }
   }
 
+  // Franchise dashboard pages handle their own auth via tenant claims.
+  // The consumer auth router must NOT redirect franchise users to /patients
+  // or /onboarding — those routes don't exist on the tenant subdomain.
+  if (currentPath.startsWith('/dashboard') || currentPath.startsWith('/dev')) {
+    const tokenResult = await user.getIdTokenResult()
+    const claims = tokenResult.claims as any
+    if (claims.tenantRole === 'franchise_admin' || claims.tenantRole === 'franchise_staff') {
+      logger.debug('[AuthRouter] Franchise user on dashboard - skipping consumer routing')
+      return { type: 'stay', reason: 'Franchise user - handled by tenant dashboard' }
+    }
+  }
+
   // Step 1: Not authenticated → Must go to /auth
   if (!user) {
     logger.debug('[AuthRouter] No user - redirect to /auth')

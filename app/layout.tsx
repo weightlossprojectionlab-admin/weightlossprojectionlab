@@ -20,7 +20,10 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.wellnessprojectionlab.com'),
   alternates: {
-    canonical: '/',
+    canonical: 'https://www.wellnessprojectionlab.com',
+  },
+  verification: {
+    google: 'ydQcXg_dbc0feDQpZbLUonWZvKXEF5wndkeh7p-zt5Y',
   },
   openGraph: {
     type: 'website',
