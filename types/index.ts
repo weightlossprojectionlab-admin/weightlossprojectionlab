@@ -52,6 +52,12 @@ export interface User {
   caregiverOf?: CaregiverContext[]  // Accounts where this user is a caregiver (family plan only)
   tenantId?: string | null          // Franchise tenant ID (null = WPL direct user)
   tenantRole?: 'franchise_admin' | 'staff' | 'user' | null  // Role within franchise
+  // Phase B: ids of franchise tenants that manage this consumer family.
+  // Distinct from tenantId/tenantRole — those describe people who WORK for a
+  // franchise (owners, staff). managedBy describes consumer end-users who are
+  // CLIENTS of a franchise. MVP allows at most one entry, but stored as an
+  // array per FRANCHISE_PRD open question for forward compatibility.
+  managedBy?: string[]
   createdAt: Date
   lastActiveAt: Date
 }

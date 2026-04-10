@@ -120,10 +120,14 @@ export function proxy(request: NextRequest) {
       pathname.startsWith('/api') ||
       pathname.startsWith('/admin') ||
       pathname.startsWith('/login') ||
+      pathname.startsWith('/auth') || // /login redirects here; both must be apex
       pathname.startsWith('/franchise') ||
       pathname.startsWith('/franchise-agreement') ||
       pathname.startsWith('/baa') ||
       pathname.startsWith('/data-policy') ||
+      pathname.startsWith('/find-a-provider') || // Phase B: family-side directory
+      pathname.startsWith('/onboarding') || // consumer onboarding (auth-router may redirect here)
+      pathname.startsWith('/dev') || // dev-only helpers (e.g. /dev/sign-in)
       pathname.startsWith('/tenant-shell') // prevent rewrite loops
 
     if (!isApexOnlyRoute) {
@@ -137,10 +141,14 @@ export function proxy(request: NextRequest) {
     if (
       pathname.startsWith('/admin') ||
       pathname.startsWith('/login') ||
+      pathname.startsWith('/auth') ||
       pathname.startsWith('/franchise') ||
       pathname.startsWith('/franchise-agreement') ||
       pathname.startsWith('/baa') ||
-      pathname.startsWith('/data-policy')
+      pathname.startsWith('/data-policy') ||
+      pathname.startsWith('/find-a-provider') ||
+      pathname.startsWith('/onboarding') ||
+      pathname.startsWith('/dev')
     ) {
       return NextResponse.next({ request: { headers: requestHeaders } })
     }

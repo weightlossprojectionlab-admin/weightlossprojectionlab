@@ -126,6 +126,29 @@ service firebase.storage {
       allow delete: if isAuthenticated();
     }
 
+    // Tenant branding assets (franchise owner-uploaded logos, etc.)
+    // Public read — the logo is rendered on the public tenant landing page.
+    // Write/delete restricted to: (a) the franchise admin whose custom claims
+    // match this tenantId, or (b) a WPL super admin. The tenantId in the path
+    // must match the tenantId in the user's auth token claims.
+    match /tenants/{tenantId}/branding/{file} {
+      allow read: if true;
+      allow write: if isAuthenticated() &&
+                      isValidImage() &&
+                      request.resource.size < 5 * 1024 * 1024 && // Max 5MB
+                      (
+                        (request.auth.token.tenantId == tenantId &&
+                         request.auth.token.tenantRole == 'franchise_admin') ||
+                        request.auth.token.role == 'admin'
+                      );
+      allow delete: if isAuthenticated() &&
+                       (
+                         (request.auth.token.tenantId == tenantId &&
+                          request.auth.token.tenantRole == 'franchise_admin') ||
+                         request.auth.token.role == 'admin'
+                       );
+    }
+
     // Default deny
     match /{allPaths=**} {
       allow read, write: if false;

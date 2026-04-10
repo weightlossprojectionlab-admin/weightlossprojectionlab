@@ -116,6 +116,21 @@ export interface PatientProfile {
   // Onboarding status
   vitalsComplete?: boolean // true if height + initial weight provided
 
+  // Franchise client intake fields (Phase C)
+  // Populated by the professional intake wizard at /dashboard/families/new.
+  // Optional on the interface so consumer-created patients don't need them.
+  insuranceProvider?: string
+  insurancePolicyNumber?: string
+  dietaryRestrictions?: string[] // vegetarian, vegan, gluten-free, keto, halal, kosher, etc.
+  careGoals?: string[]           // weight_loss, nutrition, medical_tracking, fitness, etc.
+  practiceNotes?: string         // Internal notes from the franchise owner about this client
+  consentGiven?: boolean         // Client consented to care management
+  consentGivenAt?: string        // ISO 8601
+  referralSource?: string        // How did this client find the practice
+  intakedByTenantId?: string     // Which franchise onboarded this client
+  intakedByUid?: string          // Which staff member performed the intake
+  intakedAt?: string             // ISO 8601
+
   // Soft Delete / Archive Support (HIPAA compliance)
   status?: 'active' | 'deleted' | 'archived' // Defaults to 'active'
   deletedAt?: string // ISO 8601 - When patient was soft-deleted

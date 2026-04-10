@@ -55,6 +55,15 @@ export type AdminAction =
   | 'tenant_create'
   | 'tenant_payment_link_sent'
   | 'tenant_branding_updated'
+  | 'tenant_family_attached'   // Phase B: franchise admin manually attaches a family
+  | 'tenant_family_revoked'    // Phase B: franchise admin revokes management of a family
+  | 'tenant_staff_invited'     // Phase B: franchise admin invites a staff member
+  | 'tenant_staff_accepted'    // Phase B: invited staff accepts and provisions account
+  | 'tenant_staff_revoked'     // Phase B: franchise admin revokes a staff invitation/seat
+  | 'tenant_request_submitted' // Phase B slice 7: family submits a management request
+  | 'tenant_request_approved'  // Phase B slice 7: franchise approves a management request
+  | 'tenant_request_declined'  // Phase B slice 7: franchise declines a management request
+  | 'tenant_client_onboarded'  // Phase C: franchise completes professional client intake
   | 'franchise_application_reviewed'
   | 'franchise_application_approved'
   | 'franchise_application_rejected'

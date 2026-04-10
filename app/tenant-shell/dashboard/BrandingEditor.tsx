@@ -10,14 +10,22 @@
  * Auth gating: server page already 404s for missing tenant; this component
  * checks the user's claims on mount and redirects to /login on mismatch.
  *
+ * Logo upload: drag-and-drop or click-to-pick uploads directly to Firebase
+ * Storage at tenants/{tenantId}/branding/{file} (rule in storage.rules), then
+ * the resulting download URL is stored in the form state and PATCHed to
+ * /api/tenant/branding alongside the other fields. Manual URL paste is kept
+ * as a small fallback affordance below the drop zone for users who already
+ * host their logo on their own CDN.
+ *
  * Submits to PATCH /api/tenant/branding with a Bearer token. The API route
  * persists, audit-logs, and revalidates the tenant landing path.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { auth } from '@/lib/firebase'
+import { auth, storage } from '@/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { logger } from '@/lib/logger'
 import { getCSRFToken } from '@/lib/csrf'
 
@@ -40,6 +48,15 @@ function toCss(color: string): string {
   return /^\d/.test(color) ? `hsl(${color})` : color
 }
 
+const ACCEPTED_LOGO_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+  'image/svg+xml',
+]
+const MAX_LOGO_BYTES = 5 * 1024 * 1024 // 5MB — must match storage.rules
+
 export default function BrandingEditor({ tenantId, initial }: Props) {
   const router = useRouter()
   const [state, setState] = useState<BrandingState>(initial)
@@ -47,6 +64,11 @@ export default function BrandingEditor({ tenantId, initial }: Props) {
   const [authorized, setAuthorized] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [dragActive, setDragActive] = useState(false)
+  const [showUrlFallback, setShowUrlFallback] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!auth) {
@@ -75,6 +97,95 @@ export default function BrandingEditor({ tenantId, initial }: Props) {
     })
     return () => unsub()
   }, [router, tenantId])
+
+  const validateFile = (file: File): string | null => {
+    if (!ACCEPTED_LOGO_TYPES.includes(file.type)) {
+      return 'Logo must be a PNG, JPEG, WebP, or SVG image.'
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      return `Logo must be smaller than 5 MB. (Yours is ${(file.size / (1024 * 1024)).toFixed(1)} MB.)`
+    }
+    return null
+  }
+
+  const handleFile = async (file: File) => {
+    setUploadError(null)
+    const validationError = validateFile(file)
+    if (validationError) {
+      setUploadError(validationError)
+      return
+    }
+    if (!auth?.currentUser) {
+      setUploadError('You are not signed in.')
+      return
+    }
+    if (!storage) {
+      setUploadError('Storage is unavailable. Please refresh and try again.')
+      return
+    }
+
+    setUploading(true)
+    try {
+      // Cache-bust by timestamping the filename. Old logos are orphaned in
+      // Storage rather than deleted (matches the partner-logo upload pattern
+      // in lib/perk-image-upload.ts) — branding changes are infrequent and
+      // the storage cost is negligible.
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
+      const path = `tenants/${tenantId}/branding/logo-${Date.now()}.${ext}`
+      const ref = storageRef(storage, path)
+
+      await uploadBytes(ref, file, { contentType: file.type })
+      const downloadUrl = await getDownloadURL(ref)
+
+      setState(s => ({ ...s, logoUrl: downloadUrl }))
+    } catch (err) {
+      logger.error('[BrandingEditor] logo upload failed', err as Error)
+      const code = (err as any)?.code
+      if (code === 'storage/unauthorized') {
+        setUploadError('Upload denied. Your account does not have permission for this tenant.')
+      } else {
+        setUploadError(err instanceof Error ? err.message : 'Upload failed.')
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFile(file)
+  }
+
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!dragActive) setDragActive(true)
+  }
+
+  const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+  }
+
+  const onPickFile = () => {
+    fileInputRef.current?.click()
+  }
+
+  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleFile(file)
+    // Reset so picking the same filename again still fires onChange
+    e.target.value = ''
+  }
+
+  const removeLogo = () => {
+    setState(s => ({ ...s, logoUrl: '' }))
+    setUploadError(null)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -123,6 +234,7 @@ export default function BrandingEditor({ tenantId, initial }: Props) {
   }
 
   const previewColor = toCss(state.primaryColor)
+  const hasLogo = !!state.logoUrl
 
   return (
     <form
@@ -147,19 +259,148 @@ export default function BrandingEditor({ tenantId, initial }: Props) {
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
           />
         </div>
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logo URL</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Logo</label>
+
+          {hasLogo ? (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
+              <div className="flex items-center gap-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={state.logoUrl}
+                  alt="Logo preview"
+                  className="h-20 w-20 object-contain rounded bg-white border border-gray-200 dark:border-gray-700"
+                  onError={() =>
+                    setUploadError('This logo URL did not load. Try uploading a file instead.')
+                  }
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                    {state.logoUrl}
+                  </p>
+                  <div className="flex gap-3 mt-2">
+                    <button
+                      type="button"
+                      onClick={onPickFile}
+                      disabled={uploading}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 disabled:opacity-50"
+                    >
+                      Replace
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removeLogo}
+                      disabled={uploading}
+                      className="text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onClick={onPickFile}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onPickFile()
+                }
+              }}
+              className={`rounded-lg border-2 border-dashed p-8 text-center cursor-pointer transition ${
+                dragActive
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 bg-gray-50 dark:bg-gray-900'
+              }`}
+            >
+              {uploading ? (
+                <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
+                    <path
+                      fill="currentColor"
+                      className="opacity-75"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
+                  <span className="text-sm">Uploading&hellip;</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <svg
+                    className="mx-auto h-10 w-10 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M7 16a4 4 0 01-.88-7.9 5 5 0 019.9-1.1A4.5 4.5 0 0117 16h-1m-4-4v8m0-8l-3 3m3-3l3 3"
+                    />
+                  </svg>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-medium text-blue-600 dark:text-blue-400">Click to upload</span>{' '}
+                    or drag and drop
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    PNG, JPEG, WebP, or SVG &middot; up to 5 MB
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           <input
-            type="url"
-            value={state.logoUrl}
-            onChange={e => setState(s => ({ ...s, logoUrl: e.target.value }))}
-            placeholder="https://..."
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_LOGO_TYPES.join(',')}
+            onChange={onFileInputChange}
+            className="hidden"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Paste a hosted image URL. Direct file upload is coming in a future release.
-          </p>
+
+          {uploadError && (
+            <p className="text-sm text-red-600 dark:text-red-400 mt-2">{uploadError}</p>
+          )}
+
+          <div className="mt-3">
+            {showUrlFallback ? (
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+                  Or paste a hosted image URL
+                </label>
+                <input
+                  type="url"
+                  value={state.logoUrl}
+                  onChange={e => setState(s => ({ ...s, logoUrl: e.target.value }))}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                />
+                <p className="text-xs text-gray-500">
+                  Must be a direct image URL (ending in .png, .jpg, .webp, etc.) and publicly
+                  accessible. Pages from sites like Shutterstock or Google Images won&rsquo;t work.
+                </p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowUrlFallback(true)}
+                className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 underline"
+              >
+                Already have a hosted image? Paste a URL instead
+              </button>
+            )}
+          </div>
         </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Primary color (HSL triplet)
@@ -208,7 +449,7 @@ export default function BrandingEditor({ tenantId, initial }: Props) {
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || uploading}
           className="inline-flex items-center justify-center rounded-lg px-6 py-3 text-base font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-50"
           style={{ backgroundColor: previewColor }}
         >

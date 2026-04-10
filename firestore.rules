@@ -56,6 +56,18 @@ service cloud.firestore {
              request.auth.token.tenantRole == 'franchise_admin';
     }
 
+    // Phase C: Check if caller is franchise admin OR staff whose tenant
+    // manages this specific user. Used for tenant-scoped health data access.
+    // Reads the user doc to check the managedBy array — costs one read per
+    // rule evaluation but is the only way to enforce "you can only see health
+    // data for families your practice manages."
+    function isTenantOfUser(userId) {
+      return isAuthenticated() &&
+             (request.auth.token.tenantRole == 'franchise_admin' ||
+              request.auth.token.tenantRole == 'franchise_staff') &&
+             request.auth.token.tenantId in get(/databases/$(database)/documents/users/$(userId)).data.get('managedBy', []);
+    }
+
     // ============================================
     // USERS COLLECTION
     // ============================================
@@ -63,6 +75,14 @@ service cloud.firestore {
     match /users/{userId} {
       // Read: Users can read their own profile, admins can read all
       allow read: if isOwner(userId) || isAdmin();
+
+      // Phase B+C: Franchise admins and staff can read user docs for the
+      // families they manage. A family is "managed by" a tenant when that
+      // tenant's id is in the user's managedBy array.
+      allow read: if isAuthenticated() &&
+                    (request.auth.token.tenantRole == 'franchise_admin' ||
+                     request.auth.token.tenantRole == 'franchise_staff') &&
+                    request.auth.token.tenantId in resource.data.get('managedBy', []);
 
       // Allow admins to query the users collection (for admin stats)
       // TEMPORARY: Allow authenticated users to test permissions
@@ -96,8 +116,8 @@ service cloud.firestore {
 
       // Patient profiles
       match /patients/{patientId} {
-        // Read: Owner or admin can read patients
-        allow read: if isOwner(userId) || isAdmin();
+        // Read: Owner, admin, or franchise staff/admin managing this user
+        allow read: if isOwner(userId) || isAdmin() || isTenantOfUser(userId);
 
         // Create: Owner can create patients
         allow create: if isOwner(userId) &&
@@ -113,7 +133,7 @@ service cloud.firestore {
 
         // Vital signs subcollection
         match /vitals/{vitalId} {
-          allow read: if isOwner(userId);
+          allow read: if isOwner(userId) || isTenantOfUser(userId);
 
           // Create: Owner can create vitals with date validation and plan tier enforcement
           allow create: if isOwner(userId) &&
@@ -129,7 +149,7 @@ service cloud.firestore {
 
         // Weight logs subcollection (hyphenated naming)
         match /weight-logs/{logId} {
-          allow read: if isOwner(userId);
+          allow read: if isOwner(userId) || isTenantOfUser(userId);
           allow create: if isOwner(userId) &&
                           request.resource.data.patientId == patientId &&
                           request.resource.data.userId == userId;
@@ -139,7 +159,7 @@ service cloud.firestore {
 
         // Meal logs subcollection (hyphenated naming)
         match /meal-logs/{logId} {
-          allow read: if isOwner(userId);
+          allow read: if isOwner(userId) || isTenantOfUser(userId);
           allow create: if isOwner(userId) &&
                           request.resource.data.patientId == patientId &&
                           request.resource.data.userId == userId;
@@ -159,8 +179,8 @@ service cloud.firestore {
 
         // Medications subcollection
         match /medications/{medicationId} {
-          // Read: Owner or admin
-          allow read: if isOwner(userId) || isAdmin();
+          // Read: Owner, admin, or franchise staff/admin managing this user
+          allow read: if isOwner(userId) || isAdmin() || isTenantOfUser(userId);
 
           // Create: Owner with validation, or admin
           allow create: if (isOwner(userId) &&
@@ -1672,11 +1692,43 @@ service cloud.firestore {
     // TENANTS (franchise system)
     // ============================================
 
+    // ============================================
+    // TENANT MANAGEMENT REQUESTS (Phase B slice 7)
+    // ============================================
+    // Family-side requests to be managed by a franchise. Created via the
+    // POST /api/tenant/[tenantId]/management-request endpoint, approved or
+    // declined via /api/tenant/[tenantId]/management-request/[reqId]/{approve,decline}.
+    // Both writes go through the API so the rules layer is the second
+    // line of defense — never the only line.
+    match /tenantManagementRequests/{requestId} {
+      // The requesting family can read their own request docs (to render
+      // a "request pending" badge in their account UI). The franchise admin
+      // can read any request docs targeted at their tenant. Super admins
+      // can read everything for back-office support.
+      allow read: if isAdmin() ||
+                    (isAuthenticated() && request.auth.uid == resource.data.familyUid) ||
+                    (isAuthenticated() &&
+                     request.auth.token.tenantRole == 'franchise_admin' &&
+                     request.auth.token.tenantId == resource.data.tenantId);
+      // Direct client writes are denied — the API endpoints are the only
+      // canonical write path. The endpoints validate that family writes
+      // are for themselves and franchise writes are for their tenant.
+      allow write: if false;
+    }
+
     match /tenants/{tenantId} {
-      // Anyone can read tenant data (needed for public branding on subdomain).
-      // TODO(phase-b): tighten so only `branding`, `name`, `slug`, `status` are
-      // publicly readable; everything else requires isTenantAdmin or isAdmin.
-      allow read: if true;
+      // Phase B slice 8: tightened read access. Only super admins and the
+      // franchise admin for THIS tenant can read directly from the client.
+      //
+      // Public branding (rendered on tenant subdomain landing pages, the
+      // /find-a-provider directory, and the new /about page) is served by
+      // server components via the Firebase Admin SDK in lib/tenant-server.ts,
+      // which bypasses these rules. The server-rendered HTML reaches the
+      // public browser without needing client-side Firestore access — so
+      // tightening this rule has zero impact on the public surface.
+      //
+      // Closes the FRANCHISE_PRD knownLooseness on tenants/{id} read.
+      allow read: if isAdmin() || isTenantAdmin(tenantId);
       // Super admins can create/edit any tenant. Franchise owners can edit
       // only their own tenant doc (the API route at /api/tenant/branding is
       // the canonical write path and validates which fields can change).

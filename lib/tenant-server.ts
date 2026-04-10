@@ -41,3 +41,31 @@ export const getTenantById = cache(async (tenantId: string): Promise<Tenant | nu
     return null
   }
 })
+
+/**
+ * Phase B slice 6: list every tenant that's eligible for the public
+ * /find-a-provider directory. "Eligible" means status is one of the
+ * post-payment states (active, paid). Pending and suspended tenants
+ * are filtered out.
+ *
+ * Capped at 200 to keep the directory page bounded; pagination is a
+ * Phase C concern. Soft-fails to an empty list on lookup error so the
+ * directory page renders an empty state instead of a 500.
+ */
+export const listPublicTenants = cache(async (): Promise<Tenant[]> => {
+  try {
+    const db = getAdminDb()
+    const snap = await db
+      .collection('tenants')
+      .where('status', 'in', ['active', 'paid'])
+      .limit(200)
+      .get()
+    return snap.docs.map(doc => ({
+      ...(doc.data() as Omit<Tenant, 'id'>),
+      id: doc.id,
+    }))
+  } catch (err) {
+    logger.error('[tenant-server] Failed to list public tenants', err as Error)
+    return []
+  }
+})

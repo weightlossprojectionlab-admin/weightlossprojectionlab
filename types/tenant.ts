@@ -21,8 +21,15 @@ export interface TenantBranding {
 
 export interface TenantBilling {
   plan: 'starter' | 'professional' | 'enterprise'
-  maxSeats: number           // max staff accounts
-  currentSeats: number       // active staff accounts
+  maxSeats: number           // max staff accounts (per plan)
+  currentSeats: number       // active + pending staff accounts (Phase B slice 5)
+  // Phase B slice 5: family-side seat counters. Count managed families
+  // (consumer end users in user.managedBy) against the per-plan family cap.
+  // Both optional for backward compat with tenants created before slice 5;
+  // missing values are read as 0 (used) and looked up from FRANCHISE_PLANS
+  // by tenant.billing.plan (max).
+  currentFamilies?: number
+  maxFamilies?: number
   monthlyBaseRate: number    // in cents (e.g. 75000 = $750)
   perSeatRate: number        // in cents (e.g. 3500 = $35)
   billingEmail: string

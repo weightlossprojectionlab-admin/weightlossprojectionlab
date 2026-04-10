@@ -55,6 +55,21 @@ export const FRANCHISE_PLANS: FranchisePlan[] = [
   },
 ]
 
+/**
+ * Look up the seat limits for a plan id. Used by Phase B slice 5 seat
+ * counters when the tenant doc doesn't have a snapshotted limit yet
+ * (older tenants created before currentFamilies/maxFamilies were added).
+ *
+ * Returns staff seat limit and family seat limit. -1 means unlimited
+ * (matches the FRANCHISE_PLANS convention).
+ */
+export function getPlanLimits(
+  planId: string | undefined
+): { maxSeats: number; maxFamilies: number } {
+  const plan = FRANCHISE_PLANS.find(p => p.id === planId) || FRANCHISE_PLANS[0]
+  return { maxSeats: plan.maxSeats, maxFamilies: plan.maxClients }
+}
+
 /** One-time setup fee charged at franchise activation, in USD. */
 export const SETUP_FEE_USD = 3000
 

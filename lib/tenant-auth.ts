@@ -83,3 +83,88 @@ export async function verifyTenantAdminAuth(
     return { ...empty, error: err instanceof Error ? err.message : 'Authentication failed' }
   }
 }
+
+export interface TenantStaffOrAdminVerificationResult extends TenantAdminVerificationResult {
+  /** True if the caller is the franchise admin (owner). False if they're staff. */
+  isFranchiseAdmin: boolean
+  /** True if the caller is staff (not the admin). */
+  isFranchiseStaff: boolean
+}
+
+/**
+ * Verify that the request is from EITHER a franchise admin OR franchise staff
+ * for a specific tenant. Used by endpoints that staff are allowed to call —
+ * notably the managed-families attach/revoke endpoints, where staff doing the
+ * day-to-day work need write access without being able to edit branding or
+ * invite more staff.
+ *
+ * Branding edit and staff invitation endpoints intentionally still call
+ * verifyTenantAdminAuth (admin-only) — this helper is the wider net.
+ */
+export async function verifyTenantStaffOrAdminAuth(
+  authHeader: string | null
+): Promise<TenantStaffOrAdminVerificationResult> {
+  const empty: TenantStaffOrAdminVerificationResult = {
+    ok: false,
+    uid: '',
+    email: '',
+    tenantId: '',
+    isSuperAdmin: false,
+    isFranchiseAdmin: false,
+    isFranchiseStaff: false,
+  }
+
+  try {
+    if (!authHeader?.startsWith('Bearer ')) {
+      return { ...empty, error: 'Missing authentication token' }
+    }
+    const idToken = authHeader.split('Bearer ')[1]
+    const decoded = await adminAuth.verifyIdToken(idToken)
+
+    const uid = decoded.uid
+    const email = decoded.email || 'unknown'
+    const claims = decoded as any
+
+    if (claims.role === 'admin') {
+      return {
+        ok: true,
+        uid,
+        email,
+        tenantId: '',
+        isSuperAdmin: true,
+        isFranchiseAdmin: false,
+        isFranchiseStaff: false,
+      }
+    }
+
+    const hasTenantId = typeof claims.tenantId === 'string' && claims.tenantId.length > 0
+    if (hasTenantId && claims.tenantRole === 'franchise_admin') {
+      return {
+        ok: true,
+        uid,
+        email,
+        tenantId: claims.tenantId,
+        isSuperAdmin: false,
+        isFranchiseAdmin: true,
+        isFranchiseStaff: false,
+      }
+    }
+    if (hasTenantId && claims.tenantRole === 'franchise_staff') {
+      return {
+        ok: true,
+        uid,
+        email,
+        tenantId: claims.tenantId,
+        isSuperAdmin: false,
+        isFranchiseAdmin: false,
+        isFranchiseStaff: true,
+      }
+    }
+
+    logger.warn('[Tenant Auth] Non-franchise access attempt (staff-or-admin gate)', { uid, email })
+    return { ...empty, uid, email, error: 'User is not part of a franchise' }
+  } catch (err) {
+    logger.error('[Tenant Auth] Staff-or-admin verification failed', err as Error)
+    return { ...empty, error: err instanceof Error ? err.message : 'Authentication failed' }
+  }
+}
