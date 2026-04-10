@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     canonical: 'https://www.wellnessprojectionlab.com',
   },
   verification: {
-    google: 'ydQcXg_dbc0feDQpZbLUonWZvKXEF5wndkeh7p-zt5Y',
+    google: 'ug3K1EIvHU4OWAtIU-HdOVfhDvAOVhNd3R4xtse6zCc',
   },
   openGraph: {
     type: 'website',
