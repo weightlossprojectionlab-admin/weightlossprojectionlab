@@ -36,12 +36,14 @@ interface Medication {
 
 interface IntakeForm {
   // Step 1
-  name: string
+  firstName: string
+  lastName: string
   email: string
   phone: string
+  // Step 1 — checkbox: also create as a family member/patient
+  addAsFamilyMember: boolean
   dateOfBirth: string
   gender: string
-  relationship: string
   // Step 2
   healthConditions: string[]
   customCondition: string
@@ -57,9 +59,7 @@ interface IntakeForm {
   targetWeight: string
   dailyCalorieGoal: string
   dailyStepGoal: string
-  // Step 4
-  insuranceProvider: string
-  insurancePolicyNumber: string
+  // Emergency contact
   emergencyContactName: string
   emergencyContactPhone: string
   emergencyContactRelationship: string
@@ -71,23 +71,50 @@ interface IntakeForm {
 }
 
 const EMPTY_FORM: IntakeForm = {
-  name: '', email: '', phone: '', dateOfBirth: '', gender: '', relationship: 'client',
+  firstName: '', lastName: '', email: '', phone: '',
+  addAsFamilyMember: false, dateOfBirth: '', gender: '',
   healthConditions: [], customCondition: '', foodAllergies: [], customAllergy: '',
   medications: [], activityLevel: '',
   currentWeight: '', weightUnit: 'lbs', height: '', heightUnit: 'imperial',
   targetWeight: '', dailyCalorieGoal: '', dailyStepGoal: '',
-  insuranceProvider: '', insurancePolicyNumber: '',
   emergencyContactName: '', emergencyContactPhone: '', emergencyContactRelationship: '',
   careGoals: [], dietaryRestrictions: [], practiceNotes: '', consentGiven: false,
 }
 
-const STEPS = [
-  'Client Information',
-  'Medical History',
-  'Physical Measurements',
-  'Insurance & Emergency',
-  'Care Goals & Notes',
-  'Review & Confirm',
+// Steps are dynamic — medical history and measurements only show when
+// "Also add as family member" is checked. Step IDs are stable so the
+// form state doesn't reset when steps are added/removed.
+type StepId = 'client' | 'medical' | 'measurements' | 'nutrition' | 'emergency' | 'goals' | 'review'
+
+interface StepDef {
+  id: StepId
+  label: string
+  requiresFamilyMember?: boolean
+  // If set, only show for these practice types. Omitted = show for all.
+  // Unknown/Other practice types see all steps (generic fallback).
+  practiceTypes?: string[]
+}
+
+const KNOWN_TYPES = [
+  'Solo Nurse / Caregiver',
+  'Wellness Coach',
+  'Concierge Doctor',
+  'Home Care Agency',
+  'Patient Advocate',
+]
+
+const ALL_STEPS: StepDef[] = [
+  { id: 'client', label: 'Client Information' },
+  { id: 'medical', label: 'Medical History', requiresFamilyMember: true,
+    practiceTypes: ['Solo Nurse / Caregiver', 'Concierge Doctor', 'Home Care Agency'] },
+  { id: 'measurements', label: 'Physical Measurements', requiresFamilyMember: true,
+    practiceTypes: ['Solo Nurse / Caregiver', 'Concierge Doctor', 'Home Care Agency'] },
+  { id: 'nutrition', label: 'Nutrition & Lifestyle', requiresFamilyMember: true,
+    practiceTypes: ['Wellness Coach'] },
+  { id: 'emergency', label: 'Emergency Contact',
+    practiceTypes: ['Solo Nurse / Caregiver', 'Concierge Doctor', 'Home Care Agency', 'Patient Advocate'] },
+  { id: 'goals', label: 'Care Goals & Notes' },
+  { id: 'review', label: 'Review & Confirm' },
 ]
 
 const CONDITIONS = [
@@ -114,30 +141,24 @@ const DIETARY_RESTRICTIONS = [
   'Low-Sugar', 'Halal', 'Kosher', 'Dairy-Free', 'Nut-Free', 'FODMAP',
 ]
 
-const RELATIONSHIPS = [
-  { value: 'client', label: 'Client' },
-  { value: 'patient', label: 'Patient' },
-  { value: 'child', label: 'Family Member (Child)' },
-  { value: 'spouse', label: 'Family Member (Spouse)' },
-  { value: 'parent', label: 'Family Member (Parent)' },
-  { value: 'sibling', label: 'Family Member (Sibling)' },
-  { value: 'grandparent', label: 'Family Member (Grandparent)' },
-]
-
 // ─── Main Component ──────────────────────────────────────
 
 export default function ClientIntakePage() {
   const router = useRouter()
   const [tenantId, setTenantId] = useState<string | null>(null)
+  const [practiceType, setPracticeType] = useState('')
   const [authorized, setAuthorized] = useState(false)
-  const [step, setStep] = useState(0)
+  const [stepIndex, setStepIndex] = useState(0)
   const [form, setForm] = useState<IntakeForm>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const el = document.querySelector('[data-tenant-id]')
-    if (el) setTenantId(el.getAttribute('data-tenant-id'))
+    if (el) {
+      setTenantId(el.getAttribute('data-tenant-id'))
+      setPracticeType(el.getAttribute('data-practice-type') || '')
+    }
   }, [])
 
   useEffect(() => {
@@ -154,6 +175,19 @@ export default function ClientIntakePage() {
     })
     return () => unsub()
   }, [router])
+
+  // Compute active steps based on checkbox + practice type
+  const isKnownType = KNOWN_TYPES.includes(practiceType)
+  const activeSteps = ALL_STEPS.filter(s => {
+    if (s.requiresFamilyMember && !form.addAsFamilyMember) return false
+    if (s.practiceTypes) {
+      // Known type: must match. Unknown/Other: show all (generic fallback).
+      if (isKnownType && !s.practiceTypes.includes(practiceType)) return false
+    }
+    return true
+  })
+  const currentStep = activeSteps[stepIndex] || activeSteps[0]
+  const totalSteps = activeSteps.length
 
   const update = (fields: Partial<IntakeForm>) => setForm(prev => ({ ...prev, ...fields }))
 
@@ -177,8 +211,8 @@ export default function ClientIntakePage() {
   }
 
   const canAdvance = (): boolean => {
-    if (step === 0) return !!form.name.trim() && !!form.email.trim()
-    if (step === 4) return form.consentGiven
+    if (currentStep.id === 'client') return !!form.firstName.trim() && !!form.lastName.trim() && !!form.email.trim()
+    if (currentStep.id === 'goals') return form.consentGiven
     return true
   }
 
@@ -190,12 +224,14 @@ export default function ClientIntakePage() {
       const token = await auth.currentUser.getIdToken()
       const csrfToken = getCSRFToken()
       const payload = {
-        name: form.name.trim(),
+        name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
-        dateOfBirth: form.dateOfBirth,
-        gender: form.gender,
-        relationship: form.relationship,
+        addAsFamilyMember: form.addAsFamilyMember,
+        dateOfBirth: form.addAsFamilyMember ? form.dateOfBirth : undefined,
+        gender: form.addAsFamilyMember ? form.gender : undefined,
         healthConditions: [...form.healthConditions, ...(form.customCondition ? [form.customCondition.trim()] : [])],
         foodAllergies: [...form.foodAllergies, ...(form.customAllergy ? [form.customAllergy.trim()] : [])],
         medications: form.medications.filter(m => m.name.trim()),
@@ -207,8 +243,6 @@ export default function ClientIntakePage() {
         targetWeight: form.targetWeight ? parseFloat(form.targetWeight) : undefined,
         dailyCalorieGoal: form.dailyCalorieGoal ? parseInt(form.dailyCalorieGoal) : undefined,
         dailyStepGoal: form.dailyStepGoal ? parseInt(form.dailyStepGoal) : undefined,
-        insuranceProvider: form.insuranceProvider.trim(),
-        insurancePolicyNumber: form.insurancePolicyNumber.trim(),
         emergencyContactName: form.emergencyContactName.trim(),
         emergencyContactPhone: form.emergencyContactPhone.trim(),
         emergencyContactRelationship: form.emergencyContactRelationship.trim(),
@@ -256,42 +290,68 @@ export default function ClientIntakePage() {
       {/* Progress bar */}
       <div className="mb-8">
         <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
-          <span>Step {step + 1} of {STEPS.length}</span>
-          <span>{STEPS[step]}</span>
+          <span>Step {stepIndex + 1} of {totalSteps}</span>
+          <span>{currentStep.label}</span>
         </div>
         <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div
             className="h-full bg-blue-600 rounded-full transition-all duration-300"
-            style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+            style={{ width: `${((stepIndex + 1) / totalSteps) * 100}%` }}
           />
         </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-6 sm:p-8">
         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-          {STEPS[step]}
+          {currentStep.label}
         </h2>
 
-        {/* Step 1: Client Information */}
-        {step === 0 && (
+        {/* Step: Client Information */}
+        {currentStep.id === 'client' && (
           <div className="space-y-4">
-            <Field label="Full Name *" value={form.name} onChange={v => update({ name: v })} placeholder="Jane Henderson" />
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="First Name *" value={form.firstName} onChange={v => update({ firstName: v })} placeholder="Jane" />
+              <Field label="Last Name *" value={form.lastName} onChange={v => update({ lastName: v })} placeholder="Henderson" />
+            </div>
             <Field label="Email *" value={form.email} onChange={v => update({ email: v })} type="email" placeholder="jane@example.com" />
             <Field label="Phone" value={form.phone} onChange={v => update({ phone: v })} type="tel" placeholder="(555) 123-4567" />
-            <Field label="Date of Birth" value={form.dateOfBirth} onChange={v => update({ dateOfBirth: v })} type="date" />
-            <Select label="Gender" value={form.gender} onChange={v => update({ gender: v })} options={[
-              { value: '', label: 'Select...' },
-              { value: 'female', label: 'Female' },
-              { value: 'male', label: 'Male' },
-              { value: 'other', label: 'Other' },
-              { value: 'prefer-not-to-say', label: 'Prefer not to say' },
-            ]} />
-            <Select label="Relationship to Practice" value={form.relationship} onChange={v => update({ relationship: v })} options={RELATIONSHIPS} />
+
+            <label className="flex items-start gap-3 cursor-pointer mt-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+              <input
+                type="checkbox"
+                checked={form.addAsFamilyMember}
+                onChange={e => update({ addAsFamilyMember: e.target.checked })}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <div>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Also add this person as a family member
+                </span>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Check this if the client themselves will be tracked as a patient
+                  (vitals, meals, medications). Leave unchecked if they&rsquo;re just the
+                  account contact and you&rsquo;ll add family members separately.
+                </p>
+              </div>
+            </label>
+
+            {form.addAsFamilyMember && (
+              <div className="space-y-4 pl-4 border-l-2 border-blue-200 dark:border-blue-800 mt-2">
+                <Field label="Date of Birth" value={form.dateOfBirth} onChange={v => update({ dateOfBirth: v })} type="date" />
+                <Select label="Gender" value={form.gender} onChange={v => update({ gender: v })} options={[
+                  { value: '', label: 'Select...' },
+                  { value: 'female', label: 'Female' },
+                  { value: 'male', label: 'Male' },
+                  { value: 'other', label: 'Other' },
+                  { value: 'prefer-not-to-say', label: 'Prefer not to say' },
+                ]} />
+              </div>
+            )}
           </div>
         )}
 
-        {/* Step 2: Medical History */}
-        {step === 1 && (
+        {/* Step: Medical History (only if family member) */}
+        {currentStep.id === 'medical' && (
           <div className="space-y-6">
             <ChipGroup label="Known Health Conditions" options={CONDITIONS} selected={form.healthConditions} onToggle={v => toggleArray('healthConditions', v)} />
             <Field label="Other Condition" value={form.customCondition} onChange={v => update({ customCondition: v })} placeholder="Add a condition not listed above" />
@@ -322,8 +382,8 @@ export default function ClientIntakePage() {
           </div>
         )}
 
-        {/* Step 3: Physical Measurements */}
-        {step === 2 && (
+        {/* Step: Physical Measurements (only if family member) */}
+        {currentStep.id === 'measurements' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Field label="Current Weight" value={form.currentWeight} onChange={v => update({ currentWeight: v })} type="number" placeholder="185" />
@@ -339,29 +399,39 @@ export default function ClientIntakePage() {
           </div>
         )}
 
-        {/* Step 4: Insurance & Emergency Contact */}
-        {step === 3 && (
+        {/* Step: Nutrition & Lifestyle (Wellness Coach) */}
+        {currentStep.id === 'nutrition' && (
           <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Insurance (optional)</h3>
-              <div className="space-y-4">
-                <Field label="Provider" value={form.insuranceProvider} onChange={v => update({ insuranceProvider: v })} placeholder="Blue Cross Blue Shield" />
-                <Field label="Policy Number" value={form.insurancePolicyNumber} onChange={v => update({ insurancePolicyNumber: v })} placeholder="BCB-123456" />
-              </div>
+            <Select label="Activity Level" value={form.activityLevel} onChange={v => update({ activityLevel: v })} options={[
+              { value: '', label: 'Select...' },
+              { value: 'sedentary', label: 'Sedentary' },
+              { value: 'light', label: 'Light' },
+              { value: 'moderate', label: 'Moderate' },
+              { value: 'active', label: 'Active' },
+              { value: 'very-active', label: 'Very Active' },
+            ]} />
+            <ChipGroup label="Dietary Restrictions" options={DIETARY_RESTRICTIONS} selected={form.dietaryRestrictions} onToggle={v => toggleArray('dietaryRestrictions', v)} />
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Current Weight" value={form.currentWeight} onChange={v => update({ currentWeight: v })} type="number" placeholder="185" />
+              <Select label="Unit" value={form.weightUnit} onChange={v => update({ weightUnit: v })} options={[{ value: 'lbs', label: 'lbs' }, { value: 'kg', label: 'kg' }]} />
             </div>
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Emergency Contact</h3>
-              <div className="space-y-4">
-                <Field label="Name" value={form.emergencyContactName} onChange={v => update({ emergencyContactName: v })} placeholder="John Henderson" />
-                <Field label="Phone" value={form.emergencyContactPhone} onChange={v => update({ emergencyContactPhone: v })} type="tel" placeholder="(555) 987-6543" />
-                <Field label="Relationship" value={form.emergencyContactRelationship} onChange={v => update({ emergencyContactRelationship: v })} placeholder="Spouse" />
-              </div>
-            </div>
+            <Field label="Target Weight (optional)" value={form.targetWeight} onChange={v => update({ targetWeight: v })} type="number" placeholder="165" />
+            <Field label="Daily Calorie Goal (optional)" value={form.dailyCalorieGoal} onChange={v => update({ dailyCalorieGoal: v })} type="number" placeholder="2000" />
+            <Field label="Daily Step Goal (optional)" value={form.dailyStepGoal} onChange={v => update({ dailyStepGoal: v })} type="number" placeholder="10000" />
           </div>
         )}
 
-        {/* Step 5: Care Goals & Notes */}
-        {step === 4 && (
+        {/* Step: Emergency Contact */}
+        {currentStep.id === 'emergency' && (
+          <div className="space-y-4">
+            <Field label="Name" value={form.emergencyContactName} onChange={v => update({ emergencyContactName: v })} placeholder="John Henderson" />
+            <Field label="Phone" value={form.emergencyContactPhone} onChange={v => update({ emergencyContactPhone: v })} type="tel" placeholder="(555) 987-6543" />
+            <Field label="Relationship" value={form.emergencyContactRelationship} onChange={v => update({ emergencyContactRelationship: v })} placeholder="Spouse" />
+          </div>
+        )}
+
+        {/* Step: Care Goals & Notes */}
+        {currentStep.id === 'goals' && (
           <div className="space-y-6">
             <ChipGroup label="Primary Care Goals" options={CARE_GOALS} selected={form.careGoals} onToggle={v => toggleArray('careGoals', v)} />
             <ChipGroup label="Dietary Restrictions" options={DIETARY_RESTRICTIONS} selected={form.dietaryRestrictions} onToggle={v => toggleArray('dietaryRestrictions', v)} />
@@ -390,32 +460,51 @@ export default function ClientIntakePage() {
           </div>
         )}
 
-        {/* Step 6: Review & Confirm */}
-        {step === 5 && (
+        {/* Step: Review & Confirm */}
+        {currentStep.id === 'review' && (
           <div className="space-y-4 text-sm">
             <ReviewSection title="Client" items={[
-              ['Name', form.name],
+              ['Name', `${form.firstName} ${form.lastName}`.trim()],
               ['Email', form.email],
               ['Phone', form.phone || '—'],
-              ['DOB', form.dateOfBirth || '—'],
-              ['Gender', form.gender || '—'],
-              ['Relationship', form.relationship],
+              ['Also a family member', form.addAsFamilyMember ? 'Yes' : 'No'],
+              ...(form.addAsFamilyMember ? [
+                ['Date of Birth', form.dateOfBirth || '—'] as [string, string],
+                ['Gender', form.gender || '—'] as [string, string],
+              ] : []),
             ]} />
-            <ReviewSection title="Medical" items={[
-              ['Conditions', form.healthConditions.length ? form.healthConditions.join(', ') : '—'],
-              ['Allergies', form.foodAllergies.length ? form.foodAllergies.join(', ') : '—'],
-              ['Medications', form.medications.length ? form.medications.map(m => m.name).join(', ') : '—'],
-              ['Activity', form.activityLevel || '—'],
-            ]} />
-            <ReviewSection title="Measurements" items={[
-              ['Weight', form.currentWeight ? `${form.currentWeight} ${form.weightUnit}` : '—'],
-              ['Height', form.height ? `${form.height} ${form.heightUnit === 'imperial' ? 'in' : 'cm'}` : '—'],
-              ['Target Weight', form.targetWeight ? `${form.targetWeight} ${form.weightUnit}` : '—'],
-            ]} />
-            <ReviewSection title="Insurance & Emergency" items={[
-              ['Insurance', form.insuranceProvider || '—'],
-              ['Emergency Contact', form.emergencyContactName ? `${form.emergencyContactName} (${form.emergencyContactRelationship})` : '—'],
-            ]} />
+            {activeSteps.some(s => s.id === 'medical') && (
+              <ReviewSection title="Medical History" items={[
+                ['Conditions', form.healthConditions.length ? form.healthConditions.join(', ') : '—'],
+                ['Allergies', form.foodAllergies.length ? form.foodAllergies.join(', ') : '—'],
+                ['Medications', form.medications.length ? form.medications.map(m => m.name).join(', ') : '—'],
+                ['Activity', form.activityLevel || '—'],
+              ]} />
+            )}
+            {activeSteps.some(s => s.id === 'measurements') && (
+              <ReviewSection title="Measurements" items={[
+                ['Weight', form.currentWeight ? `${form.currentWeight} ${form.weightUnit}` : '—'],
+                ['Height', form.height ? `${form.height} ${form.heightUnit === 'imperial' ? 'in' : 'cm'}` : '—'],
+                ['Target Weight', form.targetWeight ? `${form.targetWeight} ${form.weightUnit}` : '—'],
+              ]} />
+            )}
+            {activeSteps.some(s => s.id === 'nutrition') && (
+              <ReviewSection title="Nutrition & Lifestyle" items={[
+                ['Activity', form.activityLevel || '—'],
+                ['Dietary Restrictions', form.dietaryRestrictions.length ? form.dietaryRestrictions.join(', ') : '—'],
+                ['Weight', form.currentWeight ? `${form.currentWeight} ${form.weightUnit}` : '—'],
+                ['Target Weight', form.targetWeight ? `${form.targetWeight} ${form.weightUnit}` : '—'],
+                ['Calorie Goal', form.dailyCalorieGoal || '—'],
+                ['Step Goal', form.dailyStepGoal || '—'],
+              ]} />
+            )}
+            {activeSteps.some(s => s.id === 'emergency') && (
+              <ReviewSection title="Emergency Contact" items={[
+                ['Name', form.emergencyContactName || '—'],
+                ['Phone', form.emergencyContactPhone || '—'],
+                ['Relationship', form.emergencyContactRelationship || '—'],
+              ]} />
+            )}
             <ReviewSection title="Care Plan" items={[
               ['Goals', form.careGoals.length ? form.careGoals.join(', ') : '—'],
               ['Dietary', form.dietaryRestrictions.length ? form.dietaryRestrictions.join(', ') : '—'],
@@ -435,16 +524,16 @@ export default function ClientIntakePage() {
         <div className="flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
           <button
             type="button"
-            onClick={() => setStep(s => Math.max(0, s - 1))}
-            disabled={step === 0}
+            onClick={() => setStepIndex(s => Math.max(0, s - 1))}
+            disabled={stepIndex === 0}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             Back
           </button>
-          {step < STEPS.length - 1 ? (
+          {stepIndex < totalSteps - 1 ? (
             <button
               type="button"
-              onClick={() => setStep(s => s + 1)}
+              onClick={() => setStepIndex(s => s + 1)}
               disabled={!canAdvance()}
               className="px-6 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition"
             >

@@ -190,21 +190,6 @@ export function proxy(request: NextRequest) {
     // Enhanced logging with IP (from sec-005)
     const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
 
-    // Debug logging with full details
-    console.log('[CSRF Middleware] Validation attempt:', {
-      pathname,
-      method,
-      hasCookie: !!cookieToken,
-      hasHeader: !!headerToken,
-      cookieLength: cookieToken?.length,
-      headerLength: headerToken?.length,
-      cookieToken: cookieToken,
-      headerToken: headerToken,
-      tokensMatch: cookieToken === headerToken,
-      allCookies: request.cookies.getAll(),
-      allHeaders: Object.fromEntries(request.headers.entries())
-    })
-
     // Check if both tokens exist
     if (!cookieToken || !headerToken) {
       logger.warn('CSRF token missing', {

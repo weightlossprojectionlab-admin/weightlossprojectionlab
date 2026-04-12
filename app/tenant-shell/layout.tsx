@@ -94,6 +94,7 @@ export default async function TenantShellLayout({ children }: { children: React.
     <div
       data-tenant-slug={tenant.slug}
       data-tenant-id={tenant.id}
+      data-practice-type={tenant.practiceType || ''}
       style={{ ['--tenant-primary' as string]: brandingColor }}
     >
       {children}

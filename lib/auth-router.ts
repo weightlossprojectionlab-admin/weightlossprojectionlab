@@ -98,13 +98,6 @@ export async function determineUserDestination(
       caregiverOf: profile.caregiverOf?.length || 0
     })
 
-    // DEBUG: Log entire profile structure to diagnose onboarding redirect
-    console.log('[AuthRouter DEBUG] Full profile:', JSON.stringify(profile, null, 2))
-    console.log('[AuthRouter DEBUG] profile.profile:', profile.profile)
-    console.log('[AuthRouter DEBUG] onboardingCompleted value:', profile.profile?.onboardingCompleted)
-    console.log('[AuthRouter DEBUG] typeof onboardingCompleted:', typeof profile.profile?.onboardingCompleted)
-    console.log('[AuthRouter DEBUG] caregiverOf:', profile.caregiverOf)
-
     // Step 3.5: Check if user is ONLY a caregiver (no personal account)
     const isCaregiverOnly = !profile.profile?.onboardingCompleted && profile.caregiverOf && profile.caregiverOf.length > 0
 
