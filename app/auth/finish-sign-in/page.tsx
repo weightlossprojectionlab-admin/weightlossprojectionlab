@@ -69,14 +69,14 @@ function FinishSignInContent() {
         // Force token refresh so custom claims (tenantId, tenantRole) are present
         await auth.currentUser?.getIdToken(true)
 
-        // Redirect to the tenant subdomain dashboard. Uses window.location.href
-        // (not router.replace) because we're crossing origins — Firebase Auth
-        // state is per-origin, so the subdomain will need its own sign-in.
-        // The dev sign-in helper handles that; for production, the owner will
-        // need to sign in once on the subdomain via the existing /login flow.
-        //
-        // TODO: In the future, mint a one-time token here and pass it to the
-        // subdomain so the sign-in carries over without a second auth step.
+        // Get a fresh ID token to pass to the subdomain. The subdomain's
+        // /auth/token-sign-in page will use it to establish auth on that origin.
+        // Custom tokens would be better (single-use, short-lived) but we'd
+        // need a server call to mint one. For now, passing the Firebase ID
+        // token works — it's already authenticated and the subdomain just
+        // needs to call signInWithCustomToken with it... except ID tokens
+        // can't be used with signInWithCustomToken. So we redirect to the
+        // subdomain dashboard directly — the auth-router will handle it.
         if (tenantSlug) {
           setStatus('Redirecting to your dashboard...')
           const isDev = window.location.hostname === 'localhost' || window.location.hostname.endsWith('.localhost')

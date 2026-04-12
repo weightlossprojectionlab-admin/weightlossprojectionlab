@@ -42,6 +42,7 @@ import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
 import { getProductLabel, getTooltip } from '@/lib/messaging/terminology'
 import { TrustBadge } from '@/components/ui/TrustBadge'
 import { userProfileOperations } from '@/lib/firebase-operations'
+import ManagedByBanner from '@/components/franchise/ManagedByBanner'
 import { UpgradeRequiredModal } from '@/components/subscription/UpgradeRequiredModal'
 import { FeatureEnabledModal } from '@/components/subscription/FeatureEnabledModal'
 import { useSubscription } from '@/hooks/useSubscription'
@@ -432,6 +433,15 @@ function DashboardContent() {
               </Link>
             </div>
           </div>
+        )}
+
+        {/* Franchise Management Consent Banner */}
+        {userProfile?.managedBy?.length > 0 && !userProfile?.managedByConsented && (
+          <ManagedByBanner
+            userId={userProfile.userId || user?.uid || ''}
+            managedBy={userProfile.managedBy}
+            managedByConsented={userProfile.managedByConsented}
+          />
         )}
 
         {loading || loadingMeals ? (

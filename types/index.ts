@@ -58,6 +58,7 @@ export interface User {
   // CLIENTS of a franchise. MVP allows at most one entry, but stored as an
   // array per FRANCHISE_PRD open question for forward compatibility.
   managedBy?: string[]
+  managedByConsented?: boolean
   createdAt: Date
   lastActiveAt: Date
 }

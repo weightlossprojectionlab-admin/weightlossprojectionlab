@@ -68,6 +68,7 @@ const STATIC_EXTENSIONS = [
   '.ttf',
   '.eot',
   '.otf',
+  '.json',
 ]
 
 // Paths that should bypass CSRF protection.
@@ -243,5 +244,5 @@ export function proxy(request: NextRequest) {
 
 // Apply to all routes (subdomain detection needs all, CSRF only checks /api)
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|json|woff|woff2|ttf)$).*)'],
 }

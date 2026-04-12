@@ -53,24 +53,25 @@ function AcceptInvitationContent() {
         // Force-refresh so the new claims are present on the next page.
         await auth.currentUser?.getIdToken(true)
 
-        // Redirect to the tenant dashboard. We have to switch hosts because
-        // the staff dashboard lives on the tenant subdomain — but Firebase
-        // Auth state is per-origin, so the new origin will be a fresh sign
-        // -in. The custom claims are persisted on the user record (we set
-        // them server-side), so once they sign in on the subdomain via the
-        // existing magic link / dev sign-in flow they'll have staff access.
-        //
-        // For now, the simplest UX is: tell them they're set up, and link
-        // them to the subdomain. They'll still need to sign in there once.
-        // Slice 4.5 (future) can refactor this to a same-origin flow.
+        // Redirect to the tenant subdomain with the custom token as a query
+        // param. The subdomain's /auth/token-sign-in page consumes the token
+        // to establish Firebase Auth on the subdomain origin (auth state is
+        // per-origin, so the apex sign-in doesn't carry over).
         const slug = data.tenantSlug
-        if (slug) {
-          const subdomainRoot =
-            process.env.NEXT_PUBLIC_APP_URL?.includes('localhost')
-              ? `http://${slug}.localhost:3003/dashboard`
-              : `https://${slug}.wellnessprojectionlab.com/dashboard`
+        if (slug && data.token) {
+          const isDev = window.location.hostname === 'localhost' || window.location.hostname.endsWith('.localhost')
+          const subdomainUrl = isDev
+            ? `http://${slug}.localhost:3003/auth/token-sign-in?token=${encodeURIComponent(data.token)}`
+            : `https://${slug}.wellnessprojectionlab.com/auth/token-sign-in?token=${encodeURIComponent(data.token)}`
           setStatus('Redirecting to your dashboard...')
-          window.location.href = subdomainRoot
+          window.location.href = subdomainUrl
+        } else if (slug) {
+          // Fallback if no token — redirect without auto-sign-in
+          const isDev = window.location.hostname === 'localhost' || window.location.hostname.endsWith('.localhost')
+          const subdomainUrl = isDev
+            ? `http://${slug}.localhost:3003/dashboard`
+            : `https://${slug}.wellnessprojectionlab.com/dashboard`
+          window.location.href = subdomainUrl
         } else {
           setError('Invitation accepted, but no tenant subdomain to redirect to.')
         }
