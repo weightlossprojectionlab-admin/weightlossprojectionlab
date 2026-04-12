@@ -94,8 +94,35 @@ export function TenantProvider({ tenantSlug, children }: TenantProviderProps) {
 
         setTenant(tenantData)
       } catch (err) {
-        logger.error('[TenantContext] Failed to fetch tenant', err as Error, { slug: tenantSlug })
-        setError('Failed to load organization')
+        // Firestore rules may block client-side tenant reads (Phase B slice 8
+        // tightened to admin/tenant-admin only). Fall back to DOM attributes
+        // set by the server-rendered tenant-shell layout.
+        const errMsg = (err as any)?.message || ''
+        if (errMsg.includes('permission') || errMsg.includes('insufficient')) {
+          logger.warn('[TenantContext] Permission denied — falling back to DOM attributes', { slug: tenantSlug })
+          const el = typeof document !== 'undefined' ? document.querySelector('[data-tenant-id]') : null
+          if (el) {
+            const fallbackTenant = {
+              id: el.getAttribute('data-tenant-id') || '',
+              slug: el.getAttribute('data-tenant-slug') || tenantSlug,
+              name: tenantSlug, // best we can do without the doc
+              status: 'active' as const,
+              branding: {} as any,
+              billing: {} as any,
+              contact: {} as any,
+              features: {} as any,
+              createdAt: '',
+              updatedAt: '',
+              onboardingCompleted: true,
+            }
+            setTenant(fallbackTenant)
+          } else {
+            setError('Failed to load organization')
+          }
+        } else {
+          logger.error('[TenantContext] Failed to fetch tenant', err as Error, { slug: tenantSlug })
+          setError('Failed to load organization')
+        }
       } finally {
         setIsLoading(false)
       }
