@@ -212,7 +212,6 @@ export default function ClientIntakePage() {
 
   const canAdvance = (): boolean => {
     if (currentStep.id === 'client') return !!form.firstName.trim() && !!form.lastName.trim() && !!form.email.trim()
-    if (currentStep.id === 'goals') return form.consentGiven
     return true
   }
 
@@ -446,17 +445,12 @@ export default function ClientIntakePage() {
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
               />
             </div>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.consentGiven}
-                onChange={e => update({ consentGiven: e.target.checked })}
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                Client has consented to care management by this practice. *
-              </span>
-            </label>
+            <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                The client will be asked to consent when they first sign in to
+                their Wellness Projection Lab account.
+              </p>
+            </div>
           </div>
         )}
 
@@ -509,7 +503,6 @@ export default function ClientIntakePage() {
               ['Goals', form.careGoals.length ? form.careGoals.join(', ') : '—'],
               ['Dietary', form.dietaryRestrictions.length ? form.dietaryRestrictions.join(', ') : '—'],
               ['Notes', form.practiceNotes || '—'],
-              ['Consent', form.consentGiven ? 'Given' : 'Not given'],
             ]} />
           </div>
         )}
@@ -543,7 +536,7 @@ export default function ClientIntakePage() {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={submitting || !form.consentGiven}
+              disabled={submitting}
               className="px-6 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition"
             >
               {submitting ? 'Adding Client...' : 'Add Client'}
