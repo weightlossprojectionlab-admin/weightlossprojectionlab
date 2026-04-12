@@ -17,7 +17,7 @@
 
 import { useState, useEffect } from 'react'
 import { auth, db } from '@/lib/firebase'
-import { doc, getDoc, updateDoc, arrayRemove } from 'firebase/firestore'
+import { doc, updateDoc, arrayRemove } from 'firebase/firestore'
 import { logger } from '@/lib/logger'
 
 interface Props {
@@ -40,26 +40,29 @@ export default function ManagedByBanner({ userId, managedBy, managedByConsented 
 
   const shouldHide = managedByConsented || !managedBy?.length || dismissed
 
-  // Load tenant names for display
+  // Load tenant names via API (can't read tenants collection directly —
+  // Firestore rules restrict it to admins/tenant admins only)
   useEffect(() => {
     const loadTenants = async () => {
-      if (!db || !managedBy?.length) { setLoading(false); return }
+      if (!managedBy?.length) { setLoading(false); return }
       try {
-        const results: TenantInfo[] = []
-        for (const tenantId of managedBy) {
-          const snap = await getDoc(doc(db, 'tenants', tenantId))
-          if (snap.exists()) {
-            const data = snap.data() as any
-            results.push({
-              id: tenantId,
-              name: data.branding?.companyName || data.name || 'A care provider',
-              slug: data.slug || '',
-            })
-          }
+        const token = await auth?.currentUser?.getIdToken()
+        if (!token) { setLoading(false); return }
+        const res = await fetch('/api/tenant/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ tenantIds: managedBy }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setTenants(data.tenants || [])
+        } else {
+          // Fallback: show generic names
+          setTenants(managedBy.map(id => ({ id, name: 'A care provider', slug: '' })))
         }
-        setTenants(results)
       } catch (err) {
         logger.error('[ManagedByBanner] failed to load tenant info', err as Error)
+        setTenants(managedBy.map(id => ({ id, name: 'A care provider', slug: '' })))
       } finally {
         setLoading(false)
       }
