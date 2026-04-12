@@ -240,7 +240,11 @@ async function handleFranchiseSetupPaid(session: Stripe.Checkout.Session, tenant
         // prompts the user as a bulletproof fallback (the Firebase-recommended
         // production pattern). For production, the prospect will recognize their
         // own email and type it correctly.
-        const finishUrl = `https://${tenant.slug}.wellnessprojectionlab.com/auth/finish-sign-in`
+        // Canonical apex URL — only www.wellnessprojectionlab.com needs to be
+        // in Firebase Authorized Domains (already is). The ?tenant= param tells
+        // the finish page which subdomain to redirect to after sign-in. This
+        // eliminates the need to manually add each tenant subdomain to Firebase.
+        const finishUrl = `https://www.wellnessprojectionlab.com/auth/finish-sign-in?tenant=${encodeURIComponent(tenant.slug)}`
         magicLinkUrl = await auth.generateSignInWithEmailLink(adminEmail, {
           url: finishUrl,
           handleCodeInApp: true,

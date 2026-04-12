@@ -126,7 +126,9 @@ async function main() {
   // Instead, the finish-sign-in page reads the email from localStorage OR
   // prompts the user as a bulletproof fallback (the Firebase-recommended
   // production pattern).
-  const finishUrl = `https://${tenant.slug}.wellnessprojectionlab.com/auth/finish-sign-in`
+  // Canonical apex URL — mirrors the Stripe webhook. Only
+  // www.wellnessprojectionlab.com needs to be in Firebase Authorized Domains.
+  const finishUrl = `https://www.wellnessprojectionlab.com/auth/finish-sign-in?tenant=${encodeURIComponent(tenant.slug)}`
   const magicLinkUrl = await auth.generateSignInWithEmailLink(adminEmail, {
     url: finishUrl,
     handleCodeInApp: true,

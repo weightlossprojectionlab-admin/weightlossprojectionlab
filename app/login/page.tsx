@@ -5,12 +5,12 @@
 
 import { redirect } from 'next/navigation'
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { redirect?: string }
+  searchParams: Promise<{ redirect?: string }>
 }) {
-  // Redirect to /auth with the same redirect parameter if present
-  const redirectParam = searchParams.redirect ? `?redirect=${encodeURIComponent(searchParams.redirect)}` : ''
+  const params = await searchParams
+  const redirectParam = params.redirect ? `?redirect=${encodeURIComponent(params.redirect)}` : ''
   redirect(`/auth${redirectParam}`)
 }

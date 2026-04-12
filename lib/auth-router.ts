@@ -50,14 +50,21 @@ export async function determineUserDestination(
     return { type: 'stay', reason: 'Admin page - handled by admin layout' }
   }
 
-  // Franchise dashboard pages handle their own auth via tenant claims.
-  // The consumer auth router must NOT redirect franchise users to /patients
-  // or /onboarding — those routes don't exist on the tenant subdomain.
-  if (currentPath.startsWith('/dashboard') || currentPath.startsWith('/dev')) {
+  // Franchise users must NEVER enter the consumer auth flow. If the user
+  // has a tenantRole claim, they're a franchise owner or staff — the consumer
+  // routing (onboarding, /patients redirect, family plan checks) is irrelevant
+  // and causes infinite redirect loops on the tenant subdomain.
+  // Check claims on ALL paths, not just /dashboard.
+  if (user) {
     const tokenResult = await user.getIdTokenResult()
     const claims = tokenResult.claims as any
     if (claims.tenantRole === 'franchise_admin' || claims.tenantRole === 'franchise_staff') {
-      logger.debug('[AuthRouter] Franchise user on dashboard - skipping consumer routing')
+      // If they're on /auth, send them to /dashboard. Otherwise stay put.
+      if (currentPath === '/auth' || currentPath === '/login') {
+        logger.debug('[AuthRouter] Franchise user on /auth - redirecting to dashboard')
+        return { type: 'dashboard', reason: 'Franchise user - redirect to dashboard' }
+      }
+      logger.debug('[AuthRouter] Franchise user - skipping consumer routing')
       return { type: 'stay', reason: 'Franchise user - handled by tenant dashboard' }
     }
   }
