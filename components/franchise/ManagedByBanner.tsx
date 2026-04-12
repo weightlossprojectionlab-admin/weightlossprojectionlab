@@ -38,8 +38,7 @@ export default function ManagedByBanner({ userId, managedBy, managedByConsented 
   const [acting, setActing] = useState<string | null>(null)
   const [dismissed, setDismissed] = useState(false)
 
-  // Don't show if already consented or no managed-by entries
-  if (managedByConsented || !managedBy?.length || dismissed) return null
+  const shouldHide = managedByConsented || !managedBy?.length || dismissed
 
   // Load tenant names for display
   useEffect(() => {
@@ -96,7 +95,7 @@ export default function ManagedByBanner({ userId, managedBy, managedByConsented 
     }
   }
 
-  if (loading || tenants.length === 0) return null
+  if (shouldHide || loading || tenants.length === 0) return null
 
   return (
     <div className="rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-6">
