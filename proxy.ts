@@ -115,46 +115,25 @@ export function proxy(request: NextRequest) {
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set('x-tenant-slug', tenantSlug)
 
-    // Apex-only routes: admin, login, and API stay on the apex marketing app
-    // even when reached via a tenant subdomain. They get the header but no rewrite.
-    const isApexOnlyRoute =
-      pathname.startsWith('/api') ||
-      pathname.startsWith('/admin') ||
-      pathname.startsWith('/login') ||
-      pathname.startsWith('/auth') || // /login redirects here; both must be apex
-      pathname.startsWith('/franchise') ||
-      pathname.startsWith('/franchise-agreement') ||
-      pathname.startsWith('/baa') ||
-      pathname.startsWith('/data-policy') ||
-      pathname.startsWith('/find-a-provider') || // Phase B: family-side directory
-      pathname.startsWith('/onboarding') || // consumer onboarding (auth-router may redirect here)
-      pathname.startsWith('/patients') || // consumer patients (auth-router may redirect here)
-      pathname.startsWith('/dev') || // dev-only helpers (e.g. /dev/sign-in)
-      pathname.startsWith('/tenant-shell') // prevent rewrite loops
+    // Tenant-shell routes: ONLY these paths have a /tenant-shell equivalent
+    // and should be rewritten. Everything else passes through to the apex app
+    // with the x-tenant-slug header attached.
+    const isTenantShellRoute =
+      pathname === '/' ||
+      pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/about') ||
+      pathname.startsWith('/tenant-shell') // prevent rewrite loops — never rewrite
 
-    if (!isApexOnlyRoute) {
-      // Internal rewrite to the tenant route group. URL bar stays {slug}.domain/path.
+    if (isTenantShellRoute && !pathname.startsWith('/tenant-shell')) {
       const url = request.nextUrl.clone()
       url.pathname = `/tenant-shell${pathname === '/' ? '' : pathname}`
       return NextResponse.rewrite(url, { request: { headers: requestHeaders } })
     }
 
-    // Apex-only path on a tenant subdomain — pass through with header attached
-    if (
-      pathname.startsWith('/admin') ||
-      pathname.startsWith('/login') ||
-      pathname.startsWith('/auth') ||
-      pathname.startsWith('/franchise') ||
-      pathname.startsWith('/franchise-agreement') ||
-      pathname.startsWith('/baa') ||
-      pathname.startsWith('/data-policy') ||
-      pathname.startsWith('/find-a-provider') ||
-      pathname.startsWith('/onboarding') ||
-      pathname.startsWith('/patients') ||
-      pathname.startsWith('/dev')
-    ) {
-      return NextResponse.next({ request: { headers: requestHeaders } })
-    }
+    // Everything else: pass through to apex app with tenant header attached.
+    // This covers /api, /admin, /auth, /medications, /appointments, /shopping,
+    // /family-admin, /notifications, /progress, /dev, etc.
+    return NextResponse.next({ request: { headers: requestHeaders } })
   }
 
   // Development bypass (from sec-005)
