@@ -312,6 +312,7 @@ function TabButton({ active, onClick, label }: { active: boolean; onClick: () =>
 }
 
 function FamilySnapshotCard({ family }: { family: FranchiseFamilySnapshot }) {
+  const router = useRouter()
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'Never'
     const date = new Date(dateStr)
@@ -330,7 +331,10 @@ function FamilySnapshotCard({ family }: { family: FranchiseFamilySnapshot }) {
   const isActive = family.lastActiveAt && (Date.now() - new Date(family.lastActiveAt).getTime()) < 30 * 24 * 60 * 60 * 1000
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-5 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all">
+    <div
+      onClick={() => router.push(`/dashboard/families/${family.id}`)}
+      className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-5 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all cursor-pointer"
+    >
       <div className="flex items-start gap-4 mb-4">
         <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
           <span className="text-blue-600 dark:text-blue-400 font-semibold text-xl">
@@ -372,6 +376,11 @@ function FamilySnapshotCard({ family }: { family: FranchiseFamilySnapshot }) {
             </span>
           </div>
         )}
+      </div>
+      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-right">
+        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+          View Family →
+        </span>
       </div>
     </div>
   )

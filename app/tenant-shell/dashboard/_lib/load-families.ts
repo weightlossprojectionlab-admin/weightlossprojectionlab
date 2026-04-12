@@ -292,3 +292,127 @@ export async function loadPendingRequests(tenantId: string): Promise<PendingRequ
     return []
   }
 }
+
+// ─── Client Detail (patients under a managed user) ───────
+
+export interface ClientPatient {
+  id: string
+  name: string
+  type: 'human' | 'pet'
+  relationship: string
+  dateOfBirth: string | null
+  gender: string | null
+  health: FamilyHealthSnapshot
+}
+
+export interface ClientDetail {
+  id: string
+  name: string
+  email: string
+  phone: string
+  lastActiveAt: string | null
+  joinedPlatformAt: string | null
+  practiceNotes: string
+  patients: ClientPatient[]
+  // Consumer-level health (for clients who track themselves without a patient profile)
+  ownHealth: FamilyHealthSnapshot
+}
+
+/**
+ * Load a single managed client's full detail — their user info plus all
+ * their patients with per-patient health snapshots. Used by the client
+ * detail page at /dashboard/families/[userId].
+ *
+ * Verifies the user is actually managed by the given tenant before
+ * returning data (security: prevent franchise A from viewing franchise B's
+ * clients by guessing user IDs).
+ */
+export async function loadClientDetail(
+  tenantId: string,
+  userId: string
+): Promise<ClientDetail | null> {
+  try {
+    const db = getAdminDb()
+    const userSnap = await db.collection('users').doc(userId).get()
+    if (!userSnap.exists) return null
+
+    const userData = userSnap.data() as any
+    const managedBy: string[] = Array.isArray(userData?.managedBy) ? userData.managedBy : []
+    if (!managedBy.includes(tenantId)) return null
+
+    // Load patients under this user
+    const patientsSnap = await db
+      .collection('users')
+      .doc(userId)
+      .collection('patients')
+      .where('status', '==', 'active')
+      .limit(50)
+      .get()
+      .catch(() => null)
+
+    const patients: ClientPatient[] = await Promise.all(
+      (patientsSnap?.docs || []).map(async doc => {
+        const d = doc.data() as any
+        const ref = doc.ref
+
+        const [mealSnap, weightSnap, vitalSnap, medsSnap] = await Promise.all([
+          ref.collection('meal-logs').orderBy('loggedAt', 'desc').limit(1).get().catch(() => null),
+          ref.collection('weight-logs').orderBy('loggedAt', 'desc').limit(1).get().catch(() => null),
+          ref.collection('vitals').orderBy('recordedAt', 'desc').limit(1).get().catch(() => null),
+          ref.collection('medications').where('status', '==', 'active').get().catch(() => null),
+        ])
+
+        const meal = mealSnap?.docs?.[0]?.data() as any
+        const weight = weightSnap?.docs?.[0]?.data() as any
+        const vital = vitalSnap?.docs?.[0]?.data() as any
+
+        return {
+          id: doc.id,
+          name: d.name || 'Unnamed',
+          type: (d.type || 'human') as 'human' | 'pet',
+          relationship: d.relationship || '',
+          dateOfBirth: normalizeDate(d.dateOfBirth),
+          gender: d.gender || null,
+          health: {
+            lastMealAt: normalizeDate(meal?.loggedAt),
+            lastMealName: meal?.description || meal?.name || meal?.mealType || null,
+            lastWeightValue: typeof weight?.weight === 'number' ? weight.weight : null,
+            lastWeightUnit: weight?.unit || 'lbs',
+            lastWeightAt: normalizeDate(weight?.loggedAt),
+            lastVitalType: vital?.type || null,
+            lastVitalAt: normalizeDate(vital?.recordedAt),
+            activeMedicationsCount: medsSnap?.size || 0,
+          },
+        }
+      })
+    )
+
+    // Also load the user's own consumer-level health data
+    const ownHealth = await loadHealthSnapshot(db, userId)
+
+    // Find practice notes from the patient profile created during intake
+    let practiceNotes = ''
+    for (const p of patients) {
+      const pDoc = patientsSnap?.docs.find(d => d.id === p.id)
+      if (pDoc) {
+        const pData = pDoc.data() as any
+        if (pData.practiceNotes) { practiceNotes = pData.practiceNotes; break }
+      }
+    }
+
+    return {
+      id: userId,
+      name: userData.name || userData.displayName || userData.email || 'Unknown',
+      email: userData.email || '',
+      phone: userData.phone || '',
+      lastActiveAt: normalizeDate(userData.lastActiveAt),
+      joinedPlatformAt: normalizeDate(userData.createdAt),
+      practiceNotes,
+      patients,
+      ownHealth,
+    }
+  } catch (err) {
+    logger.error('[dashboard] failed to load client detail', err as Error, { tenantId, userId })
+    return null
+  }
+}
