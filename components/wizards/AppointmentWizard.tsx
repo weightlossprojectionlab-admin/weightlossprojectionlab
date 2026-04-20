@@ -22,6 +22,8 @@ import { PROVIDER_TITLES, PROVIDER_SPECIALTIES } from '@/types/providers'
 import toast from 'react-hot-toast'
 import { getCSRFToken } from '@/lib/csrf'
 import { getAuth } from 'firebase/auth'
+import { PhoneInput } from '@/components/form/PhoneInput'
+import { TimeInput } from '@/components/form/TimeInput'
 
 interface AppointmentWizardProps {
   isOpen: boolean
@@ -659,11 +661,9 @@ function ProviderStep({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
-              <input
-                type="tel"
+              <PhoneInput
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(555) 123-4567"
+                onChange={setPhone}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -840,18 +840,18 @@ function DateTimeStep({
             <ClockIcon className="w-4 h-4 inline mr-1" />
             Time
           </label>
-          <input
-            type="time"
+          <TimeInput
             value={time}
-            onChange={(e) => {
-              setTime(e.target.value)
-              if (date) {
-                const combined = new Date(`${date}T${e.target.value}`)
+            onChange={(v) => {
+              setTime(v)
+              if (date && v) {
+                const combined = new Date(`${date}T${v}`)
                 onChange(combined)
               }
             }}
             className="w-full px-4 py-3 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
           />
+          <p className="text-xs text-muted-foreground mt-1">Appointments are scheduled in 15-minute increments.</p>
         </div>
       </div>
     </div>
@@ -1142,12 +1142,10 @@ function TransportationStep({
             <label className="block text-sm font-medium text-foreground mb-2">
               Pickup Time
             </label>
-            <input
-              type="time"
+            <TimeInput
               value={pickupTime ? pickupTime.toTimeString().slice(0, 5) : ''}
-              onChange={(e) => {
-                const time = e.target.value
-                const dateTime = time ? new Date(`1970-01-01T${time}`) : undefined
+              onChange={(v) => {
+                const dateTime = v ? new Date(`1970-01-01T${v}`) : undefined
                 onChange(true, assignedDriverId, dateTime)
               }}
               className="w-full px-4 py-3 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"

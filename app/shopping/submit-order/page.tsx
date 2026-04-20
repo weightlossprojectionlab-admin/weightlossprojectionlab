@@ -8,6 +8,7 @@ import { createShopAndDeliverOrder } from '@/lib/shop-deliver-orders'
 import { ShoppingItem } from '@/types/shopping'
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'
+import { PhoneInput } from '@/components/form/PhoneInput'
 
 export default function SubmitOrderPage() {
   const router = useRouter()
@@ -230,11 +231,9 @@ export default function SubmitOrderPage() {
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Phone Number <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="tel"
+                <PhoneInput
                   value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="(555) 123-4567"
+                  onChange={setPhoneNumber}
                   className="w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground"
                   required
                 />

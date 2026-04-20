@@ -16,6 +16,7 @@ import type { ProviderType } from '@/types/medical'
 import type { ExtractedProviderInfo } from '@/lib/ocr-provider'
 import { CameraIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import { PhoneInput } from '@/components/form/PhoneInput'
 
 const ProviderScanner = dynamic(() => import('@/components/providers/ProviderScanner').then(mod => ({ default: mod.ProviderScanner })), {
   loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>,
@@ -247,10 +248,9 @@ function NewProviderContent() {
               <label className="block text-sm font-medium text-foreground mb-2">
                 Phone Number *
               </label>
-              <input
-                type="tel"
+              <PhoneInput
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(v) => setFormData({ ...formData, phone: v })}
                 required
                 className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground"
                 placeholder="+1 (555) 123-4567"

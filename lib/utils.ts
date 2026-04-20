@@ -47,6 +47,40 @@ export function capitalizeName(name: string): string {
 }
 
 /**
+ * Format a US phone number progressively as the user types.
+ * Strips non-digits and applies the pattern "(xxx) xxx-xxxx".
+ * If the number starts with a leading "1" and has >10 digits, renders as "+1 (xxx) xxx-xxxx".
+ *
+ * @example
+ * formatPhone("1")          // "(1"
+ * formatPhone("123")        // "(123"
+ * formatPhone("1234")       // "(123) 4"
+ * formatPhone("1231231234") // "(123) 123-1234"
+ * formatPhone("11231231234")// "+1 (123) 123-1234"
+ */
+export function formatPhone(input: string): string {
+  if (!input) return ''
+  let digits = input.replace(/\D/g, '')
+  if (!digits) return ''
+
+  let prefix = ''
+  if (digits.length === 11 && digits.startsWith('1')) {
+    prefix = '+1 '
+    digits = digits.slice(1)
+  } else if (digits.length > 10) {
+    digits = digits.slice(0, 10)
+  }
+
+  const area = digits.slice(0, 3)
+  const mid = digits.slice(3, 6)
+  const last = digits.slice(6, 10)
+
+  if (digits.length <= 3) return `${prefix}(${area}`
+  if (digits.length <= 6) return `${prefix}(${area}) ${mid}`
+  return `${prefix}(${area}) ${mid}-${last}`
+}
+
+/**
  * Generate a SEO-friendly slug from a recipe name
  * @param recipeName - The recipe name (e.g., "Greek Chicken Bowl")
  * @returns URL-safe slug (e.g., "greek-chicken-bowl")

@@ -25,6 +25,7 @@ import { auth } from '@/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { getCSRFToken } from '@/lib/csrf'
 import { logger } from '@/lib/logger'
+import { PhoneInput } from '@/components/form/PhoneInput'
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -313,7 +314,11 @@ export default function ClientIntakePage() {
               <Field label="Last Name *" value={form.lastName} onChange={v => update({ lastName: v })} placeholder="Henderson" />
             </div>
             <Field label="Email *" value={form.email} onChange={v => update({ email: v })} type="email" placeholder="jane@example.com" />
-            <Field label="Phone" value={form.phone} onChange={v => update({ phone: v })} type="tel" placeholder="(555) 123-4567" />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+              <PhoneInput value={form.phone} onChange={v => update({ phone: v })}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" />
+            </div>
 
             <label className="flex items-start gap-3 cursor-pointer mt-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
               <input
@@ -424,7 +429,11 @@ export default function ClientIntakePage() {
         {currentStep.id === 'emergency' && (
           <div className="space-y-4">
             <Field label="Name" value={form.emergencyContactName} onChange={v => update({ emergencyContactName: v })} placeholder="John Henderson" />
-            <Field label="Phone" value={form.emergencyContactPhone} onChange={v => update({ emergencyContactPhone: v })} type="tel" placeholder="(555) 987-6543" />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+              <PhoneInput value={form.emergencyContactPhone} onChange={v => update({ emergencyContactPhone: v })} placeholder="(555) 987-6543"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" />
+            </div>
             <Field label="Relationship" value={form.emergencyContactRelationship} onChange={v => update({ emergencyContactRelationship: v })} placeholder="Spouse" />
           </div>
         )}

@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import AuthGuard from '@/components/auth/AuthGuard'
 import toast from 'react-hot-toast'
 import { PROVIDER_SPECIALTIES, PROVIDER_TITLES } from '@/types/providers'
+import { PhoneInput } from '@/components/form/PhoneInput'
 
 export default function ProviderEditPage() {
   return (
@@ -233,24 +234,21 @@ function ProviderEditContent() {
               <label className="block text-sm font-medium text-foreground mb-2">
                 Phone
               </label>
-              <input
-                type="tel"
+              <PhoneInput
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(v) => setFormData({ ...formData, phone: v })}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="(555) 123-4567"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
                 Fax
               </label>
-              <input
-                type="tel"
+              <PhoneInput
                 value={formData.fax}
-                onChange={(e) => setFormData({ ...formData, fax: e.target.value })}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+                onChange={(v) => setFormData({ ...formData, fax: v })}
                 placeholder="(555) 123-4568"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
           </div>

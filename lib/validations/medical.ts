@@ -7,6 +7,17 @@
 
 import { z } from 'zod'
 
+/**
+ * Platform rule: appointment/pickup times must fall on 15-minute increments
+ * (:00, :15, :30, :45). Enforced on the server as a safety net in case the
+ * client bypasses the TimeInput component.
+ */
+const isFifteenMinuteIncrement = (iso: string): boolean => {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return false
+  return d.getMinutes() % 15 === 0 && d.getSeconds() === 0 && d.getMilliseconds() === 0
+}
+
 // ==================== PATIENT PROFILE SCHEMAS ====================
 
 export const emergencyContactSchema = z.object({
@@ -366,7 +377,7 @@ export const appointmentSchema = z.object({
   specialty: z.string().optional(),
 
   // Scheduling
-  dateTime: z.string().datetime(),
+  dateTime: z.string().datetime().refine(isFifteenMinuteIncrement, 'Appointment time must fall on a 15-minute increment'),
   endTime: z.string().datetime().optional(),
   duration: z.number().positive().max(480).optional(), // max 8 hours
   type: appointmentTypeSchema,
@@ -390,7 +401,7 @@ export const appointmentSchema = z.object({
   driverDeclinedAt: z.string().datetime().optional(),
   driverDeclineReason: z.string().max(500).optional(),
   driverNotes: z.string().max(500).optional(),
-  pickupTime: z.string().datetime().optional(),
+  pickupTime: z.string().datetime().refine((v) => !v || isFifteenMinuteIncrement(v), 'Pickup time must fall on a 15-minute increment').optional(),
   dropoffTime: z.string().datetime().optional(),
 
   // Lifecycle

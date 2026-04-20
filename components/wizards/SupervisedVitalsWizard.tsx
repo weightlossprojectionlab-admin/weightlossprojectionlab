@@ -34,6 +34,7 @@ import { sendCriticalVitalAlert } from '@/lib/emergency-alerts'
 import { useAuth } from '@/hooks/useAuth'
 import VitalDatePicker from '../vitals/VitalDatePicker'
 import { useVitalDatePicker } from '@/hooks/useVitalDatePicker'
+import { TimeInput } from '@/components/form/TimeInput'
 
 interface SupervisedVitalsWizardProps {
   isOpen: boolean
@@ -1966,13 +1967,12 @@ function ScheduleStep({
             </label>
             <div className="grid grid-cols-2 gap-2">
               {times.map((time, index) => (
-                <input
+                <TimeInput
                   key={index}
-                  type="time"
                   value={time}
-                  onChange={(e) => {
+                  onChange={(v) => {
                     const newTimes = [...times]
-                    newTimes[index] = e.target.value
+                    newTimes[index] = v
                     setTimes(newTimes)
                   }}
                   className="px-2 py-1.5 border border-border rounded-md bg-card text-foreground text-center text-base"
