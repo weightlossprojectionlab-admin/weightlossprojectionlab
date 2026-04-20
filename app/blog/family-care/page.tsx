@@ -8,6 +8,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   SparklesIcon,
@@ -33,21 +35,33 @@ export const metadata: Metadata = {
     title: 'Family Health Tracking — Intelligent Monitoring for Everyone You Care About',
     description: 'Multi-person intelligent health monitoring for your entire family. AI-powered alerts from newborns to seniors.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/family-care',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Family Care' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/family-care',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'Family Health Tracking — Intelligent Monitoring for Everyone You Care About',
     description: 'Multi-person intelligent health monitoring for your entire family. AI-powered alerts from newborns to seniors.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/family-care'
+    canonical: 'https://www.wellnessprojectionlab.com/blog/family-care'
   }
 }
 
 export default function FamilyCareBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'Family Health Tracking — Intelligent Monitoring for Everyone You Care About',
+          description: 'Multi-person intelligent health monitoring for your entire family. AI-powered alerts for newborns to seniors. Track nutrition, weight, vitals, and medications — one dashboard, proactive insights.',
+          slug: 'family-care',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'family health monitoring, multi-person health tracking, AI health alerts, pediatric tracking, elderly care monitoring, family care dashboard, caregiver coordination, family health app',
+        })}
+      />
 
       {/* ============================================ */}
       {/* HERO — Emotional hook + clear value prop     */}
@@ -293,8 +307,8 @@ export default function FamilyCareBlogPage() {
           <div className="mb-12">
             <Screenshot
               src="/screenshots/family-care/admin-dashboard-full-desktop-light.png"
-              alt="Family Admin Dashboard showing 5 Family Members Under Care with health snapshots, active medications, and vital check times"
-              caption="Your entire family's health — one glance, zero guesswork"
+              alt="Family health app roster showing six profiles across multiple generations — parents, babies, a newborn, and the family dog — each with one-tap access to vitals and their own dashboard"
+              caption="One account, every generation — from newborns and toddlers to parents and the family dog"
               priority
               zoomable
             />
@@ -303,41 +317,44 @@ export default function FamilyCareBlogPage() {
           <div className="grid md:grid-cols-2 gap-8 mb-12">
             <Screenshot
               src="/screenshots/family-care/family-dashboard-overview-desktop-light.png"
-              alt="Family health overview with quick stats and member snapshots"
-              caption="Instant overview: who needs attention, who's on track"
+              alt="Family Admin Dashboard for a household of six (five people, one pet) — top-row stats for pending tasks, invites, unread notifications, and upcoming appointments, with per-person health snapshots below showing active medication counts and last vital check dates"
+              caption="The at-a-glance family health overview — pending tasks, appointments, and each person's medication count and last vital check, all on one page"
               zoomable
             />
             <Screenshot
-              src="/screenshots/family-care/all-management-tools-desktop-light.png"
-              alt="14 family health management tools grid"
-              caption="14 integrated tools — from medications to meal tracking to household duties"
+              src="/screenshots/family-care/management-tools-desktop-light.png"
+              alt="All Management Tools menu on the Family Admin Dashboard — fourteen integrated tools for family health: member profiles, medications, appointments, caregivers, documents, progress tracking, notifications, healthcare providers, households, shopping lists, kitchen inventory, role-based permissions, family invitations, and household duties"
+              caption="Fourteen integrated tools in one dashboard — from medications and appointments to healthcare providers, household duties, and shopping lists"
               zoomable
             />
           </div>
 
           <h3 className="text-2xl font-bold text-foreground mb-6 text-center">Works On Every Device</h3>
           <div className="flex flex-wrap justify-center gap-8">
-            <MobileFrame variant="ios">
+            <MobileFrame variant="ios" caption="Check on everyone from your phone">
               <Screenshot
                 src="/screenshots/family-care/family-dashboard-mobile-light.png"
                 alt="Mobile family dashboard"
-                caption="Check on everyone from your phone"
                 variant="mobile"
               />
             </MobileFrame>
-            <MobileFrame variant="ios">
+            <MobileFrame
+              variant="ios"
+              caption="Every household member on your phone — one tap to vitals or their dashboard"
+            >
               <Screenshot
-                src="/screenshots/patient-care/family-members-list-mobile-light.png"
-                alt="Family members list on mobile"
-                caption="Switch between family members instantly"
+                src="/screenshots/family-care/family-members-list-mobile-light.png"
+                alt="Family Members list on mobile showing six profiles (five people, one pet) with +Add Family Member, Family Admin Dashboard link, All/Humans/Pets filter tabs, and per-member Vitals and View Dashboard buttons"
                 variant="mobile"
               />
             </MobileFrame>
-            <MobileFrame variant="ios">
+            <MobileFrame
+              variant="ios"
+              caption="Per-profile detail — breed, age, role — with Vitals and Dashboard on every card"
+            >
               <Screenshot
-                src="/screenshots/patient-care/patient-cards-mobile-light.png"
-                alt="Patient cards with vitals and dashboard access"
-                caption="Vitals and dashboard per person"
+                src="/screenshots/family-care/patient-cards-mobile-light.png"
+                alt="Family Members list on mobile, scrolled to show individual profile cards — Fido (Dog, Doberman Pinscher, born 12/31/2021), Dad (Parent, age 56, Male), Mom (Parent, age 40, Female), and Newborn (Infant, one month old, Female) — each with Vitals and View Dashboard buttons"
                 variant="mobile"
               />
             </MobileFrame>

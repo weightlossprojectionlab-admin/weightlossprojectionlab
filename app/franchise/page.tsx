@@ -9,20 +9,22 @@
  */
 
 import Link from 'next/link'
-import type { Metadata } from 'next'
 import { CheckIcon } from '@heroicons/react/24/outline'
 import { FRANCHISE_PLANS, SETUP_FEE_USD, ANNUAL_DISCOUNT_PCT } from '@/lib/franchise-plans'
+import { buildPageMetadata } from '@/lib/seo'
 
 export const dynamic = 'force-static'
 export const revalidate = false
 
 const CURRENT_YEAR = new Date().getFullYear()
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: 'License Wellness Projection Lab — Launch Your Branded Health Practice',
   description:
     'White-label the HIPAA-compliant family health platform under your own brand. AI-powered tracking, your subdomain, your colors, your clients. Launch in 48 hours.',
-}
+  path: '/franchise',
+  keywords: 'white label health platform, HIPAA franchise, private practice software, branded patient portal, nurse practice software, concierge health platform',
+})
 
 const PROBLEMS = [
   {

@@ -5,6 +5,8 @@ import { CsrfInitializer } from '@/components/CsrfInitializer'
 import { ConditionalFooter } from '@/components/ConditionalFooter'
 import { UpdateChecker } from '@/components/UpdateChecker'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { organizationSchema } from '@/lib/json-ld'
 import './globals.css'
 
 // Force dynamic rendering for all pages to skip static generation
@@ -141,6 +143,7 @@ export default async function RootLayout({
             }),
           }}
         />
+        <JsonLd data={organizationSchema()} />
         {/* Resource hints for third-party origins */}
         <link rel="preconnect" href="https://apis.google.com" />
         <link rel="preconnect" href="https://weightlossprojectionlab-8b284.firebaseapp.com" />

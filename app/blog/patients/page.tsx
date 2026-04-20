@@ -9,6 +9,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import {
   UserGroupIcon,
   HeartIcon,
@@ -36,21 +38,33 @@ export const metadata: Metadata = {
     title: 'Health Profiles — Your Family\'s Health Operating System',
     description: 'Create intelligent health profiles for everyone you care about. AI-powered insights from newborns to seniors.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/patients',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Patients' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/patients',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'Health Profiles — Your Family\'s Health Operating System',
     description: 'Create intelligent health profiles for everyone you care about. AI-powered insights from newborns to seniors.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/patients'
+    canonical: 'https://www.wellnessprojectionlab.com/blog/patients'
   }
 }
 
 export default function PatientsBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'Health Profiles — Your Family\'s Health Operating System',
+          description: 'Create intelligent health profiles for everyone you care about — children, partners, aging parents, and pets. AI-powered insights, life-stage awareness, and proactive alerts from one centralized system.',
+          slug: 'patients',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'health profiles, family health system, multi-person health tracking, AI health insights, pediatric tracking, elderly monitoring, pet health tracking, caregiver platform, health operating system',
+        })}
+      />
 
       {/* ============================================ */}
       {/* HERO                                         */}

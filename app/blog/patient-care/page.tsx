@@ -6,6 +6,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   ArrowPathIcon,
@@ -32,21 +34,33 @@ export const metadata: Metadata = {
     title: 'Coordinate Care Across Caregivers — No One Falls Through the Cracks',
     description: 'One patient profile, multiple caregivers, real-time sync. WPL coordinates people around shared health data so nothing gets missed.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/patient-care',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/patient-care/patient-profile-vitals-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Patient Care' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/patient-care',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/patient-care/patient-profile-vitals-desktop-light.png'],
     title: 'Coordinate Care Across Caregivers — No One Falls Through the Cracks',
     description: 'One patient profile, multiple caregivers, real-time sync. WPL coordinates people around shared health data so nothing gets missed.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/patient-care',
+    canonical: 'https://www.wellnessprojectionlab.com/blog/patient-care',
   },
 }
 
 export default function PatientCareBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'Care Coordination for Caregivers — Sync Your Entire Care Team',
+          description: 'Coordinate care across multiple caregivers with real-time sync, role-based access, shared activity feeds, and duty assignment. One patient profile, one source of truth — no one falls through the cracks.',
+          slug: 'patient-care',
+          image: '/screenshots/patient-care/patient-profile-vitals-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'care coordination, caregiver coordination, caregiver tools, family caregiver app, shared patient data, caregiver sync, caregiver communication, care team management, caregiver duty assignment, elderly care coordination',
+        })}
+      />
       {/* ───────────── 1. Hero ───────────── */}
       <div className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white overflow-hidden">
         <div

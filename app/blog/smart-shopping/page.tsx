@@ -6,6 +6,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   SparklesIcon,
@@ -36,22 +38,34 @@ export const metadata: Metadata = {
     description:
       'Auto-generate grocery lists from your family meal plans. Checks inventory, filters allergens per person, and shares lists with caregivers.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/smart-shopping',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Smart Shopping' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/smart-shopping',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'From Meal Plan to Grocery Cart — Automatically',
     description:
       'Auto-generate grocery lists from your family meal plans. Checks inventory, filters allergens per person, and shares lists with caregivers.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/smart-shopping',
+    canonical: 'https://www.wellnessprojectionlab.com/blog/smart-shopping',
   },
 }
 
 export default function SmartShoppingBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'Intelligent Shopping — From Meal Plan to Grocery Cart',
+          description: 'Auto-generate grocery lists from your family meal plans. WPL checks pantry inventory, filters allergens per person, suggests budget-friendly alternatives, and shares lists with caregivers.',
+          slug: 'smart-shopping',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'smart shopping list, AI grocery list, meal plan shopping, allergen filtering, pantry inventory, budget groceries, family shopping list, caregiver grocery shopping',
+        })}
+      />
       {/* ── Hero ── */}
       <div className="relative bg-gradient-to-br from-lime-600 via-green-600 to-emerald-600 text-white overflow-hidden">
         <div

@@ -7,6 +7,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   HeartIcon,
@@ -36,21 +38,33 @@ export const metadata: Metadata = {
     title: 'Catch Problems Before They Become Emergencies - Intelligent Vital Monitoring',
     description: 'Detect health issues early with intelligent vital sign monitoring. Track BP, glucose, heart rate, SpO2, temperature, mood, and pain for your entire family with trend alerts and AI insights.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/vitals-tracking',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/vitals-tracking/vital-reminders-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Vitals Tracking' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/vitals-tracking',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/vitals-tracking/vital-reminders-desktop-light.png'],
     title: 'Catch Problems Before They Become Emergencies - Intelligent Vital Monitoring',
     description: 'Detect health issues early with intelligent vital sign monitoring. Track BP, glucose, heart rate, SpO2, temperature, mood, and pain for your entire family with trend alerts and AI insights.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/vitals-tracking'
+    canonical: 'https://www.wellnessprojectionlab.com/blog/vitals-tracking'
   }
 }
 
 export default function VitalsTrackingBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'Catch Problems Before They Become Emergencies - Intelligent Vital Monitoring',
+          description: 'Detect health issues early with intelligent vital sign monitoring. Track BP, glucose, heart rate, SpO2, temperature, mood, and pain for your entire family with trend alerts and AI insights.',
+          slug: 'vitals-tracking',
+          image: '/screenshots/vitals-tracking/vital-reminders-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'vitals tracking, blood pressure monitoring, glucose tracking, heart rate monitor, early detection, health alerts, vital signs, family health monitoring, abnormal vitals alert, remote patient monitoring',
+        })}
+      />
       {/* Hero Section */}
       <div className="relative bg-gradient-to-br from-red-600 via-rose-600 to-pink-600 text-white overflow-hidden">
         <div

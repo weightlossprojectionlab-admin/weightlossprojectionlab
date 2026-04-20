@@ -3,15 +3,17 @@
  * Details WPL's HIPAA compliance measures and Notice of Privacy Practices
  */
 
-import type { Metadata } from 'next'
 import Link from 'next/link'
 import ComplaintForm from '@/components/hipaa/ComplaintForm'
+import { buildPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: 'HIPAA Compliance | Wellness Projection Lab',
   description:
-    'Wellness Projection Lab HIPAA compliance information and Notice of Privacy Practices for Protected Health Information (PHI).',
-}
+    'Wellness Projection Lab HIPAA compliance information and Notice of Privacy Practices for Protected Health Information (PHI) — encryption, access controls, breach notification, and your rights.',
+  path: '/hipaa',
+  keywords: 'HIPAA compliance, protected health information, PHI, notice of privacy practices, HIPAA-compliant health app, health data security',
+})
 
 export default function HipaaPage() {
   return (

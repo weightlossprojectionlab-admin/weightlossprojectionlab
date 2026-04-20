@@ -7,6 +7,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema, faqPageSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   BeakerIcon,
@@ -26,29 +28,88 @@ import {
   ArrowPathIcon,
 } from '@heroicons/react/24/outline'
 
+const PAGE_TITLE = 'Medication Reminder App for Families & Elderly Parents'
+const PAGE_DESCRIPTION =
+  'Never miss a dose — for your kids, your aging parents, or yourself. Track medications across every family member with smart reminders, refill alerts, and shared caregiver access. HIPAA-compliant.'
+const PAGE_IMAGE =
+  'https://www.wellnessprojectionlab.com/screenshots/medications/medication-management-grid-desktop-light.png'
+const PAGE_URL = 'https://www.wellnessprojectionlab.com/blog/medications'
+
 export const metadata: Metadata = {
-  title: 'Every Pill, Every Person, Every Reminder — Handled | Medication Safety System | Wellness Projection Lab',
-  description: 'Manage medications for your entire family with smart reminders, adherence tracking, refill alerts, and provider-ready exports. Stop the "Did Mom take her pills?" anxiety for good.',
-  keywords: 'medication tracking, prescription management, medication reminders, pill tracker, medication adherence, refill alerts, family medication management, medication safety, caregiver medication tracking',
+  title: { absolute: PAGE_TITLE },
+  description: PAGE_DESCRIPTION,
+  keywords:
+    'medication reminder app for elderly parents, family medication tracker, pill reminder app for caregivers, medication tracking for multiple family members, medication adherence app, refill alerts, caregiver medication app, HIPAA medication reminder',
   openGraph: {
-    title: 'Every Pill, Every Person, Every Reminder — Handled | Medication Safety System',
-    description: 'Manage medications for your entire family with smart reminders, adherence tracking, refill alerts, and provider-ready exports. Stop the "Did Mom take her pills?" anxiety for good.',
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/medications',
+    images: [{ url: PAGE_IMAGE, width: 1200, height: 630, alt: 'Medication reminder app for families — Wellness Projection Lab' }],
+    url: PAGE_URL,
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Every Pill, Every Person, Every Reminder — Handled | Medication Safety System',
-    description: 'Manage medications for your entire family with smart reminders, adherence tracking, refill alerts, and provider-ready exports.',
+    images: [PAGE_IMAGE],
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/medications'
-  }
+    canonical: PAGE_URL,
+  },
 }
+
+const FAQ = [
+  {
+    question: 'What is the best medication reminder app for elderly parents?',
+    answer:
+      'The right app for an aging parent is one that (a) handles many medications per person, (b) lets a family member set up and monitor reminders remotely, and (c) alerts caregivers when doses are missed. Wellness Projection Lab was built around these three requirements — a parent (or their in-home caregiver) gets the reminder, and you get visibility from your phone.',
+  },
+  {
+    question: 'Can I track medications for multiple family members in one app?',
+    answer:
+      'Yes. You can add any number of profiles (kids, parents, grandparents, yourself, pets) and track each person\u2019s medications separately. Every profile has its own medication list, dosing schedule, and adherence history.',
+  },
+  {
+    question: 'How do I set up medication reminders for someone else?',
+    answer:
+      'Add a profile for the person you\u2019re caring for, enter their medications with doses and schedules, and set up reminders. The reminder can ping the person taking the medication, you, or both. Adherence history is shared with anyone you\u2019ve granted access.',
+  },
+  {
+    question: 'What happens when my parent misses a dose?',
+    answer:
+      'Missed doses show up on the adherence timeline, and you can configure alerts to notify one or more caregivers when a dose is skipped. No more \u201cDid mom take her pills?\u201d guessing at 9 p.m.',
+  },
+  {
+    question: 'Can I share my parent\u2019s medication list with their doctor?',
+    answer:
+      'Yes. You can export a formatted, up-to-date medication list as a PDF — with dosages, frequencies, prescribers, and pharmacies — and bring it to any appointment or email it to a provider.',
+  },
+  {
+    question: 'Is Wellness Projection Lab HIPAA compliant?',
+    answer:
+      'Yes. Wellness Projection Lab is built as a HIPAA-compliant platform with fine-grained access controls, and BAAs are available for practitioners who license the platform.',
+  },
+  {
+    question: 'Is there a free trial?',
+    answer: 'Yes — a free 7-day trial with full access. No credit card required. Cancel anytime.',
+  },
+]
 
 export default function MedicationsBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: PAGE_TITLE,
+          description: PAGE_DESCRIPTION,
+          slug: 'medications',
+          image: '/screenshots/medications/medication-management-grid-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords:
+            'medication reminder app for elderly parents, family medication tracker, pill reminder app for caregivers, medication tracking for multiple family members, medication adherence, refill alerts, caregiver medication app',
+        })}
+      />
+      <JsonLd data={faqPageSchema(FAQ)} />
       {/* Hero Section */}
       <div className="relative bg-gradient-to-br from-rose-600 via-pink-600 to-fuchsia-600 text-white overflow-hidden">
         <div
@@ -66,11 +127,12 @@ export default function MedicationsBlogPage() {
               <span className="text-sm font-medium">Medication Safety System</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              Every Pill, Every Person, Every Reminder — Handled
+              The Medication Reminder App for Everyone You Care For
             </h1>
             <p className="text-xl text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
-              Managing medications for yourself is hard enough. Managing them for your whole family?
-              WPL turns medication chaos into a system you can trust.
+              Track medications for your kids, your aging parents, your partner, and yourself — all
+              in one place. Smart reminders, refill alerts, and shared access for every caregiver
+              who helps.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
@@ -241,16 +303,40 @@ export default function MedicationsBlogPage() {
           </div>
         </section>
 
+        {/* FAQ */}
+        <section aria-labelledby="medications-faq" className="mb-20">
+          <h2 id="medications-faq" className="text-4xl font-bold text-foreground mb-4 text-center">Frequently Asked Questions</h2>
+          <p className="text-lg text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+            Answers to what families ask us most about medication tracking across the household.
+          </p>
+          <div className="max-w-3xl mx-auto space-y-3">
+            {FAQ.map((item) => (
+              <details
+                key={item.question}
+                className="group bg-card rounded-xl border-2 border-border p-5 open:shadow-md transition-shadow"
+              >
+                <summary className="cursor-pointer list-none font-semibold text-foreground flex items-start justify-between gap-4">
+                  <span>{item.question}</span>
+                  <span className="text-rose-600 dark:text-rose-400 text-xl leading-none group-open:rotate-45 transition-transform">+</span>
+                </summary>
+                <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+                  {item.answer}
+                </p>
+              </details>
+            ))}
+          </div>
+        </section>
+
         {/* Related Features / Sibling Links */}
         <section className="mb-20">
           <h2 className="text-4xl font-bold text-foreground mb-8 text-center">Explore the Platform</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <RelatedLink href="/caregivers/aging-parents" title="Caring for Aging Parents" description="A full guide to long-distance caregiving and remote monitoring" />
             <RelatedLink href="/blog/vitals-tracking" title="Vitals Tracking" description="Catch health problems before they become emergencies" />
             <RelatedLink href="/blog/dashboard" title="Health Dashboard" description="Your centralized command center for all health data" />
             <RelatedLink href="/blog/family-care" title="Family Care" description="Manage health for every member of your household" />
             <RelatedLink href="/blog/appointments" title="Appointments" description="Bring medication lists to every doctor visit" />
             <RelatedLink href="/blog/wpl-health-reports" title="AI Health Reports" description="Weekly AI-powered insights including medication adherence" />
-            <RelatedLink href="/blog/medical-documents" title="Medical Documents" description="Store prescriptions and pharmacy records securely" />
           </div>
         </section>
 

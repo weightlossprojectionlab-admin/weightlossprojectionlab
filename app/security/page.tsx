@@ -3,14 +3,16 @@
  * Details WPL's security measures, certifications, and practices
  */
 
-import type { Metadata } from 'next'
 import Link from 'next/link'
+import { buildPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: 'Security | Wellness Projection Lab',
   description:
-    'Learn about Wellness Projection Lab\'s enterprise-grade security measures, HIPAA compliance, and commitment to protecting your health data.',
-}
+    'Enterprise-grade security at Wellness Projection Lab — AES-256 encryption, TLS 1.3, SOC 2 infrastructure, MFA, role-based access, and audit logging for every action on PHI.',
+  path: '/security',
+  keywords: 'health data security, HIPAA security, AES-256 encryption, SOC 2 health app, multi-factor authentication, audit logs, secure health platform',
+})
 
 export default function SecurityPage() {
   return (

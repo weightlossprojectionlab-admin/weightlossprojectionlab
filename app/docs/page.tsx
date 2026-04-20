@@ -3,14 +3,16 @@
  * Comprehensive documentation hub for WPL users, developers, and partners
  */
 
-import type { Metadata } from 'next'
 import Link from 'next/link'
+import { buildPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: 'Documentation | Wellness Projection Lab',
   description:
-    'Comprehensive documentation for Wellness Projection Lab - user guides, API reference, tutorials, and developer resources.',
-}
+    'User guides, API reference, tutorials, and developer resources for Wellness Projection Lab — everything you need to track family health intelligently.',
+  path: '/docs',
+  keywords: 'WPL documentation, health tracking user guide, wellness API reference, caregiver tutorials, family health how-to',
+})
 
 export default function DocsPage() {
   return (

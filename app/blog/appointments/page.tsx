@@ -6,6 +6,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   SparklesIcon,
@@ -35,22 +37,34 @@ export const metadata: Metadata = {
     description:
       'Coordinate doctor visits for every family member in one calendar. Color-coded schedules, driver assignment, multi-level reminders, and visit notes.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/appointments',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/appointments/family-calendar-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Appointments' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/appointments',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/appointments/family-calendar-desktop-light.png'],
     title: 'Never Miss a Visit — For Anyone in Your Family',
     description:
       'Coordinate doctor visits for every family member in one calendar. Color-coded schedules, driver assignment, multi-level reminders, and visit notes.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/appointments',
+    canonical: 'https://www.wellnessprojectionlab.com/blog/appointments',
   },
 }
 
 export default function AppointmentsBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'Family Appointment Hub — Never Miss a Visit',
+          description: 'Coordinate doctor visits for every family member in one calendar. Color-coded schedules, driver assignment, multi-level reminders, and visit notes — so no appointment falls through the cracks.',
+          slug: 'appointments',
+          image: '/screenshots/appointments/family-calendar-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'family appointment scheduling, healthcare calendar, doctor visit coordination, appointment reminders, driver assignment, caregiver scheduling, medical appointments, family health management',
+        })}
+      />
       {/* ── Hero ── */}
       <div className="relative bg-gradient-to-br from-pink-600 via-rose-600 to-red-600 text-white overflow-hidden">
         <div

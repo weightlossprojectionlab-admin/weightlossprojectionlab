@@ -162,10 +162,10 @@ export default function PressPage() {
                       <dt className="font-medium text-gray-700">Website</dt>
                       <dd>
                         <a
-                          href="https://weightlossproglab.com"
+                          href="https://www.wellnessprojectionlab.com"
                           className="text-blue-600 hover:text-blue-700"
                         >
-                          weightlossproglab.com
+                          wellnessprojectionlab.com
                         </a>
                       </dd>
                     </div>
@@ -184,7 +184,7 @@ export default function PressPage() {
                     protection users need when managing sensitive health information. The platform
                     features advanced technology, biometric
                     authentication, and family care management tools that make health tracking
-                    effortless and effective. For more information, visit weightlossproglab.com.
+                    effortless and effective. For more information, visit wellnessprojectionlab.com.
                   </p>
                 </div>
               </div>
@@ -474,12 +474,12 @@ export default function PressPage() {
                         caption: 'Mobile Family Dashboard - Health on the go'
                       },
                       {
-                        src: '/screenshots/patient-care/family-members-list-mobile-light.png',
+                        src: '/screenshots/family-care/family-members-list-mobile-light.png',
                         alt: 'Mobile family members list with premium badge',
                         caption: 'Family Members - Mobile view'
                       },
                       {
-                        src: '/screenshots/patient-care/patient-cards-mobile-light.png',
+                        src: '/screenshots/family-care/patient-cards-mobile-light.png',
                         alt: 'Patient cards with vitals and dashboard access buttons',
                         caption: 'Patient Cards - Quick access to health data'
                       }

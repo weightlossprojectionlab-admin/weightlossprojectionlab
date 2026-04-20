@@ -6,6 +6,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   CheckCircleIcon,
@@ -38,22 +40,34 @@ export const metadata: Metadata = {
     description:
       'WPL delivers weekly AI-powered health reports for every family member. Meal pattern analysis, weight trend insights, vital sign correlations, and actionable recommendations.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/wpl-health-reports',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Wpl Health Reports' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/wpl-health-reports',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'AI Health Reports — Your Family\'s Health Interpreted, Not Just Tracked',
     description:
       'WPL delivers weekly AI-powered health reports for every family member. Meal patterns, weight trends, vital correlations, and actionable recommendations.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/wpl-health-reports',
+    canonical: 'https://www.wellnessprojectionlab.com/blog/wpl-health-reports',
   },
 }
 
 export default function AiHealthReportsBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'AI Health Reports — Your Family\'s Health Interpreted, Not Just Tracked',
+          description: 'WPL delivers weekly AI-powered health reports for every family member. Meal pattern analysis, weight trend insights, vital sign correlations, and actionable recommendations — all in one place.',
+          slug: 'wpl-health-reports',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'AI health reports, family health tracking, weekly health insights, personalized health recommendations, meal pattern analysis, weight trend insights, vital sign monitoring, family wellness, WPL health intelligence',
+        })}
+      />
       {/* ─── 1. Hero ─── */}
       <section className="relative bg-gradient-to-br from-cyan-600 via-sky-600 to-blue-600 text-white overflow-hidden">
         <div

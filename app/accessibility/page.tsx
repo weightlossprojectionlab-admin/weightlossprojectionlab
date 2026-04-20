@@ -3,14 +3,16 @@
  * Details WPL's commitment to accessibility and compliance with WCAG 2.1 AA standards
  */
 
-import type { Metadata } from 'next'
 import Link from 'next/link'
+import { buildPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: 'Accessibility Statement | Wellness Projection Lab',
   description:
-    'Wellness Projection Lab is committed to ensuring digital accessibility for people with disabilities. Learn about our accessibility features and standards compliance.',
-}
+    'Wellness Projection Lab is committed to digital accessibility for people with disabilities — WCAG 2.1 AA compliance, screen reader support, keyboard navigation, and continuous testing.',
+  path: '/accessibility',
+  keywords: 'accessibility statement, WCAG 2.1 AA, accessible health app, screen reader health tracking, ADA compliance',
+})
 
 export default function AccessibilityPage() {
   return (

@@ -6,6 +6,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema, faqPageSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   SparklesIcon,
@@ -28,29 +30,88 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline'
 
+const PAGE_TITLE = 'Weight Loss Projections: AI Weight Tracker for Families'
+const PAGE_DESCRIPTION =
+  'See where your weight is headed — not just yesterday\u2019s number. An AI weight tracker that projects your trajectory for you, your kids, or an aging parent, with shared family tracking and smart alerts.'
+const PAGE_IMAGE =
+  'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'
+const PAGE_URL = 'https://www.wellnessprojectionlab.com/blog/weight-tracking'
+
 export const metadata: Metadata = {
-  title: 'AI-Powered Weight Loss Projections — See Your Future Progress | Wellness Projection Lab',
-  description: 'Stop guessing and start projecting. Our AI weight tracking engine analyzes your patterns and projects your trajectory — for you, your kids, or your aging parents. Multi-person tracking with smart alerts.',
-  keywords: 'weight loss projections, AI weight tracker, weight prediction, weight trajectory, family weight tracking, weight goal projections, AI health predictions, weight trend analysis',
+  title: { absolute: PAGE_TITLE },
+  description: PAGE_DESCRIPTION,
+  keywords:
+    'weight loss projection calculator, AI weight tracker, weight loss prediction app, family weight tracker, how long to reach weight loss goal, track child growth curve, monitor elderly parent weight, weight trajectory app',
   openGraph: {
-    title: 'AI-Powered Weight Loss Projections — See Your Future Progress',
-    description: 'Stop guessing and start projecting. Our AI weight tracking engine analyzes your patterns and projects your trajectory — for you, your kids, or your aging parents.',
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/weight-tracking',
+    images: [{ url: PAGE_IMAGE, width: 1200, height: 630, alt: 'AI weight loss projection tracker — Wellness Projection Lab' }],
+    url: PAGE_URL,
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AI-Powered Weight Loss Projections — See Your Future Progress',
-    description: 'Stop guessing and start projecting. Our AI weight tracking engine analyzes your patterns and projects your trajectory — for you, your kids, or your aging parents.',
+    images: [PAGE_IMAGE],
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/weight-tracking'
-  }
+    canonical: PAGE_URL,
+  },
 }
+
+const FAQ = [
+  {
+    question: 'How accurate is an AI weight loss projection?',
+    answer:
+      'Projections improve as the model sees more of your data. After about 2\u20134 weeks of consistent logging, the trajectory line tracks real outcomes with a confidence range shown on the chart. Big changes in habits, medications, or life events will shift the projection, which is exactly the point — it reflects your current pattern, not a generic formula.',
+  },
+  {
+    question: 'Can I predict when I\u2019ll hit my weight loss goal?',
+    answer:
+      'Yes. Set a target weight and the projection engine continuously recalculates your estimated completion date based on your actual trend. If you\u2019re off pace, you\u2019ll see it early — not the week before the deadline.',
+  },
+  {
+    question: 'Can I track my whole family\u2019s weight in one app?',
+    answer:
+      'Yes. Every person in your household gets their own profile with its own weight log, projection timeline, and privacy controls — kids, partners, aging parents, and yourself on one account.',
+  },
+  {
+    question: 'Can I track a child\u2019s growth curve?',
+    answer:
+      'Yes. A child\u2019s profile logs weight (and optionally height) over time, and the chart makes percentile trends legible — useful to bring to pediatrician visits.',
+  },
+  {
+    question: 'Can I monitor an aging parent\u2019s weight remotely?',
+    answer:
+      'Yes. Your parent or their in-home caregiver can log weight weekly, and you\u2019ll see the trajectory from anywhere. Rapid unintentional weight loss in older adults is a known warning sign, and the system can alert you when it spots one.',
+  },
+  {
+    question: 'Do I need a smart scale?',
+    answer:
+      'No. One-tap manual entry works fine. If you have a smart scale, you can add weigh-ins the same way — the projection engine doesn\u2019t care where the number came from.',
+  },
+  {
+    question: 'Is there a free trial?',
+    answer: 'Yes — a free 7-day trial with full access. No credit card required. Cancel anytime.',
+  },
+]
 
 export default function WeightTrackingBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: PAGE_TITLE,
+          description: PAGE_DESCRIPTION,
+          slug: 'weight-tracking',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords:
+            'weight loss projection calculator, AI weight tracker, weight loss prediction app, family weight tracker, weight trajectory app, track child growth curve, monitor elderly parent weight',
+        })}
+      />
+      <JsonLd data={faqPageSchema(FAQ)} />
 
       {/* ── Hero Section ── */}
       <div className="relative bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 text-white overflow-hidden">
@@ -69,12 +130,13 @@ export default function WeightTrackingBlogPage() {
               <span className="text-sm font-medium">AI Weight Projections</span>
             </div>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight">
-              See Where You're Headed — Not Just Where You've Been
+              Weight Loss Projections: See Where You&apos;re Headed, Not Just Where You&apos;ve Been
             </h1>
             <p className="text-lg sm:text-xl text-white/90 mb-10 leading-relaxed max-w-3xl mx-auto">
-              Most trackers show you yesterday's number. Wellness Projection Lab shows you
-              tomorrow's trajectory. Our AI projection engine turns raw weigh-ins into
-              actionable forecasts — for you, your children, or your aging parents.
+              An AI weight tracker that turns raw weigh-ins into a real trajectory — a clear
+              projection of when you&apos;ll hit your goal, how a child&apos;s growth curve is trending,
+              or when an aging parent&apos;s weight needs attention. One account, every person in your
+              family.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
@@ -334,12 +396,43 @@ export default function WeightTrackingBlogPage() {
           </div>
         </section>
 
+        {/* ── FAQ ── */}
+        <section aria-labelledby="weight-tracking-faq" className="mb-24">
+          <h2 id="weight-tracking-faq" className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-center">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+            Answers to what families ask most about projection-based weight tracking.
+          </p>
+          <div className="max-w-3xl mx-auto space-y-3">
+            {FAQ.map((item) => (
+              <details
+                key={item.question}
+                className="group bg-card rounded-xl border-2 border-border p-5 open:shadow-md transition-shadow"
+              >
+                <summary className="cursor-pointer list-none font-semibold text-foreground flex items-start justify-between gap-4">
+                  <span>{item.question}</span>
+                  <span className="text-violet-600 dark:text-violet-400 text-xl leading-none group-open:rotate-45 transition-transform">+</span>
+                </summary>
+                <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+                  {item.answer}
+                </p>
+              </details>
+            ))}
+          </div>
+        </section>
+
         {/* ── Interconnection Links ── */}
         <section className="mb-24">
           <h2 className="text-3xl font-bold text-foreground mb-8 text-center">
             Explore the Platform
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <RelatedLink
+              href="/caregivers/aging-parents"
+              title="Caring for Aging Parents"
+              description="Remote monitoring, medication tracking, and shared visibility"
+            />
             <RelatedLink
               href="/blog/meal-tracking"
               title="Meal Tracking"
@@ -349,11 +442,6 @@ export default function WeightTrackingBlogPage() {
               href="/blog/ai-health-reports"
               title="AI Health Reports"
               description="Automated health summaries and trend reports"
-            />
-            <RelatedLink
-              href="/blog/dashboard"
-              title="Dashboard"
-              description="Your centralized health command center"
             />
             <RelatedLink
               href="/blog/family-care"

@@ -6,6 +6,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   CheckCircleIcon,
@@ -23,21 +25,33 @@ export const metadata: Metadata = {
     title: 'Weekly Health Reports - Personalized Insights and Recommendations',
     description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Wellness Projection Lab.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/ai-health-reports',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Ai Health Reports' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/ai-health-reports',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'Weekly Health Reports - Personalized Insights and Recommendations',
     description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Wellness Projection Lab.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/ai-health-reports'
+    canonical: 'https://www.wellnessprojectionlab.com/blog/ai-health-reports'
   }
 }
 
 export default function AihealthreportsBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'Weekly Health Reports - Personalized Insights and Recommendations',
+          description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Wellness Projection Lab.',
+          slug: 'ai-health-reports',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'health reports, health insights, personalized recommendations, health coach, health analysis, weekly health summary, WPL reports',
+        })}
+      />
       {/* Hero Section */}
       <div className="relative bg-gradient-to-br from-cyan-600 via-sky-600 to-blue-600 text-white overflow-hidden">
         {/* Background Image */}

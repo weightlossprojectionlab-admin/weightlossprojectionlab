@@ -129,29 +129,49 @@ export function Screenshot({
 
 /**
  * Mobile Screenshot Frame Component
- * Wraps mobile screenshots in a phone frame mockup
+ * Wraps mobile screenshots in a phone frame mockup.
+ * Pass `caption` here (not on the inner Screenshot) so captions render
+ * below the bezel instead of being clipped by the frame's overflow-hidden.
  */
-export function MobileFrame({ children, variant = 'ios' }: { children: React.ReactNode; variant?: 'ios' | 'android' }) {
-  return (
-    <div className="relative inline-block">
-      {/* Phone Frame */}
-      <div
-        className={`relative bg-gray-900 rounded-[3rem] p-3 shadow-2xl ${
-          variant === 'ios' ? 'border-8 border-gray-800' : 'border-4 border-gray-700'
-        }`}
-      >
-        {/* Notch (iOS) */}
-        {variant === 'ios' && (
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-3xl z-10" />
-        )}
+export function MobileFrame({
+  children,
+  variant = 'ios',
+  caption,
+}: {
+  children: React.ReactNode
+  variant?: 'ios' | 'android'
+  caption?: string
+}) {
+  const frame = (
+    <div
+      className={`relative bg-gray-900 rounded-[3rem] p-3 shadow-2xl ${
+        variant === 'ios' ? 'border-8 border-gray-800' : 'border-4 border-gray-700'
+      }`}
+    >
+      {/* Notch (iOS) */}
+      {variant === 'ios' && (
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-3xl z-10" />
+      )}
 
-        {/* Screen Content */}
-        <div className="relative bg-white dark:bg-gray-900 rounded-[2.5rem] overflow-hidden">
-          {children}
-        </div>
+      {/* Screen Content */}
+      <div className="relative bg-white dark:bg-gray-900 rounded-[2.5rem] overflow-hidden">
+        {children}
       </div>
     </div>
   )
+
+  if (caption) {
+    return (
+      <figure className="inline-flex flex-col items-center">
+        {frame}
+        <figcaption className="mt-3 text-sm text-center text-muted-foreground italic max-w-[320px]">
+          {caption}
+        </figcaption>
+      </figure>
+    )
+  }
+
+  return <div className="relative inline-block">{frame}</div>
 }
 
 /**

@@ -3,14 +3,16 @@
  * Company information, mission, and team
  */
 
-import type { Metadata } from 'next'
 import Link from 'next/link'
+import { buildPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: 'About Us | Wellness Projection Lab',
   description:
-    'Learn about Wellness Projection Lab - our mission to revolutionize health tracking with AI-powered insights and HIPAA-compliant technology.',
-}
+    'Wellness Projection Lab is on a mission to make family health tracking intelligent, accessible, and HIPAA-compliant for caregivers at every life stage.',
+  path: '/about',
+  keywords: 'about wellness projection lab, family health company, caregiver technology mission, HIPAA health platform',
+})
 
 export default function AboutPage() {
   return (

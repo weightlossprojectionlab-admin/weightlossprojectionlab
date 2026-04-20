@@ -7,6 +7,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   UserCircleIcon,
@@ -31,21 +33,33 @@ export const metadata: Metadata = {
     title: 'Your Health Identity — The AI Learns What\'s Normal So It Can Spot What Isn\'t',
     description: 'Build your intelligent health identity. The AI learns your patterns to deliver personalized insights and catch anomalies before they become problems.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/profile',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Profile' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/profile',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'Your Health Identity — The AI Learns What\'s Normal So It Can Spot What Isn\'t',
     description: 'Build your intelligent health identity. The AI learns your patterns to deliver personalized insights and catch anomalies before they become problems.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/profile'
+    canonical: 'https://www.wellnessprojectionlab.com/blog/profile'
   }
 }
 
 export default function ProfileBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'Your Health Identity — The AI Learns What&apos;s Normal So It Can Spot What Isn&apos;t',
+          description: 'Build your intelligent health identity with WPL. Set dietary preferences, allergies, weight goals, and privacy controls — then let the AI learn your patterns to deliver personalized insights and catch anomalies early.',
+          slug: 'profile',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'health identity, AI health profile, personalized health tracking, dietary preferences, food allergies, weight goals, privacy settings, intelligent health monitoring, anomaly detection',
+        })}
+      />
       {/* Hero Section */}
       <div className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white overflow-hidden">
         {/* Background Image */}

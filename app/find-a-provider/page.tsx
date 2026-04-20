@@ -16,19 +16,21 @@
  * call to action is the foundation; the CTA is the next layer.
  */
 
-import type { Metadata } from 'next'
 import Link from 'next/link'
 import { listPublicTenants } from '@/lib/tenant-server'
 import ProviderDirectoryFilters from './ProviderDirectoryFilters'
 import RequestToBeManagedButton from './RequestToBeManagedButton'
+import { buildPageMetadata } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: 'Find a Provider — Wellness Projection Lab',
   description:
     'Browse independent care providers — solo nurses, wellness coaches, concierge doctors, and home care agencies — building their practices on Wellness Projection Lab.',
-}
+  path: '/find-a-provider',
+  keywords: 'find a care provider, independent nurses directory, wellness coach directory, concierge doctor finder, home care agencies, patient advocate directory',
+})
 
 interface PageProps {
   searchParams: Promise<{ q?: string; type?: string }>

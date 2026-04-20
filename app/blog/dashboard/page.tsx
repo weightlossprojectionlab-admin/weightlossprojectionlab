@@ -9,6 +9,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   SparklesIcon,
@@ -37,21 +39,33 @@ export const metadata: Metadata = {
     title: 'Family Health Dashboard — See Everyone\'s Health in One Glance',
     description: 'Your family health command center. Monitor weight, meals, vitals, and AI insights for every family member from one intelligent dashboard.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/dashboard',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Dashboard' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/dashboard',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'Family Health Dashboard — See Everyone\'s Health in One Glance',
     description: 'Your family health command center. Monitor weight, meals, vitals, and AI insights for every family member from one intelligent dashboard.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/dashboard'
+    canonical: 'https://www.wellnessprojectionlab.com/blog/dashboard'
   }
 }
 
 export default function DashboardBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'Family Health Dashboard — See Everyone&apos;s Health in One Glance',
+          description: 'Your family health command center. Monitor weight, meals, vitals, and AI-powered insights for every family member from one intelligent dashboard. Proactive alerts, care coordination, and privacy controls.',
+          slug: 'dashboard',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'family health dashboard, health command center, family health monitoring, multi-person dashboard, caregiver dashboard, health insights dashboard, family wellness tracking, centralized health view',
+        })}
+      />
 
       {/* ============================================ */}
       {/* HERO — Emotional hook + clear value prop     */}
@@ -246,19 +260,17 @@ export default function DashboardBlogPage() {
 
           <h3 className="text-2xl font-bold text-foreground mb-6 text-center">Works On Every Device</h3>
           <div className="flex flex-wrap justify-center gap-8">
-            <MobileFrame variant="ios">
+            <MobileFrame variant="ios" caption="Check on everyone from your phone">
               <Screenshot
                 src="/screenshots/family-care/family-dashboard-mobile-light.png"
                 alt="Mobile family health dashboard"
-                caption="Check on everyone from your phone"
                 variant="mobile"
               />
             </MobileFrame>
-            <MobileFrame variant="ios">
+            <MobileFrame variant="ios" caption="Every tool accessible on the go">
               <Screenshot
                 src="/screenshots/family-care/management-tools-desktop-light.png"
                 alt="Management tools on mobile view"
-                caption="Every tool accessible on the go"
                 variant="mobile"
               />
             </MobileFrame>

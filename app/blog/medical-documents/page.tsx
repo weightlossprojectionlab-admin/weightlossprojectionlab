@@ -6,6 +6,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   DocumentTextIcon,
@@ -30,21 +32,33 @@ export const metadata: Metadata = {
     title: 'Insurance Cards, Lab Results, Prescriptions — Always With You',
     description: 'Your family&apos;s critical medical documents — stored securely, organized per person, searchable instantly. Ready when emergencies happen.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/medical-documents',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Medical Documents' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/medical-documents',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'Insurance Cards, Lab Results, Prescriptions — Always With You',
     description: 'Your family&apos;s critical medical documents — stored securely, organized per person, searchable instantly.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/medical-documents'
+    canonical: 'https://www.wellnessprojectionlab.com/blog/medical-documents'
   }
 }
 
 export default function MedicalDocumentsBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'Insurance Cards, Lab Results, Prescriptions — Always With You',
+          description: 'Store insurance cards, lab results, prescriptions, and vaccination records in a secure HIPAA-compliant vault. Instant access for emergencies, specialist visits, and school forms. OCR search across all documents.',
+          slug: 'medical-documents',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'medical documents, insurance card storage, lab results, prescriptions, vaccination records, HIPAA document vault, OCR medical search, emergency medical access, family medical records',
+        })}
+      />
       {/* Hero Section */}
       <div className="relative bg-gradient-to-br from-slate-700 via-blue-700 to-indigo-800 text-white overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/20 via-transparent to-transparent" />

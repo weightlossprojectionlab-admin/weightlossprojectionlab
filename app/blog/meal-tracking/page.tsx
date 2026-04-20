@@ -7,6 +7,8 @@
  */
 
 import Link from 'next/link'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { blogPostingSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   CameraIcon,
@@ -37,21 +39,33 @@ export const metadata: Metadata = {
     title: 'AI Meal Tracking — Photo Food Logging with Instant Nutrition Analysis',
     description: 'Snap a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and allergens for every family member with 85-95% accuracy.',
     type: 'article',
-    url: 'https://weightlossproglab.com/blog/meal-tracking',
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Meal Tracking' }],
+    url: 'https://www.wellnessprojectionlab.com/blog/meal-tracking',
   },
   twitter: {
     card: 'summary_large_image',
+    images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'AI Meal Tracking — Photo Food Logging with Instant Nutrition Analysis',
     description: 'Snap a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and allergens for every family member with 85-95% accuracy.',
   },
   alternates: {
-    canonical: 'https://weightlossproglab.com/blog/meal-tracking'
+    canonical: 'https://www.wellnessprojectionlab.com/blog/meal-tracking'
   }
 }
 
 export default function MealtrackingBlogPage() {
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd
+        data={blogPostingSchema({
+          headline: 'AI Meal Tracking — Photo Food Logging with Instant Nutrition Analysis',
+          description: 'Snap a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and allergens for every family member. Per-person dietary tracking with 85-95% accuracy.',
+          slug: 'meal-tracking',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          datePublished: '2026-01-15T00:00:00-05:00',
+          keywords: 'meal tracking, food tracking app, photo food logger, AI calorie counter, nutrition tracker, family meal tracking, allergen detection, macro tracker, food diary, meal logging app, AI nutrition analysis, family food tracker',
+        })}
+      />
       {/* ============ HERO ============ */}
       <div className="relative bg-gradient-to-br from-orange-600 via-amber-600 to-yellow-600 text-white overflow-hidden">
         <div

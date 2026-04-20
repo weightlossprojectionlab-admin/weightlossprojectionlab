@@ -3,14 +3,16 @@
  * Legal terms and conditions for using Wellness Projection Lab
  */
 
-import type { Metadata } from 'next'
 import Link from 'next/link'
+import { buildPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: 'Terms of Service | Wellness Projection Lab',
   description:
-    'Terms of Service for Wellness Projection Lab - Legal terms and conditions governing your use of our health tracking platform.',
-}
+    'Terms of Service for Wellness Projection Lab — legal terms governing your use of our family health tracking platform, subscriptions, and AI features.',
+  path: '/terms',
+  keywords: 'terms of service, terms and conditions, health app legal, subscription terms, acceptable use policy',
+})
 
 export default function TermsPage() {
   return (

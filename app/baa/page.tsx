@@ -1,8 +1,13 @@
 import Link from 'next/link'
+import { buildPageMetadata } from '@/lib/seo'
 
-export const metadata = {
-  title: 'Business Associate Agreement (BAA)',
-}
+export const metadata = buildPageMetadata({
+  title: 'Business Associate Agreement (BAA) | Wellness Projection Lab',
+  description:
+    'Review the Wellness Projection Lab Business Associate Agreement — the HIPAA contract that governs how WPL handles Protected Health Information on behalf of franchise partners and covered entities.',
+  path: '/baa',
+  keywords: 'business associate agreement, BAA HIPAA, covered entity contract, PHI handling agreement, HIPAA business associate',
+})
 
 export default function BAAPage() {
   return (

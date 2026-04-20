@@ -3,14 +3,16 @@
  * HIPAA-compliant privacy policy for Wellness Projection Lab
  */
 
-import type { Metadata } from 'next'
 import Link from 'next/link'
+import { buildPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: 'Privacy Policy | Wellness Projection Lab',
   description:
-    'Wellness Projection Lab Privacy Policy - Learn how we collect, use, and protect your health information in compliance with HIPAA and GDPR.',
-}
+    'Wellness Projection Lab Privacy Policy — how we collect, use, and protect your family health information in compliance with HIPAA, GDPR, and CCPA.',
+  path: '/privacy',
+  keywords: 'privacy policy, HIPAA privacy, GDPR, CCPA, health data privacy, personal health information protection',
+})
 
 export default function PrivacyPage() {
   return (

@@ -7,7 +7,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { toast } from 'react-hot-toast'
 import { NameInput } from '@/components/form/NameInput'
@@ -24,7 +24,8 @@ export function DemoRequestModal({ isOpen, onClose, source }: DemoRequestModalPr
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
-  // Form state
+  // Form state — timezone and utmParams are filled in after mount since both
+  // need `window` / the client-side `Intl` resolver.
   const [formData, setFormData] = useState<CreateDemoRequestInput>({
     name: '',
     email: '',
@@ -34,17 +35,26 @@ export function DemoRequestModal({ isOpen, onClose, source }: DemoRequestModalPr
     role: '',
     preferredDate: '',
     preferredTime: undefined,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timezone: '',
     useCase: '',
     currentSolution: '',
     urgency: 'medium',
     source,
-    utmParams: {
-      utm_source: new URLSearchParams(window.location.search).get('utm_source') || undefined,
-      utm_medium: new URLSearchParams(window.location.search).get('utm_medium') || undefined,
-      utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || undefined,
-    }
+    utmParams: {},
   })
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    setFormData((prev) => ({
+      ...prev,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      utmParams: {
+        utm_source: params.get('utm_source') || undefined,
+        utm_medium: params.get('utm_medium') || undefined,
+        utm_campaign: params.get('utm_campaign') || undefined,
+      },
+    }))
+  }, [])
 
   const handleInputChange = (field: keyof CreateDemoRequestInput, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))

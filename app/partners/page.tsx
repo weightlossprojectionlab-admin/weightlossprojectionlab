@@ -3,14 +3,16 @@
  * Partnership opportunities and partner program information
  */
 
-import type { Metadata } from 'next'
 import Link from 'next/link'
+import { buildPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
-  title: 'Partners | Weight Loss Projection Lab',
+export const metadata = buildPageMetadata({
+  title: 'Partners | Wellness Projection Lab',
   description:
-    'Explore partnership opportunities with Weight Loss Projection Lab. Join our partner ecosystem for technology integrations, healthcare providers, and business collaborations.',
-}
+    'Partner with Wellness Projection Lab to deliver intelligent health technology. Technology integrations, healthcare providers, and channel partners welcome.',
+  path: '/partners',
+  keywords: 'health tech partners, healthcare integration partners, WPL partner program, health platform partnerships',
+})
 
 export default function PartnersPage() {
   return (
