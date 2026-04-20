@@ -130,12 +130,30 @@ export async function POST(request: NextRequest) {
         userId,
         messageId: response
       })
-    } catch (error) {
-    return errorResponse(error, {
-      route: '/api/notifications/test',
-      operation: 'create'
-    })
-  }
+    } catch (error: any) {
+      const code = error?.errorInfo?.code ?? error?.code
+      if (code === 'messaging/registration-token-not-registered' ||
+          code === 'messaging/invalid-registration-token') {
+        logger.warn('[Test Notification] Stale FCM token — deleting', { userId, code })
+        try {
+          await adminDb.collection('notification_tokens').doc(userId).delete()
+        } catch (deleteError) {
+          logger.error('[Test Notification] Failed to delete stale token', deleteError as Error, { userId })
+        }
+        return NextResponse.json(
+          {
+            error: 'Notifications were disconnected on this device. Re-enable notifications in your Profile to get a fresh device token.',
+            code: 'STALE_FCM_TOKEN',
+            hint: 'Go to Profile → Notifications and click "Enable Notifications" again'
+          },
+          { status: 410 }
+        )
+      }
+      return errorResponse(error, {
+        route: '/api/notifications/test',
+        operation: 'create'
+      })
+    }
 
     return NextResponse.json({
       success: true,

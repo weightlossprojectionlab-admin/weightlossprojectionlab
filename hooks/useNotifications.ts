@@ -172,8 +172,26 @@ export function useNotifications(userId: string | undefined) {
         throw new Error('Service workers not supported in this browser')
       }
 
-      logger.debug('[useNotifications] Waiting for service worker...')
-      const registration = await navigator.serviceWorker.ready
+      // Explicitly register the Firebase messaging SW. In dev builds, the general-purpose
+      // useServiceWorker hook skips registration (production-only), so navigator.serviceWorker.ready
+      // would hang forever. Registering here works in both dev and prod, and is idempotent.
+      logger.debug('[useNotifications] Registering firebase-messaging-sw.js...')
+      let registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+      if (!registration) {
+        registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/firebase-cloud-messaging-push-scope' })
+      }
+      // Wait for the SW to become active before handing it to getToken.
+      if (!registration.active) {
+        logger.debug('[useNotifications] Waiting for SW to activate...')
+        await new Promise<void>((resolve) => {
+          const worker = registration!.installing || registration!.waiting
+          if (!worker) { resolve(); return }
+          if (worker.state === 'activated') { resolve(); return }
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'activated') resolve()
+          })
+        })
+      }
       logger.debug('[useNotifications] Service worker ready')
 
       // Request permission

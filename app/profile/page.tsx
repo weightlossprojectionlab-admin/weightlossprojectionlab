@@ -24,6 +24,7 @@ import { HealthConnectModal } from '@/components/health/HealthConnectModal'
 import { detectPlatform, getHealthAppForPlatform } from '@/lib/health-sync-utils'
 import { logger } from '@/lib/logger'
 import { useSubscription } from '@/hooks/useSubscription'
+import { useNotifications } from '@/hooks/useNotifications'
 import { usePatientLimit } from '@/hooks/usePatientLimit'
 import { PlanBadge } from '@/components/subscription/PlanBadge'
 import { UpgradeModal } from '@/components/subscription/UpgradeModal'
@@ -62,6 +63,9 @@ function ProfileContent() {
   const { current, max, percentage } = usePatientLimit(patients.length)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const { isEnabled: stepTrackingEnabled, enableTracking, disableTracking, isTracking } = useStepTracking()
+
+  // Push notification registration (FCM token + permission)
+  const { requestPermission: registerForPushNotifications } = useNotifications(user?.uid)
 
   // Get user preferences from onboarding
   const userPrefs = useUserPreferences()
@@ -299,18 +303,36 @@ function ProfileContent() {
         oxygenSaturation: 'general',
       }
 
-      const csrfToken = getCSRFToken()
-      const response = await fetch('/api/notifications/test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'X-CSRF-Token': csrfToken,
-        },
-        body: JSON.stringify({ type: typeMap[vitalType] || 'general' }),
-      })
+      const sendTest = async (): Promise<Response> => {
+        return fetch('/api/notifications/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-CSRF-Token': getCSRFToken(),
+          },
+          body: JSON.stringify({ type: typeMap[vitalType] || 'general' }),
+        })
+      }
 
-      const result = await response.json()
+      let response = await sendTest()
+      let result = await response.json()
+
+      // If this browser has no FCM token (or has a stale one the server just pruned),
+      // register it now and retry once — saves the user a hidden manual step.
+      const needsRegister = !response.ok && (response.status === 400 || response.status === 410)
+      if (needsRegister) {
+        toast.loading('Registering this device for notifications...', { id: 'fcm-register' })
+        const registered = await registerForPushNotifications()
+        toast.dismiss('fcm-register')
+        if (!registered) {
+          toast.error(result.error || 'Could not register this device for notifications')
+          return
+        }
+        response = await sendTest()
+        result = await response.json()
+      }
+
       if (response.ok) {
         toast.success('Test reminder sent! Check your notifications.')
       } else {
