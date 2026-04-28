@@ -83,18 +83,17 @@ async function buildDutyMetadata(duty: HouseholdDuty, actionByName: string): Pro
  * Routes grocery shopping duties to shopping list, others to duty details
  */
 function getDutyActionUrl(duty: HouseholdDuty): string {
-  // All duty notifications point at the household duties page. The page
-  // accepts ?householdId= to scope the list and ?dutyId= for future
-  // deep-linking/highlighting of the specific duty.
-  //
-  // Note on shopping duties: ideally these would deep-link to the shared
-  // household shopping list (so the assigned caregiver can see what to
-  // buy), but `/shopping` is currently hardcoded to the current user's
-  // own list and doesn't yet support viewing another household's list.
-  // Routing to /households/duties keeps the link working — the caregiver
-  // sees the duty card and can mark it complete. TODO: once useShopping
-  // accepts a householdId param + RBAC + Firestore rules permit it, the
-  // shopping branch can deep-link to /shopping?householdId=...&dutyId=...
+  // Shopping duties get their own destination — a read-only view of the
+  // household's shopping list (the items the caregiver needs to buy). It
+  // calls a new server endpoint that does the RBAC check + admin-SDK read
+  // so caregivers can see another user's shopping_items without the
+  // Firestore client rules blocking them.
+  if (duty.category === 'grocery_shopping' || duty.category === 'shopping') {
+    return `/households/${duty.householdId}/shopping?dutyId=${duty.id}`
+  }
+
+  // Everything else points at the household duties list, scoped to the
+  // duty's household. The page accepts ?dutyId= for future deep-linking.
   return `/households/duties?householdId=${duty.householdId}&dutyId=${duty.id}`
 }
 
