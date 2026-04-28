@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/firebase'
@@ -24,6 +24,7 @@ import PendingVitalApprovals from '@/components/vitals/PendingVitalApprovals'
 import VitalsHistory from '@/components/vitals/VitalsHistory'
 import VitalReminderPrompt from '@/components/vitals/VitalReminderPrompt'
 import VitalQuickLogModal from '@/components/vitals/VitalQuickLogModal'
+import { getApplicableVitalTypes } from '@/lib/vital-applicability'
 import { FamilyMemberCard } from '@/components/family/FamilyMemberCard'
 import { PermissionsMatrix } from '@/components/family/PermissionsMatrix'
 import { InviteModal } from '@/components/family/InviteModal'
@@ -88,6 +89,11 @@ function PatientDetailContent() {
 
   // Get tab from query parameter, default to 'vitals'
   const tabParam = searchParams.get('tab') as 'vitals' | 'meals' | 'steps' | 'medications' | null
+  // Optional deep-link from notifications: `?logVital=blood_pressure` opens the
+  // VitalQuickLogModal pre-selected to that vital type so the user lands on
+  // the log form directly (e.g. tapping a "Blood pressure reminder for Baby 3"
+  // notification jumps straight to BP entry, not just the vitals tab).
+  const logVitalParam = searchParams.get('logVital') as VitalType | null
 
   const [patient, setPatient] = useState<PatientProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -374,6 +380,16 @@ function PatientDetailContent() {
       setSelectedVitalType('weight')
     }
   }, [patient, isNewbornOrInfant])
+
+  // Open the VitalQuickLogModal when arriving via a notification deep-link
+  // (`?logVital={vitalType}`). Wait until the patient is loaded so the modal
+  // has the data it needs, then fire once. Subsequent renders are no-ops.
+  const logVitalParamHandled = useRef(false)
+  useEffect(() => {
+    if (!logVitalParam || !patient || logVitalParamHandled.current) return
+    setQuickLogVitalType(logVitalParam)
+    logVitalParamHandled.current = true
+  }, [logVitalParam, patient])
 
   // Reset to 'info' tab if patient is a newborn/infant and currently on an inappropriate tab
   useEffect(() => {
@@ -1102,7 +1118,7 @@ function PatientDetailContent() {
               patientName={patient.name}
               vitals={vitals}
               userPreferences={patient.preferences}
-              isNewbornOrInfant={isNewbornOrInfant}
+              applicableVitals={getApplicableVitalTypes(patient)}
               onLogVitalsClick={() => setShowVitalsWizard(true)}
               onLogSpecificVital={(vitalType) => {
                 setQuickLogVitalType(vitalType)

@@ -17,7 +17,7 @@
 import { useState } from 'react'
 import { XMarkIcon, BellIcon, ClockIcon } from '@heroicons/react/24/outline'
 import { VitalSign, VitalType, PatientProfile } from '@/types/medical'
-import { shouldShowVitalReminder, getVitalReminderMessage, getVitalReminderColor, VitalFrequency } from '@/lib/vital-reminder-logic'
+import { shouldShowVitalReminder, getVitalReminderMessage, getVitalReminderColor, VitalFrequency, VITAL_DISPLAY_NAMES, VITAL_ICONS } from '@/lib/vital-reminder-logic'
 import { userProfileOperations } from '@/lib/firebase-operations'
 import toast from 'react-hot-toast'
 import { VitalReminderConfig } from '@/lib/services/patient-preferences'
@@ -27,6 +27,14 @@ interface VitalReminderPromptProps {
   patientName: string
   vitals: VitalSign[]
   userPreferences?: PatientProfile['preferences']
+  /** Vital types appropriate for this patient (life stage / species). When
+   *  provided, the prompt intersects the user's enabled reminders with this
+   *  list so legacy reminders for inapplicable vitals (e.g. blood_sugar
+   *  configured for an infant) don't leak into the UI. Compute via
+   *  `getApplicableVitalTypes(patient)` from lib/vital-applicability.ts. */
+  applicableVitals?: VitalType[]
+  /** @deprecated — superseded by applicableVitals. Kept for backward compat
+   *  during the migration; no longer drives the type list. */
   isNewbornOrInfant?: boolean
   onLogVitalsClick: () => void
   onLogSpecificVital?: (vitalType: VitalType) => void
@@ -52,6 +60,8 @@ export default function VitalReminderPrompt({
   patientName,
   vitals,
   userPreferences,
+  applicableVitals,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isNewbornOrInfant = false,
   onLogVitalsClick,
   onLogSpecificVital,
@@ -60,24 +70,25 @@ export default function VitalReminderPrompt({
   const [dismissedVitals, setDismissedVitals] = useState<Set<VitalType>>(new Set())
   const [confirmDisable, setConfirmDisable] = useState<{ type: VitalType; label: string } | null>(null)
 
-  // Define vital types based on patient age
-  const vitalTypes: Array<{ type: VitalType; label: string; icon: string }> = isNewbornOrInfant
-    ? [
-        { type: 'weight', label: 'Weight', icon: '⚖️' },
-        { type: 'temperature', label: 'Temperature', icon: '🌡️' },
-        { type: 'newborn_heart_rate', label: 'Heart Rate', icon: '💓' },
-        { type: 'newborn_respiratory_rate', label: 'Respiratory Rate', icon: '💨' },
-        { type: 'newborn_oxygen_saturation', label: 'Oxygen Saturation', icon: '🫁' },
-        { type: 'newborn_diaper_output', label: 'Diaper Output', icon: '👶' },
-      ]
-    : [
-        { type: 'blood_pressure', label: 'Blood Pressure', icon: '💓' },
-        { type: 'blood_sugar', label: 'Blood Sugar', icon: '🩸' },
-        { type: 'temperature', label: 'Temperature', icon: '🌡️' },
-        { type: 'pulse_oximeter', label: 'Pulse Oximeter', icon: '❤️' },
-        { type: 'weight', label: 'Weight', icon: '⚖️' },
-        { type: 'mood', label: 'Mood', icon: '😊' }
-      ]
+  // Drive the prompt off the user's enabled reminders, intersected with the
+  // patient's applicable vital types when provided. /profile gates input to
+  // applicable vitals already, but `applicableVitals` here is defense in
+  // depth — keeps legacy data (e.g. blood_sugar configured for an infant
+  // before the gating shipped) from showing up in the prompt.
+  const applicableSet = applicableVitals ? new Set<VitalType>(applicableVitals) : null
+  const enabledReminderTypes = Object.entries(userPreferences?.vitalReminders ?? {})
+    .filter(([type, config]) => {
+      if (!(config as VitalReminderConfig | undefined)?.enabled) return false
+      if (applicableSet && !applicableSet.has(type as VitalType)) return false
+      return true
+    })
+    .map(([type]) => type as VitalType)
+
+  const vitalTypes: Array<{ type: VitalType; label: string; icon: string }> = enabledReminderTypes.map((type) => ({
+    type,
+    label: VITAL_DISPLAY_NAMES[type] ?? type,
+    icon: VITAL_ICONS[type] ?? '🔔',
+  }))
 
   // Calculate which vitals need reminders today
   const vitalsNeedingReminders: VitalReminderInfo[] = []
@@ -240,18 +251,23 @@ export default function VitalReminderPrompt({
                   key={vital.type}
                   className={`bg-white rounded-lg p-4 border-l-4 border-2 border-gray-200 ${vital.color.border}`}
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  {/* Mobile: info on top, action row below (full width).
+                      Desktop (sm+): info on the left, actions on the right. */}
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     {/* Vital Info */}
-                    <div className="flex items-center gap-3 flex-1">
-                      <span className="text-3xl">{vital.icon}</span>
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <span className="text-3xl flex-shrink-0">{vital.icon}</span>
+                      <div className="flex-1 min-w-0">
                         <h4 className="font-bold text-gray-900 text-lg">{vital.label}</h4>
                         <p className="text-sm font-medium text-gray-700 mt-1">{vital.message}</p>
                       </div>
                     </div>
 
-                    {/* Action Buttons - Mobile Responsive */}
-                    <div className="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-2">
+                    {/* Action Buttons. On mobile (outer also stacks) the buttons
+                        sit below the info, full-width and stacked vertically for
+                        easy thumb tapping. On desktop they sit inline to the
+                        right of the info. */}
+                    <div className="flex flex-col sm:flex-row items-stretch gap-2 flex-shrink-0">
                       {/* Log this vital button - only show if callback provided */}
                       {onLogSpecificVital && (
                         <button
@@ -259,7 +275,7 @@ export default function VitalReminderPrompt({
                             onLogSpecificVital(vital.type)
                             handleRemindLater(vital.type)
                           }}
-                          className="w-full sm:w-auto px-4 py-2.5 sm:px-3 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                          className="w-full sm:w-auto px-4 py-2.5 sm:px-3 sm:py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-medium rounded-lg transition-colors min-h-[44px]"
                           aria-label={`Log ${vital.label} now`}
                         >
                           Log Now
@@ -269,7 +285,7 @@ export default function VitalReminderPrompt({
                       {/* Remind Later */}
                       <button
                         onClick={() => handleRemindLater(vital.type)}
-                        className="w-full sm:w-auto p-2.5 sm:p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+                        className="w-full sm:w-auto px-4 py-2.5 sm:p-2 text-gray-600 hover:text-gray-900 active:bg-gray-200 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 min-h-[44px] border border-gray-200 sm:border-0"
                         aria-label={`Remind me later about ${vital.label}`}
                         title="Remind me later"
                       >
@@ -280,7 +296,7 @@ export default function VitalReminderPrompt({
                       {/* Don't Remind Again */}
                       <button
                         onClick={() => confirmDisableReminder(vital.type)}
-                        className="w-full sm:w-auto p-2.5 sm:p-2 text-gray-600 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+                        className="w-full sm:w-auto px-4 py-2.5 sm:p-2 text-gray-600 hover:text-red-600 active:bg-red-100 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 min-h-[44px] border border-gray-200 sm:border-0"
                         aria-label={`Disable ${vital.label} reminders`}
                         title="Don't remind me again"
                       >

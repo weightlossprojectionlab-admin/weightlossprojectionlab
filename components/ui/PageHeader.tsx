@@ -43,7 +43,10 @@ export function PageHeader({
   return (
     <header className={`page-header ${className}`}>
       <div className="page-header-content">
-        <div className="flex items-center gap-4 min-w-0 flex-1">
+        {/* Title block. min-w-[180px] ensures the action row wraps to a new
+            line on narrow viewports instead of squashing the title — the
+            container has flex-wrap; this minimum is what triggers the wrap. */}
+        <div className="flex items-center gap-4 min-w-[180px] flex-1">
           {(backHref || backButton) && backHref && (
             <Link
               href={backHref}
@@ -97,7 +100,7 @@ export function SimplePageHeader({ title, subtitle, showMenu = true }: { title: 
   return (
     <header className="page-header">
       <div className="page-header-content">
-        <div className="flex-1">
+        <div className="flex-1 min-w-[180px]">
           <h1 className="page-title">{title}</h1>
           {subtitle && <div className="text-caption mt-1">{subtitle}</div>}
         </div>
@@ -153,7 +156,7 @@ export function TabbedPageHeader({
   return (
     <header className="page-header">
       <div className="page-header-content">
-        <div className="flex items-center gap-4 min-w-0 flex-1">
+        <div className="flex items-center gap-4 min-w-[180px] flex-1">
           {backHref && (
             <Link
               href={backHref}

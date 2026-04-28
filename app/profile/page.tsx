@@ -45,6 +45,7 @@ import {
   migrateLegacyWeightReminders
 } from '@/lib/vital-reminder-logic'
 import { updateVitalReminders } from '@/lib/services/patient-preferences'
+import { getApplicableVitalTypes } from '@/lib/vital-applicability'
 import { getCSRFToken } from '@/lib/csrf'
 import { useFeatureGate } from '@/hooks/useFeatureGate'
 import { UpgradeRequiredModal } from '@/components/subscription/UpgradeRequiredModal'
@@ -570,12 +571,14 @@ function ProfileContent() {
       <div className="mx-auto max-w-2xl px-4 py-6 space-y-6">
         {/* Family Member Selector - ALWAYS SHOW */}
         <div className="bg-gradient-to-r from-primary-light to-accent-light rounded-lg p-6 shadow-lg border-2 border-primary/30">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-3xl">
+          {/* Mobile: avatar+title row at top, pill row below (left-aligned).
+              Desktop: avatar+title on left, pill on right of the same row. */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-3xl flex-shrink-0">
                 {currentlyViewingMember ? '👥' : '🙋'}
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="text-label-sm uppercase tracking-wide mb-1">
                   ⭐ Currently Viewing
                 </div>
@@ -591,8 +594,8 @@ function ProfileContent() {
               </div>
             </div>
             {currentlyViewingMember && (
-              <div className="flex flex-col items-end gap-2">
-                <span className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full uppercase">
+              <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 flex-shrink-0">
+                <span className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full uppercase whitespace-nowrap">
                   Family Member
                 </span>
                 <span className="text-description-sm">
@@ -953,7 +956,15 @@ function ProfileContent() {
           </p>
 
           <div className="space-y-6">
-            {getAllVitalTypes().map((vitalType) => {
+            {/* Life-stage / species-aware vital list. Newborns and infants
+                see neonatal vitals (heart rate, respiratory rate, etc) and
+                NOT adult-only ones like blood pressure/sugar. Pets get the
+                species-specific set. See lib/vital-applicability.ts. */}
+            {getApplicableVitalTypes(
+              currentlyViewingMember
+                ? { type: currentlyViewingMember.type, species: currentlyViewingMember.species, dateOfBirth: currentlyViewingMember.dateOfBirth }
+                : { type: 'human', dateOfBirth: profileData?.dateOfBirth }
+            ).map((vitalType) => {
               // Get current settings (migrate legacy weight settings if needed)
               const vitalReminders = profileData?.preferences?.vitalReminders || {}
               let vitalConfig = vitalReminders[vitalType]

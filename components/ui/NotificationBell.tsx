@@ -163,9 +163,13 @@ export function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown.
+          Mobile (<sm): fixed to viewport, 8px from left/right edges, anchored
+          below the sticky header — anchoring to the bell with right-0 caused
+          the left side of the dropdown to overflow off-screen on narrow viewports.
+          Desktop (sm+): absolute, anchored to the bell's right edge, 384px wide. */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-lg shadow-xl z-50 max-h-[600px] overflow-hidden flex flex-col">
+        <div className="fixed sm:absolute left-2 right-2 top-16 sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 bg-card border border-border rounded-lg shadow-xl z-50 max-h-[calc(100vh-5rem)] sm:max-h-[600px] overflow-hidden flex flex-col">
           {/* Header */}
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <h3 className="font-semibold text-foreground">Notifications</h3>
@@ -197,7 +201,7 @@ export function NotificationBell() {
                     <button
                       type="button"
                       onClick={() => handleNotificationClick(notification)}
-                      className="w-full px-4 py-3 pr-10 text-left"
+                      className="w-full px-4 py-3 pr-12 text-left min-h-[60px] active:bg-muted/60 transition-colors"
                     >
                       <div className="flex gap-3">
                         {/* Icon */}
@@ -236,8 +240,9 @@ export function NotificationBell() {
                             </p>
 
                             {notification.actionLabel && (
-                              <span className="text-xs font-medium text-primary">
+                              <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary">
                                 {notification.actionLabel}
+                                <span aria-hidden="true">→</span>
                               </span>
                             )}
                           </div>

@@ -85,7 +85,9 @@ export function DashboardSelector() {
 export function DashboardSelectorCompact() {
   return (
     <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg shadow-lg p-6 text-white">
-      <div className="flex items-center justify-between">
+      {/* Mobile: stacks vertically, button spans full width and is comfortably
+          tappable. Desktop (sm+): title on the left, button on the right. */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h3 className="text-lg font-bold mb-1">Family Admin Dashboard</h3>
           <p className="text-sm text-purple-100">
@@ -94,7 +96,7 @@ export function DashboardSelectorCompact() {
         </div>
         <Link
           href="/family-admin/dashboard"
-          className="px-6 py-3 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium flex items-center gap-2 whitespace-nowrap"
+          className="w-full sm:w-auto px-6 py-3 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium flex items-center justify-center gap-2 whitespace-nowrap min-h-[44px] flex-shrink-0"
         >
           <span>Go to Dashboard</span>
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

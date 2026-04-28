@@ -381,7 +381,10 @@
   }
 
   .page-header-content {
-    @apply mx-auto max-w-7xl px-4 py-4 flex items-center justify-between gap-4;
+    /* flex-wrap so the action row (page-action button + HouseholdSwitcher +
+       NotificationBell + SwitchAccountButton + MenuButton) drops to a second
+       line on narrow viewports instead of squashing the title block. */
+    @apply mx-auto max-w-7xl px-4 py-4 flex flex-wrap items-center justify-between gap-3;
   }
 
   .page-title {

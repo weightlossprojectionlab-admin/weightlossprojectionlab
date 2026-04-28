@@ -101,9 +101,13 @@ const VITAL_VERBS: Partial<Record<VitalType, string>> = {
 export function buildVitalReminder(opts: {
   vitalType: VitalType
   patientName: string | null
+  /** When provided, the notification deep-links to that patient's dashboard
+   *  instead of the generic /dashboard — so tapping a "Blood pressure
+   *  reminder for Baby 3" lands on Baby 3's chart, not the user's home. */
+  patientId?: string
   isTest?: boolean
 }): BuiltNotification {
-  const { vitalType, patientName, isTest } = opts
+  const { vitalType, patientName, patientId, isTest } = opts
   const icon = VITAL_ICONS[vitalType] ?? '🔔'
   const displayName = VITAL_DISPLAY_NAMES[vitalType] ?? 'vital'
   const labelLower = displayName.toLowerCase()
@@ -114,7 +118,14 @@ export function buildVitalReminder(opts: {
   return {
     title: `${icon} ${displayName} reminder${forSuffix}${isTest ? ' (test)' : ''}`,
     body: `Time to ${verb} ${possessive} ${labelLower}.`,
-    link: '/dashboard',
+    // Deep-link to the patient's vitals tab AND open the quick-log modal
+    // pre-selected to the specific vital being reminded about. The patient
+    // detail page reads `?tab=vitals&logVital={type}` and pops the modal
+    // on mount once the patient is loaded — so tapping a "Blood pressure
+    // reminder for Baby 3" notification jumps straight to BP entry.
+    link: patientId
+      ? `/patients/${patientId}?tab=vitals&logVital=${encodeURIComponent(vitalType)}`
+      : '/dashboard',
     // The bell renders by NotificationType — vital_alert is the closest
     // existing variant for vital reminders. Add 'vital_reminder' to the
     // union later if we want to differentiate alerts (out-of-range) from
@@ -283,7 +294,7 @@ export async function sendVitalReminder(opts: {
     : null
   const resolvedPatientId = patientName ? patientId : undefined
 
-  const built = buildVitalReminder({ vitalType, patientName, isTest })
+  const built = buildVitalReminder({ vitalType, patientName, patientId: resolvedPatientId, isTest })
 
   // Try the push first. If no token at all, we still want to record the bell
   // row — but the test endpoint historically returns 400 in that case to
