@@ -1322,11 +1322,19 @@ function ShoppingPageRouter() {
   const dutyId = searchParams.get('dutyId')
 
   if (householdParam) {
+    // Wrap in AuthGuard explicitly: the existing ShoppingListContent
+    // mounts AuthGuard inside its render tree, but the caregiver branch
+    // bypasses that. Without this guard, the component would mount
+    // before auth state is hydrated, see auth.currentUser === null,
+    // bail out of its load(), flip loading=false, and render an empty
+    // "All caught up" page instead of the actual shopping list.
     return (
-      <HouseholdCaregiverShopping
-        householdId={householdParam}
-        dutyId={dutyId}
-      />
+      <AuthGuard>
+        <HouseholdCaregiverShopping
+          householdId={householdParam}
+          dutyId={dutyId}
+        />
+      </AuthGuard>
     )
   }
 
