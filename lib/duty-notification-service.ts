@@ -83,13 +83,14 @@ async function buildDutyMetadata(duty: HouseholdDuty, actionByName: string): Pro
  * Routes grocery shopping duties to shopping list, others to duty details
  */
 function getDutyActionUrl(duty: HouseholdDuty): string {
-  // Shopping duties get their own destination — a read-only view of the
-  // household's shopping list (the items the caregiver needs to buy). It
-  // calls a new server endpoint that does the RBAC check + admin-SDK read
-  // so caregivers can see another user's shopping_items without the
-  // Firestore client rules blocking them.
+  // Shopping duties land at /shopping?household={id}. That route renders
+  // either the user's own list (if they're the household owner) or the
+  // caregiver-mode view of someone else's list (if they're a member of
+  // that household via additionalCaregiverIds or the /admin caregivers
+  // subcollection). One URL for shopping, regardless of role — duties
+  // assigned to either party point to the same place.
   if (duty.category === 'grocery_shopping' || duty.category === 'shopping') {
-    return `/households/${duty.householdId}/shopping?dutyId=${duty.id}`
+    return `/shopping?household=${duty.householdId}&dutyId=${duty.id}`
   }
 
   // Everything else points at the household duties list, scoped to the
