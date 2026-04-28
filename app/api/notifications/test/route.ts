@@ -130,6 +130,47 @@ export async function POST(request: NextRequest) {
         userId,
         messageId: response
       })
+
+      // Mirror into the in-app notifications collection so it shows in the bell.
+      // FCM banners are easy to miss (suppressed when tab is foregrounded, blocked
+      // by Focus Assist, etc.) — the persistent record lets users confirm delivery.
+      const inAppType =
+        notificationType === 'medication_reminder' ? 'medication_reminder'
+        : notificationType === 'appointment_reminder' ? 'appointment_reminder'
+        : 'vital_alert'
+      const notifId = `notif_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
+      const nowIso = new Date().toISOString()
+      try {
+        await adminDb.collection('notifications').doc(notifId).set({
+          id: notifId,
+          userId,
+          type: inAppType,
+          priority: 'normal',
+          status: 'delivered',
+          title: notif.title,
+          message: notif.body,
+          actionUrl: notif.link,
+          actionLabel: 'Open',
+          metadata: {
+            vitalId: 'test',
+            vitalType: 'weight',
+            value: 'Test reminder',
+            unit: '',
+            patientName: 'You',
+            actionBy: 'System (Test)',
+          },
+          read: false,
+          archived: false,
+          emailSent: false,
+          pushSent: true,
+          pushSentAt: nowIso,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        })
+      } catch (mirrorError) {
+        // Don't fail the test if the mirror write fails — push already succeeded.
+        logger.error('[Test Notification] Failed to mirror to in-app notifications', mirrorError as Error, { userId, notifId })
+      }
     } catch (error: any) {
       const code = error?.errorInfo?.code ?? error?.code
       if (code === 'messaging/registration-token-not-registered' ||
