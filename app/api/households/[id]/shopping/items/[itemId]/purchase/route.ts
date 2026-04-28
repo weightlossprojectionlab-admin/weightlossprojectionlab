@@ -95,6 +95,11 @@ export async function POST(
       inStock: true,
       needed: false,
       lastPurchased: now,
+      // Top-level field already in the shopping schema (types/shopping.ts).
+      // Mirrors the most recent purchaseHistory[].purchasedBy so the
+      // owner's /shopping page can render "Purchased by [name]" without
+      // diving into the array.
+      purchasedBy: callerUserId,
       lastModifiedBy: callerUserId,
       updatedAt: now,
       purchaseHistory: [...existingHistory, newPurchase],

@@ -47,6 +47,7 @@ import { useActiveShoppingSessions } from '@/hooks/useActiveShoppingSessions'
 import { BulkOperationBlockedError } from '@/lib/permissions-guard'
 import type { BulkOperationPermissionCheck } from '@/lib/permissions-guard'
 import { HouseholdCaregiverShopping } from '@/components/shopping/HouseholdCaregiverShopping'
+import { useUserNames } from '@/hooks/useUserNames'
 
 // Dynamic imports
 const BarcodeScanner = dynamic(
@@ -220,16 +221,41 @@ function ShoppingListContent() {
     fetchMembers()
   }, [])
 
+  // Resolve caregiver auth uids → display names so badges and "Purchased
+  // by" lines read like names instead of generic "Member". Items added
+  // or purchased by caregivers (cross-household via the API endpoints)
+  // carry uids that aren't in the patient `members` map, so we hand
+  // them to the shared resolver which hits /api/users/names with
+  // session-level caching.
+  const caregiverUids = useMemo(() => {
+    const ids = new Set<string>()
+    const collect = (v: unknown) => {
+      if (typeof v === 'string') ids.add(v)
+      else if (Array.isArray(v)) v.forEach(collect)
+    }
+    for (const item of (showDebugMode ? allItems : neededItems)) {
+      collect((item as any).addedBy)
+      collect((item as any).requestedBy)
+      collect((item as any).purchasedBy)
+      collect((item as any).lastModifiedBy)
+    }
+    return Array.from(ids)
+  }, [showDebugMode, allItems, neededItems])
+
+  const { getName: getCaregiverName } = useUserNames(caregiverUids)
+
   /**
-   * Get member display name
+   * Get member display name. Resolves in this priority:
+   *   1. Patient/member map (existing family-plan behavior)
+   *   2. Current user → "You"
+   *   3. Caregiver name resolved from /api/users/names
    */
   const getMemberName = (userId?: string): string => {
     if (!userId) return ''
     const member = members[userId]
-    if (member) {
-      return member.name || 'Member'
-    }
-    return auth.currentUser?.uid === userId ? 'You' : 'Member'
+    if (member) return member.name || 'Member'
+    if (auth.currentUser?.uid === userId) return 'You'
+    return getCaregiverName(userId)
   }
 
   // Get display items based on debug mode
@@ -1184,6 +1210,9 @@ function ShoppingItemCard({
           {item.lastPurchased && (
             <span className="text-xs text-muted-foreground dark:text-muted-foreground">
               Last: {new Date(item.lastPurchased).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {item.purchasedBy && item.purchasedBy !== auth.currentUser?.uid && getMemberName && (
+                <> · by {getMemberName(item.purchasedBy)}</>
+              )}
             </span>
           )}
           {/* Family member badge - Shows who requested or added this item */}

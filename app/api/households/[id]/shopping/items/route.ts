@@ -85,7 +85,11 @@ export async function POST(
       priority,
       isPerishable: false,
       purchaseHistory: [],
-      addedBy: callerUserId,
+      // addedBy is array-shaped per types/shopping.ts (it's the multi-
+      // requester field) — store as a single-element array even when
+      // there's just one caregiver, so the existing FamilyMemberBadge
+      // rendering on /shopping picks it up without special-casing.
+      addedBy: [callerUserId],
       addedByCaregiver: callerUserId !== ownerUserId,
       source: 'caregiver',
       createdAt: now,

@@ -152,6 +152,7 @@ export async function POST(
         inStock: true,
         needed: false,
         lastPurchased: now,
+        purchasedBy: callerUserId,
         lastModifiedBy: callerUserId,
         updatedAt: now,
         purchaseHistory: [
@@ -207,7 +208,8 @@ export async function POST(
       quantity: 1,
       isPerishable: false,
       priority: 'medium',
-      addedBy: callerUserId,
+      // addedBy is array-shaped per types/shopping.ts.
+      addedBy: [callerUserId],
       addedByCaregiver: callerUserId !== ownerUserId,
       source: 'caregiver-scan',
       createdAt: now,
@@ -222,6 +224,7 @@ export async function POST(
       newItem.needed = false
       newItem.inStock = true
       newItem.lastPurchased = now
+      newItem.lastPurchasedBy = callerUserId
       newItem.purchaseHistory = [
         { date: now, purchasedBy: callerUserId, scanned: true },
       ]
