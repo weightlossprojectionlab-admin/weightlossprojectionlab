@@ -18,7 +18,6 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Spinner } from '@/components/ui/Spinner'
@@ -74,8 +73,6 @@ function formatSyncedAgo(ms: number): string {
 }
 
 export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
-  const router = useRouter()
-
   const [data, setData] = useState<ShoppingResponse | null>(null)
   const [householdName, setHouseholdName] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -131,10 +128,11 @@ export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
     // `?household=` param so /shopping renders their normal personal view.
     // We do this in refresh() rather than only on first load so that any
     // post-mutation refresh also catches the case.
-    if (body.ownerUserId === auth.currentUser?.uid) {
-      router.replace('/shopping')
-      return
-    }
+    // Note: if the signed-in user IS the owner of this household, they
+    // shouldn't be on this caregiver page — but we still render normally
+    // (no auto-redirect) since this URL is a legitimate destination from
+    // duty notifications or menu links. The owner's full /shopping
+    // experience is one tap away via the link below.
     setData(body)
     setLastSyncedAt(Date.now())
   }

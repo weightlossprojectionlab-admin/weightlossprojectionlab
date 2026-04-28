@@ -1,39 +1,31 @@
 'use client'
 
 /**
- * Legacy household shopping route — redirects to the unified URL.
+ * Household Shopping List (caregiver view).
  *
- * /households/{id}/shopping?dutyId={duty} → /shopping?household={id}&dutyId={duty}
+ * Standalone page at /households/{id}/shopping?dutyId=<id>. Caregivers
+ * land here from duty notification CTAs and from the menu when acting
+ * on behalf of another household. Renders the shared
+ * HouseholdCaregiverShopping component, which talks to
+ * /api/households/[id]/shopping/... (admin SDK on the server, since
+ * Firestore client rules block cross-user shopping_items access).
  *
- * Kept around so duty notifications, bell rows, and bookmarks shipped
- * before the unification still work. New code should link directly to
- * /shopping?household={id}.
+ * Owners use /shopping (their own list) — no router branching here.
  */
 
-import { useEffect } from 'react'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { Spinner } from '@/components/ui/Spinner'
+import { useParams, useSearchParams } from 'next/navigation'
+import AuthGuard from '@/components/auth/AuthGuard'
+import { HouseholdCaregiverShopping } from '@/components/shopping/HouseholdCaregiverShopping'
 
-export default function LegacyHouseholdShoppingRedirect() {
+export default function HouseholdShoppingPage() {
   const params = useParams<{ householdId: string }>()
   const searchParams = useSearchParams()
-  const router = useRouter()
-
-  useEffect(() => {
-    const householdId = params.householdId
-    if (!householdId) return
-
-    const target = new URLSearchParams()
-    target.set('household', householdId)
-    const dutyId = searchParams.get('dutyId')
-    if (dutyId) target.set('dutyId', dutyId)
-
-    router.replace(`/shopping?${target.toString()}`)
-  }, [params.householdId, router, searchParams])
+  const householdId = params.householdId
+  const dutyId = searchParams.get('dutyId')
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Spinner />
-    </div>
+    <AuthGuard>
+      <HouseholdCaregiverShopping householdId={householdId} dutyId={dutyId} />
+    </AuthGuard>
   )
 }

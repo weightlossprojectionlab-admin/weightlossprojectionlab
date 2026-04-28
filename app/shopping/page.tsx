@@ -46,7 +46,6 @@ import { BlockedOperationModal } from '@/components/shopping/BlockedOperationMod
 import { useActiveShoppingSessions } from '@/hooks/useActiveShoppingSessions'
 import { BulkOperationBlockedError } from '@/lib/permissions-guard'
 import type { BulkOperationPermissionCheck } from '@/lib/permissions-guard'
-import { HouseholdCaregiverShopping } from '@/components/shopping/HouseholdCaregiverShopping'
 import { useUserNames } from '@/hooks/useUserNames'
 
 // Dynamic imports
@@ -1306,45 +1305,10 @@ function ShoppingItemCard({
   )
 }
 
-/**
- * Caregiver-mode dispatcher.
- *
- * When the URL is `/shopping?household={id}`, render the household-aware
- * caregiver view (a different shopping_items list, mediated by API
- * endpoints + admin SDK). When the user IS the owner of that household,
- * the component itself strips the param and we fall back to the normal
- * personal-list view here. This keeps shopping at one URL — `/shopping` —
- * regardless of which household the user is acting on.
- */
-function ShoppingPageRouter() {
-  const searchParams = useSearchParams()
-  const householdParam = searchParams.get('household')
-  const dutyId = searchParams.get('dutyId')
-
-  if (householdParam) {
-    // Wrap in AuthGuard explicitly: the existing ShoppingListContent
-    // mounts AuthGuard inside its render tree, but the caregiver branch
-    // bypasses that. Without this guard, the component would mount
-    // before auth state is hydrated, see auth.currentUser === null,
-    // bail out of its load(), flip loading=false, and render an empty
-    // "All caught up" page instead of the actual shopping list.
-    return (
-      <AuthGuard>
-        <HouseholdCaregiverShopping
-          householdId={householdParam}
-          dutyId={dutyId}
-        />
-      </AuthGuard>
-    )
-  }
-
-  return <ShoppingListContent />
-}
-
 export default function ShoppingPage() {
   return (
     <Suspense fallback={<Spinner />}>
-      <ShoppingPageRouter />
+      <ShoppingListContent />
     </Suspense>
   )
 }

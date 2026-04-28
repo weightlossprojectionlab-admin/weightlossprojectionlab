@@ -83,14 +83,12 @@ async function buildDutyMetadata(duty: HouseholdDuty, actionByName: string): Pro
  * Routes grocery shopping duties to shopping list, others to duty details
  */
 function getDutyActionUrl(duty: HouseholdDuty): string {
-  // Shopping duties land at /shopping?household={id}. That route renders
-  // either the user's own list (if they're the household owner) or the
-  // caregiver-mode view of someone else's list (if they're a member of
-  // that household via additionalCaregiverIds or the /admin caregivers
-  // subcollection). One URL for shopping, regardless of role — duties
-  // assigned to either party point to the same place.
+  // Shopping duties land at /households/{id}/shopping — a self-contained
+  // caregiver page that renders the household's shopping_items via the
+  // admin-SDK API endpoints. Owners use /shopping for their own list;
+  // caregivers use this URL when acting on behalf of another household.
   if (duty.category === 'grocery_shopping' || duty.category === 'shopping') {
-    return `/shopping?household=${duty.householdId}&dutyId=${duty.id}`
+    return `/households/${duty.householdId}/shopping?dutyId=${duty.id}`
   }
 
   // Everything else points at the household duties list, scoped to the
