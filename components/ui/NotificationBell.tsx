@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotifications } from '@/hooks/useNotifications'
-import { BellIcon } from '@heroicons/react/24/outline'
+import { BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { BellIcon as BellIconSolid } from '@heroicons/react/24/solid'
+import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
 import type { Notification } from '@/types/notifications'
 
@@ -24,7 +25,8 @@ export function NotificationBell() {
     unreadCount,
     notifications,
     subscribeToNotifications,
-    markAsRead
+    markAsRead,
+    archiveNotification,
   } = useNotifications(user?.uid)
 
   const [isOpen, setIsOpen] = useState(false)
@@ -72,6 +74,18 @@ export function NotificationBell() {
 
     // Close dropdown
     setIsOpen(false)
+  }
+
+  // Dismiss = archive. Soft-delete only — the row stays in Firestore for
+  // audit and is recoverable via the "Show Archived" toggle on /notifications.
+  const handleDismiss = async (e: React.MouseEvent, notification: Notification) => {
+    e.stopPropagation() // don't trigger the row click / navigation
+    try {
+      await archiveNotification(notification.id)
+    } catch (error) {
+      console.error('Error dismissing notification:', error)
+      toast.error('Failed to dismiss notification')
+    }
   }
 
   const getNotificationIcon = (type: string) => {
@@ -174,61 +188,74 @@ export function NotificationBell() {
             ) : (
               <div className="divide-y divide-border">
                 {notifications.map((notification) => (
-                  <button
+                  <div
                     key={notification.id}
-                    type="button"
-                    onClick={() => handleNotificationClick(notification)}
-                    className={`w-full px-4 py-3 text-left hover:bg-muted transition-colors ${
+                    className={`relative group hover:bg-muted transition-colors ${
                       !notification.read ? 'bg-primary/5' : ''
                     }`}
                   >
-                    <div className="flex gap-3">
-                      {/* Icon */}
-                      <div className="text-2xl flex-shrink-0 mt-0.5">
-                        {getNotificationIcon(notification.type)}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h4 className={`font-medium text-sm ${getPriorityColor(notification.priority)}`}>
-                            {notification.title}
-                          </h4>
-                          {!notification.read && (
-                            <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5"></span>
-                          )}
+                    <button
+                      type="button"
+                      onClick={() => handleNotificationClick(notification)}
+                      className="w-full px-4 py-3 pr-10 text-left"
+                    >
+                      <div className="flex gap-3">
+                        {/* Icon */}
+                        <div className="text-2xl flex-shrink-0 mt-0.5">
+                          {getNotificationIcon(notification.type)}
                         </div>
 
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-1">
-                          {notification.message}
-                        </p>
-
-                        <div className="flex items-center justify-between mt-2">
-                          <p className="text-xs text-muted-foreground">
-                            {notification.type === 'appointment_scheduled' && 'appointmentDateTime' in notification.metadata && notification.metadata.appointmentDateTime ? (
-                              // For appointments, show the appointment date
-                              new Date(notification.metadata.appointmentDateTime).toLocaleDateString('en-US', {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: 'numeric',
-                                minute: '2-digit'
-                              })
-                            ) : (
-                              // For other notifications, show relative time
-                              formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h4 className={`font-medium text-sm ${getPriorityColor(notification.priority)}`}>
+                              {notification.title}
+                            </h4>
+                            {!notification.read && (
+                              <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5"></span>
                             )}
+                          </div>
+
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-1">
+                            {notification.message}
                           </p>
 
-                          {notification.actionLabel && (
-                            <span className="text-xs font-medium text-primary">
-                              {notification.actionLabel}
-                            </span>
-                          )}
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-xs text-muted-foreground">
+                              {notification.type === 'appointment_scheduled' && 'appointmentDateTime' in notification.metadata && notification.metadata.appointmentDateTime ? (
+                                new Date(notification.metadata.appointmentDateTime).toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit'
+                                })
+                              ) : (
+                                formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })
+                              )}
+                            </p>
+
+                            {notification.actionLabel && (
+                              <span className="text-xs font-medium text-primary">
+                                {notification.actionLabel}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+
+                    {/* Dismiss (archive) — visible on hover, always tappable on touch */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleDismiss(e, notification)}
+                      className="absolute top-2 right-2 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/80 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity touch:opacity-100"
+                      aria-label="Dismiss notification"
+                      title="Dismiss"
+                    >
+                      <XMarkIcon className="w-4 h-4" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}

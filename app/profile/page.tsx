@@ -311,7 +311,13 @@ function ProfileContent() {
             'Authorization': `Bearer ${token}`,
             'X-CSRF-Token': getCSRFToken(),
           },
-          body: JSON.stringify({ type: typeMap[vitalType] || 'general' }),
+          body: JSON.stringify({
+            type: typeMap[vitalType] || 'general',
+            vitalType,
+            // patientId is omitted when viewing your own profile; backend treats
+            // missing patientId as "self" and skips the family-member name suffix
+            patientId: currentlyViewingMember?.id,
+          }),
         })
       }
 

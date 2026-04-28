@@ -13,6 +13,8 @@ import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } fro
 import { logger } from '@/lib/logger'
 import { errorResponse, unauthorizedResponse, validationError } from '@/lib/api-response'
 import type { Appointment, PatientProfile, Provider } from '@/types/medical'
+import type { NotificationMetadata } from '@/types/notifications'
+import { recordInAppNotification } from '@/lib/notifications/dispatch'
 import { v4 as uuidv4 } from 'uuid'
 
 export async function GET(request: NextRequest) {
@@ -233,34 +235,32 @@ export async function POST(request: NextRequest) {
         metadata.providerName = provider.name
       }
 
-      const notificationData = {
-        type: 'appointment_scheduled',
-        title: 'Appointment Scheduled',
-        message: `${patient.name} has an appointment${provider?.name ? ` with ${provider.name}` : ''} on ${appointmentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at ${appointmentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
-        priority: 'normal',
-        read: false,
-        actionUrl: `/calendar`,
-        actionLabel: 'View Calendar',
-        metadata,
-        createdAt: now,
-        updatedAt: now
-      }
+      const title = 'Appointment Scheduled'
+      const message = `${patient.name} has an appointment${provider?.name ? ` with ${provider.name}` : ''} on ${appointmentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at ${appointmentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
 
-      // Helper function to create notification for a user
+      // Use the canonical bell-mirror helper so the doc has the full schema
+      // (archived, pushSent, emailSent, status) — legacy thin docs caused the
+      // /notifications page to render empty even though the bell badge showed
+      // unread counts. Now every appointment-scheduled row matches the page's
+      // archived-filter query.
       const createNotificationForUser = async (targetUserId: string, userType: string) => {
-        const notificationRef = adminDb.collection('notifications').doc()
-        await notificationRef.set({
-          id: notificationRef.id,
+        const { id: notificationId } = await recordInAppNotification({
           userId: targetUserId,
-          ...notificationData
+          patientId: validatedData.patientId,
+          type: 'appointment_scheduled',
+          priority: 'normal',
+          title,
+          message,
+          actionUrl: '/calendar',
+          actionLabel: 'View Calendar',
+          metadata: metadata as NotificationMetadata,
         })
         logger.info(`[API /appointments POST] ${userType} notification created`, {
-          notificationId: notificationRef.id,
-          appointmentId
+          notificationId,
+          appointmentId,
         })
       }
 
-      // Create notifications for relevant users
       await createNotificationForUser(ownerUserId, 'Owner')
       if (userId !== ownerUserId) {
         await createNotificationForUser(userId, 'Acting user')

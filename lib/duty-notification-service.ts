@@ -6,7 +6,7 @@
  */
 
 import { HouseholdDuty } from '@/types/household-duties'
-import { createNotification } from './notification-service'
+import { recordInAppNotification, getPatientName as getPatientNameScoped } from './notifications/dispatch'
 import { DutyMetadata } from '@/types/notifications'
 import { getAdminDb } from './firebase-admin'
 import { logger } from './logger'
@@ -28,26 +28,11 @@ async function getHouseholdName(householdId: string): Promise<string> {
 }
 
 /**
- * Get patient name from Firestore
+ * Resolve a patient's name within the duty's owning user's subcollection.
+ * Replaces a previous O(N-users) global scan that read every user doc.
  */
-async function getPatientName(patientId: string): Promise<string> {
-  try {
-    const db = getAdminDb()
-    // Try to find patient across all user subcollections
-    const usersSnapshot = await db.collection('users').get()
-
-    for (const userDoc of usersSnapshot.docs) {
-      const patientDoc = await db.collection('users').doc(userDoc.id).collection('patients').doc(patientId).get()
-      if (patientDoc.exists) {
-        return patientDoc.data()?.name || 'Patient'
-      }
-    }
-
-    return 'Patient'
-  } catch (error) {
-    logger.error('[DutyNotification] Error fetching patient name', error as Error, { patientId })
-    return 'Patient'
-  }
+async function getPatientName(userId: string, patientId: string): Promise<string> {
+  return (await getPatientNameScoped(userId, patientId)) ?? 'Patient'
 }
 
 /**
@@ -70,7 +55,7 @@ async function getUserName(userId: string): Promise<string> {
 async function buildDutyMetadata(duty: HouseholdDuty, actionByName: string): Promise<DutyMetadata> {
   const [householdName, forPatientName] = await Promise.all([
     getHouseholdName(duty.householdId),
-    duty.forPatientId ? getPatientName(duty.forPatientId) : Promise.resolve(undefined)
+    duty.forPatientId ? getPatientName(duty.userId, duty.forPatientId) : Promise.resolve(undefined)
   ])
 
   return {
@@ -120,7 +105,7 @@ async function getDutyActionLabel(duty: HouseholdDuty): Promise<string> {
   // Handle both 'grocery_shopping' and legacy 'shopping' category
   if (duty.category === 'grocery_shopping' || duty.category === 'shopping') {
     if (duty.forPatientId) {
-      const patientName = await getPatientName(duty.forPatientId)
+      const patientName = await getPatientName(duty.userId, duty.forPatientId)
       return `View ${patientName}'s Shopping List`
     }
     return 'View Household Shopping List'
@@ -149,7 +134,7 @@ export async function notifyDutyAssigned(duty: HouseholdDuty, assignedByName: st
       // Skip notification to the person who assigned it
       if (caregiverId === duty.assignedBy) continue
 
-      await createNotification({
+      await recordInAppNotification({
         userId: caregiverId,
         patientId: duty.forPatientId,
         type: 'duty_assigned',
@@ -190,7 +175,7 @@ export async function notifyDutyCompleted(duty: HouseholdDuty, completedByName: 
     const recipientIds = [duty.userId, ...duty.assignedTo].filter(id => id !== duty.lastCompletedBy)
 
     for (const recipientId of recipientIds) {
-      await createNotification({
+      await recordInAppNotification({
         userId: recipientId,
         patientId: duty.forPatientId,
         type: 'duty_completed',
@@ -223,7 +208,7 @@ export async function notifyDutyReminder(duty: HouseholdDuty): Promise<void> {
     const dueTimeString = getDueTimeString(duty.nextDueDate!)
 
     for (const caregiverId of duty.assignedTo) {
-      await createNotification({
+      await recordInAppNotification({
         userId: caregiverId,
         patientId: duty.forPatientId,
         type: 'duty_reminder',
@@ -253,7 +238,7 @@ export async function notifyDutyOverdue(duty: HouseholdDuty): Promise<void> {
     const metadata = await buildDutyMetadata(duty, assignedByName)
 
     for (const caregiverId of duty.assignedTo) {
-      await createNotification({
+      await recordInAppNotification({
         userId: caregiverId,
         patientId: duty.forPatientId,
         type: 'duty_overdue',

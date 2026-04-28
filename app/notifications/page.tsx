@@ -73,8 +73,10 @@ export default function NotificationsPage() {
           filters.read = false
         }
 
-        // Filter archived/active notifications
-        filters.archived = showArchived
+        // Archived filtering happens client-side (see filteredNotifications
+        // memo below). No server-side filter — there's no composite index for
+        // (userId, archived, createdAt), and equality filters would also drop
+        // legacy docs missing the field entirely.
 
         const fetchedNotifications = await getNotifications(filters)
         setNotifications(fetchedNotifications)
@@ -89,17 +91,25 @@ export default function NotificationsPage() {
     loadNotifications()
   }, [user?.uid, filterType, filterPriority, filterRead, showArchived, getNotifications])
 
-  // Filter notifications by search query
+  // Filter notifications by archived state + search query. Archived filtering
+  // happens entirely client-side because there's no (userId, archived,
+  // createdAt) composite index in Firestore — see useNotifications.getNotifications.
+  // This also correctly handles legacy docs that lack the `archived` field
+  // (Firestore equality filters require field presence).
   const filteredNotifications = useMemo(() => {
-    if (!searchQuery) return notifications
+    const visibilityFiltered = showArchived
+      ? notifications.filter((n) => n.archived === true)
+      : notifications.filter((n) => n.archived !== true)
+
+    if (!searchQuery) return visibilityFiltered
 
     const lowerQuery = searchQuery.toLowerCase()
-    return notifications.filter(
+    return visibilityFiltered.filter(
       (n) =>
         n.title.toLowerCase().includes(lowerQuery) ||
         n.message.toLowerCase().includes(lowerQuery)
     )
-  }, [notifications, searchQuery])
+  }, [notifications, searchQuery, showArchived])
 
   // Group notifications by date
   const groupedNotifications = useMemo(() => {
@@ -311,7 +321,7 @@ export default function NotificationsPage() {
                   </div>
                 </button>
 
-                {/* Archive Button */}
+                {/* Dismiss button (archives the row — recoverable via Show Archived) */}
                 {!showArchived && (
                   <button
                     type="button"
@@ -320,9 +330,10 @@ export default function NotificationsPage() {
                       handleArchiveNotification(notification.id)
                     }}
                     className="flex-shrink-0 p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                    title="Archive notification"
+                    title="Dismiss notification"
+                    aria-label="Dismiss notification"
                   >
-                    <ArchiveBoxIcon className="h-5 w-5" />
+                    <XMarkIcon className="h-5 w-5" />
                   </button>
                 )}
               </div>
@@ -403,8 +414,8 @@ export default function NotificationsPage() {
                     onClick={handleArchiveAllRead}
                     className="flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground rounded-lg hover:bg-muted transition-colors font-medium"
                   >
-                    <ArchiveBoxIcon className="h-5 w-5" />
-                    <span>Archive Read</span>
+                    <XMarkIcon className="h-5 w-5" />
+                    <span>Dismiss Read</span>
                   </button>
                 )}
               </div>

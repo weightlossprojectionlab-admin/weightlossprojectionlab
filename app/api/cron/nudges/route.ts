@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
               .get()
 
             if (mealsSnap.empty && existingNudge.empty) {
-              const sent = await sendPush(token, mealNudge.title, mealNudge.body, {
+              const sent = await sendPush(userId, token, mealNudge.title, mealNudge.body, {
                 action: 'log_meal',
                 mealType: mealNudge.mealType,
               })
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
                 .get()
 
               if (existingReEngagement.empty) {
-                const sent = await sendPush(token, 'We miss you!', 'Come back and continue your health journey', {
+                const sent = await sendPush(userId, token, 'We miss you!', 'Come back and continue your health journey', {
                   action: 'open_app',
                 })
                 if (sent) {
@@ -154,6 +154,7 @@ export async function GET(request: NextRequest) {
 
               if (existingMilestone.empty) {
                 const sent = await sendPush(
+                  userId,
                   token,
                   `${currentStreak}-day streak!`,
                   `Amazing consistency! You've logged meals ${currentStreak} days in a row.`,
@@ -196,13 +197,15 @@ function getMealReminder(hour: number): { mealType: string; title: string; body:
   return null
 }
 
-async function sendPush(token: string, title: string, body: string, data?: Record<string, string>): Promise<boolean> {
+async function sendPush(userId: string, token: string, title: string, body: string, data?: Record<string, string>): Promise<boolean> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.wellnessprojectionlab.com'
     const res = await fetch(`${baseUrl}/api/notifications/send-push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, notification: { title, body }, data }),
+      // userId is passed alongside token so send-push can prune the
+      // notification_tokens doc if FCM rejects with a stale-token error.
+      body: JSON.stringify({ userId, token, notification: { title, body }, data }),
     })
     return res.ok
   } catch {

@@ -133,10 +133,16 @@ export function useNotifications(userId: string | undefined) {
       where('read', '==', false)
     )
 
+    // We deliberately DO NOT add `where('archived', '==', false)` server-side:
+    // Firestore equality filters require the field to exist, so legacy docs
+    // written before the canonical schema (no `archived` field) would be
+    // dropped silently. Instead we filter client-side — `archived !== true`
+    // matches both legacy (missing field) and explicitly non-archived rows.
     const unsubscribe = onSnapshot(
       unreadQuery,
       (snapshot) => {
-        setUnreadCount(snapshot.size)
+        const visible = snapshot.docs.filter((d) => d.data()?.archived !== true)
+        setUnreadCount(visible.length)
       },
       (error) => {
         logger.error('[useNotifications] Error listening to unread count:', error)
@@ -357,9 +363,12 @@ export function useNotifications(userId: string | undefined) {
         notificationQuery = query(notificationQuery, where('read', '==', filters.read))
       }
 
-      if (filters?.archived !== undefined) {
-        notificationQuery = query(notificationQuery, where('archived', '==', filters.archived))
-      }
+      // Note: `archived` is intentionally NOT applied server-side. There's no
+      // composite index for (userId, archived, createdAt) — adding the filter
+      // would require a deploy of firestore.indexes.json. The bell badge,
+      // dropdown, and /notifications page all handle archived filtering
+      // client-side (matching legacy docs missing the field), so the server
+      // query just returns everything for the user and lets the UI decide.
 
       if (filters?.priority) {
         const priorities = Array.isArray(filters.priority) ? filters.priority : [filters.priority]
@@ -383,8 +392,17 @@ export function useNotifications(userId: string | undefined) {
       setNotifications(fetchedNotifications)
       setNotificationsLoading(false)
       return fetchedNotifications
-    } catch (error) {
-      logger.error('[useNotifications] Error fetching notifications:', error as Error)
+    } catch (error: any) {
+      // Firebase errors don't always serialize via JSON.stringify cleanly,
+      // so pull the useful properties explicitly. Most common cause here is
+      // a missing composite index — the error message will include a Firebase
+      // console URL to create one.
+      logger.error('[useNotifications] Error fetching notifications:', error as Error, {
+        code: error?.code,
+        message: error?.message,
+        name: error?.name,
+        filters,
+      })
       setNotificationsLoading(false)
       return []
     }
@@ -593,20 +611,23 @@ export function useNotifications(userId: string | undefined) {
   const subscribeToNotifications = useCallback((limitCount: number = 5) => {
     if (!userId) return () => {}
 
+    // Pull a wider slice than `limitCount` so we still have `limitCount` rows
+    // after client-side filtering of archived. See comment on the unread count
+    // query above for why archived can't be filtered server-side.
     const notificationQuery = query(
       collection(db, 'notifications'),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc'),
-      limit(limitCount)
+      limit(limitCount * 3)
     )
 
     const unsubscribe = onSnapshot(
       notificationQuery,
       (snapshot) => {
-        const latestNotifications = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Notification[]
+        const latestNotifications = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as Notification))
+          .filter(n => n.archived !== true)
+          .slice(0, limitCount)
 
         setNotifications(latestNotifications)
       },
