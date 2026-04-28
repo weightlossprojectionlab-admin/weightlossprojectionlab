@@ -19,14 +19,55 @@ import { formatDistanceToNow, isToday, isYesterday, isThisWeek, parseISO } from 
 import type { Notification, NotificationType, NotificationPriority, NotificationFilter } from '@/types/notifications'
 import toast from 'react-hot-toast'
 
+// Group raw NotificationType values into user-facing categories. The category
+// chip row above the search bar filters by these groups so users can quickly
+// scope to "Appointments" or "Duties" instead of picking individual types.
+const CATEGORY_TYPES: Record<string, { label: string; icon: string; types: NotificationType[] }> = {
+  appointments: {
+    label: 'Appointments',
+    icon: '📅',
+    types: ['appointment_scheduled', 'appointment_updated', 'appointment_cancelled', 'appointment_reminder'],
+  },
+  duties: {
+    label: 'Duties',
+    icon: '🧹',
+    types: ['duty_assigned', 'duty_reassigned', 'duty_updated', 'duty_reminder', 'duty_overdue', 'duty_completed'],
+  },
+  medications: {
+    label: 'Medications',
+    icon: '💊',
+    types: ['medication_added', 'medication_updated', 'medication_deleted', 'medication_reminder'],
+  },
+  vitals: {
+    label: 'Vitals',
+    icon: '❤️',
+    types: ['vital_logged', 'vital_alert', 'weight_logged', 'weight_approval_needed', 'weight_approval_result'],
+  },
+  documents: {
+    label: 'Documents',
+    icon: '📄',
+    types: ['document_uploaded', 'health_report_generated'],
+  },
+  family: {
+    label: 'Family',
+    icon: '👥',
+    types: ['family_member_invited', 'family_member_joined', 'patient_added'],
+  },
+}
+type CategoryKey = keyof typeof CATEGORY_TYPES
+
+const PAGE_SIZE_OPTIONS = [20, 50, 100] as const
+type PageSize = typeof PAGE_SIZE_OPTIONS[number]
+
 /**
  * Notification Center Page
  *
  * Full list of notifications with:
- * - Pagination
- * - Filter by patient, type, read/unread
+ * - Category chips (Appointments / Duties / Medications / Vitals / Documents / Family)
+ * - Pagination with selectable page size (20/50/100)
+ * - Filter by type, priority, read/unread
  * - Search functionality
- * - Bulk "Mark all as read" button
+ * - Bulk "Mark all as read" / "Dismiss Read" buttons
  * - Group by date (Today, Yesterday, This Week, Older)
  * - Click notification to navigate to context
  */
@@ -49,6 +90,9 @@ export default function NotificationsPage() {
   const [showArchived, setShowArchived] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [selectedCategory, setSelectedCategory] = useState<CategoryKey | 'all'>('all')
+  const [pageSize, setPageSize] = useState<PageSize>(20)
+  const [visibleCount, setVisibleCount] = useState<number>(20)
 
   // Load notifications
   useEffect(() => {
@@ -78,6 +122,12 @@ export default function NotificationsPage() {
         // (userId, archived, createdAt), and equality filters would also drop
         // legacy docs missing the field entirely.
 
+        // Cap server reads. 500 covers users with several years of notifications
+        // (median is ~100). Users with >500 will need cursor pagination — punt
+        // until we see real cases. Client-side filtering + Load More is fine
+        // for the common case.
+        filters.limit = 500
+
         const fetchedNotifications = await getNotifications(filters)
         setNotifications(fetchedNotifications)
       } catch (error) {
@@ -91,25 +141,59 @@ export default function NotificationsPage() {
     loadNotifications()
   }, [user?.uid, filterType, filterPriority, filterRead, showArchived, getNotifications])
 
-  // Filter notifications by archived state + search query. Archived filtering
-  // happens entirely client-side because there's no (userId, archived,
-  // createdAt) composite index in Firestore — see useNotifications.getNotifications.
-  // This also correctly handles legacy docs that lack the `archived` field
-  // (Firestore equality filters require field presence).
+  // Filter notifications by archived state + category + search. All filtering
+  // happens client-side: archived because Firestore lacks the composite index,
+  // category because each category bundles 4-6 NotificationType values and
+  // a server-side `where('type', 'in', [...])` would also need a composite
+  // index per combination. Search is text-based so client-side either way.
   const filteredNotifications = useMemo(() => {
-    const visibilityFiltered = showArchived
+    let result = showArchived
       ? notifications.filter((n) => n.archived === true)
       : notifications.filter((n) => n.archived !== true)
 
-    if (!searchQuery) return visibilityFiltered
+    if (selectedCategory !== 'all') {
+      const types = new Set<string>(CATEGORY_TYPES[selectedCategory].types)
+      result = result.filter((n) => types.has(n.type))
+    }
 
-    const lowerQuery = searchQuery.toLowerCase()
-    return visibilityFiltered.filter(
-      (n) =>
-        n.title.toLowerCase().includes(lowerQuery) ||
-        n.message.toLowerCase().includes(lowerQuery)
-    )
-  }, [notifications, searchQuery, showArchived])
+    if (searchQuery) {
+      const lowerQuery = searchQuery.toLowerCase()
+      result = result.filter(
+        (n) =>
+          n.title.toLowerCase().includes(lowerQuery) ||
+          n.message.toLowerCase().includes(lowerQuery)
+      )
+    }
+
+    return result
+  }, [notifications, searchQuery, showArchived, selectedCategory])
+
+  // Slice the filtered list to the user's visible page size. "Load More" bumps
+  // visibleCount; switching filters / page size resets it back to one page.
+  const pagedNotifications = useMemo(
+    () => filteredNotifications.slice(0, visibleCount),
+    [filteredNotifications, visibleCount]
+  )
+
+  // Reset pagination when any filter changes — otherwise "Load More" applied
+  // to a different list bleeds across category switches.
+  useEffect(() => {
+    setVisibleCount(pageSize)
+  }, [pageSize, selectedCategory, searchQuery, showArchived, filterType, filterPriority, filterRead])
+
+  // Per-category counts for the chip badges. Computed off the visibility-only
+  // base list so the count matches what the user would see if they tapped it.
+  const categoryCounts = useMemo(() => {
+    const base = showArchived
+      ? notifications.filter((n) => n.archived === true)
+      : notifications.filter((n) => n.archived !== true)
+    const counts: Record<string, number> = { all: base.length }
+    for (const [key, def] of Object.entries(CATEGORY_TYPES)) {
+      const set = new Set<string>(def.types)
+      counts[key] = base.filter((n) => set.has(n.type)).length
+    }
+    return counts
+  }, [notifications, showArchived])
 
   // Group notifications by date
   const groupedNotifications = useMemo(() => {
@@ -125,7 +209,7 @@ export default function NotificationsPage() {
       older: []
     }
 
-    filteredNotifications.forEach((notification) => {
+    pagedNotifications.forEach((notification) => {
       const date = parseISO(notification.createdAt)
 
       if (isToday(date)) {
@@ -140,7 +224,7 @@ export default function NotificationsPage() {
     })
 
     return groups
-  }, [filteredNotifications])
+  }, [pagedNotifications])
 
   const handleNotificationClick = async (notification: Notification) => {
     // Mark as read
@@ -321,7 +405,8 @@ export default function NotificationsPage() {
                   </div>
                 </button>
 
-                {/* Dismiss button (archives the row — recoverable via Show Archived) */}
+                {/* Dismiss button (archives the row — recoverable via Show Archived).
+                    44×44 tap target for mobile / WCAG 2.5.5. */}
                 {!showArchived && (
                   <button
                     type="button"
@@ -329,7 +414,7 @@ export default function NotificationsPage() {
                       e.stopPropagation()
                       handleArchiveNotification(notification.id)
                     }}
-                    className="flex-shrink-0 p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                    className="flex-shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted active:bg-muted/80 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                     title="Dismiss notification"
                     aria-label="Dismiss notification"
                   >
@@ -358,6 +443,44 @@ export default function NotificationsPage() {
         />
 
         <div className="max-w-4xl mx-auto px-4 py-6">
+          {/* Category chips — quick filter by event domain (Appointments, Duties, etc.) */}
+          <div className="mb-4 -mx-4 px-4 overflow-x-auto">
+            <div className="flex gap-2 min-w-max">
+              <button
+                type="button"
+                onClick={() => setSelectedCategory('all')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-colors min-h-[40px] ${
+                  selectedCategory === 'all'
+                    ? 'bg-primary text-white'
+                    : 'bg-card border border-border text-foreground hover:bg-muted'
+                }`}
+              >
+                <span>All</span>
+                <span className={`text-xs ${selectedCategory === 'all' ? 'opacity-90' : 'text-muted-foreground'}`}>
+                  {categoryCounts.all}
+                </span>
+              </button>
+              {(Object.entries(CATEGORY_TYPES) as [CategoryKey, typeof CATEGORY_TYPES[CategoryKey]][]).map(([key, def]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setSelectedCategory(selectedCategory === key ? 'all' : key)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-colors min-h-[40px] ${
+                    selectedCategory === key
+                      ? 'bg-primary text-white'
+                      : 'bg-card border border-border text-foreground hover:bg-muted'
+                  }`}
+                >
+                  <span>{def.icon}</span>
+                  <span>{def.label}</span>
+                  <span className={`text-xs ${selectedCategory === key ? 'opacity-90' : 'text-muted-foreground'}`}>
+                    {categoryCounts[key] ?? 0}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Search and Filters */}
           <div className="mb-6 space-y-4">
             {/* Search Bar */}
@@ -396,12 +519,13 @@ export default function NotificationsPage() {
                 <span>{showArchived ? 'Show Active' : 'Show Archived'}</span>
               </button>
 
-              <div className="ml-auto flex items-center gap-3">
+              {/* Bulk actions — full width on mobile (easier to tap), inline on desktop */}
+              <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row sm:items-center gap-3">
                 {!showArchived && unreadCount > 0 && (
                   <button
                     type="button"
                     onClick={handleMarkAllAsRead}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium"
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium min-h-[44px]"
                   >
                     <CheckIcon className="h-5 w-5" />
                     <span>Mark All Read</span>
@@ -412,7 +536,7 @@ export default function NotificationsPage() {
                   <button
                     type="button"
                     onClick={handleArchiveAllRead}
-                    className="flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground rounded-lg hover:bg-muted transition-colors font-medium"
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-card border border-border text-foreground rounded-lg hover:bg-muted transition-colors font-medium min-h-[44px]"
                   >
                     <XMarkIcon className="h-5 w-5" />
                     <span>Dismiss Read</span>
@@ -514,12 +638,46 @@ export default function NotificationsPage() {
             />
           ) : (
             /* Grouped Notifications */
-            <div>
-              {renderNotificationGroup('Today', groupedNotifications.today)}
-              {renderNotificationGroup('Yesterday', groupedNotifications.yesterday)}
-              {renderNotificationGroup('This Week', groupedNotifications.thisWeek)}
-              {renderNotificationGroup('Older', groupedNotifications.older)}
-            </div>
+            <>
+              <div>
+                {renderNotificationGroup('Today', groupedNotifications.today)}
+                {renderNotificationGroup('Yesterday', groupedNotifications.yesterday)}
+                {renderNotificationGroup('This Week', groupedNotifications.thisWeek)}
+                {renderNotificationGroup('Older', groupedNotifications.older)}
+              </div>
+
+              {/* Pagination footer — page-size selector + Load More.
+                  Mobile-first: stacks vertically with full-width Load More
+                  so the tap target spans the row. Desktop spreads horizontally. */}
+              <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
+                <p className="text-sm text-muted-foreground">
+                  Showing {Math.min(visibleCount, filteredNotifications.length)} of {filteredNotifications.length}
+                </p>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:ml-auto">
+                  <label className="text-sm text-muted-foreground flex items-center justify-between sm:justify-start gap-2">
+                    <span>Per page:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value) as PageSize)}
+                      className="px-3 py-2 bg-card border border-border rounded-md text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[40px]"
+                    >
+                      {PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>{size}</option>
+                      ))}
+                    </select>
+                  </label>
+                  {visibleCount < filteredNotifications.length && (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount(visibleCount + pageSize)}
+                      className="w-full sm:w-auto px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium text-sm min-h-[44px]"
+                    >
+                      Load {Math.min(pageSize, filteredNotifications.length - visibleCount)} more
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>

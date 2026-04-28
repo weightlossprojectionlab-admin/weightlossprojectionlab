@@ -245,15 +245,17 @@ export function NotificationBell() {
                       </div>
                     </button>
 
-                    {/* Dismiss (archive) — visible on hover, always tappable on touch */}
+                    {/* Dismiss (archive). Always visible — mobile has no hover
+                        so an opacity-on-hover pattern would hide it on touch.
+                        44×44 tap target meets Apple HIG / WCAG 2.5.5 (target size). */}
                     <button
                       type="button"
                       onClick={(e) => handleDismiss(e, notification)}
-                      className="absolute top-2 right-2 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/80 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity touch:opacity-100"
+                      className="absolute top-1 right-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/80 active:bg-background transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                       aria-label="Dismiss notification"
                       title="Dismiss"
                     >
-                      <XMarkIcon className="w-4 h-4" />
+                      <XMarkIcon className="w-5 h-5" />
                     </button>
                   </div>
                 ))}
