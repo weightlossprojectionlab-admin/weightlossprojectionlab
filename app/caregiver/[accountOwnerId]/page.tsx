@@ -347,7 +347,7 @@ function MyDutiesSection({ householdId, caregiverUserId }: MyDutiesSectionProps)
 
 // ==================== MAIN DASHBOARD ====================
 
-type ActiveTab = 'patients' | 'duties'
+type ActiveTab = 'patients' | 'duties' | 'shopping'
 
 function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
   const resolvedParams = use(params)
@@ -593,6 +593,19 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
               My Duties
             </button>
           )}
+
+          {householdId && (
+            <button
+              onClick={() => setActiveTab('shopping')}
+              className={`px-5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                activeTab === 'shopping'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Shopping List
+            </button>
+          )}
         </div>
 
         {/* Tab content: Assigned Patients */}
@@ -660,6 +673,34 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
         {/* Tab content: My Duties */}
         {activeTab === 'duties' && householdId && user && (
           <MyDutiesSection householdId={householdId} caregiverUserId={user.uid} />
+        )}
+
+        {/* Tab content: Shopping List — link out to the dedicated
+            caregiver shopping page so the full UI (qty / scan / notes /
+            mark-purchased / live sync) is available. Embedding the
+            component inline would clash with the dashboard's PageHeader
+            since HouseholdCaregiverShopping renders its own. */}
+        {activeTab === 'shopping' && householdId && (
+          <div className="bg-card rounded-lg border-2 border-border p-6">
+            <h3 className="font-semibold text-foreground text-lg mb-2">
+              {caregiverContext.accountOwnerName}'s Shopping List
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              View the household's shopping list. Mark items purchased as you
+              shop, scan barcodes, add new items, or edit quantities — every
+              change syncs back to the household admin.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push(`/households/${householdId}/shopping`)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-hover min-h-[44px]"
+            >
+              Open shopping list
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         )}
 
         {/* Help Section */}
