@@ -93,8 +93,11 @@ function getDutyActionUrl(duty: HouseholdDuty): string {
     return `/shopping?householdId=${duty.householdId}&dutyId=${duty.id}`
   }
 
-  // Default: duty details page
-  return `/households/${duty.householdId}/duties`
+  // Default: the household duties page (a flat route with householdId as a
+  // query param). Was previously `/households/${householdId}/duties` which
+  // 404'd — that nested route doesn't exist. The flat page also accepts
+  // `?dutyId=` so the link can scroll/highlight a specific duty later.
+  return `/households/duties?householdId=${duty.householdId}&dutyId=${duty.id}`
 }
 
 /**
