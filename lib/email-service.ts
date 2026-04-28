@@ -59,12 +59,35 @@ interface SendEmailParams {
   subject: string
   html: string
   text?: string
+  /** 'high' adds X-Priority:1 + Importance:high (use for invitations / urgent
+   *  alerts only — these headers trigger spam filters on routine emails).
+   *  Defaults to 'normal' for everything else. */
+  priority?: 'high' | 'normal'
+  /** Categorizes the X-Entity-Ref-ID for analytics + per-category list filtering.
+   *  Defaults to 'notification'; use 'invitation' for family invites etc. */
+  category?: 'notification' | 'invitation' | 'reminder' | 'alert' | 'transactional'
 }
 
 /**
- * Send an email using Resend
+ * Send an email using Resend.
+ *
+ * Spam-deliverability notes:
+ *  - High-priority headers (X-Priority:1, Importance:high) are opt-in via
+ *    `priority: 'high'`. Defaults to normal because spam filters score
+ *    routine emails marked "urgent" heavily.
+ *  - List-Unsubscribe header is always set so Gmail / Outlook surface the
+ *    one-click unsubscribe affordance and trust the sender more.
+ *  - X-Entity-Ref-ID uses the `category` so receiver-side filtering can
+ *    bucket notifications separately from invitations.
  */
-export async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<void> {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+  priority = 'normal',
+  category = 'notification',
+}: SendEmailParams): Promise<void> {
   if (!process.env.RESEND_API_KEY) {
     console.warn('[Email Service] RESEND_API_KEY not configured. Email not sent.')
     return
@@ -74,18 +97,23 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams): P
     const resend = getResend()
     console.log(`[Email Service] Sending email from: ${FROM_NAME} <${FROM_EMAIL}> to: ${to}`)
 
+    const headers: Record<string, string> = {
+      'List-Unsubscribe': `<mailto:${REPLY_TO_EMAIL || FROM_EMAIL}?subject=Unsubscribe>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      'X-Entity-Ref-ID': `wlpl-${category}-${Date.now()}`,
+    }
+    if (priority === 'high') {
+      headers['X-Priority'] = '1'
+      headers['Importance'] = 'high'
+    }
+
     const mailOptions: any = {
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
       to,
       subject,
       html,
       text: text || stripHtml(html),
-      headers: {
-        'List-Unsubscribe': `<mailto:${REPLY_TO_EMAIL || FROM_EMAIL}?subject=Unsubscribe>`,
-        'X-Entity-Ref-ID': `wlpl-invitation-${Date.now()}`,
-        'X-Priority': '1',
-        'Importance': 'high'
-      }
+      headers,
     }
 
     // Add reply-to if configured

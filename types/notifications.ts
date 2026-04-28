@@ -41,6 +41,10 @@ export type NotificationType =
   | 'episode_updated'
   | 'weight_approval_needed'
   | 'weight_approval_result'
+  // Engagement nudges (fired by app/api/cron/nudges)
+  | 'meal_reminder'
+  | 're_engagement'
+  | 'milestone'
 
 /**
  * NotificationPriority - Urgency level
@@ -366,6 +370,11 @@ export interface NotificationPreferences {
   duty_overdue: NotificationChannelPreferences
   duty_completed: NotificationChannelPreferences
 
+  // Engagement nudges (fired by app/api/cron/nudges)
+  meal_reminder: NotificationChannelPreferences
+  re_engagement: NotificationChannelPreferences
+  milestone: NotificationChannelPreferences
+
   // Quiet hours (no push notifications during these hours)
   quietHours?: {
     enabled: boolean
@@ -409,6 +418,9 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   duty_reminder: { email: true, push: true, inApp: true },
   duty_overdue: { email: true, push: true, inApp: true },
   duty_completed: { email: false, push: false, inApp: true },
+  meal_reminder: { email: false, push: true, inApp: true },
+  re_engagement: { email: false, push: true, inApp: true },
+  milestone: { email: false, push: true, inApp: true },
   quietHours: {
     enabled: true,
     startHour: 22, // 10 PM

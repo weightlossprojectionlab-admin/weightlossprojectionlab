@@ -15,9 +15,12 @@
  * client components — use lib/notification-service.ts (client SDK) instead.
  */
 
-import { adminDb } from '@/lib/firebase-admin'
+import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { sendEmail } from '@/lib/email-service'
+import { generateGenericNotificationEmail } from '@/lib/email-templates'
 import { VITAL_DISPLAY_NAMES, VITAL_ICONS } from '@/lib/vital-reminder-logic'
+import { shouldDispatch, getUserPreferences, type Channel } from '@/lib/notifications/preferences'
 import type { VitalType } from '@/types/medical'
 import type {
   NotificationType,
@@ -270,24 +273,308 @@ export async function recordInAppNotification(opts: {
   return { id }
 }
 
+// ─── Email channel sender ───────────────────────────────────────────────
+
+/**
+ * Send a notification via email (Resend). Looks up the user's email from
+ * Firebase Auth (admin SDK) — falls back to users/{uid}.email if Auth is
+ * missing it. Renders a minimal HTML body with the title, message, and a
+ * CTA link to actionUrl. Email-specific subject prefix is the title verbatim.
+ */
+async function dispatchUserEmail(opts: {
+  userId: string
+  title: string
+  body: string
+  link: string
+  priority?: NotificationPriority
+  /** Origin URL used to build the CTA href. Falls back to NEXT_PUBLIC_APP_URL. */
+  origin?: string
+}): Promise<{ ok: boolean; reason?: string }> {
+  const { userId, title, body, link, priority } = opts
+
+  // Resolve recipient email + display name: Auth first, then Firestore mirror
+  let recipient: string | undefined
+  let recipientName: string | undefined
+  try {
+    const user = await adminAuth.getUser(userId)
+    recipient = user.email ?? undefined
+    recipientName = user.displayName ?? undefined
+  } catch (error) {
+    logger.warn('[notifications/dispatch] auth.getUser failed; falling back to Firestore', { userId })
+  }
+  if (!recipient) {
+    try {
+      const doc = await adminDb.collection('users').doc(userId).get()
+      const data = doc.data()
+      if (typeof data?.email === 'string') recipient = data.email
+      if (!recipientName && typeof data?.displayName === 'string') recipientName = data.displayName
+    } catch (error) {
+      logger.warn('[notifications/dispatch] users/{uid}.email lookup failed', { userId, error })
+    }
+  }
+
+  if (!recipient) {
+    return { ok: false, reason: 'No email address on file for user' }
+  }
+
+  const origin = opts.origin
+    ?? process.env.NEXT_PUBLIC_APP_URL
+    ?? 'https://www.wellnessprojectionlab.com'
+  const ctaUrl = link.startsWith('http') ? link : `${origin}${link.startsWith('/') ? '' : '/'}${link}`
+
+  // Use the branded notification template (purple gradient header + content
+  // box + CTA + footer with prefs link). Subject is the notification title.
+  const { html, text, subject } = generateGenericNotificationEmail({
+    title,
+    body,
+    ctaUrl,
+    recipientName,
+  })
+
+  try {
+    // Routine notifications use 'normal' priority headers — high priority
+    // (X-Priority:1, Importance:high) increases spam scoring on
+    // non-transactional mail. Urgent notifications opt into high.
+    await sendEmail({
+      to: recipient,
+      subject,
+      html,
+      text,
+      priority: priority === 'urgent' ? 'high' : 'normal',
+      category: 'notification',
+    })
+    return { ok: true }
+  } catch (error: any) {
+    logger.error('[notifications/dispatch] email send failed', error as Error, { userId })
+    return { ok: false, reason: error?.message ?? 'Email send failed' }
+  }
+}
+
+// ─── Voice channel — extension point (future Alexa / Google / Apple / Bixby) ─
+
+/**
+ * Voice provider adapter shape. Implement one per provider in a future PR
+ * and register it via `registerVoiceProvider()`. The voiceSender below
+ * iterates every registered provider, calls isLinked, then send.
+ *
+ * Token storage convention: users/{uid}/voiceTokens/{provider} mirrors the
+ * existing FCM token pattern at notification_tokens/{userId}. Each provider
+ * stores its own OAuth tokens / device IDs.
+ */
+export interface VoiceProvider {
+  name: 'alexa' | 'google' | 'apple' | 'bixby'
+  isLinked(userId: string): Promise<boolean>
+  send(userId: string, event: { title: string; body: string; link: string; priority?: NotificationPriority }): Promise<void>
+}
+
+const voiceProviders: VoiceProvider[] = []
+
+/** Register a voice provider adapter. Called at app boot from a future
+ *  lib/notifications/voice/{provider}.ts file. No-op until providers exist. */
+export function registerVoiceProvider(provider: VoiceProvider): void {
+  voiceProviders.push(provider)
+}
+
+async function dispatchUserVoice(opts: {
+  userId: string
+  title: string
+  body: string
+  link: string
+  priority?: NotificationPriority
+}): Promise<{ ok: boolean; reason?: string }> {
+  if (voiceProviders.length === 0) {
+    return { ok: false, reason: 'No voice providers registered' }
+  }
+  let attempted = 0
+  for (const provider of voiceProviders) {
+    try {
+      if (await provider.isLinked(opts.userId)) {
+        await provider.send(opts.userId, opts)
+        attempted++
+      }
+    } catch (error) {
+      logger.warn('[notifications/dispatch] voice provider failed', { provider: provider.name, error })
+    }
+  }
+  return attempted > 0 ? { ok: true } : { ok: false, reason: 'No linked voice providers' }
+}
+
+// ─── SMS channel — extension point (future Twilio integration) ─────────
+
+async function dispatchUserSms(_opts: {
+  userId: string
+  title: string
+  body: string
+  link: string
+}): Promise<{ ok: boolean; reason?: string }> {
+  // Placeholder: a future Twilio integration plugs in here. Mirrors the email
+  // recipient lookup pattern (Auth phoneNumber → Firestore fallback) plus
+  // a Twilio client send. No-op for now.
+  return { ok: false, reason: 'SMS channel not implemented' }
+}
+
+// ─── Channel-aware fan-out ──────────────────────────────────────────────
+
+export interface NotificationEvent {
+  userId: string
+  type: NotificationType
+  title: string
+  body: string
+  link: string
+  priority?: NotificationPriority
+  metadata: NotificationMetadata
+  patientId?: string
+  /** Used to namespace the FCM tag. */
+  tagPrefix?: string
+  /** Optional explicit list of channels to attempt; defaults to all. */
+  channels?: Channel[]
+  /** Optional TTL passed through to the bell mirror row. */
+  expiresInDays?: number
+  /** Optional actionLabel for the bell row. Defaults to 'Open'. */
+  actionLabel?: string
+}
+
+export interface DispatchSummary {
+  /** True if at least one channel succeeded. */
+  ok: boolean
+  notificationId?: string
+  /** Per-channel outcome for callers/tests/log analysis. */
+  channels: Partial<Record<Channel, { dispatched: boolean; reason?: string }>>
+  /** Set when push reported a stale FCM token. */
+  staleToken?: boolean
+}
+
+const ALL_CHANNELS: Channel[] = ['push', 'inApp', 'email', 'voice', 'sms']
+
+/**
+ * Fan a single notification event out across channels, gated by the user's
+ * preferences. Reads prefs once, then asks shouldDispatch for each channel.
+ * On per-channel failure, logs and continues — one channel's failure never
+ * blocks another.
+ */
+export async function dispatchNotification(event: NotificationEvent): Promise<DispatchSummary> {
+  const channels = event.channels ?? ALL_CHANNELS
+  const prefs = await getUserPreferences(event.userId)
+  const summary: DispatchSummary = { ok: false, channels: {} }
+
+  for (const channel of channels) {
+    const allowed = await shouldDispatch({
+      userId: event.userId,
+      type: event.type,
+      channel,
+      priority: event.priority,
+      prefs,
+    })
+    if (!allowed) {
+      summary.channels[channel] = { dispatched: false, reason: 'preferences' }
+      continue
+    }
+
+    try {
+      switch (channel) {
+        case 'push': {
+          const result = await dispatchUserPush({
+            userId: event.userId,
+            title: event.title,
+            body: event.body,
+            link: event.link,
+            tagPrefix: event.tagPrefix ?? event.type,
+          })
+          summary.channels.push = { dispatched: result.ok, reason: result.reason }
+          if (result.staleToken) summary.staleToken = true
+          if (result.ok) summary.ok = true
+          break
+        }
+        case 'inApp': {
+          const record = await recordInAppNotification({
+            userId: event.userId,
+            patientId: event.patientId,
+            type: event.type,
+            priority: event.priority,
+            title: event.title,
+            message: event.body,
+            actionUrl: event.link,
+            actionLabel: event.actionLabel,
+            metadata: event.metadata,
+            pushed: !!summary.channels.push?.dispatched,
+            expiresInDays: event.expiresInDays,
+          })
+          summary.notificationId = record.id
+          summary.channels.inApp = { dispatched: true }
+          summary.ok = true
+          break
+        }
+        case 'email': {
+          const result = await dispatchUserEmail({
+            userId: event.userId,
+            title: event.title,
+            body: event.body,
+            link: event.link,
+            priority: event.priority,
+          })
+          summary.channels.email = { dispatched: result.ok, reason: result.reason }
+          if (result.ok) summary.ok = true
+          break
+        }
+        case 'voice': {
+          const result = await dispatchUserVoice({
+            userId: event.userId,
+            title: event.title,
+            body: event.body,
+            link: event.link,
+            priority: event.priority,
+          })
+          summary.channels.voice = { dispatched: result.ok, reason: result.reason }
+          if (result.ok) summary.ok = true
+          break
+        }
+        case 'sms': {
+          const result = await dispatchUserSms({
+            userId: event.userId,
+            title: event.title,
+            body: event.body,
+            link: event.link,
+          })
+          summary.channels.sms = { dispatched: result.ok, reason: result.reason }
+          if (result.ok) summary.ok = true
+          break
+        }
+      }
+    } catch (error) {
+      logger.error(`[notifications/dispatch] ${channel} channel threw`, error as Error, { userId: event.userId })
+      summary.channels[channel] = { dispatched: false, reason: (error as Error)?.message ?? 'channel error' }
+    }
+  }
+
+  return summary
+}
+
 // ─── High-level: vital reminder ─────────────────────────────────────────
 
 /**
- * Build + push + record a vital reminder. The convenience entry point that
- * the test endpoint and the future vital-reminder cron call.
+ * Build + dispatch a vital reminder across all enabled channels. The
+ * convenience entry point used by the test endpoint and the future
+ * vital-reminder cron.
  *
  * - Looks up patientName when a patientId is given.
- * - Sends FCM push (handles stale-token pruning).
- * - Always writes the bell mirror, even if push fails — the user can still
- *   see it in /notifications.
+ * - Calls dispatchNotification which fans out across push/inApp/email
+ *   (and voice/sms once those senders are wired), gated by the user's
+ *   notification_preferences (or legacy notificationSettings as fallback).
+ * - Returns a DispatchResult shape compatible with the prior single-channel
+ *   API so callers (test route, etc.) don't need changes.
  */
 export async function sendVitalReminder(opts: {
   userId: string
   patientId?: string
   vitalType: VitalType
   isTest?: boolean
+  /** Optional channel filter. If omitted on a non-test path, all channels
+   *  (push/inApp/email/voice/sms) fire subject to user preferences. On test
+   *  paths, defaults to ['push','inApp'] to avoid email spam from rapid
+   *  click-testing — pass an explicit array (e.g. all channels) to override. */
+  channels?: Channel[]
 }): Promise<DispatchResult> {
-  const { userId, patientId, vitalType, isTest } = opts
+  const { userId, patientId, vitalType, isTest, channels } = opts
 
   const patientName = patientId && patientId !== userId
     ? await getPatientName(userId, patientId)
@@ -296,36 +583,35 @@ export async function sendVitalReminder(opts: {
 
   const built = buildVitalReminder({ vitalType, patientName, patientId: resolvedPatientId, isTest })
 
-  // Try the push first. If no token at all, we still want to record the bell
-  // row — but the test endpoint historically returns 400 in that case to
-  // prompt the client to register. Caller decides; we just report.
-  const push = await dispatchUserPush({
+  const summary = await dispatchNotification({
     userId,
+    type: built.type,
     title: built.title,
     body: built.body,
     link: built.link,
+    metadata: built.metadata,
+    patientId: resolvedPatientId,
+    priority: 'normal',
     tagPrefix: isTest ? 'test' : 'vital-reminder',
+    actionLabel: 'Open',
+    // Channel selection precedence:
+    //   1. Explicit `channels` from the caller wins (e.g. /profile "Test
+    //      Your Settings" passes all channels for an end-to-end pref test).
+    //   2. On test paths without an explicit list, default to push+inApp so
+    //      rapid per-vital test clicks don't email-spam the user.
+    //   3. On real (non-test) paths, undefined = all channels, gated by prefs.
+    channels: channels ?? (isTest ? ['push', 'inApp'] : undefined),
   })
 
-  // Write the bell mirror unless push failed for "no token" — in that case
-  // there's no point in cluttering the bell with a record the user wouldn't
-  // see (and the client will retry after registering).
-  let notificationId: string | undefined
-  if (push.ok || push.staleToken) {
-    const record = await recordInAppNotification({
-      userId,
-      patientId: resolvedPatientId,
-      type: built.type,
-      priority: 'normal',
-      title: built.title,
-      message: built.body,
-      actionUrl: built.link,
-      actionLabel: 'Open',
-      metadata: built.metadata,
-      pushed: push.ok,
-    })
-    notificationId = record.id
+  // Map the per-channel summary back to the legacy DispatchResult shape so
+  // existing callers (test route, etc.) keep working without changes.
+  const pushOk = summary.channels.push?.dispatched ?? false
+  const inAppOk = summary.channels.inApp?.dispatched ?? false
+  return {
+    ok: summary.ok,
+    notificationId: summary.notificationId,
+    staleToken: summary.staleToken,
+    code: !summary.ok && !pushOk && !inAppOk ? 'NO_CHANNEL' : undefined,
+    reason: !summary.ok ? 'All channels suppressed or failed' : undefined,
   }
-
-  return { ...push, notificationId }
 }

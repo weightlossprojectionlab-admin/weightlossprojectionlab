@@ -55,6 +55,9 @@ export async function GET(request: NextRequest) {
         duty_reminder: { email: true, push: true, inApp: true },
         duty_overdue: { email: true, push: true, inApp: true },
         duty_completed: { email: false, push: false, inApp: true },
+        meal_reminder: { email: false, push: true, inApp: true },
+        re_engagement: { email: false, push: true, inApp: true },
+        milestone: { email: false, push: true, inApp: true },
         quietHours: {
           enabled: true,
           startHour: 22,

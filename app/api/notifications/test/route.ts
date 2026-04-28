@@ -39,10 +39,19 @@ export async function POST(request: NextRequest) {
     // Parse body
     let requestedPatientId: string | undefined
     let requestedVitalType: VitalType | undefined
+    let requestedChannels: ('push' | 'inApp' | 'email' | 'voice' | 'sms')[] | undefined
     try {
       const body = await request.json()
       requestedPatientId = typeof body?.patientId === 'string' ? body.patientId : undefined
       requestedVitalType = typeof body?.vitalType === 'string' ? (body.vitalType as VitalType) : undefined
+      // Caller can pass explicit channels (e.g. NotificationPreferences "Test
+      // Your Settings" passes all five) to override the default test path
+      // which is push+inApp only.
+      if (Array.isArray(body?.channels)) {
+        requestedChannels = body.channels.filter((c: unknown): c is 'push' | 'inApp' | 'email' | 'voice' | 'sms' =>
+          c === 'push' || c === 'inApp' || c === 'email' || c === 'voice' || c === 'sms'
+        )
+      }
     } catch {
       // No body or invalid JSON — defaults below
     }
@@ -55,6 +64,7 @@ export async function POST(request: NextRequest) {
       patientId: requestedPatientId,
       vitalType,
       isTest: true,
+      channels: requestedChannels,
     })
 
     if (result.ok) {

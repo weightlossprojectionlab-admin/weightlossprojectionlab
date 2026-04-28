@@ -32,6 +32,7 @@ export {
   generateVitalLoggedEmail,
   generateDocumentUploadedEmail,
   generateHealthReportEmail,
+  generateGenericNotificationEmail,
   notificationEmailTemplates
 } from './notification-emails'
 

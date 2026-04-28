@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
+import { getCSRFToken } from '@/lib/csrf'
 import type { NotificationPreferences as NotificationPrefsType, NotificationType } from '@/types/notifications'
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@/types/notifications'
 import toast from 'react-hot-toast'
@@ -191,7 +192,9 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${idToken}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          // CSRF middleware (proxy.ts) blocks unsafe methods without this header.
+          'X-CSRF-Token': getCSRFToken(),
         },
         body: JSON.stringify(preferences)
       })
@@ -258,60 +261,47 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
   const handleSendTestNotification = async () => {
     setSendingTest(true)
     try {
-      // Check if browser supports notifications
-      if (!('Notification' in window)) {
-        toast.error('Your browser does not support notifications')
+      const user = auth.currentUser
+      if (!user) {
+        toast.error('Please sign in to send a test notification')
         return
       }
 
-      // Check if service worker is available
-      if (!('serviceWorker' in navigator)) {
-        toast.error('Service workers not supported. Please use a modern browser.')
-        return
-      }
+      // Route through /api/notifications/test so the test exercises the real
+      // dispatch pipeline (lib/notifications/dispatch.ts) and respects the
+      // notification_preferences toggles + quiet hours. A local
+      // showNotification() bypasses every preference and would mislead the
+      // user into thinking their settings work when they may not.
+      const idToken = await user.getIdToken()
+      const response = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': getCSRFToken(),
+        },
+        // "Test Your Settings" should exercise every channel the user has
+        // enabled — push, in-app, email, and (later) voice/SMS — so this
+        // button truly verifies the prefs end-to-end. Per-vital test buttons
+        // pass no explicit channels and default to push+inApp only to avoid
+        // email spam from frequent click-testing.
+        body: JSON.stringify({
+          type: 'general',
+          channels: ['push', 'inApp', 'email', 'voice', 'sms'],
+        }),
+      })
 
-      // Check current permission
-      let permission = Notification.permission
-
-      // Request permission if not granted
-      if (permission === 'default') {
-        logger.debug('[NotificationPreferences] Requesting permission...')
-        permission = await Notification.requestPermission()
-      }
-
-      if (permission === 'denied') {
-        toast.error('Notification permission denied. Please enable notifications in your browser settings.')
-        return
-      }
-
-      if (permission === 'granted') {
-        // Wait for service worker to be ready (critical for mobile)
-        logger.debug('[NotificationPreferences] Waiting for service worker...')
-        const swReg = await navigator.serviceWorker.ready
-        logger.debug('[NotificationPreferences] Service worker ready, showing notification...')
-
-        // Use ServiceWorkerRegistration.showNotification() — required on mobile
-        // (new Notification() is blocked on Android/iOS browsers)
-        await swReg.showNotification('🔔 Test Notification', {
-          body: 'Your notification preferences are working! You will receive helpful updates based on your settings.',
-          icon: '/icon-192x192.png',
-          badge: '/icon-72x72.png',
-          tag: 'test-notification',
-          requireInteraction: false,
-          silent: false
-        })
-
-        toast.success('Test notification sent successfully!')
-        logger.info('[NotificationPreferences] Test notification sent successfully')
+      const result = await response.json().catch(() => ({}))
+      if (response.ok) {
+        toast.success('Test notification sent! Check your device + the bell.')
+      } else if (response.status === 400 && result?.code !== 'STALE_FCM_TOKEN') {
+        toast.error(result?.error || 'Enable notifications in your browser first.')
+      } else {
+        toast.error(result?.error || 'Failed to send test notification')
       }
     } catch (error) {
       logger.error('Error sending test notification:', error as Error)
-      const errorMsg = (error as Error).message
-      if (errorMsg.includes('service worker')) {
-        toast.error('Service worker not ready. Please refresh the page and try again.')
-      } else {
-        toast.error('Failed to send test notification: ' + errorMsg)
-      }
+      toast.error('Failed to send test notification')
     } finally {
       setSendingTest(false)
     }

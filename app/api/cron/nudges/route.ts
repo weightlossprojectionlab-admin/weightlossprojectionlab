@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { shouldDispatch } from '@/lib/notifications/preferences'
+import type { NotificationType } from '@/types/notifications'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -49,31 +51,21 @@ export async function GET(request: NextRequest) {
       stats.usersChecked++
 
       try {
-        // Get user's notification settings
+        // Read raw user data — only used for activity timestamps and gamification
+        // lookups below. Preference gating moved to shouldDispatch() which reads
+        // notification_preferences/{userId} (with users.notificationSettings as
+        // legacy fallback). One source of truth, no per-cron pref logic.
         const userDoc = await adminDb.collection('users').doc(userId).get()
         const userData = userDoc.data()
-        const settings = userData?.notificationSettings || {
-          enabled: true,
-          mealReminders: true,
-          encouragement: true,
-          milestones: true,
-          reEngagement: true,
-          quietHoursStart: 22,
-          quietHoursEnd: 7,
-        }
-
-        // Skip disabled users
-        if (!settings.enabled) continue
-
-        // Skip quiet hours
-        const { quietHoursStart = 22, quietHoursEnd = 7 } = settings
-        const inQuietHours = quietHoursStart > quietHoursEnd
-          ? (currentHour >= quietHoursStart || currentHour < quietHoursEnd)
-          : (currentHour >= quietHoursStart && currentHour < quietHoursEnd)
-        if (inQuietHours) continue
 
         // --- Meal reminders ---
-        if (settings.mealReminders !== false) {
+        const mealAllowed = await shouldDispatch({
+          userId,
+          type: 'meal_reminder' as NotificationType,
+          channel: 'push',
+          priority: 'normal',
+        })
+        if (mealAllowed) {
           const mealNudge = getMealReminder(currentHour)
           if (mealNudge) {
             // Check if user already logged this meal type today
@@ -107,7 +99,13 @@ export async function GET(request: NextRequest) {
         }
 
         // --- Re-engagement (24h+ inactive) ---
-        if (settings.reEngagement !== false) {
+        const reEngagementAllowed = await shouldDispatch({
+          userId,
+          type: 're_engagement' as NotificationType,
+          channel: 'push',
+          priority: 'normal',
+        })
+        if (reEngagementAllowed) {
           const lastActive = userData?.lastActiveAt?.toDate?.() || null
           if (lastActive) {
             const hoursSince = (now.getTime() - lastActive.getTime()) / (1000 * 60 * 60)
@@ -135,7 +133,13 @@ export async function GET(request: NextRequest) {
         }
 
         // --- Milestone check (streak) ---
-        if (settings.milestones !== false) {
+        const milestoneAllowed = await shouldDispatch({
+          userId,
+          type: 'milestone' as NotificationType,
+          channel: 'push',
+          priority: 'normal',
+        })
+        if (milestoneAllowed) {
           const gamificationSnap = await adminDb
             .collection(`users/${userId}/gamification`)
             .limit(1)
