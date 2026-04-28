@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
+import { checkHouseholdAccess } from '@/lib/household-access'
 import { logger } from '@/lib/logger'
 import type { Household } from '@/types/household'
 
@@ -38,56 +39,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const decodedToken = await verifyIdToken(idToken)
     const userId = decodedToken.uid
 
-    // Get household
-    const householdDoc = await adminDb.collection('households').doc(householdId).get()
-
-    if (!householdDoc.exists) {
+    const access = await checkHouseholdAccess(householdId, userId)
+    if (!access.exists) {
       return NextResponse.json(
         { error: 'Household not found' },
         { status: 404 }
       )
     }
-
-    const household = { id: householdDoc.id, ...householdDoc.data() } as Household
-
-    // Verify access. Direct fields first; then caregivers added via the
-    // /admin flow live in the users/{accountOwner}/familyMembers
-    // subcollection, so check there too against every plausible
-    // owner-equivalent for backward compatibility.
-    let hasAccess =
-      household.primaryCaregiverId === userId ||
-      household.additionalCaregiverIds?.includes(userId) ||
-      (household as any).createdBy === userId
-
-    if (!hasAccess) {
-      const ownerCandidates = Array.from(
-        new Set([
-          household.primaryCaregiverId,
-          (household as any).createdBy,
-        ].filter(Boolean) as string[])
-      )
-      for (const ownerUid of ownerCandidates) {
-        const familySnap = await adminDb
-          .collection('users')
-          .doc(ownerUid)
-          .collection('familyMembers')
-          .where('userId', '==', userId)
-          .where('status', '==', 'accepted')
-          .limit(1)
-          .get()
-        if (!familySnap.empty) {
-          hasAccess = true
-          break
-        }
-      }
-    }
-
-    if (!hasAccess) {
+    if (!access.isMember) {
       return NextResponse.json(
         { error: 'Unauthorized: You do not have access to this household' },
         { status: 403 }
       )
     }
+    const household = { id: householdId, ...access.household } as Household
 
     // Get patients in household
     const patientsQuery = await adminDb

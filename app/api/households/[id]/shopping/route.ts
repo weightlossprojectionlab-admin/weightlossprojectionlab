@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminDb } from '@/lib/firebase-admin'
 import { verifyAuthToken } from '@/lib/rbac-middleware'
+import { checkHouseholdAccess } from '@/lib/household-access'
 import { logger } from '@/lib/logger'
 import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 
@@ -46,72 +47,20 @@ export async function GET(
 
     const db = getAdminDb()
 
-    // Look up the household to (a) verify the caller is a member, and
-    // (b) find the household admin (whose shopping_items we'll surface).
-    const householdDoc = await db.collection('households').doc(householdId).get()
-    if (!householdDoc.exists) {
+    const access = await checkHouseholdAccess(householdId, callerUserId)
+    if (!access.exists) {
       return NextResponse.json({ error: 'Household not found' }, { status: 404 })
     }
-    const household = householdDoc.data() ?? {}
-    const ownerUserId: string | undefined = household.primaryCaregiverId
-    if (!ownerUserId) {
+    if (!access.ownerUserId) {
       return NextResponse.json({ error: 'Household has no primary caregiver' }, { status: 422 })
     }
-
-    // Caller is a household member if any of:
-    //   1. Direct: createdBy / primaryCaregiverId / additionalCaregiverIds
-    //   2. Indirect: an accepted entry in family_members where the caller is
-    //      the userId and the household owner is the accountUserId. The
-    //      /admin "Caregivers" UI populates family_members, NOT the
-    //      household's array — so a strict array check returned 403 even
-    //      for caregivers the admin had explicitly added.
-    let isMember =
-      household.createdBy === callerUserId ||
-      household.primaryCaregiverId === callerUserId ||
-      (Array.isArray(household.additionalCaregiverIds) &&
-        household.additionalCaregiverIds.includes(callerUserId))
-
-    if (!isMember) {
-      // /admin Caregivers UI writes accepted caregivers to
-      // users/{accountOwnerId}/familyMembers (a subcollection on the owner's
-      // user doc — see app/api/admin/users/[uid]/add-caregiver/route.ts).
-      // userId field on each doc is the caregiver's auth uid. Check that
-      // subcollection on every plausible household-owner candidate
-      // (primaryCaregiverId / createdBy) since older households used
-      // different fields as the canonical owner.
-      const ownerCandidates = Array.from(
-        new Set([household.primaryCaregiverId, household.createdBy].filter(Boolean) as string[])
-      )
-      for (const ownerUid of ownerCandidates) {
-        const familySnap = await db
-          .collection('users')
-          .doc(ownerUid)
-          .collection('familyMembers')
-          .where('userId', '==', callerUserId)
-          .where('status', '==', 'accepted')
-          .limit(1)
-          .get()
-        if (!familySnap.empty) {
-          isMember = true
-          break
-        }
-      }
-
-      if (!isMember) {
-        logger.debug('[API /households/shopping] no familyMembers match', {
-          callerUserId,
-          householdId,
-          ownerCandidates,
-        })
-      }
-    }
-
-    if (!isMember) {
+    if (!access.isMember) {
       logger.warn('[API /households/shopping] Caller not a household member', {
-        callerUserId, householdId, ownerUserId,
+        callerUserId, householdId, ownerUserId: access.ownerUserId,
       })
       return NextResponse.json({ error: 'Not a member of this household' }, { status: 403 })
     }
+    const ownerUserId = access.ownerUserId
 
     // The "household's" shopping list lives under the primary caregiver's
     // userId in the existing data model (shopping_items has a userId field).
