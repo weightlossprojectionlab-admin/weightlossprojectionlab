@@ -6,7 +6,7 @@
  */
 
 import { HouseholdDuty } from '@/types/household-duties'
-import { recordInAppNotification, getPatientName as getPatientNameScoped } from './notifications/dispatch'
+import { dispatchNotification, getPatientName as getPatientNameScoped } from './notifications/dispatch'
 import { DutyMetadata } from '@/types/notifications'
 import { getAdminDb } from './firebase-admin'
 import { logger } from './logger'
@@ -134,17 +134,18 @@ export async function notifyDutyAssigned(duty: HouseholdDuty, assignedByName: st
       // Skip notification to the person who assigned it
       if (caregiverId === duty.assignedBy) continue
 
-      await recordInAppNotification({
+      await dispatchNotification({
         userId: caregiverId,
         patientId: duty.forPatientId,
         type: 'duty_assigned',
         priority: notificationPriority,
         title: `New Duty: ${duty.name}`,
-        message: `${assignedByName} assigned you a ${duty.priority} priority duty${duty.forPatientId ? ` for ${metadata.forPatientName}` : ''}.`,
+        body: `${assignedByName} assigned you a ${duty.priority} priority duty${duty.forPatientId ? ` for ${metadata.forPatientName}` : ''}.`,
         metadata,
-        actionUrl: getDutyActionUrl(duty),
+        link: getDutyActionUrl(duty),
         actionLabel: await getDutyActionLabel(duty),
-        expiresInDays: 30
+        tagPrefix: 'duty-assigned',
+        expiresInDays: 30,
       })
     }
 
@@ -175,17 +176,18 @@ export async function notifyDutyCompleted(duty: HouseholdDuty, completedByName: 
     const recipientIds = [duty.userId, ...duty.assignedTo].filter(id => id !== duty.lastCompletedBy)
 
     for (const recipientId of recipientIds) {
-      await recordInAppNotification({
+      await dispatchNotification({
         userId: recipientId,
         patientId: duty.forPatientId,
         type: 'duty_completed',
         priority: 'low',
         title: `Duty Completed: ${duty.name}`,
-        message: `${completedByName} completed "${duty.name}"${duty.nextDueDate ? `. Next due: ${new Date(duty.nextDueDate).toLocaleDateString()}` : ''}.`,
+        body: `${completedByName} completed "${duty.name}"${duty.nextDueDate ? `. Next due: ${new Date(duty.nextDueDate).toLocaleDateString()}` : ''}.`,
         metadata,
-        actionUrl: getDutyActionUrl(duty),
+        link: getDutyActionUrl(duty),
         actionLabel: 'View Details',
-        expiresInDays: 7
+        tagPrefix: 'duty-completed',
+        expiresInDays: 7,
       })
     }
 
@@ -208,16 +210,17 @@ export async function notifyDutyReminder(duty: HouseholdDuty): Promise<void> {
     const dueTimeString = getDueTimeString(duty.nextDueDate!)
 
     for (const caregiverId of duty.assignedTo) {
-      await recordInAppNotification({
+      await dispatchNotification({
         userId: caregiverId,
         patientId: duty.forPatientId,
         type: 'duty_reminder',
         priority: duty.priority === 'urgent' ? 'urgent' : 'high',
         title: `Reminder: ${duty.name}`,
-        message: `Due ${dueTimeString}${duty.forPatientId ? ` for ${metadata.forPatientName}` : ''}`,
+        body: `Due ${dueTimeString}${duty.forPatientId ? ` for ${metadata.forPatientName}` : ''}`,
         metadata,
-        actionUrl: getDutyActionUrl(duty),
-        actionLabel: await getDutyActionLabel(duty)
+        link: getDutyActionUrl(duty),
+        actionLabel: await getDutyActionLabel(duty),
+        tagPrefix: 'duty-reminder',
       })
     }
 
@@ -238,18 +241,19 @@ export async function notifyDutyOverdue(duty: HouseholdDuty): Promise<void> {
     const metadata = await buildDutyMetadata(duty, assignedByName)
 
     for (const caregiverId of duty.assignedTo) {
-      await recordInAppNotification({
+      await dispatchNotification({
         userId: caregiverId,
         patientId: duty.forPatientId,
         type: 'duty_overdue',
         priority: 'urgent',
         title: `Overdue: ${duty.name}`,
-        message: `This duty was due ${getDueTimeString(duty.nextDueDate!)}`,
+        body: `This duty was due ${getDueTimeString(duty.nextDueDate!)}`,
         metadata,
-        actionUrl: getDutyActionUrl(duty),
+        link: getDutyActionUrl(duty),
         actionLabel: (duty.category === 'grocery_shopping' || duty.category === 'shopping')
           ? await getDutyActionLabel(duty)
-          : 'Complete Now'
+          : 'Complete Now',
+        tagPrefix: 'duty-overdue',
       })
     }
 

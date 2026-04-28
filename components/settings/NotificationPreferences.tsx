@@ -131,6 +131,89 @@ const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
         description: 'When a new patient is added'
       }
     ]
+  },
+  {
+    title: 'Health Episodes & Approvals',
+    description: 'Episode tracking and weight log approval workflow',
+    types: [
+      {
+        type: 'episode_created',
+        label: 'Episode Created',
+        description: 'When a new health episode is logged'
+      },
+      {
+        type: 'episode_updated',
+        label: 'Episode Updated',
+        description: 'When an existing episode is changed'
+      },
+      {
+        type: 'weight_approval_needed',
+        label: 'Weight Approval Needed',
+        description: 'Family member submitted a weight that needs your approval'
+      },
+      {
+        type: 'weight_approval_result',
+        label: 'Weight Approval Result',
+        description: 'Your submitted weight was approved or rejected'
+      }
+    ]
+  },
+  {
+    title: 'Household Duties',
+    description: 'Duty assignments, completions, and overdue reminders',
+    types: [
+      {
+        type: 'duty_assigned',
+        label: 'Duty Assigned',
+        description: 'A new duty has been assigned to you'
+      },
+      {
+        type: 'duty_reassigned',
+        label: 'Duty Reassigned',
+        description: 'A duty has been reassigned to a different caregiver'
+      },
+      {
+        type: 'duty_updated',
+        label: 'Duty Updated',
+        description: 'Duty details (frequency, priority, etc.) have changed'
+      },
+      {
+        type: 'duty_reminder',
+        label: 'Duty Reminders',
+        description: 'Upcoming duty notifications'
+      },
+      {
+        type: 'duty_overdue',
+        label: 'Duty Overdue',
+        description: 'A duty assigned to you is past its due date'
+      },
+      {
+        type: 'duty_completed',
+        label: 'Duty Completed',
+        description: 'A duty you helped assign has been completed'
+      }
+    ]
+  },
+  {
+    title: 'Engagement & Nudges',
+    description: 'Meal reminders, milestones, and re-engagement prompts',
+    types: [
+      {
+        type: 'meal_reminder',
+        label: 'Meal Reminders',
+        description: 'Breakfast, lunch, and dinner reminders to log your meals'
+      },
+      {
+        type: 're_engagement',
+        label: 'Re-engagement',
+        description: 'A friendly check-in after extended inactivity'
+      },
+      {
+        type: 'milestone',
+        label: 'Milestones',
+        description: 'Streak achievements (7, 14, 30, 60, 100 days)'
+      }
+    ]
   }
 ]
 
