@@ -243,6 +243,12 @@ export async function recordInAppNotification(opts: {
   const id = `notif_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
   const now = new Date().toISOString()
 
+  // Firestore admin SDK rejects undefined values anywhere in the doc, so we
+  // strip undefined keys from metadata recursively before writing. Common
+  // case: optional fields like DutyMetadata.forPatientId / forPatientName
+  // are passed through as `undefined` when a duty isn't tied to a patient.
+  const cleanMetadata = stripUndefined(opts.metadata) as NotificationMetadata
+
   const doc: Record<string, unknown> = {
     id,
     userId: opts.userId,
@@ -253,7 +259,7 @@ export async function recordInAppNotification(opts: {
     message: opts.message,
     actionUrl: opts.actionUrl,
     actionLabel: opts.actionLabel ?? 'Open',
-    metadata: opts.metadata,
+    metadata: cleanMetadata,
     read: false,
     archived: false,
     emailSent: false,
@@ -271,6 +277,28 @@ export async function recordInAppNotification(opts: {
 
   await adminDb.collection('notifications').doc(id).set(doc)
   return { id }
+}
+
+/**
+ * Recursively remove undefined-valued fields from an object. Firestore
+ * admin SDK throws "Cannot use 'undefined' as a Firestore value" for any
+ * undefined leaf, even at deep levels — common case is optional metadata
+ * fields like DutyMetadata.forPatientId on a duty that isn't tied to a
+ * patient. Returns a new object; does not mutate the input.
+ */
+function stripUndefined<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((v) => stripUndefined(v)) as unknown as T
+  }
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === undefined) continue
+      out[k] = stripUndefined(v)
+    }
+    return out as T
+  }
+  return value
 }
 
 // ─── Email channel sender ───────────────────────────────────────────────
