@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAdminDb } from '@/lib/firebase-admin'
+import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin'
 import { verifyAuthToken } from '@/lib/rbac-middleware'
 import {
   HouseholdDuty,
@@ -336,9 +336,27 @@ export async function POST(request: NextRequest) {
       category: body.category
     })
 
-    // Get assignedBy user name for notification
-    const assignedByUser = await db.collection('users').doc(authResult.userId).get()
-    const assignedByName = assignedByUser.data()?.displayName || assignedByUser.data()?.email || 'Someone'
+    // Get assigner's display name for notification body. Firebase Auth is
+    // the canonical source of displayName/email — the users/{uid} Firestore
+    // mirror often lacks these fields (especially for older accounts), which
+    // would silently fall through to "Someone". Try Auth first, then Firestore,
+    // then bail.
+    let assignedByName = 'Someone'
+    try {
+      const authUser = await getAdminAuth().getUser(authResult.userId)
+      assignedByName = authUser.displayName || authUser.email?.split('@')[0] || assignedByName
+    } catch {
+      // Auth lookup failed (deleted user, etc.) — fall through to Firestore mirror
+    }
+    if (assignedByName === 'Someone') {
+      const assignedByUser = await db.collection('users').doc(authResult.userId).get()
+      const data = assignedByUser.data()
+      assignedByName =
+        data?.displayName ||
+        data?.name ||
+        (typeof data?.email === 'string' ? data.email.split('@')[0] : '') ||
+        'Someone'
+    }
 
     // Create action_items for each assigned caregiver (shows in Tasks tab)
     for (const caregiverId of body.assignedTo) {
