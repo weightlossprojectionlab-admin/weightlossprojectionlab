@@ -53,15 +53,38 @@ export async function GET(
       return NextResponse.json({ error: 'Household not found' }, { status: 404 })
     }
     const household = householdDoc.data() ?? {}
+    const ownerUserId: string | undefined = household.primaryCaregiverId
+    if (!ownerUserId) {
+      return NextResponse.json({ error: 'Household has no primary caregiver' }, { status: 422 })
+    }
 
-    const isMember =
+    // Caller is a household member if any of:
+    //   1. Direct: createdBy / primaryCaregiverId / additionalCaregiverIds
+    //   2. Indirect: an accepted entry in family_members where the caller is
+    //      the userId and the household owner is the accountUserId. The
+    //      /admin "Caregivers" UI populates family_members, NOT the
+    //      household's array — so a strict array check returned 403 even
+    //      for caregivers the admin had explicitly added.
+    let isMember =
       household.createdBy === callerUserId ||
       household.primaryCaregiverId === callerUserId ||
       (Array.isArray(household.additionalCaregiverIds) &&
         household.additionalCaregiverIds.includes(callerUserId))
+
+    if (!isMember) {
+      const familySnap = await db
+        .collection('family_members')
+        .where('userId', '==', callerUserId)
+        .where('accountUserId', '==', ownerUserId)
+        .where('status', '==', 'accepted')
+        .limit(1)
+        .get()
+      if (!familySnap.empty) isMember = true
+    }
+
     if (!isMember) {
       logger.warn('[API /households/shopping] Caller not a household member', {
-        callerUserId, householdId,
+        callerUserId, householdId, ownerUserId,
       })
       return NextResponse.json({ error: 'Not a member of this household' }, { status: 403 })
     }
@@ -70,11 +93,6 @@ export async function GET(
     // userId in the existing data model (shopping_items has a userId field).
     // If we ever migrate to a household-scoped collection, swap this for a
     // direct read on `household_shopping_items` or similar.
-    const ownerUserId: string | undefined = household.primaryCaregiverId
-    if (!ownerUserId) {
-      return NextResponse.json({ error: 'Household has no primary caregiver' }, { status: 422 })
-    }
-
     const itemsSnap = await db
       .collection('shopping_items')
       .where('userId', '==', ownerUserId)
