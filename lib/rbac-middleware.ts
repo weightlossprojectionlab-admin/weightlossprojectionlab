@@ -95,8 +95,26 @@ export async function checkPatientAccess(
       }
     }
 
-    // User is not owner - check if they're a family member with access
-    const familyMembersSnapshot = await adminDb
+    // User is not the patient's owner — check if they're a household-level
+    // family member of the patient's account.
+    //
+    // Two acceptance modes:
+    //   1. Per-patient grant (legacy): familyMember.patientsAccess includes
+    //      this patientId. The `/admin` add-caregiver flow asks for an
+    //      explicit patientIds list and stores it here.
+    //   2. Household-level grant (new): familyMember exists for the
+    //      patient's owner with status='accepted', regardless of
+    //      patientsAccess. This matches how `checkHouseholdAccess` handles
+    //      the shopping/duty endpoints — a caregiver added at the household
+    //      level should be able to see every patient in that household
+    //      without the admin having to re-grant on every new patient.
+    //
+    // Mode 1 is checked first (cheap collectionGroup query). On miss we
+    // fall through to mode 2: read the familyMembers subcollection of the
+    // patient's actual owner directly.
+    let familyMemberDoc: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData> | null = null
+
+    const perPatientSnapshot = await adminDb
       .collectionGroup('familyMembers')
       .where('userId', '==', userId)
       .where('status', '==', 'accepted')
@@ -104,12 +122,51 @@ export async function checkPatientAccess(
       .limit(1)
       .get()
 
-    if (familyMembersSnapshot.empty) {
+    if (!perPatientSnapshot.empty) {
+      familyMemberDoc = perPatientSnapshot.docs[0]
+    } else {
+      // Find the patient's owner via the caller's caregiverOf list
+      // (set by /admin add-caregiver — see app/api/admin/users/[uid]/
+      // add-caregiver/route.ts:177). Each entry has accountOwnerId. For
+      // each owner the caller is a caregiver of, check if THIS patient
+      // lives under that owner's /users/{ownerId}/patients subcollection.
+      // If it does, household-level access is granted.
+      const callerDoc = await adminDb.collection('users').doc(userId).get()
+      const caregiverOf: Array<{ accountOwnerId?: string }> =
+        Array.isArray(callerDoc.data()?.caregiverOf) ? callerDoc.data()!.caregiverOf : []
+
+      for (const ctx of caregiverOf) {
+        const ownerUid = ctx?.accountOwnerId
+        if (!ownerUid) continue
+
+        const patientUnderOwner = await adminDb
+          .collection('users')
+          .doc(ownerUid)
+          .collection('patients')
+          .doc(patientId)
+          .get()
+        if (!patientUnderOwner.exists) continue
+
+        const householdSnapshot = await adminDb
+          .collection('users')
+          .doc(ownerUid)
+          .collection('familyMembers')
+          .where('userId', '==', userId)
+          .where('status', '==', 'accepted')
+          .limit(1)
+          .get()
+        if (!householdSnapshot.empty) {
+          familyMemberDoc = householdSnapshot.docs[0]
+          break
+        }
+      }
+    }
+
+    if (!familyMemberDoc) {
       logger.warn('[RBAC] User has no access to patient', { userId, patientId })
       return { authorized: false }
     }
 
-    const familyMemberDoc = familyMembersSnapshot.docs[0]
     const familyMember = {
       id: familyMemberDoc.id,
       ...familyMemberDoc.data()
