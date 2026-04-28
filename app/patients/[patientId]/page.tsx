@@ -1159,8 +1159,16 @@ function PatientDetailContent() {
                   throw new Error('Failed to update patient vital reminders')
                 }
 
-                // No need to setPatient - onSnapshot will handle real-time update
-                logger.debug('[PatientPage] Vital reminder disabled, onSnapshot will sync', { vitalType })
+                // Update local state from the API response. There's no
+                // onSnapshot listener on this page (uses one-time fetch on
+                // mount), so without this, subsequent disables would read
+                // stale `patient.preferences.vitalReminders` from React state
+                // and resurrect everything we'd previously disabled.
+                const result = await response.json()
+                if (result?.data) {
+                  setPatient(result.data)
+                }
+                logger.debug('[PatientPage] Vital reminder disabled', { vitalType })
               }}
             />
           )

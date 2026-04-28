@@ -977,7 +977,13 @@ function ProfileContent() {
                 )
               }
 
-              const isEnabled = vitalConfig?.enabled ?? (vitalType === 'weight') // Weight enabled by default
+              // Trust the saved config exactly — no implicit "weight defaults
+              // to on" fallback. Previously: when vitalConfig was missing or
+              // had been cleared, the weight toggle re-rendered as enabled
+              // even after the user had disabled it. "Off should mean off."
+              // New patients can be initialized via initializeDefaultPreferences
+              // at creation time if a default-on weight reminder is desired.
+              const isEnabled = vitalConfig?.enabled === true
               const currentFrequency = vitalConfig?.frequency || DEFAULT_FREQUENCIES[vitalType]
               const availableFrequencies = FREQUENCY_OPTIONS[vitalType]
 
