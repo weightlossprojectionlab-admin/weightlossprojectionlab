@@ -8,6 +8,7 @@ import {
   saveNotificationToken,
   deleteNotificationToken,
   getNotificationSettings,
+  getNotificationToken,
   updateNotificationSettings,
   type NotificationSettings
 } from '@/lib/nudge-system'
@@ -101,13 +102,20 @@ export function useNotifications(userId: string | undefined) {
         loading: false
       }))
 
-      // Load user settings
+      // Load user settings + check if already-registered. Without checking
+      // Firestore for an existing notification_tokens doc, isSubscribed
+      // would always start false on every reload — making the "Enable on
+      // This Device" card always look like the user hadn't registered yet.
       if (userId) {
         try {
-          const settings = await getNotificationSettings(userId)
+          const [settings, existingToken] = await Promise.all([
+            getNotificationSettings(userId),
+            getNotificationToken(userId),
+          ])
           setState(prev => ({
             ...prev,
-            settings
+            settings,
+            isSubscribed: !!existingToken,
           }))
         } catch (error) {
           logger.error('[useNotifications] Error loading settings:', error as Error)

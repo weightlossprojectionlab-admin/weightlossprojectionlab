@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
 import { getCSRFToken } from '@/lib/csrf'
+import { useNotifications } from '@/hooks/useNotifications'
 import type { NotificationPreferences as NotificationPrefsType, NotificationType } from '@/types/notifications'
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@/types/notifications'
 import toast from 'react-hot-toast'
@@ -223,6 +224,17 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
   const [saving, setSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [sendingTest, setSendingTest] = useState(false)
+  const [enablingPush, setEnablingPush] = useState(false)
+
+  // Hook drives the FCM registration flow: requestPermission registers the
+  // service worker, asks the browser for notification permission, calls
+  // getToken(messaging) and saves the token to notification_tokens/{userId}.
+  // Used by the "Enable on This Device" button below.
+  const {
+    permission,
+    isSubscribed,
+    requestPermission: registerForPushNotifications,
+  } = useNotifications(userId)
 
   // Load preferences on mount
   useEffect(() => {
@@ -570,6 +582,44 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
             )}
           </div>
 
+          {/* Enable on This Device — first-run path. Without an FCM token,
+              push will silently fail (bell + email still work). Surfacing
+              this explicitly so caregivers signing in for the first time
+              don't have to find a per-vital test button to register. */}
+          <div className={`border rounded-lg p-4 ${
+            isSubscribed
+              ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
+              : 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'
+          }`}>
+            <h3 className="font-medium text-foreground mb-2">
+              {isSubscribed ? '✅ Push Notifications Enabled on This Device' : '🔔 Enable Push Notifications'}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              {isSubscribed
+                ? 'This browser is registered for push notifications. Your in-app and email channels work regardless — this controls phone/desktop banners specifically.'
+                : permission === 'denied'
+                  ? 'Notifications are blocked in your browser settings. Click the lock icon in the address bar → Notifications → Allow, then refresh.'
+                  : 'Without this, you\'ll only see notifications in the app and via email — no phone/desktop banners. One tap below registers this device.'}
+            </p>
+            {!isSubscribed && permission !== 'denied' && (
+              <button
+                onClick={async () => {
+                  setEnablingPush(true)
+                  try {
+                    const ok = await registerForPushNotifications()
+                    if (ok) toast.success('This device is now registered for push notifications')
+                  } finally {
+                    setEnablingPush(false)
+                  }
+                }}
+                disabled={enablingPush}
+                className="w-full px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed min-h-[44px]"
+              >
+                {enablingPush ? 'Registering...' : 'Enable on This Device'}
+              </button>
+            )}
+          </div>
+
           {/* Test Notification */}
           <div className="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
             <h3 className="font-medium text-foreground mb-2">Test Your Settings</h3>
@@ -579,7 +629,7 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
             <button
               onClick={handleSendTestNotification}
               disabled={sendingTest}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed min-h-[44px]"
             >
               {sendingTest ? 'Sending Test...' : 'Send Test Notification'}
             </button>

@@ -87,23 +87,21 @@ export async function saveNotificationToken(userId: string, token: string): Prom
 }
 
 /**
- * Get FCM token for user
+ * Get FCM token for user.
+ *
+ * Reads `notification_tokens/{userId}` directly (the doc ID IS the userId,
+ * see saveNotificationToken below). Previously this used a collection query
+ * with `where('userId', '==', userId)` which fails Firestore security rules
+ * — those rules permit per-doc reads (`userId == request.auth.uid` matched
+ * against the wildcard), not list queries. The direct fetch hits the doc
+ * rule cleanly and is also one less round-trip than a query.
  */
 export async function getNotificationToken(userId: string): Promise<string | null> {
   try {
-    const tokenQuery = query(
-      collection(db, 'notification_tokens'),
-      where('userId', '==', userId),
-      limit(1)
-    )
-
-    const tokenSnap = await getDocs(tokenQuery)
-    if (tokenSnap.empty) {
-      return null
-    }
-
-    const tokenData = tokenSnap.docs[0].data() as NotificationToken
-    return tokenData.token
+    const tokenDoc = await getDoc(doc(db, 'notification_tokens', userId))
+    if (!tokenDoc.exists()) return null
+    const tokenData = tokenDoc.data() as NotificationToken
+    return tokenData.token ?? null
   } catch (error) {
     logger.error('[Nudge] Error getting notification token', error as Error)
     return null
