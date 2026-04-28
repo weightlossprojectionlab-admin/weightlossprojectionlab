@@ -469,8 +469,16 @@ function FamilyDashboardContent() {
                           householdName={households.find(h => h.id === selectedHouseholdForDuties)?.name || ''}
                           households={households}
                           onHouseholdChange={setSelectedHouseholdForDuties}
+                          // CaregiverProfile.id MUST be the assignee's Firebase
+                          // Auth uid because DutyFormModal pushes `caregiver.id`
+                          // into duty.assignedTo, which downstream code uses
+                          // verbatim as the auth uid (FCM tokens, email lookup
+                          // via auth.getUser, notification_preferences/{uid}).
+                          // member.id is the family-member RECORD id (Firestore-
+                          // generated, ~20 chars) — using it caused dispatch to
+                          // attempt auth.getUser on a non-auth doc id and fail.
                           caregivers={activeMembers.map(member => ({
-                            id: member.id,
+                            id: member.userId || member.id,
                             userId: member.userId || member.id,
                             name: member.name,
                             email: member.email,
