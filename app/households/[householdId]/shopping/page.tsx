@@ -25,7 +25,14 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Spinner } from '@/components/ui/Spinner'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
-import { CheckCircleIcon, ShoppingCartIcon, PlusIcon } from '@heroicons/react/24/outline'
+import {
+  CheckCircleIcon,
+  ShoppingCartIcon,
+  PlusIcon,
+  MinusIcon,
+  TrashIcon,
+  PencilSquareIcon,
+} from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
 interface HouseholdShoppingItem {
@@ -63,10 +70,13 @@ function HouseholdShoppingContent() {
   const [error, setError] = useState<string | null>(null)
   const [isOwner, setIsOwner] = useState(false)
   const [purchasingIds, setPurchasingIds] = useState<Set<string>>(new Set())
+  const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
   const [recentlyPurchased, setRecentlyPurchased] = useState<Set<string>>(new Set())
   const [showAddForm, setShowAddForm] = useState(false)
   const [newItemName, setNewItemName] = useState('')
   const [adding, setAdding] = useState(false)
+  const [editingNotesId, setEditingNotesId] = useState<string | null>(null)
+  const [notesDraft, setNotesDraft] = useState('')
 
   async function authedFetch(url: string, init: RequestInit = {}) {
     const user = auth.currentUser
@@ -163,6 +173,110 @@ function HouseholdShoppingContent() {
         next.delete(itemId)
         return next
       })
+    }
+  }
+
+  function withBusy(itemId: string, on: boolean) {
+    setBusyIds(prev => {
+      const next = new Set(prev)
+      if (on) next.add(itemId)
+      else next.delete(itemId)
+      return next
+    })
+  }
+
+  async function patchItem(itemId: string, body: Record<string, unknown>) {
+    const res = await authedFetch(
+      `/api/households/${householdId}/shopping/items/${itemId}`,
+      { method: 'PATCH', body: JSON.stringify(body) }
+    )
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}))
+      throw new Error(errBody?.error || `HTTP ${res.status}`)
+    }
+  }
+
+  async function handleQtyDelta(itemId: string, delta: number, currentQty: number) {
+    if (currentQty + delta < 1) {
+      toast('Use Remove to drop the item from the list', { icon: 'ℹ️' })
+      return
+    }
+    withBusy(itemId, true)
+    // Optimistic update
+    setData(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        neededItems: prev.neededItems.map(i =>
+          i.id === itemId ? { ...i, quantity: (i.quantity ?? 0) + delta } : i
+        ),
+      }
+    })
+    try {
+      await patchItem(itemId, { delta })
+    } catch (err: any) {
+      // Roll back optimistic update
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          neededItems: prev.neededItems.map(i =>
+            i.id === itemId ? { ...i, quantity: (i.quantity ?? 0) - delta } : i
+          ),
+        }
+      })
+      logger.error('[HouseholdShopping] qty update failed', err as Error, { itemId, delta })
+      toast.error(err?.message || 'Failed to update quantity')
+    } finally {
+      withBusy(itemId, false)
+    }
+  }
+
+  async function handleRemove(itemId: string, productName: string) {
+    if (!confirm(`Remove "${productName}" from the shopping list?`)) return
+    withBusy(itemId, true)
+    try {
+      await patchItem(itemId, { needed: false })
+      setData(prev => {
+        if (!prev) return prev
+        const remaining = prev.neededItems.filter(i => i.id !== itemId)
+        return { ...prev, neededItems: remaining, neededCount: remaining.length }
+      })
+      toast.success(`Removed "${productName}"`)
+    } catch (err: any) {
+      logger.error('[HouseholdShopping] remove failed', err as Error, { itemId })
+      toast.error(err?.message || 'Failed to remove item')
+    } finally {
+      withBusy(itemId, false)
+    }
+  }
+
+  function startEditingNotes(item: HouseholdShoppingItem) {
+    setEditingNotesId(item.id)
+    setNotesDraft(item.notes ?? '')
+  }
+
+  async function saveNotes(itemId: string) {
+    const trimmed = notesDraft.trim()
+    withBusy(itemId, true)
+    try {
+      await patchItem(itemId, { notes: trimmed })
+      setData(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          neededItems: prev.neededItems.map(i =>
+            i.id === itemId ? { ...i, notes: trimmed || undefined } : i
+          ),
+        }
+      })
+      setEditingNotesId(null)
+      setNotesDraft('')
+    } catch (err: any) {
+      logger.error('[HouseholdShopping] notes update failed', err as Error, { itemId })
+      toast.error(err?.message || 'Failed to save note')
+    } finally {
+      withBusy(itemId, false)
     }
   }
 
@@ -313,9 +427,12 @@ function HouseholdShoppingContent() {
           <ul className="bg-card border border-border rounded-lg divide-y divide-border">
             {needed.map((item) => {
               const purchasing = purchasingIds.has(item.id)
+              const busy = busyIds.has(item.id)
+              const qty = typeof item.quantity === 'number' ? item.quantity : 1
+              const editingNotes = editingNotesId === item.id
               return (
-                <li key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                <li key={item.id} className="p-4 flex flex-col gap-3">
+                  <div className="flex items-start gap-3">
                     {item.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -334,33 +451,126 @@ function HouseholdShoppingContent() {
                         <div className="text-xs text-muted-foreground">{item.brand}</div>
                       )}
                       <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                        {item.displayQuantity && <span>{item.displayQuantity}</span>}
-                        {item.category && <span>· {item.category}</span>}
+                        {item.category && <span>{item.category}</span>}
                         {item.priority === 'high' && (
-                          <span className="text-red-600 font-medium">High priority</span>
+                          <span className="text-red-600 font-medium">· High priority</span>
                         )}
                       </div>
-                      {item.notes && (
-                        <p className="text-sm text-foreground/80 mt-1">{item.notes}</p>
-                      )}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleMarkPurchased(item.id, item.productName)}
-                    disabled={purchasing}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-60 min-h-[44px] sm:flex-shrink-0 w-full sm:w-auto"
-                    aria-label={`Mark ${item.productName} as purchased`}
-                  >
-                    {purchasing ? (
-                      <>Marking…</>
-                    ) : (
-                      <>
-                        <CheckCircleIcon className="w-5 h-5" />
-                        Mark Purchased
-                      </>
+
+                  {editingNotes ? (
+                    <div className="flex flex-col gap-2">
+                      <textarea
+                        value={notesDraft}
+                        onChange={e => setNotesDraft(e.target.value)}
+                        placeholder="e.g. Get the unsweetened version"
+                        rows={2}
+                        autoFocus
+                        className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        disabled={busy}
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          type="button"
+                          onClick={() => { setEditingNotesId(null); setNotesDraft('') }}
+                          disabled={busy}
+                          className="px-3 py-2 text-sm rounded-lg text-muted-foreground hover:bg-muted min-h-[44px]"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => saveNotes(item.id)}
+                          disabled={busy}
+                          className="px-3 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 min-h-[44px]"
+                        >
+                          Save note
+                        </button>
+                      </div>
+                    </div>
+                  ) : item.notes ? (
+                    <button
+                      type="button"
+                      onClick={() => startEditingNotes(item)}
+                      className="text-left text-sm text-foreground/80 bg-muted/40 rounded-md px-3 py-2 hover:bg-muted/70"
+                    >
+                      <span className="text-muted-foreground text-xs uppercase tracking-wide block">
+                        Note (tap to edit)
+                      </span>
+                      {item.notes}
+                    </button>
+                  ) : null}
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="inline-flex items-center border border-border rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => handleQtyDelta(item.id, -1, qty)}
+                        disabled={busy || qty <= 1}
+                        className="px-3 min-h-[44px] hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label={`Decrease quantity for ${item.productName}`}
+                      >
+                        <MinusIcon className="w-4 h-4" />
+                      </button>
+                      <span className="px-3 text-sm font-medium tabular-nums min-w-[3ch] text-center">
+                        {qty}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleQtyDelta(item.id, +1, qty)}
+                        disabled={busy}
+                        className="px-3 min-h-[44px] hover:bg-muted disabled:opacity-40"
+                        aria-label={`Increase quantity for ${item.productName}`}
+                      >
+                        <PlusIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {item.unit && (
+                      <span className="text-xs text-muted-foreground">{item.unit}</span>
                     )}
-                  </button>
+
+                    {!editingNotes && (
+                      <button
+                        type="button"
+                        onClick={() => startEditingNotes(item)}
+                        disabled={busy}
+                        className="inline-flex items-center gap-1 px-2 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-md min-h-[44px]"
+                        aria-label={`Edit note for ${item.productName}`}
+                      >
+                        <PencilSquareIcon className="w-4 h-4" />
+                        {item.notes ? 'Edit note' : 'Add note'}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(item.id, item.productName)}
+                      disabled={busy}
+                      className="inline-flex items-center gap-1 px-2 py-2 text-xs text-red-600 hover:bg-red-50 rounded-md min-h-[44px] ml-auto"
+                      aria-label={`Remove ${item.productName} from list`}
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                      Remove
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleMarkPurchased(item.id, item.productName)}
+                      disabled={purchasing || busy}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-60 min-h-[44px] w-full sm:w-auto"
+                      aria-label={`Mark ${item.productName} as purchased`}
+                    >
+                      {purchasing ? (
+                        <>Marking…</>
+                      ) : (
+                        <>
+                          <CheckCircleIcon className="w-5 h-5" />
+                          Mark Purchased
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </li>
               )
             })}
