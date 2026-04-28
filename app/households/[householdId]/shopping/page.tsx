@@ -32,8 +32,10 @@ import {
   MinusIcon,
   TrashIcon,
   PencilSquareIcon,
+  CameraIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import { BarcodeScanner } from '@/components/BarcodeScanner'
 
 interface HouseholdShoppingItem {
   id: string
@@ -77,6 +79,8 @@ function HouseholdShoppingContent() {
   const [adding, setAdding] = useState(false)
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null)
   const [notesDraft, setNotesDraft] = useState('')
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [scanning, setScanning] = useState(false)
 
   async function authedFetch(url: string, init: RequestInit = {}) {
     const user = auth.currentUser
@@ -280,6 +284,42 @@ function HouseholdShoppingContent() {
     }
   }
 
+  async function handleScan(barcode: string) {
+    setScannerOpen(false)
+    setScanning(true)
+    try {
+      const res = await authedFetch(
+        `/api/households/${householdId}/shopping/scan`,
+        { method: 'POST', body: JSON.stringify({ barcode }) }
+      )
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(result?.error || `HTTP ${res.status}`)
+
+      // Refresh the list so the post-scan state (purchased / new in-stock
+      // / new needed) is reflected. Cheaper than reconciling locally
+      // since the scan result depends on what existed server-side.
+      await refresh()
+
+      const name = result?.productName || `Item ${barcode}`
+      const action: string = result?.action ?? 'instock'
+      const matched: boolean = !!result?.matched
+      if (action === 'purchase' || (action === 'instock' && matched)) {
+        toast.success(`Marked "${name}" purchased`)
+      } else if (action === 'instock') {
+        toast.success(`Logged "${name}" as bought`)
+      } else if (action === 'add') {
+        toast.success(`Added "${name}" to the list`)
+      } else {
+        toast.success(`Scanned "${name}"`)
+      }
+    } catch (err: any) {
+      logger.error('[HouseholdShopping] scan failed', err as Error, { barcode })
+      toast.error(err?.message || 'Failed to process scan')
+    } finally {
+      setScanning(false)
+    }
+  }
+
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault()
     const name = newItemName.trim()
@@ -365,18 +405,30 @@ function HouseholdShoppingContent() {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Needed ({needed.length})
           </h2>
-          <button
-            type="button"
-            onClick={() => setShowAddForm(prev => !prev)}
-            className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-primary rounded-lg hover:bg-primary/10 min-h-[44px]"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Add item
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setScannerOpen(true)}
+              disabled={scanning}
+              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-primary rounded-lg hover:bg-primary/10 disabled:opacity-50 min-h-[44px]"
+              aria-label="Scan barcode"
+            >
+              <CameraIcon className="w-4 h-4" />
+              {scanning ? 'Scanning…' : 'Scan'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(prev => !prev)}
+              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-primary rounded-lg hover:bg-primary/10 min-h-[44px]"
+            >
+              <PlusIcon className="w-4 h-4" />
+              Add item
+            </button>
+          </div>
         </div>
 
         {showAddForm && (
@@ -588,6 +640,14 @@ function HouseholdShoppingContent() {
           </div>
         )}
       </div>
+
+      <BarcodeScanner
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={handleScan}
+        context="purchase"
+        title="Scan Product"
+      />
     </div>
   )
 }
