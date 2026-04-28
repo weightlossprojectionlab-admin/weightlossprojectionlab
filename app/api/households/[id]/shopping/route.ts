@@ -72,36 +72,37 @@ export async function GET(
         household.additionalCaregiverIds.includes(callerUserId))
 
     if (!isMember) {
-      // The /admin Caregivers UI populates family_members. The doc shape
-      // can vary (different historical versions of the invitation flow),
-      // so we accept the caller as a member if ANY accepted family_members
-      // doc points back at the household's owner-equivalent. Possible
-      // ownerLink values: primaryCaregiverId or createdBy.
+      // /admin Caregivers UI writes accepted caregivers to
+      // users/{accountOwnerId}/familyMembers (a subcollection on the owner's
+      // user doc — see app/api/admin/users/[uid]/add-caregiver/route.ts).
+      // userId field on each doc is the caregiver's auth uid. Check that
+      // subcollection on every plausible household-owner candidate
+      // (primaryCaregiverId / createdBy) since older households used
+      // different fields as the canonical owner.
       const ownerCandidates = Array.from(
         new Set([household.primaryCaregiverId, household.createdBy].filter(Boolean) as string[])
       )
-      const familySnap = await db
-        .collection('family_members')
-        .where('userId', '==', callerUserId)
-        .where('status', '==', 'accepted')
-        .get()
-      if (!familySnap.empty) {
-        const matches = familySnap.docs.some((d) => {
-          const data = d.data() as { accountUserId?: string; ownerUserId?: string; managedBy?: string }
-          const candidate = data.accountUserId ?? data.ownerUserId ?? data.managedBy
-          return !!candidate && ownerCandidates.includes(candidate)
-        })
-        if (matches) isMember = true
-        // Diagnostic — surfaces the actual shape so we can lock the rule
-        // tighter once we know the canonical field name.
-        if (!matches) {
-          logger.debug('[API /households/shopping] family_members rows present but no owner match', {
-            callerUserId,
-            householdId,
-            ownerCandidates,
-            shapes: familySnap.docs.map((d) => Object.keys(d.data())),
-          })
+      for (const ownerUid of ownerCandidates) {
+        const familySnap = await db
+          .collection('users')
+          .doc(ownerUid)
+          .collection('familyMembers')
+          .where('userId', '==', callerUserId)
+          .where('status', '==', 'accepted')
+          .limit(1)
+          .get()
+        if (!familySnap.empty) {
+          isMember = true
+          break
         }
+      }
+
+      if (!isMember) {
+        logger.debug('[API /households/shopping] no familyMembers match', {
+          callerUserId,
+          householdId,
+          ownerCandidates,
+        })
       }
     }
 
