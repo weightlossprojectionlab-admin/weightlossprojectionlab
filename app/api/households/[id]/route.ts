@@ -50,10 +50,37 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const household = { id: householdDoc.id, ...householdDoc.data() } as Household
 
-    // Verify access
-    const hasAccess =
+    // Verify access. Direct fields first; then caregivers added via the
+    // /admin flow live in the users/{accountOwner}/familyMembers
+    // subcollection, so check there too against every plausible
+    // owner-equivalent for backward compatibility.
+    let hasAccess =
       household.primaryCaregiverId === userId ||
-      household.additionalCaregiverIds?.includes(userId)
+      household.additionalCaregiverIds?.includes(userId) ||
+      (household as any).createdBy === userId
+
+    if (!hasAccess) {
+      const ownerCandidates = Array.from(
+        new Set([
+          household.primaryCaregiverId,
+          (household as any).createdBy,
+        ].filter(Boolean) as string[])
+      )
+      for (const ownerUid of ownerCandidates) {
+        const familySnap = await adminDb
+          .collection('users')
+          .doc(ownerUid)
+          .collection('familyMembers')
+          .where('userId', '==', userId)
+          .where('status', '==', 'accepted')
+          .limit(1)
+          .get()
+        if (!familySnap.empty) {
+          hasAccess = true
+          break
+        }
+      }
+    }
 
     if (!hasAccess) {
       return NextResponse.json(

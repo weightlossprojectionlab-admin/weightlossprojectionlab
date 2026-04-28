@@ -173,7 +173,7 @@ const nextConfig: NextConfig = {
                   "default-src 'self'",
                   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://cdn.jsdelivr.net https://unpkg.com",
                   "style-src 'self' 'unsafe-inline'",
-                  "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://images.unsplash.com https://picsum.photos",
+                  "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://images.unsplash.com https://picsum.photos https://images.openfoodfacts.org https://static.openfoodfacts.org",
                   "font-src 'self' data:",
                   "connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://firebasestorage.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://api.stripe.com https://generativelanguage.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://lh3.googleusercontent.com https://images.unsplash.com https://picsum.photos https://api.openai.com",
                   "frame-src https://js.stripe.com https://firebasestorage.googleapis.com https://accounts.google.com https://weightlossprojectionlab-8b284.firebaseapp.com https://app.netlify.com",
