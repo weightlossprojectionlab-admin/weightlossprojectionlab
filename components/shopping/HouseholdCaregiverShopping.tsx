@@ -17,7 +17,7 @@
  * cross-user API path.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -64,6 +64,15 @@ interface Props {
   dutyId?: string | null
 }
 
+function formatSyncedAgo(ms: number): string {
+  const s = Math.floor(ms / 1000)
+  if (s < 5) return 'Synced just now'
+  if (s < 60) return `Synced ${s}s ago`
+  const m = Math.floor(s / 60)
+  if (m === 1) return 'Synced 1m ago'
+  return `Synced ${m}m ago`
+}
+
 export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
   const router = useRouter()
 
@@ -81,6 +90,21 @@ export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
   const [notesDraft, setNotesDraft] = useState('')
   const [scannerOpen, setScannerOpen] = useState(false)
   const [scanning, setScanning] = useState(false)
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
+  // Mutable "is anything in-flight" flag — read by the polling tick.
+  // Stored in a ref (not deps) so the polling timer doesn't restart on
+  // every keystroke / busy-state change.
+  const busyRef = useRef(false)
+  busyRef.current =
+    scanning ||
+    adding ||
+    scannerOpen ||
+    editingNotesId !== null ||
+    showAddForm ||
+    busyIds.size > 0 ||
+    purchasingIds.size > 0
 
   async function authedFetch(url: string, init: RequestInit = {}) {
     const user = auth.currentUser
@@ -112,6 +136,7 @@ export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
       return
     }
     setData(body)
+    setLastSyncedAt(Date.now())
   }
 
   useEffect(() => {
@@ -152,6 +177,70 @@ export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [householdId])
+
+  // Background sync: poll the GET endpoint every 15s while the page is
+  // visible and no mutation is in-flight, so a second caregiver shopping
+  // simultaneously (or the household admin editing the list) shows up
+  // here within ~15s. Skips when the user is mid-edit to avoid clobbering
+  // optimistic state.
+  //
+  // Future upgrade path to true real-time:
+  //   1. Write a denormalized doc at users/{ownerUserId}/caregiverIds/
+  //      {caregiverUid} when the /admin add-caregiver flow runs.
+  //   2. Update Firestore rules on shopping_items to also allow read when
+  //      exists(/databases/$(database)/documents/users/$(resource.data
+  //      .userId)/caregiverIds/$(request.auth.uid)).
+  //   3. Replace this polling effect with onSnapshot listening to
+  //      shopping_items where userId == ownerUserId && needed == true.
+  //
+  // Polling is fine for v1 — shopping is a slow-moving collaborative
+  // activity and 15s lag is well below the human noticeability threshold
+  // for "did my partner already buy the milk."
+  useEffect(() => {
+    if (loading || error) return
+
+    let cancelled = false
+    let timer: number | null = null
+
+    async function tick() {
+      if (cancelled) return
+      const visible =
+        typeof document === 'undefined' || document.visibilityState === 'visible'
+      if (visible && !busyRef.current) {
+        try {
+          await refresh()
+        } catch {
+          // Silent; next tick retries.
+        }
+      }
+      if (cancelled) return
+      timer = window.setTimeout(tick, 15000)
+    }
+
+    timer = window.setTimeout(tick, 15000)
+
+    function onVisibility() {
+      if (document.visibilityState === 'visible' && !busyRef.current) {
+        if (timer) window.clearTimeout(timer)
+        timer = window.setTimeout(tick, 500)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      cancelled = true
+      if (timer) window.clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, error, householdId])
+
+  // Tick the "Synced X ago" indicator every 10s so it doesn't read as
+  // "Synced just now" forever. Cheap render trigger.
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 10000)
+    return () => window.clearInterval(id)
+  }, [])
 
   async function handleMarkPurchased(itemId: string, productName: string) {
     setPurchasingIds(prev => new Set(prev).add(itemId))
@@ -401,9 +490,16 @@ export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Needed ({needed.length})
-          </h2>
+          <div className="flex items-baseline gap-2">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Needed ({needed.length})
+            </h2>
+            {lastSyncedAt && (
+              <span className="text-xs text-muted-foreground" title="Auto-syncs every 15s while open">
+                {formatSyncedAgo(now - lastSyncedAt)}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             <button
               type="button"
