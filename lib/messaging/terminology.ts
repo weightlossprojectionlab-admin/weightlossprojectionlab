@@ -2,17 +2,21 @@
  * Centralized Messaging & Terminology System
  *
  * Provides context-aware messaging for features across different platform layers:
- * - SEO: AI-heavy for search discoverability
+ * - SEO: Search-discoverable terms that accurately reflect each feature's tech layer
+ *        (AI for vision/OCR; self-teaching for personalization; smart for rule-based)
  * - Marketing: Technical authority for healthcare credibility
  * - Product: Branded WPL technology for trust & differentiation
  *
- * This system enables consistent terminology replacement across 750+ AI references
- * while maintaining strategic messaging per context.
+ * Architecture note: WPL uses two distinct technology layers. AI (Gemini Vision)
+ * powers photo-based capture (meals, medical document OCR). Self-teaching ML
+ * (WPL-owned) powers personalization, projections, and recommendations that
+ * learn each family member's patterns over time. Terminology in this file
+ * reflects which layer actually powers each feature — do not inflate.
  */
 
 /**
  * Messaging contexts determine which terminology variant to use
- * - seo: Search-optimized (AI keywords for discoverability)
+ * - seo: Search-optimized terms accurate to the feature's tech layer
  * - marketing: Technical authority (builds healthcare credibility)
  * - product: Branded WPL terms (user-facing trust & differentiation)
  */
@@ -64,17 +68,17 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Health Insights & Predictions
+  // Health Insights & Predictions (self-teaching ML)
   healthInsights: {
     seo: {
-      headline: 'AI Health Insights & Predictions',
-      description: 'Get AI-powered health insights, weight predictions, and personalized wellness recommendations',
-      keywords: ['AI health insights', 'predictive health analytics', 'AI wellness coach']
+      headline: 'Self-Teaching Health Insights & Predictions',
+      description: 'Personalized health insights, weight predictions, and wellness recommendations that adapt to your family\'s patterns over time',
+      keywords: ['self-teaching health insights', 'predictive health analytics', 'personalized wellness insights']
     },
     marketing: {
       headline: 'Predictive Health Analytics Engine',
-      description: 'Machine learning algorithms analyze your health data to identify trends, predict outcomes, and provide evidence-based recommendations',
-      technicalDetails: 'Time-series analysis with LSTM neural networks for outcome prediction'
+      description: 'Self-teaching ML algorithms analyze your health data to identify trends, predict outcomes, and provide evidence-based recommendations that adapt as new data accumulates',
+      technicalDetails: 'Time-series analysis with statistical models for outcome prediction; learns each family member\'s baseline over time'
     },
     product: {
       label: 'Wellness Intelligence',
@@ -102,16 +106,16 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Smart Shopping Suggestions
+  // Smart Shopping Suggestions (self-teaching ML, rule-based + collaborative filtering)
   shoppingSuggestions: {
     seo: {
-      headline: 'AI Smart Shopping Lists',
-      description: 'AI-powered shopping suggestions based on your health goals, inventory, and meal plans',
-      keywords: ['AI shopping list', 'smart grocery suggestions', 'AI meal planning']
+      headline: 'Self-Teaching Smart Shopping Lists',
+      description: 'Adaptive shopping suggestions that learn what your household actually buys, based on health goals, inventory, and meal plans',
+      keywords: ['self-teaching shopping list', 'smart grocery suggestions', 'adaptive meal planning']
     },
     marketing: {
-      headline: 'Intelligent Shopping Recommendation Engine',
-      description: 'Multi-factor recommendation system combining health goals, dietary restrictions, inventory depletion, and nutritional optimization',
+      headline: 'Self-Teaching Shopping Recommendation Engine',
+      description: 'Multi-factor recommendation system combining health goals, dietary restrictions, inventory depletion, and nutritional optimization — learns your household\'s actual purchase patterns over time',
       technicalDetails: 'Collaborative filtering with constraint-based optimization for health-aligned shopping'
     },
     product: {
@@ -121,54 +125,54 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Recipe Generation
+  // Recipe Generation (self-teaching ML, with Gemini fallback for missing recipe steps)
   recipeGeneration: {
     seo: {
-      headline: 'AI Recipe Generator',
-      description: 'Generate personalized recipes with AI based on your inventory, health goals, and preferences',
-      keywords: ['AI recipe generator', 'personalized recipe AI', 'inventory recipe creator']
+      headline: 'Self-Teaching Recipe Recommendations',
+      description: 'Personalized recipe recommendations that adapt to your family\'s inventory, health goals, restrictions, and preferences over time',
+      keywords: ['self-teaching recipe recommendations', 'personalized recipes', 'inventory recipe creator']
     },
     marketing: {
-      headline: 'Adaptive Recipe Generation System',
-      description: 'Large language model fine-tuned on nutritional science generates recipes optimized for your health conditions and available ingredients',
-      technicalDetails: 'LLM with retrieval-augmented generation (RAG) for evidence-based recipe creation'
+      headline: 'Adaptive Recipe Recommendation System',
+      description: 'Self-teaching ML uses collaborative filtering on product associations and family preferences to recommend recipes optimized for your health conditions and available ingredients. Gemini Flash fills in missing recipe steps when needed.',
+      technicalDetails: 'Collaborative filtering with product-association mining; Gemini Flash Lite for recipe-step generation when inventory matches a recipe with incomplete instructions'
     },
     product: {
-      label: 'Recipe Generator',
-      tooltip: 'Create custom recipes from your pantry ingredients, tailored to your health goals and taste preferences',
-      shortDescription: 'Generate recipes'
+      label: 'Recipe Recommendations',
+      tooltip: 'Get recipe ideas tuned to your pantry ingredients, health goals, and taste preferences',
+      shortDescription: 'Personalized recipes'
     }
   },
 
-  // AI Coaching
+  // Self-Teaching Coach (ROADMAP — not yet shipped; will be data-driven coaching, NOT a conversational LLM chatbot)
   aiCoaching: {
     seo: {
-      headline: 'AI Wellness Coach',
-      description: 'Get 24/7 AI coaching for weight loss, nutrition, fitness, and wellness guidance',
-      keywords: ['AI wellness coach', 'AI health coach', 'personalized AI coaching']
+      headline: 'Self-Teaching Wellness Coach (Coming Soon)',
+      description: 'Data-driven coaching surfaced from your family\'s accumulated patterns — not a chatbot. Coming soon.',
+      keywords: ['self-teaching wellness coach', 'data-driven health coach', 'personalized coaching']
     },
     marketing: {
-      headline: 'Conversational AI Health Coaching',
-      description: 'Advanced natural language AI trained on clinical wellness protocols provides personalized coaching, accountability, and evidence-based guidance',
-      technicalDetails: 'GPT-4 fine-tuned on behavioral psychology and nutritional science research'
+      headline: 'Predictive Wellness Coaching',
+      description: 'Self-teaching ML coaching surfaced from each family member\'s accumulated meal, vitals, weight, and adherence data. Not a conversational chatbot — it\'s evidence-based guidance derived from your actual patterns.',
+      technicalDetails: 'Pattern detection on time-series health data with rule-based intervention suggestions; roadmap feature, not yet shipped'
     },
     product: {
-      label: 'Wellness Coach',
-      tooltip: 'Chat with your AI Wellness Coach anytime for personalized guidance, motivation, and health advice',
-      shortDescription: '24/7 coaching support'
+      label: 'Predictive Coach',
+      tooltip: 'Predictive coaching surfaces what your data is telling us — personalized guidance from your family\'s patterns. (Coming soon.)',
+      shortDescription: 'Data-driven coaching (roadmap)'
     }
   },
 
-  // Weight Projections
+  // Weight Projections (self-teaching ML, statistical time-series)
   weightProjections: {
     seo: {
-      headline: 'AI Weight Loss Predictions',
-      description: 'AI-powered weight projections show when you\'ll reach your goal based on your progress',
-      keywords: ['AI weight prediction', 'weight loss calculator', 'AI goal projections']
+      headline: 'Self-Teaching Weight Loss Projections',
+      description: 'Self-teaching weight projections that learn your body\'s actual response patterns to show when you\'ll reach your goal',
+      keywords: ['self-teaching weight projection', 'weight loss calculator', 'personalized goal projections']
     },
     marketing: {
       headline: 'Predictive Weight Modeling',
-      description: 'Statistical time-series models analyze your weight trends and lifestyle factors to project realistic goal achievement timelines',
+      description: 'Statistical time-series models analyze your weight trends and lifestyle factors to project realistic goal achievement timelines — refining as more data accumulates',
       technicalDetails: 'Bayesian regression with confidence intervals for evidence-based projections'
     },
     product: {
@@ -178,17 +182,17 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Nutrition Analysis
+  // Nutrition Analysis (Gemini Vision = real AI; ACCURATE to call this AI)
   nutritionAnalysis: {
     seo: {
       headline: 'AI Nutrition Analysis',
-      description: 'Instant AI-powered nutrition facts from meal photos and food descriptions',
+      description: 'Instant AI-powered nutrition facts from meal photos and food descriptions, powered by Gemini Vision',
       keywords: ['AI nutrition calculator', 'meal nutrition AI', 'automatic calorie counter']
     },
     marketing: {
       headline: 'Multi-Modal Nutrition Computation',
-      description: 'Computer vision and NLP algorithms estimate portion sizes and compute comprehensive macronutrient breakdowns from images or text',
-      technicalDetails: 'CNN-based portion estimation with USDA database integration for 300k+ foods'
+      description: 'Gemini Vision estimates portion sizes and computes comprehensive macronutrient breakdowns from images or text descriptions',
+      technicalDetails: 'Gemini Vision 2.5 Pro for image analysis with USDA FoodData Central integration for 300k+ foods'
     },
     product: {
       label: 'Nutrition Analysis',
@@ -197,16 +201,16 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Health Correlations
+  // Health Correlations (self-teaching ML, statistical correlation analysis)
   healthCorrelations: {
     seo: {
-      headline: 'AI Health Pattern Detection',
-      description: 'Discover how your meals, activities, and lifestyle affect your health with AI pattern analysis',
-      keywords: ['AI health patterns', 'nutrition correlation AI', 'health trend analysis']
+      headline: 'Self-Teaching Health Pattern Detection',
+      description: 'Discover how your meals, activities, and lifestyle affect your health — patterns get more accurate the longer you use it',
+      keywords: ['self-teaching health patterns', 'nutrition correlation', 'health trend analysis']
     },
     marketing: {
       headline: 'Multi-Variate Health Correlation Analysis',
-      description: 'Statistical learning algorithms identify correlations between nutrition, vitals, medications, and health outcomes for personalized insights',
+      description: 'Self-teaching statistical learning identifies correlations between nutrition, vitals, medications, and health outcomes — building a personalized model for each family member',
       technicalDetails: 'Correlation matrices with causal inference for actionable health recommendations'
     },
     product: {
@@ -216,35 +220,35 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Appointment Recommendations
+  // Appointment Recommendations (heuristic engine on weight trends, vital thresholds, appointment intervals — NOT USPSTF clinical decision support)
   appointmentRecommendations: {
     seo: {
-      headline: 'AI Health Appointment Reminders',
-      description: 'AI suggests when you need checkups based on your health conditions and medical history',
-      keywords: ['AI appointment scheduler', 'health checkup reminders', 'medical appointment AI']
+      headline: 'Smart Appointment Reminders',
+      description: 'Reminders for nutritionist, doctor, and follow-up visits based on your weight trends, vital sign patterns, and time since last appointment',
+      keywords: ['smart appointment reminders', 'weight loss check-in', 'health appointment scheduler']
     },
     marketing: {
-      headline: 'Clinical Decision Support for Preventive Care',
-      description: 'Evidence-based algorithms analyze health conditions, medication regimens, and care guidelines to recommend appropriate appointment scheduling',
-      technicalDetails: 'Rule-based expert system trained on USPSTF clinical care guidelines'
+      headline: 'Heuristic Appointment Recommendations',
+      description: 'Pattern-based suggestions for when to see a nutritionist, doctor, or specialist — driven by stalled weight loss, vital sign trends, and appointment cadence',
+      technicalDetails: 'Heuristic rule engine evaluating weight progress, vital sign thresholds, and appointment intervals. Not a USPSTF or clinical decision support system; does not codify Recommendation Statements or grade screenings.'
     },
     product: {
       label: 'Checkup Reminders',
-      tooltip: 'Get timely reminders for doctor visits, lab work, and preventive screenings based on your health profile',
-      shortDescription: 'Smart appointment scheduling'
+      tooltip: 'Get timely reminders for doctor visits and follow-ups based on your weight progress, vitals, and appointment history',
+      shortDescription: 'Appointment reminders'
     }
   },
 
-  // Expiration Predictions
+  // Expiration Predictions (self-teaching ML on shelf-life data)
   expirationPredictions: {
     seo: {
-      headline: 'AI Food Expiration Tracker',
-      description: 'AI predicts when your food will expire to reduce waste and keep your pantry fresh',
-      keywords: ['AI expiration tracker', 'food waste prevention', 'smart pantry management']
+      headline: 'Self-Teaching Food Expiration Tracker',
+      description: 'Predicts when your food will expire — learning from your household\'s storage and consumption patterns to reduce waste',
+      keywords: ['food expiration tracker', 'food waste prevention', 'smart pantry management']
     },
     marketing: {
       headline: 'Predictive Inventory Degradation Modeling',
-      description: 'Machine learning models trained on shelf-life data predict optimal consumption windows based on storage conditions and product categories',
+      description: 'Self-teaching ML models trained on shelf-life data predict optimal consumption windows based on storage conditions and product categories',
       technicalDetails: 'Time-to-event analysis with environmental factor adjustment for accurate predictions'
     },
     product: {
@@ -273,17 +277,17 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Veterinary Intelligence
+  // Veterinary Intelligence (self-teaching ML, species-specific analytics)
   veterinaryIntelligence: {
     seo: {
-      headline: 'AI Pet Health Tracking',
-      description: 'Track your pet\'s weight, medications, and vet appointments with AI-powered pet health insights',
-      keywords: ['AI pet health tracker', 'pet weight tracking', 'veterinary health AI']
+      headline: 'Self-Teaching Pet Health Tracking',
+      description: 'Track your pet\'s weight, medications, and vet appointments with self-teaching pet health insights tuned to your specific animal',
+      keywords: ['self-teaching pet health tracker', 'pet weight tracking', 'veterinary health analytics']
     },
     marketing: {
       headline: 'Species-Specific Veterinary Health Analytics',
-      description: 'Specialized algorithms calibrated for canine and feline physiology provide breed-aware health monitoring and veterinary care recommendations',
-      technicalDetails: 'Multi-species neural networks trained on veterinary medical databases and breed standards'
+      description: 'Self-teaching ML calibrated for canine and feline physiology provides breed-aware health monitoring and veterinary care recommendations that adapt to your specific pet',
+      technicalDetails: 'Species-specific statistical models on veterinary care guidelines and breed standards'
     },
     product: {
       label: 'Pet Health Tracking',

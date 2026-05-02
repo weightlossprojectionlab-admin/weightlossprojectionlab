@@ -26,13 +26,13 @@
 
 ### Product Vision
 
-Weight Loss Project Lab is an **AI-powered health management platform** that transforms how individuals and families track nutrition, manage medical records, and coordinate healthcare. By leveraging computer vision AI and intelligent automation, we enable users to:
+Weight Loss Project Lab is a **family health management platform** built on two technology layers: **Gemini Vision AI** for instant photo-based capture (meals, medical document OCR), and a **self-teaching ML engine** that learns each family member's patterns and adapts recommendations over time. We enable users to:
 
-- **Track nutrition** with photo-based meal logging (30-second process vs. 5-10 minutes traditional)
+- **Track nutrition** with photo-based meal logging (30-second process vs. 5-10 minutes traditional) — Gemini Vision identifies foods and estimates portions
 - **Manage family health** with multi-patient support (humans AND pets)
-- **Coordinate medical care** with AI-powered appointment recommendations
-- **Shop smarter** with intelligent shopping lists and kitchen inventory tracking
-- **Cook healthier** with personalized recipes and cooking session guidance
+- **Coordinate medical care** with smart appointment recommendations driven by weight trends, vital sign patterns, and appointment cadence
+- **Shop smarter** with self-teaching shopping lists and kitchen inventory tracking
+- **Cook healthier** with self-teaching recipe recommendations adapted to each family member's preferences and history
 
 ### Target Audience
 
@@ -49,7 +49,7 @@ Weight Loss Project Lab is an **AI-powered health management platform** that tra
 ### Key Differentiators
 
 1. **Multi-Mode UX**: Adaptive interface based on user role (single/household/caregiver)
-2. **AI-Powered Everything**: Meal analysis, appointment recommendations, shopping suggestions
+2. **AI Vision + Self-Teaching ML**: Gemini Vision for meal/document capture; self-teaching ML for personalization, projections, and recommendations that adapt to each family member over time
 3. **Family-First Design**: Multi-patient support with granular permissions
 4. **Medical + Wellness**: Combines nutrition tracking with comprehensive medical records
 5. **Event-Driven Monetization**: Trigger upgrades at natural decision points
@@ -255,14 +255,14 @@ if (primaryRole === 'parent' || 'partner' || 'child' || 'pet' || 'multiple') →
 - ✅ Multi-patient profiles (humans + pets)
 - ✅ Health vitals tracking (BP, glucose, SpO2, temp)
 - ✅ Medication management with OCR scanning
-- ✅ Appointment scheduling with AI recommendations
+- ✅ Appointment scheduling with smart recommendations (heuristic — weight trends, vital sign thresholds, appointment intervals)
 - ✅ Healthcare provider management
 - ✅ Medical document storage with OCR
 - ✅ Family collaboration with 12 permission types
 
 **Shopping & Kitchen**
 - ✅ Smart shopping lists with barcode scanning
-- ✅ AI-powered product suggestions
+- ✅ Self-teaching product suggestions (adapts to what your household actually buys)
 - ✅ Nutrition review before purchase
 - ✅ Kitchen inventory with expiration tracking
 - ✅ Waste analytics

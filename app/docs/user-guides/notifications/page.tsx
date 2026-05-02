@@ -250,7 +250,7 @@ export default function NotificationsPage() {
         <li><strong>Group by Type:</strong> All meal reminders in one notification</li>
         <li><strong>Daily Digest:</strong> One email per day with all updates</li>
         <li><strong>Weekly Summary:</strong> Friday email with week's progress</li>
-        <li><strong>Smart Batching:</strong> AI groups related notifications</li>
+        <li><strong>Smart Batching:</strong> Related notifications are grouped automatically</li>
       </ul>
 
       <h2 id="caregiver-notifications">Caregiver-Specific Notifications</h2>

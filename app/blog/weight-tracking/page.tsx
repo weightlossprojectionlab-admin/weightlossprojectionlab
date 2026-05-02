@@ -1,7 +1,7 @@
 /**
  * Weight Tracking - Marketing Blog Page
  *
- * Reframed around AI Weight Projections as the killer feature.
+ * Reframed around Self-Teaching Projections as the killer feature.
  * "See Where You're Headed — Not Just Where You've Been"
  */
 
@@ -30,9 +30,9 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline'
 
-const PAGE_TITLE = 'Weight Loss Projections: AI Weight Tracker for Families'
+const PAGE_TITLE = 'Weight Loss Projections — Self-Teaching Weight Tracker for Families'
 const PAGE_DESCRIPTION =
-  'See where your weight is headed — not just yesterday\u2019s number. An AI weight tracker that projects your trajectory for you, your kids, or an aging parent, with shared family tracking and smart alerts.'
+  'See where your weight is headed — not just yesterday\u2019s number. A self-teaching weight tracker that projects your trajectory for you, your kids, or an aging parent, with shared family tracking and smart alerts.'
 const PAGE_IMAGE =
   'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'
 const PAGE_URL = 'https://www.wellnessprojectionlab.com/blog/weight-tracking'
@@ -41,12 +41,12 @@ export const metadata: Metadata = {
   title: { absolute: PAGE_TITLE },
   description: PAGE_DESCRIPTION,
   keywords:
-    'weight loss projection calculator, AI weight tracker, weight loss prediction app, family weight tracker, how long to reach weight loss goal, track child growth curve, monitor elderly parent weight, weight trajectory app',
+    'weight loss projection calculator, self-teaching weight tracker, weight loss prediction app, family weight tracker, how long to reach weight loss goal, track child growth curve, monitor elderly parent weight, weight trajectory app',
   openGraph: {
     title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
     type: 'article',
-    images: [{ url: PAGE_IMAGE, width: 1200, height: 630, alt: 'AI weight loss projection tracker — Wellness Projection Lab' }],
+    images: [{ url: PAGE_IMAGE, width: 1200, height: 630, alt: 'Self-teaching weight loss projection tracker — Wellness Projection Lab' }],
     url: PAGE_URL,
   },
   twitter: {
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
 
 const FAQ = [
   {
-    question: 'How accurate is an AI weight loss projection?',
+    question: 'How accurate is a self-teaching weight loss projection?',
     answer:
       'Projections improve as the model sees more of your data. After about 2\u20134 weeks of consistent logging, the trajectory line tracks real outcomes with a confidence range shown on the chart. Big changes in habits, medications, or life events will shift the projection, which is exactly the point — it reflects your current pattern, not a generic formula.',
   },
@@ -108,7 +108,7 @@ export default function WeightTrackingBlogPage() {
           image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
           datePublished: '2026-01-15T00:00:00-05:00',
           keywords:
-            'weight loss projection calculator, AI weight tracker, weight loss prediction app, family weight tracker, weight trajectory app, track child growth curve, monitor elderly parent weight',
+            'weight loss projection calculator, self-teaching weight tracker, weight loss prediction app, family weight tracker, weight trajectory app, track child growth curve, monitor elderly parent weight',
         })}
       />
       <JsonLd data={faqPageSchema(FAQ)} />
@@ -127,13 +127,13 @@ export default function WeightTrackingBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <CpuChipIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">AI Weight Projections</span>
+              <span className="text-sm font-medium">Self-Teaching Projections</span>
             </div>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight">
               Weight Loss Projections: See Where You&apos;re Headed, Not Just Where You&apos;ve Been
             </h1>
             <p className="text-lg sm:text-xl text-white/90 mb-10 leading-relaxed max-w-3xl mx-auto">
-              An AI weight tracker that turns raw weigh-ins into a real trajectory — a clear
+              A self-teaching weight tracker that turns raw weigh-ins into a real trajectory — a clear
               projection of when you&apos;ll hit your goal, how a child&apos;s growth curve is trending,
               or when an aging parent&apos;s weight needs attention. One account, every person in your
               family.
@@ -149,7 +149,7 @@ export default function WeightTrackingBlogPage() {
                 href="/blog/ai-health-reports"
                 className="px-8 py-4 bg-white/20 backdrop-blur-sm text-white rounded-lg hover:bg-white/30 transition-colors font-semibold"
               >
-                See AI Reports
+                See Health Reports
               </Link>
             </div>
           </div>
@@ -208,7 +208,7 @@ export default function WeightTrackingBlogPage() {
               <ProjectionStep
                 step={2}
                 icon={<CpuChipIcon className="w-8 h-8 text-white" />}
-                title="AI Analyzes Patterns"
+                title="The System Analyzes Patterns"
                 description="Our engine detects trends, plateaus, and inflection points in your data."
               />
               <ProjectionStep
@@ -274,7 +274,7 @@ export default function WeightTrackingBlogPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             <FeatureCard
               icon={<CpuChipIcon className="w-10 h-10 text-violet-600" />}
-              title="AI Projections"
+              title="Self-Teaching Projections"
               description="See where your weight will be in 2 weeks, 1 month, or 3 months. The engine learns your patterns and refines forecasts over time."
             />
             <FeatureCard
@@ -290,7 +290,7 @@ export default function WeightTrackingBlogPage() {
             <FeatureCard
               icon={<ChartBarIcon className="w-10 h-10 text-violet-600" />}
               title="Interactive Charts"
-              description="Zoom, pan, and annotate your weight timeline. Overlay projections against actuals to see how accurate the AI has been."
+              description="Zoom, pan, and annotate your weight timeline. Overlay projections against actuals to see how accurate the system has been."
             />
             <FeatureCard
               icon={<FlagIcon className="w-10 h-10 text-violet-600" />}
@@ -352,7 +352,7 @@ export default function WeightTrackingBlogPage() {
               items={[
                 'Interactive chart with actual vs. projected weight curves',
                 'Drag the timeline to explore past and future',
-                'Tap any point to see the AI confidence range',
+                'Tap any point to see the projection confidence range',
               ]}
             />
             <ScreenDescription
@@ -391,7 +391,7 @@ export default function WeightTrackingBlogPage() {
             />
             <TrustBadge
               icon={<SparklesIcon className="w-8 h-8 text-violet-600" />}
-              label="AI-Powered Insights"
+              label="Self-Teaching Insights"
             />
           </div>
         </section>
@@ -436,11 +436,11 @@ export default function WeightTrackingBlogPage() {
             <RelatedLink
               href="/blog/meal-tracking"
               title="Meal Tracking"
-              description="AI-powered meal logging and nutrition analysis"
+              description="AI photo capture (Gemini Vision) + self-teaching nutrition analysis"
             />
             <RelatedLink
               href="/blog/ai-health-reports"
-              title="AI Health Reports"
+              title="Self-Teaching Health Reports"
               description="Automated health summaries and trend reports"
             />
             <RelatedLink

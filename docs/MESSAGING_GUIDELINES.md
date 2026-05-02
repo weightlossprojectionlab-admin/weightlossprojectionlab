@@ -1,37 +1,58 @@
-﻿# Messaging Guidelines - AI Terminology Strategy
+﻿# Messaging Guidelines — AI vs Self-Teaching ML Terminology Strategy
 
 ## Overview
 
-**Why We Replaced Generic "AI" with Branded/Technical Terms**
+**Why we differentiate AI from self-teaching ML in our copy**
 
-This project implements a strategic 3-layer messaging architecture to balance search discoverability, healthcare credibility, and brand differentiation. Instead of generic "AI" references throughout the product, we use:
+WPL is built on **two distinct technology layers**, and our public copy must reflect that honestly:
 
-- **SEO Layer**: "AI" keywords preserved for search engine optimization
-- **Marketing Layer**: Technical authority terms (Computer Vision, Machine Learning, NLP) for healthcare credibility
+- **AI (LLM-based, Gemini Vision)** — used **only** for instant photo-based capture: meal photo analysis and medical document OCR. These are real LLM features.
+- **Self-teaching ML (WPL-owned)** — used for **everything that learns from each family member over time**: health reports, weight projections, recipe recommendations, shopping suggestions, dashboard insights, pattern detection, coaching (roadmap).
+
+Conflating the two is a credibility risk. Calling rule-based statistics "AI" or claiming "Conversational AI Health Coaching" when no chatbot exists turns AI summarizers and journalists into amplifiers of false claims. This document is the policy that prevents that.
+
+**The 3-layer messaging architecture is preserved**, but each layer now uses terms that **accurately reflect** which tech actually powers each feature:
+
+- **SEO Layer**: Search-discoverable terms that match the feature's real tech (AI for vision/OCR; self-teaching for personalization; smart for rule-based)
+- **Marketing Layer**: Technical authority terms (Computer Vision, Time-series ML, USPSTF rule-based) — never use vaporware phrases like "Conversational AI" or "GPT-4 fine-tuned" for features that don't exist
 - **Product Layer**: Branded WPL terminology (WPL Vision™, Wellness Intelligence, WPL Prescribe™) for trust and differentiation
 
 **Key Benefits:**
-- ✅ Maintains SEO performance with "AI" keywords on public pages
-- ✅ Builds healthcare authority with technical precision in marketing content
+- ✅ Honest SEO that holds up to scrutiny — AI tools and journalists can't catch us inflating
+- ✅ "Self-teaching" is actually a stronger differentiator than "AI" — competitors all claim AI; few can claim the system genuinely learns each user over time
+- ✅ Builds healthcare authority with technical precision (no fabricated stack claims)
 - ✅ Establishes proprietary brand identity in product UI
-- ✅ Centralizes terminology for consistency across 750+ references
-- ✅ Enables easy updates without scattered find-replace operations
+- ✅ Centralizes terminology so the AI/ML split stays consistent
+
+## Quick reference: which word for which feature?
+
+| If the feature uses... | Use this word | Examples |
+|---|---|---|
+| Gemini Vision (LLM) | **AI** | Meal photo analysis, medical document OCR |
+| Self-teaching ML that learns each family's data | **Self-Teaching** | Health reports, weight projections, recipes, shopping, insights |
+| Heuristic / threshold logic | **Smart** | Appointment reminders (weight + vitals + intervals), notification batching |
+| Not yet built | **(Coming soon)** + roadmap label | Coach, goal recommendations |
+
+> ⚠️ **Do NOT claim USPSTF, clinical decision support, or "expert system" capabilities.** WPL's appointment recommendation engine is a heuristic on weight trends, vital sign thresholds, and appointment intervals. It does not codify USPSTF Recommendation Statements, compute A/B/C/D grades, or integrate with Prevention TaskForce. Claiming otherwise is a regulated-domain credibility risk.
+
+When in doubt, check `lib/messaging/terminology.ts` — it's the source of truth and per-feature classification is encoded there.
 
 ---
 
 ## 3-Layer Messaging Architecture
 
-### Layer 1: SEO/Marketing (Preserve "AI")
+### Layer 1: SEO/Marketing (Search-discoverable terms accurate to each feature's tech)
 
 **When to Use:** Meta tags, page titles, H1 headlines on public-facing pages, landing pages, blog posts, marketing materials
 
-**Purpose:** Search engine discoverability and broad market appeal
+**Purpose:** Search engine discoverability with terms that match what the feature actually does
 
-**Example Terms:**
-- "AI-Powered Meal Tracking"
-- "AI Health Insights & Predictions"
-- "AI Medication Label Scanner"
-- "AI Wellness Coach"
+**Example Terms (correct usage by feature type):**
+- "AI-Powered Meal Tracking" *(✓ accurate — Gemini Vision)*
+- "AI Medication Label Scanner" *(✓ accurate — Gemini Vision OCR)*
+- "Self-Teaching Health Insights & Predictions" *(rule-based stats + scoring → self-teaching)*
+- "Self-Teaching Wellness Coach (Coming Soon)" *(roadmap — never claim "AI Coach" present-tense)*
+- "Smart Appointment Reminders" *(rule-based on USPSTF guidelines, not ML/AI)*
 
 **Implementation:**
 ```typescript
@@ -53,10 +74,12 @@ export const metadata = {
 **Purpose:** Establish technical authority and healthcare credibility
 
 **Example Terms:**
-- "Computer Vision Meal Analysis"
-- "Predictive Health Analytics Engine"
-- "Clinical-Grade OCR & NLP Medication Parser"
-- "Conversational AI Health Coaching"
+- "Computer Vision Meal Analysis" *(Gemini Vision)*
+- "Clinical-Grade OCR Medication Parser" *(Gemini Vision)*
+- "Predictive Health Analytics Engine" *(self-teaching ML — time-series statistical models)*
+- "Self-Teaching Shopping Recommendation Engine" *(collaborative filtering)*
+- "Predictive Wellness Coaching" *(roadmap — never describe as "Conversational AI" or "GPT-4 fine-tuned"; the platform does not have an LLM-based chatbot)*
+- "Heuristic Appointment Recommendations" *(weight/vital trend heuristics — do NOT claim USPSTF, clinical decision support, A/B grade recommendations, or Prevention TaskForce integration; none of those are implemented)*
 
 **Implementation:**
 ```typescript
@@ -78,11 +101,11 @@ import { getMarketingHeadline, getTechnicalDetails } from '@/lib/messaging/termi
 **Purpose:** Proprietary brand identity, trust-building, product differentiation
 
 **Example Terms:**
-- "WPL Vision™" (meal photo tracking)
-- "Wellness Intelligence" (health insights)
-- "WPL Prescribe™" (medication parsing)
-- "Smart Suggestions" (shopping recommendations)
-- "Wellness Coach" (AI coaching)
+- "WPL Vision™" (meal photo tracking — Gemini Vision)
+- "Wellness Intelligence" (health insights — self-teaching ML)
+- "WPL Prescribe™" (medication parsing — Gemini Vision OCR)
+- "Smart Suggestions" (shopping recommendations — self-teaching ML)
+- "Predictive Coach" (data-driven coaching — roadmap, not yet shipped)
 
 **Implementation:**
 ```typescript
@@ -101,23 +124,23 @@ import { getProductLabel, getTooltip } from '@/lib/messaging/terminology'
 
 Quick lookup table for developers:
 
-| Feature | SEO Term | Marketing Term | Product Term |
-|---------|----------|----------------|--------------|
-| **Meal Tracking** | AI-Powered Meal Tracking | Computer Vision Meal Analysis | WPL Vision™ |
-| **Health Insights** | AI Health Insights & Predictions | Predictive Health Analytics Engine | Wellness Intelligence |
-| **Medication Parsing** | AI Medication Label Scanner | Clinical-Grade OCR & NLP Medication Parser | WPL Prescribe™ |
-| **Shopping Suggestions** | AI Smart Shopping Lists | Intelligent Shopping Recommendation Engine | Smart Suggestions |
-| **Recipe Generation** | AI Recipe Generator | Adaptive Recipe Generation System | Recipe Generator |
-| **AI Coaching** | AI Wellness Coach | Conversational AI Health Coaching | Wellness Coach |
-| **Weight Projections** | AI Wellness Predictions | Predictive Weight Modeling | Goal Projections |
-| **Nutrition Analysis** | AI Nutrition Analysis | Multi-Modal Nutrition Computation | Nutrition Analysis |
-| **Health Correlations** | AI Health Pattern Detection | Multi-Variate Health Correlation Analysis | Health Patterns |
-| **Appointment Recommendations** | AI Health Appointment Reminders | Clinical Decision Support for Preventive Care | Checkup Reminders |
-| **Expiration Predictions** | AI Food Expiration Tracker | Predictive Inventory Degradation Modeling | Freshness Alerts |
-| **Family Health Dashboard** | AI Family Health Dashboard | Unified Multi-Patient Analytics Platform | Family Dashboard |
-| **Veterinary Intelligence** | AI Pet Health Tracking | Species-Specific Veterinary Health Analytics | Pet Health Tracking |
-| **Barcode Scanning** | AI Barcode Scanner for Groceries | Computer Vision Barcode Recognition | Barcode Scanner |
-| **Meal Safety** | AI Meal Safety Checker | Clinical Safety Analysis Engine | Safety Alerts |
+| Feature | Tech Layer | SEO Term | Marketing Term | Product Term |
+|---------|-----------|----------|----------------|--------------|
+| **Meal Tracking** | AI (Gemini Vision) | AI-Powered Meal Tracking | Computer Vision Meal Analysis | WPL Vision™ |
+| **Medication Parsing** | AI (Gemini Vision OCR) | AI Medication Label Scanner | Clinical-Grade OCR Medication Parser | WPL Prescribe™ |
+| **Nutrition Analysis** | AI (Gemini Vision) | AI Nutrition Analysis | Multi-Modal Nutrition Computation | Nutrition Analysis |
+| **Health Insights** | Self-Teaching ML | Self-Teaching Health Insights & Predictions | Predictive Health Analytics Engine | Wellness Intelligence |
+| **Weight Projections** | Self-Teaching ML | Self-Teaching Weight Loss Projections | Predictive Weight Modeling | Goal Projections |
+| **Recipe Generation** | Self-Teaching ML *(+Gemini Flash for missing steps)* | Self-Teaching Recipe Recommendations | Adaptive Recipe Recommendation System | Recipe Recommendations |
+| **Shopping Suggestions** | Self-Teaching ML | Self-Teaching Smart Shopping Lists | Self-Teaching Shopping Recommendation Engine | Smart Suggestions |
+| **Health Correlations** | Self-Teaching ML | Self-Teaching Health Pattern Detection | Multi-Variate Health Correlation Analysis | Health Patterns |
+| **Expiration Predictions** | Self-Teaching ML | Self-Teaching Food Expiration Tracker | Predictive Inventory Degradation Modeling | Freshness Alerts |
+| **Veterinary Intelligence** | Self-Teaching ML | Self-Teaching Pet Health Tracking | Species-Specific Veterinary Health Analytics | Pet Health Tracking |
+| **Barcode Scanning** | Self-Teaching ML *(OpenFoodFacts lookup)* | Smart Barcode Scanner for Groceries | Barcode Recognition with Product Lookup | Barcode Scanner |
+| **Meal Safety** | Self-Teaching ML | Self-Teaching Meal Safety Checker | Clinical Safety Analysis Engine | Safety Alerts |
+| **Appointment Recommendations** | Heuristic (weight + vitals + intervals) | Smart Appointment Reminders | Heuristic Appointment Recommendations | Checkup Reminders |
+| **Family Health Dashboard** | Self-Teaching ML | Family Health Dashboard | Unified Multi-Patient Analytics Platform | Family Dashboard |
+| **Coaching** *(roadmap — not shipped)* | Self-Teaching ML *(planned)* | Self-Teaching Wellness Coach (Coming Soon) | Predictive Wellness Coaching | Predictive Coach |
 
 ---
 
@@ -138,9 +161,13 @@ import {
 <button>{getProductLabel('mealTracking')}</button>
 // Output: "WPL Vision™"
 
-// SEO/Meta
+// SEO/Meta — feature-dependent. AI for vision; Self-Teaching for ML; Smart for rule-based.
 <title>{getSEOHeadline('mealTracking')}</title>
-// Output: "AI-Powered Meal Tracking"
+// Output: "AI-Powered Meal Tracking" (this one is genuine AI — Gemini Vision)
+//
+// vs.
+<title>{getSEOHeadline('healthInsights')}</title>
+// Output: "Self-Teaching Health Insights & Predictions" (ML personalization, NOT AI)
 
 // Marketing page
 <h2>{getMarketingHeadline('mealTracking')}</h2>
@@ -161,14 +188,14 @@ const messaging = getCompleteMessaging('healthInsights')
 console.log(messaging)
 // {
 //   seo: {
-//     headline: 'AI Health Insights & Predictions',
-//     description: 'Get AI-powered health insights...',
-//     keywords: ['AI health insights', 'predictive health analytics', ...]
+//     headline: 'Self-Teaching Health Insights & Predictions',
+//     description: 'Personalized health insights, weight predictions, and wellness recommendations that adapt to your family's patterns over time',
+//     keywords: ['self-teaching health insights', 'predictive health analytics', 'personalized wellness insights']
 //   },
 //   marketing: {
 //     headline: 'Predictive Health Analytics Engine',
-//     description: 'Machine learning algorithms analyze...',
-//     technicalDetails: 'Time-series analysis with LSTM neural networks...'
+//     description: 'Self-teaching ML algorithms analyze your health data to identify trends...',
+//     technicalDetails: 'Time-series analysis with statistical models for outcome prediction; learns each family member's baseline over time'
 //   },
 //   product: {
 //     label: 'Wellness Intelligence',
@@ -244,12 +271,17 @@ if (!validation.valid) {
    // ✅ GOOD - Add to lib/messaging/terminology.ts
    export const FEATURE_MESSAGING = {
      newFeature: {
-       seo: { headline: 'AI ...', description: '...', keywords: [...] },
+       // Use "AI ..." ONLY if the feature is genuinely LLM/Vision-based.
+       // Use "Self-Teaching ..." for ML personalization.
+       // Use "Smart ..." for rule-based logic.
+       seo: { headline: 'Self-Teaching ...', description: '...', keywords: [...] },
        marketing: { headline: 'Technical ...', description: '...', technicalDetails: '...' },
        product: { label: 'Brand Name', tooltip: '...', shortDescription: '...' }
      }
    }
    ```
+
+6. **DO label roadmap features explicitly** — never claim a feature is shipped if it isn't. Use "Coming Soon" suffix in SEO headlines and `(roadmap)` notes in product copy.
 
 ### ❌ DON'T
 
@@ -315,12 +347,14 @@ Is this content visible to non-authenticated users?
 ├─ YES → Is it the main page headline (H1) or meta tags?
 │   │
 │   ├─ YES → Use SEO Layer (getSEOHeadline)
-│   │         "AI-Powered Meal Tracking"
+│   │         "AI-Powered Meal Tracking" (vision feature → AI is accurate)
+│   │         OR "Self-Teaching Health Insights" (ML feature → never call AI)
 │   │
 │   └─ NO → Is it below-fold marketing content?
 │       │
 │       ├─ YES → Use Marketing Layer (getMarketingHeadline)
 │       │         "Computer Vision Meal Analysis"
+│       │         OR "Predictive Health Analytics Engine" (ML)
 │       │
 │       └─ NO → Use context-appropriate layer
 │
@@ -334,7 +368,12 @@ Is this content visible to non-authenticated users?
 
 ## Adding New Features
 
-When adding a new feature that involves AI/ML, follow this process:
+When adding a new feature that involves AI or ML, follow this process. **First, determine which technology layer it belongs to** (see the Quick Reference table at the top of this document):
+
+- **Genuine AI?** → uses Gemini Vision or another LLM/multimodal model. SEO term should use "AI ...".
+- **Self-teaching ML?** → learns from each family's data over time. SEO term should use "Self-Teaching ...".
+- **Rule-based?** → static logic, clinical guidelines, or thresholds. SEO term should use "Smart ..." (no AI/ML claim).
+- **Roadmap?** → not yet shipped. SEO term must include "(Coming Soon)" and product label must include `(roadmap)`.
 
 ### 1. Define Complete Messaging
 
@@ -346,14 +385,16 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
 
   newFeatureName: {
     seo: {
-      headline: 'AI-Powered [Feature Name]',
-      description: 'Brief SEO-friendly description with AI keywords',
-      keywords: ['AI keyword 1', 'AI keyword 2', 'AI keyword 3']
+      // Pick the prefix that matches reality: "AI" (Gemini/LLM only),
+      // "Self-Teaching" (ML personalization), or "Smart" (rule-based).
+      headline: 'Self-Teaching [Feature Name]',
+      description: 'Brief SEO-friendly description that accurately reflects how the feature works',
+      keywords: ['accurate keyword 1', 'accurate keyword 2', 'accurate keyword 3']
     },
     marketing: {
-      headline: 'Technical Marketing Headline (e.g., Computer Vision ...)',
-      description: 'Detailed technical marketing description establishing authority',
-      technicalDetails: 'Deep technical details (e.g., CNN-based processing with ...)'
+      headline: 'Technical Marketing Headline (e.g., Computer Vision ... or Predictive ML ...)',
+      description: 'Detailed technical marketing description establishing authority — only claim techniques actually used in the implementation',
+      technicalDetails: 'Deep technical details that match the real implementation (e.g., Gemini Vision 2.5 Pro, time-series regression, USPSTF rule-based)'
     },
     product: {
       label: 'WPL Branded Name™ or Simple Product Name',
@@ -407,10 +448,12 @@ When discussing AI/ML features, always emphasize:
 - "Patient Data Privacy Protected"
 - "Clinical-Grade Security"
 
-**Proprietary Technology:**
-- "No Third-Party AI APIs"
-- "Proprietary Machine Learning"
-- "WPL-Owned Technology"
+**Hybrid Architecture (honest framing):**
+- "AI capture (Gemini Vision under BAA) + Self-Teaching ML (WPL-owned)"
+- "Self-Teaching ML on WPL-owned infrastructure"
+- "Vision processing under HIPAA Business Associate Agreement with Google"
+
+> ⚠️ **Do NOT use "No Third-Party AI APIs"** — this claim is false. WPL uses Google Gemini Vision (under HIPAA BAA) for meal photo analysis and medical document OCR. Inflating this into a "no third party" claim is a credibility risk and potentially a compliance one. The honest framing — Gemini for capture under BAA, WPL-owned ML for everything else — is actually a stronger story.
 
 **Data Control:**
 - "Your Data Stays With You"
@@ -427,7 +470,7 @@ import { TrustBadge } from '@/components/ui/TrustBadge'
   <p>{getTooltip('mealTracking')}</p>
 
   <TrustBadge variant="default" />
-  {/* Displays: HIPAA-Secure | No Third-Party AI APIs | Proprietary ML */}
+  {/* Displays: HIPAA-Secure | Self-Teaching ML | BAA with Google for AI Vision */}
 </section>
 ```
 
@@ -643,6 +686,14 @@ export const FEATURE_MESSAGING = {
 ---
 
 ## Changelog
+
+### Phase 6 - Honest AI vs Self-Teaching ML Reframe (2026-05-02)
+- ✅ Audited every "AI" claim against the actual implementation; identified ~10 features mislabeled as AI when they are self-teaching ML or rule-based
+- ✅ Reclassified each of the 15 features in `lib/messaging/terminology.ts` by tech layer (AI / Self-Teaching ML / Rule-based / Roadmap)
+- ✅ Updated SEO Layer policy: "AI" prefix reserved for genuine LLM/Vision features (meal photo analysis, medical document OCR); "Self-Teaching" used for ML personalization; "Smart" used for rule-based features
+- ✅ Removed false "No Third-Party AI APIs" trust badge claim — Gemini Vision is used under HIPAA BAA
+- ✅ Removed vaporware claims like "Conversational AI Health Coaching" / "GPT-4 fine-tuned" from marketing copy; flagged Coach + Goal Recommendations as roadmap with "(Coming Soon)" suffix
+- ✅ Reframed across the user-facing site: 8 blog posts, homepage SoftwareApplication schema, llms.txt, Organization schema, franchise page, README, MASTER_PRD
 
 ### Phase 5 - AI Terminology Replacement (2026-01-06)
 - ✅ Created centralized messaging system (`lib/messaging/terminology.ts`)

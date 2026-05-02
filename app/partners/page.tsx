@@ -158,9 +158,12 @@ export default function PartnersPage() {
                     <span>Dedicated account management</span>
                   </li>
                 </ul>
-                <button className="text-green-600 hover:text-green-700 font-semibold">
-                  Learn More →
-                </button>
+                <Link
+                  href="/franchise"
+                  className="text-green-600 hover:text-green-700 font-semibold"
+                >
+                  License the platform →
+                </Link>
               </div>
 
               {/* Reseller Partners */}

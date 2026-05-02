@@ -11,7 +11,7 @@
 ## Executive Summary
 
 ### Product Vision
-Wellness Projection Lab is an AI-powered family health management platform that enables caregivers and families to track vitals, medications, meals, appointments, and medical records for every member of their household — from newborns to seniors to pets — in one HIPAA-compliant app.
+Wellness Projection Lab is a family health management platform built on two technology layers: **AI (Gemini Vision)** for instant photo-based capture (meals, medical document OCR), and a **self-teaching ML engine** that learns each family member's patterns over time. It enables caregivers and families to track vitals, medications, meals, appointments, and medical records for every member of their household — from newborns to seniors to pets — in one HIPAA-compliant app.
 
 ### Ideal Customer Profile (ICP)
 - **Primary:** Family caregivers aged 30-55 (sandwich generation managing kids + aging parents)
@@ -49,7 +49,7 @@ Track vitals, medications, meals, and appointments for everyone — kids, parent
 - **Unified dashboard:** See everyone's health at a glance
 - **Medication tracking:** Reminders, dose logging, interaction flags
 - **Caregiver sharing:** Grant access with granular permissions
-- **AI-powered logging:** Snap a photo for meal tracking, auto-detect vitals
+- **AI photo capture (Gemini Vision):** Snap a photo for instant meal analysis or medical document OCR
 - **Cross-device sync:** Access from any device, real-time updates
 - **Privacy:** HIPAA-compliant data handling
 
@@ -68,8 +68,8 @@ Track vitals, medications, meals, and appointments for everyone — kids, parent
 | **Weight Tracking** | Weight logs with trend analysis, BMI, goal tracking | Shipped |
 | **Appointments** | Schedule and track appointments with providers | Shipped |
 | **Medical Documents** | Upload, store, and organize medical documents with OCR | Shipped |
-| **Health Reports** | AI-generated health summaries per patient | Shipped |
-| **Recipe System** | 30+ recipes with inventory matching, AI generation, cooking mode | Shipped |
+| **Health Reports** | Self-teaching health summaries per patient (statistical analysis with templated insights) | Shipped |
+| **Recipe System** | 30+ recipes with inventory matching, self-teaching recommendations (collaborative filtering), Gemini Flash for missing recipe steps, cooking mode | Shipped |
 | **Shopping List** | Household + member-specific shopping lists with recipe linking | Shipped |
 | **Caregiver Permissions** | Invite family members/caregivers with granular permissions matrix | Shipped |
 | **Caregiver Journal** | Mood, stress, energy, sleep tracking for the caregiver's own wellness | Shipped |
@@ -132,7 +132,7 @@ All plans include 7-day free trial. Upgrade triggers: adding 2nd patient, hittin
 - Referral/affiliate program with admin dashboard
 - Admin patient name editing (user + admin level)
 - Admin user display name editing
-- AI recipe generation from name only
+- Recipe generation from name only (Gemini Flash fills in missing steps when recipe data is incomplete)
 - Recipe inventory availability badges (correct missing count)
 - Member-specific shopping lists (DRY shared utility)
 - SEO metadata updated for caregiver keywords

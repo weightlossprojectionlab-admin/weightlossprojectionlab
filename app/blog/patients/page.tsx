@@ -32,11 +32,11 @@ import { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Health Profiles — Your Family\'s Health Operating System | Wellness Projection Lab',
-  description: 'Create intelligent health profiles for everyone you care about — children, partners, aging parents, and pets. AI-powered insights, life-stage awareness, and proactive alerts from one centralized system.',
-  keywords: 'health profiles, family health system, multi-person health tracking, AI health insights, pediatric tracking, elderly monitoring, pet health tracking, caregiver platform, health operating system',
+  description: 'Create intelligent health profiles for everyone you care about — children, partners, aging parents, and pets. self-teaching insights, life-stage awareness, and proactive alerts from one centralized system.',
+  keywords: 'health profiles, family health system, multi-person health tracking, self-teaching health insights, pediatric tracking, elderly monitoring, pet health tracking, caregiver platform, health operating system',
   openGraph: {
     title: 'Health Profiles — Your Family\'s Health Operating System',
-    description: 'Create intelligent health profiles for everyone you care about. AI-powered insights from newborns to seniors.',
+    description: 'Create intelligent health profiles for everyone you care about. self-teaching insights from newborns to seniors.',
     type: 'article',
     images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Patients' }],
     url: 'https://www.wellnessprojectionlab.com/blog/patients',
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'Health Profiles — Your Family\'s Health Operating System',
-    description: 'Create intelligent health profiles for everyone you care about. AI-powered insights from newborns to seniors.',
+    description: 'Create intelligent health profiles for everyone you care about. self-teaching insights from newborns to seniors.',
   },
   alternates: {
     canonical: 'https://www.wellnessprojectionlab.com/blog/patients'
@@ -58,11 +58,11 @@ export default function PatientsBlogPage() {
       <JsonLd
         data={blogPostingSchema({
           headline: 'Health Profiles — Your Family\'s Health Operating System',
-          description: 'Create intelligent health profiles for everyone you care about — children, partners, aging parents, and pets. AI-powered insights, life-stage awareness, and proactive alerts from one centralized system.',
+          description: 'Create intelligent health profiles for everyone you care about — children, partners, aging parents, and pets. self-teaching insights, life-stage awareness, and proactive alerts from one centralized system.',
           slug: 'patients',
           image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
           datePublished: '2026-01-15T00:00:00-05:00',
-          keywords: 'health profiles, family health system, multi-person health tracking, AI health insights, pediatric tracking, elderly monitoring, pet health tracking, caregiver platform, health operating system',
+          keywords: 'health profiles, family health system, multi-person health tracking, self-teaching health insights, pediatric tracking, elderly monitoring, pet health tracking, caregiver platform, health operating system',
         })}
       />
 
@@ -88,7 +88,7 @@ export default function PatientsBlogPage() {
               Every Person You Care About.<br />One Intelligent System.
             </h1>
             <p className="text-xl text-cyan-100 mb-8 leading-relaxed max-w-3xl mx-auto">
-              Create a health profile for your child, your partner, your aging parent, or your pet. Each profile gets its own dashboard, AI insights, and proactive alerts — all managed from your single account.
+              Create a health profile for your child, your partner, your aging parent, or your pet. Each profile gets its own dashboard, self-teaching insights, and proactive alerts — all managed from your single account.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
@@ -127,7 +127,7 @@ export default function PatientsBlogPage() {
             <ModeCard
               icon={<UserIcon className="w-8 h-8" />}
               title="Personal"
-              description="Track your own weight, meals, vitals, and progress with AI-powered projections."
+              description="Track your own weight, meals, vitals, and progress with self-teaching projections that adapt to your data."
               color="bg-blue-500"
             />
             <ModeCard
@@ -164,7 +164,7 @@ export default function PatientsBlogPage() {
                 Profiles That Think — Not Just Store
               </h2>
               <p className="text-lg text-white/90 mb-10 text-center max-w-2xl mx-auto">
-                Every profile is powered by AI that learns what&apos;s normal for each person and flags what isn&apos;t.
+                Every profile is powered by a self-teaching engine that learns what&apos;s normal for each person and flags what isn&apos;t.
               </p>
               <div className="grid md:grid-cols-3 gap-8">
                 <IntelligenceCard
@@ -173,7 +173,7 @@ export default function PatientsBlogPage() {
                 />
                 <IntelligenceCard
                   title="Pattern Detection"
-                  description="AI watches for declining trends, missed check-ins, weight plateaus, and nutrition gaps — across every profile, simultaneously."
+                  description="The system watches for declining trends, missed check-ins, weight plateaus, and nutrition gaps — across every profile, simultaneously."
                 />
                 <IntelligenceCard
                   title="Proactive Alerts"
@@ -235,7 +235,7 @@ export default function PatientsBlogPage() {
               emoji="👶"
               title="Sarah: Three Kids, Three Different Needs"
               scenario="One child has Type 1 diabetes, one has celiac disease, and one is training for soccer. Each needs different meal plans, different calorie goals, and different alerts."
-              solution="Three profiles, each with unique dietary preferences and AI meal suggestions. Diabetic-friendly meals for one, gluten-free for another, high-protein for the athlete. One app, zero confusion."
+              solution="Three profiles, each with unique dietary preferences and self-teaching meal suggestions. Diabetic-friendly meals for one, gluten-free for another, high-protein for the athlete. One app, zero confusion."
             />
             <StoryCard
               emoji="👴"
@@ -246,8 +246,8 @@ export default function PatientsBlogPage() {
             <StoryCard
               emoji="💪"
               title="Emily & David: Joint Weight Loss, Individual Goals"
-              scenario="Emily wants to lose 40 lbs. Her husband David is targeting 60 lbs. They want accountability but different AI recommendations."
-              solution="Separate profiles with individual goals, dashboards, and AI health reports. They can view each other's progress for motivation while keeping their own targets."
+              scenario="Emily wants to lose 40 lbs. Her husband David is targeting 60 lbs. They want accountability but different personalized recommendations."
+              solution="Separate profiles with individual goals, dashboards, and self-teaching health reports. They can view each other's progress for motivation while keeping their own targets."
             />
           </div>
         </section>
@@ -261,11 +261,11 @@ export default function PatientsBlogPage() {
             <FeatureCard
               icon={<UserGroupIcon className="w-10 h-10 text-blue-600" />}
               title="Personal Dashboard"
-              description="Weight trends, meal logs, vitals, and AI insights — unique to each person. Switch profiles in one tap."
+              description="Weight trends, meal logs, vitals, and self-teaching insights — unique to each person. Switch profiles in one tap."
             />
             <FeatureCard
               icon={<ChartBarIcon className="w-10 h-10 text-purple-600" />}
-              title="AI Health Reports"
+              title="Self-Teaching Health Reports"
               description="Personalized insights based on age, life stage, goals, and health data. Not generic — tailored to each individual."
             />
             <FeatureCard

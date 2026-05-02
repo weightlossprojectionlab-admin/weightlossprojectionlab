@@ -2,7 +2,7 @@
  * WPL Health Reports - Marketing Blog Page
  *
  * "Your Family's Health — Interpreted, Not Just Tracked"
- * Showcases the unique AI Health Intelligence feature of WPL
+ * Showcases the unique Self-Teaching Health Intelligence feature of WPL
  */
 
 import Link from 'next/link'
@@ -30,15 +30,15 @@ import {
 } from '@heroicons/react/24/outline'
 
 export const metadata: Metadata = {
-  title: 'AI Health Reports — Your Family\'s Health Interpreted, Not Just Tracked | Wellness Projection Lab',
+  title: 'Self-Teaching Health Reports — Your Family\'s Health Interpreted, Not Just Tracked | Wellness Projection Lab',
   description:
-    'WPL delivers weekly AI-powered health reports for every family member. Meal pattern analysis, weight trend insights, vital sign correlations, and actionable recommendations — all in one place.',
+    'WPL delivers weekly self-teaching health reports for every family member. Meal pattern analysis, weight trend insights, vital sign correlations, and actionable recommendations — all in one place.',
   keywords:
-    'AI health reports, family health tracking, weekly health insights, personalized health recommendations, meal pattern analysis, weight trend insights, vital sign monitoring, family wellness, WPL health intelligence',
+    'self-teaching health reports, family health tracking, weekly health insights, personalized health recommendations, meal pattern analysis, weight trend insights, vital sign monitoring, family wellness, WPL health intelligence',
   openGraph: {
-    title: 'AI Health Reports — Your Family\'s Health Interpreted, Not Just Tracked',
+    title: 'Self-Teaching Health Reports — Your Family\'s Health Interpreted, Not Just Tracked',
     description:
-      'WPL delivers weekly AI-powered health reports for every family member. Meal pattern analysis, weight trend insights, vital sign correlations, and actionable recommendations.',
+      'WPL delivers weekly self-teaching health reports for every family member. Meal pattern analysis, weight trend insights, vital sign correlations, and actionable recommendations.',
     type: 'article',
     images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Wpl Health Reports' }],
     url: 'https://www.wellnessprojectionlab.com/blog/wpl-health-reports',
@@ -46,9 +46,9 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
-    title: 'AI Health Reports — Your Family\'s Health Interpreted, Not Just Tracked',
+    title: 'Self-Teaching Health Reports — Your Family\'s Health Interpreted, Not Just Tracked',
     description:
-      'WPL delivers weekly AI-powered health reports for every family member. Meal patterns, weight trends, vital correlations, and actionable recommendations.',
+      'WPL delivers weekly self-teaching health reports for every family member. Meal patterns, weight trends, vital correlations, and actionable recommendations.',
   },
   alternates: {
     canonical: 'https://www.wellnessprojectionlab.com/blog/wpl-health-reports',
@@ -60,12 +60,12 @@ export default function AiHealthReportsBlogPage() {
     <div className="min-h-screen bg-background">
       <JsonLd
         data={blogPostingSchema({
-          headline: 'AI Health Reports — Your Family\'s Health Interpreted, Not Just Tracked',
-          description: 'WPL delivers weekly AI-powered health reports for every family member. Meal pattern analysis, weight trend insights, vital sign correlations, and actionable recommendations — all in one place.',
+          headline: 'Self-Teaching Health Reports — Your Family\'s Health Interpreted, Not Just Tracked',
+          description: 'WPL delivers weekly self-teaching health reports for every family member. Meal pattern analysis, weight trend insights, vital sign correlations, and actionable recommendations — all in one place.',
           slug: 'wpl-health-reports',
           image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
           datePublished: '2026-01-15T00:00:00-05:00',
-          keywords: 'AI health reports, family health tracking, weekly health insights, personalized health recommendations, meal pattern analysis, weight trend insights, vital sign monitoring, family wellness, WPL health intelligence',
+          keywords: 'self-teaching health reports, family health tracking, weekly health insights, personalized health recommendations, meal pattern analysis, weight trend insights, vital sign monitoring, family wellness, WPL health intelligence',
         })}
       />
       {/* ─── 1. Hero ─── */}
@@ -83,7 +83,7 @@ export default function AiHealthReportsBlogPage() {
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-5 py-2 mb-8">
               <SparklesIcon className="w-5 h-5" />
-              <span className="text-sm font-semibold tracking-wide">AI Health Intelligence</span>
+              <span className="text-sm font-semibold tracking-wide">Self-Teaching Health Intelligence</span>
             </div>
 
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight">
@@ -92,7 +92,7 @@ export default function AiHealthReportsBlogPage() {
             </h1>
 
             <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed max-w-3xl mx-auto">
-              Every week, WPL's AI reads your family's meals, weight, and vitals — then
+              Every week, WPL's self-teaching engine reads your family's meals, weight, and vitals — then
               tells you what it all <em>means</em>. Per person. In plain language.
             </p>
 
@@ -142,11 +142,11 @@ export default function AiHealthReportsBlogPage() {
           </div>
         </section>
 
-        {/* ─── 3. What the AI Report Contains ─── */}
+        {/* ─── 3. What the Report Contains ─── */}
         <section className="mb-24">
           <SectionHeading
             overline="Inside Your Report"
-            title="What the AI Report Contains"
+            title="What the Report Contains"
             subtitle="Every Monday, each family member receives a personalized health brief covering four critical dimensions."
           />
 
@@ -194,11 +194,11 @@ export default function AiHealthReportsBlogPage() {
           </div>
         </section>
 
-        {/* ─── 4. Sample AI Insights ─── */}
+        {/* ─── 4. Sample Insights ─── */}
         <section className="mb-24">
           <SectionHeading
             overline="Real Examples"
-            title="Sample AI Insights"
+            title="Sample Insights"
             subtitle="Here's what an actual WPL health alert looks like in your weekly report."
           />
 
@@ -225,7 +225,7 @@ export default function AiHealthReportsBlogPage() {
         <section className="mb-24">
           <SectionHeading
             overline="Real Life, Real Impact"
-            title="How Families Use AI Health Reports"
+            title="How Families Use Self-Teaching Health Reports"
             subtitle="These aren't hypothetical scenarios — they're the moments that matter most."
           />
 
@@ -252,7 +252,7 @@ export default function AiHealthReportsBlogPage() {
         <section className="mb-24">
           <SectionHeading
             overline="Feature Set"
-            title="Everything Inside Your AI Health Report"
+            title="Everything Inside Your Self-Teaching Health Report"
             subtitle="Six powerful capabilities working together every single week."
           />
 
@@ -270,7 +270,7 @@ export default function AiHealthReportsBlogPage() {
             <FeatureCard
               icon={<ChartBarIcon className="w-10 h-10 text-sky-600" />}
               title="Pattern Detection"
-              description="The AI identifies recurring trends — like skipped breakfasts every Thursday or weekend sodium spikes — that you'd never spot manually."
+              description="The system identifies recurring trends — like skipped breakfasts every Thursday or weekend sodium spikes — that you'd never spot manually."
             />
             <FeatureCard
               icon={<BellAlertIcon className="w-10 h-10 text-sky-600" />}
@@ -299,7 +299,7 @@ export default function AiHealthReportsBlogPage() {
               <span className="text-cyan-600">WPL Gives You Answers.</span>
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
-              No competitor delivers weekly AI health reports broken down per family member.
+              No competitor delivers weekly self-teaching health reports broken down per family member.
               Not MyFitnessPal. Not Apple Health. Not Fitbit. This is the feature that turns
               passive tracking into active family health management.
             </p>
@@ -325,7 +325,7 @@ export default function AiHealthReportsBlogPage() {
             <RelatedLink
               href="/blog/meal-tracking"
               title="Meal Tracking"
-              description="AI-powered meal logging and analysis"
+              description="AI meal photo capture (Gemini Vision) with self-teaching nutrition guidance"
             />
             <RelatedLink
               href="/blog/vitals-tracking"
@@ -347,7 +347,7 @@ export default function AiHealthReportsBlogPage() {
             Start Getting Answers, Not Just Numbers
           </h2>
           <p className="text-xl text-white/90 mb-10 max-w-3xl mx-auto leading-relaxed">
-            Your first AI health report is generated within 7 days of tracking.
+            Your first self-teaching health report is generated within 7 days of tracking.
             No credit card required to start your free 7-day trial.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">

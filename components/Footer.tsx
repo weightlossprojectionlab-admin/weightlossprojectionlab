@@ -79,6 +79,7 @@ export function Footer() {
       { href: '/contact', label: 'Contact', public: true },
       { href: '/press', label: 'Press Kit', public: true },
       { href: '/partners', label: 'Partners', public: true },
+      { href: '/franchise', label: 'License the Platform', public: true },
     ] as FooterLink[],
     legal: [
       { href: '/privacy', label: 'Privacy Policy', public: true },

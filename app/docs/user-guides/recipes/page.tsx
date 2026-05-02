@@ -23,7 +23,7 @@ export default function RecipesPage() {
 
       <h2 id="overview">Overview</h2>
       <p>
-        WPL's recipe library helps you discover healthy meals that align with your health goals. Search by dietary restrictions, generate AI suggestions based on your pantry, and build shopping lists directly from recipes.
+        WPL's recipe library helps you discover healthy meals that align with your health goals. Search by dietary restrictions, get self-teaching recipe suggestions based on your pantry and family preferences, and build shopping lists directly from recipes.
       </p>
 
       <h2 id="browsing">Browsing the Recipe Library</h2>
@@ -202,10 +202,10 @@ export default function RecipesPage() {
         <li><strong>Meal Prep Sunday:</strong> Batch cooking for busy weeks</li>
       </ul>
 
-      <h2 id="ai-suggestions">AI Recipe Suggestions</h2>
+      <h2 id="ai-suggestions">Self-Teaching Recipe Suggestions</h2>
 
       <h3>Personalized Recommendations</h3>
-      <p>AI suggests recipes based on:</p>
+      <p>The system suggests recipes based on:</p>
       <ul>
         <li>Your health goals and dietary restrictions</li>
         <li>Ingredients you have in pantry</li>
@@ -219,13 +219,13 @@ export default function RecipesPage() {
       <ol>
         <li>Click <strong>"Find Recipes with My Ingredients"</strong></li>
         <li>List ingredients you have available</li>
-        <li>AI suggests recipes using those ingredients</li>
+        <li>The system suggests recipes using those ingredients</li>
         <li>Sorted by fewest additional ingredients needed</li>
         <li>Reduces food waste and saves money</li>
       </ol>
 
       <h3>Smart Substitutions</h3>
-      <p>AI suggests ingredient swaps:</p>
+      <p>The system suggests ingredient swaps:</p>
       <ul>
         <li>Healthier alternatives (Greek yogurt for sour cream)</li>
         <li>Allergy-friendly swaps (coconut milk for dairy)</li>
@@ -243,7 +243,7 @@ export default function RecipesPage() {
         <li>Add ingredients with quantities</li>
         <li>Write step-by-step instructions</li>
         <li>Upload photo (optional)</li>
-        <li>Enter nutrition info (or let AI estimate)</li>
+        <li>Enter nutrition info (or let WPL Vision estimate from a photo)</li>
         <li>Save recipe</li>
       </ol>
 
@@ -253,7 +253,7 @@ export default function RecipesPage() {
         <li>Copy the URL</li>
         <li>In WPL, click <strong>"Import Recipe from URL"</strong></li>
         <li>Paste URL</li>
-        <li>AI extracts ingredients and instructions</li>
+        <li>The system extracts ingredients and instructions</li>
         <li>Review and edit if needed</li>
         <li>Save to your recipes</li>
       </ol>
@@ -262,7 +262,7 @@ export default function RecipesPage() {
       <ol>
         <li>Have a meal photo in your meal log</li>
         <li>Click <strong>"Save as Recipe"</strong> on the meal</li>
-        <li>AI reverse-engineers the recipe from photo and analysis</li>
+        <li>WPL Vision reverse-engineers the recipe from photo and analysis</li>
         <li>Edit ingredients and instructions</li>
         <li>Save for future use</li>
       </ol>
@@ -361,7 +361,7 @@ export default function RecipesPage() {
           <div>
             <p className="font-semibold text-gray-900 mb-1">Rate Everything</p>
             <p className="text-sm text-gray-600 m-0">
-              Rate recipes after trying them. Helps AI suggest better recipes. You'll build a personalized collection of winners.
+              Rate recipes after trying them. The self-teaching layer learns from your ratings and suggests better recipes over time. You'll build a personalized collection of winners.
             </p>
           </div>
         </div>

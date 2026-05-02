@@ -24,7 +24,7 @@ WPL v2 is a simplified, mobile-first weight loss tracking app that focuses on co
 - **Mobile-First Design**: Fully responsive with WCAG 2.1 AA accessibility compliance
 - **HIPAA-Secure Backend**: Clean, flat Firebase database structure with clinical-grade security
 - **Modern UX**: Toast notifications and custom confirmation modals for better user experience
-- **Proprietary ML**: No third-party AI APIs - all machine learning runs on WPL-owned infrastructure
+- **Hybrid AI + Self-Teaching ML**: Gemini Vision for photo-based capture (meals, medical document OCR); self-teaching ML — running on WPL-owned infrastructure — for personalization, projections, recommendations, and insights
 
 ## 🏗️ Architecture
 
@@ -37,7 +37,8 @@ WPL v2 is a simplified, mobile-first weight loss tracking app that focuses on co
 ### Backend Stack
 - **Firebase Firestore** (HIPAA-secure flat collections)
 - **Firebase Authentication** + WebAuthn for biometrics
-- **Proprietary ML Models** for meal image analysis (WPL Vision™)
+- **Gemini Vision** for meal image analysis (branded as WPL Vision™ in product UI)
+- **Self-teaching ML models** (WPL-owned) for personalization, projections, and recommendations
 - **USDA FoodData Central API** for nutrition data validation
 
 ### Key Features
@@ -241,7 +242,7 @@ See **[Developer Security Guidelines](docs/DEVELOPER_SECURITY_GUIDELINES.md)** f
 - Today's nutrition summary with macros
 - Activity tracking (steps)
 - Quick action buttons for logging
-- AI coach recommendations
+- Self-teaching coach recommendations *(roadmap — not yet shipped)*
 
 ### Meal Logging (`/log-meal`)
 - Camera integration for meal photos
@@ -257,25 +258,39 @@ See **[Developer Security Guidelines](docs/DEVELOPER_SECURITY_GUIDELINES.md)** f
 - Manual entry option
 - Goal progress tracking
 
-## 🤖 Machine Learning & AI Integration
+## 🤖 AI + Self-Teaching ML Architecture
 
-### WPL Vision™ - Meal Analysis System
-- **Proprietary computer vision technology** - No third-party AI APIs
-- **HIPAA-compliant processing** - Your data never leaves our secure platform
+WPL uses **two distinct technology layers**:
+
+**AI (LLM-based, Gemini Vision)** — used for instant capture tasks only:
+- Meal photo analysis (food identification, portion estimation, nutrition extraction)
+- Medical document OCR (parsing scanned records into structured data)
+
+**Self-Teaching ML (WPL-owned)** — used for everything that learns from each family member over time:
+- Health reports and weekly insights
+- Weight projections (statistical time-series)
+- Recipe recommendations (collaborative filtering)
+- Shopping suggestions (rule-based + adaptive learning)
+- Pattern detection across meals, vitals, and adherence
+- Coaching and goal recommendations *(roadmap)*
+
+### WPL Vision™ — Meal Analysis System
+- **Powered by Google Gemini Vision** (branded as WPL Vision™ in product UI)
+- **HIPAA-compliant processing** — data handled per BAA with Google
 - Returns: food items, calories, macros, confidence, suggestions
-- Multi-modal deep learning trained on 10M+ meal images
+- Self-teaching layer learns each family member's actual portions and food preferences from corrections over time
 - Error handling with graceful fallbacks
 
 ### Messaging & Terminology Strategy
 WPL implements a 3-layer messaging architecture:
-- **SEO Layer**: "AI" keywords for search optimization (public pages)
+- **SEO Layer**: Search-optimized terms reflecting accurate capability (AI for vision/OCR; self-teaching for personalization)
 - **Marketing Layer**: Technical authority terms (landing pages, marketing content)
 - **Product Layer**: Branded WPL terminology (authenticated product UI)
 
 See **[Messaging Guidelines](./docs/MESSAGING_GUIDELINES.md)** for complete terminology reference and usage examples.
 
-### Wellness Intelligence Features
-- Personalized health recommendations
+### Wellness Intelligence Features (self-teaching ML)
+- Personalized health recommendations that adapt to each family member's patterns
 - Weekly wellness insights
 - Goal adjustment suggestions
 - Pattern recognition in eating habits
@@ -338,7 +353,7 @@ This project was developed using a structured agent approach:
 
 - **Frontend Agent**: Next.js + Tailwind CSS + Mobile UI
 - **Backend Agent**: Firebase + API integration + WebAuthn
-- **AI Agent**: OpenAI integration + meal analysis + recommendations
+- **AI Agent**: Gemini Vision integration (meals, OCR) + self-teaching ML for recommendations
 - **QA Agent**: Testing + accessibility + cross-browser compatibility
 
 See `/agents/` directory for detailed specifications.

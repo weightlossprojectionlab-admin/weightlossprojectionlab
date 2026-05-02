@@ -1,8 +1,9 @@
 /**
- * Ai Health Reports - Marketing Blog Page
+ * Health Reports — Marketing Blog Page (URL slug retained: /blog/ai-health-reports)
  *
- * Hybrid marketing page showcasing WPL Ai Health Reports
- * Optimized for SEO with top-notch backlinks and conversion funnel
+ * Showcases WPL Self-Teaching Health Reports — weekly personalized insights
+ * that learn each family member's baseline patterns. Slug kept for SEO equity;
+ * page content reflects the AI-vision-only / self-teaching-ML-everywhere-else split.
  */
 
 import Link from 'next/link'
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
     title: 'Weekly Health Reports - Personalized Insights and Recommendations',
     description: 'Get weekly health reports with personalized recommendations based on your meal patterns, weight trends, vital signs, and activity data. Powered by Wellness Projection Lab.',
     type: 'article',
-    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Ai Health Reports' }],
+    images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab — Weekly Health Reports' }],
     url: 'https://www.wellnessprojectionlab.com/blog/ai-health-reports',
   },
   twitter: {

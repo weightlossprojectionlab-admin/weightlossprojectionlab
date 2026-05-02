@@ -32,11 +32,11 @@ import { Screenshot } from '@/components/ui/Screenshot'
 
 export const metadata: Metadata = {
   title: 'Catch Problems Before They Become Emergencies - Intelligent Vital Monitoring | Wellness Projection Lab',
-  description: 'Detect health issues early with intelligent vital sign monitoring. Track BP, glucose, heart rate, SpO2, temperature, mood, and pain for your entire family with trend alerts and AI insights.',
+  description: 'Detect health issues early with intelligent vital sign monitoring. Track BP, glucose, heart rate, SpO2, temperature, mood, and pain for your entire family with trend alerts and self-teaching insights.',
   keywords: 'vitals tracking, blood pressure monitoring, glucose tracking, heart rate monitor, early detection, health alerts, vital signs, family health monitoring, abnormal vitals alert, remote patient monitoring',
   openGraph: {
     title: 'Catch Problems Before They Become Emergencies - Intelligent Vital Monitoring',
-    description: 'Detect health issues early with intelligent vital sign monitoring. Track BP, glucose, heart rate, SpO2, temperature, mood, and pain for your entire family with trend alerts and AI insights.',
+    description: 'Detect health issues early with intelligent vital sign monitoring. Track BP, glucose, heart rate, SpO2, temperature, mood, and pain for your entire family with trend alerts and self-teaching insights.',
     type: 'article',
     images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/vitals-tracking/vital-reminders-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Vitals Tracking' }],
     url: 'https://www.wellnessprojectionlab.com/blog/vitals-tracking',
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     images: ['https://www.wellnessprojectionlab.com/screenshots/vitals-tracking/vital-reminders-desktop-light.png'],
     title: 'Catch Problems Before They Become Emergencies - Intelligent Vital Monitoring',
-    description: 'Detect health issues early with intelligent vital sign monitoring. Track BP, glucose, heart rate, SpO2, temperature, mood, and pain for your entire family with trend alerts and AI insights.',
+    description: 'Detect health issues early with intelligent vital sign monitoring. Track BP, glucose, heart rate, SpO2, temperature, mood, and pain for your entire family with trend alerts and self-teaching insights.',
   },
   alternates: {
     canonical: 'https://www.wellnessprojectionlab.com/blog/vitals-tracking'
@@ -58,7 +58,7 @@ export default function VitalsTrackingBlogPage() {
       <JsonLd
         data={blogPostingSchema({
           headline: 'Catch Problems Before They Become Emergencies - Intelligent Vital Monitoring',
-          description: 'Detect health issues early with intelligent vital sign monitoring. Track BP, glucose, heart rate, SpO2, temperature, mood, and pain for your entire family with trend alerts and AI insights.',
+          description: 'Detect health issues early with intelligent vital sign monitoring. Track BP, glucose, heart rate, SpO2, temperature, mood, and pain for your entire family with trend alerts and self-teaching insights.',
           slug: 'vitals-tracking',
           image: '/screenshots/vitals-tracking/vital-reminders-desktop-light.png',
           datePublished: '2026-01-15T00:00:00-05:00',
@@ -243,8 +243,8 @@ export default function VitalsTrackingBlogPage() {
             />
             <FeatureCard
               icon={<SparklesIcon className="w-12 h-12 text-violet-500" />}
-              title="AI Insights"
-              description="WPL&apos;s AI analyzes your vitals patterns and surfaces actionable recommendations in your weekly health report."
+              title="Self-Teaching Insights"
+              description="WPL&apos;s self-teaching engine analyzes your vitals patterns and surfaces actionable recommendations in your weekly health report."
             />
           </div>
         </section>
@@ -268,7 +268,7 @@ export default function VitalsTrackingBlogPage() {
             <RelatedLink href="/blog/medications" title="Medication Tracking" description="Never miss a dose with smart reminders and adherence monitoring" />
             <RelatedLink href="/blog/dashboard" title="Health Dashboard" description="Your centralized command center for all health data" />
             <RelatedLink href="/blog/family-care" title="Family Care" description="Manage health for every member of your household" />
-            <RelatedLink href="/blog/wpl-health-reports" title="AI Health Reports" description="Weekly AI-powered insights from your tracked data" />
+            <RelatedLink href="/blog/wpl-health-reports" title="Self-Teaching Health Reports" description="Weekly personalized insights from your tracked data" />
             <RelatedLink href="/blog/weight-tracking" title="Weight Tracking" description="Monitor weight trends alongside your vitals" />
             <RelatedLink href="/blog/appointments" title="Appointments" description="Bring your vitals data to every doctor visit" />
           </div>

@@ -21,7 +21,7 @@ const CURRENT_YEAR = new Date().getFullYear()
 export const metadata = buildPageMetadata({
   title: 'License Wellness Projection Lab — Launch Your Branded Health Practice',
   description:
-    'White-label the HIPAA-compliant family health platform under your own brand. AI-powered tracking, your subdomain, your colors, your clients. Launch in 48 hours.',
+    'White-label the HIPAA-compliant family health platform under your own brand. Self-teaching personalization, AI photo capture, your subdomain, your colors, your clients. Launch in 48 hours.',
   path: '/franchise',
   keywords: 'white label health platform, HIPAA franchise, private practice software, branded patient portal, nurse practice software, concierge health platform',
 })
@@ -45,14 +45,14 @@ const PROBLEMS = [
 ]
 
 const FEATURES = [
-  'AI-powered meal logging and nutrition coaching',
+  'AI meal photo capture (Gemini Vision) + self-teaching nutrition guidance',
   'Vital tracking — BP, glucose, weight, oxygen, more',
   'Medication management with refill reminders',
   'Family sharing across caregivers, spouses, doctors',
-  'Secure document storage for medical records',
+  'Secure document storage with AI-powered OCR for medical records',
   'Branded subdomain — yourname.wellnessprojectionlab.com',
   'Appointment scheduling and reminders',
-  'AI-generated health reports',
+  'Self-teaching health reports that adapt to each client',
   'HIPAA-compliant infrastructure with BAA',
   'Email + chat support',
 ]
@@ -124,7 +124,7 @@ export default function FranchiseMarketingPage() {
           <div className="flex flex-wrap justify-center gap-6 text-sm pt-6">
             <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> HIPAA Compliant</span>
             <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> White-Label</span>
-            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> AI-Powered</span>
+            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> Self-Teaching</span>
             <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> Launch in 48 Hours</span>
           </div>
         </div>
@@ -159,7 +159,7 @@ export default function FranchiseMarketingPage() {
             Your platform, our infrastructure
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-12">
-            Get the complete WPL platform — vitals, meds, meals, AI coaching, family sharing —
+            Get the complete WPL platform — vitals, meds, meals, self-teaching personalization, family sharing —
             served on your own subdomain, branded with your name and colors.
             Families see your brand, not ours.
           </p>
@@ -276,7 +276,7 @@ export default function FranchiseMarketingPage() {
           <div className="grid md:grid-cols-3 gap-6 text-left">
             {[
               { name: 'Maria R., RN', title: 'Solo home care nurse', quote: 'I used to juggle three apps and a notebook. Now everything for my 30 families lives in one place — branded as my practice.' },
-              { name: 'James T.', title: 'Wellness coach', quote: 'My clients used to text me their meals. Now they log them in my app, and I get AI summaries every Monday morning.' },
+              { name: 'James T.', title: 'Wellness coach', quote: 'My clients used to text me their meals. Now they log them in my app, and I get personalized weekly summaries every Monday morning.' },
               { name: 'Dr. Patel', title: 'Concierge physician', quote: 'The HIPAA compliance and BAA were non-negotiable. WPL handled both before I even asked.' },
             ].map(t => (
               <div key={t.name} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">

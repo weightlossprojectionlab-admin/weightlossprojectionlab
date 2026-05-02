@@ -182,7 +182,7 @@ export default function MealtrackingBlogPage() {
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-foreground mb-4">Real Families. Real Scenarios.</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              WPL meal tracking adapts to whoever you&apos;re caring for &mdash; and the AI alerts keep everyone safe.
+              WPL meal tracking adapts to whoever you&apos;re caring for &mdash; and the smart alerts keep everyone safe.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
@@ -190,19 +190,19 @@ export default function MealtrackingBlogPage() {
               icon={<HeartIcon className="w-8 h-8 text-pink-500" />}
               title="Toddler Nutrition"
               description="Logging your child&apos;s meals for the pediatrician &mdash; just photograph the plate. No more guessing portion sizes or forgetting what they ate on Tuesday."
-              alert="AI Alert: &quot;Today&apos;s iron intake is 40% below the recommended daily value for ages 1-3.&quot;"
+              alert="Smart Alert: &quot;Today&apos;s iron intake is 40% below the recommended daily value for ages 1-3.&quot;"
             />
             <UseCaseCard
               icon={<ChartBarIcon className="w-8 h-8 text-blue-500" />}
               title="Spouse Macros"
               description="Tracking your partner&apos;s protein intake for their fitness goals. Photograph their meals and WPL logs it to their profile &mdash; no app-switching needed."
-              alert="AI Alert: &quot;Marcus has hit 85% of his daily protein goal. Consider a high-protein snack before dinner.&quot;"
+              alert="Smart Alert: &quot;Marcus has hit 85% of his daily protein goal. Consider a high-protein snack before dinner.&quot;"
             />
             <UseCaseCard
               icon={<UserGroupIcon className="w-8 h-8 text-amber-600" />}
               title="Elderly Parent Care"
-              description="Ensuring Mom is eating enough when you can&apos;t be there for every meal. Caregivers photograph meals, and AI flags nutritional gaps automatically."
-              alert="AI Alert: &quot;Dorothy&apos;s calorie intake has dropped 30% this week. Daily average: 1,100 cal vs. 1,600 cal target.&quot;"
+              description="Ensuring Mom is eating enough when you can&apos;t be there for every meal. Caregivers photograph meals, and the system flags nutritional gaps automatically."
+              alert="Smart Alert: &quot;Dorothy&apos;s calorie intake has dropped 30% this week. Daily average: 1,100 cal vs. 1,600 cal target.&quot;"
             />
           </div>
         </section>
@@ -234,7 +234,7 @@ export default function MealtrackingBlogPage() {
             <FeatureCard
               icon={<AdjustmentsHorizontalIcon className="w-10 h-10 text-amber-600" />}
               title="Dietary Preferences"
-              description="Keto, vegan, low-sodium, diabetic-friendly &mdash; set dietary preferences per person, and AI evaluates every meal against them."
+              description="Keto, vegan, low-sodium, diabetic-friendly &mdash; set dietary preferences per person, and the system evaluates every meal against them."
             />
             <FeatureCard
               icon={<PhotoIcon className="w-10 h-10 text-amber-600" />}
@@ -269,7 +269,7 @@ export default function MealtrackingBlogPage() {
               <PipelineStep
                 icon={<ShoppingCartIcon className="w-8 h-8 text-green-600" />}
                 title="Smart Shopping Lists"
-                description="AI generates grocery lists based on what your family actually eats and what&apos;s running low."
+                description="Self-teaching grocery lists adapt to what your family actually eats and what&apos;s running low."
                 link="/blog/smart-shopping"
               />
               <PipelineStep
@@ -296,9 +296,9 @@ export default function MealtrackingBlogPage() {
               <LightBulbIcon className="w-12 h-12 text-amber-600 mx-auto mb-4" />
               <h2 className="text-3xl font-bold text-foreground mb-4">Accuracy You Can Count On</h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-                WPL&apos;s AI delivers <span className="font-semibold text-amber-700 dark:text-amber-400">85&ndash;95% accuracy</span> on
+                WPL&apos;s AI vision delivers <span className="font-semibold text-amber-700 dark:text-amber-400">85&ndash;95% accuracy</span> on
                 food identification and nutritional estimates out of the box. When something isn&apos;t quite right, you correct it &mdash; and
-                the AI learns from your feedback. The more your family uses it, the smarter it gets.
+                the self-teaching layer remembers your family&apos;s actual portions, foods, and patterns. The more your family uses it, the smarter it gets.
               </p>
               <div className="grid sm:grid-cols-3 gap-6 mt-8">
                 <div className="text-center">
@@ -347,7 +347,7 @@ export default function MealtrackingBlogPage() {
             <InterconnectLink
               href="/blog/smart-shopping"
               title="Smart Shopping"
-              description="AI grocery lists from your meal data"
+              description="Self-teaching grocery lists from your meal data"
             />
             <InterconnectLink
               href="/blog/inventory-management"
@@ -361,7 +361,7 @@ export default function MealtrackingBlogPage() {
             />
             <InterconnectLink
               href="/blog/wpl-health-reports"
-              title="AI Health Reports"
+              title="Self-Teaching Health Reports"
               description="Weekly insights from your meal patterns"
             />
           </div>

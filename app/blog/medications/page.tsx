@@ -336,7 +336,7 @@ export default function MedicationsBlogPage() {
             <RelatedLink href="/blog/dashboard" title="Health Dashboard" description="Your centralized command center for all health data" />
             <RelatedLink href="/blog/family-care" title="Family Care" description="Manage health for every member of your household" />
             <RelatedLink href="/blog/appointments" title="Appointments" description="Bring medication lists to every doctor visit" />
-            <RelatedLink href="/blog/wpl-health-reports" title="AI Health Reports" description="Weekly AI-powered insights including medication adherence" />
+            <RelatedLink href="/blog/wpl-health-reports" title="Self-Teaching Health Reports" description="Weekly personalized insights including medication adherence" />
           </div>
         </section>
 

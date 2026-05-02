@@ -29,11 +29,11 @@ import { Screenshot, MobileFrame } from '@/components/ui/Screenshot'
 
 export const metadata: Metadata = {
   title: 'Family Health Tracking — Intelligent Monitoring for Everyone You Care About | Wellness Projection Lab',
-  description: 'Multi-person intelligent health monitoring for your entire family. AI-powered alerts for newborns to seniors. Track nutrition, weight, vitals, and medications — one dashboard, proactive insights.',
-  keywords: 'family health monitoring, multi-person health tracking, AI health alerts, pediatric tracking, elderly care monitoring, family care dashboard, caregiver coordination, family health app',
+  description: 'Multi-person intelligent health monitoring for your entire family. self-teaching alerts for newborns to seniors. Track nutrition, weight, vitals, and medications — one dashboard, proactive insights.',
+  keywords: 'family health monitoring, multi-person health tracking, self-teaching health alerts, pediatric tracking, elderly care monitoring, family care dashboard, caregiver coordination, family health app',
   openGraph: {
     title: 'Family Health Tracking — Intelligent Monitoring for Everyone You Care About',
-    description: 'Multi-person intelligent health monitoring for your entire family. AI-powered alerts from newborns to seniors.',
+    description: 'Multi-person intelligent health monitoring for your entire family. self-teaching alerts from newborns to seniors.',
     type: 'article',
     images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Family Care' }],
     url: 'https://www.wellnessprojectionlab.com/blog/family-care',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'Family Health Tracking — Intelligent Monitoring for Everyone You Care About',
-    description: 'Multi-person intelligent health monitoring for your entire family. AI-powered alerts from newborns to seniors.',
+    description: 'Multi-person intelligent health monitoring for your entire family. self-teaching alerts from newborns to seniors.',
   },
   alternates: {
     canonical: 'https://www.wellnessprojectionlab.com/blog/family-care'
@@ -55,11 +55,11 @@ export default function FamilyCareBlogPage() {
       <JsonLd
         data={blogPostingSchema({
           headline: 'Family Health Tracking — Intelligent Monitoring for Everyone You Care About',
-          description: 'Multi-person intelligent health monitoring for your entire family. AI-powered alerts for newborns to seniors. Track nutrition, weight, vitals, and medications — one dashboard, proactive insights.',
+          description: 'Multi-person intelligent health monitoring for your entire family. self-teaching alerts for newborns to seniors. Track nutrition, weight, vitals, and medications — one dashboard, proactive insights.',
           slug: 'family-care',
           image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
           datePublished: '2026-01-15T00:00:00-05:00',
-          keywords: 'family health monitoring, multi-person health tracking, AI health alerts, pediatric tracking, elderly care monitoring, family care dashboard, caregiver coordination, family health app',
+          keywords: 'family health monitoring, multi-person health tracking, self-teaching health alerts, pediatric tracking, elderly care monitoring, family care dashboard, caregiver coordination, family health app',
         })}
       />
 
@@ -159,7 +159,7 @@ export default function FamilyCareBlogPage() {
             <LoopStep
               step="2"
               title="Analyze"
-              description="AI detects patterns, projects trends, and flags anomalies across all profiles."
+              description="The system detects patterns, projects trends, and flags anomalies across all profiles — learning what's normal for each person."
               color="bg-purple-500"
             />
             <LoopStep
@@ -221,7 +221,7 @@ export default function FamilyCareBlogPage() {
               subtitle="Partners, siblings, yourself"
               features={[
                 'Weight loss projections & goal tracking',
-                'AI-powered nutrition analysis',
+                'AI meal photo capture (Gemini Vision) + self-teaching nutrition analysis',
                 'Meal pattern & habit detection',
                 'Activity level monitoring',
                 'BMI trends with smart recommendations',
@@ -282,7 +282,7 @@ export default function FamilyCareBlogPage() {
               <div className="space-y-4">
                 {[
                   'Multi-person monitoring from one dashboard',
-                  'AI interprets data and detects patterns',
+                  'Self-teaching system interprets data and detects patterns',
                   'Proactive alerts before problems happen',
                   'All family members under one account',
                   'Caregiver duties, assignments, and scheduling',
@@ -374,7 +374,7 @@ export default function FamilyCareBlogPage() {
             />
             <FeatureCard
               icon={<ChartBarIcon className="w-12 h-12 text-emerald-600" />}
-              title="AI Health Insights"
+              title="Self-Teaching Health Insights"
               description="Pattern detection across meals, weight, vitals, and symptoms. The system learns what's normal for each person."
             />
             <FeatureCard

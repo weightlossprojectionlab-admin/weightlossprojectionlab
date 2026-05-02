@@ -305,7 +305,7 @@ export default function ShoppingPage() {
       <ul>
         <li>Drag item to correct section</li>
         <li>System learns your preferences</li>
-        <li>Report persistent issues for AI improvement</li>
+        <li>Report persistent issues so we can improve the system</li>
       </ul>
 
       <h3>Can't share list</h3>

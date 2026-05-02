@@ -33,11 +33,11 @@ import { Screenshot, MobileFrame } from '@/components/ui/Screenshot'
 
 export const metadata: Metadata = {
   title: 'Family Health Dashboard — See Everyone&apos;s Health in One Glance | Wellness Projection Lab',
-  description: 'Your family health command center. Monitor weight, meals, vitals, and AI-powered insights for every family member from one intelligent dashboard. Proactive alerts, care coordination, and privacy controls.',
+  description: 'Your family health command center. Monitor weight, meals, vitals, and self-teaching insights for every family member from one intelligent dashboard. Proactive alerts, care coordination, and privacy controls.',
   keywords: 'family health dashboard, health command center, family health monitoring, multi-person dashboard, caregiver dashboard, health insights dashboard, family wellness tracking, centralized health view',
   openGraph: {
     title: 'Family Health Dashboard — See Everyone\'s Health in One Glance',
-    description: 'Your family health command center. Monitor weight, meals, vitals, and AI insights for every family member from one intelligent dashboard.',
+    description: 'Your family health command center. Monitor weight, meals, vitals, and self-teaching insights for every family member from one intelligent dashboard.',
     type: 'article',
     images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Dashboard' }],
     url: 'https://www.wellnessprojectionlab.com/blog/dashboard',
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'Family Health Dashboard — See Everyone\'s Health in One Glance',
-    description: 'Your family health command center. Monitor weight, meals, vitals, and AI insights for every family member from one intelligent dashboard.',
+    description: 'Your family health command center. Monitor weight, meals, vitals, and self-teaching insights for every family member from one intelligent dashboard.',
   },
   alternates: {
     canonical: 'https://www.wellnessprojectionlab.com/blog/dashboard'
@@ -59,7 +59,7 @@ export default function DashboardBlogPage() {
       <JsonLd
         data={blogPostingSchema({
           headline: 'Family Health Dashboard — See Everyone&apos;s Health in One Glance',
-          description: 'Your family health command center. Monitor weight, meals, vitals, and AI-powered insights for every family member from one intelligent dashboard. Proactive alerts, care coordination, and privacy controls.',
+          description: 'Your family health command center. Monitor weight, meals, vitals, and self-teaching insights for every family member from one intelligent dashboard. Proactive alerts, care coordination, and privacy controls.',
           slug: 'dashboard',
           image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
           datePublished: '2026-01-15T00:00:00-05:00',
@@ -168,7 +168,7 @@ export default function DashboardBlogPage() {
             />
             <StepCard
               step="3"
-              title="AI Insights"
+              title="Self-Teaching Insights"
               description="Platform-generated health analysis surfaces patterns you&apos;d never catch manually — declining intake, weight plateaus, vital sign trends."
               color="bg-indigo-500"
             />
@@ -221,7 +221,7 @@ export default function DashboardBlogPage() {
               title="Weekly Family Health Review"
               time="Sunday Evening"
               gradient="from-indigo-500 to-purple-500"
-              narrative="Every Sunday, the Patel family sits down and reviews the Dashboard together. They look at weight progress for the adults, meal quality scores for the kids, and check if any upcoming appointments need drivers assigned. The AI insights flag that their son&apos;s vegetable intake dropped 40% this week — time to get creative with dinner."
+              narrative="Every Sunday, the Patel family sits down and reviews the Dashboard together. They look at weight progress for the adults, meal quality scores for the kids, and check if any upcoming appointments need drivers assigned. The self-teaching insights flag that their son&apos;s vegetable intake dropped 40% this week — time to get creative with dinner."
               outcome="A 10-minute ritual that keeps the whole family aligned."
             />
           </div>
@@ -293,7 +293,7 @@ export default function DashboardBlogPage() {
               icon={<ArrowsRightLeftIcon className="w-12 h-12 text-emerald-600" />}
               title="Profile Switching"
               benefit="Go from household view to individual detail instantly"
-              description="Tap any family member to dive into their full health profile — weight charts, meal logs, vitals history, medications, and AI-generated insights. Switch back with one tap."
+              description="Tap any family member to dive into their full health profile — weight charts, meal logs, vitals history, medications, and self-teaching insights. Switch back with one tap."
             />
             <FeatureCard
               icon={<BellAlertIcon className="w-12 h-12 text-emerald-600" />}
@@ -303,7 +303,7 @@ export default function DashboardBlogPage() {
             />
             <FeatureCard
               icon={<LightBulbIcon className="w-12 h-12 text-emerald-600" />}
-              title="AI Health Insights"
+              title="Self-Teaching Health Insights"
               benefit="Understand patterns you would never catch manually"
               description="Platform-generated analysis across meals, weight, vitals, and activity. Detects correlations, flags anomalies, and suggests next steps tailored to each person."
             />
@@ -359,7 +359,7 @@ export default function DashboardBlogPage() {
                 {[
                   'Shows EVERYONE&apos;s data from one intelligent view',
                   'One login — unlimited family members',
-                  'AI detects patterns across the entire household',
+                  'Self-teaching system detects patterns across the entire household',
                   'Smart alerts for every person you care about',
                   'Built-in care coordination and task management',
                   'Shared activity feed with role-based privacy',
@@ -396,7 +396,7 @@ export default function DashboardBlogPage() {
             />
             <TrustBadge
               icon={<SparklesIcon className="w-8 h-8 text-emerald-600" />}
-              value="AI-Powered"
+              value="Self-Teaching"
               label="Proactive Insights"
             />
           </div>
@@ -408,7 +408,7 @@ export default function DashboardBlogPage() {
         <section className="mb-24">
           <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Explore What Powers the Dashboard</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <RelatedLink href="/blog/meal-tracking" title="Meal Tracking" description="AI-powered photo meal logging with nutritional analysis" />
+            <RelatedLink href="/blog/meal-tracking" title="Meal Tracking" description="AI photo capture (Gemini Vision) + self-teaching nutrition analysis" />
             <RelatedLink href="/blog/weight-tracking" title="Weight Tracking" description="Trend charts, goal setting, and progress visualization" />
             <RelatedLink href="/blog/vitals-tracking" title="Vitals Tracking" description="Blood pressure, glucose, temperature, and more" />
             <RelatedLink href="/blog/medications" title="Medications" description="Medication schedules, reminders, and adherence tracking" />

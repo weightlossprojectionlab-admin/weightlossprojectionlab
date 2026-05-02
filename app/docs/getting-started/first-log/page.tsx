@@ -7,7 +7,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Log Your First Meal - Getting Started | Wellness Projection Lab',
-  description: 'Learn how to track your first meal using WPL\'s WPL-powered meal tracking feature.',
+  description: 'Learn how to track your first meal using WPL Vision (Gemini Vision) for instant photo-based meal tracking.',
 }
 
 export default function FirstLogDocsPage() {
@@ -36,7 +36,7 @@ export default function FirstLogDocsPage() {
             <h1 className="text-4xl font-bold text-gray-900">Log Your First Meal</h1>
           </div>
           <p className="text-xl text-gray-600">
-            Track meals with WPL-powered analysis for accurate nutritional insights
+            Track meals with AI-powered photo analysis (WPL Vision™ — Gemini Vision) for accurate nutritional insights
           </p>
         </div>
 
@@ -128,8 +128,8 @@ export default function FirstLogDocsPage() {
                   <li className="flex gap-3">
                     <span className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
                     <div>
-                      <strong className="text-gray-900">Wait for WPL analysis</strong>
-                      <p className="text-sm text-gray-700 mt-1">Usually takes 3-5 seconds to identify ingredients</p>
+                      <strong className="text-gray-900">Wait for WPL Vision analysis</strong>
+                      <p className="text-sm text-gray-700 mt-1">Gemini Vision usually takes 3-5 seconds to identify ingredients</p>
                     </div>
                   </li>
                   <li className="flex gap-3">
