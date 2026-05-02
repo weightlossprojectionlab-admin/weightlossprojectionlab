@@ -18,6 +18,44 @@ function ensureKey(): string | null {
   return USDA_API_KEY
 }
 
+/**
+ * Fetch from USDA via api.data.gov with header-based auth.
+ *
+ * Pass the API key via X-Api-Key header instead of ?api_key=... query string
+ * (header is recommended by api.data.gov to keep keys out of URL/proxy logs).
+ *
+ * Logs the X-RateLimit-Remaining header so we have visibility into the 1,000
+ * req/hour quota. Logs api.data.gov's own error.code for invalid-key / over-
+ * limit cases so silent fallback to OpenFoodFacts is detectable.
+ */
+async function usdaFetch(url: string, key: string): Promise<Response> {
+  const response = await fetch(url, {
+    headers: { 'X-Api-Key': key }
+  })
+
+  const remaining = response.headers.get('X-RateLimit-Remaining')
+  if (remaining !== null) {
+    logger.debug('[USDA API] quota remaining', { remaining })
+  }
+
+  if (!response.ok) {
+    // Try to surface api.data.gov's structured error code (e.g.
+    // API_KEY_INVALID, OVER_RATE_LIMIT) so misconfigurations don't
+    // silently fall through to the OpenFoodFacts fallback forever.
+    try {
+      const body = await response.clone().json()
+      const code = body?.error?.code
+      if (code) {
+        logger.warn('[USDA API] gateway error', { httpStatus: response.status, code, url })
+      }
+    } catch {
+      // Non-JSON response — ignore parse failure
+    }
+  }
+
+  return response
+}
+
 export interface USDANutrient {
   nutrientId: number
   nutrientName: string
@@ -93,8 +131,9 @@ export async function searchByBarcode(barcode: string): Promise<USDAProductData 
   try {
     logger.info('[USDA API] Searching by barcode', { barcode })
 
-    const response = await fetch(
-      `${USDA_API_BASE}/foods/search?query=${barcode}&dataType=Branded&pageSize=1&api_key=${key}`
+    const response = await usdaFetch(
+      `${USDA_API_BASE}/foods/search?query=${barcode}&dataType=Branded&pageSize=1`,
+      key
     )
 
     if (!response.ok) {
@@ -137,8 +176,9 @@ export async function getFoodById(fdcId: number): Promise<USDAFood | null> {
   try {
     logger.info('[USDA API] Getting food by ID', { fdcId })
 
-    const response = await fetch(
-      `${USDA_API_BASE}/food/${fdcId}?api_key=${key}`
+    const response = await usdaFetch(
+      `${USDA_API_BASE}/food/${fdcId}`,
+      key
     )
 
     if (!response.ok) {
@@ -166,8 +206,9 @@ export async function searchFoods(query: string, pageSize = 25): Promise<USDAFoo
   try {
     logger.info('[USDA API] Searching foods', { query, pageSize })
 
-    const response = await fetch(
-      `${USDA_API_BASE}/foods/search?query=${encodeURIComponent(query)}&pageSize=${pageSize}&api_key=${key}`
+    const response = await usdaFetch(
+      `${USDA_API_BASE}/foods/search?query=${encodeURIComponent(query)}&pageSize=${pageSize}`,
+      key
     )
 
     if (!response.ok) {
