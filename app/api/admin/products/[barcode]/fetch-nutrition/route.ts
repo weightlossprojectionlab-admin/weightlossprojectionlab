@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { lookupBarcodeServer } from '@/lib/openfoodfacts-server'
+import { lookupProductHybrid } from '@/lib/product-lookup-server'
 import { errorResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
 
 /**
  * POST /api/admin/products/[barcode]/fetch-nutrition
- * Fetch and update nutrition data from OpenFoodFacts
+ *
+ * Hybrid lookup: USDA FoodData Central for nutrition (authoritative for US
+ * branded foods) + OpenFoodFacts for the product image (USDA has none).
+ * Falls back to OFF-only when USDA has no record. Source is recorded in
+ * quality.dataSource so admins can see where each datum came from.
  */
 export async function POST(
   request: NextRequest,
@@ -49,18 +53,16 @@ export async function POST(
       return NextResponse.json({ error: 'Product not found in database' }, { status: 404 })
     }
 
-    // Fetch from OpenFoodFacts
-    logger.info(`Fetching nutrition data for barcode ${barcode}`)
-    const offResponse = await lookupBarcodeServer(barcode)
+    // Hybrid fetch — USDA for nutrition + OFF for image; falls back to OFF-only
+    logger.info(`Fetching hybrid nutrition data for barcode ${barcode}`)
+    const product = await lookupProductHybrid(barcode)
 
-    if (offResponse.status !== 1 || !offResponse.product) {
+    if (!product) {
       return NextResponse.json({
-        error: 'Product not found in OpenFoodFacts',
-        details: offResponse.status_verbose
+        error: 'Product not found in USDA or OpenFoodFacts'
       }, { status: 404 })
     }
 
-    const product = offResponse.product
     const nutriments = product.nutriments || {}
 
     // Extract nutrition data (prefer per-serving, fallback to per-100g)
@@ -100,10 +102,10 @@ export async function POST(
     if (iron !== undefined) nutrition.iron = Math.round(iron * 10) / 10
     if (potassium !== undefined) nutrition.potassium = Math.round(potassium * 10) / 10
 
-    // Prepare update data
+    // Prepare update data — record exactly which sources contributed
     const updateData: Record<string, any> = {
       nutrition,
-      'quality.dataSource': 'openfoodfacts',
+      'quality.dataSource': product.source, // 'usda' | 'openfoodfacts' | 'usda+off'
       updatedAt: new Date()
     }
 
@@ -120,8 +122,10 @@ export async function POST(
       }
     }
 
-    // Update image if better quality available
-    const newImageUrl = product.image_front_url || product.image_url
+    // Update image if better quality available. lookupProductHybrid already
+    // merged the OFF image into product.image_url when USDA won the nutrition
+    // lookup, so this is a single source of truth.
+    const newImageUrl = product.image_url
     if (newImageUrl && (!currentData?.imageUrl || currentData.imageUrl.length < newImageUrl.length)) {
       updateData['imageUrl'] = newImageUrl
     }

@@ -3,7 +3,7 @@ import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { rateLimit } from '@/lib/rate-limit'
-import { lookupProductByBarcode } from '@/lib/product-lookup-server'
+import { lookupProductHybrid } from '@/lib/product-lookup-server'
 
 /**
  * GET /api/products/lookup?barcode={barcode}
@@ -120,12 +120,15 @@ export async function GET(request: NextRequest) {
       logger.debug(`Cache stale for barcode ${barcode} (${Math.round(daysSinceUpdate)} days old)`)
     }
 
-    // Step 2: cache miss or stale — USDA-first, OpenFoodFacts-fallback
-    const product = await lookupProductByBarcode(barcode)
+    // Step 2: cache miss or stale — hybrid lookup (USDA nutrition + OFF image)
+    const product = await lookupProductHybrid(barcode)
 
     await logAPIUsage({
       timestamp: new Date(),
-      source: product?.source || 'openfoodfacts',
+      // Telemetry source field accepts 'cache' | 'usda' | 'openfoodfacts'.
+      // 'usda+off' (hybrid hit) is normalized to 'usda' since USDA was the
+      // primary nutrition source — OFF image is a supplement, not a hit.
+      source: product?.source === 'usda+off' ? 'usda' : (product?.source || 'openfoodfacts'),
       barcode,
       userId,
       found: !!product

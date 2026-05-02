@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { lookupBarcodeServer } from '@/lib/openfoodfacts-server'
+import { lookupProductHybrid } from '@/lib/product-lookup-server'
 import { isSuperAdmin } from '@/lib/admin/permissions'
 
 /**
  * POST /api/admin/products/fetch-nutrition-bulk
- * Fetch and update nutrition data for multiple products from OpenFoodFacts
+ *
+ * Hybrid bulk lookup: USDA FoodData Central for nutrition + OpenFoodFacts for
+ * the product image. Per-row source recorded in quality.dataSource.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -69,19 +71,18 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Fetch from OpenFoodFacts
-        const offResponse = await lookupBarcodeServer(barcode)
+        // Hybrid fetch — USDA + OFF image, with OFF fallback
+        const product = await lookupProductHybrid(barcode)
 
-        if (offResponse.status !== 1 || !offResponse.product) {
+        if (!product) {
           results.push({
             barcode,
             success: false,
-            error: 'Not found in OpenFoodFacts'
+            error: 'Not found in USDA or OpenFoodFacts'
           })
           continue
         }
 
-        const product = offResponse.product
         const nutriments = product.nutriments || {}
 
         // Extract nutrition data (prefer per-serving, fallback to per-100g)
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
         const fiber = nutriments.fiber_serving || nutriments.fiber_100g || nutriments.fiber || 0
         const sodium = nutriments.sodium_serving || nutriments.sodium_100g || nutriments.sodium || 0
 
-        // Prepare update data
+        // Prepare update data — record exactly which sources contributed
         const updateData: Record<string, any> = {
           nutrition: {
             calories: Math.round(calories),
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
             sodium: Math.round(sodium),
             servingSize: product.serving_size || product.quantity || ''
           },
-          'quality.dataSource': 'openfoodfacts',
+          'quality.dataSource': product.source, // 'usda' | 'openfoodfacts' | 'usda+off'
           updatedAt: new Date()
         }
 
@@ -120,8 +121,10 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Update image if better quality available
-        const newImageUrl = product.image_front_url || product.image_url
+        // Update image if better quality available. lookupProductHybrid already
+        // merged the OFF image into product.image_url when USDA won the nutrition
+        // lookup, so this is a single source of truth.
+        const newImageUrl = product.image_url
         if (newImageUrl && (!currentData?.imageUrl || currentData.imageUrl.length < newImageUrl.length)) {
           updateData['imageUrl'] = newImageUrl
         }
