@@ -7,8 +7,16 @@
 
 import { logger } from '@/lib/logger'
 
-const USDA_API_KEY = process.env.NEXT_PUBLIC_USDA_API_KEY || 'yWQMnRlTqV80igsnpIDcXfiP1pCMj2Qn135JZCgi'
+const USDA_API_KEY = process.env.USDA_API_KEY
 const USDA_API_BASE = 'https://api.nal.usda.gov/fdc/v1'
+
+function ensureKey(): string | null {
+  if (!USDA_API_KEY) {
+    logger.warn('[USDA API] USDA_API_KEY not set; falling back to OpenFoodFacts')
+    return null
+  }
+  return USDA_API_KEY
+}
 
 export interface USDANutrient {
   nutrientId: number
@@ -79,11 +87,14 @@ export interface USDAProductData {
  * Search USDA FoodData Central by barcode (UPC/GTIN)
  */
 export async function searchByBarcode(barcode: string): Promise<USDAProductData | null> {
+  const key = ensureKey()
+  if (!key) return null
+
   try {
     logger.info('[USDA API] Searching by barcode', { barcode })
 
     const response = await fetch(
-      `${USDA_API_BASE}/foods/search?query=${barcode}&dataType=Branded&pageSize=1&api_key=${USDA_API_KEY}`
+      `${USDA_API_BASE}/foods/search?query=${barcode}&dataType=Branded&pageSize=1&api_key=${key}`
     )
 
     if (!response.ok) {
@@ -120,11 +131,14 @@ export async function searchByBarcode(barcode: string): Promise<USDAProductData 
  * Get food details by FDC ID
  */
 export async function getFoodById(fdcId: number): Promise<USDAFood | null> {
+  const key = ensureKey()
+  if (!key) return null
+
   try {
     logger.info('[USDA API] Getting food by ID', { fdcId })
 
     const response = await fetch(
-      `${USDA_API_BASE}/food/${fdcId}?api_key=${USDA_API_KEY}`
+      `${USDA_API_BASE}/food/${fdcId}?api_key=${key}`
     )
 
     if (!response.ok) {
@@ -146,11 +160,14 @@ export async function getFoodById(fdcId: number): Promise<USDAFood | null> {
  * Search foods by query text
  */
 export async function searchFoods(query: string, pageSize = 25): Promise<USDAFood[]> {
+  const key = ensureKey()
+  if (!key) return []
+
   try {
     logger.info('[USDA API] Searching foods', { query, pageSize })
 
     const response = await fetch(
-      `${USDA_API_BASE}/foods/search?query=${encodeURIComponent(query)}&pageSize=${pageSize}&api_key=${USDA_API_KEY}`
+      `${USDA_API_BASE}/foods/search?query=${encodeURIComponent(query)}&pageSize=${pageSize}&api_key=${key}`
     )
 
     if (!response.ok) {
