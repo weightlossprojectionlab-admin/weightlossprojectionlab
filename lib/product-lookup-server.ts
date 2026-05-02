@@ -6,7 +6,7 @@
 
 import { logger } from '@/lib/logger'
 import { searchByBarcode as usdaSearchByBarcode, type USDAProductData } from './usda-api'
-import { fetchOpenFoodFactsImageOnly } from './openfoodfacts-api'
+import { fetchOpenFoodFactsImageOnly } from './openfoodfacts-server'
 
 const OPENFOODFACTS_API_URL = 'https://world.openfoodfacts.org/api/v2/product'
 

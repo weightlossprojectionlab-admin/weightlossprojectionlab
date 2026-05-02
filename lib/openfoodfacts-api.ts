@@ -65,33 +65,10 @@ export interface SimplifiedProduct {
 }
 
 /**
- * Fetch ONLY the product image URL from OpenFoodFacts.
- *
- * Used by the hybrid lookup in lib/product-lookup-server.ts when USDA wins on
- * nutrition (USDA has no images) — we still want the OFF image when available.
- * Uses the v2 ?fields= filter to keep the response small.
- *
- * Returns the image URL string or null. Never throws.
- */
-export async function fetchOpenFoodFactsImageOnly(barcode: string): Promise<string | null> {
-  try {
-    const response = await fetch(
-      `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=image_front_url,image_url`,
-      {
-        headers: { 'User-Agent': 'WeightLossProjectLab/1.0' }
-      }
-    )
-    if (!response.ok) return null
-    const data = await response.json()
-    return data?.product?.image_front_url || data?.product?.image_url || null
-  } catch (error) {
-    logger.warn('[OpenFoodFacts] image-only lookup failed', { barcode, error: (error as Error).message })
-    return null
-  }
-}
-
-/**
  * Lookup product by barcode from OpenFoodFacts
+ *
+ * NOTE: server-side image-only lookup lives in lib/openfoodfacts-server.ts
+ * (this file is 'use client' so its exports can't be invoked from server code).
  */
 export async function lookupBarcode(barcode: string): Promise<OpenFoodFactsResponse> {
   try {
