@@ -53,13 +53,15 @@ export async function POST(
       return NextResponse.json({ error: 'Product not found in database' }, { status: 404 })
     }
 
-    // Hybrid fetch — USDA for nutrition + OFF for image; falls back to OFF-only
-    logger.info(`Fetching hybrid nutrition data for barcode ${barcode}`)
-    const product = await lookupProductHybrid(barcode)
+    // Hybrid fetch — USDA-only for nutrition + OFF for image. Strict mode
+    // means we don't fall back to OFF nutrition when USDA misses — keeps
+    // the curated product_database free of crowdsourced OFF nutrition data.
+    logger.info(`Fetching USDA-strict hybrid nutrition for barcode ${barcode}`)
+    const product = await lookupProductHybrid(barcode, { strictUsdaNutrition: true })
 
     if (!product) {
       return NextResponse.json({
-        error: 'Product not found in USDA or OpenFoodFacts'
+        error: 'Product not found in USDA. To save nutrition data for this product, enter values manually on the edit page.'
       }, { status: 404 })
     }
 

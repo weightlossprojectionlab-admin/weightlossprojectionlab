@@ -71,14 +71,15 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Hybrid fetch — USDA + OFF image, with OFF fallback
-        const product = await lookupProductHybrid(barcode)
+        // USDA-strict for admin: USDA-only for nutrition, OFF for image.
+        // No OFF nutrition fallback so we don't pollute the curated DB.
+        const product = await lookupProductHybrid(barcode, { strictUsdaNutrition: true })
 
         if (!product) {
           results.push({
             barcode,
             success: false,
-            error: 'Not found in USDA or OpenFoodFacts'
+            error: 'Not found in USDA (admin must enter nutrition manually)'
           })
           continue
         }

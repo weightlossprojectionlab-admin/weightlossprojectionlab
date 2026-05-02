@@ -52,26 +52,39 @@ export interface ProductData {
 }
 
 /**
- * Hybrid lookup: USDA-first for nutrition, then enrich with OpenFoodFacts image.
+ * Hybrid lookup: USDA for nutrition, OpenFoodFacts for the image.
  *
  * USDA FoodData Central provides authoritative branded-foods nutrition but no
- * product images at all (verified via OpenAPI schema and live response). When
- * USDA wins on the nutrition lookup, we still ping OFF in parallel just for the
- * image so admin-curated products and end-user scans get a recognizable thumbnail.
+ * product images at all (verified via OpenAPI schema and live response). OFF
+ * has user-submitted images of varying quality and inconsistent nutrition
+ * data. We treat the two sources as specialists, never overlapping:
+ *
+ *   - USDA = sole source of nutrition, ingredients, category
+ *   - OFF  = sole source of the product image (and lenient-mode nutrition fallback)
  *
  * Source semantics:
  *   - 'usda+off'      = USDA had the nutrition, OFF supplied the image
  *   - 'usda'          = USDA had the nutrition, OFF had no usable image
- *   - 'openfoodfacts' = USDA had nothing, fell back to OFF for everything
- *   - null            = neither source had the barcode
+ *   - 'openfoodfacts' = USDA had nothing; lenient mode fell back to OFF entirely
+ *   - null            = USDA had nothing AND (strict mode OR OFF also had nothing)
  *
- * Use this for admin curation and end-user lookups where image quality matters.
+ * Modes:
+ *   - strictUsdaNutrition: true  — USDA required for nutrition. Returns null
+ *     when USDA has no record. Use this for admin curation so we never
+ *     contaminate the curated product_database with crowdsourced OFF nutrition.
+ *   - strictUsdaNutrition: false — When USDA misses, fall back to a full OFF
+ *     lookup (nutrition + image). Use for end-user scans where some answer is
+ *     better than "not found" for non-US/regional products.
+ *
  * The OFF image-only call is a small extra request; results are cached for 30
- * days in product_database (see app/api/products/lookup/route.ts), so this only
- * runs on cache misses.
+ * days in product_database, so this only runs on cache misses.
  */
-export async function lookupProductHybrid(barcode: string): Promise<ProductData | null> {
-  logger.info('[Hybrid Lookup] Starting', { barcode })
+export async function lookupProductHybrid(
+  barcode: string,
+  options: { strictUsdaNutrition?: boolean } = {}
+): Promise<ProductData | null> {
+  const { strictUsdaNutrition = false } = options
+  logger.info('[Hybrid Lookup] Starting', { barcode, strictUsdaNutrition })
 
   // Run USDA + OFF-image-only in parallel — even if USDA wins, we want OFF's image.
   const [usdaProduct, offImage] = await Promise.all([
@@ -92,7 +105,13 @@ export async function lookupProductHybrid(barcode: string): Promise<ProductData 
     return merged
   }
 
-  // USDA had nothing — fall back to a full OFF lookup (with nutrition).
+  // USDA missed.
+  if (strictUsdaNutrition) {
+    logger.info('[Hybrid Lookup] USDA miss with strict mode — returning null', { barcode })
+    return null
+  }
+
+  // Lenient: fall back to a full OFF lookup (nutrition + image).
   logger.info('[Hybrid Lookup] USDA miss, full OFF lookup', { barcode })
   return lookupProductByBarcode(barcode)
 }
