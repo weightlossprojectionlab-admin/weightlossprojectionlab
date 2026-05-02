@@ -34,6 +34,22 @@ export async function verifyBulkOperationPermission(
   operation: 'clear_list' | 'batch_discard'
 ): Promise<BulkOperationPermissionCheck> {
   try {
+    // Single-user mode: when callers can't supply a real householdId they pass
+    // the user's own UID as a sentinel. The user owns their own items (Firestore
+    // rules verify `resource.data.userId == request.auth.uid` at write time), so
+    // skip the household-membership and active-session checks — they don't apply
+    // to a solo user with no shared household.
+    if (householdId === authenticatedUid) {
+      logger.info('[PermissionGuard] Single-user bulk operation, skipping household checks', {
+        userId: authenticatedUid,
+        operation
+      })
+      return {
+        allowed: true,
+        userRole: 'owner'
+      }
+    }
+
     // 1. Fetch household to get user's role
     const householdDoc = await getDoc(doc(db, 'households', householdId))
     if (!householdDoc.exists()) {
