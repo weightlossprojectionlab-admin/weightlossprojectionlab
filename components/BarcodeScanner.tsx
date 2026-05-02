@@ -287,6 +287,12 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
     try {
       toast.loading('Scanning image...', { id: 'file-scan' })
 
+      // Html5Qrcode only allows one operation at a time. If the live camera
+      // scan is still running, scanFile() rejects with "Cannot start file scan
+      // - ongoing camera scan". Stop the camera first so file upload works as
+      // a fallback when the camera can't decode.
+      await stopScanning()
+
       // Initialize scanner if needed
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode('barcode-reader', {
