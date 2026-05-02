@@ -180,16 +180,33 @@ export default function BarcodesManagementPage() {
 
       const data = await response.json()
 
-      // Show summary
-      const { summary } = data
+      // Show summary with per-error context. The most common failure is now
+      // "Not found in USDA" because admin nutrition is USDA-strict — surface
+      // that distinctly so admins understand they need to enter nutrition
+      // manually for non-USDA products instead of seeing a vague error.
+      const { summary, results } = data as { summary: { successful: number; failed: number }; results: Array<{ barcode: string; success: boolean; error?: string }> }
+
+      const usdaMisses = (results || []).filter((r) => !r.success && /USDA/i.test(r.error || '')).length
+
       if (summary.successful > 0) {
         if (summary.failed === 0) {
           toast.success(`Updated ${summary.successful} product${summary.successful !== 1 ? 's' : ''} successfully`)
+        } else if (usdaMisses === summary.failed) {
+          toast.success(`Updated ${summary.successful}. ${summary.failed} not in USDA — edit each manually to add nutrition.`)
         } else {
-          toast.success(`Updated ${summary.successful} products, ${summary.failed} failed`)
+          toast.success(`Updated ${summary.successful}, ${summary.failed} failed`)
         }
+      } else if (usdaMisses === summary.failed && summary.failed > 0) {
+        toast.error(`None of the selected ${summary.failed} products are in USDA. Edit each manually to enter nutrition values.`, { duration: 6000 })
       } else {
         toast.error('Failed to update products')
+      }
+
+      // Log per-row results so admins can inspect which barcodes failed
+      if (summary.failed > 0) {
+        logger.warn('[BulkFetch] some rows failed', {
+          failed: results.filter((r) => !r.success).map((r) => ({ barcode: r.barcode, error: r.error }))
+        })
       }
 
       // Reload products
