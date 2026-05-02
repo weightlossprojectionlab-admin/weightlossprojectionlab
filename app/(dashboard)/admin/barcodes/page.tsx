@@ -48,6 +48,10 @@ export default function BarcodesManagementPage() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
   const [showBulkActions, setShowBulkActions] = useState(false)
 
+  // Migrate-to-USDA destructive action state
+  const [migratingToUsda, setMigratingToUsda] = useState(false)
+  const [showMigrateConfirm, setShowMigrateConfirm] = useState(false)
+
   useEffect(() => {
     if (isAdmin) {
       loadProducts()
@@ -223,6 +227,53 @@ export default function BarcodesManagementPage() {
     }
   }
 
+  /**
+   * Destructive migration: walk the entire product_database, run each barcode
+   * through USDA-strict hybrid lookup. Update rows USDA has, DELETE the rest.
+   * Result: only USDA-quality nutrition data remains in the cache.
+   */
+  const handleMigrateToUsda = async () => {
+    setMigratingToUsda(true)
+    setShowMigrateConfirm(false)
+
+    try {
+      const token = await getAdminAuthToken()
+      const csrfToken = getCSRFToken()
+
+      toast.loading('Migrating product database to USDA…', { id: 'migrate-usda', duration: 60000 })
+
+      const response = await fetch('/api/admin/products/migrate-to-usda', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Migration failed' }))
+        throw new Error(errorData.error || 'Migration failed')
+      }
+
+      const data = await response.json() as { success: boolean; stats: { total: number; migrated: number; deleted: number; errors: number } }
+      const { stats } = data
+
+      toast.success(
+        `Migration complete: ${stats.migrated} kept (USDA), ${stats.deleted} deleted (no USDA record), ${stats.errors} errors`,
+        { id: 'migrate-usda', duration: 8000 }
+      )
+
+      logger.info('Migration to USDA complete', stats)
+      await loadProducts()
+    } catch (err) {
+      logger.error('Migrate to USDA error:', err as Error)
+      toast.error(err instanceof Error ? err.message : 'Migration failed', { id: 'migrate-usda' })
+    } finally {
+      setMigratingToUsda(false)
+    }
+  }
+
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -246,15 +297,58 @@ export default function BarcodesManagementPage() {
             Search, edit, and verify products in the global database
           </p>
         </div>
-        <button
-          onClick={loadProducts}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors disabled:bg-gray-400"
-        >
-          <ArrowPathIcon className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowMigrateConfirm(true)}
+            disabled={migratingToUsda || loading}
+            className="flex items-center gap-2 px-4 py-2 bg-error hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+            title="Re-fetch every product via USDA. Deletes products USDA does not have."
+          >
+            {migratingToUsda ? 'Migrating…' : 'Migrate All to USDA'}
+          </button>
+          <button
+            onClick={loadProducts}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors disabled:bg-gray-400"
+          >
+            <ArrowPathIcon className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {/* Migrate-to-USDA confirmation modal */}
+      {showMigrateConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-foreground mb-3">Migrate all products to USDA?</h2>
+            <p className="text-sm text-muted-foreground mb-2">
+              This will look up every one of your <strong>{products.length}</strong> products against USDA FoodData Central:
+            </p>
+            <ul className="text-sm text-muted-foreground list-disc pl-5 mb-3 space-y-1">
+              <li><strong>USDA has it</strong> → row updated with USDA nutrition + OFF image</li>
+              <li><strong>USDA does not have it</strong> → row <strong className="text-error">permanently deleted</strong></li>
+            </ul>
+            <p className="text-xs text-muted-foreground mb-4">
+              Existing user inventory and shopping items are not affected (those store per-item snapshots). Future scans of deleted barcodes will repopulate via the lenient lookup pipeline.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowMigrateConfirm(false)}
+                className="px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleMigrateToUsda}
+                className="px-4 py-2 bg-error hover:bg-red-700 text-white rounded-lg font-medium text-sm"
+              >
+                Yes, migrate now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
