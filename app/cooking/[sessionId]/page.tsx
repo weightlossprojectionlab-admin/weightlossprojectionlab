@@ -15,6 +15,7 @@ import { logger } from '@/lib/logger'
 import { useInventory } from '@/hooks/useInventory'
 import { useShopping } from '@/hooks/useShopping'
 import { checkIngredientsWithQuantities } from '@/lib/ingredient-matcher'
+import { convertUnit } from '@/lib/unit-conversion'
 
 function CookingSessionContent() {
   const router = useRouter()
@@ -119,30 +120,67 @@ function CookingSessionContent() {
         completedAt: new Date()
       })
 
-      // Consume ingredients from inventory
+      // Consume ingredients from inventory.
+      //
+      // Phase 2c: prefer amount-based deduction over the legacy "wipe
+      // the whole row" path. For each matched ingredient:
+      //   - If the inventory row tracks containerSize/containerUnit AND
+      //     the recipe ingredient's unit converts cleanly into that
+      //     unit (same dimension), call consumeItem with useAmount so
+      //     only the recipe's actual usage is deducted (e.g., a 16-oz
+      //     bottle drops by 2 oz, not the whole bottle).
+      //   - Otherwise fall back to the legacy whole-item consume.
+      //     Reasons it can fall back: the row predates Phase 2a
+      //     (no containerSize), the recipe ingredient is in a
+      //     different dimension (volume vs weight, would need
+      //     density), or the recipe's needed.unit/quantity wasn't
+      //     parsed from the free text.
       if (session.scaledIngredients && session.scaledIngredients.length > 0) {
         const ingredientResults = checkIngredientsWithQuantities(
           session.scaledIngredients,
           inventoryItems
         )
 
-        // Consume items we have enough of
-        let consumedCount = 0
+        let amountDeductedCount = 0
+        let wholeConsumedCount = 0
         const consumePromises = ingredientResults
           .filter(result => result.matched && result.hasEnough === true && result.item)
           .map(async (result) => {
+            const item = result.item!
+            const needed = result.needed
+            const canDeductAmount =
+              typeof item.containerSize === 'number' &&
+              item.containerSize > 0 &&
+              !!item.containerUnit &&
+              typeof needed.quantity === 'number' &&
+              !!needed.unit
             try {
-              await consumeItem(result.item!.id)
-              consumedCount++
+              if (canDeductAmount) {
+                const converted = convertUnit(needed.quantity!, needed.unit, item.containerUnit)
+                if (converted !== null && converted > 0) {
+                  await consumeItem(item.id, { useAmount: converted })
+                  amountDeductedCount++
+                  return
+                }
+              }
+              // Fallback: legacy full-item consume
+              await consumeItem(item.id)
+              wholeConsumedCount++
             } catch (err) {
-              logger.error(`Failed to consume item ${result.item!.id}`, err as Error)
+              logger.error(`Failed to consume item ${item.id}`, err as Error)
             }
           })
 
         await Promise.all(consumePromises)
 
-        if (consumedCount > 0) {
-          toast.success(`✓ ${consumedCount} ingredient${consumedCount > 1 ? 's' : ''} consumed from inventory`)
+        const total = amountDeductedCount + wholeConsumedCount
+        if (total > 0) {
+          const summary = amountDeductedCount > 0 && wholeConsumedCount > 0
+            ? `${amountDeductedCount} partial, ${wholeConsumedCount} full`
+            : amountDeductedCount > 0
+              ? `${amountDeductedCount} partial`
+              : `${wholeConsumedCount} full`
+          toast.success(`✓ ${total} ingredient${total > 1 ? 's' : ''} consumed (${summary})`)
         }
       }
 
