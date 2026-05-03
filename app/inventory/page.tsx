@@ -26,6 +26,7 @@ import { ScanContextModal } from '@/components/shopping/ScanContextModal'
 import { ExpirationPicker } from '@/components/shopping/ExpirationPicker'
 import { RecipeLinks } from '@/components/shopping/RecipeLinks'
 import { QuantityAdjustModal } from '@/components/shopping/QuantityAdjustModal'
+import { RenameProductModal } from '@/components/shopping/RenameProductModal'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { addManualShoppingItem } from '@/lib/shopping-operations'
 import type { ScanContext } from '@/types/shopping'
@@ -81,6 +82,22 @@ function KitchenInventoryContent() {
     category: import('@/types/shopping').ProductCategory
     currentQty: number
     unit?: import('@/types/shopping').QuantityUnit
+  } | null>(null)
+
+  /**
+   * Rename modal state — used both by the inline pencil on existing rows
+   * with placeholder names, and by the scan-time auto-prompt for newly
+   * scanned products that came back without a real name.
+   *
+   * `itemId` is set for inline edits (we update the local row's name on
+   * success). It's undefined for scan-time renames where the local row
+   * hasn't been created yet.
+   */
+  const [renameModal, setRenameModal] = useState<{
+    itemId?: string
+    barcode: string
+    productName: string
+    imageUrl?: string
   } | null>(null)
 
   const summary = getSummary()
@@ -380,8 +397,31 @@ function KitchenInventoryContent() {
 
                       {/* Product Info */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-foreground truncate">
-                          {item.productName}
+                        <h3 className="font-semibold text-foreground truncate flex items-center gap-2">
+                          <span className="truncate">{item.productName || 'Unknown Product'}</span>
+                          {/* Inline rename pencil — only shown for placeholder
+                              names. Curated names are admin-only via the
+                              /admin/barcodes edit flow. */}
+                          {item.barcode &&
+                            (!item.productName ||
+                              item.productName.toLowerCase() === 'unknown product') && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setRenameModal({
+                                    itemId: item.id,
+                                    barcode: item.barcode!,
+                                    productName: item.productName,
+                                    imageUrl: item.imageUrl,
+                                  })
+                                }}
+                                className="text-xs text-primary hover:underline flex-shrink-0"
+                                title="Set the real name for this barcode"
+                              >
+                                ✏️ Name it
+                              </button>
+                            )}
                         </h3>
                         {item.brand && (
                           <p className="text-sm text-muted-foreground truncate">
@@ -541,6 +581,34 @@ function KitchenInventoryContent() {
           onClose={() => setShowScanner(false)}
           context={scanContext}
         />
+
+        {/* Rename modal — triggered by inline pencil on existing rows
+            with placeholder names. Persists to product_database via the
+            /api/products/[barcode]/name endpoint, then updates the local
+            inventory row's name to match. */}
+        {renameModal && (
+          <RenameProductModal
+            isOpen={true}
+            onClose={() => setRenameModal(null)}
+            barcode={renameModal.barcode}
+            imageUrl={renameModal.imageUrl}
+            currentName={renameModal.productName}
+            onConfirmed={async (newName) => {
+              if (renameModal.itemId) {
+                try {
+                  await updateItem(renameModal.itemId, { productName: newName })
+                  toast.success(`✓ Saved name: ${newName}`)
+                } catch (e) {
+                  logger.error('[Inventory] Failed to update local row after rename', e as Error)
+                  toast.error('Saved globally but local row update failed — refresh to see it')
+                }
+              } else {
+                toast.success(`✓ Saved name: ${newName}`)
+              }
+              setRenameModal(null)
+            }}
+          />
+        )}
 
         {/* Quantity prompt — used by both "Used Up" and "Buy Again". Same
             modal, different copy/defaults/onConfirm based on qtyModal.mode. */}
