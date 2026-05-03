@@ -91,9 +91,34 @@ interface NutrientRow {
 
 type NutrientMap = Map<string, Map<number, number>>
 
-const csvDir = process.argv[2]
+/**
+ * Normalize a USDA gtin_upc value to a clean barcode string.
+ *
+ * USDA's branded_food.csv stores UPCs in human-readable formats with spaces
+ * and dashes (e.g. "0 - 77890 - 32930"). Camera-decoded barcodes are pure
+ * digits ("077890329303"). Stripping non-digits puts both on the same shape
+ * so doc lookups by camera-emitted barcode actually find the cached doc.
+ *
+ * Without this, every bulk-imported doc is stored under a doc ID no
+ * end-user scan will ever produce — making the entire cache invisible.
+ */
+function normalizeUpc(raw: string): string {
+  return (raw || '').replace(/\D/g, '')
+}
+
+// Parse args. The directory path is the only positional arg; flags can
+// appear in any order. Supported flags:
+//   --clean       Delete every doc in product_database before importing.
+//                 Use this to wipe stale/malformed entries from a prior
+//                 import (e.g. when UPC normalization changes mean old
+//                 doc IDs are unreachable). DESTRUCTIVE — confirms by
+//                 logging the count and the operation it is about to do.
+const cliArgs = process.argv.slice(2)
+const cleanFirst = cliArgs.includes('--clean')
+const csvDir = cliArgs.find((a) => !a.startsWith('--'))
+
 if (!csvDir) {
-  console.error('Usage: npm run usda:import -- <path-to-unzipped-csv-dir>')
+  console.error('Usage: npm run usda:import -- <path-to-unzipped-csv-dir> [--clean]')
   process.exit(1)
 }
 
@@ -124,12 +149,50 @@ function streamCsv<T>(file: string, onRow: (row: T) => void): Promise<void> {
   })
 }
 
+/**
+ * Delete every doc in product_database in 500-doc batches.
+ *
+ * Used by the --clean flag to wipe a previous import before re-running.
+ * Idempotent: if the collection is empty, returns immediately. Logs progress
+ * every 5,000 deletes. Note this affects ONLY the global product cache —
+ * shopping_items, inventory_actions, and any per-user collections are
+ * untouched (they live in separate collections and store snapshot data).
+ */
+async function deleteAllProducts(): Promise<{ deleted: number; elapsedSec: number }> {
+  const startTime = Date.now()
+  const collection = adminDb.collection('product_database')
+  let deleted = 0
+
+  while (true) {
+    const snap = await collection.limit(500).get()
+    if (snap.empty) break
+    const batch = adminDb.batch()
+    snap.docs.forEach((d) => batch.delete(d.ref))
+    await batch.commit()
+    deleted += snap.size
+    if (deleted % 5_000 === 0) {
+      console.log(`  deleted ${deleted.toLocaleString()}`)
+    }
+  }
+
+  return { deleted, elapsedSec: Math.round((Date.now() - startTime) / 1000) }
+}
+
 async function main() {
   const startTime = Date.now()
 
   // Dynamically import after env vars are loaded
   const adminMod = await import('../lib/firebase-admin')
   adminDb = adminMod.adminDb
+
+  // ── Pre-step (optional): wipe the existing collection ───────────────────
+  if (cleanFirst) {
+    const countSnap = await adminDb.collection('product_database').count().get()
+    const total = countSnap.data().count
+    console.log(`[USDA Import] --clean: deleting ${total.toLocaleString()} existing docs from product_database`)
+    const result = await deleteAllProducts()
+    console.log(`[USDA Import] --clean: deleted ${result.deleted.toLocaleString()} docs in ${result.elapsedSec}s`)
+  }
 
   // ── Pass 1: food.csv → fdc_id → description ─────────────────────────────
   console.log(`[USDA Import] Pass 1: loading descriptions from ${path.basename(FOOD_CSV)}`)
@@ -148,7 +211,7 @@ async function main() {
   let brandedRows = 0
   await streamCsv<BrandedFoodRow>(BRANDED_CSV, (row) => {
     brandedRows++
-    if (row.gtin_upc && row.gtin_upc.trim()) {
+    if (normalizeUpc(row.gtin_upc).length > 0) {
       brandedByFdc.set(row.fdc_id, row)
     }
     if (brandedRows % 100_000 === 0) console.log(`  ${brandedRows.toLocaleString()} branded rows`)
@@ -187,7 +250,7 @@ async function main() {
     const branded = brandedByFdc.get(fdcId)
     if (!branded) return // not a branded food (foundation foods etc.)
 
-    const upc = branded.gtin_upc.trim()
+    const upc = normalizeUpc(branded.gtin_upc)
     if (!upc) return
 
     if (seenUpcs.has(upc)) {

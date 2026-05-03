@@ -21,6 +21,7 @@
     "migrate:duties:live": "tsx scripts/migrate-duties-to-households.ts --live",
     "migrate:duties:rollback": "tsx scripts/migrate-duties-to-households.ts --rollback",
     "usda:import": "tsx scripts/import-usda-branded.ts",
+    "diag:products": "tsx scripts/diag-product-database.ts",
     "validate:migration": "tsx scripts/validate-migration.ts",
     "bundle:size": "size-limit",
     "build:mobile": "cross-env CAPACITOR_BUILD=true NODE_OPTIONS=\"--max-old-space-size=8192\" next build",
