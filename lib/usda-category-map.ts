@@ -1,4 +1,4 @@
-do /**
+/**
  * USDA `branded_food_category` -> app `ProductCategory` mapping.
  *
  * USDA stores broad food-merchandising categories on each branded_food
