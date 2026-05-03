@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { resolveProductDoc } from '@/lib/barcode-variants'
 
 interface ScanEvent {
   id: string
@@ -50,19 +51,19 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
-    // Fetch product document
-    const productDoc = await adminDb.collection('product_database').doc(barcode).get()
-
-    if (!productDoc.exists) {
+    // Fetch product document — resolve via the shared resolver so the
+    // admin URL accepts any plausible variant of the barcode (UPC-E,
+    // UPC-A, EAN-13, GTIN-14, etc).
+    const resolved = await resolveProductDoc(adminDb, barcode)
+    if (!resolved) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    const productData = productDoc.data()
+    const productData = resolved.snap.data()
+    const resolvedBarcode = resolved.resolvedId
 
-    // Fetch scan events from subcollection
-    const scansSnapshot = await adminDb
-      .collection('product_database')
-      .doc(barcode)
+    // Fetch scan events from subcollection (anchored to the resolved doc)
+    const scansSnapshot = await resolved.ref
       .collection('scans')
       .orderBy('scannedAt', 'desc')
       .limit(100)
@@ -144,7 +145,7 @@ export async function GET(
 
     return NextResponse.json({
       product: {
-        barcode,
+        barcode: resolvedBarcode,
         ...productData,
         stats: {
           ...productData?.stats,
@@ -220,15 +221,15 @@ export async function PUT(
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Get current product data for comparison (for edit history)
-    const productRef = adminDb.collection('product_database').doc(barcode)
-    const currentProduct = await productRef.get()
-
-    if (!currentProduct.exists) {
+    // Resolve via the shared resolver — admins can hit this endpoint with
+    // any variant of the barcode and it'll land on the canonical doc.
+    const resolved = await resolveProductDoc(adminDb, barcode)
+    if (!resolved) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
-
-    const currentData = currentProduct.data()
+    const productRef = resolved.ref
+    const currentData = resolved.snap.data()
+    const resolvedBarcode = resolved.resolvedId
 
     // Prepare update data
     const now = new Date()
@@ -297,12 +298,12 @@ export async function PUT(
       changes
     })
 
-    logger.info(`Product ${barcode} edited by ${adminEmail}`, { changes })
+    logger.info(`Product ${resolvedBarcode} edited by ${adminEmail}`, { changes })
 
     return NextResponse.json({
       success: true,
       message: 'Product updated successfully',
-      barcode
+      barcode: resolvedBarcode
     })
   } catch (error) {
     return errorResponse(error, {

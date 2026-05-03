@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger'
 import { lookupProductHybrid } from '@/lib/product-lookup-server'
 import { errorResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { resolveProductDoc } from '@/lib/barcode-variants'
 
 /**
  * POST /api/admin/products/[barcode]/fetch-nutrition
@@ -45,19 +46,21 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
-    // Check if product exists in database
-    const productRef = adminDb.collection('product_database').doc(barcode)
-    const productDoc = await productRef.get()
-
-    if (!productDoc.exists) {
+    // Check if product exists in database via the shared resolver — admin
+    // URLs accept any plausible variant of the barcode and land on the
+    // canonical doc.
+    const resolved = await resolveProductDoc(adminDb, barcode)
+    if (!resolved) {
       return NextResponse.json({ error: 'Product not found in database' }, { status: 404 })
     }
+    const productRef = resolved.ref
+    const resolvedBarcode = resolved.resolvedId
 
     // Hybrid fetch — USDA-only for nutrition + OFF for image. Strict mode
     // means we don't fall back to OFF nutrition when USDA misses — keeps
     // the curated product_database free of crowdsourced OFF nutrition data.
-    logger.info(`Fetching USDA-strict hybrid nutrition for barcode ${barcode}`)
-    const product = await lookupProductHybrid(barcode, { strictUsdaNutrition: true })
+    logger.info(`Fetching USDA-strict hybrid nutrition for barcode ${resolvedBarcode}`)
+    const product = await lookupProductHybrid(resolvedBarcode, { strictUsdaNutrition: true })
 
     if (!product) {
       return NextResponse.json({
@@ -112,7 +115,7 @@ export async function POST(
     }
 
     // Optionally update product name and brand if they were missing or generic
-    const currentData = productDoc.data()
+    const currentData = resolved.snap.data()
     if (!currentData?.productName || currentData.productName === 'Unknown Product') {
       if (product.product_name) {
         updateData['productName'] = product.product_name
@@ -139,7 +142,7 @@ export async function POST(
     const updatedDoc = await productRef.get()
     const updatedProduct = updatedDoc.data()
 
-    logger.info(`Successfully updated nutrition data for barcode ${barcode}`, {
+    logger.info(`Successfully updated nutrition data for barcode ${resolvedBarcode}`, {
       admin: adminEmail,
       calories: updateData.nutrition.calories,
       protein: updateData.nutrition.protein
@@ -149,7 +152,7 @@ export async function POST(
       success: true,
       message: 'Nutrition data updated successfully',
       product: {
-        barcode,
+        barcode: resolvedBarcode,
         ...updatedProduct,
         stats: {
           ...updatedProduct?.stats,

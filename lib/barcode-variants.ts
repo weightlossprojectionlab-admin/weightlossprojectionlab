@@ -1,3 +1,5 @@
+import type { Firestore, DocumentReference, DocumentSnapshot } from 'firebase-admin/firestore'
+
 /**
  * Server-side barcode variant generator for product_database lookups.
  *
@@ -136,5 +138,90 @@ function compressUpcA(upcA: string): string | null {
   if (d[5] !== '0' && d[6] === '0' && d[7] === '0' && d[8] === '0' && d[9] === '0' && '56789'.includes(d[10])) {
     return ns + d[1] + d[2] + d[3] + d[4] + d[5] + d[10] + c
   }
+  return null
+}
+
+export interface ResolvedProduct {
+  ref: DocumentReference
+  snap: DocumentSnapshot
+  resolvedId: string
+  /**
+   * False when the doc was located via the variant fan-out path (legacy or
+   * never-scanned doc with no `aliases` field). Callers should schedule an
+   * `aliases` backfill via `after()` so the next scan hits the array-contains
+   * fast path instead.
+   */
+  hadAliases: boolean
+}
+
+/**
+ * Resolve a scanned/typed barcode to its product_database doc, regardless
+ * of which canonical form it was stored under.
+ *
+ * Lookup order, stopping on first hit:
+ *   1. doc.get(input) — single read, fast path for canonical-id matches
+ *   2. where('aliases', 'array-contains', input).limit(1) — single query,
+ *      covers any doc that's already been alias-populated
+ *   3. variant fan-out — iterate barcodeVariants() and doc.get() each;
+ *      only reached for legacy docs that haven't been backfilled yet
+ *
+ * Returns null when no candidate doc exists. The fan-out path bounds the
+ * worst-case cost at ~10 reads; once a doc has been backfilled with its
+ * `aliases` array, every future lookup of any of its variants resolves in
+ * a single read via step 2.
+ */
+export async function resolveProductDoc(
+  db: Firestore,
+  input: string
+): Promise<ResolvedProduct | null> {
+  const cleaned = (input || '').trim()
+  if (!cleaned) return null
+
+  const collection = db.collection('product_database')
+
+  // Step 1: direct doc id lookup
+  const directRef = collection.doc(cleaned)
+  const directSnap = await directRef.get()
+  if (directSnap.exists) {
+    const data = directSnap.data()
+    return {
+      ref: directRef,
+      snap: directSnap,
+      resolvedId: cleaned,
+      hadAliases: Array.isArray(data?.aliases) && data!.aliases.length > 0,
+    }
+  }
+
+  // Step 2: array-contains query against the alias index
+  const aliasQuery = await collection
+    .where('aliases', 'array-contains', cleaned)
+    .limit(1)
+    .get()
+  if (!aliasQuery.empty) {
+    const snap = aliasQuery.docs[0]
+    return {
+      ref: snap.ref,
+      snap,
+      resolvedId: snap.id,
+      hadAliases: true,
+    }
+  }
+
+  // Step 3: variant fan-out (legacy / un-backfilled docs)
+  const variants = barcodeVariants(cleaned).filter((v) => v !== cleaned)
+  for (const v of variants) {
+    const ref = collection.doc(v)
+    const snap = await ref.get()
+    if (snap.exists) {
+      const data = snap.data()
+      return {
+        ref,
+        snap,
+        resolvedId: v,
+        hadAliases: Array.isArray(data?.aliases) && data!.aliases.length > 0,
+      }
+    }
+  }
+
   return null
 }

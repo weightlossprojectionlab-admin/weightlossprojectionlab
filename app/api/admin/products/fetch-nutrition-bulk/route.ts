@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { lookupProductHybrid } from '@/lib/product-lookup-server'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { resolveProductDoc } from '@/lib/barcode-variants'
 
 /**
  * POST /api/admin/products/fetch-nutrition-bulk
@@ -58,11 +59,10 @@ export async function POST(request: NextRequest) {
     // Process each barcode
     for (const barcode of barcodes) {
       try {
-        // Check if product exists
-        const productRef = adminDb.collection('product_database').doc(barcode)
-        const productDoc = await productRef.get()
-
-        if (!productDoc.exists) {
+        // Resolve via the shared resolver — bulk inputs may arrive in any
+        // canonical form and the doc may live under a different one.
+        const resolved = await resolveProductDoc(adminDb, barcode)
+        if (!resolved) {
           results.push({
             barcode,
             success: false,
@@ -70,10 +70,12 @@ export async function POST(request: NextRequest) {
           })
           continue
         }
+        const productRef = resolved.ref
+        const resolvedBarcode = resolved.resolvedId
 
         // USDA-strict for admin: USDA-only for nutrition, OFF for image.
         // No OFF nutrition fallback so we don't pollute the curated DB.
-        const product = await lookupProductHybrid(barcode, { strictUsdaNutrition: true })
+        const product = await lookupProductHybrid(resolvedBarcode, { strictUsdaNutrition: true })
 
         if (!product) {
           results.push({
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Optionally update product name and brand if they were missing or generic
-        const currentData = productDoc.data()
+        const currentData = resolved.snap.data()
         if (!currentData?.productName || currentData.productName === 'Unknown Product') {
           if (product.product_name) {
             updateData['productName'] = product.product_name

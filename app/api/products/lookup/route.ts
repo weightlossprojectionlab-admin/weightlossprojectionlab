@@ -5,7 +5,7 @@ import { errorResponse } from '@/lib/api-response'
 import { rateLimit } from '@/lib/rate-limit'
 import { lookupProductHybrid } from '@/lib/product-lookup-server'
 import { fetchOpenFoodFactsImageOnly } from '@/lib/openfoodfacts-server'
-import { barcodeVariants } from '@/lib/barcode-variants'
+import { barcodeVariants, resolveProductDoc } from '@/lib/barcode-variants'
 
 /**
  * GET /api/products/lookup?barcode={barcode}
@@ -69,28 +69,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing barcode parameter' }, { status: 400 })
     }
 
-    // Step 1: cache check — try the raw barcode first, then encoding/length
-    // variants (UPC-E ↔ UPC-A, EAN-13 leading-zero, GTIN-14 leading-zeros,
-    // strip/pad to 8/12/13/14). See lib/barcode-variants.ts for why this
-    // is necessary — scanner output and stored doc IDs frequently disagree
-    // on canonical form for the same physical barcode.
-    let productRef = adminDb.collection('product_database').doc(barcode)
-    let productDoc = await productRef.get()
-    let resolvedBarcode = barcode
+    // Step 1: cache check via the shared resolver. Tries direct doc.get,
+    // then the array-contains alias index, then variant fan-out as a last
+    // resort. Returns the canonical doc id under `resolvedId`, plus a
+    // `hadAliases` flag we use to schedule lazy backfill below.
+    const resolved = await resolveProductDoc(adminDb, barcode)
+    const productRef = resolved?.ref ?? adminDb.collection('product_database').doc(barcode)
+    const productDoc = resolved?.snap ?? (await productRef.get())
+    const resolvedBarcode = resolved?.resolvedId ?? barcode
 
-    if (!productDoc.exists) {
-      const variants = barcodeVariants(barcode).filter((v) => v !== barcode)
-      for (const v of variants) {
-        const ref = adminDb.collection('product_database').doc(v)
-        const snap = await ref.get()
-        if (snap.exists) {
-          productRef = ref
-          productDoc = snap
-          resolvedBarcode = v
-          logger.info('[Lookup] resolved via barcode variant', { input: barcode, resolved: v })
-          break
-        }
-      }
+    if (resolved && resolvedBarcode !== barcode) {
+      logger.info('[Lookup] resolved via barcode variant', { input: barcode, resolved: resolvedBarcode })
     }
 
     if (productDoc.exists) {
@@ -131,6 +120,25 @@ export async function GET(request: NextRequest) {
             } catch (e) {
               // Non-critical — image stays empty, will retry on next scan
               logger.debug('[Lookup] background image enrichment failed', {
+                barcode: resolvedBarcode,
+                error: (e as Error).message,
+              })
+            }
+          })
+        }
+
+        // Lazy alias backfill: if this doc still doesn't have an `aliases`
+        // array, write one based on its canonical id. Future scans of any
+        // variant resolve via the array-contains query in a single read,
+        // skipping the variant fan-out path entirely.
+        if (resolved && !resolved.hadAliases) {
+          after(async () => {
+            try {
+              const aliases = barcodeVariants(resolvedBarcode)
+              await productRef.update({ aliases, updatedAt: new Date() })
+              logger.info('[Lookup] backfilled aliases', { barcode: resolvedBarcode, count: aliases.length })
+            } catch (e) {
+              logger.debug('[Lookup] alias backfill failed', {
                 barcode: resolvedBarcode,
                 error: (e as Error).message,
               })
@@ -181,7 +189,7 @@ export async function GET(request: NextRequest) {
       // 'usda+off' (hybrid hit) is normalized to 'usda' since USDA was the
       // primary nutrition source — OFF image is a supplement, not a hit.
       source: product?.source === 'usda+off' ? 'usda' : (product?.source || 'openfoodfacts'),
-      barcode,
+      barcode: resolvedBarcode,
       userId,
       found: !!product
     })
@@ -195,12 +203,23 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Step 3: update cache
+    // Step 3: update cache.
+    //
+    // Write-side guard: if the doc was located via variant resolution
+    // (productDoc.exists), update IT — never set a fresh doc under the raw
+    // input. That would create a duplicate when an existing canonical-id
+    // doc lives under a different form than the scanner's emission.
+    //
+    // For genuinely-new products, set under the input id and seed the
+    // `aliases` field so future scans of any variant of this product
+    // resolve in a single read via the array-contains index.
     try {
       const now = new Date()
       const nutriments = product.nutriments || {}
+      const writeId = productDoc.exists ? resolvedBarcode : barcode
+      const aliases = barcodeVariants(writeId)
       const baseUpdate = {
-        barcode,
+        barcode: writeId,
         productName: product.product_name || 'Unknown Product',
         brand: product.brands || '',
         imageUrl: product.image_url || '',
@@ -212,6 +231,7 @@ export async function GET(request: NextRequest) {
           fiber: nutriments.fiber || nutriments.fiber_100g || 0,
           servingSize: product.serving_size || ''
         },
+        aliases,
         updatedAt: now
       }
 
@@ -258,11 +278,11 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      code: barcode,
+      code: productDoc.exists ? resolvedBarcode : barcode,
       status: 1,
       status_verbose: `product found (${product.source})`,
       product: {
-        code: barcode,
+        code: productDoc.exists ? resolvedBarcode : barcode,
         product_name: product.product_name,
         brands: product.brands || '',
         quantity: product.quantity || '',

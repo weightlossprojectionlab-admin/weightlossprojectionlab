@@ -12,6 +12,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { RecipeIngredient } from './meal-suggestions'
 import { analyzeTrendingIngredients, findMostViableRecipes } from './cross-user-recipe-analyzer'
+import { resolveProductDoc } from './barcode-variants'
 
 interface ProductAssociation {
   barcode: string
@@ -495,20 +496,22 @@ export async function generateRecipesFromAssociations(
       continue
     }
 
-    // Fetch main product details
-    const mainProductDoc = await adminDb.collection('product_database').doc(association.barcode).get()
-    if (!mainProductDoc.exists) {
+    // Fetch main product details — resolve via the shared helper so that
+    // ML association barcodes recorded in any canonical form still land
+    // on the correct product doc.
+    const mainResolved = await resolveProductDoc(adminDb, association.barcode)
+    if (!mainResolved) {
       skipped++
       continue
     }
-    const mainProduct = mainProductDoc.data() as Product
+    const mainProduct = mainResolved.snap.data() as Product
 
     // Fetch related product details
     const relatedProducts: Product[] = []
     for (const related of strongRelated.slice(0, MAX_INGREDIENTS - 1)) {
-      const relatedDoc = await adminDb.collection('product_database').doc(related.barcode).get()
-      if (relatedDoc.exists) {
-        relatedProducts.push(relatedDoc.data() as Product)
+      const relatedResolved = await resolveProductDoc(adminDb, related.barcode)
+      if (relatedResolved) {
+        relatedProducts.push(relatedResolved.snap.data() as Product)
       }
     }
 

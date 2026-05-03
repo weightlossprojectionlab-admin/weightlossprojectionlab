@@ -35,6 +35,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as dotenv from 'dotenv'
 import csvParser from 'csv-parser'
+import { barcodeVariants } from '../lib/barcode-variants'
 
 // Load .env.local before lib/firebase-admin is imported, since it reads
 // env vars at module init time. Next.js auto-loads these in app code,
@@ -302,6 +303,11 @@ async function main() {
       collection.doc(upc),
       {
         barcode: upc,
+        // aliases lets lookups by ANY canonical form (UPC-E, UPC-A, EAN-13,
+        // GTIN-14, leading-zero variants) resolve via a single
+        // array-contains query instead of fanning out doc.get attempts.
+        // See lib/barcode-variants.ts for the variant rules.
+        aliases: barcodeVariants(upc),
         productName,
         brand: branded.brand_owner || branded.brand_name || '',
         imageUrl: '', // populated by /api/products/lookup cache-hit branch via after()-scheduled OFF fetch on first end-user scan

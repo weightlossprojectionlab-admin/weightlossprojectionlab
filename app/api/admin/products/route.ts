@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { errorResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { resolveProductDoc } from '@/lib/barcode-variants'
 
 /**
  * GET /api/admin/products
@@ -74,11 +75,14 @@ export async function GET(request: NextRequest) {
     const isBarcodeSearch = /^\d+$/.test(search)
     if (search) {
       if (isBarcodeSearch) {
-        // Exact barcode lookup short-circuits everything else
-        const doc = await adminDb.collection('product_database').doc(search).get()
-        if (doc.exists) {
+        // Exact barcode lookup short-circuits everything else. Use the
+        // shared resolver so that admins typing/pasting any plausible
+        // variant of a stored UPC (UPC-E, UPC-A, EAN-13, GTIN-14) land
+        // on the canonical doc.
+        const resolved = await resolveProductDoc(adminDb, search)
+        if (resolved) {
           return NextResponse.json({
-            products: [{ barcode: doc.id, ...doc.data() }],
+            products: [{ barcode: resolved.resolvedId, ...resolved.snap.data() }],
             nextCursor: null,
             total: 1,
           })
