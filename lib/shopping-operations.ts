@@ -40,6 +40,7 @@ import type {
 } from '@/types/shopping'
 import { detectCategory, calculateDefaultExpiration, suggestStorageLocation, suggestDefaultUnit, formatQuantityDisplay } from './product-categories'
 import type { OpenFoodFactsProduct } from './openfoodfacts-api'
+import { mapUsdaCategory } from './usda-category-map'
 import { FirebaseTimestamp, toDate } from '@/types/common'
 import { generateProductKey, findHouseholdItemByProductKey, addOrUpdateHouseholdItem } from './household-shopping-operations'
 
@@ -69,15 +70,24 @@ const VALID_PRODUCT_CATEGORIES: readonly ProductCategory[] = [
  *
  * `product.categories` is whatever /api/products/lookup returned, which is
  * sourced from product_database.category — the admin-curated value visible
- * in /admin/barcodes. If the curated value matches a known ProductCategory,
- * we trust it. Otherwise (raw USDA strings, empty, etc.) fall back to the
- * client-side heuristic.
+ * in /admin/barcodes. Resolution order:
+ *
+ *   1. Already a known ProductCategory enum value → use it.
+ *   2. A USDA branded_food_category string (e.g. "Ketchup, Mustard, BBQ &
+ *      Cheese Sauce") that we've mapped → use the mapped value.
+ *   3. Otherwise → fall back to the client-side detectCategory heuristic.
+ *
+ * The USDA mapping (lib/usda-category-map.ts) covers the ~120 most
+ * common branded_food_category strings; misclassifications can be
+ * corrected by adding a key there + running npm run resync:categories.
  */
 function pickCategory(product: OpenFoodFactsProduct): ProductCategory {
   const raw = (product.categories || '').toString().toLowerCase().trim()
   if ((VALID_PRODUCT_CATEGORIES as readonly string[]).includes(raw)) {
     return raw as ProductCategory
   }
+  const mapped = mapUsdaCategory(product.categories)
+  if (mapped) return mapped
   return detectCategory(product)
 }
 

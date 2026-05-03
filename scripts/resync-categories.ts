@@ -20,6 +20,7 @@
  */
 import * as path from 'path'
 import * as dotenv from 'dotenv'
+import { mapUsdaCategory } from '../lib/usda-category-map'
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') })
 
 const VALID_CATEGORIES = new Set([
@@ -95,8 +96,19 @@ async function main() {
         skippedNoCanonical++
         continue
       }
-      const normalized = canonicalCategory.toLowerCase().trim()
-      if (!VALID_CATEGORIES.has(normalized)) {
+      const lowered = canonicalCategory.toLowerCase().trim()
+      // Direct match against the ProductCategory enum, OR map a USDA
+      // branded_food_category string (e.g. "Ketchup, Mustard, BBQ &
+      // Cheese Sauce" → "condiments") via the shared lookup table so
+      // resync agrees with the scan-add path's pickCategory().
+      let normalized: string | null = null
+      if (VALID_CATEGORIES.has(lowered)) {
+        normalized = lowered
+      } else {
+        const mapped = mapUsdaCategory(canonicalCategory)
+        if (mapped) normalized = mapped
+      }
+      if (!normalized) {
         skippedInvalidCanonical++
         continue
       }
