@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { rateLimit } from '@/lib/rate-limit'
 import { lookupProductHybrid } from '@/lib/product-lookup-server'
+import { fetchOpenFoodFactsImageOnly } from '@/lib/openfoodfacts-server'
 
 /**
  * GET /api/products/lookup?barcode={barcode}
@@ -85,6 +86,36 @@ export async function GET(request: NextRequest) {
           found: true,
           cacheFreshnessDays: Math.round(daysSinceUpdate)
         })
+
+        // Lazy image enrichment: if this cache hit has no image (typically
+        // because it came from the USDA bulk import, which doesn't supply
+        // images), schedule a background OFF lookup. The user gets the
+        // cached response immediately; the next scanner of this product
+        // gets the enriched doc with an image attached.
+        //
+        // Uses Next.js `after()` which keeps the serverless function alive
+        // briefly after the response is sent, completing the background
+        // work without blocking the user.
+        if (!productData?.imageUrl) {
+          after(async () => {
+            try {
+              const offImage = await fetchOpenFoodFactsImageOnly(barcode)
+              if (offImage) {
+                await productRef.update({
+                  imageUrl: offImage,
+                  updatedAt: new Date(),
+                })
+                logger.info('[Lookup] background image enrichment succeeded', { barcode })
+              }
+            } catch (e) {
+              // Non-critical — image stays empty, will retry on next scan
+              logger.debug('[Lookup] background image enrichment failed', {
+                barcode,
+                error: (e as Error).message,
+              })
+            }
+          })
+        }
 
         return NextResponse.json({
           code: barcode,

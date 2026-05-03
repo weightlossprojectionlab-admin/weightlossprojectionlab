@@ -241,7 +241,7 @@ async function main() {
         barcode: upc,
         productName,
         brand: branded.brand_owner || branded.brand_name || '',
-        imageUrl: '', // populated lazily via OFF on first end-user scan
+        imageUrl: '', // populated by /api/products/lookup cache-hit branch via after()-scheduled OFF fetch on first end-user scan
         category: branded.branded_food_category || 'other',
         nutrition,
         quality: {
