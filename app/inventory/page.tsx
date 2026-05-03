@@ -25,6 +25,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ScanContextModal } from '@/components/shopping/ScanContextModal'
 import { ExpirationPicker } from '@/components/shopping/ExpirationPicker'
 import { RecipeLinks } from '@/components/shopping/RecipeLinks'
+import { QuantityAdjustModal } from '@/components/shopping/QuantityAdjustModal'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { addManualShoppingItem } from '@/lib/shopping-operations'
 import type { ScanContext } from '@/types/shopping'
@@ -66,6 +67,20 @@ function KitchenInventoryContent() {
   const [scanContext, setScanContext] = useState<ScanContext>('inventory')
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null)
   const [members, setMembers] = useState<Record<string, PatientProfile>>({})
+
+  // Quantity prompt for "Used Up" / "Buy Again" actions. We capture which
+  // mode is active alongside the row context so the same modal serves
+  // both flows with different titles, defaults, and confirm actions.
+  const [qtyModal, setQtyModal] = useState<{
+    mode: 'used-up' | 'buy-again'
+    itemId: string
+    productName: string
+    brand?: string
+    imageUrl?: string
+    category: import('@/types/shopping').ProductCategory
+    currentQty: number
+    unit?: import('@/types/shopping').QuantityUnit
+  } | null>(null)
 
   const summary = getSummary()
   const loading = inventoryLoading || expiredLoading
@@ -372,7 +387,30 @@ function KitchenInventoryContent() {
                             {item.brand}
                           </p>
                         )}
+                        {item.barcode && (
+                          <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">
+                            {item.barcode}
+                          </p>
+                        )}
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {/* Stock-level pill — coarse approximation until Phase 2
+                              wires real amount-remaining (container size + actual
+                              consumption). Today: count-based. */}
+                          {(() => {
+                            const q = item.quantity ?? 0
+                            const cls =
+                              q > 1
+                                ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                                : q === 1
+                                  ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300'
+                                  : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                            const label = q > 1 ? 'Stocked' : q === 1 ? 'Last one' : 'Out'
+                            return (
+                              <span className={`text-xs px-2 py-1 rounded font-medium ${cls}`}>
+                                {label}
+                              </span>
+                            )
+                          })()}
                           <span className="text-xs px-2 py-1 bg-muted rounded">
                             {categoryMeta.displayName}
                           </span>
@@ -423,46 +461,59 @@ function KitchenInventoryContent() {
                       <div className="flex flex-col gap-2">
                         <button
                           type="button"
-                          onClick={async () => {
-                            try {
-                              await consumeItem(item.id)
-                              toast.success(`✓ Moved ${item.productName} to shopping list`)
-                            } catch (error: any) {
-                              console.error('[Inventory] Error marking as consumed:', error)
-                              toast.error(`Failed to move item: ${error?.message || 'Unknown error'}`)
-                            }
+                          onClick={() => {
+                            setQtyModal({
+                              mode: 'used-up',
+                              itemId: item.id,
+                              productName: item.productName,
+                              brand: item.brand,
+                              imageUrl: item.imageUrl,
+                              category: item.category,
+                              currentQty: item.quantity ?? 1,
+                              unit: item.unit,
+                            })
                           }}
                           className="px-3 py-1 text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded hover:bg-orange-200 dark:hover:bg-orange-900/30 transition-colors"
-                          title="Mark as used up"
+                          title="Log how much you used"
                         >
                           Used Up
                         </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!auth.currentUser?.uid) {
-                              toast.error('You must be logged in')
-                              return
-                            }
-
-                            try {
-                              // Add to shopping list without removing from inventory
-                              await addManualShoppingItem(auth.currentUser.uid, item.productName, {
-                                quantity: 1,
-                                unit: item.unit,
-                                priority: 'medium'
-                              })
-                              toast.success(`✓ Added ${item.productName} to shopping list`)
-                            } catch (error: any) {
-                              console.error('[Inventory] Error adding to shopping list:', error)
-                              toast.error(`Failed to add: ${error?.message || 'Unknown error'}`)
-                            }
-                          }}
-                          className="px-3 py-1 text-xs bg-blue-100 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
-                          title="Add to shopping list for restocking"
-                        >
-                          Buy Again
-                        </button>
+                        {/* Buy Again — gated on stock level. Stocked items don't
+                            need restocking; last-one and out states enable it. */}
+                        {(() => {
+                          const q = item.quantity ?? 0
+                          const enabled = q <= 1
+                          return (
+                            <button
+                              type="button"
+                              disabled={!enabled}
+                              onClick={() => {
+                                if (!auth.currentUser?.uid) {
+                                  toast.error('You must be logged in')
+                                  return
+                                }
+                                setQtyModal({
+                                  mode: 'buy-again',
+                                  itemId: item.id,
+                                  productName: item.productName,
+                                  brand: item.brand,
+                                  imageUrl: item.imageUrl,
+                                  category: item.category,
+                                  currentQty: 1,
+                                  unit: item.unit,
+                                })
+                              }}
+                              className={`px-3 py-1 text-xs rounded transition-colors ${
+                                enabled
+                                  ? 'bg-blue-100 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/30'
+                                  : 'bg-muted text-muted-foreground opacity-50 cursor-not-allowed'
+                              }`}
+                              title={enabled ? 'Add to shopping list for restocking' : 'Item is stocked — only enabled when low or out'}
+                            >
+                              Buy Again
+                            </button>
+                          )
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -487,6 +538,61 @@ function KitchenInventoryContent() {
           onClose={() => setShowScanner(false)}
           context={scanContext}
         />
+
+        {/* Quantity prompt — used by both "Used Up" and "Buy Again". Same
+            modal, different copy/defaults/onConfirm based on qtyModal.mode. */}
+        {qtyModal && (
+          <QuantityAdjustModal
+            isOpen={true}
+            onClose={() => setQtyModal(null)}
+            product={{
+              productName: qtyModal.productName,
+              brand: qtyModal.brand,
+              imageUrl: qtyModal.imageUrl,
+              category: qtyModal.category,
+            }}
+            title={qtyModal.mode === 'used-up' ? 'How much did you use?' : 'How many to buy?'}
+            subtitle={
+              qtyModal.mode === 'used-up'
+                ? `You have ${qtyModal.currentQty}. Drop the count by however much you used.`
+                : 'Adds to your shopping list as needed.'
+            }
+            defaultQuantity={qtyModal.mode === 'used-up' ? qtyModal.currentQty : 1}
+            minQuantity={1}
+            maxQuantity={qtyModal.mode === 'used-up' ? qtyModal.currentQty : 99}
+            confirmLabel={qtyModal.mode === 'used-up' ? 'Log usage' : 'Add to list'}
+            onConfirm={async (qty) => {
+              try {
+                if (qtyModal.mode === 'used-up') {
+                  await consumeItem(qtyModal.itemId, qty)
+                  const remaining = qtyModal.currentQty - qty
+                  toast.success(
+                    remaining <= 0
+                      ? `✓ ${qtyModal.productName} marked out — added to shopping list`
+                      : `✓ Logged ${qty} used (${remaining} left)`
+                  )
+                } else {
+                  if (!auth.currentUser?.uid) {
+                    toast.error('You must be logged in')
+                    return
+                  }
+                  await addManualShoppingItem(auth.currentUser.uid, qtyModal.productName, {
+                    quantity: qty,
+                    unit: qtyModal.unit,
+                    priority: 'medium',
+                  })
+                  toast.success(`✓ Added ${qty} × ${qtyModal.productName} to shopping list`)
+                }
+              } catch (error: any) {
+                logger.error('[Inventory] Quantity action failed', error as Error, {
+                  mode: qtyModal.mode,
+                  itemId: qtyModal.itemId,
+                })
+                toast.error(`Failed: ${error?.message || 'Unknown error'}`)
+              }
+            }}
+          />
+        )}
       </div>
     </AuthGuard>
   )

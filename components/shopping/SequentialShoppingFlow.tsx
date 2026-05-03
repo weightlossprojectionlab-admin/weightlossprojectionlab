@@ -432,7 +432,14 @@ export function SequentialShoppingFlow({
               <QuantityAdjustModal
                 isOpen={true}
                 onClose={onCancel}
-                item={{ ...item, quantity: selectedQuantity }}
+                product={{
+                  productName: item.productName,
+                  brand: item.brand,
+                  imageUrl: item.imageUrl,
+                  category: item.category,
+                }}
+                defaultQuantity={selectedQuantity}
+                subtitle="How many units are you buying?"
                 onConfirm={handleQuantityConfirm}
               />
             )}

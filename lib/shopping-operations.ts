@@ -85,7 +85,7 @@ interface FirestoreData {
 /**
  * Convert Firestore timestamps to Date objects
  */
-function convertTimestamps<T extends FirestoreData>(data: T): T {
+export function convertTimestamps<T extends FirestoreData>(data: T): T {
   const converted = { ...data }
 
   if (converted.expiresAt) converted.expiresAt = toDate(converted.expiresAt)
@@ -471,20 +471,66 @@ export async function updateShoppingItem(
 }
 
 /**
- * Mark item as consumed/thrown away
+ * Mark item as consumed/thrown away.
+ *
+ * Two modes:
+ *   - No `useQuantity` arg → consume the entire item (fully out of stock,
+ *     auto-add to shopping list as needed). Original behavior.
+ *   - `useQuantity` arg → partial consumption. The current quantity is
+ *     decremented by `useQuantity`. If the result reaches 0, the item
+ *     transitions to out-of-stock + needed (same as full consume). If
+ *     it stays > 0, only the quantity field updates.
+ *
+ * The partial path lets users say "I used 1 of 3 cans" without losing
+ * the rest of the inventory row.
  */
-export async function markItemAsConsumed(itemId: string): Promise<void> {
+export async function markItemAsConsumed(
+  itemId: string,
+  useQuantity?: number
+): Promise<void> {
   try {
-    await updateShoppingItem(itemId, {
-      inStock: false,
-      quantity: 0,
-      needed: true,
-      priority: 'high',
-      updatedAt: new Date()
-    })
+    if (useQuantity === undefined) {
+      // Full consumption — original behavior
+      await updateShoppingItem(itemId, {
+        inStock: false,
+        quantity: 0,
+        needed: true,
+        priority: 'high',
+        updatedAt: new Date(),
+      })
+      return
+    }
+
+    // Partial consumption — read current quantity, subtract, decide path
+    const itemRef = doc(db, 'shopping_items', itemId)
+    const snap = await getDoc(itemRef)
+    if (!snap.exists()) {
+      throw new Error(`Shopping item ${itemId} not found`)
+    }
+    const data = snap.data() as { quantity?: number }
+    const currentQty = typeof data.quantity === 'number' ? data.quantity : 1
+    const remaining = Math.max(0, currentQty - Math.max(0, useQuantity))
+
+    if (remaining === 0) {
+      // Reached zero — same end state as full consume
+      await updateShoppingItem(itemId, {
+        inStock: false,
+        quantity: 0,
+        needed: true,
+        priority: 'high',
+        updatedAt: new Date(),
+      })
+    } else {
+      // Still in stock, just decrement
+      await updateShoppingItem(itemId, {
+        quantity: remaining,
+        updatedAt: new Date(),
+      })
+    }
   } catch (error: any) {
     logger.error('[ShoppingOps] Error marking item as consumed', error as Error, {
-      itemId
+      itemId,
+      useQuantity,
     })
     throw error
   }

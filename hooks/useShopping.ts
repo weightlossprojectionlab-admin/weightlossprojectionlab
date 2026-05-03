@@ -3,74 +3,108 @@
 /**
  * useShopping Hook
  *
- * React hook for managing shopping list and store visits
+ * Real-time hook for managing shopping list and store visits.
+ * Subscribes to `shopping_items` via Firestore onSnapshot so the list stays
+ * in sync with /inventory and across devices/tabs.
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { auth } from '@/lib/firebase'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot
+} from 'firebase/firestore'
+import { db, auth } from '@/lib/firebase'
 import type { ShoppingItem, ShoppingListSummary } from '@/types/shopping'
 import { logger } from '@/lib/logger'
 import {
-  getAllShoppingItems,
-  getNeededItems,
   addOrUpdateShoppingItem,
   updateShoppingItem,
   markItemAsConsumed,
   markItemAsPurchased,
   deleteShoppingItem,
-  getStoreVisits,
-  addManualShoppingItem
+  addManualShoppingItem,
+  convertTimestamps
 } from '@/lib/shopping-operations'
 import {
   getAllStores,
   saveStore,
-  updateStoreVisit,
-  recordPrice,
-  getAveragePrice
+  updateStoreVisit
 } from '@/lib/store-operations'
 import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
 import { mergeIngredients } from '@/lib/shopping-diff'
 import type { RecipeIngredient } from '@/lib/shopping-diff'
-import type { Store, ProductCategory } from '@/types/shopping'
+import type { Store } from '@/types/shopping'
+
+const SHOPPING_ITEMS_COLLECTION = 'shopping_items'
 
 export function useShopping() {
   const [items, setItems] = useState<ShoppingItem[]>([])
-  const [neededItems, setNeededItems] = useState<ShoppingItem[]>([])
   const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const userId = auth.currentUser?.uid
 
-  /**
-   * Fetch all shopping items and stores
-   */
-  const fetchItems = useCallback(async () => {
+  // Derive needed items from the live `items` snapshot — single source of truth.
+  const neededItems = useMemo(
+    () => items.filter(item => item.needed),
+    [items]
+  )
+
+  // Real-time subscription to the user's shopping items.
+  // Replaces what used to be two one-shot fetches (getAllShoppingItems +
+  // getNeededItems). One listener, derived state for `needed`.
+  useEffect(() => {
     if (!userId) {
       setLoading(false)
       return
     }
 
+    const q = query(
+      collection(db, SHOPPING_ITEMS_COLLECTION),
+      where('userId', '==', userId),
+      orderBy('updatedAt', 'desc')
+    )
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const all = snapshot.docs.map(doc =>
+          convertTimestamps({ id: doc.id, ...doc.data() }) as ShoppingItem
+        )
+        setItems(all)
+        setLoading(false)
+        setError(null)
+      },
+      (err) => {
+        logger.error('[useShopping] Snapshot error', err)
+        setError(err.message || 'Failed to load shopping items')
+        setLoading(false)
+      }
+    )
+
+    return unsubscribe
+  }, [userId])
+
+  // Stores stay one-shot — they change rarely and aren't part of the
+  // realtime sync requirement. Kept as a separate fetch so addStore can
+  // refresh them locally without needing a second listener.
+  const refreshStores = useCallback(async () => {
+    if (!userId) return
     try {
-      setLoading(true)
-      setError(null)
-
-      const [allItems, needed, userStores] = await Promise.all([
-        getAllShoppingItems(userId),
-        getNeededItems(userId),
-        getAllStores(userId, 5) // Get 5 most recent stores
-      ])
-
-      setItems(allItems)
-      setNeededItems(needed)
+      const userStores = await getAllStores(userId, 5)
       setStores(userStores)
-    } catch (err: any) {
-      logger.error('Error fetching shopping items:', err instanceof Error ? err : new Error(String(err)))
-      setError(err.message || 'Failed to load shopping items')
-    } finally {
-      setLoading(false)
+    } catch (err) {
+      logger.error('[useShopping] Error fetching stores', err as Error)
     }
   }, [userId])
+
+  useEffect(() => {
+    refreshStores()
+  }, [refreshStores])
 
   /**
    * Add or update item from barcode scan
@@ -88,19 +122,20 @@ export function useShopping() {
     }
   ) => {
     if (!userId) throw new Error('User not authenticated')
-
-    const newItem = await addOrUpdateShoppingItem(userId, product, options)
-    await fetchItems() // Refresh list
-    return newItem
-  }, [userId, fetchItems])
+    return addOrUpdateShoppingItem(userId, product, options)
+  }, [userId])
 
   /**
-   * Mark item as consumed/used up
+   * Mark item as consumed/used up.
+   *
+   * Pass `useQuantity` for partial use (e.g., "I used 1 of 3 cans"). The
+   * underlying op decrements; if the result hits zero, the item moves to
+   * out-of-stock + needed automatically. Without `useQuantity`, the entire
+   * item is consumed at once (legacy behavior).
    */
-  const consumeItem = useCallback(async (itemId: string) => {
-    await markItemAsConsumed(itemId)
-    await fetchItems()
-  }, [fetchItems])
+  const consumeItem = useCallback(async (itemId: string, useQuantity?: number) => {
+    await markItemAsConsumed(itemId, useQuantity)
+  }, [])
 
   /**
    * Mark item as purchased
@@ -115,8 +150,7 @@ export function useShopping() {
     }
   ) => {
     await markItemAsPurchased(itemId, options)
-    await fetchItems()
-  }, [fetchItems])
+  }, [])
 
   /**
    * Update item
@@ -126,24 +160,21 @@ export function useShopping() {
     updates: Partial<ShoppingItem>
   ) => {
     await updateShoppingItem(itemId, updates)
-    await fetchItems()
-  }, [fetchItems])
+  }, [])
 
   /**
    * Delete item
    */
   const removeItem = useCallback(async (itemId: string) => {
     await deleteShoppingItem(itemId)
-    await fetchItems()
-  }, [fetchItems])
+  }, [])
 
   /**
    * Toggle item needed status
    */
   const toggleNeeded = useCallback(async (itemId: string, needed: boolean) => {
     await updateShoppingItem(itemId, { needed })
-    await fetchItems()
-  }, [fetchItems])
+  }, [])
 
   /**
    * Add ingredients from recipe to shopping list
@@ -156,10 +187,8 @@ export function useShopping() {
     if (!userId) throw new Error('User not authenticated')
 
     try {
-      // Merge duplicate ingredients
       const mergedIngredients = mergeIngredients(ingredients)
 
-      // Add each ingredient to shopping list
       const addPromises = mergedIngredients.map(ingredient =>
         addManualShoppingItem(userId, ingredient.name, {
           recipeId,
@@ -170,14 +199,13 @@ export function useShopping() {
       )
 
       await Promise.all(addPromises)
-      await fetchItems()
 
       return { success: true, itemsAdded: mergedIngredients.length }
     } catch (error) {
       logger.error('Error adding recipe to shopping list:', error as Error)
       throw error
     }
-  }, [userId, fetchItems])
+  }, [userId])
 
   /**
    * Get shopping list summary
@@ -215,7 +243,6 @@ export function useShopping() {
     const store = stores.find(s => s.id === storeId)
 
     if (!store || !store.aisleOrder) {
-      // Default sort: priority desc, then category
       return [...itemsToSort].sort((a, b) => {
         const priorityOrder = { high: 3, medium: 2, low: 1 }
         const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority]
@@ -224,12 +251,10 @@ export function useShopping() {
       })
     }
 
-    // Sort by store's aisle order
     return [...itemsToSort].sort((a, b) => {
       const aIndex = store.aisleOrder!.indexOf(a.category)
       const bIndex = store.aisleOrder!.indexOf(b.category)
 
-      // Handle categories not in aisle order (put at end)
       if (aIndex === -1 && bIndex === -1) return 0
       if (aIndex === -1) return 1
       if (bIndex === -1) return -1
@@ -259,9 +284,9 @@ export function useShopping() {
       lastVisitedAt: new Date()
     })
 
-    await fetchItems() // Refresh to get updated stores list
+    await refreshStores()
     return newStore
-  }, [userId, fetchItems])
+  }, [userId, refreshStores])
 
   /**
    * Update store visit timestamp
@@ -270,13 +295,8 @@ export function useShopping() {
     if (!userId) throw new Error('User not authenticated')
 
     await updateStoreVisit(userId, storeId)
-    await fetchItems()
-  }, [userId, fetchItems])
-
-  // Load items on mount
-  useEffect(() => {
-    fetchItems()
-  }, [fetchItems])
+    await refreshStores()
+  }, [userId, refreshStores])
 
   return {
     items,
@@ -295,6 +315,10 @@ export function useShopping() {
     smartSort,
     addStore,
     visitStore,
-    refresh: fetchItems
+    // No-op kept for callers (RecipeModal, shopping page) that still
+    // explicitly request a refresh after mutations. The snapshot listener
+    // delivers item changes automatically; this just refreshes the
+    // one-shot stores list in case a store was added externally.
+    refresh: refreshStores
   }
 }
