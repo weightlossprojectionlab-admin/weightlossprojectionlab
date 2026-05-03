@@ -275,6 +275,16 @@ function getDefaultStorageRecommendations(category: ProductCategory): string[] {
       'Check expiration dates on formula',
       'Keep diapers and wipes sealed until use'
     ],
+    'pet-food': [
+      'Store in original bag inside an airtight container',
+      'Keep in cool, dry place away from sunlight',
+      'Use within 6 weeks of opening for kibble; refrigerate opened wet food'
+    ],
+    'pet-supplies': [
+      'Store flea/tick and dewormer in original packaging',
+      'Keep litter and bedding dry and sealed',
+      'Check expiration on medicated products'
+    ],
     other: [
       'Follow package instructions',
       'Store in appropriate temperature',
@@ -366,6 +376,17 @@ function getDefaultSpoilageIndicators(category: ProductCategory): string[] {
       'Formula clumping or discoloration',
       'Damaged packaging',
       'Past expiration date'
+    ],
+    'pet-food': [
+      'Rancid or off smell (oxidized fats)',
+      'Pest infestation or webbing',
+      'Mold on wet food',
+      'Past expiration date'
+    ],
+    'pet-supplies': [
+      'Damaged or punctured packaging',
+      'Past expiration on medicated products',
+      'Caked or contaminated litter'
     ],
     other: [
       'Unusual smell',

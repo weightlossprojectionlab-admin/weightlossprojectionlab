@@ -348,6 +348,9 @@ export default function ProductEditPage() {
               <option value="pantry">Pantry</option>
               <option value="beverages">Beverages</option>
               <option value="condiments">Condiments</option>
+              <option value="baby">Baby</option>
+              <option value="pet-food">Pet & Animal Food</option>
+              <option value="pet-supplies">Pet & Animal Supplies</option>
               <option value="other">Other</option>
             </select>
           </div>

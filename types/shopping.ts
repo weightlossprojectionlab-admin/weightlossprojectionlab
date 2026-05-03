@@ -21,6 +21,8 @@ export type ProductCategory =
   | 'beverages'
   | 'condiments'
   | 'baby'
+  | 'pet-food'
+  | 'pet-supplies'
   | 'other'
 
 export type StorageLocation =

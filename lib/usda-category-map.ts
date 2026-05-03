@@ -1,4 +1,4 @@
-/**
+do /**
  * USDA `branded_food_category` -> app `ProductCategory` mapping.
  *
  * USDA stores broad food-merchandising categories on each branded_food
@@ -171,6 +171,18 @@ const RAW_MAP: Record<string, ProductCategory> = {
   'Formula': 'baby',
   'Baby Snacks & Beverages': 'baby',
   'Baby Foods': 'baby',
+
+  // Pet — USDA FoodData Central does not index pet/animal feed, but OFF
+  // occasionally returns these strings as free-text categories. Mapped
+  // defensively so a hit short-circuits the heuristic.
+  'Pet Food': 'pet-food',
+  'Cat Food': 'pet-food',
+  'Dog Food': 'pet-food',
+  'Pet Treats': 'pet-food',
+  'Dry Pet Food': 'pet-food',
+  'Wet Pet Food': 'pet-food',
+  'Pet Supplies': 'pet-supplies',
+  'Cat Litter': 'pet-supplies',
 }
 
 // Build a case-insensitive index for lookup.

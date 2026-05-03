@@ -440,6 +440,8 @@ export default function BarcodesManagementPage() {
             <option value="pantry">Pantry</option>
             <option value="frozen">Frozen</option>
             <option value="beverages">Beverages</option>
+            <option value="pet-food">Pet & Animal Food</option>
+            <option value="pet-supplies">Pet & Animal Supplies</option>
             <option value="other">Other</option>
           </select>
 
