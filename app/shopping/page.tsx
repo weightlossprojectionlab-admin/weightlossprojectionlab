@@ -424,14 +424,18 @@ function ShoppingListContent() {
           return
         }
 
-        // Item NOT on list and no duplicates - show impulse purchase confirmation
-        const category = detectCategory(response.product!)
-        setScannedProduct({
-          product: response.product!,
-          itemId: undefined, // New item, no existing ID
-          category
+        // Item NOT on list and no duplicates — add it to the shopping list
+        // as needed. We deliberately do NOT write to inventory here:
+        // scanning a product on the shopping-list page means "I want to
+        // buy this," not "I already bought it." Inventory writes happen
+        // only on the inventory page or when an existing on-list item is
+        // checked off via re-scan above.
+        await addItem(response.product!, {
+          inStock: false,
+          needed: true,
+          quantity: 1,
         })
-        setShowImpulseConfirm(true)
+        toast.success(`Added ${product.name} to shopping list`)
       }
     } catch (error: any) {
       logger.error('[Shopping] Barcode scan error', error as Error, {
@@ -1195,6 +1199,11 @@ function ShoppingItemCard({
         {item.brand && (
           <p className="text-sm text-muted-foreground truncate">
             {highlightText(item.brand)}
+          </p>
+        )}
+        {item.barcode && (
+          <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">
+            {item.barcode}
           </p>
         )}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
