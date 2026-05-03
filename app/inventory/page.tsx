@@ -27,7 +27,8 @@ import { ExpirationPicker } from '@/components/shopping/ExpirationPicker'
 import { RecipeLinks } from '@/components/shopping/RecipeLinks'
 import { QuantityAdjustModal } from '@/components/shopping/QuantityAdjustModal'
 import { RenameProductModal } from '@/components/shopping/RenameProductModal'
-import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
+import { simplifyProduct } from '@/lib/openfoodfacts-api'
+import { lookupBarcodeWithCache } from '@/lib/cached-product-lookup'
 import { addManualShoppingItem } from '@/lib/shopping-operations'
 import type { ScanContext } from '@/types/shopping'
 import type { PatientProfile } from '@/types/medical'
@@ -192,7 +193,10 @@ function KitchenInventoryContent() {
     try {
       toast.loading('Looking up product...', { id: 'barcode' })
 
-      const response = await lookupBarcode(barcode)
+      // Use the cached server endpoint (not OFF directly) so the response
+      // carries product_database fields like container_size that
+      // addOrUpdateShoppingItem reads to seed Phase 2b's amount tracking.
+      const response = await lookupBarcodeWithCache(barcode)
       const product = simplifyProduct(response)
 
       if (!product.found) {
