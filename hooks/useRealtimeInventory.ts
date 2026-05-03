@@ -216,7 +216,17 @@ export function useRealtimeInventory(options?: UseRealtimeInventoryOptions) {
           ...doc.data(),
           createdAt: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
           updatedAt: doc.data().updatedAt?.toDate?.() || new Date(doc.data().updatedAt),
-          expiresAt: doc.data().expiresAt?.toDate?.() || (doc.data().expiresAt ? new Date(doc.data().expiresAt) : undefined)
+          // expiresAt may arrive as: a Firestore Timestamp (toDate() works),
+          // an ISO string (new Date works), an empty string / null (new
+          // Date returns an Invalid Date whose .getTime() is NaN), or
+          // undefined. Keep only well-formed Dates so downstream rendering
+          // isn't poisoned with "Invalid Date".
+          expiresAt: (() => {
+            const raw = doc.data().expiresAt
+            if (!raw) return undefined
+            const d = raw?.toDate?.() ?? new Date(raw)
+            return d instanceof Date && !isNaN(d.getTime()) ? d : undefined
+          })(),
         })) as ShoppingItem[]
 
         const organized = organizeItems(items)

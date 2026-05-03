@@ -128,6 +128,24 @@ export const CATEGORY_METADATA: Record<ProductCategory, CategoryMetadata> = {
     defaultLocation: 'pantry',
     expirationPriority: 'low'
   },
+  'pet-food': {
+    name: 'pet-food',
+    displayName: 'Pet & Animal Food',
+    icon: '🐾',
+    isPerishable: false,
+    defaultShelfLifeDays: 365,
+    defaultLocation: 'pantry',
+    expirationPriority: 'low'
+  },
+  'pet-supplies': {
+    name: 'pet-supplies',
+    displayName: 'Pet & Animal Supplies',
+    icon: '🦴',
+    isPerishable: false,
+    defaultShelfLifeDays: 730,
+    defaultLocation: 'pantry',
+    expirationPriority: 'low'
+  },
   other: {
     name: 'other',
     displayName: 'Other',
@@ -140,9 +158,54 @@ export const CATEGORY_METADATA: Record<ProductCategory, CategoryMetadata> = {
 }
 
 /**
- * Category detection keywords (from OpenFoodFacts categories)
+ * Category detection keywords (from OpenFoodFacts categories).
+ *
+ * Declaration order is significant: detectCategory() returns on first
+ * keyword hit. pet-food and pet-supplies are declared first so phrases
+ * like "chicken & rice dog food" or "salmon kitten food" route to pet,
+ * not meat/seafood. Keywords are kept conservative — disambiguated
+ * phrases ("dog food" not "food") and brand+line tokens ("purina pro
+ * plan" not "purina") to avoid false positives on human groceries.
  */
 const CATEGORY_KEYWORDS: Record<ProductCategory, string[]> = {
+  'pet-food': [
+    // disambiguated phrases
+    'pet food', 'cat food', 'dog food', 'puppy food', 'kitten food',
+    'dog treat', 'cat treat', 'pet treat', 'dog chew', 'cat chew',
+    'wet cat', 'wet dog', 'dry cat', 'dry dog', 'kibble',
+    'fish food', 'bird seed', 'bird food', 'rabbit food', 'guinea pig food',
+    'hamster food', 'ferret food', 'reptile food', 'turtle food',
+    'horse feed', 'cattle feed', 'goat feed', 'sheep feed', 'pig feed',
+    'chicken feed', 'layer pellets', 'scratch grains', 'flock raiser',
+    'timothy hay', 'alfalfa hay', 'orchard hay',
+    'pet supplement', 'animal supplement', 'pet vitamin',
+    // brand + product line (unambiguous)
+    'purina pro plan', 'purina one', 'beneful', 'fancy feast', 'friskies',
+    'meow mix', 'whiskas', 'iams', 'pedigree', 'blue buffalo wilderness',
+    'blue buffalo life protection', 'hill\'s science diet', 'royal canin',
+    'wellness core', 'taste of the wild', 'merrick backcountry', 'nutro ultra',
+    'oxbow essentials', 'kaytee forti-diet', 'mazuri', 'tetra fish',
+    'wardley', 'zoo med', 'repashy', 'triple crown senior', 'nutrena safechoice',
+    'manna pro', 'layena'
+  ],
+  'pet-supplies': [
+    'cat litter', 'litter box', 'scratching post', 'cat tree', 'cat tower',
+    'dog leash', 'dog collar', 'dog harness', 'pet harness', 'pet collar',
+    'dog crate', 'pet carrier', 'dog bed', 'cat bed', 'pet bed',
+    'aquarium', 'fish tank', 'terrarium', 'reptile cage', 'bird cage',
+    'hamster cage', 'rabbit hutch', 'chicken coop',
+    'aquarium filter', 'aquarium gravel', 'aquarium plant',
+    'reptile substrate', 'reptile heat', 'uvb bulb', 'heat lamp',
+    'puppy pad', 'pee pad', 'training pad', 'poop bag', 'waste bag',
+    'flea collar', 'tick collar', 'flea treatment', 'flea & tick',
+    'frontline plus', 'k9 advantix', 'seresto collar', 'nexgard', 'simparica',
+    'heartgard', 'capstar', 'dewormer',
+    'pet shampoo', 'dog shampoo', 'cat shampoo', 'pet brush', 'grooming wipe',
+    'kong toy', 'nylabone', 'chew toy', 'cat toy', 'dog toy', 'bird toy',
+    'tidy cats', 'fresh step', 'world\'s best cat litter', 'yesterday\'s news litter',
+    'fluval', 'marina aquarium', 'aqueon', 'penn-plax', 'exo terra',
+    'petsafe', 'petmate'
+  ],
   produce: [
     'fruit', 'vegetable', 'produce', 'salad', 'lettuce', 'tomato', 'apple', 'banana',
     'orange', 'carrot', 'broccoli', 'spinach', 'berry', 'melon', 'potato'
@@ -390,6 +453,9 @@ export function getAllCategories(): CategoryMetadata[] {
     'beverages',
     'pantry',
     'condiments',
+    'baby',
+    'pet-food',
+    'pet-supplies',
     'other'
   ]
 
@@ -400,6 +466,13 @@ export function getAllCategories(): CategoryMetadata[] {
  * Format expiration date for display
  */
 export function formatExpirationDate(date: Date): string {
+  // Guard against NaN-valued Date objects. A bad expiresAt source
+  // (empty string, "null", malformed timestamp) can survive the hook's
+  // conversion if its sanitization slips, and date.toLocaleDateString
+  // returns the literal string "Invalid Date" — which we don't want
+  // showing up as a badge.
+  if (!(date instanceof Date) || isNaN(date.getTime())) return ''
+
   const now = new Date()
   const diffTime = date.getTime() - now.getTime()
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))

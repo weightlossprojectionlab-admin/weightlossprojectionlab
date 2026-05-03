@@ -104,6 +104,10 @@ export function useRealtimeExpiredItems() {
           if (!item.expiresAt) return null
 
           const expiresAt = item.expiresAt instanceof Date ? item.expiresAt : (item.expiresAt as any)?.toDate?.() || new Date(item.expiresAt as any)
+          // Reject invalid Dates (NaN-valued from unparseable raw inputs)
+          // — without this, daysExpired becomes NaN, the < 0 check below
+          // fails (NaN compares false), and bad rows show up as expired.
+          if (!(expiresAt instanceof Date) || isNaN(expiresAt.getTime())) return null
           const daysExpired = Math.floor(
             (now.getTime() - expiresAt.getTime()) / (1000 * 60 * 60 * 24)
           )
