@@ -58,6 +58,48 @@ export interface NutritionData {
 }
 
 /**
+ * Fetch from USDA via api.data.gov with header-based auth.
+ *
+ * Mirrors lib/usda-api.ts's usdaFetch — passes the key via X-Api-Key
+ * header (recommended; keeps key out of URL/proxy logs), surfaces the
+ * X-RateLimit-Remaining counter, and pulls api.data.gov's structured
+ * error.code (API_KEY_INVALID, OVER_RATE_LIMIT, etc.) when the response
+ * isn't OK so silent failure modes show up as warnings in the log.
+ *
+ * Logs the http status code on failure so we can tell rate-limit (429)
+ * from auth (401/403) from upstream outages (5xx) without grepping
+ * raw stack traces.
+ */
+async function usdaFetch(url: string, key: string, op: string): Promise<Response> {
+  const response = await fetch(url, { headers: { 'X-Api-Key': key } })
+
+  const remaining = response.headers.get('X-RateLimit-Remaining')
+  if (remaining !== null) {
+    logger.debug('[USDA Nutrition] quota remaining', { remaining })
+  }
+
+  if (!response.ok) {
+    let code: string | undefined
+    let message: string | undefined
+    try {
+      const body = await response.clone().json()
+      code = body?.error?.code
+      message = body?.error?.message
+    } catch {
+      // Non-JSON response — fine, fall through
+    }
+    logger.warn('[USDA Nutrition] gateway error', {
+      op,
+      httpStatus: response.status,
+      code,
+      message,
+    })
+  }
+
+  return response
+}
+
+/**
  * Search for food items in USDA database
  */
 export async function searchUSDAFood(
@@ -84,13 +126,15 @@ export async function searchUSDAFood(
       query,
       pageSize: maxResults.toString(),
       dataType: 'Survey (FNDDS),Foundation,SR Legacy,Branded', // All major databases
-      api_key: apiKey
     })
 
-    const response = await fetch(url)
+    const response = await usdaFetch(url, apiKey, 'searchUSDAFood')
 
     if (!response.ok) {
-      throw new Error(`USDA API error: ${response.status}`)
+      // usdaFetch already logged the structured error; return empty so
+      // callers fall back to whatever's downstream (cached nutrition,
+      // OpenFoodFacts, manual entry).
+      return []
     }
 
     const data: USDASearchResult = await response.json()
@@ -103,7 +147,7 @@ export async function searchUSDAFood(
 
     return results
   } catch (error) {
-    logger.error('USDA API error', error as Error)
+    logger.error('USDA API error', error as Error, { op: 'searchUSDAFood' })
     return []
   }
 }
@@ -128,11 +172,12 @@ export async function getUSDAFoodDetails(fdcId: number): Promise<NutritionData |
   }
 
   try {
-    const url = `${USDA_API_BASE}/food/${fdcId}?api_key=${apiKey}`
-    const response = await fetch(url)
+    const url = `${USDA_API_BASE}/food/${fdcId}`
+    const response = await usdaFetch(url, apiKey, 'getUSDAFoodDetails')
 
     if (!response.ok) {
-      throw new Error(`USDA API error: ${response.status}`)
+      // usdaFetch already logged structured error
+      return null
     }
 
     const food: USDAFoodItem = await response.json()
@@ -143,7 +188,7 @@ export async function getUSDAFoodDetails(fdcId: number): Promise<NutritionData |
 
     return result
   } catch (error) {
-    logger.error('USDA API error', error as Error)
+    logger.error('USDA API error', error as Error, { op: 'getUSDAFoodDetails', fdcId })
     return null
   }
 }
