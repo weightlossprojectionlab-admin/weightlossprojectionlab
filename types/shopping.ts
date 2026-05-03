@@ -110,6 +110,24 @@ export interface ShoppingItem {
   displayQuantity?: string // Formatted display string (e.g., "2.5 lbs", "3 apples")
   location: StorageLocation
 
+  // Phase 2b: Amount-aware consumption tracking.
+  //
+  // When the source product has a known container size (USDA's
+  // package_weight, parsed at import time per Phase 2a), we copy the
+  // size + unit onto the inventory row at scan-add. The row's
+  // remainingAmount starts at containerSize × quantity and decrements
+  // each time the user logs partial consumption via the Used Up modal.
+  //
+  // Pill color in /inventory uses these fields when present to compute
+  // % remaining; rows without containerSize fall back to the count-based
+  // pill that shipped in Phase 2a (qty>1=green, =1=yellow, =0=red).
+  /** Total package size from product_database, frozen at scan-add. */
+  containerSize?: number
+  /** Unit for containerSize (matches QuantityUnit). */
+  containerUnit?: QuantityUnit
+  /** Remaining amount in containerUnit. Decremented on partial Used Up. */
+  remainingAmount?: number
+
   // Expiration Management
   expiresAt?: Date
   isPerishable: boolean

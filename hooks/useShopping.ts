@@ -128,13 +128,16 @@ export function useShopping() {
   /**
    * Mark item as consumed/used up.
    *
-   * Pass `useQuantity` for partial use (e.g., "I used 1 of 3 cans"). The
-   * underlying op decrements; if the result hits zero, the item moves to
-   * out-of-stock + needed automatically. Without `useQuantity`, the entire
-   * item is consumed at once (legacy behavior).
+   *   consumeItem(id)                     → consume entire item
+   *   consumeItem(id, 1)                  → count-based, decrement quantity by 1
+   *   consumeItem(id, { useAmount: 2.5 }) → amount-based (Phase 2b), decrement
+   *                                         remainingAmount by 2.5 in containerUnit
    */
-  const consumeItem = useCallback(async (itemId: string, useQuantity?: number) => {
-    await markItemAsConsumed(itemId, useQuantity)
+  const consumeItem = useCallback(async (
+    itemId: string,
+    useQuantityOrOptions?: number | { useAmount: number }
+  ) => {
+    await markItemAsConsumed(itemId, useQuantityOrOptions)
   }, [])
 
   /**

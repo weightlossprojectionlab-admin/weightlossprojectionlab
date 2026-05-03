@@ -171,7 +171,9 @@ export async function GET(request: NextRequest) {
               fiber_100g: productData?.nutrition?.fiber || 0,
             },
             categories: productData?.category || '',
-            ingredients_text: ''
+            ingredients_text: '',
+            container_size: productData?.containerSize ?? undefined,
+            container_unit: productData?.containerUnit ?? undefined,
           },
           _cached: true,
           _cacheFreshnessDays: Math.round(daysSinceUpdate)

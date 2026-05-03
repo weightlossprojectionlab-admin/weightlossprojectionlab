@@ -82,6 +82,14 @@ function KitchenInventoryContent() {
     category: import('@/types/shopping').ProductCategory
     currentQty: number
     unit?: import('@/types/shopping').QuantityUnit
+    /**
+     * Phase 2b: amount-aware tracking. When set, the Used Up modal asks
+     * for an amount in `containerUnit` and dispatches `consumeItem` with
+     * `useAmount` instead of `useQuantity`. Absent → count-based modal.
+     */
+    containerSize?: number
+    containerUnit?: import('@/types/shopping').QuantityUnit
+    remainingAmount?: number
   } | null>(null)
 
   /**
@@ -459,10 +467,47 @@ function KitchenInventoryContent() {
                           </p>
                         )}
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          {/* Stock-level pill — coarse approximation until Phase 2
-                              wires real amount-remaining (container size + actual
-                              consumption). Today: count-based. */}
+                          {/* Stock-level pill.
+                              Amount-aware path (Phase 2b): pct = remainingAmount /
+                              containerSize. >100% means the user has more than one
+                              full container's worth, so green. 25-100% yellow. <25%
+                              red. Falls back to count-based pill (Phase 2a) when
+                              the item has no containerSize — manual entries,
+                              user-renamed products, anything from before backfill. */}
                           {(() => {
+                            const cs = item.containerSize
+                            const ra = item.remainingAmount
+                            const hasAmountData = typeof cs === 'number' && cs > 0 && typeof ra === 'number'
+
+                            if (hasAmountData) {
+                              const pct = ra! / cs!
+                              const cls =
+                                pct >= 1
+                                  ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                                  : pct >= 0.25
+                                    ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300'
+                                    : pct > 0
+                                      ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                                      : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                              // Round to nearest 5% to avoid 73.4% noise; clamp display at 100%.
+                              const displayPct = Math.min(100, Math.round((pct * 100) / 5) * 5)
+                              const label =
+                                pct >= 1
+                                  ? `${displayPct}%`
+                                  : pct > 0
+                                    ? `${displayPct}% left`
+                                    : 'Out'
+                              return (
+                                <span
+                                  className={`text-xs px-2 py-1 rounded font-medium ${cls}`}
+                                  title={`${ra!.toFixed(1)} ${item.containerUnit ?? ''} of ${cs!} ${item.containerUnit ?? ''}`}
+                                >
+                                  {label}
+                                </span>
+                              )
+                            }
+
+                            // Fallback: count-based pill (Phase 2a)
                             const q = item.quantity ?? 0
                             const cls =
                               q > 1
@@ -538,6 +583,9 @@ function KitchenInventoryContent() {
                               category: item.category,
                               currentQty: item.quantity ?? 1,
                               unit: item.unit,
+                              containerSize: item.containerSize,
+                              containerUnit: item.containerUnit,
+                              remainingAmount: item.remainingAmount,
                             })
                           }}
                           className="px-3 py-1 text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded hover:bg-orange-200 dark:hover:bg-orange-900/30 transition-colors"
@@ -652,9 +700,52 @@ function KitchenInventoryContent() {
           />
         )}
 
-        {/* Quantity prompt — used by both "Used Up" and "Buy Again". Same
-            modal, different copy/defaults/onConfirm based on qtyModal.mode. */}
-        {qtyModal && (
+        {/* Quantity prompt — used by both "Used Up" and "Buy Again".
+            Same modal, different copy/defaults/onConfirm based on
+            qtyModal.mode. Phase 2b: when the row has containerSize, the
+            'used-up' branch switches to amount-aware mode (asks for oz/g
+            instead of "units" and dispatches consumeItem with useAmount). */}
+        {qtyModal && (() => {
+          const isAmountAware =
+            qtyModal.mode === 'used-up' &&
+            typeof qtyModal.containerSize === 'number' &&
+            qtyModal.containerSize > 0 &&
+            typeof qtyModal.remainingAmount === 'number'
+
+          let title: string
+          let subtitle: string
+          let defaultQuantity: number
+          let maxQuantity: number
+          let unitLabel: string | undefined
+          let confirmLabel: string
+
+          if (qtyModal.mode === 'used-up') {
+            if (isAmountAware) {
+              const remainingFloor = Math.max(1, Math.floor(qtyModal.remainingAmount!))
+              title = 'How much did you use?'
+              subtitle = `${qtyModal.remainingAmount!.toFixed(1)} ${qtyModal.containerUnit} left of ${qtyModal.containerSize} ${qtyModal.containerUnit} per container.`
+              defaultQuantity = 1
+              maxQuantity = remainingFloor
+              unitLabel = qtyModal.containerUnit
+              confirmLabel = 'Log usage'
+            } else {
+              title = 'How much did you use?'
+              subtitle = `You have ${qtyModal.currentQty}. Drop the count by however much you used.`
+              defaultQuantity = qtyModal.currentQty
+              maxQuantity = qtyModal.currentQty
+              unitLabel = undefined
+              confirmLabel = 'Log usage'
+            }
+          } else {
+            title = 'How many to buy?'
+            subtitle = 'Adds to your shopping list as needed.'
+            defaultQuantity = 1
+            maxQuantity = 99
+            unitLabel = undefined
+            confirmLabel = 'Add to list'
+          }
+
+          return (
           <QuantityAdjustModal
             isOpen={true}
             onClose={() => setQtyModal(null)}
@@ -664,26 +755,33 @@ function KitchenInventoryContent() {
               imageUrl: qtyModal.imageUrl,
               category: qtyModal.category,
             }}
-            title={qtyModal.mode === 'used-up' ? 'How much did you use?' : 'How many to buy?'}
-            subtitle={
-              qtyModal.mode === 'used-up'
-                ? `You have ${qtyModal.currentQty}. Drop the count by however much you used.`
-                : 'Adds to your shopping list as needed.'
-            }
-            defaultQuantity={qtyModal.mode === 'used-up' ? qtyModal.currentQty : 1}
+            title={title}
+            subtitle={subtitle}
+            defaultQuantity={defaultQuantity}
             minQuantity={1}
-            maxQuantity={qtyModal.mode === 'used-up' ? qtyModal.currentQty : 99}
-            confirmLabel={qtyModal.mode === 'used-up' ? 'Log usage' : 'Add to list'}
+            maxQuantity={maxQuantity}
+            unitLabel={unitLabel}
+            confirmLabel={confirmLabel}
             onConfirm={async (qty) => {
               try {
                 if (qtyModal.mode === 'used-up') {
-                  await consumeItem(qtyModal.itemId, qty)
-                  const remaining = qtyModal.currentQty - qty
-                  toast.success(
-                    remaining <= 0
-                      ? `✓ ${qtyModal.productName} marked out — added to shopping list`
-                      : `✓ Logged ${qty} used (${remaining} left)`
-                  )
+                  if (isAmountAware) {
+                    await consumeItem(qtyModal.itemId, { useAmount: qty })
+                    const remaining = qtyModal.remainingAmount! - qty
+                    toast.success(
+                      remaining <= 0
+                        ? `✓ ${qtyModal.productName} marked out — added to shopping list`
+                        : `✓ Logged ${qty} ${qtyModal.containerUnit} used (${remaining.toFixed(1)} ${qtyModal.containerUnit} left)`
+                    )
+                  } else {
+                    await consumeItem(qtyModal.itemId, qty)
+                    const remaining = qtyModal.currentQty - qty
+                    toast.success(
+                      remaining <= 0
+                        ? `✓ ${qtyModal.productName} marked out — added to shopping list`
+                        : `✓ Logged ${qty} used (${remaining} left)`
+                    )
+                  }
                 } else {
                   if (!auth.currentUser?.uid) {
                     toast.error('You must be logged in')
@@ -713,7 +811,8 @@ function KitchenInventoryContent() {
               }
             }}
           />
-        )}
+          )
+        })()}
       </div>
     </AuthGuard>
   )

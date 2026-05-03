@@ -197,7 +197,22 @@ export async function addOrUpdateShoppingItem(
     const existingItem = await getShoppingItemByBarcode(userId, product.code)
 
     if (existingItem) {
-      // Update existing item
+      // Update existing item.
+      //
+      // Phase 2b: when re-scanning an item that already has containerSize
+      // tracked, bump remainingAmount by one full container — the user
+      // bought another package of the same SKU. Backfill containerSize
+      // onto the row if it wasn't there before but the lookup now has it
+      // (typical case: row was created before Phase 2a's backfill ran).
+      const incomingContainerSize =
+        product.container_size ?? existingItem.containerSize
+      const incomingContainerUnit =
+        (product.container_unit as QuantityUnit | undefined) ?? existingItem.containerUnit
+      const newRemaining =
+        typeof incomingContainerSize === 'number' && incomingContainerSize > 0
+          ? (existingItem.remainingAmount ?? 0) + incomingContainerSize
+          : undefined
+
       const updates: Partial<ShoppingItem> = {
         inStock: options.inStock ?? existingItem.inStock,
         quantity: options.quantity ?? (existingItem.quantity + 1),
@@ -205,6 +220,9 @@ export async function addOrUpdateShoppingItem(
         location: options.location ?? existingItem.location,
         needed: options.needed ?? false,
         lastPurchased: options.inStock ? new Date() : existingItem.lastPurchased,
+        ...(incomingContainerSize ? { containerSize: incomingContainerSize } : {}),
+        ...(incomingContainerUnit ? { containerUnit: incomingContainerUnit } : {}),
+        ...(newRemaining !== undefined ? { remainingAmount: newRemaining } : {}),
         updatedAt: new Date()
       }
 
@@ -216,6 +234,17 @@ export async function addOrUpdateShoppingItem(
     const quantity = options.quantity ?? 1
     const unit = options.unit ?? suggestDefaultUnit(category)
     const displayQuantity = formatQuantityDisplay(quantity, unit)
+
+    // Phase 2b: copy container size onto the row so the inventory pill
+    // can compute % remaining without re-querying product_database, and
+    // seed remainingAmount = containerSize * quantity (full purchase,
+    // nothing used yet).
+    const containerSize = product.container_size
+    const containerUnit = product.container_unit as QuantityUnit | undefined
+    const remainingAmount =
+      typeof containerSize === 'number' && containerSize > 0
+        ? containerSize * quantity
+        : undefined
 
     const newItem: Omit<ShoppingItem, 'id'> = {
       userId,
@@ -233,6 +262,9 @@ export async function addOrUpdateShoppingItem(
       quantity,
       unit,
       displayQuantity,
+      containerSize,
+      containerUnit,
+      remainingAmount,
       location: options.location ?? suggestStorageLocation(category),
       expiresAt: options.expiresAt ?? (isPerishable ? calculateDefaultExpiration(category) : undefined),
       isPerishable,
@@ -533,55 +565,110 @@ export async function updateShoppingItem(
 /**
  * Mark item as consumed/thrown away.
  *
- * Two modes:
- *   - No `useQuantity` arg → consume the entire item (fully out of stock,
- *     auto-add to shopping list as needed). Original behavior.
- *   - `useQuantity` arg → partial consumption. The current quantity is
- *     decremented by `useQuantity`. If the result reaches 0, the item
- *     transitions to out-of-stock + needed (same as full consume). If
- *     it stays > 0, only the quantity field updates.
+ * Three modes:
+ *   - No args → consume the entire item (fully out of stock, auto-add
+ *     to shopping list as needed). Legacy behavior.
+ *   - `useQuantity` → count-based partial consumption. Decrement
+ *     quantity by useQuantity; if it hits 0 the row goes out-of-stock.
+ *     Used by inventory rows that don't track containerSize (manual
+ *     entries, products without USDA package_weight data).
+ *   - `useAmount` → amount-based partial consumption (Phase 2b).
+ *     Decrement remainingAmount by useAmount (in containerUnit). When
+ *     remainingAmount reaches 0, the row goes out-of-stock + needed.
+ *     Quantity is also decremented to reflect the empty container.
+ *     Used by amount-tracked rows (containerSize is known).
  *
- * The partial path lets users say "I used 1 of 3 cans" without losing
- * the rest of the inventory row.
+ * Callers pick the path based on whether the row has containerSize.
+ * The two partial paths are mutually exclusive — only one of
+ * useQuantity/useAmount should be supplied.
  */
 export async function markItemAsConsumed(
   itemId: string,
-  useQuantity?: number
+  useQuantityOrOptions?: number | { useAmount: number }
 ): Promise<void> {
   try {
-    if (useQuantity === undefined) {
+    // Disambiguate the overloaded second arg
+    const useAmount =
+      typeof useQuantityOrOptions === 'object' && useQuantityOrOptions !== null
+        ? useQuantityOrOptions.useAmount
+        : undefined
+    const useQuantity =
+      typeof useQuantityOrOptions === 'number' ? useQuantityOrOptions : undefined
+
+    if (useQuantity === undefined && useAmount === undefined) {
       // Full consumption — original behavior
       await updateShoppingItem(itemId, {
         inStock: false,
         quantity: 0,
         needed: true,
         priority: 'high',
+        remainingAmount: 0,
         updatedAt: new Date(),
       })
       return
     }
 
-    // Partial consumption — read current quantity, subtract, decide path
+    // Read current state — both partial paths need it
     const itemRef = doc(db, 'shopping_items', itemId)
     const snap = await getDoc(itemRef)
     if (!snap.exists()) {
       throw new Error(`Shopping item ${itemId} not found`)
     }
-    const data = snap.data() as { quantity?: number }
+    const data = snap.data() as {
+      quantity?: number
+      containerSize?: number
+      remainingAmount?: number
+    }
     const currentQty = typeof data.quantity === 'number' ? data.quantity : 1
-    const remaining = Math.max(0, currentQty - Math.max(0, useQuantity))
+
+    // Amount-based path
+    if (useAmount !== undefined) {
+      const currentRemaining =
+        typeof data.remainingAmount === 'number'
+          ? data.remainingAmount
+          : (data.containerSize ?? 0) * currentQty
+      const newRemaining = Math.max(0, currentRemaining - Math.max(0, useAmount))
+
+      if (newRemaining === 0) {
+        await updateShoppingItem(itemId, {
+          inStock: false,
+          quantity: 0,
+          remainingAmount: 0,
+          needed: true,
+          priority: 'high',
+          updatedAt: new Date(),
+        })
+      } else {
+        // Still some left. Recompute the apparent quantity (number of
+        // full containers + a partial) so the count-based pill — and
+        // any UI still reading `quantity` — stays sensible. We always
+        // round UP to keep "any partial container" visible as ≥1.
+        const containerSize = data.containerSize || 0
+        const apparentQty = containerSize > 0
+          ? Math.max(1, Math.ceil(newRemaining / containerSize))
+          : currentQty
+        await updateShoppingItem(itemId, {
+          remainingAmount: newRemaining,
+          quantity: apparentQty,
+          updatedAt: new Date(),
+        })
+      }
+      return
+    }
+
+    // Count-based path (legacy / non-amount-tracked rows)
+    const remaining = Math.max(0, currentQty - Math.max(0, useQuantity!))
 
     if (remaining === 0) {
-      // Reached zero — same end state as full consume
       await updateShoppingItem(itemId, {
         inStock: false,
         quantity: 0,
+        remainingAmount: 0,
         needed: true,
         priority: 'high',
         updatedAt: new Date(),
       })
     } else {
-      // Still in stock, just decrement
       await updateShoppingItem(itemId, {
         quantity: remaining,
         updatedAt: new Date(),
@@ -590,7 +677,7 @@ export async function markItemAsConsumed(
   } catch (error: any) {
     logger.error('[ShoppingOps] Error marking item as consumed', error as Error, {
       itemId,
-      useQuantity,
+      useQuantityOrOptions,
     })
     throw error
   }

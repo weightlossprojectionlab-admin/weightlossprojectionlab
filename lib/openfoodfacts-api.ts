@@ -40,6 +40,16 @@ export interface OpenFoodFactsProduct {
   categories?: string
   allergens?: string
   ingredients_text?: string
+
+  /**
+   * Phase 2a/2b: structured total-package size sourced from
+   * product_database.containerSize (originally USDA's package_weight,
+   * parsed via lib/package-weight). Surfaced in /api/products/lookup
+   * responses so scan-add can seed remainingAmount on the inventory row.
+   */
+  container_size?: number
+  /** Unit for container_size (matches QuantityUnit). */
+  container_unit?: string
 }
 
 export interface OpenFoodFactsResponse {
