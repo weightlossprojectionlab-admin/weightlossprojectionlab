@@ -46,6 +46,41 @@ import { generateProductKey, findHouseholdItemByProductKey, addOrUpdateHousehold
 const SHOPPING_ITEMS_COLLECTION = 'shopping_items'
 const STORE_VISITS_COLLECTION = 'store_visits'
 
+/** All ProductCategory enum values, used to validate admin-curated values. */
+const VALID_PRODUCT_CATEGORIES: readonly ProductCategory[] = [
+  'produce',
+  'meat',
+  'dairy',
+  'bakery',
+  'deli',
+  'eggs',
+  'herbs',
+  'seafood',
+  'frozen',
+  'pantry',
+  'beverages',
+  'condiments',
+  'baby',
+  'other',
+] as const
+
+/**
+ * Pick the best category for an inventory/shopping write.
+ *
+ * `product.categories` is whatever /api/products/lookup returned, which is
+ * sourced from product_database.category — the admin-curated value visible
+ * in /admin/barcodes. If the curated value matches a known ProductCategory,
+ * we trust it. Otherwise (raw USDA strings, empty, etc.) fall back to the
+ * client-side heuristic.
+ */
+function pickCategory(product: OpenFoodFactsProduct): ProductCategory {
+  const raw = (product.categories || '').toString().toLowerCase().trim()
+  if ((VALID_PRODUCT_CATEGORIES as readonly string[]).includes(raw)) {
+    return raw as ProductCategory
+  }
+  return detectCategory(product)
+}
+
 /**
  * Remove undefined fields recursively from an object
  * Firestore doesn't allow undefined values
@@ -125,7 +160,14 @@ export async function addOrUpdateShoppingItem(
   } = {}
 ): Promise<ShoppingItem> {
   try {
-    const category = detectCategory(product)
+    // Prefer the admin-curated category from product_database (surfaced as
+    // product.categories by /api/products/lookup) over the client-side
+    // heuristic. detectCategory() only fires when the curated value is
+    // empty or doesn't match a known ProductCategory — e.g., for raw USDA
+    // strings like "Soups, Sauces, And Gravies" that haven't been mapped
+    // into the app's enum yet. Editing the row in /admin/barcodes is the
+    // canonical fix path.
+    const category = pickCategory(product)
     const productKey = generateProductKey(product.code, product.product_name || 'Unknown Product', product.brands || '')
 
     // HOUSEHOLD MODE: If householdId is provided, use household deduplication
@@ -263,11 +305,29 @@ export async function addManualShoppingItem(
     unit?: QuantityUnit
     priority?: 'low' | 'medium' | 'high'
     householdId?: string // NEW: If provided, uses household mode
+    /**
+     * Override the category instead of inferring from the ingredient name.
+     * Used by inventory's "Buy Again" so we keep the existing item's
+     * (admin-curated) category instead of letting detectCategoryFromText
+     * misclassify based on a free-text product name.
+     */
+    category?: ProductCategory
+    /**
+     * Optional barcode association — kept on the new shopping-list row so
+     * future scans match the same product, image carries forward, etc.
+     */
+    barcode?: string
+    /** Optional brand for richer row display when restocking from inventory. */
+    brand?: string
+    /** Optional image URL for richer row display when restocking from inventory. */
+    imageUrl?: string
   } = {}
 ): Promise<ShoppingItem> {
   try {
-    // Try to extract category from ingredient name
-    const category = detectCategoryFromText(ingredientName)
+    // Prefer caller-supplied category (e.g., from an existing inventory
+    // row's curated value); fall back to text inference for true manual
+    // entries where no category context exists.
+    const category = options.category ?? detectCategoryFromText(ingredientName)
     const isPerishable = ['produce', 'meat', 'seafood', 'dairy', 'bakery', 'deli', 'eggs', 'herbs'].includes(category)
     const quantity = options.quantity ?? 1
     const unit = options.unit ?? suggestDefaultUnit(category)
@@ -276,10 +336,10 @@ export async function addManualShoppingItem(
     const newItem: Omit<ShoppingItem, 'id'> = {
       userId,
       householdId: options.householdId, // NEW: Add household ID if provided
-      barcode: undefined, // No barcode for manual entries
+      barcode: options.barcode,
       productName: ingredientName,
-      brand: '',
-      imageUrl: '',
+      brand: options.brand ?? '',
+      imageUrl: options.imageUrl ?? '',
       category,
       isManual: true,
       manualIngredientName: ingredientName,

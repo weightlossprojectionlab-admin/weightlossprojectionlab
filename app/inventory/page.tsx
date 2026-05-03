@@ -77,6 +77,7 @@ function KitchenInventoryContent() {
     productName: string
     brand?: string
     imageUrl?: string
+    barcode?: string
     category: import('@/types/shopping').ProductCategory
     currentQty: number
     unit?: import('@/types/shopping').QuantityUnit
@@ -468,6 +469,7 @@ function KitchenInventoryContent() {
                               productName: item.productName,
                               brand: item.brand,
                               imageUrl: item.imageUrl,
+                              barcode: item.barcode,
                               category: item.category,
                               currentQty: item.quantity ?? 1,
                               unit: item.unit,
@@ -498,6 +500,7 @@ function KitchenInventoryContent() {
                                   productName: item.productName,
                                   brand: item.brand,
                                   imageUrl: item.imageUrl,
+                                  barcode: item.barcode,
                                   category: item.category,
                                   currentQty: 1,
                                   unit: item.unit,
@@ -576,10 +579,18 @@ function KitchenInventoryContent() {
                     toast.error('You must be logged in')
                     return
                   }
+                  // Carry the existing inventory row's curated category +
+                  // barcode + brand + image through to the new shopping
+                  // list entry so we don't lose context (and so detectCategoryFromText
+                  // doesn't misclassify based on the free-text name).
                   await addManualShoppingItem(auth.currentUser.uid, qtyModal.productName, {
                     quantity: qty,
                     unit: qtyModal.unit,
                     priority: 'medium',
+                    category: qtyModal.category,
+                    barcode: qtyModal.barcode,
+                    brand: qtyModal.brand,
+                    imageUrl: qtyModal.imageUrl,
                   })
                   toast.success(`✓ Added ${qty} × ${qtyModal.productName} to shopping list`)
                 }
