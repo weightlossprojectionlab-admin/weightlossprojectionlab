@@ -237,26 +237,22 @@ function KitchenInventoryContent() {
           toast.error('Item not found in inventory')
         }
       } else if (scanContext === 'purchase' || scanContext === 'inventory') {
-        // Add to inventory (they bought it or taking stock at home)
-        const existing = allInventoryItems.find(item => item.barcode === barcode)
-
-        if (existing) {
-          // Item already exists, increment quantity
-          await updateItem(existing.id, {
-            inStock: true,
-            quantity: existing.quantity + 1,
-            needed: false
-          })
-          toast.success(`Updated ${product.name} in inventory`)
-        } else {
-          // New item, add to inventory
-          await addItem(response.product!, {
-            inStock: true,
-            needed: false,
-            quantity: 1
-          })
-          toast.success(`➕ Added ${product.name} to inventory`)
-        }
+        // Add or update inventory via the shared addOrUpdateShoppingItem
+        // path so existing rows pick up Phase 2b's containerSize +
+        // remainingAmount seeding (and any future lookup-side fields)
+        // without us re-implementing the dedup + update logic here.
+        // addOrUpdateShoppingItem finds the row by barcode, increments
+        // its quantity by 1, and copies container metadata across.
+        const existing = allInventoryItems.find((item) => item.barcode === barcode)
+        await addItem(response.product!, {
+          inStock: true,
+          needed: false,
+        })
+        toast.success(
+          existing
+            ? `Updated ${product.name} in inventory`
+            : `➕ Added ${product.name} to inventory`
+        )
       } else {
         // Just show info (meal context)
         toast(`${product.name} - ${product.calories} cal`)
