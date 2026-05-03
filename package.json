@@ -24,6 +24,7 @@
     "diag:products": "tsx scripts/diag-product-database.ts",
     "diag:aliases": "tsx scripts/diag-aliases.ts",
     "resync:categories": "tsx scripts/resync-categories.ts",
+    "backfill:container": "tsx scripts/backfill-container-size.ts",
     "validate:migration": "tsx scripts/validate-migration.ts",
     "bundle:size": "size-limit",
     "build:mobile": "cross-env CAPACITOR_BUILD=true NODE_OPTIONS=\"--max-old-space-size=8192\" next build",

@@ -36,6 +36,7 @@ import * as path from 'path'
 import * as dotenv from 'dotenv'
 import csvParser from 'csv-parser'
 import { barcodeVariants } from '../lib/barcode-variants'
+import { parsePackageWeight } from '../lib/package-weight'
 
 // Load .env.local before lib/firebase-admin is imported, since it reads
 // env vars at module init time. Next.js auto-loads these in app code,
@@ -82,6 +83,13 @@ interface BrandedFoodRow {
   serving_size_unit: string
   household_serving_fulltext: string
   branded_food_category: string
+  /**
+   * Total-package weight as a free-text string (e.g. "20 OZ", "1 LB",
+   * "16 FL OZ", "500 ML"). Phase 2a parses this into structured
+   * containerSize + containerUnit so the inventory UI can compute
+   * "% remaining" once usage tracking lands in 2b.
+   */
+  package_weight: string
 }
 
 interface NutrientRow {
@@ -299,6 +307,13 @@ async function main() {
     if (potassium !== undefined) nutrition.potassium = Math.round(potassium * 10) / 10
     if (vitD !== undefined) nutrition.vitaminD = Math.round(vitD * 10) / 10
 
+    // Phase 2a: parse USDA's free-text package_weight ("20 OZ", "1 LB",
+    // "16 FL OZ", etc.) into a structured containerSize + containerUnit.
+    // Phase 2b's amount-aware pill divides remainingAmount by this size
+    // to compute % remaining; until then the field is purely
+    // informational (visible in /admin/barcodes detail).
+    const parsedPkg = parsePackageWeight(branded.package_weight)
+
     batch.set(
       collection.doc(upc),
       {
@@ -312,6 +327,11 @@ async function main() {
         brand: branded.brand_owner || branded.brand_name || '',
         imageUrl: '', // populated by /api/products/lookup cache-hit branch via after()-scheduled OFF fetch on first end-user scan
         category: branded.branded_food_category || 'other',
+        containerSize: parsedPkg?.size ?? null,
+        containerUnit: parsedPkg?.unit ?? null,
+        // Preserve the original free-text so admins can see the source
+        // of truth even when our parser couldn't classify it.
+        packageWeightRaw: branded.package_weight || '',
         nutrition,
         quality: {
           verified: false,

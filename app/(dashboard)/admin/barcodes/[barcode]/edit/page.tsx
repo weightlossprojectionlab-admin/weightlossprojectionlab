@@ -16,6 +16,12 @@ interface ProductEditData {
   brand: string
   imageUrl: string
   category: string
+  /** Phase 2a: parsed total package size (e.g., 16 of unit "oz"). */
+  containerSize?: number | null
+  /** Phase 2a: unit for containerSize (matches QuantityUnit). */
+  containerUnit?: string | null
+  /** Phase 2a: original USDA package_weight free-text (e.g., "16 OZ"). */
+  packageWeightRaw?: string
   nutrition: {
     calories: number
     protein: number
@@ -114,6 +120,9 @@ export default function ProductEditPage() {
         brand: data.product.brand,
         imageUrl: data.product.imageUrl || '',
         category: data.product.category,
+        containerSize: data.product.containerSize ?? null,
+        containerUnit: data.product.containerUnit ?? null,
+        packageWeightRaw: data.product.packageWeightRaw || '',
         nutrition: data.product.nutrition,
         quality: data.product.quality
       }
@@ -341,6 +350,38 @@ export default function ProductEditPage() {
               <option value="condiments">Condiments</option>
               <option value="other">Other</option>
             </select>
+          </div>
+
+          {/* Container Size — Phase 2a foundation. Sourced from USDA's
+              package_weight at import time; read-only here for now. Used
+              by Phase 2b's amount-aware pill to compute % remaining once
+              inventory tracks remainingAmount. */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Container Size
+            </label>
+            <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg text-sm">
+              {formData.containerSize && formData.containerUnit ? (
+                <>
+                  <span className="font-semibold text-foreground">
+                    {formData.containerSize} {formData.containerUnit}
+                  </span>
+                  {formData.packageWeightRaw && (
+                    <span className="text-xs text-muted-foreground">
+                      (from USDA: &ldquo;{formData.packageWeightRaw}&rdquo;)
+                    </span>
+                  )}
+                </>
+              ) : formData.packageWeightRaw ? (
+                <span className="text-muted-foreground">
+                  Couldn&apos;t parse &ldquo;{formData.packageWeightRaw}&rdquo; — admin will need to fix in a future release
+                </span>
+              ) : (
+                <span className="text-muted-foreground">
+                  Not set. Run <code className="font-mono">npm run backfill:container</code> with the USDA branded_food.csv to populate.
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
