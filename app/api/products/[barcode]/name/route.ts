@@ -3,7 +3,7 @@ import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { rateLimit } from '@/lib/rate-limit'
-import { resolveProductDoc } from '@/lib/barcode-variants'
+import { resolveProductDoc, barcodeVariants } from '@/lib/barcode-variants'
 
 /**
  * POST /api/products/[barcode]/name
@@ -65,11 +65,72 @@ export async function POST(
       return NextResponse.json({ error: 'Name too long (max 200 chars)' }, { status: 400 })
     }
 
-    // Resolve any canonical-form variant to the actual doc
+    // Resolve any canonical-form variant to the actual doc. If no doc
+    // exists at all, fall through to the upsert path below — this
+    // happens when USDA + OFF both missed the barcode but the user
+    // managed to get the row into their inventory anyway (e.g. via an
+    // older lookup that's now rate-limited, or a private-label product
+    // neither catalog covers).
     const resolved = await resolveProductDoc(adminDb, barcode)
+    const now = new Date()
+
     if (!resolved) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+      // Upsert: create a fresh doc under the input barcode so future
+      // scans can find it via the resolver. The doc is intentionally
+      // sparse — no nutrition, no curated category — because we don't
+      // have those details. Admins can fill them in later via
+      // /admin/barcodes.
+      const newRef = adminDb.collection('product_database').doc(barcode)
+      const aliases = barcodeVariants(barcode)
+      await newRef.set({
+        barcode,
+        productName: proposedName,
+        brand: '',
+        imageUrl: '',
+        category: 'other',
+        aliases,
+        nutrition: {
+          calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, servingSize: '',
+        },
+        stats: {
+          totalScans: 0, uniqueUsers: 0, totalPurchases: 0,
+          firstSeenAt: now, lastSeenAt: now,
+        },
+        quality: {
+          verified: false, verificationCount: 0,
+          dataSource: 'user',
+          confidence: 30,
+        },
+        createdAt: now,
+        updatedAt: now,
+      })
+      try {
+        await newRef.collection('edit_history').add({
+          editedBy: userId,
+          editedByEmail: userEmail,
+          editedAt: now,
+          action: 'create_named',
+          changes: { productName: { before: '', after: proposedName } },
+        })
+      } catch (auditErr) {
+        logger.error('[Rename] failed to write audit entry on create', auditErr as Error, {
+          barcode,
+          userId,
+        })
+      }
+      logger.info('[Rename] created new product doc with user-supplied name', {
+        barcode,
+        userId,
+        name: proposedName,
+      })
+      return NextResponse.json({
+        success: true,
+        barcode,
+        productName: proposedName,
+        created: true,
+      })
     }
+
     const data = resolved.snap.data() || {}
     const before = (data.productName || '').toString()
 
@@ -86,7 +147,6 @@ export async function POST(
       )
     }
 
-    const now = new Date()
     await resolved.ref.update({
       productName: proposedName,
       updatedAt: now,
