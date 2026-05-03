@@ -98,6 +98,13 @@ function KitchenInventoryContent() {
     barcode: string
     productName: string
     imageUrl?: string
+    /**
+     * When set, the modal was triggered by an in-flight scan and the
+     * product needs to be added to inventory after the rename completes.
+     * The full OFF/USDA-shaped product object is captured so we can call
+     * addItem with the user-supplied name patched in.
+     */
+    pendingScanProduct?: import('@/lib/openfoodfacts-api').OpenFoodFactsProduct
   } | null>(null)
 
   const summary = getSummary()
@@ -192,6 +199,24 @@ function KitchenInventoryContent() {
       }
 
       toast.success(`Found: ${product.name}`, { id: 'barcode' })
+
+      // Scan-time rename: if the lookup returned a product with no real
+      // name, prompt the user to supply one BEFORE the row gets created.
+      // The modal POSTs to the rename endpoint, then we re-enter the add
+      // flow with the product's product_name mutated to the user's input
+      // so the inventory row inherits the correct name from the start.
+      const isPlaceholderName =
+        !product.name || product.name.toLowerCase() === 'unknown product'
+      if (isPlaceholderName && response.product && (scanContext === 'purchase' || scanContext === 'inventory')) {
+        setRenameModal({
+          barcode,
+          productName: product.name,
+          imageUrl: response.product.image_url || response.product.image_front_url,
+          pendingScanProduct: response.product,
+        })
+        toast.dismiss('barcode')
+        return
+      }
 
       // Handle based on scan context
       if (scanContext === 'consume') {
@@ -595,12 +620,29 @@ function KitchenInventoryContent() {
             currentName={renameModal.productName}
             onConfirmed={async (newName) => {
               if (renameModal.itemId) {
+                // Inline rename of an existing inventory row
                 try {
                   await updateItem(renameModal.itemId, { productName: newName })
                   toast.success(`✓ Saved name: ${newName}`)
                 } catch (e) {
                   logger.error('[Inventory] Failed to update local row after rename', e as Error)
                   toast.error('Saved globally but local row update failed — refresh to see it')
+                }
+              } else if (renameModal.pendingScanProduct) {
+                // Scan-time rename — the user just scanned an item that
+                // had no real name. Now that we have one, finish the add
+                // flow they started by inserting the row into inventory
+                // with the user-supplied name patched in.
+                try {
+                  const patched = {
+                    ...renameModal.pendingScanProduct,
+                    product_name: newName,
+                  }
+                  await addItem(patched, { inStock: true, needed: false, quantity: 1 })
+                  toast.success(`✓ Added ${newName} to inventory`)
+                } catch (e) {
+                  logger.error('[Inventory] Add after scan-rename failed', e as Error)
+                  toast.error('Saved name globally, but failed to add to inventory')
                 }
               } else {
                 toast.success(`✓ Saved name: ${newName}`)

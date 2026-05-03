@@ -31,6 +31,7 @@ import { SmartSuggestions } from '@/components/shopping/SmartSuggestions'
 import { HealthSuggestions } from '@/components/shopping/HealthSuggestions'
 import { SequentialShoppingFlow } from '@/components/shopping/SequentialShoppingFlow'
 import { RecipeLinks } from '@/components/shopping/RecipeLinks'
+import { RenameProductModal } from '@/components/shopping/RenameProductModal'
 import { PurchaseConfirmation } from '@/components/shopping/PurchaseConfirmation'
 import { FamilyMemberBadge } from '@/components/shopping/FamilyMemberBadge'
 import type { ProductCategory, ShoppingItem } from '@/types/shopping'
@@ -186,6 +187,19 @@ function ShoppingListContent() {
   // Sequential shopping flow state
   const [selectedItem, setSelectedItem] = useState<ShoppingItem | null>(null)
   const [showSequentialFlow, setShowSequentialFlow] = useState(false)
+
+  /**
+   * Scan-time rename prompt state. Set when a barcode lookup returned
+   * a placeholder name AND the item isn't already on the shopping list,
+   * so we can capture a real name before adding the row. Carries the
+   * full lookup product so we can finish the add after the user submits.
+   */
+  const [renameScan, setRenameScan] = useState<{
+    barcode: string
+    productName: string
+    imageUrl?: string
+    pendingScanProduct: OpenFoodFactsProduct
+  } | null>(null)
 
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('')
@@ -367,6 +381,25 @@ function ShoppingListContent() {
       }
 
       toast.success(`Found: ${product.name}`, { id: 'barcode-lookup' })
+
+      // Scan-time rename: if the lookup returned a placeholder name and
+      // the item isn't already on the shopping list, prompt the user to
+      // supply a real name BEFORE the row gets created. Items already on
+      // the list keep the existing flow (check off via expiration picker)
+      // since they were named at the time they were originally added.
+      const isPlaceholderName =
+        !product.name || product.name.toLowerCase() === 'unknown product'
+      const alreadyOnList = neededItems.some((it) => it.barcode === barcode)
+      if (isPlaceholderName && !alreadyOnList && response.product) {
+        setRenameScan({
+          barcode,
+          productName: product.name,
+          imageUrl: response.product.image_url || response.product.image_front_url,
+          pendingScanProduct: response.product,
+        })
+        toast.dismiss('barcode-lookup')
+        return
+      }
 
       // Check if this product is on the shopping list
       const existingItem = neededItems.find(item => item.barcode === barcode)
@@ -1029,6 +1062,38 @@ function ShoppingListContent() {
             }}
             onSelectDate={handleExpirationSelected}
             onSkip={handleSkipExpiration}
+          />
+        )}
+
+        {/* Scan-time rename — shown when a barcode lookup returned an
+            empty / "Unknown Product" name. Captures a real name before
+            the row is created, then finishes the add via addItem with
+            the user-supplied name patched in. */}
+        {renameScan && (
+          <RenameProductModal
+            isOpen={true}
+            onClose={() => setRenameScan(null)}
+            barcode={renameScan.barcode}
+            imageUrl={renameScan.imageUrl}
+            currentName={renameScan.productName}
+            onConfirmed={async (newName) => {
+              try {
+                const patched = {
+                  ...renameScan.pendingScanProduct,
+                  product_name: newName,
+                }
+                await addItem(patched, {
+                  inStock: false,
+                  needed: true,
+                  quantity: 1,
+                })
+                toast.success(`Added ${newName} to shopping list`)
+              } catch (e) {
+                logger.error('[Shopping] Add after scan-rename failed', e as Error)
+                toast.error('Saved name globally, but failed to add to list')
+              }
+              setRenameScan(null)
+            }}
           />
         )}
 
