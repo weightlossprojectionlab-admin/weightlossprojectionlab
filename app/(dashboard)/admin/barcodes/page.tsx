@@ -52,25 +52,54 @@ export default function BarcodesManagementPage() {
   const [migratingToUsda, setMigratingToUsda] = useState(false)
   const [showMigrateConfirm, setShowMigrateConfirm] = useState(false)
 
-  useEffect(() => {
-    if (isAdmin) {
-      loadProducts()
-    }
-  }, [isAdmin])
+  // Server-side pagination state
+  const [pageCursor, setPageCursor] = useState<string | null>(null) // current page's starting cursor
+  const [nextCursor, setNextCursor] = useState<string | null>(null) // next page's cursor (or null on last page)
+  const [cursorStack, setCursorStack] = useState<string[]>([]) // history for prev nav
+  const [totalProducts, setTotalProducts] = useState(0)
+  const [pageSize, setPageSize] = useState(50)
 
-  // Filter products whenever search/filter state changes
+  // Re-fetch from server whenever any filter, sort, or page changes.
+  // Search input is debounced separately (see effect below).
   useEffect(() => {
-    filterProducts()
-  }, [products, searchQuery, categoryFilter, verificationFilter, dataSourceFilter, sortBy])
+    if (!isAdmin) return
+    loadProducts({ resetPagination: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFilter, sortBy, pageSize, isAdmin])
 
-  const loadProducts = async () => {
+  // Debounce search input — wait 300ms after typing stops before hitting server
+  useEffect(() => {
+    if (!isAdmin) return
+    const id = setTimeout(() => loadProducts({ resetPagination: true }), 300)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, isAdmin])
+
+  /**
+   * Fetch the current page from the server. Uses cursor pagination — pass
+   * `cursor` to start after a specific doc ID, or `resetPagination: true`
+   * to clear cursor stack and load page 1.
+   *
+   * Server applies search, category, and sort. Verification and dataSource
+   * filters are still applied client-side to whatever the server returns —
+   * those are post-fetch refinements within the current page only.
+   */
+  const loadProducts = async (
+    opts: { cursor?: string | null; resetPagination?: boolean } = {}
+  ) => {
     setLoading(true)
     setError(null)
 
     try {
       const token = await getAdminAuthToken()
-      const csrfToken = getCSRFToken()
-      const response = await fetch(`/api/admin/products?limit=500`, {
+      const params = new URLSearchParams()
+      params.set('limit', String(pageSize))
+      if (sortBy) params.set('sortBy', sortBy)
+      if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter)
+      if (searchQuery) params.set('search', searchQuery)
+      if (opts.cursor) params.set('cursor', opts.cursor)
+
+      const response = await fetch(`/api/admin/products?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
 
@@ -81,6 +110,13 @@ export default function BarcodesManagementPage() {
 
       const data = await response.json()
       setProducts(data.products || [])
+      setNextCursor(data.nextCursor || null)
+      setTotalProducts(data.total || 0)
+
+      if (opts.resetPagination) {
+        setPageCursor(null)
+        setCursorStack([])
+      }
     } catch (err) {
       logger.error('Load products error:', err as Error)
       setError(err instanceof Error ? err.message : 'Failed to load products')
@@ -89,51 +125,41 @@ export default function BarcodesManagementPage() {
     }
   }
 
-  const filterProducts = () => {
+  /**
+   * Apply post-fetch filters that aren't supported server-side (verified
+   * and dataSource), then update filteredProducts. Also re-applies the
+   * client-side sort field "verified" since the server can't sort by that.
+   */
+  useEffect(() => {
     let filtered = [...products]
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(p =>
-        p.barcode.includes(query) ||
-        p.productName.toLowerCase().includes(query) ||
-        p.brand.toLowerCase().includes(query)
-      )
-    }
-
-    // Category filter
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(p => p.category === categoryFilter)
-    }
-
-    // Verification filter
     if (verificationFilter === 'verified') {
-      filtered = filtered.filter(p => p.quality.verified)
+      filtered = filtered.filter((p) => p.quality.verified)
     } else if (verificationFilter === 'unverified') {
-      filtered = filtered.filter(p => !p.quality.verified)
+      filtered = filtered.filter((p) => !p.quality.verified)
     }
-
-    // Data source filter
     if (dataSourceFilter !== 'all') {
-      filtered = filtered.filter(p => p.quality.dataSource === dataSourceFilter)
+      filtered = filtered.filter((p) => p.quality.dataSource === dataSourceFilter)
     }
-
-    // Sort
-    filtered.sort((a, b) => {
-      if (sortBy === 'scans') {
-        return b.stats.totalScans - a.stats.totalScans
-      } else if (sortBy === 'name') {
-        return a.productName.localeCompare(b.productName)
-      } else if (sortBy === 'recent') {
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      } else if (sortBy === 'verified') {
-        return (b.quality.verified ? 1 : 0) - (a.quality.verified ? 1 : 0)
-      }
-      return 0
-    })
-
+    if (sortBy === 'verified') {
+      filtered.sort((a, b) => (b.quality.verified ? 1 : 0) - (a.quality.verified ? 1 : 0))
+    }
     setFilteredProducts(filtered)
+  }, [products, verificationFilter, dataSourceFilter, sortBy])
+
+  const goToNextPage = () => {
+    if (!nextCursor) return
+    setCursorStack((prev) => [...prev, pageCursor || ''])
+    setPageCursor(nextCursor)
+    loadProducts({ cursor: nextCursor })
+  }
+
+  const goToPrevPage = () => {
+    if (cursorStack.length === 0) return
+    const prevStack = [...cursorStack]
+    const prev = prevStack.pop() || null
+    setCursorStack(prevStack)
+    setPageCursor(prev || null)
+    loadProducts({ cursor: prev || undefined })
   }
 
   const toggleSelectProduct = (barcode: string) => {
@@ -307,7 +333,7 @@ export default function BarcodesManagementPage() {
             {migratingToUsda ? 'Migrating…' : 'Migrate All to USDA'}
           </button>
           <button
-            onClick={loadProducts}
+            onClick={() => loadProducts({ resetPagination: true })}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors disabled:bg-gray-400"
           >
@@ -350,34 +376,38 @@ export default function BarcodesManagementPage() {
         </div>
       )}
 
-      {/* Stats Cards */}
+      {/* Stats Cards — Total comes from a server-side count() aggregation
+          (single read, O(1) regardless of catalog size). Verified/Unverified
+          counts apply only to the current page since computing them globally
+          would require scanning the full collection. */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-card rounded-lg shadow p-6">
           <div className="text-sm text-muted-foreground mb-1">Total Products</div>
           <div className="text-3xl font-bold text-foreground">
-            {products.length.toLocaleString()}
+            {totalProducts.toLocaleString()}
           </div>
         </div>
         <div className="bg-card rounded-lg shadow p-6">
-          <div className="text-sm text-muted-foreground mb-1">Verified</div>
+          <div className="text-sm text-muted-foreground mb-1">Verified (this page)</div>
           <div className="text-3xl font-bold text-success dark:text-green-400">
-            {products.filter(p => p.quality.verified).length}
+            {products.filter(p => p.quality?.verified).length}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {products.length > 0 ? ((products.filter(p => p.quality.verified).length / products.length) * 100).toFixed(1) : 0}%
+            {products.length > 0 ? ((products.filter(p => p.quality?.verified).length / products.length) * 100).toFixed(1) : 0}%
           </div>
         </div>
         <div className="bg-card rounded-lg shadow p-6">
-          <div className="text-sm text-muted-foreground mb-1">Unverified</div>
+          <div className="text-sm text-muted-foreground mb-1">Unverified (this page)</div>
           <div className="text-3xl font-bold text-warning">
-            {products.filter(p => !p.quality.verified).length}
+            {products.filter(p => !p.quality?.verified).length}
           </div>
         </div>
         <div className="bg-card rounded-lg shadow p-6">
-          <div className="text-sm text-muted-foreground mb-1">Filtered Results</div>
+          <div className="text-sm text-muted-foreground mb-1">Showing</div>
           <div className="text-3xl font-bold text-foreground">
             {filteredProducts.length}
           </div>
+          <div className="text-xs text-muted-foreground mt-1">of {totalProducts.toLocaleString()} matching</div>
         </div>
       </div>
 
@@ -602,6 +632,41 @@ export default function BarcodesManagementPage() {
               </p>
             </div>
           )}
+
+          {/* Pagination Controls */}
+          <div className="p-4 border-t border-border flex items-center justify-between flex-wrap gap-3">
+            <div className="text-sm text-muted-foreground">
+              Page size:
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(parseInt(e.target.value, 10))}
+                className="ml-2 px-2 py-1 border border-border rounded bg-background"
+              >
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={goToPrevPage}
+                disabled={cursorStack.length === 0 || loading}
+                className="px-3 py-1.5 text-sm border border-border rounded disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted"
+              >
+                ← Prev
+              </button>
+              <span className="text-sm text-muted-foreground">
+                Page {cursorStack.length + 1}
+              </span>
+              <button
+                onClick={goToNextPage}
+                disabled={!nextCursor || loading}
+                className="px-3 py-1.5 text-sm border border-border rounded disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,16 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
-import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
 
 /**
- * GET /api/admin/products?search=&category=&limit=50&pageToken=
- * Get products from global product database
+ * GET /api/admin/products
+ *
+ * Cursor-paginated, server-side-filtered product list for /admin/barcodes.
+ * Refactored from the original "fetch 500 + filter client-side + scan
+ * entire collection for stats" implementation that became unusable when
+ * product_database grew to ~456k entries (page loads were taking 6-7
+ * minutes each).
+ *
+ * Query params:
+ *   limit       Page size (default 50, max 100)
+ *   cursor      Firestore doc ID to start after (for next-page navigation)
+ *   search      If all digits, exact barcode match. Otherwise prefix
+ *               match on productName (case-sensitive — USDA stores
+ *               products in uppercase, so user input is upper-cased
+ *               server-side).
+ *   category    Filter by category field (exact match)
+ *   sortBy      'scans' | 'recent' | 'name' (default 'scans'; ignored
+ *               when search is active so the prefix range query has the
+ *               right orderBy)
+ *
+ * Response:
+ *   products       Array of product docs (just this page)
+ *   nextCursor     Doc ID to pass back as ?cursor= for next page (or null)
+ *   total          Total docs matching the filter, via count() aggregation.
+ *                  This is a separate single-aggregation read, not a full
+ *                  collection scan.
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin authentication
+    // Admin auth
     const authHeader = request.headers.get('authorization')
     const idToken = authHeader?.replace('Bearer ', '') || request.cookies.get('idToken')?.value
 
@@ -18,12 +41,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify token with Firebase Admin SDK
     const decodedToken = await adminAuth.verifyIdToken(idToken)
     const adminUid = decodedToken.uid
     const adminEmail = decodedToken.email || 'unknown'
 
-    // Check if user is admin
     const adminDoc = await adminDb.collection('users').doc(adminUid).get()
     const adminData = adminDoc.data()
     const isSuper = isSuperAdmin(adminEmail)
@@ -33,75 +54,100 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams
-    const search = searchParams.get('search')
+    const search = (searchParams.get('search') || '').trim()
     const category = searchParams.get('category')
-    const limit = parseInt(searchParams.get('limit') || '50', 10)
-    const sortBy = searchParams.get('sortBy') || 'scans' // scans, recent, name
+    const cursor = searchParams.get('cursor')
+    const limitRaw = parseInt(searchParams.get('limit') || '50', 10)
+    const limit = Math.min(Math.max(limitRaw, 1), 100)
+    const sortBy = searchParams.get('sortBy') || 'scans'
 
     // Build query
-    let query = adminDb.collection('product_database')
+    let query: FirebaseFirestore.Query = adminDb.collection('product_database')
 
-    // Filter by category if provided
+    // Category filter (exact match)
     if (category && category !== 'all') {
-      query = query.where('category', '==', category) as any
+      query = query.where('category', '==', category)
     }
 
-    // Sort
-    if (sortBy === 'scans') {
-      query = query.orderBy('stats.totalScans', 'desc') as any
-    } else if (sortBy === 'recent') {
-      query = query.orderBy('stats.lastSeenAt', 'desc') as any
-    } else if (sortBy === 'name') {
-      query = query.orderBy('productName', 'asc') as any
+    // Search: special-case barcode (all digits) for exact lookup; otherwise
+    // do a prefix range query on productName.
+    const isBarcodeSearch = /^\d+$/.test(search)
+    if (search) {
+      if (isBarcodeSearch) {
+        // Exact barcode lookup short-circuits everything else
+        const doc = await adminDb.collection('product_database').doc(search).get()
+        if (doc.exists) {
+          return NextResponse.json({
+            products: [{ barcode: doc.id, ...doc.data() }],
+            nextCursor: null,
+            total: 1,
+          })
+        }
+        return NextResponse.json({ products: [], nextCursor: null, total: 0 })
+      }
+      // Text search → uppercase prefix range on productName.
+      // USDA products are stored in UPPERCASE so this matches reliably for
+      // the bulk-imported catalog. User-edited products with mixed case are
+      // a minor blind spot — acceptable until we add a productName_lower
+      // field via migration.
+      const upper = search.toUpperCase()
+      query = query
+        .where('productName', '>=', upper)
+        .where('productName', '<=', upper + '')
+        .orderBy('productName')
+    } else {
+      // Sort (only honored when not searching — search forces orderBy productName)
+      if (sortBy === 'scans') query = query.orderBy('stats.totalScans', 'desc')
+      else if (sortBy === 'recent') query = query.orderBy('stats.lastSeenAt', 'desc')
+      else if (sortBy === 'name') query = query.orderBy('productName', 'asc')
     }
 
-    query = query.limit(limit) as any
+    // Cursor pagination — startAfter(<lastDocSnapshot>). The cursor we
+    // accept from the client is the last doc's ID, so we look it up first
+    // and pass the snapshot to startAfter. (You can't startAfter by
+    // arbitrary value when the orderBy is on a different field.)
+    if (cursor) {
+      const cursorDoc = await adminDb.collection('product_database').doc(cursor).get()
+      if (cursorDoc.exists) {
+        query = query.startAfter(cursorDoc)
+      }
+    }
 
-    const snapshot = await query.get()
+    query = query.limit(limit)
 
-    let products = snapshot.docs.map(doc => ({
+    // Total count via aggregation — single read, not a full scan
+    let totalQuery: FirebaseFirestore.Query = adminDb.collection('product_database')
+    if (category && category !== 'all') {
+      totalQuery = totalQuery.where('category', '==', category)
+    }
+    if (search && !isBarcodeSearch) {
+      const upper = search.toUpperCase()
+      totalQuery = totalQuery
+        .where('productName', '>=', upper)
+        .where('productName', '<=', upper + '')
+    }
+
+    const [snapshot, countSnap] = await Promise.all([
+      query.get(),
+      totalQuery.count().get(),
+    ])
+
+    const products = snapshot.docs.map((doc) => ({
       barcode: doc.id,
-      ...doc.data()
+      ...doc.data(),
     }))
 
-    // Client-side search filter (Firestore doesn't support full-text search)
-    if (search) {
-      const searchLower = search.toLowerCase()
-      products = products.filter((product: any) =>
-        product.productName?.toLowerCase().includes(searchLower) ||
-        product.brand?.toLowerCase().includes(searchLower) ||
-        product.barcode?.includes(searchLower)
-      )
-    }
-
-    // Calculate aggregate stats
-    const allProductsSnapshot = await adminDb.collection('product_database').get()
-    const totalProducts = allProductsSnapshot.size
-
-    const stats = {
-      totalProducts,
-      totalScans: allProductsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().stats?.totalScans || 0), 0),
-      totalPurchases: allProductsSnapshot.docs.reduce((sum, doc) => sum + (doc.data().stats?.totalPurchases || 0), 0),
-      uniqueUsers: new Set(allProductsSnapshot.docs.map(doc => doc.data().stats?.uniqueUsers || 0)).size,
-    }
-
-    // Category breakdown
-    const categoryBreakdown: Record<string, number> = {}
-    allProductsSnapshot.docs.forEach(doc => {
-      const cat = doc.data().category
-      categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + 1
-    })
+    const nextCursor = snapshot.docs.length === limit ? snapshot.docs[snapshot.docs.length - 1].id : null
 
     return NextResponse.json({
       products,
-      stats,
-      categoryBreakdown,
-      count: products.length
+      nextCursor,
+      total: countSnap.data().count,
     })
   } catch (error) {
     return errorResponse(error, {
       route: '/api/admin/products',
-      operation: 'fetch'
+      operation: 'fetch',
     })
   }
 }
