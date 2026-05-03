@@ -5,6 +5,7 @@ import { errorResponse } from '@/lib/api-response'
 import { rateLimit } from '@/lib/rate-limit'
 import { lookupProductHybrid } from '@/lib/product-lookup-server'
 import { fetchOpenFoodFactsImageOnly } from '@/lib/openfoodfacts-server'
+import { barcodeVariants } from '@/lib/barcode-variants'
 
 /**
  * GET /api/products/lookup?barcode={barcode}
@@ -68,9 +69,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing barcode parameter' }, { status: 400 })
     }
 
-    // Step 1: cache check
-    const productRef = adminDb.collection('product_database').doc(barcode)
-    const productDoc = await productRef.get()
+    // Step 1: cache check — try the raw barcode first, then encoding/length
+    // variants (UPC-E ↔ UPC-A, EAN-13 leading-zero, GTIN-14 leading-zeros,
+    // strip/pad to 8/12/13/14). See lib/barcode-variants.ts for why this
+    // is necessary — scanner output and stored doc IDs frequently disagree
+    // on canonical form for the same physical barcode.
+    let productRef = adminDb.collection('product_database').doc(barcode)
+    let productDoc = await productRef.get()
+    let resolvedBarcode = barcode
+
+    if (!productDoc.exists) {
+      const variants = barcodeVariants(barcode).filter((v) => v !== barcode)
+      for (const v of variants) {
+        const ref = adminDb.collection('product_database').doc(v)
+        const snap = await ref.get()
+        if (snap.exists) {
+          productRef = ref
+          productDoc = snap
+          resolvedBarcode = v
+          logger.info('[Lookup] resolved via barcode variant', { input: barcode, resolved: v })
+          break
+        }
+      }
+    }
 
     if (productDoc.exists) {
       const productData = productDoc.data()
@@ -81,7 +102,7 @@ export async function GET(request: NextRequest) {
         await logAPIUsage({
           timestamp: new Date(),
           source: 'cache',
-          barcode,
+          barcode: resolvedBarcode,
           userId,
           found: true,
           cacheFreshnessDays: Math.round(daysSinceUpdate)
@@ -99,18 +120,18 @@ export async function GET(request: NextRequest) {
         if (!productData?.imageUrl) {
           after(async () => {
             try {
-              const offImage = await fetchOpenFoodFactsImageOnly(barcode)
+              const offImage = await fetchOpenFoodFactsImageOnly(resolvedBarcode)
               if (offImage) {
                 await productRef.update({
                   imageUrl: offImage,
                   updatedAt: new Date(),
                 })
-                logger.info('[Lookup] background image enrichment succeeded', { barcode })
+                logger.info('[Lookup] background image enrichment succeeded', { barcode: resolvedBarcode })
               }
             } catch (e) {
               // Non-critical — image stays empty, will retry on next scan
               logger.debug('[Lookup] background image enrichment failed', {
-                barcode,
+                barcode: resolvedBarcode,
                 error: (e as Error).message,
               })
             }
@@ -118,11 +139,11 @@ export async function GET(request: NextRequest) {
         }
 
         return NextResponse.json({
-          code: barcode,
+          code: resolvedBarcode,
           status: 1,
           status_verbose: 'product found (cached)',
           product: {
-            code: barcode,
+            code: resolvedBarcode,
             product_name: productData?.productName,
             brands: productData?.brand,
             quantity: productData?.nutrition?.servingSize || '',
