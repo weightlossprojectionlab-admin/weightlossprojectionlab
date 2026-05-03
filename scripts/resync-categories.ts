@@ -37,6 +37,8 @@ const VALID_CATEGORIES = new Set([
   'beverages',
   'condiments',
   'baby',
+  'pet-food',
+  'pet-supplies',
   'other',
 ])
 

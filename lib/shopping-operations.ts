@@ -62,6 +62,8 @@ const VALID_PRODUCT_CATEGORIES: readonly ProductCategory[] = [
   'beverages',
   'condiments',
   'baby',
+  'pet-food',
+  'pet-supplies',
   'other',
 ] as const
 
