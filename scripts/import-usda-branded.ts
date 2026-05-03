@@ -33,8 +33,19 @@
 
 import * as fs from 'fs'
 import * as path from 'path'
+import * as dotenv from 'dotenv'
 import csvParser from 'csv-parser'
-import { adminDb } from '../lib/firebase-admin'
+
+// Load .env.local before lib/firebase-admin is imported, since it reads
+// env vars at module init time. Next.js auto-loads these in app code,
+// but scripts run via tsx don't get that for free.
+dotenv.config({ path: path.join(__dirname, '..', '.env.local') })
+
+// Dynamic import (after dotenv.config has run) so the admin module sees
+// the credentials. ES module imports hoist to the top regardless of
+// where they appear in source, so a static import of firebase-admin
+// would race the dotenv call.
+let adminDb: import('firebase-admin/firestore').Firestore
 
 // USDA nutrient IDs (from FoodData Central nutrient.csv reference)
 const NUTRIENT_IDS = {
@@ -116,6 +127,10 @@ function streamCsv<T>(file: string, onRow: (row: T) => void): Promise<void> {
 async function main() {
   const startTime = Date.now()
 
+  // Dynamically import after env vars are loaded
+  const adminMod = await import('../lib/firebase-admin')
+  adminDb = adminMod.adminDb
+
   // ── Pass 1: food.csv → fdc_id → description ─────────────────────────────
   console.log(`[USDA Import] Pass 1: loading descriptions from ${path.basename(FOOD_CSV)}`)
   const descByFdc = new Map<string, string>()
@@ -140,59 +155,44 @@ async function main() {
   })
   console.log(`[USDA Import] Pass 2 done: ${brandedRows.toLocaleString()} branded rows; ${brandedByFdc.size.toLocaleString()} have UPC`)
 
-  // ── Pass 3: food_nutrient.csv → fdc_id → {nutrient_id: amount} ──────────
-  // Filter to only fdc_ids that are in branded set AND nutrient_ids we care about.
-  // This drops 95%+ of rows up front and keeps memory bounded.
-  console.log(`[USDA Import] Pass 3: streaming nutrients from ${path.basename(NUTRIENT_CSV)} (this is the large file)`)
-  const nutrientsByFdc: NutrientMap = new Map()
-  let nutrientRows = 0
-  let kept = 0
-  await streamCsv<NutrientRow>(NUTRIENT_CSV, (row) => {
-    nutrientRows++
-    if (nutrientRows % 1_000_000 === 0) {
-      console.log(`  ${nutrientRows.toLocaleString()} nutrient rows scanned, ${kept.toLocaleString()} relevant`)
-    }
-    const nutrientId = parseInt(row.nutrient_id, 10)
-    if (!TARGET_NUTRIENT_IDS.has(nutrientId)) return
-    if (!brandedByFdc.has(row.fdc_id)) return
-    const amount = parseFloat(row.amount)
-    if (Number.isNaN(amount)) return
-    let m = nutrientsByFdc.get(row.fdc_id)
-    if (!m) {
-      m = new Map()
-      nutrientsByFdc.set(row.fdc_id, m)
-    }
-    m.set(nutrientId, amount)
-    kept++
-  })
-  console.log(`[USDA Import] Pass 3 done: ${nutrientRows.toLocaleString()} rows scanned, ${kept.toLocaleString()} kept across ${nutrientsByFdc.size.toLocaleString()} foods`)
-
-  // ── Pass 4: assemble + write to Firestore in batches of 500 ─────────────
-  console.log('[USDA Import] Pass 4: writing to Firestore')
+  // ── Pass 3: stream food_nutrient.csv with boundary-flush ────────────────
+  //
+  // food_nutrient.csv is sorted by fdc_id (USDA convention). We accumulate
+  // nutrients for the current fdc_id, and as soon as fdc_id changes, we
+  // flush the previous fdc_id's product to Firestore. This keeps memory
+  // bounded — at any moment we hold only the current fdc_id's nutrients
+  // (~13 entries) plus the in-flight batch. The earlier in-memory map of
+  // 26M entries blew the V8 heap.
+  console.log(`[USDA Import] Pass 3: streaming nutrients with boundary-flush from ${path.basename(NUTRIENT_CSV)}`)
   const collection = adminDb.collection('product_database')
   const stats = { written: 0, skippedNoNutrition: 0, skippedDuplicate: 0, errors: 0 }
   const seenUpcs = new Set<string>()
+  const now = new Date()
+  const BATCH_LIMIT = 500
 
   let batch = adminDb.batch()
   let batchSize = 0
-  const BATCH_LIMIT = 500
-  const now = new Date()
+  let nutrientRows = 0
+  let kept = 0
 
-  for (const [fdcId, branded] of brandedByFdc) {
+  let currentFdcId: string | null = null
+  let currentNutrients: Map<number, number> | null = null
+
+  /**
+   * Look up branded info + descriptions for the given fdc_id, build the
+   * product record, and queue it on the active batch. Commits the batch
+   * when it hits BATCH_LIMIT.
+   */
+  async function flushFdc(fdcId: string, nutMap: Map<number, number>) {
+    const branded = brandedByFdc.get(fdcId)
+    if (!branded) return // not a branded food (foundation foods etc.)
+
     const upc = branded.gtin_upc.trim()
-    if (!upc) continue
+    if (!upc) return
 
-    // Some entries have duplicate UPCs across multiple fdc_ids (different
-    // formulations or revision dates). Keep only the first one we see.
     if (seenUpcs.has(upc)) {
       stats.skippedDuplicate++
-      continue
-    }
-
-    const nutMap = nutrientsByFdc.get(fdcId)
-    if (!nutMap) {
-      stats.skippedNoNutrition++
-      continue
+      return
     }
 
     const calories = nutMap.get(NUTRIENT_IDS.energyKcal)
@@ -201,7 +201,7 @@ async function main() {
     const fat = nutMap.get(NUTRIENT_IDS.fat)
     if (calories === undefined || protein === undefined || carbs === undefined || fat === undefined) {
       stats.skippedNoNutrition++
-      continue
+      return
     }
 
     seenUpcs.add(upc)
@@ -235,9 +235,8 @@ async function main() {
     if (potassium !== undefined) nutrition.potassium = Math.round(potassium * 10) / 10
     if (vitD !== undefined) nutrition.vitaminD = Math.round(vitD * 10) / 10
 
-    const ref = collection.doc(upc)
     batch.set(
-      ref,
+      collection.doc(upc),
       {
         barcode: upc,
         productName,
@@ -275,19 +274,63 @@ async function main() {
     if (batchSize >= BATCH_LIMIT) {
       try {
         await batch.commit()
-        if (stats.written % 5_000 === 0) {
-          console.log(`  ${stats.written.toLocaleString()} written so far`)
-        }
       } catch (err) {
         stats.errors++
         console.error('Batch commit failed:', (err as Error).message)
       }
       batch = adminDb.batch()
       batchSize = 0
+      if (stats.written % 5_000 === 0) {
+        console.log(`  ${stats.written.toLocaleString()} written so far`)
+      }
     }
   }
 
-  // Flush final batch
+  // Stream rows via async iteration — naturally serializes our boundary-
+  // flush awaits without manual pause/resume gymnastics.
+  const stream = fs.createReadStream(NUTRIENT_CSV).pipe(csvParser())
+  for await (const row of stream as AsyncIterable<NutrientRow>) {
+    nutrientRows++
+    if (nutrientRows % 1_000_000 === 0) {
+      console.log(`  ${nutrientRows.toLocaleString()} nutrient rows scanned, ${kept.toLocaleString()} relevant, ${stats.written.toLocaleString()} written`)
+    }
+
+    const fdcId = row.fdc_id
+
+    // Boundary: fdc_id changed → flush previous fdc's accumulated nutrients.
+    if (currentFdcId !== null && currentFdcId !== fdcId && currentNutrients) {
+      try {
+        await flushFdc(currentFdcId, currentNutrients)
+      } catch (err) {
+        console.error('Flush error:', (err as Error).message)
+        stats.errors++
+      }
+      currentNutrients = null
+    }
+
+    currentFdcId = fdcId
+
+    const nutrientId = parseInt(row.nutrient_id, 10)
+    if (!TARGET_NUTRIENT_IDS.has(nutrientId)) continue
+    if (!brandedByFdc.has(fdcId)) continue
+    const amount = parseFloat(row.amount)
+    if (Number.isNaN(amount)) continue
+
+    if (!currentNutrients) currentNutrients = new Map()
+    currentNutrients.set(nutrientId, amount)
+    kept++
+  }
+
+  // Flush the final fdc_id
+  if (currentFdcId !== null && currentNutrients) {
+    try {
+      await flushFdc(currentFdcId, currentNutrients)
+    } catch (err) {
+      stats.errors++
+    }
+  }
+
+  // Final batch commit
   if (batchSize > 0) {
     try {
       await batch.commit()
@@ -296,6 +339,8 @@ async function main() {
       console.error('Final batch commit failed:', (err as Error).message)
     }
   }
+
+  console.log(`[USDA Import] Pass 3 done: ${nutrientRows.toLocaleString()} rows scanned, ${kept.toLocaleString()} nutrients kept`)
 
   const elapsed = Math.round((Date.now() - startTime) / 1000)
   console.log('\n[USDA Import] Complete')
