@@ -341,6 +341,121 @@ export function checkIngredientsWithQuantities(
 }
 
 /**
+ * Match a single structured RecipeIngredient against inventory.
+ *
+ * Prefers exact barcode match when the recipe ingredient was curated
+ * via /admin/recipes (which links to product_database via ProductSelector).
+ * Falls back to text-based matching for ingredients without a barcode.
+ *
+ * The structured path is strictly better than the text path:
+ *   - Exact match by `inventoryItem.barcode === ingredient.productBarcode`
+ *     (no parsing, no synonym fuzziness)
+ *   - Recipe quantity + unit are already structured (no regex extraction)
+ *   - Same hasEnough math against the inventory row's tracked unit
+ *
+ * Used by RecipeModal's missing-ingredients block, the /recipes/[id]
+ * Start Cooking enable check, and the Phase 2c cooking-session
+ * deduction. Behavior for legacy free-text ingredients is unchanged.
+ */
+export function matchStructuredIngredient(
+  ingredient: {
+    productBarcode?: string
+    productName?: string
+    ingredientText?: string
+    quantity?: number
+    unit?: string
+  },
+  inventoryItems: ShoppingItem[]
+): IngredientMatchResult {
+  const displayText = ingredient.ingredientText
+    || (ingredient.productName ? `${ingredient.quantity ?? ''} ${ingredient.unit ?? ''} ${ingredient.productName}`.trim() : '')
+    || '(unnamed ingredient)'
+
+  // Barcode-linked path — exact inventory match by barcode
+  if (ingredient.productBarcode) {
+    const match = inventoryItems.find((it) => it.barcode === ingredient.productBarcode) || null
+    const result: IngredientMatchResult = {
+      ingredient: displayText,
+      matched: match !== null,
+      item: match || undefined,
+      needed: {
+        quantity: typeof ingredient.quantity === 'number' ? ingredient.quantity : null,
+        unit: ingredient.unit as QuantityUnit | undefined,
+      },
+      have: { quantity: match?.quantity || 0, unit: match?.unit },
+      hasEnough: null,
+      comparison: '',
+    }
+
+    if (!match) {
+      result.comparison = `Don't have ${ingredient.productName || displayText}`
+      result.hasEnough = false
+      return result
+    }
+
+    // Quantityless ingredients ("a pinch of salt") just need presence
+    if (typeof ingredient.quantity !== 'number') {
+      result.hasEnough = true
+      result.comparison = `Have ${match.productName}`
+      return result
+    }
+
+    // Compare quantities, preferring incompatible-units null over false
+    if (!areUnitsCompatible(ingredient.unit as QuantityUnit, match.unit)) {
+      result.hasEnough = null
+      result.comparison = `Have ${match.productName} but can't compare units (${ingredient.unit} vs ${match.unit})`
+      return result
+    }
+    const enough = hasEnough(
+      ingredient.quantity,
+      ingredient.unit as QuantityUnit,
+      match.quantity,
+      match.unit
+    )
+    result.hasEnough = enough
+    result.comparison = formatQuantityComparison(
+      ingredient.quantity,
+      ingredient.unit as QuantityUnit,
+      match.quantity,
+      match.unit
+    )
+    if (!enough) {
+      result.deficit = calculateDeficit(
+        ingredient.quantity,
+        ingredient.unit as QuantityUnit,
+        match.quantity,
+        match.unit
+      )
+    }
+    return result
+  }
+
+  // No barcode link — fall through to text-based matcher.
+  return matchIngredientWithQuantity(displayText, inventoryItems)
+}
+
+/**
+ * Check structured recipe ingredients (ingredientsV2) against inventory.
+ * Counterpart to checkIngredientsWithQuantities for the structured path.
+ *
+ * Prefer this over checkIngredientsWithQuantities anywhere a recipe has
+ * `ingredientsV2` populated. The legacy text-array function stays as
+ * the fallback for recipes that only have free-text `ingredients[]`.
+ */
+export function checkStructuredIngredients(
+  ingredients: Array<{
+    productBarcode?: string
+    productName?: string
+    ingredientText?: string
+    quantity?: number
+    unit?: string
+  }>,
+  inventoryItems: ShoppingItem[]
+): IngredientMatchResult[] {
+  return ingredients.map((ing) => matchStructuredIngredient(ing, inventoryItems))
+}
+
+/**
  * Get recipe readiness summary
  */
 export interface RecipeReadiness {
