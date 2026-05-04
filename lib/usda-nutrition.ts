@@ -114,8 +114,19 @@ export async function searchUSDAFood(
     return []
   }
 
+  // Defensive guard: USDA's /foods/search returns 400 when query is
+  // empty, whitespace, or undefined. Some upstream code paths (recipe
+  // generation fallback, meal-suggestion sweeps) were passing through
+  // empty strings and producing recurring 400 pairs every couple of
+  // minutes — pure log noise. Bail early instead of round-tripping the
+  // bad request.
+  const trimmedQuery = (query || '').trim()
+  if (trimmedQuery.length === 0) {
+    return []
+  }
+
   // Check cache first
-  const cacheKey = `search:${query.toLowerCase()}`
+  const cacheKey = `search:${trimmedQuery.toLowerCase()}`
   const cached = cache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.data as NutritionData[]
@@ -123,7 +134,7 @@ export async function searchUSDAFood(
 
   try {
     const url = `${USDA_API_BASE}/foods/search?` + new URLSearchParams({
-      query,
+      query: trimmedQuery,
       pageSize: maxResults.toString(),
       dataType: 'Survey (FNDDS),Foundation,SR Legacy,Branded', // All major databases
     })
