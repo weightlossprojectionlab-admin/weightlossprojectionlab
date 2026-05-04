@@ -56,6 +56,7 @@ import { addProductImage } from '@/lib/product-image-upload'
 import { barcodeVariants } from '@/lib/barcode-variants'
 import type { ShoppingItem } from '@/types/shopping'
 import { ScanItemCard } from './ScanItemCard'
+import { PurchaseConfirmation } from './PurchaseConfirmation'
 
 const BarcodeScanner = dynamic(
   () => import('@/components/BarcodeScanner').then((mod) => ({ default: mod.BarcodeScanner })),
@@ -92,6 +93,12 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   const [summaryStoreName, setSummaryStoreName] = useState('')
   const [summaryRemoveSkipped, setSummaryRemoveSkipped] = useState(false)
   const [summarySaving, setSummarySaving] = useState(false)
+  // PurchaseConfirmation modal — bulk-mark fallback for users who
+  // shopped without scanning. Reuses the existing component as-is
+  // (DRY) rather than re-implementing checkbox-multi-select logic
+  // inside ActiveShoppingMode. Only one items-view is on screen at
+  // a time (modal swap), so no list duplication.
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const photoInputRef = useRef<HTMLInputElement | null>(null)
@@ -107,6 +114,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       setSummaryOpen(false)
       setSummaryStoreName('')
       setSummaryRemoveSkipped(false)
+      setBulkConfirmOpen(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
@@ -384,13 +392,24 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
           </p>
         </div>
         {!summaryOpen && (
-          <button
-            type="button"
-            onClick={handleEndPressed}
-            className="px-3 py-2 bg-muted text-foreground rounded-lg text-sm font-medium active:bg-muted/80"
-          >
-            End
-          </button>
+          <div className="flex items-center gap-2">
+            {orderedSessionRows.pending.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setBulkConfirmOpen(true)}
+                className="px-3 py-2 bg-muted text-foreground rounded-lg text-sm font-medium active:bg-muted/80"
+              >
+                Mark multiple
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleEndPressed}
+              className="px-3 py-2 bg-muted text-foreground rounded-lg text-sm font-medium active:bg-muted/80"
+            >
+              End
+            </button>
+          </div>
         )}
       </header>
 
@@ -654,6 +673,37 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       )}
 
       {photoCaptureOpen /* file picker is invisible; this is a placeholder for future inline UI */}
+
+      {/* Bulk-confirm modal — wraps PurchaseConfirmation as-is.
+          DRY: same component, same backend (/api/shopping/confirm-
+          purchases), no parallel implementation. Items aren't
+          duplicated on screen because this is a modal swap, not an
+          inline render. */}
+      {bulkConfirmOpen && (
+        <div className="fixed inset-0 z-[60] bg-background flex flex-col overflow-y-auto">
+          <header className="px-4 py-3 border-b border-border flex items-center justify-between bg-card sticky top-0">
+            <h2 className="text-base font-bold text-foreground">Mark multiple as purchased</h2>
+            <button
+              type="button"
+              onClick={() => setBulkConfirmOpen(false)}
+              className="text-foreground text-2xl leading-none w-8 h-8 flex items-center justify-center"
+              aria-label="Close bulk confirm"
+            >
+              ✕
+            </button>
+          </header>
+          <div className="flex-1 p-4">
+            <PurchaseConfirmation
+              pendingItems={orderedSessionRows.pending}
+              onConfirm={() => {
+                // useShopping is realtime — items will reflect via
+                // the live subscription. Just close the modal.
+                setBulkConfirmOpen(false)
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

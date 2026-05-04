@@ -32,7 +32,6 @@ import { HealthSuggestions } from '@/components/shopping/HealthSuggestions'
 import { SequentialShoppingFlow } from '@/components/shopping/SequentialShoppingFlow'
 import { RecipeLinks } from '@/components/shopping/RecipeLinks'
 import { RenameProductModal } from '@/components/shopping/RenameProductModal'
-import { PurchaseConfirmation } from '@/components/shopping/PurchaseConfirmation'
 import { FamilyMemberBadge } from '@/components/shopping/FamilyMemberBadge'
 import type { ProductCategory, ShoppingItem } from '@/types/shopping'
 import type { PatientProfile } from '@/types/medical'
@@ -787,17 +786,9 @@ function ShoppingListContent() {
             </button>
           </div>
 
-          {/* Purchase Confirmation Section */}
-          <PurchaseConfirmation
-            pendingItems={neededItems.filter(item => !item.inStock)}
-            onConfirm={refresh}
-            onRemoveItem={async (itemId: string) => {
-              await removeItem(itemId)
-              toast.success('Item removed from shopping list')
-            }}
-            memberId={memberId || undefined}
-            dutyId={dutyId || undefined}
-          />
+          {/* Purchase Confirmation moved to /shopping/active —
+              the act of purchasing belongs in the active-session
+              surface alongside the per-item scan flow. */}
 
           {/* Health-Based Suggestions (Member-Specific) */}
           {memberId && (
