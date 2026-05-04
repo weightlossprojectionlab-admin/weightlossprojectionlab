@@ -250,6 +250,11 @@ function getDefaultStorageRecommendations(category: ProductCategory): string[] {
       'Cover loosely with plastic bag',
       'Change water every 2 days'
     ],
+    spices: [
+      'Store in airtight containers away from heat and light',
+      'Pantry shelf is fine; avoid above the stove',
+      'Replace whole spices every 3-4 years, ground every 1-2 years'
+    ],
     frozen: [
       'Maintain freezer at 0°F or below',
       'Avoid refreezing after thawing',
@@ -347,6 +352,12 @@ function getDefaultSpoilageIndicators(category: ProductCategory): string[] {
       'Slimy stems',
       'Moldy appearance',
       'Loss of aroma'
+    ],
+    spices: [
+      'Faded or dull color',
+      'Loss of aroma when sniffed',
+      'Clumping (sign of moisture exposure)',
+      'Tastes flat compared to fresh'
     ],
     frozen: [
       'Freezer burn (dry, grayish spots)',

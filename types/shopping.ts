@@ -15,6 +15,7 @@ export type ProductCategory =
   | 'deli'
   | 'eggs'
   | 'herbs'
+  | 'spices'
   | 'seafood'
   | 'frozen'
   | 'pantry'

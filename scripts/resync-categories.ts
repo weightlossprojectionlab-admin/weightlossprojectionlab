@@ -31,6 +31,7 @@ const VALID_CATEGORIES = new Set([
   'deli',
   'eggs',
   'herbs',
+  'spices',
   'seafood',
   'frozen',
   'pantry',

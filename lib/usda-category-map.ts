@@ -61,9 +61,14 @@ const RAW_MAP: Record<string, ProductCategory> = {
   'Bagged Salads': 'produce',
   'Pre-packaged Fruit & Vegetables': 'produce',
 
-  // Herbs (treated as produce-ish; detectCategory has a herbs bucket)
-  'Spices, Seasonings & Herbs': 'condiments',
+  // Herbs + Spices. USDA lumps them under one category; we route to
+  // 'spices' (covers most: pepper, cinnamon, paprika, oregano, garlic
+  // powder, etc.) — it's the better default than 'condiments'. Fresh
+  // herbs sold separately get 'herbs' instead.
+  'Spices, Seasonings & Herbs': 'spices',
   'Fresh Herbs': 'herbs',
+  'Salt': 'spices',
+  'Pepper': 'spices',
 
   // Bakery
   'Bread & Buns': 'bakery',
@@ -159,8 +164,6 @@ const RAW_MAP: Record<string, ProductCategory> = {
   'Honey, Syrup & Sugar': 'condiments',
   'Jam, Jelly & Fruit Spreads': 'condiments',
   'Peanut Butter & Spreads': 'condiments',
-  'Salt': 'condiments',
-  'Pepper': 'condiments',
   'Sugars': 'condiments',
   'Spreads': 'condiments',
   'Other Condiments': 'condiments',

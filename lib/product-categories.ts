@@ -83,6 +83,18 @@ export const CATEGORY_METADATA: Record<ProductCategory, CategoryMetadata> = {
     defaultLocation: 'fridge',
     expirationPriority: 'medium'
   },
+  spices: {
+    name: 'spices',
+    displayName: 'Spices & Seasonings',
+    icon: '🧂',
+    isPerishable: false,
+    // Dried spices keep 2-4 years; using ~3 years (1095 days) as the
+    // expiration default. Most users never deplete a spice via use —
+    // it goes stale long before it runs out.
+    defaultShelfLifeDays: 1095,
+    defaultLocation: 'pantry',
+    expirationPriority: 'low'
+  },
   frozen: {
     name: 'frozen',
     displayName: 'Frozen',
@@ -232,6 +244,22 @@ const CATEGORY_KEYWORDS: Record<ProductCategory, string[]> = {
   ],
   herbs: [
     'herb', 'basil', 'cilantro', 'parsley', 'mint', 'rosemary', 'thyme', 'oregano', 'sage'
+  ],
+  spices: [
+    // Common dried spices and seasoning blends. Keep narrow — single-word
+    // common spice names + multi-word brand-agnostic phrases so we don't
+    // catch "salt-free" pasta sauce or "peppermint tea".
+    'spice', 'seasoning', 'salt', 'pepper', 'peppercorn', 'paprika',
+    'cumin', 'coriander', 'turmeric', 'ginger powder', 'garlic powder',
+    'onion powder', 'cinnamon', 'nutmeg', 'allspice', 'cardamom', 'clove',
+    'bay leaf', 'cayenne', 'chili powder', 'curry powder', 'curry paste',
+    'italian seasoning', 'taco seasoning', 'cajun seasoning',
+    'old bay', 'lemon pepper', 'garam masala', 'five spice',
+    'msg', 'monosodium glutamate', 'sea salt', 'kosher salt', 'pink salt',
+    'rock salt', 'iodized salt', 'fennel seed', 'caraway seed',
+    'mustard seed', 'sesame seed', 'poppy seed', 'celery seed', 'dill seed',
+    'star anise', 'vanilla bean', 'vanilla extract', 'almond extract',
+    'lemon extract', 'food coloring'
   ],
   frozen: [
     'frozen', 'freeze', 'ice'

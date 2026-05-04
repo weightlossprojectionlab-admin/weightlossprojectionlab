@@ -56,6 +56,7 @@ const VALID_PRODUCT_CATEGORIES: readonly ProductCategory[] = [
   'deli',
   'eggs',
   'herbs',
+  'spices',
   'seafood',
   'frozen',
   'pantry',
