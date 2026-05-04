@@ -239,11 +239,17 @@ function CookingSessionContent() {
   const currentStepData = session.stepTimers[session.currentStep]
   const progress = ((session.currentStep + 1) / session.totalSteps) * 100
   const actionLabel = getRecipeActionLabel(recipe)
+  // Convert action verb ("Cook", "Prepare") into its present-participle.
+  // Naive concatenation (`${label}ing`) produced "Prepareing" — silent-e
+  // drop is needed for verbs ending in 'e' before 'ing'.
+  const actionParticiple = actionLabel.endsWith('e')
+    ? `${actionLabel.slice(0, -1)}ing`
+    : `${actionLabel}ing`
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-100">
       <PageHeader
-        title={`${actionLabel}ing: ${session.recipeName}`}
+        title={`${actionParticiple}: ${session.recipeName}`}
         subtitle={`Step ${session.currentStep + 1} of ${session.totalSteps}`}
       />
 
