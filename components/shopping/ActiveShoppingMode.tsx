@@ -304,7 +304,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
         <button
           type="button"
           onClick={onClose}
-          className="px-3 py-2 bg-muted text-foreground rounded-lg text-sm font-medium active:bg-gray-300"
+          className="px-3 py-2 bg-muted text-foreground rounded-lg text-sm font-medium active:bg-muted/80"
         >
           End
         </button>

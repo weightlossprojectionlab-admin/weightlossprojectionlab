@@ -181,7 +181,7 @@ export function ScanItemCard({
             type="button"
             onClick={decrement}
             disabled={disabled || quantity <= 1}
-            className="w-10 h-10 rounded-full bg-muted text-foreground text-xl font-bold disabled:opacity-30 active:bg-gray-300"
+            className="w-10 h-10 rounded-full bg-muted text-foreground text-xl font-bold disabled:opacity-30 active:bg-muted/80"
             aria-label="Decrease quantity"
           >
             −
@@ -193,7 +193,7 @@ export function ScanItemCard({
             type="button"
             onClick={increment}
             disabled={disabled}
-            className="w-10 h-10 rounded-full bg-muted text-foreground text-xl font-bold disabled:opacity-30 active:bg-gray-300"
+            className="w-10 h-10 rounded-full bg-muted text-foreground text-xl font-bold disabled:opacity-30 active:bg-muted/80"
             aria-label="Increase quantity"
           >
             +

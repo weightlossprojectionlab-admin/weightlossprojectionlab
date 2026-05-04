@@ -17,6 +17,7 @@ import {
   PhotoIcon,
   BookOpenIcon,
   ShoppingBagIcon,
+  ShoppingCartIcon,
   ArchiveBoxIcon,
   MagnifyingGlassIcon,
   UserGroupIcon,
@@ -94,6 +95,11 @@ export function AppMenu() {
         { name: 'Recipes', href: '/recipes', icon: BookOpenIcon },
         { name: 'Discover', href: '/discover', icon: MagnifyingGlassIcon },
         { name: 'Shopping List', href: '/shopping', icon: ShoppingBagIcon },
+        // Start Shopping sits between List and Inventory to mirror
+        // the temporal flow: build → shop → pantry. Distinct icon
+        // (cart) so it reads as the active in-store mode, not a
+        // duplicate of the list (bag).
+        { name: 'Start Shopping', href: '/shopping/active', icon: ShoppingCartIcon },
         { name: 'Kitchen Inventory', href: '/inventory', icon: ArchiveBoxIcon },
       ],
     },
