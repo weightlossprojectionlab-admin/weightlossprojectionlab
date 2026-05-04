@@ -41,7 +41,7 @@
  *   - notification.mp3 — same chime CookingTimer uses.
  */
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { Fragment, useState, useMemo, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
 import { auth } from '@/lib/firebase'
@@ -125,6 +125,34 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
     return map
   }, [items])
 
+  // Walk-the-store category order. Items group into sections by
+  // category, with sections ordered to minimize backtracking on a
+  // typical store layout: perimeter (fresh) first, interior aisles
+  // (shelf-stable) middle, far-back / non-food last. Categories
+  // missing from this list fall through to the end via Infinity.
+  const STORE_LAYOUT_ORDER: Record<string, number> = useMemo(
+    () => ({
+      produce: 0,
+      bakery: 1,
+      deli: 2,
+      meat: 3,
+      seafood: 4,
+      dairy: 5,
+      eggs: 6,
+      herbs: 7,
+      frozen: 8,
+      spices: 9,
+      condiments: 10,
+      pantry: 11,
+      beverages: 12,
+      baby: 13,
+      'pet-food': 14,
+      'pet-supplies': 15,
+      other: 99,
+    }),
+    []
+  )
+
   // Sort: pending items first (in original order), found items last
   // and visually distinct. Done in a memo so the order doesn't churn
   // every render.
@@ -144,6 +172,25 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
 
   const totalCount = sessionItems.length
   const foundCount = orderedSessionRows.found.length
+
+  // Group pending items by category so the shopper walks the store
+  // section by section instead of zig-zagging across aisles. Sections
+  // emerge in STORE_LAYOUT_ORDER; categories not in the map fall to
+  // the end. Within a section, items keep their original session
+  // order (avoids reshuffling under the user's finger mid-trip).
+  const pendingByCategory = useMemo(() => {
+    const groups = new Map<string, ShoppingItem[]>()
+    for (const it of orderedSessionRows.pending) {
+      const cat = it.category || 'other'
+      if (!groups.has(cat)) groups.set(cat, [])
+      groups.get(cat)!.push(it)
+    }
+    return Array.from(groups.entries()).sort(([a], [b]) => {
+      const oa = STORE_LAYOUT_ORDER[a] ?? 100
+      const ob = STORE_LAYOUT_ORDER[b] ?? 100
+      return oa - ob
+    })
+  }, [orderedSessionRows.pending, STORE_LAYOUT_ORDER])
 
   const activeItem = activeItemId ? liveItemsById.get(activeItemId) ?? null : null
 
@@ -532,39 +579,53 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
             </div>
           ) : (
             <ul className="divide-y divide-border">
-              {orderedSessionRows.pending.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => openItem(item)}
-                    className="w-full px-4 py-3 flex items-center gap-3 text-left active:bg-muted"
-                  >
-                    <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt=""
-                          className="w-full h-full object-contain"
-                        />
-                      ) : (
-                        <span className="text-3xl">📦</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      {/* Title with bold qty prefix — Instacart
-                          pattern, our typography tokens. */}
-                      <p className="font-medium text-foreground">
-                        <span className="font-bold">{item.quantity || 1} ×</span>{' '}
-                        {item.productName}
-                      </p>
-                      {(item.brand || item.category) && (
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                          {[item.brand, item.category].filter(Boolean).join(' • ')}
-                        </p>
-                      )}
-                    </div>
-                  </button>
-                </li>
+              {/* Pending items grouped by category — section
+                  headers minimize backtracking through the store
+                  (produce → meat → dairy → frozen → pantry).
+                  Sections render in store-walk order; categories
+                  not in the layout map fall to the end. */}
+              {pendingByCategory.map(([cat, catItems]) => (
+                <Fragment key={cat}>
+                  <li className="px-4 py-2 bg-muted/30">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      {formatCategoryLabel(cat)}
+                    </p>
+                  </li>
+                  {catItems.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => openItem(item)}
+                        className="w-full px-4 py-3 flex items-center gap-3 text-left active:bg-muted"
+                      >
+                        <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl}
+                              alt=""
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <span className="text-3xl">📦</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {/* Title with bold qty prefix. */}
+                          <p className="font-medium text-foreground">
+                            <span className="font-bold">{item.quantity || 1} ×</span>{' '}
+                            {item.productName}
+                          </p>
+                          {item.brand && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                              {item.brand}
+                              {formatSizeLabel(item) ? ` • ${formatSizeLabel(item)}` : ''}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </Fragment>
               ))}
               {orderedSessionRows.found.length > 0 && (
                 <li className="px-4 py-2 bg-muted/30">
@@ -706,6 +767,17 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       )}
     </div>
   )
+}
+
+/**
+ * Pretty-print a category enum value for section headers
+ * (`'pet-food'` → `'Pet Food'`, `'produce'` → `'Produce'`).
+ */
+function formatCategoryLabel(cat: string): string {
+  return cat
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
 }
 
 /**
