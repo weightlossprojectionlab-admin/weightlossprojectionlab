@@ -466,7 +466,10 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
         toast.success(`✓ Added ${newItemsCount} item${newItemsCount > 1 ? 's' : ''} to shopping list!`)
       }
 
-      setActiveTab('recipe') // Switch back to recipe tab
+      // Switch to the shopping tab so the user lands on what they just
+      // added — easier to see linked vs new items at a glance, and the
+      // toast message references counts that match the visible list.
+      setActiveTab('shopping')
     } catch (error) {
       logger.error('Error adding to shopping list:', error as Error)
       toast.error('Failed to add items to shopping list')
