@@ -1719,15 +1719,21 @@ function LogMealContent() {
                     alt="Captured meal"
                     className="w-full h-64 object-cover rounded-lg"
                   />
-                  {analyzing && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
-                      <div className="text-white text-center">
-                        <Spinner size="lg" className="text-white mx-auto mb-2" />
-                        <p>{BRAND_TERMS.WPL_VISION} analyzing...</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
+                {/* Analysis status — placed BELOW the image rather than as an
+                    overlay. Bright food photos washed out the previous
+                    50%-black overlay's white text, leaving the status
+                    unreadable. A standalone status panel has reliable
+                    contrast regardless of what's in the image, and the user
+                    can still see what they captured while AI analyzes. */}
+                {analyzing && (
+                  <div className="flex items-center justify-center gap-3 bg-primary-light dark:bg-purple-900/20 border border-primary-light dark:border-purple-700 rounded-lg p-3">
+                    <Spinner size="sm" className="text-primary" />
+                    <p className="text-sm text-primary font-medium">
+                      {BRAND_TERMS.WPL_VISION} analyzing...
+                    </p>
+                  </div>
+                )}
 
                 {!analyzing && !aiAnalysis && (
                   <label className="btn btn-secondary w-full cursor-pointer">
