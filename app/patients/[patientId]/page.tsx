@@ -165,7 +165,11 @@ function PatientDetailContent() {
     patientId,
     autoFetch: true
   })
-  const { createAppointment } = useAppointments()
+  // Only consume the create mutation — autoFetch:false skips the
+  // redundant /api/appointments GET. DailyVitalsSummary already
+  // fetches the patient-scoped list separately; firing two parallel
+  // requests on mount was burning the per-user rate limit.
+  const { createAppointment } = useAppointments({ autoFetch: false })
   const { providers, refetch: refetchProviders } = useProviders()
   const { createSchedule } = useVitalSchedules({ patientId, autoFetch: false })
 
