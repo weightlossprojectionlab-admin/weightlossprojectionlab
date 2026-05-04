@@ -699,6 +699,63 @@ export async function markItemAsConsumed(
 /**
  * Mark item as purchased
  */
+/**
+ * Mark a shopping_items row as "found in cart" during active
+ * in-store shopping (Stage 2a). The user has the item in their
+ * cart but hasn't checked out yet — it's NOT in inventory.
+ *
+ * Distinct from markItemAsPurchased, which is the post-checkout
+ * "into inventory" write. Splitting these mirrors how shopping
+ * actually works: scan-at-shelf and pay-at-register are different
+ * events, and items can be removed from a cart before checkout.
+ *
+ * Light update — only foundInStore + purchasedBy + qty get touched.
+ * needed stays true so a back-out is possible (cancelled trip
+ * resets foundInStore; abandoned trip leaves it set so the next
+ * session resumes where the user left off).
+ */
+export async function markItemAsFoundInStore(
+  itemId: string,
+  options: {
+    quantity?: number
+    purchasedBy?: string
+  } = {}
+): Promise<void> {
+  try {
+    const updates: Partial<ShoppingItem> & { updatedAt: Date } = {
+      foundInStore: true,
+      updatedAt: new Date(),
+    }
+    if (options.quantity !== undefined) {
+      updates.quantity = options.quantity
+    }
+    if (options.purchasedBy) {
+      updates.purchasedBy = options.purchasedBy
+    }
+    await updateShoppingItem(itemId, updates)
+  } catch (error) {
+    logger.error('[ShoppingOps] Error marking item as found in store', error as Error, { itemId })
+    throw error
+  }
+}
+
+/**
+ * Reset foundInStore on a row — used when a trip is cancelled and
+ * the items go back into the still-needed pool. Clears the in-cart
+ * flag without touching needed / inStock / quantity.
+ */
+export async function clearItemFoundInStore(itemId: string): Promise<void> {
+  try {
+    await updateShoppingItem(itemId, {
+      foundInStore: false,
+      updatedAt: new Date(),
+    })
+  } catch (error) {
+    logger.error('[ShoppingOps] Error clearing foundInStore', error as Error, { itemId })
+    throw error
+  }
+}
+
 export async function markItemAsPurchased(
   itemId: string,
   options: {

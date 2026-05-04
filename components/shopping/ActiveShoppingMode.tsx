@@ -49,6 +49,7 @@ import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import {
   markItemAsPurchased,
+  markItemAsFoundInStore,
   linkBarcodeToManualItem,
   logStoreVisit,
   deleteShoppingItem,
@@ -57,7 +58,6 @@ import { addProductImage } from '@/lib/product-image-upload'
 import { barcodeVariants } from '@/lib/barcode-variants'
 import type { ShoppingItem } from '@/types/shopping'
 import { ScanItemCard } from './ScanItemCard'
-import { PurchaseConfirmation } from './PurchaseConfirmation'
 
 const BarcodeScanner = dynamic(
   () => import('@/components/BarcodeScanner').then((mod) => ({ default: mod.BarcodeScanner })),
@@ -94,12 +94,11 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   const [summaryStoreName, setSummaryStoreName] = useState('')
   const [summaryRemoveSkipped, setSummaryRemoveSkipped] = useState(false)
   const [summarySaving, setSummarySaving] = useState(false)
-  // PurchaseConfirmation modal — bulk-mark fallback for users who
-  // shopped without scanning. Reuses the existing component as-is
-  // (DRY) rather than re-implementing checkbox-multi-select logic
-  // inside ActiveShoppingMode. Only one items-view is on screen at
-  // a time (modal swap), so no list duplication.
-  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
+  // Gating checkbox on the trip summary — Confirm Purchase only
+  // enables once the shopper confirms checkout completed at the
+  // register. Without this, items could land in inventory before
+  // the user actually paid for them.
+  const [transactionConfirmed, setTransactionConfirmed] = useState(false)
   // List view tab — TO-PICK (still need to find) | IN-REVIEW
   // (parked items pending a decision: out-of-stock, brand mismatch
   // the shopper wants to think on, items being messaged about) |
@@ -123,7 +122,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       setSummaryOpen(false)
       setSummaryStoreName('')
       setSummaryRemoveSkipped(false)
-      setBulkConfirmOpen(false)
+      setTransactionConfirmed(false)
       setListTab('to-pick')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -226,15 +225,17 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
 
       if (opts?.linkedBarcode) {
         // Branch (b) or (c): write the barcode onto the row first,
-        // then mark purchased. The link helper also upserts the
-        // catalog stub so the alias resolver finds it next scan.
+        // then mark found-in-cart. The link helper also upserts
+        // the catalog stub so the alias resolver finds it next scan.
         await linkBarcodeToManualItem(activeItem.id, opts.linkedBarcode)
       }
 
-      await markItemAsPurchased(activeItem.id, {
+      // Scan-at-shelf is "found in cart" — NOT yet in inventory.
+      // The transition to inStock + needed:false fires from the
+      // trip summary's Confirm Purchase action after the user
+      // confirms checkout cleared at the register.
+      await markItemAsFoundInStore(activeItem.id, {
         quantity: activeQuantity,
-        unit: activeItem.unit,
-        foundInStore: true,
         purchasedBy: userId,
       })
 
@@ -248,10 +249,10 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
         // Best-effort feedback; never block.
       }
 
-      toast.success(`Got it: ${activeItem.productName}`)
+      toast.success(`In cart: ${activeItem.productName}`)
       closeItem()
     } catch (err) {
-      logger.error('[ActiveShopping] mark-purchased failed', err as Error, {
+      logger.error('[ActiveShopping] mark-found failed', err as Error, {
         itemId: activeItem.id,
       })
       toast.error('Could not mark item as found. Try again.')
@@ -374,14 +375,49 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
     setSummaryOpen(true)
   }
 
-  // Save & exit: log the StoreVisit, optionally remove skipped
-  // items, then router.back via onClose. Saving never blocks the
-  // exit — even if the visit log fails, the user gets out cleanly
-  // and the next session still starts fresh.
-  const handleSaveAndExit = async () => {
+  // Confirm purchase: receives the trip's found-in-cart items
+  // into inventory (sets inStock, needed:false, lastPurchased,
+  // appends purchaseHistory via markItemAsPurchased — full
+  // inventory write). Logs the StoreVisit, optionally removes
+  // skipped items, then router.back via onClose. Inventory writes
+  // never block the exit — even if a few fail, the user gets out
+  // cleanly; partial state is recoverable.
+  const handleConfirmPurchase = async () => {
     setSummarySaving(true)
     try {
       const userId = auth.currentUser?.uid
+
+      // 1) Move foundInStore items into inventory. Each call sets
+      //    inStock:true, needed:false, lastPurchased, and appends
+      //    a purchaseHistory entry. Done sequentially so a single
+      //    failure doesn't stop the rest.
+      const foundFailures: string[] = []
+      for (const it of orderedSessionRows.found) {
+        try {
+          await markItemAsPurchased(it.id, {
+            quantity: it.quantity,
+            unit: it.unit,
+            store: summaryStoreName.trim() || undefined,
+            foundInStore: true,
+            purchasedBy: userId,
+          })
+        } catch (err) {
+          logger.warn('[ActiveShopping] confirm-purchase write failed', {
+            itemId: it.id,
+            error: (err as Error).message,
+          })
+          foundFailures.push(it.productName)
+        }
+      }
+      if (foundFailures.length > 0) {
+        toast.error(
+          `Couldn't update ${foundFailures.length} item${
+            foundFailures.length > 1 ? 's' : ''
+          } in inventory`
+        )
+      }
+
+      // 2) Log the trip.
       if (userId) {
         const foundBarcodes = orderedSessionRows.found
           .map((it) => it.barcode)
@@ -390,9 +426,9 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
           await logStoreVisit(
             userId,
             summaryStoreName.trim() || 'Unspecified store',
-            // Geolocation is not in scope for Stage 2a — placeholder
+            // Geolocation not in scope for Stage 2a — placeholder
             // {0,0} keeps the StoreVisit type satisfied. Stage 2d
-            // (per-store layout learning) will collect real coords.
+            // collects real coords for per-store layout learning.
             { latitude: 0, longitude: 0 },
             foundBarcodes
           )
@@ -403,6 +439,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
         }
       }
 
+      // 3) Optionally remove skipped (still-needed, not-found) items.
       if (summaryRemoveSkipped) {
         const stillNeeded = orderedSessionRows.pending.filter(
           (it) => it.needed && !it.foundInStore
@@ -421,12 +458,16 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
         }
         if (failures.length > 0) {
           toast.error(
-            `Couldn't remove ${failures.length} item${failures.length > 1 ? 's' : ''}`
+            `Couldn't remove ${failures.length} skipped item${
+              failures.length > 1 ? 's' : ''
+            }`
           )
         }
       }
 
-      toast.success(`Trip saved — ${foundCount} item${foundCount > 1 ? 's' : ''} found`)
+      toast.success(
+        `Purchase confirmed — ${foundCount} item${foundCount > 1 ? 's' : ''} added to inventory`
+      )
     } finally {
       setSummarySaving(false)
       onClose()
@@ -449,33 +490,21 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
           </p>
         </div>
         {!summaryOpen && (
-          <div className="flex items-center gap-2">
-            {orderedSessionRows.pending.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setBulkConfirmOpen(true)}
-                className="px-3 py-2 bg-muted text-foreground rounded-lg text-sm font-medium active:bg-muted/80"
-              >
-                Mark multiple
-              </button>
-            )}
-            {/* Chat icon → in-app messaging entry point (PRD-in-
-                app-chat.md, Phase 1). Today fires a placeholder
-                toast; real chat lights up when chat ships. The
-                trip-end gesture has moved to a Wrap up trip CTA
-                in the DONE tab (and the all-found empty state),
-                so the header is utility-only. */}
-            <button
-              type="button"
-              onClick={() =>
-                toast('Family chat coming soon', { icon: '💬' })
-              }
-              className="p-2 bg-muted text-foreground rounded-lg active:bg-muted/80"
-              aria-label="Open family chat"
-            >
-              <ChatBubbleOvalLeftIcon className="w-5 h-5" />
-            </button>
-          </div>
+          /* Header is utility-only: the in-app chat icon. The
+              trip-end gesture lives in the body (Wrap up trip CTA
+              on the all-found state and at the top of the DONE
+              tab). The previous Mark multiple button has been
+              removed — the unified Confirm Purchase flow on the
+              trip summary now covers what bulk-mark used to do,
+              with a real "purchase actually happened" gate. */
+          <button
+            type="button"
+            onClick={() => toast('Family chat coming soon', { icon: '💬' })}
+            className="p-2 bg-muted text-foreground rounded-lg active:bg-muted/80"
+            aria-label="Open family chat"
+          >
+            <ChatBubbleOvalLeftIcon className="w-5 h-5" />
+          </button>
         )}
       </header>
 
@@ -539,15 +568,41 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
             </div>
           )}
 
+          {/* Transaction confirmation gate — Confirm Purchase
+              only enables once the shopper says checkout cleared
+              at the register. Without this, items would land in
+              inventory before the purchase was actually completed
+              (over-budget item put back, brand swap, etc.). */}
+          <div className="px-4 py-4 border-b border-border">
+            <label className="flex items-start gap-3 text-sm text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={transactionConfirmed}
+                onChange={(e) => setTransactionConfirmed(e.target.checked)}
+                className="w-5 h-5 rounded border-border mt-0.5"
+              />
+              <span>
+                I&apos;ve completed my purchase at the register.
+                <span className="block text-xs text-muted-foreground mt-1">
+                  Found items will be added to your inventory.
+                </span>
+              </span>
+            </label>
+          </div>
+
           {/* Action buttons */}
           <div className="px-4 py-4 space-y-2">
             <button
               type="button"
-              onClick={handleSaveAndExit}
-              disabled={summarySaving}
+              onClick={handleConfirmPurchase}
+              disabled={summarySaving || !transactionConfirmed}
               className="w-full px-6 py-3 bg-success text-white rounded-lg font-semibold disabled:opacity-50 active:bg-success-hover"
             >
-              {summarySaving ? 'Saving…' : 'Save & exit'}
+              {summarySaving
+                ? 'Adding to inventory…'
+                : `Confirm Purchase${
+                    foundCount > 0 ? ` (${foundCount} item${foundCount > 1 ? 's' : ''})` : ''
+                  }`}
             </button>
             <button
               type="button"
@@ -875,37 +930,6 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       )}
 
       {photoCaptureOpen /* file picker is invisible; this is a placeholder for future inline UI */}
-
-      {/* Bulk-confirm modal — wraps PurchaseConfirmation as-is.
-          DRY: same component, same backend (/api/shopping/confirm-
-          purchases), no parallel implementation. Items aren't
-          duplicated on screen because this is a modal swap, not an
-          inline render. */}
-      {bulkConfirmOpen && (
-        <div className="fixed inset-0 z-[60] bg-background flex flex-col overflow-y-auto">
-          <header className="px-4 py-3 border-b border-border flex items-center justify-between bg-card sticky top-0">
-            <h2 className="text-base font-bold text-foreground">Mark multiple as purchased</h2>
-            <button
-              type="button"
-              onClick={() => setBulkConfirmOpen(false)}
-              className="text-foreground text-2xl leading-none w-8 h-8 flex items-center justify-center"
-              aria-label="Close bulk confirm"
-            >
-              ✕
-            </button>
-          </header>
-          <div className="flex-1 p-4">
-            <PurchaseConfirmation
-              pendingItems={orderedSessionRows.pending}
-              onConfirm={() => {
-                // useShopping is realtime — items will reflect via
-                // the live subscription. Just close the modal.
-                setBulkConfirmOpen(false)
-              }}
-            />
-          </div>
-        </div>
-      )}
     </div>
   )
 }
