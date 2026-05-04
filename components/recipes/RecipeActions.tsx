@@ -1,16 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { ShareIcon, ClipboardDocumentCheckIcon, SparklesIcon, FireIcon } from '@heroicons/react/24/outline'
 import { RecipeIntegrationButton } from '@/components/shopping/RecipeIntegrationButton'
 import { shareViaWebAPI, isWebShareSupported, generateShareContent } from '@/lib/social-share-utils'
-import { cookingSessionOperations } from '@/lib/firebase-operations'
-import { auth } from '@/lib/firebase'
-import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import type { RecipeIngredient } from '@/lib/shopping-diff'
+import type { MealSuggestion } from '@/lib/meal-suggestions'
+
+// Defer-load RecipeModal — it's heavy (image gen, share menus, timers)
+// and only used when the user clicks Start Cooking, which is rare on
+// the public recipe page. Mirrors how the dashboard loads it.
+const RecipeModal = dynamic(
+  () => import('@/components/ui/RecipeModal').then((mod) => ({ default: mod.RecipeModal })),
+  { ssr: false }
+)
 
 interface RecipeActionsProps {
   recipeId: string
@@ -21,16 +27,13 @@ interface RecipeActionsProps {
   hasSteps?: boolean
 
   /**
-   * Cooking-session prerequisites. Optional so callers that don't need
-   * the Start Cooking button (legacy callers) keep working unchanged;
-   * when present, we render the button and createCookingSession can
-   * fire with proper defaults instead of fake data.
+   * Full recipe payload — passed straight to RecipeModal when the user
+   * clicks Start Cooking. RecipeModal owns the cooking-session creation
+   * (duplicate-click guard, missing-ingredients block, recipe scaling,
+   * step-timer construction). Optional so legacy callers without a
+   * full MealSuggestion still render the other action buttons.
    */
-  servingSize?: number
-  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack'
-  macros?: { protein: number; carbs: number; fat: number; fiber: number }
-  /** Free-text ingredient strings (what the cooking session will pass through ingredient-matcher). */
-  ingredientTexts?: string[]
+  recipe?: MealSuggestion
 }
 
 export default function RecipeActions({
@@ -40,49 +43,12 @@ export default function RecipeActions({
   calories,
   prepTime,
   hasSteps = true,
-  servingSize,
-  mealType,
-  macros,
-  ingredientTexts,
+  recipe,
 }: RecipeActionsProps) {
-  const router = useRouter()
   const { isAdmin } = useAdminAuth()
   const [copied, setCopied] = useState(false)
   const [generating, setGenerating] = useState(false)
-  const [startingCooking, setStartingCooking] = useState(false)
-
-  const handleStartCooking = async () => {
-    if (!auth.currentUser) {
-      toast.error('Sign in to start cooking')
-      router.push('/auth')
-      return
-    }
-    setStartingCooking(true)
-    try {
-      // Build the cooking session payload. mealType defaults to 'dinner'
-      // when the recipe didn't specify one; servingSize defaults to 1.
-      // scaledIngredients carries the raw free-text strings — the
-      // session page passes them through checkIngredientsWithQuantities
-      // which parses {amount, unit, name} as best it can.
-      const session = await cookingSessionOperations.createCookingSession({
-        recipeId,
-        recipeName,
-        servingSize: servingSize ?? 1,
-        mealType: mealType ?? 'dinner',
-        scaledIngredients: ingredientTexts ?? ingredients.map((i) => i.name || ''),
-        scaledCalories: calories,
-        scaledMacros: macros ?? { protein: 0, carbs: 0, fat: 0, fiber: 0 },
-        stepTimers: [],
-        status: 'in-progress',
-      } as any)
-      router.push(`/cooking/${session.id}`)
-    } catch (err) {
-      logger.error('Failed to start cooking session', err as Error, { recipeId })
-      toast.error('Could not start cooking session')
-    } finally {
-      setStartingCooking(false)
-    }
-  }
+  const [showCookingModal, setShowCookingModal] = useState(false)
 
   const handleShare = async () => {
     const content = generateShareContent({
@@ -159,15 +125,16 @@ export default function RecipeActions({
         ingredients={ingredients}
         className="flex-1 min-w-[140px] justify-center py-3"
       />
-      <button
-        onClick={handleStartCooking}
-        disabled={startingCooking}
-        className="flex items-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
-        title="Start a cooking session — completing it will deduct ingredients from your kitchen inventory"
-      >
-        <FireIcon className="h-5 w-5" />
-        {startingCooking ? 'Starting…' : 'Start Cooking'}
-      </button>
+      {recipe && (
+        <button
+          onClick={() => setShowCookingModal(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors font-medium"
+          title="Start a cooking session — RecipeModal handles missing-ingredient checks, scaling, and inventory deduction on completion"
+        >
+          <FireIcon className="h-5 w-5" />
+          Start Cooking
+        </button>
+      )}
       <button
         onClick={handleShare}
         className="flex items-center gap-2 px-6 py-3 bg-card border-2 border-border text-foreground rounded-lg hover:border-primary hover:text-primary transition-colors font-medium"
@@ -188,6 +155,17 @@ export default function RecipeActions({
           <SparklesIcon className="h-5 w-5" />
           {generating ? 'Generating...' : 'Regenerate Recipe'}
         </button>
+      )}
+
+      {/* RecipeModal renders inline; it owns the cooking-session
+          creation flow including missing-ingredients block, recipe
+          scaling, and the redirect to /cooking/{id}. */}
+      {recipe && (
+        <RecipeModal
+          suggestion={recipe}
+          isOpen={showCookingModal}
+          onClose={() => setShowCookingModal(false)}
+        />
       )}
     </div>
   )

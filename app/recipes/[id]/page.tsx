@@ -277,7 +277,9 @@ export default async function RecipeDetailPage({ params }: PageProps) {
             )}
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons. Pass the full MealSuggestion as `recipe`
+              so RecipeActions can hand it off to RecipeModal for the
+              cooking-session flow (which is shared with /dashboard). */}
           <RecipeActions
             recipeId={recipe.id}
             recipeName={recipe.name}
@@ -285,13 +287,10 @@ export default async function RecipeDetailPage({ params }: PageProps) {
               name: text,
               quantity: 1,
             }))}
-            ingredientTexts={recipe.ingredients || []}
             calories={recipe.calories || 0}
             prepTime={recipe.prepTime || 30}
-            servingSize={recipe.servingSize || 1}
-            mealType={recipe.mealType}
-            macros={recipe.macros}
             hasSteps={!!recipe.recipeSteps?.length && recipe.recipeSteps.some((s: string) => s.trim().length > 10)}
+            recipe={recipe}
           />
         </div>
 
