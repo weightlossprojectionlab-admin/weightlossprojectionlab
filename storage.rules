@@ -61,6 +61,19 @@ service firebase.storage {
       allow delete: if isAuthenticated(); // Admin check should be in app logic
     }
 
+    // Product images (user-captured product photos that enrich the
+    // shared product_database catalog). Same trust model as the
+    // product name endpoint: any authenticated user can contribute,
+    // but the app-side write only attaches the URL when the catalog
+    // doc has no imageUrl yet (curated images are never overwritten).
+    // Public read because the image renders for every user who scans
+    // this UPC, not just the contributor.
+    match /products/{barcode}/{file} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isValidImage() && isValidImageSize();
+      allow delete: if isAuthenticated(); // Admin check in app logic
+    }
+
     // Patient documents (insurance cards, medical records, etc.)
     match /documents/{patientId}/{documentId} {
       allow read: if isAuthenticated();

@@ -29,7 +29,7 @@ import {
   increment,
   arrayUnion
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { db, auth } from './firebase'
 import type {
   ShoppingItem,
   QuantityUnit,
@@ -1690,4 +1690,71 @@ export async function addRecipeIngredientsToShoppingList(
   }
 
   return { newCount, linkedCount }
+}
+
+/**
+ * Link a scanned barcode to an existing shopping_items row that was
+ * created without one (a manual list entry, or a row whose barcode was
+ * never captured). Two effects:
+ *
+ *   1. Writes `barcode` onto the row so future reconciliations
+ *      (in-store scanning, inventory deduction, household sync)
+ *      can match by UPC instead of fuzzy product-name matching.
+ *   2. Upserts the product_database doc for this barcode by POSTing
+ *      to /api/products/[barcode]/name with the row's productName.
+ *      That endpoint runs the canonical alias-generation pipeline
+ *      (resolveProductDoc + barcodeVariants), gates curated names
+ *      from being overwritten, and records an edit_history entry.
+ *      Single source of truth — same path RenameProductModal uses.
+ *
+ * Surface-agnostic by design: invoked the same way from in-store
+ * shopping ("Yes, this is the manual entry, link it"), home
+ * inventory ("scan to repair a row that has no UPC"), and the
+ * shopping-list build flow ("scan an item I just added by name").
+ */
+export async function linkBarcodeToManualItem(
+  itemId: string,
+  barcode: string
+): Promise<void> {
+  const cleaned = (barcode || '').replace(/\D/g, '').trim()
+  if (!cleaned) {
+    throw new Error('Invalid barcode (no digits)')
+  }
+
+  const itemRef = doc(db, SHOPPING_ITEMS_COLLECTION, itemId)
+  const snap = await getDoc(itemRef)
+  if (!snap.exists()) {
+    throw new Error(`shopping_items/${itemId} not found`)
+  }
+  const row = snap.data() as ShoppingItem
+
+  // Update the row first — this is the primary success signal. Even
+  // if the catalog upsert below fails (rate limit, network), the row
+  // is correctly linked and future scans hit the alias resolver.
+  await updateDoc(itemRef, {
+    barcode: cleaned,
+    updatedAt: new Date(),
+  })
+
+  // Best-effort catalog upsert. Swallowed on failure so a transient
+  // network blip doesn't undo the row's barcode link.
+  try {
+    const token = await auth.currentUser?.getIdToken()
+    if (!token) return
+
+    await fetch(`/api/products/${encodeURIComponent(cleaned)}/name`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ name: row.productName }),
+    })
+  } catch (err) {
+    logger.warn('[linkBarcodeToManualItem] catalog upsert failed', {
+      itemId,
+      barcode: cleaned,
+      error: (err as Error).message,
+    })
+  }
 }
