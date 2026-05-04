@@ -26,6 +26,7 @@ import {
   checkIngredientsAgainstInventory,
   checkIngredientsWithQuantities,
   checkStructuredIngredients,
+  filterRecipeRelevantItems,
   calculateRecipeReadiness,
   type IngredientMatchResult
 } from '@/lib/ingredient-matcher'
@@ -113,10 +114,18 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   // Check ingredients against inventory when modal opens
   useEffect(() => {
     if (isOpen && suggestion.ingredients && allInventoryItems.length > 0) {
+      // Strip pet-food / pet-supplies (and any future non-recipe
+      // categories) from the inventory before the matcher sees it.
+      // Without this, a recipe ingredient like "tofu" can fuzzy-match
+      // a pet product like "Crisp Cod Fish Skins" via tokenization
+      // overlap — the matcher has no concept of category. Filtering
+      // at the boundary fixes this for every matcher call below.
+      const recipeRelevantItems = filterRecipeRelevantItems(allInventoryItems)
+
       // Legacy simple matching (for backward compatibility)
       const matches = checkIngredientsAgainstInventory(
         suggestion.ingredients,
-        allInventoryItems
+        recipeRelevantItems
       )
       setInventoryMatches(matches)
 
@@ -127,8 +136,8 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
       // /admin/recipes already curated. Falls back to the legacy
       // text path for recipes that haven't been migrated.
       const quantityResults = suggestion.ingredientsV2 && suggestion.ingredientsV2.length > 0
-        ? checkStructuredIngredients(suggestion.ingredientsV2, allInventoryItems)
-        : checkIngredientsWithQuantities(suggestion.ingredients, allInventoryItems)
+        ? checkStructuredIngredients(suggestion.ingredientsV2, recipeRelevantItems)
+        : checkIngredientsWithQuantities(suggestion.ingredients, recipeRelevantItems)
       setIngredientResults(quantityResults)
 
       // Auto-check ingredients we have enough of

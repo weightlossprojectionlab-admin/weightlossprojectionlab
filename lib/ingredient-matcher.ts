@@ -6,7 +6,7 @@
  * Now with quantity-aware matching!
  */
 
-import type { ShoppingItem, QuantityUnit } from '@/types/shopping'
+import type { ShoppingItem, QuantityUnit, ProductCategory } from '@/types/shopping'
 import { parseIngredient } from './ingredient-parser'
 import { hasEnough, calculateDeficit, formatQuantityComparison, areUnitsCompatible } from './unit-converter'
 
@@ -338,6 +338,37 @@ export function checkIngredientsWithQuantities(
   return ingredients.map(ingredient =>
     matchIngredientWithQuantity(ingredient, inventoryItems)
   )
+}
+
+/**
+ * Categories whose items must be excluded when matching recipe
+ * ingredients. Pet food and pet supplies live alongside human food in
+ * product_database (the catalog is shared) but a recipe for tofu must
+ * never match a bag of fish skins or any other pet item — fuzzy text
+ * matching has no concept of category, so a pet product whose name
+ * shares a substring with a recipe ingredient (e.g. "Crisp Cod Fish
+ * Skins" overlapping "tofu" via tokenization noise) gets surfaced as
+ * a "have" match. Filtering these out before the matcher sees them
+ * fixes the issue at the boundary instead of patching the fuzzy
+ * algorithm.
+ *
+ * Add categories here when new non-recipe-relevant ones land (paper
+ * goods, cleaning supplies, etc.).
+ */
+export const EXCLUDED_RECIPE_CATEGORIES: ReadonlyArray<ProductCategory> = [
+  'pet-food',
+  'pet-supplies',
+] as const
+
+/**
+ * Strip non-recipe-relevant items from an inventory list before
+ * passing to any matcher. Single source of truth for "what can be a
+ * recipe ingredient" — every caller that feeds inventory to the
+ * matcher should run input through this first.
+ */
+export function filterRecipeRelevantItems(items: ShoppingItem[]): ShoppingItem[] {
+  const excluded = new Set<ProductCategory>(EXCLUDED_RECIPE_CATEGORIES)
+  return items.filter((it) => !excluded.has(it.category))
 }
 
 /**
