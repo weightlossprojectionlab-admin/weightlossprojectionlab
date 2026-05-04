@@ -17,6 +17,22 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
   const [isCompleted, setIsCompleted] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
+  // When the parent passes a new `duration` (e.g., user moved to the
+  // next cooking step which has its own duration), reset the timer
+  // state so the panel reflects the new step. Without this, useState
+  // captures the initial duration on mount and ignores prop changes —
+  // user reported seeing a stale "7 min" on a step labeled "2-3
+  // minutes" because the previous step's duration carried over.
+  useEffect(() => {
+    setTimeLeft(duration)
+    setIsRunning(autoStart)
+    setIsCompleted(false)
+    // autoStart is intentionally a stable input (set once at mount in
+    // practice); we want the reset to fire only when the duration
+    // actually changes, not on every parent re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duration])
+
   useEffect(() => {
     if (!isRunning || isCompleted) return
 
