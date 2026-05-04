@@ -110,11 +110,11 @@ export function ScanItemCard({
 
   return (
     <div className="flex flex-col bg-card rounded-lg border border-border overflow-hidden">
-      {/* Header bar — X close (left), chat-icon placeholder (right).
-          The chat icon is a deliberate visual reservation for the
-          in-app chat feature (PRD-in-app-chat.md, Phase 1) — wired
-          when chat ships, decorative for now. */}
-      <div className="px-4 py-3 flex items-center justify-between">
+      {/* Header bar — X close only. Chat lives in the parent's
+          navbar (ActiveShoppingMode header) so we don't duplicate
+          the affordance; the per-item card delegates to "Message
+          <member>" in the link-style action stack below. */}
+      <div className="px-4 py-3 flex items-center">
         <button
           type="button"
           onClick={onCancel}
@@ -124,9 +124,6 @@ export function ScanItemCard({
         >
           ✕
         </button>
-        <span className="text-muted-foreground text-xl" aria-hidden>
-          💬
-        </span>
       </div>
 
       {/* Image — centered, capped height. Tap to enlarge fullscreen. */}
@@ -239,7 +236,7 @@ export function ScanItemCard({
           entirely when none are active. */}
       {(onCheckExpiration ||
         onCantFindItem ||
-        (forMember && onMessageFor) ||
+        onMessageFor ||
         (showAddPhoto && onPhotoRequested)) && (
         <div className="px-4 pb-4 border-t border-border pt-3 flex flex-col items-start gap-3">
           {onCheckExpiration && (
@@ -262,14 +259,14 @@ export function ScanItemCard({
               Can&apos;t find item
             </button>
           )}
-          {forMember && onMessageFor && (
+          {onMessageFor && (
             <button
               type="button"
               onClick={onMessageFor}
               disabled={disabled}
               className="text-sm font-medium text-primary disabled:opacity-50"
             >
-              Message {forMember.name}
+              Message {forMember?.name ?? 'family'}
             </button>
           )}
           {showAddPhoto && onPhotoRequested && (

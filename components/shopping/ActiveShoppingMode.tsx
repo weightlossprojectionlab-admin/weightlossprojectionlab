@@ -44,7 +44,7 @@
 import { Fragment, useState, useMemo, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
-import { ShoppingCartIcon } from '@heroicons/react/24/outline'
+import { ChatBubbleOvalLeftIcon } from '@heroicons/react/24/outline'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import {
@@ -459,18 +459,21 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                 Mark multiple
               </button>
             )}
-            {/* Cart icon = "wrap up the trip" gesture. Replaces the
-                text "End" button — more iconic, smaller footprint,
-                doesn't compete with the Mark multiple button for
-                width on narrow phones. Same handleEndPressed
-                handler (opens trip summary or exits if 0 found). */}
+            {/* Chat icon → in-app messaging entry point (PRD-in-
+                app-chat.md, Phase 1). Today fires a placeholder
+                toast; real chat lights up when chat ships. The
+                trip-end gesture has moved to a Wrap up trip CTA
+                in the DONE tab (and the all-found empty state),
+                so the header is utility-only. */}
             <button
               type="button"
-              onClick={handleEndPressed}
+              onClick={() =>
+                toast('Family chat coming soon', { icon: '💬' })
+              }
               className="p-2 bg-muted text-foreground rounded-lg active:bg-muted/80"
-              aria-label="Wrap up trip"
+              aria-label="Open family chat"
             >
-              <ShoppingCartIcon className="w-5 h-5" />
+              <ChatBubbleOvalLeftIcon className="w-5 h-5" />
             </button>
           </div>
         )}
@@ -598,9 +601,17 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
               // state-transition lands with the out-of-stock flow.
               toast('Out-of-stock flow coming in Stage 2b', { icon: '⏳' })
             }}
-            // forMember + onMessageFor stay undefined — Phase 3
-            // populates forPatientId on rows; in-app chat (PRD-in-
-            // app-chat.md, Phase 1) wires the message handler.
+            onMessageFor={() => {
+              // In-app chat (PRD-in-app-chat.md, Phase 1) wires the
+              // real handler — context payload would include
+              // sessionId, itemId, and the family member this row
+              // is for. Today: placeholder toast so the link is
+              // discoverable.
+              toast('Family chat coming soon', { icon: '💬' })
+            }}
+            // forMember stays undefined for now → Message link
+            // renders as "Message family". Once Phase 3 populates
+            // forPatientId on rows, this becomes "Message <name>".
             disabled={submitting}
           />
         </div>
@@ -657,9 +668,17 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
 
               {listTab === 'to-pick' ? (
                 orderedSessionRows.pending.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">
-                    <p>All items found 🎉</p>
-                    <p className="text-xs mt-1">Tap End to wrap up the trip.</p>
+                  <div className="p-8 text-center">
+                    <p className="text-foreground text-lg font-medium">
+                      All items found 🎉
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleEndPressed}
+                      className="mt-4 px-6 py-3 bg-success text-white rounded-lg font-semibold active:bg-success-hover"
+                    >
+                      Wrap up trip
+                    </button>
                   </div>
                 ) : (
                   <ul className="divide-y divide-border">
@@ -738,8 +757,22 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                   <p className="text-xs mt-1">Switch to To-Pick to start scanning.</p>
                 </div>
               ) : (
-                <ul className="divide-y divide-border">
-                  {orderedSessionRows.found.map((item) => (
+                <>
+                  {/* Wrap up trip CTA at the top of the DONE tab —
+                      the natural finish-line moment. Same handler as
+                      the all-found empty state on TO-PICK. */}
+                  <div className="px-4 py-3 border-b border-border">
+                    <button
+                      type="button"
+                      onClick={handleEndPressed}
+                      className="w-full px-6 py-3 bg-success text-white rounded-lg font-semibold active:bg-success-hover"
+                    >
+                      Wrap up trip ({orderedSessionRows.found.length}{' '}
+                      {orderedSessionRows.found.length === 1 ? 'item' : 'items'})
+                    </button>
+                  </div>
+                  <ul className="divide-y divide-border">
+                    {orderedSessionRows.found.map((item) => (
                     <li
                       key={item.id}
                       className="px-4 py-3 flex items-center gap-3 opacity-60"
@@ -764,7 +797,8 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                       <span className="text-success">✓</span>
                     </li>
                   ))}
-                </ul>
+                  </ul>
+                </>
               )}
             </>
           )}
