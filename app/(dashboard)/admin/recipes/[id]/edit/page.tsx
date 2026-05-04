@@ -129,7 +129,7 @@ export default function EditRecipePage() {
       setGenerating(false)
     }
   }
-  const [initialData, setInitialData] = useState<Partial<RecipeFormData> & { existingImageUrls?: string[] } | undefined>(undefined)
+  const [initialData, setInitialData] = useState<Partial<RecipeFormData> & { existingImageUrls?: string[]; aiNutrition?: { calories: number; protein: number; carbs: number; fat: number; fiber: number } } | undefined>(undefined)
   const [recipeFetchName, setRecipeFetchName] = useState('')
 
   useEffect(() => {

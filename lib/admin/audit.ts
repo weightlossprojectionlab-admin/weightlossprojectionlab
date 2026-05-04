@@ -17,6 +17,9 @@ export type AdminAction =
   | 'user_delete'
   | 'user_export'
   | 'user_edit'
+  | 'user_update_name'
+  // Patient actions
+  | 'patient_update_name'
   // Caregiver actions
   | 'add_caregiver_manual'
   | 'remove_caregiver'
@@ -53,6 +56,7 @@ export type AdminAction =
   | 'platform_setting_updated'
   // Tenant / franchise actions
   | 'tenant_create'
+  | 'tenant_update'
   | 'tenant_payment_link_sent'
   | 'tenant_branding_updated'
   | 'tenant_family_attached'   // Phase B: franchise admin manually attaches a family
@@ -73,7 +77,7 @@ export interface AdminAuditLog {
   adminUid: string
   adminEmail: string
   action: AdminAction
-  targetType: 'user' | 'recipe' | 'case' | 'decision' | 'coach' | 'perk' | 'system' | 'tenant'
+  targetType: 'user' | 'patient' | 'recipe' | 'case' | 'decision' | 'coach' | 'perk' | 'system' | 'tenant'
   targetId: string
   /** When the action was performed against a tenant, the tenantId for queryability. */
   tenantId?: string

@@ -353,7 +353,7 @@ export default function ContentStrategy() {
                           )}
                         </div>
                         <button
-                          onClick={() => { setShowMediaPicker(`post-${i}`); setPickerPostData(item) }}
+                          onClick={() => setShowMediaPicker(`post-${i}`)}
                           className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
                         >
                           <PhotoIcon className="h-3.5 w-3.5" />

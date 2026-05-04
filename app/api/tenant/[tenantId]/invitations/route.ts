@@ -162,8 +162,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
         })
       })
     } catch (err) {
-      if (inviteError) {
-        return NextResponse.json({ error: inviteError.message }, { status: inviteError.status })
+      // TS doesn't track the closure mutation above, so the local
+      // variable still has type `null` at this point. Cast through to
+      // restore the wider type for the conditional below.
+      const captured = inviteError as InviteError | null
+      if (captured) {
+        return NextResponse.json({ error: captured.message }, { status: captured.status })
       }
       throw err
     }

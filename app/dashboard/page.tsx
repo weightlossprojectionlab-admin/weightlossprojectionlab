@@ -436,7 +436,7 @@ function DashboardContent() {
         )}
 
         {/* Franchise Management Consent Banner */}
-        {userProfile?.managedBy?.length > 0 && !userProfile?.managedByConsented && (
+        {userProfile && (userProfile.managedBy?.length ?? 0) > 0 && !userProfile.managedByConsented && (
           <ManagedByBanner
             userId={userProfile.userId || auth?.currentUser?.uid || ''}
             managedBy={userProfile.managedBy}
