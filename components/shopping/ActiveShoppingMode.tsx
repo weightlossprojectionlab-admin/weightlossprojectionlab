@@ -99,12 +99,14 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   // inside ActiveShoppingMode. Only one items-view is on screen at
   // a time (modal swap), so no list duplication.
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
-  // List view tab — TO-PICK (still need to find) | DONE (already
-  // marked found this trip). No IN-REVIEW because there's no
-  // separate party reviewing decisions in our single-shopper
-  // single-list model; the shopper is also the orderer and makes
-  // calls in real time via the per-item card / toast / confirm modal.
-  const [listTab, setListTab] = useState<'to-pick' | 'done'>('to-pick')
+  // List view tab — TO-PICK (still need to find) | IN-REVIEW
+  // (parked items pending a decision: out-of-stock, brand mismatch
+  // the shopper wants to think on, items being messaged about) |
+  // DONE (already marked found this trip). IN-REVIEW state on
+  // items lights up in Stage 2b (out-of-stock / substitution flow);
+  // the tab structure is in place now so it doesn't appear later
+  // as a surprise when the data starts populating.
+  const [listTab, setListTab] = useState<'to-pick' | 'in-review' | 'done'>('to-pick')
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const photoInputRef = useRef<HTMLInputElement | null>(null)
@@ -586,13 +588,18 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
             </div>
           ) : (
             <>
-              {/* Tab strip — TO-PICK / DONE. No IN-REVIEW: there's
-                  no separate-party review state in our model. */}
+              {/* Tab strip — TO-PICK / IN-REVIEW / DONE. IN-REVIEW
+                  is the "park for a decision" workspace: out-of-
+                  stock items pending a sub, brand mismatches the
+                  shopper wants to think on, items being messaged
+                  about. The data populating it lives in Stage 2b;
+                  the tab structure ships now so it's not a surprise
+                  later. */}
               <div className="flex border-b border-border bg-card sticky top-0 z-10">
                 <button
                   type="button"
                   onClick={() => setListTab('to-pick')}
-                  className={`flex-1 px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors ${
+                  className={`flex-1 px-3 py-3 text-xs font-semibold uppercase tracking-wide transition-colors ${
                     listTab === 'to-pick'
                       ? 'text-success border-b-2 border-success'
                       : 'text-muted-foreground border-b-2 border-transparent'
@@ -602,8 +609,19 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                 </button>
                 <button
                   type="button"
+                  onClick={() => setListTab('in-review')}
+                  className={`flex-1 px-3 py-3 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                    listTab === 'in-review'
+                      ? 'text-success border-b-2 border-success'
+                      : 'text-muted-foreground border-b-2 border-transparent'
+                  }`}
+                >
+                  In Review
+                </button>
+                <button
+                  type="button"
                   onClick={() => setListTab('done')}
-                  className={`flex-1 px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors ${
+                  className={`flex-1 px-3 py-3 text-xs font-semibold uppercase tracking-wide transition-colors ${
                     listTab === 'done'
                       ? 'text-success border-b-2 border-success'
                       : 'text-muted-foreground border-b-2 border-transparent'
@@ -672,6 +690,24 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                     ))}
                   </ul>
                 )
+              ) : listTab === 'in-review' ? (
+                /* IN-REVIEW: items the shopper marked out-of-
+                   stock at the store, waiting on a family member
+                   to decide whether to suggest a replacement or
+                   remove the item from the list. Two-party flow
+                   (shopper + family admin) — distinct from
+                   real-time decisions the shopper makes alone in
+                   the per-item card. The data + actions populate
+                   in Stage 2b. */
+                <div className="p-8 text-center text-muted-foreground">
+                  <p>Nothing in review.</p>
+                  <p className="text-xs mt-2 max-w-xs mx-auto leading-relaxed">
+                    When you can&apos;t find an item, marking it
+                    out-of-stock will park it here while a family
+                    member suggests a replacement or removes it
+                    from the list.
+                  </p>
+                </div>
               ) : orderedSessionRows.found.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   <p>Nothing marked found yet.</p>
