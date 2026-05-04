@@ -25,6 +25,7 @@ import { useShopping } from '@/hooks/useShopping'
 import {
   checkIngredientsAgainstInventory,
   checkIngredientsWithQuantities,
+  checkStructuredIngredients,
   calculateRecipeReadiness,
   type IngredientMatchResult
 } from '@/lib/ingredient-matcher'
@@ -119,11 +120,15 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
       )
       setInventoryMatches(matches)
 
-      // New quantity-aware matching
-      const quantityResults = checkIngredientsWithQuantities(
-        suggestion.ingredients,
-        allInventoryItems
-      )
+      // Quantity-aware matching. Prefer the structured path
+      // (ingredientsV2 from /admin/recipes — barcode-linked to
+      // product_database) when present; the matcher does exact
+      // barcode lookups instead of free-text parsing, which is what
+      // /admin/recipes already curated. Falls back to the legacy
+      // text path for recipes that haven't been migrated.
+      const quantityResults = suggestion.ingredientsV2 && suggestion.ingredientsV2.length > 0
+        ? checkStructuredIngredients(suggestion.ingredientsV2, allInventoryItems)
+        : checkIngredientsWithQuantities(suggestion.ingredients, allInventoryItems)
       setIngredientResults(quantityResults)
 
       // Auto-check ingredients we have enough of
@@ -135,7 +140,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
       })
       setHaveIngredients(enoughIndices)
     }
-  }, [isOpen, suggestion.ingredients, allInventoryItems])
+  }, [isOpen, suggestion.ingredients, suggestion.ingredientsV2, allInventoryItems])
 
   // Cleanup on unmount
   useEffect(() => {
