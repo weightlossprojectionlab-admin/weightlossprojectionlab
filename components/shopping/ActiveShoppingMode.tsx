@@ -319,11 +319,13 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
               productName: activeItem.productName,
               brand: activeItem.brand,
               imageUrl: activeItem.imageUrl,
+              sizeLabel: formatSizeLabel(activeItem),
               secondaryLabel:
                 activeItem.lastPurchased
                   ? `Last bought ${formatDateAgo(activeItem.lastPurchased)}`
                   : undefined,
             }}
+            infoRows={buildInfoRows(activeItem)}
             quantity={activeQuantity}
             onQuantityChange={setActiveQuantity}
             onScanRequested={() => setScannerOpen(true)}
@@ -355,7 +357,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                     onClick={() => openItem(item)}
                     className="w-full px-4 py-3 flex items-center gap-3 text-left active:bg-muted"
                   >
-                    <div className="w-12 h-12 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
                       {item.imageUrl ? (
                         <img
                           src={item.imageUrl}
@@ -363,22 +365,22 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                           className="w-full h-full object-contain"
                         />
                       ) : (
-                        <span className="text-2xl">📦</span>
+                        <span className="text-3xl">📦</span>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">
+                      {/* Title with bold qty prefix — Instacart
+                          pattern, our typography tokens. */}
+                      <p className="font-medium text-foreground">
+                        <span className="font-bold">{item.quantity || 1} ×</span>{' '}
                         {item.productName}
                       </p>
-                      {item.brand && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {item.brand}
+                      {(item.brand || item.category) && (
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          {[item.brand, item.category].filter(Boolean).join(' • ')}
                         </p>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                      ×{item.quantity || 1}
-                    </span>
                   </button>
                 </li>
               ))}
@@ -394,7 +396,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                   key={item.id}
                   className="px-4 py-3 flex items-center gap-3 opacity-60"
                 >
-                  <div className="w-12 h-12 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
                     {item.imageUrl ? (
                       <img
                         src={item.imageUrl}
@@ -402,11 +404,12 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                         className="w-full h-full object-contain"
                       />
                     ) : (
-                      <span className="text-2xl">📦</span>
+                      <span className="text-3xl">📦</span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-foreground truncate line-through">
+                      <span className="font-bold">{item.quantity || 1} ×</span>{' '}
                       {item.productName}
                     </p>
                   </div>
@@ -490,6 +493,46 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       {photoCaptureOpen /* file picker is invisible; this is a placeholder for future inline UI */}
     </div>
   )
+}
+
+/**
+ * Container size + unit pulled from Phase 2b fields when available
+ * (e.g., "2.8 oz", "16 oz", "1 lb"). Returns undefined when the row
+ * predates Phase 2a or didn't get a containerSize at scan-add.
+ *
+ * Mirrors Instacart's "2.8 oz" subtitle under the title.
+ */
+function formatSizeLabel(item: ShoppingItem): string | undefined {
+  if (typeof item.containerSize === 'number' && item.containerSize > 0 && item.containerUnit) {
+    // Strip trailing .0 to keep "16 oz" not "16.0 oz"
+    const num = item.containerSize % 1 === 0
+      ? String(item.containerSize)
+      : item.containerSize.toFixed(2).replace(/\.?0+$/, '')
+    return `${num} ${item.containerUnit}`
+  }
+  return undefined
+}
+
+/**
+ * Build the info-rows list for the per-item card. Mirrors
+ * Instacart's "Location: Snacks", "Price: $4.29" rows under the
+ * green CTA. We use category as the Location proxy until per-store
+ * aisle data exists (Stage 2d).
+ */
+function buildInfoRows(item: ShoppingItem): Array<{ label: string; value: string }> {
+  const rows: Array<{ label: string; value: string }> = []
+  if (item.category) {
+    // Capitalize for display: 'produce' → 'Produce'
+    const cat = item.category.charAt(0).toUpperCase() + item.category.slice(1).replace('-', ' ')
+    rows.push({ label: 'Location', value: cat })
+  }
+  if (typeof item.expectedPriceCents === 'number' && item.expectedPriceCents > 0) {
+    rows.push({
+      label: 'Price',
+      value: `$${(item.expectedPriceCents / 100).toFixed(2)}`,
+    })
+  }
+  return rows
 }
 
 /**

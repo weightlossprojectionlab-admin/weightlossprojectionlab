@@ -32,9 +32,17 @@ interface ScanItemCardProps {
     brand: string
     /** Empty string when product has no curated image yet. */
     imageUrl: string
-    /** Optional context surfaced under the name (e.g., "Last bought 2 wks ago"). */
+    /** Container size + unit shown under the title (e.g., "2.8 oz"). */
+    sizeLabel?: string
+    /** Optional context line (e.g., "Last bought 2 wks ago"). */
     secondaryLabel?: string
   }
+  /**
+   * Information rows below the primary CTA — Instacart's per-item
+   * card pattern (Location, Price, etc.). Pure display; parent
+   * computes labels/values from whatever data it has.
+   */
+  infoRows?: Array<{ label: string; value: string }>
   /** Current quantity value (controlled). */
   quantity: number
   onQuantityChange: (quantity: number) => void
@@ -56,6 +64,7 @@ interface ScanItemCardProps {
 
 export function ScanItemCard({
   item,
+  infoRows,
   quantity,
   onQuantityChange,
   onScanRequested,
@@ -71,12 +80,28 @@ export function ScanItemCard({
 
   return (
     <div className="flex flex-col bg-card rounded-lg border border-border overflow-hidden">
-      {/* Header row: 64×64 thumbnail + name/brand/secondary. The
-          thumbnail is still tap-to-enlarge for shoppers who need to
-          verify the package at a closer look — the fullscreen
-          overlay below renders the full image regardless of size. */}
-      <div className="px-4 py-3 border-b border-border flex items-start gap-3">
-        <div className="w-16 h-16 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+      {/* Header bar — X close (left), chat-icon placeholder (right).
+          The chat icon is a deliberate visual reservation for the
+          in-app chat feature (PRD-in-app-chat.md, Phase 1) — wired
+          when chat ships, decorative for now. */}
+      <div className="px-4 py-3 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={disabled}
+          className="text-foreground text-2xl leading-none w-8 h-8 flex items-center justify-center disabled:opacity-50"
+          aria-label="Back to list"
+        >
+          ✕
+        </button>
+        <span className="text-muted-foreground text-xl" aria-hidden>
+          💬
+        </span>
+      </div>
+
+      {/* Image — centered, capped height. Tap to enlarge fullscreen. */}
+      <div className="px-4 pb-4 flex justify-center">
+        <div className="w-full max-w-xs h-44 bg-muted rounded flex items-center justify-center overflow-hidden">
           {item.imageUrl ? (
             <button
               type="button"
@@ -91,45 +116,84 @@ export function ScanItemCard({
               />
             </button>
           ) : (
-            <span className="text-3xl" aria-label="No image">
+            <span className="text-6xl" aria-label="No image">
               📦
             </span>
           )}
         </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold text-foreground leading-tight">
-            {item.productName}
-          </h2>
-          {item.brand && (
-            <p className="text-sm text-muted-foreground mt-0.5 truncate">{item.brand}</p>
-          )}
-          {item.secondaryLabel && (
-            <p className="text-xs text-muted-foreground mt-1">{item.secondaryLabel}</p>
-          )}
-        </div>
       </div>
 
-      {/* Quantity stepper — large touch targets. */}
-      <div className="px-4 py-4 flex items-center justify-between border-b border-border">
-        <span className="text-sm font-medium text-foreground">Quantity</span>
+      {/* Title with inline quantity prefix + size subtitle. Qty is
+          driven by the controlled `quantity` prop so it stays in
+          sync with the stepper below. */}
+      <div className="px-4 pb-4">
+        <h2 className="text-xl font-semibold text-foreground leading-tight">
+          <span className="font-bold">{quantity} ×</span> {item.productName}
+        </h2>
+        {item.sizeLabel && (
+          <p className="text-sm text-muted-foreground mt-1">{item.sizeLabel}</p>
+        )}
+        {item.brand && (
+          <p className="text-sm text-muted-foreground mt-1">{item.brand}</p>
+        )}
+        {item.secondaryLabel && (
+          <p className="text-xs text-muted-foreground mt-1">{item.secondaryLabel}</p>
+        )}
+      </div>
+
+      {/* Primary CTA — green Found item button. Functionally fires
+          the scan camera; same handler as before. */}
+      <div className="px-4 pb-4">
+        <button
+          type="button"
+          onClick={onScanRequested}
+          disabled={disabled}
+          className="w-full px-6 py-4 bg-success text-white rounded-lg font-semibold text-base disabled:opacity-50 active:bg-success-hover"
+        >
+          Found item
+        </button>
+      </div>
+
+      {/* Info rows — Location / Price / etc., parent-supplied. Match
+          Instacart's flat key-value list under the green CTA. */}
+      {infoRows && infoRows.length > 0 && (
+        <div className="px-4 pb-2 border-t border-border pt-3">
+          {infoRows.map((row, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between py-1.5 text-sm"
+            >
+              <span className="text-muted-foreground">{row.label}</span>
+              <span className="text-foreground font-medium">{row.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Quantity stepper — Instacart's flow doesn't allow qty
+          adjustment (their orders are pre-set); ours does because
+          the shopper may grab more/fewer than originally requested
+          at the shelf. Secondary visual weight. */}
+      <div className="px-4 pb-3 pt-2 flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">Quantity</span>
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={decrement}
             disabled={disabled || quantity <= 1}
-            className="w-12 h-12 rounded-full bg-muted text-foreground text-2xl font-bold disabled:opacity-30 active:bg-gray-300"
+            className="w-10 h-10 rounded-full bg-muted text-foreground text-xl font-bold disabled:opacity-30 active:bg-gray-300"
             aria-label="Decrease quantity"
           >
             −
           </button>
-          <span className="min-w-[3rem] text-center text-2xl font-bold tabular-nums">
+          <span className="min-w-[2.5rem] text-center text-lg font-bold tabular-nums">
             {quantity}
           </span>
           <button
             type="button"
             onClick={increment}
             disabled={disabled}
-            className="w-12 h-12 rounded-full bg-muted text-foreground text-2xl font-bold disabled:opacity-30 active:bg-gray-300"
+            className="w-10 h-10 rounded-full bg-muted text-foreground text-xl font-bold disabled:opacity-30 active:bg-gray-300"
             aria-label="Increase quantity"
           >
             +
@@ -137,44 +201,21 @@ export function ScanItemCard({
         </div>
       </div>
 
-      {/* Action buttons — primary scan at bottom for thumb reach. */}
-      <div className="p-4 space-y-2">
-        <button
-          type="button"
-          onClick={onScanRequested}
-          disabled={disabled}
-          className="w-full px-6 py-4 bg-primary text-white rounded-lg font-semibold text-base flex items-center justify-center gap-2 disabled:opacity-50 active:bg-primary-hover"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-          </svg>
-          Scan Item
-        </button>
-
-        {showAddPhoto && onPhotoRequested && (
+      {/* Secondary link-style actions — Instacart's "Can't find item"
+          / "Message Lee" treatment. We currently only have the photo
+          path; "Can't find item" is Stage 2b territory. */}
+      {showAddPhoto && onPhotoRequested && (
+        <div className="px-4 pb-4 border-t border-border pt-3">
           <button
             type="button"
             onClick={onPhotoRequested}
             disabled={disabled}
-            className="w-full px-6 py-3 bg-muted text-foreground rounded-lg font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 active:bg-gray-300"
+            className="text-sm font-medium text-primary disabled:opacity-50"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Add Photo
+            Add product photo
           </button>
-        )}
-
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={disabled}
-          className="w-full px-6 py-3 text-muted-foreground rounded-lg font-medium text-sm disabled:opacity-50"
-        >
-          Cancel
-        </button>
-      </div>
+        </div>
+      )}
 
       {/* Fullscreen image overlay — tap anywhere to dismiss. */}
       {imageEnlarged && item.imageUrl && (
