@@ -140,10 +140,17 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
         : checkIngredientsWithQuantities(suggestion.ingredients, recipeRelevantItems)
       setIngredientResults(quantityResults)
 
-      // Auto-check ingredients we have enough of
+      // Auto-check ingredients the user effectively has. Treat
+      // hasEnough === null (matched but units can't be compared, e.g.
+      // recipe wants "1 cup snap peas" but inventory tracks count) as
+      // "have" — the user has the ingredient, just not in a unit we
+      // can convert. The cooking-block gate at handleCookNow already
+      // treats null this way; aligning the visible UI here removes
+      // the false-pessimistic "X of Y" counter where most rows showed
+      // unchecked despite the ingredient being on hand.
       const enoughIndices = new Set<number>()
       quantityResults.forEach((result, idx) => {
-        if (result.hasEnough === true) {
+        if (result.hasEnough === true || (result.matched && result.hasEnough === null)) {
           enoughIndices.add(idx)
         }
       })
@@ -738,9 +745,18 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     </button>
                   </div>
                 </div>
-                {/* Recipe Readiness Indicator */}
+                {/* Recipe Readiness Indicator. Pass structured
+                    ingredientsV2 when populated so the readiness
+                    badge benefits from barcode-exact matching;
+                    calculateRecipeReadiness also filters pet
+                    categories internally. */}
                 {ingredientResults.length > 0 && (() => {
-                  const readiness = calculateRecipeReadiness(suggestion.ingredients || [], allInventoryItems)
+                  const readiness = calculateRecipeReadiness(
+                    suggestion.ingredientsV2 && suggestion.ingredientsV2.length > 0
+                      ? suggestion.ingredientsV2
+                      : (suggestion.ingredients || []),
+                    allInventoryItems
+                  )
                   return (
                     <div className={`mb-3 p-3 rounded-lg border-2 ${
                       readiness.canMake

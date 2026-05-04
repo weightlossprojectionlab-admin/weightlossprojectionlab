@@ -504,10 +504,38 @@ export interface RecipeReadiness {
  * Calculate whether a recipe can be made with current inventory
  */
 export function calculateRecipeReadiness(
-  ingredients: string[],
+  ingredients: string[] | Array<{
+    productBarcode?: string
+    productName?: string
+    ingredientText?: string
+    quantity?: number
+    unit?: string
+  }>,
   inventoryItems: ShoppingItem[]
 ): RecipeReadiness {
-  const matches = checkIngredientsWithQuantities(ingredients, inventoryItems)
+  // Filter pet-food / pet-supplies once at the readiness boundary so
+  // every consumer of this function (RecipeModal badge, member-recipe
+  // engine, public recipe pages) gets the same exclusion without
+  // having to remember to call filterRecipeRelevantItems first.
+  const recipeRelevantInventory = filterRecipeRelevantItems(inventoryItems)
+
+  // Branch on shape: structured ingredient objects use the
+  // barcode-aware matcher, raw strings fall through to the legacy
+  // text matcher. Same return shape for both.
+  const isStructured =
+    ingredients.length > 0 && typeof ingredients[0] === 'object'
+  const matches = isStructured
+    ? checkStructuredIngredients(
+        ingredients as Array<{
+          productBarcode?: string
+          productName?: string
+          ingredientText?: string
+          quantity?: number
+          unit?: string
+        }>,
+        recipeRelevantInventory
+      )
+    : checkIngredientsWithQuantities(ingredients as string[], recipeRelevantInventory)
 
   const result: RecipeReadiness = {
     totalIngredients: ingredients.length,
@@ -525,6 +553,15 @@ export function calculateRecipeReadiness(
       result.matchedIngredients++
 
       if (match.hasEnough === true) {
+        result.haveEnough++
+      } else if (match.hasEnough === null) {
+        // Matched the inventory item but units can't be compared
+        // (e.g., recipe wants "1 cup snap peas", inventory tracks
+        // count). The user has the ingredient — we just can't verify
+        // sufficiency. Treat as effectively-have for the readiness
+        // counter; the cooking-block gate already does the same.
+        // Without this, the badge undercounts and reads as "missing"
+        // when the ingredient is actually on hand.
         result.haveEnough++
       } else if (match.hasEnough === false) {
         result.insufficient++
