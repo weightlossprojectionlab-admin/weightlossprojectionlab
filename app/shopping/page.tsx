@@ -54,6 +54,10 @@ const BarcodeScanner = dynamic(
   () => import('@/components/BarcodeScanner').then(mod => ({ default: mod.BarcodeScanner })),
   { ssr: false }
 )
+const ActiveShoppingMode = dynamic(
+  () => import('@/components/shopping/ActiveShoppingMode').then(mod => ({ default: mod.ActiveShoppingMode })),
+  { ssr: false }
+)
 
 function ShoppingListContent() {
   const router = useRouter()
@@ -172,6 +176,10 @@ function ShoppingListContent() {
   } = shoppingData
 
   const [showScanner, setShowScanner] = useState(false)
+  // Stage 2a: full-screen in-store shopping mode. Distinct from
+  // showScanner — the latter is a one-off impulse scan, this opens
+  // the per-item drilldown flow that walks the list.
+  const [shoppingModeOpen, setShoppingModeOpen] = useState(false)
   const [showExpirationPicker, setShowExpirationPicker] = useState(false)
   const [showDebugMode, setShowDebugMode] = useState(false)
   const [showImpulseConfirm, setShowImpulseConfirm] = useState(false)
@@ -761,6 +769,26 @@ function ShoppingListContent() {
             />
           </div>
 
+          {/* Stage 2a: Start Shopping CTA. Only shown when there are
+              items to shop for — empty-list state has no use for a
+              fulfillment mode. Distinct from the Scan Item button
+              below, which is for one-off impulse scans. */}
+          {neededItems.length > 0 && (
+            <div className="mb-3">
+              <button
+                type="button"
+                onClick={() => setShoppingModeOpen(true)}
+                className="w-full bg-success text-white py-4 px-4 rounded-lg font-semibold hover:bg-success-hover transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="text-xl">🛒</span>
+                <span>
+                  Start Shopping ({neededItems.length}{' '}
+                  {neededItems.length === 1 ? 'item' : 'items'})
+                </span>
+              </button>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="mb-6 flex gap-3">
             <button
@@ -1048,6 +1076,15 @@ function ShoppingListContent() {
           onScan={handleBarcodeScan}
           onClose={() => setShowScanner(false)}
           context="purchase"
+        />
+
+        {/* Stage 2a: full-screen in-store shopping mode. Mounted at
+            this level so it sits above the page chrome but below
+            other portals (toasts, BarcodeScanner overlay it opens). */}
+        <ActiveShoppingMode
+          isOpen={shoppingModeOpen}
+          onClose={() => setShoppingModeOpen(false)}
+          items={neededItems}
         />
 
         {/* Expiration Picker */}
