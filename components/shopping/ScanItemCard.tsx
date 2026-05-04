@@ -36,6 +36,13 @@ interface ScanItemCardProps {
     sizeLabel?: string
     /** Optional context line (e.g., "Last bought 2 wks ago"). */
     secondaryLabel?: string
+    /**
+     * Expected quantity from the list — display only on this card.
+     * The shopper enters the actual quantity grabbed via the
+     * Quantity Found screen that opens after a successful scan,
+     * so a pre-scan stepper here would be redundant guesswork.
+     */
+    quantity: number
   }
   /**
    * Information rows below the primary CTA — Instacart's per-item
@@ -43,9 +50,6 @@ interface ScanItemCardProps {
    * computes labels/values from whatever data it has.
    */
   infoRows?: Array<{ label: string; value: string }>
-  /** Current quantity value (controlled). */
-  quantity: number
-  onQuantityChange: (quantity: number) => void
   /** Camera scanner request — parent opens the BarcodeScanner. */
   onScanRequested: () => void
   /**
@@ -91,8 +95,6 @@ interface ScanItemCardProps {
 export function ScanItemCard({
   item,
   infoRows,
-  quantity,
-  onQuantityChange,
   onScanRequested,
   onPhotoRequested,
   onCancel,
@@ -104,9 +106,6 @@ export function ScanItemCard({
   disabled = false,
 }: ScanItemCardProps) {
   const [imageEnlarged, setImageEnlarged] = useState(false)
-
-  const decrement = () => onQuantityChange(Math.max(1, quantity - 1))
-  const increment = () => onQuantityChange(quantity + 1)
 
   return (
     <div className="flex flex-col bg-card rounded-lg border border-border overflow-hidden">
@@ -150,12 +149,12 @@ export function ScanItemCard({
         </div>
       </div>
 
-      {/* Title with inline quantity prefix + size subtitle. Qty is
-          driven by the controlled `quantity` prop so it stays in
-          sync with the stepper below. */}
+      {/* Title with inline quantity prefix (display-only — actual
+          quantity grabbed is captured on the Quantity Found
+          screen after a successful scan) + size subtitle. */}
       <div className="px-4 pb-4">
         <h2 className="text-xl font-semibold text-foreground leading-tight">
-          <span className="font-bold">{quantity} ×</span> {item.productName}
+          <span className="font-bold">{item.quantity} ×</span> {item.productName}
         </h2>
         {item.sizeLabel && (
           <p className="text-sm text-muted-foreground mt-1">{item.sizeLabel}</p>
@@ -196,37 +195,6 @@ export function ScanItemCard({
           ))}
         </div>
       )}
-
-      {/* Quantity stepper — Instacart's flow doesn't allow qty
-          adjustment (their orders are pre-set); ours does because
-          the shopper may grab more/fewer than originally requested
-          at the shelf. Secondary visual weight. */}
-      <div className="px-4 pb-3 pt-2 flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">Quantity</span>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={decrement}
-            disabled={disabled || quantity <= 1}
-            className="w-10 h-10 rounded-full bg-muted text-foreground text-xl font-bold disabled:opacity-30 active:bg-muted/80"
-            aria-label="Decrease quantity"
-          >
-            −
-          </button>
-          <span className="min-w-[2.5rem] text-center text-lg font-bold tabular-nums">
-            {quantity}
-          </span>
-          <button
-            type="button"
-            onClick={increment}
-            disabled={disabled}
-            className="w-10 h-10 rounded-full bg-muted text-foreground text-xl font-bold disabled:opacity-30 active:bg-muted/80"
-            aria-label="Increase quantity"
-          >
-            +
-          </button>
-        </div>
-      </div>
 
       {/* Secondary link-style actions stack — matches Instacart's
           per-item card pattern: Check expiration / Can't Find Item

@@ -83,11 +83,20 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   const [sessionItems, setSessionItems] = useState<ShoppingItem[]>([])
 
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
-  const [activeQuantity, setActiveQuantity] = useState(1)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Quantity Found screen — opens after a scan succeeds (any
+  // branch a/b/c). User enters the actual qty grabbed (defaults
+  // to item.quantity); confirm fires markItemAsFoundInStore with
+  // that qty. Decoupled from the stepper-on-card pattern because
+  // the actual qty grabbed is determined at the shelf, not pre-
+  // scan, and capturing it post-scan is more accurate (esp. for
+  // produce / weighed items).
+  const [qtyFoundOpen, setQtyFoundOpen] = useState(false)
+  const [qtyFoundValue, setQtyFoundValue] = useState('')
+  const [qtyFoundLinkedBarcode, setQtyFoundLinkedBarcode] = useState<string | undefined>(undefined)
   // 2.4 — Summary screen state. End button opens this; Save & exit
   // logs the StoreVisit then router.backs.
   const [summaryOpen, setSummaryOpen] = useState(false)
@@ -123,6 +132,9 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       setSummaryStoreName('')
       setSummaryRemoveSkipped(false)
       setTransactionConfirmed(false)
+      setQtyFoundOpen(false)
+      setQtyFoundValue('')
+      setQtyFoundLinkedBarcode(undefined)
       setListTab('to-pick')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -206,18 +218,35 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   // Tap-to-scan entry: open the per-item card.
   const openItem = (item: ShoppingItem) => {
     setActiveItemId(item.id)
-    setActiveQuantity(item.quantity || 1)
   }
 
   const closeItem = () => {
     setActiveItemId(null)
     setPendingConfirm(null)
+    setQtyFoundOpen(false)
+    setQtyFoundValue('')
+    setQtyFoundLinkedBarcode(undefined)
   }
 
-  // Mark the active item purchased + foundInStore. The buzz + chime
-  // is the user's confirmation that the scan was accepted — fires
-  // once per success path.
-  const fulfillActiveItem = async (opts?: { linkedBarcode?: string }) => {
+  // Open the Quantity Found screen for the active item. Called
+  // after every scan-success path (a/b/c). Default value seeded
+  // from item.quantity so the common case (got what you asked
+  // for) is one tap.
+  const openQuantityFound = (linkedBarcode?: string) => {
+    if (!activeItem) return
+    setQtyFoundLinkedBarcode(linkedBarcode)
+    setQtyFoundValue(String(activeItem.quantity || 1))
+    setQtyFoundOpen(true)
+  }
+
+  // Confirm the entered Quantity Found and persist. Writes the
+  // foundInStore flag with the chosen quantity, optionally writing
+  // a barcode link first for branches (b/c). Buzz + chime confirm
+  // the scan was accepted; fires once per success path.
+  const fulfillActiveItem = async (
+    quantity: number,
+    opts?: { linkedBarcode?: string }
+  ) => {
     if (!activeItem) return
     setSubmitting(true)
     try {
@@ -235,7 +264,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       // trip summary's Confirm Purchase action after the user
       // confirms checkout cleared at the register.
       await markItemAsFoundInStore(activeItem.id, {
-        quantity: activeQuantity,
+        quantity,
         purchasedBy: userId,
       })
 
@@ -281,8 +310,8 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       const scannedVariants = barcodeVariants(cleaned)
       const matchesActive = scannedVariants.some((v) => itemVariants.has(v))
       if (matchesActive) {
-        // Branch (a): exact match.
-        void fulfillActiveItem()
+        // Branch (a): exact match → Quantity Found.
+        openQuantityFound()
         return
       }
     }
@@ -305,8 +334,14 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
               <button
                 onClick={() => {
                   toast.dismiss(t.id)
+                  // The scanned barcode matched this OTHER item's
+                  // barcode (that's how branch d found the match),
+                  // so we can go straight to Quantity Found for it
+                  // — no second scan needed.
                   setActiveItemId(otherMatch.id)
-                  setActiveQuantity(otherMatch.quantity || 1)
+                  setQtyFoundLinkedBarcode(undefined)
+                  setQtyFoundValue(String(otherMatch.quantity || 1))
+                  setQtyFoundOpen(true)
                 }}
                 className="px-3 py-1 bg-primary text-white rounded text-sm"
               >
@@ -614,6 +649,73 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
             </button>
           </div>
         </div>
+      ) : qtyFoundOpen && activeItem ? (
+        /* Quantity Found screen — opens after a scan succeeds.
+           User confirms or edits the qty grabbed (default = the
+           list's expected qty). Numeric inputMode triggers the
+           phone keypad. Confirm fires markItemAsFoundInStore via
+           fulfillActiveItem. */
+        <div className="flex-1 flex flex-col">
+          <div className="px-4 py-6 flex-1">
+            <p className="text-base font-semibold text-foreground mb-1">
+              {activeItem.productName}
+            </p>
+            <label
+              htmlFor="qty-found-input"
+              className="block text-sm text-muted-foreground mb-3"
+            >
+              Quantity Found
+            </label>
+            <input
+              id="qty-found-input"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="any"
+              autoFocus
+              value={qtyFoundValue}
+              onChange={(e) => setQtyFoundValue(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              className="w-full text-4xl font-bold text-right border-b-2 border-border bg-transparent text-foreground focus:outline-none focus:border-success py-2"
+            />
+            {activeItem.unit && (
+              <p className="text-right text-sm text-muted-foreground mt-1">
+                {activeItem.unit}
+              </p>
+            )}
+          </div>
+          <div className="px-4 pb-4 space-y-2 border-t border-border pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                const parsed = parseFloat(qtyFoundValue)
+                if (!isFinite(parsed) || parsed <= 0) {
+                  toast.error('Enter a quantity greater than 0')
+                  return
+                }
+                const linked = qtyFoundLinkedBarcode
+                setQtyFoundOpen(false)
+                void fulfillActiveItem(parsed, linked ? { linkedBarcode: linked } : undefined)
+              }}
+              disabled={submitting}
+              className="w-full px-6 py-4 bg-success text-white rounded-lg font-semibold disabled:opacity-50 active:bg-success-hover"
+            >
+              {submitting ? 'Saving…' : 'Confirm'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setQtyFoundOpen(false)
+                setQtyFoundValue('')
+                setQtyFoundLinkedBarcode(undefined)
+              }}
+              disabled={submitting}
+              className="w-full px-6 py-3 text-muted-foreground text-sm disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       ) : activeItem ? (
         <div className="flex-1 overflow-y-auto p-4">
           <ScanItemCard
@@ -627,10 +729,9 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                 activeItem.lastPurchased
                   ? `Last bought ${formatDateAgo(activeItem.lastPurchased)}`
                   : undefined,
+              quantity: activeItem.quantity || 1,
             }}
             infoRows={buildInfoRows(activeItem)}
-            quantity={activeQuantity}
-            onQuantityChange={setActiveQuantity}
             onScanRequested={() => setScannerOpen(true)}
             onPhotoRequested={
               activeItem.barcode
@@ -899,7 +1000,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                 onClick={() => {
                   const scanned = pendingConfirm.scannedBarcode
                   setPendingConfirm(null)
-                  void fulfillActiveItem({ linkedBarcode: scanned })
+                  openQuantityFound(scanned)
                 }}
                 className="w-full px-6 py-3 bg-primary text-white rounded-lg font-medium disabled:opacity-50"
               >
