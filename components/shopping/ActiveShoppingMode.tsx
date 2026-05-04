@@ -49,6 +49,8 @@ import { logger } from '@/lib/logger'
 import {
   markItemAsPurchased,
   linkBarcodeToManualItem,
+  logStoreVisit,
+  deleteShoppingItem,
 } from '@/lib/shopping-operations'
 import { addProductImage } from '@/lib/product-image-upload'
 import { barcodeVariants } from '@/lib/barcode-variants'
@@ -84,6 +86,12 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // 2.4 — Summary screen state. End button opens this; Save & exit
+  // logs the StoreVisit then router.backs.
+  const [summaryOpen, setSummaryOpen] = useState(false)
+  const [summaryStoreName, setSummaryStoreName] = useState('')
+  const [summaryRemoveSkipped, setSummaryRemoveSkipped] = useState(false)
+  const [summarySaving, setSummarySaving] = useState(false)
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const photoInputRef = useRef<HTMLInputElement | null>(null)
@@ -96,6 +104,9 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       setSessionItems(items.filter((i) => i.needed))
       setActiveItemId(null)
       setPendingConfirm(null)
+      setSummaryOpen(false)
+      setSummaryStoreName('')
+      setSummaryRemoveSkipped(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
@@ -288,6 +299,75 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
 
   if (!isOpen) return null
 
+  // End-of-session handler: if nothing was found, just exit (no
+  // visit to log). Otherwise show the summary screen.
+  const handleEndPressed = () => {
+    if (foundCount === 0) {
+      onClose()
+      return
+    }
+    setSummaryOpen(true)
+  }
+
+  // Save & exit: log the StoreVisit, optionally remove skipped
+  // items, then router.back via onClose. Saving never blocks the
+  // exit — even if the visit log fails, the user gets out cleanly
+  // and the next session still starts fresh.
+  const handleSaveAndExit = async () => {
+    setSummarySaving(true)
+    try {
+      const userId = auth.currentUser?.uid
+      if (userId) {
+        const foundBarcodes = orderedSessionRows.found
+          .map((it) => it.barcode)
+          .filter((b): b is string => !!b)
+        try {
+          await logStoreVisit(
+            userId,
+            summaryStoreName.trim() || 'Unspecified store',
+            // Geolocation is not in scope for Stage 2a — placeholder
+            // {0,0} keeps the StoreVisit type satisfied. Stage 2d
+            // (per-store layout learning) will collect real coords.
+            { latitude: 0, longitude: 0 },
+            foundBarcodes
+          )
+        } catch (err) {
+          logger.warn('[ActiveShopping] StoreVisit log failed', {
+            error: (err as Error).message,
+          })
+        }
+      }
+
+      if (summaryRemoveSkipped) {
+        const stillNeeded = orderedSessionRows.pending.filter(
+          (it) => it.needed && !it.foundInStore
+        )
+        const failures: string[] = []
+        for (const it of stillNeeded) {
+          try {
+            await deleteShoppingItem(it.id)
+          } catch (err) {
+            logger.warn('[ActiveShopping] failed to remove skipped item', {
+              itemId: it.id,
+              error: (err as Error).message,
+            })
+            failures.push(it.productName)
+          }
+        }
+        if (failures.length > 0) {
+          toast.error(
+            `Couldn't remove ${failures.length} item${failures.length > 1 ? 's' : ''}`
+          )
+        }
+      }
+
+      toast.success(`Trip saved — ${foundCount} item${foundCount > 1 ? 's' : ''} found`)
+    } finally {
+      setSummarySaving(false)
+      onClose()
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Notification chime (preloaded). */}
@@ -296,22 +376,105 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       {/* Header */}
       <header className="px-4 py-3 border-b border-border flex items-center justify-between bg-card sticky top-0">
         <div>
-          <h1 className="text-base font-bold text-foreground">Shopping</h1>
+          <h1 className="text-base font-bold text-foreground">
+            {summaryOpen ? 'Trip summary' : 'Shopping'}
+          </h1>
           <p className="text-xs text-muted-foreground">
             {foundCount} of {totalCount} found
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-3 py-2 bg-muted text-foreground rounded-lg text-sm font-medium active:bg-muted/80"
-        >
-          End
-        </button>
+        {!summaryOpen && (
+          <button
+            type="button"
+            onClick={handleEndPressed}
+            className="px-3 py-2 bg-muted text-foreground rounded-lg text-sm font-medium active:bg-muted/80"
+          >
+            End
+          </button>
+        )}
       </header>
 
       {/* Body */}
-      {activeItem ? (
+      {summaryOpen ? (
+        <div className="flex-1 overflow-y-auto">
+          {/* Stats card */}
+          <div className="px-4 py-6 text-center border-b border-border">
+            <p className="text-4xl font-bold text-foreground">
+              {foundCount}
+              <span className="text-muted-foreground font-normal"> of {totalCount}</span>
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">items found</p>
+          </div>
+
+          {/* Optional store name */}
+          <div className="px-4 py-4 border-b border-border">
+            <label
+              htmlFor="trip-store-name"
+              className="block text-sm font-medium text-foreground mb-2"
+            >
+              Where did you shop? (optional)
+            </label>
+            <input
+              id="trip-store-name"
+              type="text"
+              value={summaryStoreName}
+              onChange={(e) => setSummaryStoreName(e.target.value)}
+              placeholder="e.g., Trader Joe's, Kroger"
+              maxLength={100}
+              className="w-full px-3 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          {/* Skipped items + bulk-remove option */}
+          {orderedSessionRows.pending.length > 0 && (
+            <div className="px-4 py-4 border-b border-border">
+              <p className="text-sm font-medium text-foreground mb-2">
+                Skipped {orderedSessionRows.pending.length}{' '}
+                {orderedSessionRows.pending.length === 1 ? 'item' : 'items'}
+              </p>
+              <ul className="space-y-1 mb-3">
+                {orderedSessionRows.pending.map((it) => (
+                  <li key={it.id} className="text-sm text-muted-foreground">
+                    • {it.productName}
+                  </li>
+                ))}
+              </ul>
+              <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={summaryRemoveSkipped}
+                  onChange={(e) => setSummaryRemoveSkipped(e.target.checked)}
+                  className="w-4 h-4 rounded border-border"
+                />
+                Remove these from my list
+              </label>
+              <p className="text-xs text-muted-foreground mt-1 ml-6">
+                Otherwise they stay on the list for next time.
+              </p>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="px-4 py-4 space-y-2">
+            <button
+              type="button"
+              onClick={handleSaveAndExit}
+              disabled={summarySaving}
+              className="w-full px-6 py-3 bg-success text-white rounded-lg font-semibold disabled:opacity-50 active:bg-success-hover"
+            >
+              {summarySaving ? 'Saving…' : 'Save & exit'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSummaryOpen(false)}
+              disabled={summarySaving}
+              className="w-full px-6 py-3 bg-muted text-foreground rounded-lg font-medium disabled:opacity-50 active:bg-muted/80"
+            >
+              Back to shopping
+            </button>
+          </div>
+        </div>
+      ) : activeItem ? (
         <div className="flex-1 overflow-y-auto p-4">
           <ScanItemCard
             item={{
