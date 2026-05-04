@@ -71,40 +71,42 @@ export function ScanItemCard({
 
   return (
     <div className="flex flex-col bg-card rounded-lg border border-border overflow-hidden">
-      {/* Image — large, tap to enlarge. */}
-      <div className="relative w-full aspect-square bg-muted flex items-center justify-center">
-        {item.imageUrl ? (
-          <button
-            type="button"
-            onClick={() => setImageEnlarged(true)}
-            className="w-full h-full"
-            aria-label="Enlarge product image"
-          >
-            <img
-              src={item.imageUrl}
-              alt={item.productName}
-              className="w-full h-full object-contain"
-            />
-          </button>
-        ) : (
-          <div className="text-center px-4">
-            <div className="text-6xl mb-2">📦</div>
-            <p className="text-sm text-muted-foreground">No image yet</p>
-          </div>
-        )}
-      </div>
-
-      {/* Name + brand + secondary label. */}
-      <div className="px-4 py-3 border-b border-border">
-        <h2 className="text-lg font-bold text-foreground leading-tight">
-          {item.productName}
-        </h2>
-        {item.brand && (
-          <p className="text-sm text-muted-foreground mt-0.5">{item.brand}</p>
-        )}
-        {item.secondaryLabel && (
-          <p className="text-xs text-muted-foreground mt-1">{item.secondaryLabel}</p>
-        )}
+      {/* Header row: 64×64 thumbnail + name/brand/secondary. The
+          thumbnail is still tap-to-enlarge for shoppers who need to
+          verify the package at a closer look — the fullscreen
+          overlay below renders the full image regardless of size. */}
+      <div className="px-4 py-3 border-b border-border flex items-start gap-3">
+        <div className="w-16 h-16 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+          {item.imageUrl ? (
+            <button
+              type="button"
+              onClick={() => setImageEnlarged(true)}
+              className="w-full h-full"
+              aria-label="Enlarge product image"
+            >
+              <img
+                src={item.imageUrl}
+                alt={item.productName}
+                className="w-full h-full object-contain"
+              />
+            </button>
+          ) : (
+            <span className="text-3xl" aria-label="No image">
+              📦
+            </span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-bold text-foreground leading-tight">
+            {item.productName}
+          </h2>
+          {item.brand && (
+            <p className="text-sm text-muted-foreground mt-0.5 truncate">{item.brand}</p>
+          )}
+          {item.secondaryLabel && (
+            <p className="text-xs text-muted-foreground mt-1">{item.secondaryLabel}</p>
+          )}
+        </div>
       </div>
 
       {/* Quantity stepper — large touch targets. */}
