@@ -99,6 +99,12 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   // inside ActiveShoppingMode. Only one items-view is on screen at
   // a time (modal swap), so no list duplication.
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
+  // List view tab — TO-PICK (still need to find) | DONE (already
+  // marked found this trip). No IN-REVIEW because there's no
+  // separate party reviewing decisions in our single-shopper
+  // single-list model; the shopper is also the orderer and makes
+  // calls in real time via the per-item card / toast / confirm modal.
+  const [listTab, setListTab] = useState<'to-pick' | 'done'>('to-pick')
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const photoInputRef = useRef<HTMLInputElement | null>(null)
@@ -115,6 +121,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       setSummaryStoreName('')
       setSummaryRemoveSkipped(false)
       setBulkConfirmOpen(false)
+      setListTab('to-pick')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
@@ -578,88 +585,128 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
               <p>No items on your list to shop for.</p>
             </div>
           ) : (
-            <ul className="divide-y divide-border">
-              {/* Pending items grouped by category — section
-                  headers minimize backtracking through the store
-                  (produce → meat → dairy → frozen → pantry).
-                  Sections render in store-walk order; categories
-                  not in the layout map fall to the end. */}
-              {pendingByCategory.map(([cat, catItems]) => (
-                <Fragment key={cat}>
-                  <li className="px-4 py-2 bg-muted/30">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      {formatCategoryLabel(cat)}
-                    </p>
-                  </li>
-                  {catItems.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        onClick={() => openItem(item)}
-                        className="w-full px-4 py-3 flex items-center gap-3 text-left active:bg-muted"
-                      >
-                        <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {item.imageUrl ? (
-                            <img
-                              src={item.imageUrl}
-                              alt=""
-                              className="w-full h-full object-contain"
-                            />
-                          ) : (
-                            <span className="text-3xl">📦</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          {/* Title with bold qty prefix. */}
-                          <p className="font-medium text-foreground">
-                            <span className="font-bold">{item.quantity || 1} ×</span>{' '}
-                            {item.productName}
+            <>
+              {/* Tab strip — TO-PICK / DONE. No IN-REVIEW: there's
+                  no separate-party review state in our model. */}
+              <div className="flex border-b border-border bg-card sticky top-0 z-10">
+                <button
+                  type="button"
+                  onClick={() => setListTab('to-pick')}
+                  className={`flex-1 px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors ${
+                    listTab === 'to-pick'
+                      ? 'text-success border-b-2 border-success'
+                      : 'text-muted-foreground border-b-2 border-transparent'
+                  }`}
+                >
+                  {orderedSessionRows.pending.length} To-Pick
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setListTab('done')}
+                  className={`flex-1 px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors ${
+                    listTab === 'done'
+                      ? 'text-success border-b-2 border-success'
+                      : 'text-muted-foreground border-b-2 border-transparent'
+                  }`}
+                >
+                  Done ({orderedSessionRows.found.length})
+                </button>
+              </div>
+
+              {listTab === 'to-pick' ? (
+                orderedSessionRows.pending.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <p>All items found 🎉</p>
+                    <p className="text-xs mt-1">Tap End to wrap up the trip.</p>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {/* Pending items grouped by category — section
+                        headers minimize backtracking through the
+                        store (produce → meat → dairy → frozen →
+                        pantry). Sections render in store-walk
+                        order; categories not in the layout map
+                        fall to the end. */}
+                    {pendingByCategory.map(([cat, catItems]) => (
+                      <Fragment key={cat}>
+                        <li className="px-4 py-2 bg-muted/30">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                            {formatCategoryLabel(cat)}
                           </p>
-                          {item.brand && (
-                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                              {item.brand}
-                              {formatSizeLabel(item) ? ` • ${formatSizeLabel(item)}` : ''}
-                            </p>
-                          )}
-                        </div>
-                      </button>
+                        </li>
+                        {catItems.map((item) => (
+                          <li key={item.id}>
+                            <button
+                              type="button"
+                              onClick={() => openItem(item)}
+                              className="w-full px-4 py-3 flex items-center gap-3 text-left active:bg-muted"
+                            >
+                              <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                                {item.imageUrl ? (
+                                  <img
+                                    src={item.imageUrl}
+                                    alt=""
+                                    className="w-full h-full object-contain"
+                                  />
+                                ) : (
+                                  <span className="text-3xl">📦</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                {/* Title with bold qty prefix. */}
+                                <p className="font-medium text-foreground">
+                                  <span className="font-bold">{item.quantity || 1} ×</span>{' '}
+                                  {item.productName}
+                                </p>
+                                {item.brand && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                                    {item.brand}
+                                    {formatSizeLabel(item) ? ` • ${formatSizeLabel(item)}` : ''}
+                                  </p>
+                                )}
+                              </div>
+                            </button>
+                          </li>
+                        ))}
+                      </Fragment>
+                    ))}
+                  </ul>
+                )
+              ) : orderedSessionRows.found.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  <p>Nothing marked found yet.</p>
+                  <p className="text-xs mt-1">Switch to To-Pick to start scanning.</p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {orderedSessionRows.found.map((item) => (
+                    <li
+                      key={item.id}
+                      className="px-4 py-3 flex items-center gap-3 opacity-60"
+                    >
+                      <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt=""
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-3xl">📦</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate line-through">
+                          <span className="font-bold">{item.quantity || 1} ×</span>{' '}
+                          {item.productName}
+                        </p>
+                      </div>
+                      <span className="text-success">✓</span>
                     </li>
                   ))}
-                </Fragment>
-              ))}
-              {orderedSessionRows.found.length > 0 && (
-                <li className="px-4 py-2 bg-muted/30">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                    Found
-                  </p>
-                </li>
+                </ul>
               )}
-              {orderedSessionRows.found.map((item) => (
-                <li
-                  key={item.id}
-                  className="px-4 py-3 flex items-center gap-3 opacity-60"
-                >
-                  <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt=""
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <span className="text-3xl">📦</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground truncate line-through">
-                      <span className="font-bold">{item.quantity || 1} ×</span>{' '}
-                      {item.productName}
-                    </p>
-                  </div>
-                  <span className="text-success">✓</span>
-                </li>
-              ))}
-            </ul>
+            </>
           )}
         </div>
       )}
