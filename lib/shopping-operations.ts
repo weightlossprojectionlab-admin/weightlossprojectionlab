@@ -706,6 +706,20 @@ export async function markItemAsPurchased(
     unit?: QuantityUnit
     expiresAt?: Date
     store?: string
+    /**
+     * Set when the purchase happened during in-store shopping mode
+     * (Stage 2a). Surfaces in family-plan UI as a "found at the store"
+     * indicator and lets analytics distinguish in-store fulfillment
+     * from at-home reconciliation. No effect when omitted, so the
+     * existing /shopping tap-to-purchase callers stay unchanged.
+     */
+    foundInStore?: boolean
+    /**
+     * userId of the shopper who marked the item purchased. Mirrors
+     * `discardedBy` / `addedBy` semantics — required for multi-user
+     * audit on family plans, optional otherwise.
+     */
+    purchasedBy?: string
   } = {}
 ): Promise<void> {
   try {
@@ -727,6 +741,11 @@ export async function markItemAsPurchased(
       expiresAt: options.expiresAt,
       preferredStore: options.store ?? item.preferredStore,
       purchaseHistory: [...(item.purchaseHistory || []), newPurchase],
+      // Optional in-store / multi-user fields — only written when
+      // the caller supplies them, preserving prior behavior for
+      // tap-to-purchase from /shopping.
+      ...(options.foundInStore !== undefined ? { foundInStore: options.foundInStore } : {}),
+      ...(options.purchasedBy ? { purchasedBy: options.purchasedBy } : {}),
       updatedAt: new Date()
     })
   } catch (error: any) {
