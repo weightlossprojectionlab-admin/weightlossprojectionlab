@@ -58,6 +58,32 @@ interface ScanItemCardProps {
   onCancel: () => void
   /** Opt-in: render the "Add Photo" button. */
   showAddPhoto?: boolean
+  /**
+   * Open an expiration picker for this item. Stage 2a: small
+   * affordance below the info rows so the shopper can stamp an
+   * expiry while at the shelf instead of guessing later.
+   */
+  onCheckExpiration?: () => void
+  /**
+   * "Can't find item" — moves the row to IN-REVIEW for a family
+   * member to suggest a replacement or remove it. Stage 2b wires
+   * the actual state transition; today this is a Stage-2b stub
+   * so the affordance is in place for users to discover.
+   */
+  onCantFindItem?: () => void
+  /**
+   * Family-member context for the "Message <name>" affordance.
+   * Phase 3 (family-meal PRD) populates this from the row's
+   * forPatientId. Today: typically undefined → message link
+   * stays hidden.
+   */
+  forMember?: { name: string }
+  /**
+   * Open chat scoped to this item + the family member it's for.
+   * Wired in Phase 1 of the in-app chat PRD; if not provided, the
+   * Message link is suppressed regardless of forMember.
+   */
+  onMessageFor?: () => void
   /** Disable inputs while a parent operation is in flight. */
   disabled?: boolean
 }
@@ -71,6 +97,10 @@ export function ScanItemCard({
   onPhotoRequested,
   onCancel,
   showAddPhoto = false,
+  onCheckExpiration,
+  onCantFindItem,
+  forMember,
+  onMessageFor,
   disabled = false,
 }: ScanItemCardProps) {
   const [imageEnlarged, setImageEnlarged] = useState(false)
@@ -201,19 +231,57 @@ export function ScanItemCard({
         </div>
       </div>
 
-      {/* Secondary link-style actions — Instacart's "Can't find item"
-          / "Message Lee" treatment. We currently only have the photo
-          path; "Can't find item" is Stage 2b territory. */}
-      {showAddPhoto && onPhotoRequested && (
-        <div className="px-4 pb-4 border-t border-border pt-3">
-          <button
-            type="button"
-            onClick={onPhotoRequested}
-            disabled={disabled}
-            className="text-sm font-medium text-primary disabled:opacity-50"
-          >
-            Add product photo
-          </button>
+      {/* Secondary link-style actions stack — matches Instacart's
+          per-item card pattern: Check expiration / Can't Find Item
+          / Message <member> / Add product photo. Each row is
+          opt-in (parent provides handler), so cards adapt to
+          available data without empty rows. Section is hidden
+          entirely when none are active. */}
+      {(onCheckExpiration ||
+        onCantFindItem ||
+        (forMember && onMessageFor) ||
+        (showAddPhoto && onPhotoRequested)) && (
+        <div className="px-4 pb-4 border-t border-border pt-3 flex flex-col items-start gap-3">
+          {onCheckExpiration && (
+            <button
+              type="button"
+              onClick={onCheckExpiration}
+              disabled={disabled}
+              className="text-sm font-medium text-primary disabled:opacity-50"
+            >
+              Check expiration date
+            </button>
+          )}
+          {onCantFindItem && (
+            <button
+              type="button"
+              onClick={onCantFindItem}
+              disabled={disabled}
+              className="text-sm font-medium text-primary disabled:opacity-50"
+            >
+              Can&apos;t find item
+            </button>
+          )}
+          {forMember && onMessageFor && (
+            <button
+              type="button"
+              onClick={onMessageFor}
+              disabled={disabled}
+              className="text-sm font-medium text-primary disabled:opacity-50"
+            >
+              Message {forMember.name}
+            </button>
+          )}
+          {showAddPhoto && onPhotoRequested && (
+            <button
+              type="button"
+              onClick={onPhotoRequested}
+              disabled={disabled}
+              className="text-sm font-medium text-primary disabled:opacity-50"
+            >
+              Add product photo
+            </button>
+          )}
         </div>
       )}
 

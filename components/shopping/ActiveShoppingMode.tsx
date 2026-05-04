@@ -44,6 +44,7 @@
 import { Fragment, useState, useMemo, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
+import { ShoppingCartIcon } from '@heroicons/react/24/outline'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import {
@@ -458,12 +459,18 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                 Mark multiple
               </button>
             )}
+            {/* Cart icon = "wrap up the trip" gesture. Replaces the
+                text "End" button — more iconic, smaller footprint,
+                doesn't compete with the Mark multiple button for
+                width on narrow phones. Same handleEndPressed
+                handler (opens trip summary or exits if 0 found). */}
             <button
               type="button"
               onClick={handleEndPressed}
-              className="px-3 py-2 bg-muted text-foreground rounded-lg text-sm font-medium active:bg-muted/80"
+              className="p-2 bg-muted text-foreground rounded-lg active:bg-muted/80"
+              aria-label="Wrap up trip"
             >
-              End
+              <ShoppingCartIcon className="w-5 h-5" />
             </button>
           </div>
         )}
@@ -577,6 +584,23 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
             }
             onCancel={closeItem}
             showAddPhoto={!activeItem.imageUrl && !!activeItem.barcode}
+            onCheckExpiration={() => {
+              // TODO: open ExpirationPicker. Existing component lives
+              // in components/shopping/ExpirationPicker.tsx and is
+              // already used by /shopping's tap-to-purchase flow —
+              // wiring it here is a small follow-up.
+              toast('Expiration picker coming soon', { icon: '📅' })
+            }}
+            onCantFindItem={() => {
+              // Stage 2b — moves the item to IN-REVIEW for a family
+              // member to suggest a replacement or remove. Stub for
+              // now so the affordance is discoverable; real
+              // state-transition lands with the out-of-stock flow.
+              toast('Out-of-stock flow coming in Stage 2b', { icon: '⏳' })
+            }}
+            // forMember + onMessageFor stay undefined — Phase 3
+            // populates forPatientId on rows; in-app chat (PRD-in-
+            // app-chat.md, Phase 1) wires the message handler.
             disabled={submitting}
           />
         </div>
@@ -883,9 +907,9 @@ function formatSizeLabel(item: ShoppingItem): string | undefined {
 
 /**
  * Build the info-rows list for the per-item card. Mirrors
- * Instacart's "Location: Snacks", "Price: $4.29" rows under the
- * green CTA. We use category as the Location proxy until per-store
- * aisle data exists (Stage 2d).
+ * Instacart's "Location: Snacks", "Price: $4.29", "UPC: ..." rows
+ * under the green CTA. We use category as the Location proxy until
+ * per-store aisle data exists (Stage 2d).
  */
 function buildInfoRows(item: ShoppingItem): Array<{ label: string; value: string }> {
   const rows: Array<{ label: string; value: string }> = []
@@ -899,6 +923,9 @@ function buildInfoRows(item: ShoppingItem): Array<{ label: string; value: string
       label: 'Price',
       value: `$${(item.expectedPriceCents / 100).toFixed(2)}`,
     })
+  }
+  if (item.barcode) {
+    rows.push({ label: 'UPC', value: item.barcode })
   }
   return rows
 }
