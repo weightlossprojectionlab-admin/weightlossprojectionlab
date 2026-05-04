@@ -285,8 +285,12 @@ export default async function RecipeDetailPage({ params }: PageProps) {
               name: text,
               quantity: 1,
             }))}
+            ingredientTexts={recipe.ingredients || []}
             calories={recipe.calories || 0}
             prepTime={recipe.prepTime || 30}
+            servingSize={recipe.servingSize || 1}
+            mealType={recipe.mealType}
+            macros={recipe.macros}
             hasSteps={!!recipe.recipeSteps?.length && recipe.recipeSteps.some((s: string) => s.trim().length > 10)}
           />
         </div>

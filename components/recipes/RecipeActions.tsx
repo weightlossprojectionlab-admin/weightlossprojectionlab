@@ -1,10 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { ShareIcon, ClipboardDocumentCheckIcon, SparklesIcon } from '@heroicons/react/24/outline'
+import { ShareIcon, ClipboardDocumentCheckIcon, SparklesIcon, FireIcon } from '@heroicons/react/24/outline'
 import { RecipeIntegrationButton } from '@/components/shopping/RecipeIntegrationButton'
 import { shareViaWebAPI, isWebShareSupported, generateShareContent } from '@/lib/social-share-utils'
+import { cookingSessionOperations } from '@/lib/firebase-operations'
+import { auth } from '@/lib/firebase'
+import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import type { RecipeIngredient } from '@/lib/shopping-diff'
 
@@ -15,6 +19,18 @@ interface RecipeActionsProps {
   calories: number
   prepTime: number
   hasSteps?: boolean
+
+  /**
+   * Cooking-session prerequisites. Optional so callers that don't need
+   * the Start Cooking button (legacy callers) keep working unchanged;
+   * when present, we render the button and createCookingSession can
+   * fire with proper defaults instead of fake data.
+   */
+  servingSize?: number
+  mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  macros?: { protein: number; carbs: number; fat: number; fiber: number }
+  /** Free-text ingredient strings (what the cooking session will pass through ingredient-matcher). */
+  ingredientTexts?: string[]
 }
 
 export default function RecipeActions({
@@ -24,10 +40,49 @@ export default function RecipeActions({
   calories,
   prepTime,
   hasSteps = true,
+  servingSize,
+  mealType,
+  macros,
+  ingredientTexts,
 }: RecipeActionsProps) {
+  const router = useRouter()
   const { isAdmin } = useAdminAuth()
   const [copied, setCopied] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [startingCooking, setStartingCooking] = useState(false)
+
+  const handleStartCooking = async () => {
+    if (!auth.currentUser) {
+      toast.error('Sign in to start cooking')
+      router.push('/auth')
+      return
+    }
+    setStartingCooking(true)
+    try {
+      // Build the cooking session payload. mealType defaults to 'dinner'
+      // when the recipe didn't specify one; servingSize defaults to 1.
+      // scaledIngredients carries the raw free-text strings — the
+      // session page passes them through checkIngredientsWithQuantities
+      // which parses {amount, unit, name} as best it can.
+      const session = await cookingSessionOperations.createCookingSession({
+        recipeId,
+        recipeName,
+        servingSize: servingSize ?? 1,
+        mealType: mealType ?? 'dinner',
+        scaledIngredients: ingredientTexts ?? ingredients.map((i) => i.name || ''),
+        scaledCalories: calories,
+        scaledMacros: macros ?? { protein: 0, carbs: 0, fat: 0, fiber: 0 },
+        stepTimers: [],
+        status: 'in-progress',
+      } as any)
+      router.push(`/cooking/${session.id}`)
+    } catch (err) {
+      logger.error('Failed to start cooking session', err as Error, { recipeId })
+      toast.error('Could not start cooking session')
+    } finally {
+      setStartingCooking(false)
+    }
+  }
 
   const handleShare = async () => {
     const content = generateShareContent({
@@ -104,6 +159,15 @@ export default function RecipeActions({
         ingredients={ingredients}
         className="flex-1 min-w-[140px] justify-center py-3"
       />
+      <button
+        onClick={handleStartCooking}
+        disabled={startingCooking}
+        className="flex items-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+        title="Start a cooking session — completing it will deduct ingredients from your kitchen inventory"
+      >
+        <FireIcon className="h-5 w-5" />
+        {startingCooking ? 'Starting…' : 'Start Cooking'}
+      </button>
       <button
         onClick={handleShare}
         className="flex items-center gap-2 px-6 py-3 bg-card border-2 border-border text-foreground rounded-lg hover:border-primary hover:text-primary transition-colors font-medium"
