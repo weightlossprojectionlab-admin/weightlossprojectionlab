@@ -14,7 +14,7 @@ import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 import { useInventory } from '@/hooks/useInventory'
 import { useShopping } from '@/hooks/useShopping'
-import { checkIngredientsWithQuantities } from '@/lib/ingredient-matcher'
+import { checkIngredientsWithQuantities, filterRecipeRelevantItems } from '@/lib/ingredient-matcher'
 import { convertUnit } from '@/lib/unit-conversion'
 
 function CookingSessionContent() {
@@ -136,9 +136,15 @@ function CookingSessionContent() {
       //     density), or the recipe's needed.unit/quantity wasn't
       //     parsed from the free text.
       if (session.scaledIngredients && session.scaledIngredients.length > 0) {
+        // Strip pet-food / pet-supplies before deduction — without
+        // this a recipe ingredient like 'tofu' could fuzzy-match a
+        // pet product (e.g. 'Crisp Cod Fish Skins') and trigger a
+        // bogus consumeItem against the wrong row. Same boundary the
+        // RecipeModal and calculateRecipeReadiness already enforce.
+        const recipeRelevantInventory = filterRecipeRelevantItems(inventoryItems)
         const ingredientResults = checkIngredientsWithQuantities(
           session.scaledIngredients,
-          inventoryItems
+          recipeRelevantInventory
         )
 
         let amountDeductedCount = 0

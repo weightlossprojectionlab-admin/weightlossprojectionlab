@@ -22,6 +22,7 @@ import {
 } from './medical-recipe-engine'
 import type { PatientProfile, PatientMedication, VitalSign } from '@/types/medical'
 import type { ShoppingItem } from '@/types/shopping'
+import { filterRecipeRelevantItems } from './ingredient-matcher'
 import { logger } from './logger'
 
 // ==================== TYPES ====================
@@ -81,13 +82,19 @@ export async function getMemberRecipeSuggestions(
     medications,
     recentVitals,
     questionnaireResponses,
-    householdInventory,
+    householdInventory: rawInventory,
     mealType,
     maxResults = 10,
     availableRecipes,
     prioritizeExpiring = true,
     minAvailability = 0
   } = options
+
+  // Strip pet-food / pet-supplies once at the engine boundary so
+  // calculateInventoryAvailability and any other downstream consumer
+  // never sees them. Same single source of truth the RecipeModal and
+  // cooking-session deduction path use.
+  const householdInventory = filterRecipeRelevantItems(rawInventory)
 
   logger.info('[Member Recipe Engine] Generating suggestions', {
     patientId: patient.id,
