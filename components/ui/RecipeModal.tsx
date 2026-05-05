@@ -31,6 +31,7 @@ import {
   type IngredientMatchResult
 } from '@/lib/ingredient-matcher'
 import { addRecipeIngredientsToShoppingList } from '@/lib/shopping-operations'
+import { findAllergenOverlap } from '@/lib/allergen-cross-check'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
@@ -99,6 +100,25 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(suggestion.mealType)
   const [startingSession, setStartingSession] = useState(false)
   const [addingToShoppingList, setAddingToShoppingList] = useState(false)
+  // Family-meal Commit C — explicit override for the allergen
+  // pre-flight gate. False by default; user must check the
+  // override box on the warning panel to clear the block. Resets
+  // on open or recipe change so stale consent doesn't carry over.
+  const [allergenOverride, setAllergenOverride] = useState(false)
+  useEffect(() => {
+    setAllergenOverride(false)
+  }, [isOpen, suggestion.id])
+
+  // Compute the allergen overlap once per render. Pure function;
+  // safe to recompute. When the recipe carries no allergens or
+  // the eater has no foodAllergies set, returns []. Drives the
+  // Cook Now gate + the warning panel below.
+  const allergenMatches = useMemo(
+    () => findAllergenOverlap(suggestion.allergens, userAllergies),
+    [suggestion.allergens, userAllergies]
+  )
+  const hasAllergenConflict = allergenMatches.length > 0
+  const cookNowBlocked = hasAllergenConflict && !allergenOverride
 
   // Prevent duplicate session creation
   const sessionCreationRef = useRef(false)
@@ -346,6 +366,21 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
     if (!suggestion.recipeSteps || suggestion.recipeSteps.length === 0) {
       toast.error('This recipe doesn\'t have cooking instructions yet')
+      return
+    }
+
+    // Family-meal Commit C — allergen pre-flight. Block when the
+    // recipe carries an allergen the eater is allergic to, unless
+    // they've explicitly checked the override. Backstop only —
+    // the button itself is also disabled below, but a defensive
+    // check here ensures the gate holds even if the disabled
+    // attribute gets bypassed (programmatic click, accessibility
+    // tools, etc.).
+    if (cookNowBlocked) {
+      const names = allergenMatches.map((m) => m.userTerm).join(', ')
+      toast.error(
+        `Recipe contains ${names}. Confirm the override above to proceed.`
+      )
       return
     }
 
@@ -711,21 +746,70 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                 </div>
               )}
 
-              {/* Allergens */}
-              {suggestion.allergens?.length > 0 && (
+              {/* Allergens — two states:
+                  1. hasAllergenConflict: this recipe contains an
+                     allergen the active eater is allergic to.
+                     Render a red gating panel with override
+                     checkbox; Cook Now is disabled until override
+                     is checked.
+                  2. No conflict but recipe carries allergens:
+                     passive orange "Contains:" label as before. */}
+              {hasAllergenConflict ? (
                 <div>
-                  <h3 className="font-semibold text-foreground mb-2">Allergen Warning</h3>
-                  <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
-                    <p className="text-sm font-medium text-orange-800 dark:text-orange-300 mb-1">Contains:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {suggestion.allergens.map(allergen => (
-                        <span key={allergen} className="text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300 px-2 py-1 rounded">
-                          {allergen}
-                        </span>
-                      ))}
-                    </div>
+                  <h3 className="font-semibold text-error mb-2">
+                    Allergen Conflict
+                  </h3>
+                  <div className="bg-error/10 border-2 border-error rounded-lg p-3">
+                    <p className="text-sm font-medium text-error mb-2">
+                      This recipe contains{' '}
+                      <strong>
+                        {allergenMatches.map((m) => m.userTerm).join(', ')}
+                      </strong>{' '}
+                      — flagged in the eater&apos;s allergy profile.
+                    </p>
+                    <p className="text-xs text-error mb-3">
+                      We&apos;ll block Cook Now unless you confirm
+                      below. Consider a substitution from the
+                      ingredient list instead.
+                    </p>
+                    <label className="flex items-start gap-2 text-sm cursor-pointer text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={allergenOverride}
+                        onChange={(e) =>
+                          setAllergenOverride(e.target.checked)
+                        }
+                        className="w-4 h-4 mt-0.5 rounded border-border"
+                      />
+                      <span>
+                        I understand the risk and want to proceed anyway.
+                      </span>
+                    </label>
                   </div>
                 </div>
+              ) : (
+                suggestion.allergens?.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">
+                      Allergen Warning
+                    </h3>
+                    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+                      <p className="text-sm font-medium text-orange-800 dark:text-orange-300 mb-1">
+                        Contains:
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {suggestion.allergens.map((allergen) => (
+                          <span
+                            key={allergen}
+                            className="text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300 px-2 py-1 rounded"
+                          >
+                            {allergen}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )
               )}
 
               {/* Ingredients - Scaled with Substitutions */}
@@ -1470,9 +1554,20 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
 
               {/* Action Buttons */}
               <div className="space-y-3">
+                {/* Allergen-conflict callout in this options pane —
+                    duplicated copy of the gate from the main view
+                    so the user sees the block in the same place
+                    they're trying to act. The disabled state +
+                    backstop in handleCookNow keep the gate held. */}
+                {cookNowBlocked && (
+                  <div className="bg-error/10 border-2 border-error rounded-lg p-3 text-sm text-error">
+                    Allergen conflict ({allergenMatches.map((m) => m.userTerm).join(', ')}).
+                    Confirm the override above to proceed.
+                  </div>
+                )}
                 <button
                   onClick={handleCookNow}
-                  disabled={startingSession}
+                  disabled={startingSession || cookNowBlocked}
                   className="w-full px-6 py-3 bg-success text-white rounded-lg hover:bg-success-hover transition-colors font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
