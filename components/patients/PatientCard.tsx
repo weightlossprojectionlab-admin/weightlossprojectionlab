@@ -40,6 +40,15 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
   const [overdueActions, setOverdueActions] = useState<string[]>([])
   const [hasUpcomingAppointment, setHasUpcomingAppointment] = useState(false)
   const [loading, setLoading] = useState(true)
+  // Vitals status — three-bucket signal driven by overdue logic.
+  //   good      → on-track or due-soon (default green button)
+  //   overdue   → past target but under the mandatory threshold
+  //               (amber button, shows day count)
+  //   mandatory → 2× target days late or worse (red button,
+  //               "Required" label)
+  // daysOverdue carries the count for the amber-state label.
+  const [vitalsStatus, setVitalsStatus] = useState<'good' | 'overdue' | 'mandatory'>('good')
+  const [vitalsDaysOverdue, setVitalsDaysOverdue] = useState(0)
 
   // Calculate age from date of birth
   const calculateAge = (dob: string): number => {
@@ -80,6 +89,28 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
           } else if (weightReminder.shouldShow) {
             const frequencyLabel = patient.weightCheckInFrequency === 'biweekly' ? 'bi-weekly' : patient.weightCheckInFrequency
             actions.push(`${frequencyLabel.charAt(0).toUpperCase() + frequencyLabel.slice(1)} weight check-in due soon`)
+          }
+
+          // Three-bucket vitals status for the button color.
+          // DRY: shouldShowWeightReminder already computes the
+          // canonical overdue + daysSince — no parallel logic.
+          //   mandatory → 2× target days late or worse (red)
+          //   overdue   → past target but under mandatory (amber)
+          //   good      → on-track or due-soon (green, default)
+          const targetDays =
+            patient.weightCheckInFrequency === 'daily' ? 1
+            : patient.weightCheckInFrequency === 'weekly' ? 7
+            : patient.weightCheckInFrequency === 'biweekly' ? 14
+            : 30 // monthly
+          if (weightReminder.isOverdue) {
+            const daysOver = weightReminder.daysSince - targetDays
+            if (weightReminder.daysSince >= targetDays * 2) {
+              setVitalsStatus('mandatory')
+              setVitalsDaysOverdue(daysOver)
+            } else {
+              setVitalsStatus('overdue')
+              setVitalsDaysOverdue(daysOver)
+            }
           }
         }
 
@@ -552,7 +583,11 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
           )}
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions — Vitals button color reflects the
+            three-bucket vitalsStatus computed above. Same handler
+            either way (opens the AI-guided quick-log modal); the
+            color + label give caregivers an at-a-glance read on
+            who needs attention. */}
         <div className="grid grid-cols-2 gap-2">
           {onQuickLogVitals && (
             <button
@@ -561,11 +596,29 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                 e.stopPropagation()
                 onQuickLogVitals()
               }}
-              className="flex items-center justify-center gap-2 px-3 py-2 bg-success text-white rounded-lg hover:bg-success-dark transition-colors font-medium text-sm"
-              title="Quick log vitals with AI guidance"
+              className={`flex items-center justify-center gap-2 px-3 py-2 text-white rounded-lg transition-colors font-medium text-sm ${
+                vitalsStatus === 'mandatory'
+                  ? 'bg-error hover:bg-error/90'
+                  : vitalsStatus === 'overdue'
+                  ? 'bg-warning hover:bg-warning/90'
+                  : 'bg-success hover:bg-success-dark'
+              }`}
+              title={
+                vitalsStatus === 'mandatory'
+                  ? `Vitals required — overdue ${vitalsDaysOverdue}d`
+                  : vitalsStatus === 'overdue'
+                  ? `Vitals overdue ${vitalsDaysOverdue}d`
+                  : 'Quick log vitals with AI guidance'
+              }
             >
               <ClipboardDocumentListIcon className="w-5 h-5" />
-              <span>Vitals</span>
+              <span>
+                {vitalsStatus === 'mandatory'
+                  ? 'Vitals — Required'
+                  : vitalsStatus === 'overdue'
+                  ? `Vitals · ${vitalsDaysOverdue}d`
+                  : 'Vitals'}
+              </span>
             </button>
           )}
           <button
