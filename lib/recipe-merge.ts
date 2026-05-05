@@ -6,6 +6,7 @@
  */
 
 import { MEAL_SUGGESTIONS, MealSuggestion } from './meal-suggestions'
+import { unpackIngredientAllergens } from './ingredient-allergen-classifier'
 
 interface FirestoreDoc {
   docId?: string
@@ -59,6 +60,11 @@ export function mergeRecipesWithMedia(
       createdAt: doc.createdAt?.toDate?.() || doc.createdAt,
       updatedAt: doc.updatedAt?.toDate?.() || doc.updatedAt,
       mediaUploadedAt: doc.mediaUploadedAt?.toDate?.() || doc.mediaUploadedAt,
+      // Family-meal Commit D — unpack ingredientAllergens from its
+      // Firestore-stored shape ([{tags:[...]}, ...]) back to the
+      // consumer-facing AllergyTag[][] form. Without this, RecipeModal
+      // sees the packed objects and silently bails on per-row chips.
+      ingredientAllergens: unpackIngredientAllergens(doc.ingredientAllergens),
     } as MealSuggestion))
 
   // Apply status filter if provided

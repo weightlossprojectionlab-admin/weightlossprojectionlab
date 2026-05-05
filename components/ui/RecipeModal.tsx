@@ -32,6 +32,7 @@ import {
 } from '@/lib/ingredient-matcher'
 import { addRecipeIngredientsToShoppingList } from '@/lib/shopping-operations'
 import { findAllergenOverlap } from '@/lib/allergen-cross-check'
+import { unpackIngredientAllergens } from '@/lib/ingredient-allergen-classifier'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
@@ -127,9 +128,17 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   // when missing — recipe-level conflict still triggers via
   // `allergenMatches` above. Map: ingredient-index → list of user
   // terms that match (e.g., ["peanuts"], ["milk", "peanuts"]).
+  //
+  // Defense-in-depth: call unpack here too. Some read paths
+  // (mergeRecipesWithMedia from useRecipes hook, raw admin SDK
+  // reads) may pass the field through in its packed Firestore
+  // shape ([{tags:[...]}, ...]). The unpack helper is idempotent
+  // — already-unpacked input passes through unchanged.
   const perIngredientConflicts = useMemo(() => {
     const map = new Map<number, string[]>()
-    const ingredientAllergens = suggestion.ingredientAllergens
+    const ingredientAllergens = unpackIngredientAllergens(
+      suggestion.ingredientAllergens,
+    )
     if (!ingredientAllergens?.length || !userAllergies?.length) return map
     suggestion.ingredients.forEach((_, idx) => {
       const tags = ingredientAllergens[idx]

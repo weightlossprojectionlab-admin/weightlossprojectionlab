@@ -220,10 +220,22 @@ export function unpackIngredientAllergens(
 ): AllergyTag[][] | undefined {
   if (!Array.isArray(stored)) return undefined
   return stored.map((entry) => {
+    // Idempotent: tolerate already-unpacked input (entry is an array
+    // of strings) so callers like RecipeModal can normalize defensively
+    // even when an upstream read path didn't unwrap.
+    if (Array.isArray(entry)) {
+      return (entry as unknown[]).filter(
+        (t): t is AllergyTag =>
+          typeof t === 'string' && (ALLERGY_TAG_VALUES as string[]).includes(t),
+      )
+    }
+    // Packed shape: entry is { tags: [...] } as persisted by
+    // packIngredientAllergens.
     const tags = (entry as { tags?: unknown })?.tags
     if (!Array.isArray(tags)) return []
-    return tags.filter((t): t is AllergyTag =>
-      typeof t === 'string' && (ALLERGY_TAG_VALUES as string[]).includes(t),
+    return (tags as unknown[]).filter(
+      (t): t is AllergyTag =>
+        typeof t === 'string' && (ALLERGY_TAG_VALUES as string[]).includes(t),
     )
   })
 }
