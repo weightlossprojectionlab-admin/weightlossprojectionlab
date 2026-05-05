@@ -410,7 +410,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
     if (cookNowBlocked) {
       const names = allergenMatches.map((m) => m.userTerm).join(', ')
       toast.error(
-        `Recipe contains ${names}. Confirm the override above to proceed.`
+        `Recipe contains ${names} — unsafe for this eater. Pick a different recipe.`
       )
       return
     }
@@ -494,7 +494,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
     if (cookNowBlocked) {
       const names = allergenMatches.map((m) => m.userTerm).join(', ')
       toast.error(
-        `Recipe contains ${names}. Confirm the allergen override above first.`
+        `Recipe contains ${names} — unsafe for this eater. Pick a different recipe.`
       )
       return
     }
@@ -791,9 +791,11 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
               {/* Allergens — two states:
                   1. hasAllergenConflict: this recipe contains an
                      allergen the active eater is allergic to.
-                     Render a red gating panel with override
-                     checkbox; Cook Now is disabled until override
-                     is checked.
+                     Render a red gating panel — Cook Now and
+                     shopping-list actions are HARD blocked.
+                     The override checkbox is disabled because the
+                     active eater literally has the allergy; an
+                     override here would just be a footgun.
                   2. No conflict but recipe carries allergens:
                      passive orange "Contains:" label as before. */}
               {hasAllergenConflict ? (
@@ -810,21 +812,20 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                       — flagged in the eater&apos;s allergy profile.
                     </p>
                     <p className="text-xs text-error mb-3">
-                      We&apos;ll block Cook Now unless you confirm
-                      below. Consider a substitution from the
-                      ingredient list instead.
+                      Cook Now and shopping-list actions are blocked
+                      for this eater. Consider a substitution from the
+                      ingredient list, or pick a different recipe.
                     </p>
-                    <label className="flex items-start gap-2 text-sm cursor-pointer text-foreground">
+                    <label className="flex items-start gap-2 text-sm cursor-not-allowed text-muted-foreground opacity-60">
                       <input
                         type="checkbox"
-                        checked={allergenOverride}
-                        onChange={(e) =>
-                          setAllergenOverride(e.target.checked)
-                        }
-                        className="w-4 h-4 mt-0.5 rounded border-border"
+                        checked={false}
+                        disabled
+                        readOnly
+                        className="w-4 h-4 mt-0.5 rounded border-border cursor-not-allowed"
                       />
                       <span>
-                        I understand the risk and want to proceed anyway.
+                        Override unavailable — this eater is allergic.
                       </span>
                     </label>
                   </div>
@@ -1244,12 +1245,12 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     </div>
 
                     {/* Family-meal Commit D — allergen pre-flight on
-                        the Shopping List path. Same gate semantics as
-                        Cook Now: when the recipe carries an allergen
-                        the eater is allergic to, surface the warning
-                        and require the override before the user can
-                        bulk-add ingredients (some of which are the
-                        actual allergens). */}
+                        the Shopping List path. Same hard-block as the
+                        Cook Now panel. Override is disabled because
+                        the active eater has the allergy; there's no
+                        scenario where bulk-adding allergen-containing
+                        ingredients to the shopping list for this
+                        eater is the right action. */}
                     {hasAllergenConflict && (
                       <div className="bg-error/10 border-2 border-error rounded-lg p-3 mb-4">
                         <h4 className="text-sm font-semibold text-error mb-1">
@@ -1260,21 +1261,21 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                           <strong>
                             {allergenMatches.map((m) => m.userTerm).join(', ')}
                           </strong>
-                          . Adding these to your shopping list won&apos;t make
-                          them safe to eat. Confirm below to proceed anyway,
-                          or skip this recipe.
+                          . Adding these ingredients to the shopping list
+                          won&apos;t make them safe for this eater. Pick a
+                          different recipe, or substitute the conflicting
+                          ingredients first.
                         </p>
-                        <label className="flex items-start gap-2 text-xs cursor-pointer text-foreground">
+                        <label className="flex items-start gap-2 text-xs cursor-not-allowed text-muted-foreground opacity-60">
                           <input
                             type="checkbox"
-                            checked={allergenOverride}
-                            onChange={(e) =>
-                              setAllergenOverride(e.target.checked)
-                            }
-                            className="w-4 h-4 mt-0.5 rounded border-border"
+                            checked={false}
+                            disabled
+                            readOnly
+                            className="w-4 h-4 mt-0.5 rounded border-border cursor-not-allowed"
                           />
                           <span>
-                            I understand the risk and want to add anyway.
+                            Override unavailable — this eater is allergic.
                           </span>
                         </label>
                       </div>
@@ -1320,7 +1321,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                             {addingToShoppingList
                               ? 'Adding...'
                               : cookNowBlocked
-                                ? 'Confirm allergen override above first'
+                                ? 'Unsafe for this eater — pick a different recipe'
                                 : itemsOnList > 0
                                   ? `Add ${remainingCount} More Item${remainingCount > 1 ? 's' : ''} to Shopping List`
                                   : `Add ${neededCount} Missing Item${neededCount > 1 ? 's' : ''} to Shopping List`
@@ -1670,8 +1671,9 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     backstop in handleCookNow keep the gate held. */}
                 {cookNowBlocked && (
                   <div className="bg-error/10 border-2 border-error rounded-lg p-3 text-sm text-error">
-                    Allergen conflict ({allergenMatches.map((m) => m.userTerm).join(', ')}).
-                    Confirm the override above to proceed.
+                    Allergen conflict ({allergenMatches.map((m) => m.userTerm).join(', ')}) —
+                    unsafe for this eater. Cook Now is blocked. Choose a
+                    different recipe or substitute the conflicting ingredients.
                   </div>
                 )}
                 <button
