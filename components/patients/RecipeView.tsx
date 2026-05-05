@@ -693,14 +693,19 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
         </div>
       ) : null}
 
-      {/* Recipe Detail Modal - DRY from RecipeModal component */}
+      {/* Recipe Detail Modal - DRY from RecipeModal component.
+          Passes the patient's foodAllergies as userAllergies so
+          the Cook Now allergen pre-flight gate (bfba00c) actually
+          fires when this recipe view is the entry surface. Also
+          passes dietaryPreferences/dietaryRestrictions so the
+          dietary-tag matcher reads them. */}
       {selectedRecipe && (
         <RecipeModal
           suggestion={selectedRecipe}
           isOpen={!!selectedRecipe}
           onClose={() => setSelectedRecipe(null)}
-          userDietaryPreferences={undefined}
-          userAllergies={undefined}
+          userDietaryPreferences={memberProfile?.dietaryRestrictions}
+          userAllergies={memberProfile?.foodAllergies}
           patientId={patientId}
         />
       )}
