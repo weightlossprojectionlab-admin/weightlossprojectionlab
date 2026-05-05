@@ -120,6 +120,28 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   const hasAllergenConflict = allergenMatches.length > 0
   const cookNowBlocked = hasAllergenConflict && !allergenOverride
 
+  // Family-meal Commit D — per-ingredient allergen conflicts.
+  // `ingredientAllergens` is the cached per-row classification
+  // populated at recipe write time by the Gemini classifier
+  // (lib/ingredient-allergen-classifier.ts). Falls back gracefully
+  // when missing — recipe-level conflict still triggers via
+  // `allergenMatches` above. Map: ingredient-index → list of user
+  // terms that match (e.g., ["peanuts"], ["milk", "peanuts"]).
+  const perIngredientConflicts = useMemo(() => {
+    const map = new Map<number, string[]>()
+    const ingredientAllergens = suggestion.ingredientAllergens
+    if (!ingredientAllergens?.length || !userAllergies?.length) return map
+    suggestion.ingredients.forEach((_, idx) => {
+      const tags = ingredientAllergens[idx]
+      if (!tags?.length) return
+      const overlaps = findAllergenOverlap(tags, userAllergies)
+      if (overlaps.length > 0) {
+        map.set(idx, overlaps.map((m) => m.userTerm))
+      }
+    })
+    return map
+  }, [suggestion.ingredients, suggestion.ingredientAllergens, userAllergies])
+
   // Prevent duplicate session creation
   const sessionCreationRef = useRef(false)
 
@@ -454,6 +476,17 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   const handleAddMissingToShoppingList = async () => {
     if (!auth.currentUser?.uid) {
       toast.error('You must be logged in to add items')
+      return
+    }
+
+    // Family-meal Commit D — defensive backstop. Button is disabled
+    // when cookNowBlocked, but a programmatic / accessibility-tool
+    // click could still hit this path. Toast and bail.
+    if (cookNowBlocked) {
+      const names = allergenMatches.map((m) => m.userTerm).join(', ')
+      toast.error(
+        `Recipe contains ${names}. Confirm the allergen override above first.`
+      )
       return
     }
 
@@ -936,6 +969,19 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                                 {isSwapped && swappedSub.notes && (
                                   <p className="text-xs text-muted-foreground mt-1">{swappedSub.notes}</p>
                                 )}
+                                {/* Family-meal Commit D — per-ingredient
+                                    allergen flag. Renders when this row's
+                                    classified allergens overlap with the
+                                    eater's foodAllergies. */}
+                                {perIngredientConflicts.has(idx) && (
+                                  <p className="text-xs text-error font-medium flex items-center gap-1 mt-1">
+                                    <span>⚠</span>
+                                    <span>
+                                      Contains {perIngredientConflicts.get(idx)!.join(', ')} —{' '}
+                                      {perIngredientConflicts.get(idx)!.length === 1 ? 'allergy' : 'allergies'}
+                                    </span>
+                                  </p>
+                                )}
                                 {/* Show quantity-aware inventory status */}
                                 {ingredientResults[idx] && (
                                   <div className="mt-1">
@@ -1188,6 +1234,43 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                       <p className="text-sm text-muted-foreground">For {servingSize} serving{servingSize > 1 ? 's' : ''}</p>
                     </div>
 
+                    {/* Family-meal Commit D — allergen pre-flight on
+                        the Shopping List path. Same gate semantics as
+                        Cook Now: when the recipe carries an allergen
+                        the eater is allergic to, surface the warning
+                        and require the override before the user can
+                        bulk-add ingredients (some of which are the
+                        actual allergens). */}
+                    {hasAllergenConflict && (
+                      <div className="bg-error/10 border-2 border-error rounded-lg p-3 mb-4">
+                        <h4 className="text-sm font-semibold text-error mb-1">
+                          Allergen Conflict
+                        </h4>
+                        <p className="text-xs text-error mb-2">
+                          This recipe contains{' '}
+                          <strong>
+                            {allergenMatches.map((m) => m.userTerm).join(', ')}
+                          </strong>
+                          . Adding these to your shopping list won&apos;t make
+                          them safe to eat. Confirm below to proceed anyway,
+                          or skip this recipe.
+                        </p>
+                        <label className="flex items-start gap-2 text-xs cursor-pointer text-foreground">
+                          <input
+                            type="checkbox"
+                            checked={allergenOverride}
+                            onChange={(e) =>
+                              setAllergenOverride(e.target.checked)
+                            }
+                            className="w-4 h-4 mt-0.5 rounded border-border"
+                          />
+                          <span>
+                            I understand the risk and want to add anyway.
+                          </span>
+                        </label>
+                      </div>
+                    )}
+
                     {/* Add to Shopping List Button / Status */}
                     {neededCount > 0 && (() => {
                       // Check how many needed items are already on shopping list
@@ -1211,12 +1294,14 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                         )
                       }
 
-                      // Some or no items on list - show add button
+                      // Some or no items on list - show add button.
+                      // Family-meal Commit D — disabled when allergen
+                      // conflict not yet overridden.
                       const remainingCount = neededCount - itemsOnList
                       return (
                         <button
                           onClick={handleAddMissingToShoppingList}
-                          disabled={addingToShoppingList}
+                          disabled={addingToShoppingList || cookNowBlocked}
                           className="w-full mb-4 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1225,9 +1310,11 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                           <span>
                             {addingToShoppingList
                               ? 'Adding...'
-                              : itemsOnList > 0
-                                ? `Add ${remainingCount} More Item${remainingCount > 1 ? 's' : ''} to Shopping List`
-                                : `Add ${neededCount} Missing Item${neededCount > 1 ? 's' : ''} to Shopping List`
+                              : cookNowBlocked
+                                ? 'Confirm allergen override above first'
+                                : itemsOnList > 0
+                                  ? `Add ${remainingCount} More Item${remainingCount > 1 ? 's' : ''} to Shopping List`
+                                  : `Add ${neededCount} Missing Item${neededCount > 1 ? 's' : ''} to Shopping List`
                             }
                           </span>
                         </button>
@@ -1289,6 +1376,19 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                                       <span className="text-xs text-muted-foreground ml-2">({swappedSub.ratio})</span>
                                     )}
                                   </span>
+                                  {/* Family-meal Commit D — per-ingredient
+                                      allergen flag in the shopping-list row,
+                                      mirroring the Recipe-tab badge so users
+                                      can see which specific items are unsafe
+                                      before adding to their list. */}
+                                  {perIngredientConflicts.has(idx) && (
+                                    <p className="text-xs text-error font-medium flex items-center gap-1 mt-1">
+                                      <span>⚠</span>
+                                      <span>
+                                        Contains {perIngredientConflicts.get(idx)!.join(', ')} — allergy
+                                      </span>
+                                    </p>
+                                  )}
                                   {/* Show quantity status */}
                                   {result && result.hasEnough === false && result.deficit && (
                                     <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">

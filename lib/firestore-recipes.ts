@@ -22,8 +22,12 @@ import {
   increment
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { MealSuggestion, RecipeStatus, MealType, MEAL_SUGGESTIONS } from './meal-suggestions'
+import { MealSuggestion, RecipeStatus, MealType, MEAL_SUGGESTIONS, AllergyTag } from './meal-suggestions'
 import { logger } from '@/lib/logger'
+import {
+  packIngredientAllergens,
+  unpackIngredientAllergens,
+} from './ingredient-allergen-classifier'
 
 const RECIPES_COLLECTION = 'recipes'
 
@@ -42,11 +46,15 @@ export function getRecipeByIdLocal(recipeId: string): MealSuggestion | null {
 }
 
 /**
- * Convert Firestore document data to MealSuggestion
+ * Convert Firestore document data to MealSuggestion. Unwraps the
+ * ingredientAllergens field from its persistence shape (array of
+ * `{ tags }` objects, since Firestore disallows nested arrays) back
+ * to the consumer-facing `AllergyTag[][]` form.
  */
 function firestoreToRecipe(id: string, data: DocumentData): MealSuggestion {
   return {
     ...data,
+    ingredientAllergens: unpackIngredientAllergens(data.ingredientAllergens),
     firestoreId: id,
     createdAt: data.createdAt?.toDate?.() || data.createdAt,
     updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
@@ -55,13 +63,19 @@ function firestoreToRecipe(id: string, data: DocumentData): MealSuggestion {
 }
 
 /**
- * Convert MealSuggestion to Firestore-ready data
+ * Convert MealSuggestion to Firestore-ready data. Packs
+ * ingredientAllergens into an array of `{ tags }` objects since
+ * Firestore disallows nested arrays. Pair with
+ * `firestoreToRecipe` on read.
  */
 function recipeToFirestore(recipe: MealSuggestion): DocumentData {
   const now = Timestamp.now()
 
   return {
     ...recipe,
+    ingredientAllergens: recipe.ingredientAllergens
+      ? packIngredientAllergens(recipe.ingredientAllergens)
+      : undefined,
     createdAt: recipe.createdAt ? Timestamp.fromDate(new Date(recipe.createdAt)) : now,
     updatedAt: now,
     mediaUploadedAt: recipe.mediaUploadedAt
@@ -69,6 +83,52 @@ function recipeToFirestore(recipe: MealSuggestion): DocumentData {
       : undefined,
     // Don't store firestoreId in the document itself
     firestoreId: undefined,
+  }
+}
+
+/**
+ * Enrich a recipe with per-ingredient allergen tags via the
+ * server-side classifier endpoint. Best-effort: any failure (network,
+ * rate limit, Gemini error) returns the recipe unchanged so the save
+ * path always proceeds. Recipe-level allergen safety is unaffected.
+ *
+ * Skips the round-trip when:
+ *   - No ingredients to classify
+ *   - ingredientAllergens already present and length-matched (cached)
+ */
+async function enrichWithIngredientAllergens(
+  recipe: MealSuggestion
+): Promise<MealSuggestion> {
+  const ingredients = recipe.ingredients
+  if (!ingredients?.length) return recipe
+
+  // Cache hit: parallel arrays match length, treat as up-to-date.
+  if (
+    recipe.ingredientAllergens &&
+    recipe.ingredientAllergens.length === ingredients.length
+  ) {
+    return recipe
+  }
+
+  try {
+    const res = await fetch('/api/recipes/classify-allergens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ingredients,
+        recipeAllergens: recipe.allergens || [],
+      }),
+    })
+    if (!res.ok) {
+      logger.warn('[firestore-recipes] classify-allergens endpoint returned non-ok', { status: res.status })
+      return recipe
+    }
+    const data = (await res.json()) as { ingredientAllergens?: AllergyTag[][] }
+    if (!Array.isArray(data.ingredientAllergens)) return recipe
+    return { ...recipe, ingredientAllergens: data.ingredientAllergens }
+  } catch (err) {
+    logger.warn('[firestore-recipes] classify-allergens enrichment failed; saving without per-ingredient tags', { error: err })
+    return recipe
   }
 }
 
@@ -84,7 +144,11 @@ export async function saveRecipeToFirestore(
     const docId = recipe.firestoreId || recipe.id
     const recipeRef = doc(db, RECIPES_COLLECTION, docId)
 
-    const data = recipeToFirestore(recipe)
+    // Enrich with per-ingredient allergen tags before persisting.
+    // Best-effort — failures here don't block the save.
+    const enriched = await enrichWithIngredientAllergens(recipe)
+
+    const data = recipeToFirestore(enriched)
 
     // Add metadata if creating
     if (!recipe.createdAt) {

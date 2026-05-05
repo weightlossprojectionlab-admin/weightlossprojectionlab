@@ -115,6 +115,12 @@ export interface MealSuggestion {
   prepTime: number // minutes
   dietaryTags: DietaryTag[]
   allergens: AllergyTag[]
+  // Parallel array to `ingredients`: per-ingredient allergen tags
+  // computed by lib/ingredient-allergen-classifier.ts at recipe
+  // write time. View paths (RecipeModal) read this to render
+  // per-row badges + gate the Shopping List "Add Missing Items"
+  // button. Length mismatch with `ingredients` = stale; recompute.
+  ingredientAllergens?: AllergyTag[][]
   description: string
   safetyWarnings?: string[] // Warnings when user hasn't provided safety info
   recipeSteps?: string[] // Step-by-step cooking instructions

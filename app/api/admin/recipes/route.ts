@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
 import { removeUndefinedValues } from '@/lib/firestore-helpers'
+import { classifyIngredientAllergens, packIngredientAllergens } from '@/lib/ingredient-allergen-classifier'
 
 /**
  * GET /api/admin/recipes?status=&limit=
@@ -102,6 +103,25 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     const recipeId = `recipe-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
+    // Per-ingredient allergen classification (Family-meal Commit D)
+    // — best-effort. On classifier failure, persist without the
+    // field so a later backfill or update can retry. Recipe-level
+    // allergens still gate Cook Now in the meantime.
+    const ingredientsForClassification: string[] = Array.isArray(body.ingredients)
+      ? body.ingredients
+      : []
+    let ingredientAllergens: Awaited<ReturnType<typeof classifyIngredientAllergens>> | undefined
+    if (ingredientsForClassification.length > 0) {
+      try {
+        ingredientAllergens = await classifyIngredientAllergens(
+          ingredientsForClassification,
+          body.allergens || [],
+        )
+      } catch (err) {
+        logger.warn('[admin/recipes POST] classifier failed; persisting without ingredientAllergens', { error: String(err) })
+      }
+    }
+
     const recipeData = {
       id: recipeId,
       name: body.name,
@@ -111,6 +131,9 @@ export async function POST(request: NextRequest) {
       servingSize: body.servingSize || 1,
       dietaryTags: body.dietaryTags || [],
       allergens: body.allergens || [],
+      ingredientAllergens: ingredientAllergens
+        ? packIngredientAllergens(ingredientAllergens)
+        : undefined,
 
       // Nutrition
       calories: body.calories,

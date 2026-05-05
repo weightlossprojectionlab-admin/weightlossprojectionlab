@@ -3,6 +3,13 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import {
+  classifyIngredientAllergens,
+  needsClassification,
+  packIngredientAllergens,
+  unpackIngredientAllergens,
+} from '@/lib/ingredient-allergen-classifier'
+import type { AllergyTag } from '@/lib/meal-suggestions'
 
 /**
  * GET /api/admin/recipes/[id]
@@ -85,9 +92,33 @@ export async function PUT(
     const body = await request.json()
     const recipeRef = adminDb.collection('recipes').doc(params.id)
 
+    // Per-ingredient allergen reclassification (Family-meal Commit D).
+    // Recompute when the ingredient list is in the payload AND the
+    // unpacked cached field is stale (length mismatch with
+    // ingredients) or missing. Best-effort — failures fall back to
+    // empty arrays, save still proceeds. Persisted in Firestore-
+    // friendly packed form.
+    let ingredientAllergens: AllergyTag[][] | undefined
+    if (Array.isArray(body.ingredients) && body.ingredients.length > 0) {
+      const incomingUnpacked = unpackIngredientAllergens(body.ingredientAllergens)
+      if (needsClassification(body.ingredients, incomingUnpacked)) {
+        try {
+          ingredientAllergens = await classifyIngredientAllergens(
+            body.ingredients,
+            (body.allergens || []) as AllergyTag[],
+          )
+        } catch (err) {
+          logger.warn('[admin/recipes PUT] classifier failed; preserving prior ingredientAllergens', { error: String(err) })
+        }
+      }
+    }
+
     // Use set with merge to create doc if it doesn't exist (e.g., hardcoded recipe getting AI data)
     const updateData = {
       ...body,
+      ...(ingredientAllergens
+        ? { ingredientAllergens: packIngredientAllergens(ingredientAllergens) }
+        : {}),
       updatedAt: new Date()
     }
 
