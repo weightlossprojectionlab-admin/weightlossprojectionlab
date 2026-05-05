@@ -1788,6 +1788,136 @@ function PatientDetailContent() {
                 )}
               </div>
 
+              {/* Food Profile — surfaces foodAllergies + preferredFoods
+                  + aversions + preparationNeeds for every family
+                  member. Each subsection only renders when its field
+                  is populated; if nothing is set, the empty-state
+                  prompt appears so caregivers know the data slots
+                  exist. Family-meal PRD fields all live on
+                  PatientProfile (foundation in c6f76ba) — this is
+                  the at-a-glance display surface. */}
+              {(() => {
+                const allergies = patient.foodAllergies ?? []
+                const preferred = patient.preferredFoods ?? []
+                const aversions = patient.aversions ?? []
+                const prep = patient.preparationNeeds
+                const hasAnyPrep =
+                  !!prep && (prep.texture || prep.cutSize || prep.temperature || prep.separated || prep.notes)
+                const isEmpty =
+                  allergies.length === 0 &&
+                  preferred.length === 0 &&
+                  aversions.length === 0 &&
+                  !hasAnyPrep
+
+                return (
+                  <div className="mt-6 pt-6 border-t border-border">
+                    <h3 className="font-semibold text-foreground mb-3">
+                      Food Profile
+                    </h3>
+                    {isEmpty ? (
+                      <p className="text-sm text-muted-foreground">
+                        No allergies, preferences, or prep needs set yet.
+                        {isOwner ? ' Edit profile to add them.' : ''}
+                      </p>
+                    ) : (
+                      <div className="space-y-4 text-sm">
+                        {allergies.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                              Allergies
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {allergies.map((a) => (
+                                <span
+                                  key={a}
+                                  className="text-xs bg-error/10 text-error border border-error/30 px-2 py-1 rounded"
+                                >
+                                  ⚠ {a}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {preferred.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                              Preferred (safe foods)
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {preferred.map((f) => (
+                                <span
+                                  key={f}
+                                  className="text-xs bg-success/10 text-success border border-success/30 px-2 py-1 rounded"
+                                >
+                                  {f}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {aversions.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                              Avoid
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {aversions.map((a) => (
+                                <span
+                                  key={a}
+                                  className="text-xs bg-muted text-foreground border border-border px-2 py-1 rounded"
+                                >
+                                  {a}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {hasAnyPrep && prep && (
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
+                              Prep Needs
+                            </p>
+                            <div className="space-y-1 text-foreground">
+                              {prep.texture && (
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Texture:</span>
+                                  <span className="font-medium capitalize">{prep.texture}</span>
+                                </div>
+                              )}
+                              {prep.cutSize && (
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Cut size:</span>
+                                  <span className="font-medium capitalize">
+                                    {prep.cutSize.replace(/-/g, ' ')}
+                                  </span>
+                                </div>
+                              )}
+                              {prep.temperature && (
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Temperature:</span>
+                                  <span className="font-medium capitalize">{prep.temperature}</span>
+                                </div>
+                              )}
+                              {prep.separated && (
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Separation:</span>
+                                  <span className="font-medium">Foods kept apart on plate</span>
+                                </div>
+                              )}
+                              {prep.notes && (
+                                <p className="text-muted-foreground italic mt-1">
+                                  &ldquo;{prep.notes}&rdquo;
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
               {/* Set as Primary Button */}
               {isOwner && (
                 <div className="mt-6 pt-6 border-t border-border">
