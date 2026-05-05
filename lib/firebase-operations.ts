@@ -269,6 +269,27 @@ export const mealLogOperations = {
     macros?: { protein?: number; carbs?: number; fat?: number; fiber?: number }
     notes?: string
     loggedAt?: string
+    // Family-meal PRD Commit A — recipe-source linkage. Optional;
+    // existing AI/template/manual logging paths omit and behave
+    // unchanged. The /api/meal-logs handler passes these through
+    // to Firestore so downstream surfaces (recipe history, per-
+    // ingredient disclosure) can read them.
+    source?: 'ai-photo' | 'recipe' | 'manual' | 'barcode-scan' | 'leftover'
+    sourceRefs?: {
+      recipeId?: string
+      cookedIngredients?: Array<{
+        ingredientText: string
+        quantity?: number
+        unit?: string
+        productBarcode?: string
+        productName?: string
+      }>
+      portion?: {
+        method: 'servings' | 'grams' | 'photo'
+        value: number
+        eaterId?: string
+      }
+    }
   }) {
     return makeAuthenticatedRequest('/api/meal-logs', {
       method: 'POST',

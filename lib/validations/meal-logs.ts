@@ -80,6 +80,29 @@ export type ManualAdjustments = z.infer<typeof ManualAdjustmentsSchema>
 // MEAL LOG REQUEST SCHEMA
 // ============================================
 
+// Cooked-ingredient snapshot — schema for the post-substitution
+// ingredient list captured at recipe-completion time.
+const CookedIngredientSchema = z.object({
+  ingredientText: z.string().min(1),
+  quantity: z.number().optional(),
+  unit: z.string().optional(),
+  productBarcode: z.string().optional(),
+  productName: z.string().optional(),
+})
+
+// Family-meal PRD Commit A — recipe-source linkage on a MealLog.
+const SourceRefsSchema = z.object({
+  recipeId: z.string().optional(),
+  cookedIngredients: z.array(CookedIngredientSchema).optional(),
+  portion: z
+    .object({
+      method: z.enum(['servings', 'grams', 'photo']),
+      value: z.number().positive(),
+      eaterId: z.string().optional(),
+    })
+    .optional(),
+})
+
 // Base schema without refinement (supports .partial() for updates)
 const CreateMealLogRequestBaseSchema = z.object({
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
@@ -89,6 +112,13 @@ const CreateMealLogRequestBaseSchema = z.object({
   manualEntries: z.array(ManualEntrySchema).optional(),
   notes: z.string().optional(),
   loggedAt: z.string().datetime().optional(), // ISO 8601 datetime string
+  // Family-meal PRD Commit A — recipe path. When 'recipe' is set,
+  // the route handler preserves it instead of overwriting with
+  // the photo/manual/hybrid heuristic. sourceRefs carries the
+  // recipeId, ingredient snapshot, and portion (method/value/
+  // optional eaterId).
+  source: z.enum(['ai-photo', 'recipe', 'manual', 'barcode-scan', 'leftover']).optional(),
+  sourceRefs: SourceRefsSchema.optional(),
 })
 
 // For CREATE operations - requires either aiAnalysis or manualEntries

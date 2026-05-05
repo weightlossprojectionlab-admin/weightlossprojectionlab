@@ -121,7 +121,11 @@ export async function POST(request: NextRequest) {
       aiAnalysis,
       manualEntries,
       notes,
-      loggedAt
+      loggedAt,
+      // Family-meal PRD Commit A — recipe linkage. Optional;
+      // existing AI/manual flows omit and behave unchanged.
+      source: clientSource,
+      sourceRefs,
     } = validatedData
 
     // Check for duplicate meal type on the same day (except snacks)
@@ -159,7 +163,13 @@ export async function POST(request: NextRequest) {
     // Calculate totals
     let totalCalories = 0
     let macros = { carbs: 0, protein: 0, fat: 0, fiber: 0 }
-    let source: 'photo' | 'manual' | 'hybrid' = 'manual'
+    // Heuristic source — based on what payload data looks like.
+    // Family-meal PRD Commit A: when the client explicitly passes
+    // `source` (e.g. 'recipe' from the cooking-completion path),
+    // that wins over the heuristic so a recipe-sourced log isn't
+    // mislabeled 'photo' just because aiAnalysis happens to be
+    // pre-filled with recipe nutrition.
+    let source: 'photo' | 'manual' | 'hybrid' | 'recipe' | 'barcode-scan' | 'leftover' | 'ai-photo' = 'manual'
 
     if (aiAnalysis) {
       // Use totalCalories as canonical field (Gemini new format)
@@ -184,6 +194,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Client-supplied source wins. Only kicks in for paths that
+    // explicitly pass it (recipe completion today; barcode-scan
+    // and leftover when those flows ship).
+    if (clientSource) {
+      source = clientSource
+    }
+
     // Create meal log data
     // Note: Firestore doesn't accept undefined values, so only add fields that exist
     const mealLogData: any = {
@@ -192,6 +209,13 @@ export async function POST(request: NextRequest) {
       macros,
       loggedAt: loggedAt ? Timestamp.fromDate(new Date(loggedAt)) : Timestamp.now(),
       source,
+    }
+
+    // Family-meal PRD Commit A — persist the recipe-source linkage
+    // when present. Downstream surfaces (recipe history, per-
+    // ingredient disclosure, leftover-aware portions) read this.
+    if (sourceRefs) {
+      mealLogData.sourceRefs = sourceRefs
     }
 
     // Only add optional fields if they have values

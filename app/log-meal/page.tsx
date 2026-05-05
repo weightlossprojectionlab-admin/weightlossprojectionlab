@@ -139,6 +139,21 @@ function LogMealContent() {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null)
   const [fromRecipe, setFromRecipe] = useState(false)
   const [recipeSessionId, setRecipeSessionId] = useState<string | null>(null)
+  // Family-meal PRD Commit A — captured when arriving via
+  // ?fromRecipe=true so the saved MealLog can carry sourceRefs
+  // (recipeId, cookedIngredients snapshot, portion). Populates
+  // from URL params + the loaded cooking session; consumed in the
+  // save handler. eaterId stays unset in single-eater mode (Commit
+  // B introduces the eater selector + multi-row save).
+  const [recipeSourceRefs, setRecipeSourceRefs] = useState<{
+    recipeId: string
+    cookedIngredients: Array<{
+      ingredientText: string
+      quantity?: number
+      unit?: string
+    }>
+    servingsConsumed: number
+  } | null>(null)
   const [saving, setSaving] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string>('')
   const [expandedMealId, setExpandedMealId] = useState<string | null>(null)
@@ -318,9 +333,23 @@ function LogMealContent() {
     loadPatient()
   }, [patientIdParam])
 
-  // PHASE 2: Auto-open camera for photo-preference users (on mount only)
+  // PHASE 2: Auto-open camera for photo-preference users (on mount only).
+  //
+  // Family-meal PRD Commit A gate: skip when arriving via
+  // ?fromRecipe=true — the user just finished cooking and is here
+  // to log a known recipe (calories/macros pre-filled from the
+  // cooking session), not to photograph a plate. Auto-camera in
+  // that flow is wrong-context and surprising. Reads the URL
+  // param directly because the `fromRecipe` state isn't set yet
+  // when this effect runs.
   useEffect(() => {
-    if (!userPrefs.loading && userPrefs.wantsPhotoLogging() && !capturedImage) {
+    const isFromRecipe = searchParams.get('fromRecipe') === 'true'
+    if (
+      !userPrefs.loading &&
+      userPrefs.wantsPhotoLogging() &&
+      !capturedImage &&
+      !isFromRecipe
+    ) {
       // Small delay to ensure page is fully loaded
       const timer = setTimeout(() => {
         logger.debug('📸 Auto-triggering camera for photo-preference user')
@@ -403,6 +432,23 @@ function LogMealContent() {
           }
 
           setAiAnalysis(analysis)
+
+          // Capture sourceRefs payload for the save call. Cooked
+          // ingredients come from the session (scaledIngredients
+          // is a string[] today; we wrap each into the
+          // structured shape the schema expects so future
+          // surfaces can render per-ingredient disclosure).
+          // servingsConsumed defaults to 1 in single-eater mode;
+          // the Commit B stepper will let the user adjust.
+          const servingsConsumed = parseFloat(servings || '1') || 1
+          setRecipeSourceRefs({
+            recipeId,
+            cookedIngredients: (session.scaledIngredients || []).map(
+              (ing: string) => ({ ingredientText: ing })
+            ),
+            servingsConsumed,
+          })
+
           toast.success(`Ready to log your ${recipe.name}!`, { duration: 3000 })
         }
       }).catch(error => {
@@ -1309,7 +1355,25 @@ function LogMealContent() {
           photoUrl: photoUrl || undefined,
           // additionalPhotos field removed - MealLog type only supports single photoUrl
           aiAnalysis: aiAnalysis || undefined,
-          loggedAt: new Date().toISOString()
+          loggedAt: new Date().toISOString(),
+          // Family-meal PRD Commit A — recipe-source linkage. Only
+          // populated when the user landed via ?fromRecipe=true and
+          // the cooking session loaded successfully. Single-eater
+          // mode for now (no eaterId); Commit B adds multi-eater
+          // rows that fan out to N MealLog entries.
+          ...(recipeSourceRefs
+            ? {
+                source: 'recipe' as const,
+                sourceRefs: {
+                  recipeId: recipeSourceRefs.recipeId,
+                  cookedIngredients: recipeSourceRefs.cookedIngredients,
+                  portion: {
+                    method: 'servings' as const,
+                    value: recipeSourceRefs.servingsConsumed,
+                  },
+                },
+              }
+            : {}),
         })
         logger.debug('✅ Meal logged successfully:', {
           mealId: response.data?.id,
@@ -1337,6 +1401,7 @@ function LogMealContent() {
       capturedImageRef.current = null // Clear ref as well
       setAiAnalysis(null)
       setAdditionalPhotos([])
+      setRecipeSourceRefs(null)
 
     } catch (error) {
       logger.error('💥 Save error:', error as Error)
