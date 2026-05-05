@@ -220,6 +220,46 @@ export async function GET(request: NextRequest) {
       const nutriments = product.nutriments || {}
       const writeId = productDoc.exists ? resolvedBarcode : barcode
       const aliases = barcodeVariants(writeId)
+      // Prefer per-serving nutrient values when present (USDA's
+      // labelNutrients overlay supplies these for branded items;
+      // OFF carries them on most curated rows). Falls back to
+      // 100g values, then 0. Only includes a field when at least
+      // one source had a non-zero value — keeps Firestore docs
+      // free of garbage zeros that aren't meaningful absence.
+      const pickNutrient = (
+        ...candidates: Array<number | undefined>
+      ): number | undefined => {
+        for (const v of candidates) {
+          if (typeof v === 'number' && v > 0) return v
+        }
+        return undefined
+      }
+      const richNutrition = {
+        sodium: pickNutrient(nutriments.sodium_serving, nutriments.sodium_100g, nutriments.sodium),
+        sugars: pickNutrient(nutriments.sugars_serving, nutriments.sugars_100g, nutriments.sugars),
+        saturatedFat: pickNutrient(
+          nutriments.saturated_fat_serving,
+          nutriments.saturated_fat_100g,
+          nutriments.saturated_fat
+        ),
+        cholesterol: pickNutrient(
+          nutriments.cholesterol_serving,
+          nutriments.cholesterol_100g,
+          nutriments.cholesterol
+        ),
+        calcium: pickNutrient(nutriments.calcium_serving, nutriments.calcium_100g, nutriments.calcium),
+        iron: pickNutrient(nutriments.iron_serving, nutriments.iron_100g, nutriments.iron),
+        potassium: pickNutrient(
+          nutriments.potassium_serving,
+          nutriments.potassium_100g,
+          nutriments.potassium
+        ),
+      }
+      // Strip undefined keys so Firestore doesn't trip on them.
+      const cleanedRichNutrition = Object.fromEntries(
+        Object.entries(richNutrition).filter(([, v]) => v !== undefined)
+      )
+
       const baseUpdate = {
         barcode: writeId,
         productName: product.product_name || 'Unknown Product',
@@ -231,7 +271,12 @@ export async function GET(request: NextRequest) {
           carbs: nutriments.carbohydrates || nutriments.carbohydrates_100g || 0,
           fat: nutriments.fat || nutriments.fat_100g || 0,
           fiber: nutriments.fiber || nutriments.fiber_100g || 0,
-          servingSize: product.serving_size || ''
+          servingSize: product.serving_size || '',
+          // Extended nutrient set — sodium / sugars / saturatedFat /
+          // cholesterol / calcium / iron / potassium. Drives medical-
+          // condition caps in lib/portion-recommendation.ts and
+          // unblocks renal / cardiac / hypertension recommendations.
+          ...cleanedRichNutrition,
         },
         aliases,
         updatedAt: now

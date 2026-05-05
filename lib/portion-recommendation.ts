@@ -113,13 +113,12 @@ export function computeRecommendedServings(
   const warnings: string[] = []
 
   // Per-serving recipe macros — guard against zeros so we don't
-  // divide by zero on under-curated recipes.
+  // divide by zero on under-curated recipes. Sodium is a real
+  // first-class field on MealSuggestion.macros (mg) — no cast.
   const perServingCals = Math.max(1, recipe.calories ?? 0)
   const perServingCarbs = recipe.macros?.carbs ?? 0
   const perServingProtein = recipe.macros?.protein ?? 0
-  // Sodium isn't on MealSuggestion's macros today; pull from any
-  // optional field if present so we're forward-compatible.
-  const perServingSodium = ((recipe as { macros?: { sodium?: number } }).macros?.sodium) ?? 0
+  const perServingSodium = recipe.macros?.sodium ?? 0
 
   // 1) Calorie-budget servings — the default.
   const calorieTarget = getMealCalorieTarget(profile, mealType)

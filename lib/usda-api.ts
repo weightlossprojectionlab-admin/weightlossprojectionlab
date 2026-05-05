@@ -77,6 +77,29 @@ export interface USDAFood {
   ingredients?: string
   foodCategory?: string
   dataType: 'Branded' | 'Foundation' | 'Survey' | 'SR Legacy'
+  /**
+   * Flat per-serving label-style nutrients. Populated only on
+   * BrandedFoodItem responses when fetched with ?format=full
+   * (or via /foods/{fdcId} which returns full by default). Each
+   * field is `{ value: number }`. When present, prefer these over
+   * the foodNutrients[] dig — they're already per-serving and
+   * map 1:1 to a product's nutrition label.
+   */
+  labelNutrients?: {
+    fat?: { value: number }
+    saturatedFat?: { value: number }
+    transFat?: { value: number }
+    cholesterol?: { value: number }
+    sodium?: { value: number }
+    carbohydrates?: { value: number }
+    fiber?: { value: number }
+    sugars?: { value: number }
+    protein?: { value: number }
+    calcium?: { value: number }
+    iron?: { value: number }
+    potassium?: { value: number }
+    calories?: { value: number }
+  }
 }
 
 export interface USDASearchResult {
@@ -114,8 +137,22 @@ export interface USDAProductData {
     sodium_serving?: number
     sugars?: number
     sugars_100g?: number
+    sugars_serving?: number
     cholesterol?: number
+    cholesterol_100g?: number
+    cholesterol_serving?: number
     saturated_fat?: number
+    saturated_fat_100g?: number
+    saturated_fat_serving?: number
+    calcium?: number
+    calcium_100g?: number
+    calcium_serving?: number
+    iron?: number
+    iron_100g?: number
+    iron_serving?: number
+    potassium?: number
+    potassium_100g?: number
+    potassium_serving?: number
   }
   ingredients_text?: string
   categories?: string
@@ -232,7 +269,23 @@ export async function searchFoods(query: string, pageSize = 25): Promise<USDAFoo
 }
 
 /**
- * Convert USDA food data to our standard format (compatible with OpenFoodFacts format)
+ * Convert USDA food data to our standard format (compatible with
+ * OpenFoodFacts format).
+ *
+ * Two paths:
+ *   1. labelNutrients (BrandedFoodItem with format=full) — flat
+ *      per-serving object that maps 1:1 to a product's nutrition
+ *      label. Preferred because the values are already per-serving
+ *      and match what the customer sees on the package.
+ *   2. foodNutrients[] fallback — name-matched extraction. Used
+ *      for Foundation / Survey / SR Legacy data, or BrandedFood
+ *      responses that came from /foods/search (which returns the
+ *      AbridgedFoodNutrient subset, not labelNutrients).
+ *
+ * Always populates 100g values; serving values get scaled in only
+ * when servingSize is present and labelNutrients didn't already
+ * supply them. labelNutrients wins for serving values when both
+ * are available.
  */
 function convertUSDAToStandardFormat(food: USDAFood, barcode: string): USDAProductData {
   // Extract nutrients
@@ -276,10 +329,27 @@ function convertUSDAToStandardFormat(food: USDAFood, barcode: string): USDAProdu
         break
       case 'cholesterol':
         acc.cholesterol = nutrient.value
+        acc.cholesterol_100g = nutrient.value
         break
       case 'fatty acids, total saturated':
       case 'saturated fat':
         acc.saturated_fat = nutrient.value
+        acc.saturated_fat_100g = nutrient.value
+        break
+      case 'calcium, ca':
+      case 'calcium':
+        acc.calcium = nutrient.value
+        acc.calcium_100g = nutrient.value
+        break
+      case 'iron, fe':
+      case 'iron':
+        acc.iron = nutrient.value
+        acc.iron_100g = nutrient.value
+        break
+      case 'potassium, k':
+      case 'potassium':
+        acc.potassium = nutrient.value
+        acc.potassium_100g = nutrient.value
         break
     }
     return acc
@@ -306,6 +376,71 @@ function convertUSDAToStandardFormat(food: USDAFood, barcode: string): USDAProdu
     }
     if (nutrients.sodium) {
       nutrients.sodium_serving = nutrients.sodium * servingRatio
+    }
+    if (nutrients.sugars) {
+      nutrients.sugars_serving = nutrients.sugars * servingRatio
+    }
+    if (nutrients.cholesterol) {
+      nutrients.cholesterol_serving = nutrients.cholesterol * servingRatio
+    }
+    if (nutrients.saturated_fat) {
+      nutrients.saturated_fat_serving = nutrients.saturated_fat * servingRatio
+    }
+    if (nutrients.calcium) {
+      nutrients.calcium_serving = nutrients.calcium * servingRatio
+    }
+    if (nutrients.iron) {
+      nutrients.iron_serving = nutrients.iron * servingRatio
+    }
+    if (nutrients.potassium) {
+      nutrients.potassium_serving = nutrients.potassium * servingRatio
+    }
+  }
+
+  // labelNutrients overlay — when present, these are the
+  // authoritative per-serving values straight from the package
+  // label. They override the foodNutrients-derived _serving values
+  // because they're untouched by 100g↔serving rounding and match
+  // exactly what the customer sees. 100g values stay derived from
+  // foodNutrients (labelNutrients doesn't carry them).
+  const ln = food.labelNutrients
+  if (ln) {
+    if (typeof ln.calories?.value === 'number') {
+      nutrients['energy-kcal_serving'] = ln.calories.value
+    }
+    if (typeof ln.protein?.value === 'number') {
+      nutrients.proteins_serving = ln.protein.value
+    }
+    if (typeof ln.carbohydrates?.value === 'number') {
+      nutrients.carbohydrates_serving = ln.carbohydrates.value
+    }
+    if (typeof ln.fat?.value === 'number') {
+      nutrients.fat_serving = ln.fat.value
+    }
+    if (typeof ln.fiber?.value === 'number') {
+      nutrients.fiber_serving = ln.fiber.value
+    }
+    if (typeof ln.sodium?.value === 'number') {
+      // labelNutrients sodium is mg; our nutriments.sodium uses g
+      nutrients.sodium_serving = ln.sodium.value / 1000
+    }
+    if (typeof ln.sugars?.value === 'number') {
+      nutrients.sugars_serving = ln.sugars.value
+    }
+    if (typeof ln.cholesterol?.value === 'number') {
+      nutrients.cholesterol_serving = ln.cholesterol.value
+    }
+    if (typeof ln.saturatedFat?.value === 'number') {
+      nutrients.saturated_fat_serving = ln.saturatedFat.value
+    }
+    if (typeof ln.calcium?.value === 'number') {
+      nutrients.calcium_serving = ln.calcium.value
+    }
+    if (typeof ln.iron?.value === 'number') {
+      nutrients.iron_serving = ln.iron.value
+    }
+    if (typeof ln.potassium?.value === 'number') {
+      nutrients.potassium_serving = ln.potassium.value
     }
   }
 

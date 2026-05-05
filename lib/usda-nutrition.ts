@@ -51,6 +51,24 @@ export interface NutritionData {
   carbs: number // grams
   fat: number // grams
   fiber: number // grams
+  /**
+   * Extended nutrient set — all optional. Populated when USDA
+   * returns the nutrient in foodNutrients[]. Drives medical-
+   * condition caps in lib/portion-recommendation.ts (sodium for
+   * hypertension/renal, saturated fat / cholesterol for heart
+   * health, potassium for renal, calcium / iron for clinical
+   * monitoring), and richer label-style display surfaces.
+   *
+   * Units are USDA's defaults: milligrams for sodium / cholesterol /
+   * calcium / iron / potassium, grams for sugars / saturatedFat.
+   */
+  sodium?: number // mg
+  sugars?: number // g
+  saturatedFat?: number // g
+  cholesterol?: number // mg
+  calcium?: number // mg
+  iron?: number // mg
+  potassium?: number // mg
   servingSize?: string
   servingUnit?: string
   confidence: number // 0-100, how well the match fits the query
@@ -217,20 +235,54 @@ function convertUSDAToNutrition(food: USDAFoodItem, searchQuery: string): Nutrit
   }
 
   // USDA Nutrient IDs:
-  // 1008 = Energy (kcal)
-  // 1003 = Protein (g)
-  // 1005 = Carbohydrate (g)
-  // 1004 = Total lipid (fat) (g)
-  // 1079 = Fiber, total dietary (g)
+  //   1008 = Energy (kcal)
+  //   1003 = Protein (g)
+  //   1005 = Carbohydrate, by difference (g)
+  //   1004 = Total lipid (fat) (g)
+  //   1079 = Fiber, total dietary (g)
+  //   1093 = Sodium, Na (mg)
+  //   2000 = Sugars, total including NLEA (g)
+  //   1258 = Fatty acids, total saturated (g)
+  //   1253 = Cholesterol (mg)
+  //   1087 = Calcium, Ca (mg)
+  //   1089 = Iron, Fe (mg)
+  //   1092 = Potassium, K (mg)
 
   const calories = getNutrient(1008)
   const protein = getNutrient(1003)
   const carbs = getNutrient(1005)
   const fat = getNutrient(1004)
   const fiber = getNutrient(1079)
+  const sodium = getNutrient(1093)
+  const sugars = getNutrient(2000)
+  const saturatedFat = getNutrient(1258)
+  const cholesterol = getNutrient(1253)
+  const calcium = getNutrient(1087)
+  const iron = getNutrient(1089)
+  const potassium = getNutrient(1092)
 
   // Calculate confidence based on string similarity
   const confidence = calculateMatchConfidence(food.description, searchQuery)
+
+  /**
+   * Round optional nutrients to 1 decimal and only include them
+   * when USDA actually returned a non-zero value. Spread-omits
+   * absent fields so consumers can `?? fallback` cleanly without
+   * the "0 means absent or actually zero?" ambiguity.
+   */
+  const optionalNutrients: Partial<
+    Pick<
+      NutritionData,
+      'sodium' | 'sugars' | 'saturatedFat' | 'cholesterol' | 'calcium' | 'iron' | 'potassium'
+    >
+  > = {}
+  if (sodium > 0) optionalNutrients.sodium = Math.round(sodium * 10) / 10
+  if (sugars > 0) optionalNutrients.sugars = Math.round(sugars * 10) / 10
+  if (saturatedFat > 0) optionalNutrients.saturatedFat = Math.round(saturatedFat * 10) / 10
+  if (cholesterol > 0) optionalNutrients.cholesterol = Math.round(cholesterol * 10) / 10
+  if (calcium > 0) optionalNutrients.calcium = Math.round(calcium * 10) / 10
+  if (iron > 0) optionalNutrients.iron = Math.round(iron * 10) / 10
+  if (potassium > 0) optionalNutrients.potassium = Math.round(potassium * 10) / 10
 
   return {
     fdcId: food.fdcId,
@@ -241,6 +293,7 @@ function convertUSDAToNutrition(food: USDAFoodItem, searchQuery: string): Nutrit
     carbs: Math.round(carbs * 10) / 10,
     fat: Math.round(fat * 10) / 10,
     fiber: Math.round(fiber * 10) / 10,
+    ...optionalNutrients,
     confidence,
     source: 'usda'
   }
