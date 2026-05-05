@@ -13,6 +13,7 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { auth } from '@/lib/firebase'
 import { getCSRFToken } from '@/lib/csrf'
 import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
+import { getRecipeByIdLocal } from '@/lib/firestore-recipes'
 import { formatFileSize } from '@/lib/image-compression'
 import { shareMeal, shareToPlatform, getPlatformInfo } from '@/lib/share-utils'
 import { SharePreviewModal } from '@/components/social/SharePreviewModal'
@@ -377,7 +378,7 @@ function LogMealContent() {
 
       // Load the cooking session to get exact nutrition data
       cookingSessionOperations.getCookingSession(sessionId).then((session: any) => {
-        const recipe = MEAL_SUGGESTIONS.find(r => r.id === recipeId)
+        const recipe = getRecipeByIdLocal(recipeId)
 
         if (session && recipe) {
           // Pre-fill AI analysis with exact recipe data

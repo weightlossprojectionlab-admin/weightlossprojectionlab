@@ -8,7 +8,8 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { CookingTimer } from '@/components/ui/CookingTimer'
 import { cookingSessionOperations } from '@/lib/firebase-operations'
 import { CookingSession } from '@/types'
-import { MEAL_SUGGESTIONS, getRecipeActionLabel } from '@/lib/meal-suggestions'
+import { getRecipeActionLabel } from '@/lib/meal-suggestions'
+import { getRecipeByIdLocal } from '@/lib/firestore-recipes'
 import { Spinner } from '@/components/ui/Spinner'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
@@ -54,7 +55,7 @@ function CookingSessionContent() {
   }, [sessionId, router])
 
   // Get recipe details
-  const recipe = session ? MEAL_SUGGESTIONS.find(r => r.id === session.recipeId) : null
+  const recipe = session ? getRecipeByIdLocal(session.recipeId) : null
 
   const handleNextStep = async () => {
     if (!session || !recipe) return

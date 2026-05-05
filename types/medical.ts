@@ -100,6 +100,62 @@ export interface PatientProfile {
   healthConditions?: string[] // e.g., ['diabetes', 'hypertension', 'celiac']
   foodAllergies?: string[] // e.g., ['peanuts', 'shellfish', 'dairy']
 
+  // ===== Family-meal PRD additions (Commit A foundation) =====
+  // All optional — existing patients get defaults via absence.
+  // Onboarding flow capture lands in Commit B / F.
+
+  /**
+   * Foods the family member likes / has identified as "safe foods"
+   * (autism context). Recipe browser boosts matches; substitution
+   * engine prefers swaps that land in this set.
+   */
+  preferredFoods?: string[]
+  /**
+   * Soft negative list — sensory aversions, dislikes. Recipe
+   * browser de-prioritizes; substitution engine offers swaps.
+   * Distinct from foodAllergies (which is a hard block).
+   */
+  aversions?: string[]
+  /**
+   * Texture / cut-size / temperature / separation requirements.
+   * Cooking-page surfaces these as inline mods on instruction
+   * steps (Commit E).
+   */
+  preparationNeeds?: {
+    texture?: 'pureed' | 'soft' | 'whole'
+    cutSize?: 'minced' | 'small-cubes' | 'standard' | 'whole'
+    temperature?: 'cold' | 'room' | 'warm' | 'hot'
+    separated?: boolean // Foods kept apart on the plate
+    notes?: string
+  }
+  /**
+   * Per-meal-slot calorie + macro budgets. When unset, the portion
+   * recommender falls back to a fraction of the daily target.
+   */
+  macroTargetsPerMeal?: Partial<
+    Record<
+      'breakfast' | 'lunch' | 'dinner' | 'snack',
+      { calories?: number; protein?: number; carbs?: number; fat?: number; fiber?: number; sodium?: number }
+    >
+  >
+  /**
+   * Captured for future medication-interaction warnings. Not
+   * surfaced anywhere yet — placeholder schema so the field
+   * exists when the interaction database lands.
+   */
+  medicationList?: Array<{
+    name: string
+    dosage?: string
+    schedule?: string
+  }>
+  /**
+   * User-chosen visual identity for the member badge across the
+   * app. Never auto-assigned by sex (see family-meal PRD); demo-
+   * graphic-aware defaults at onboarding, customizable.
+   */
+  avatarColor?: string
+  avatarIcon?: string
+
   // Patient-specific preferences (for vital reminders, etc.)
   preferences?: {
     vitalReminders?: Partial<Record<VitalType, VitalReminderConfig>>

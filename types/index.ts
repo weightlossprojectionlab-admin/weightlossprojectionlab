@@ -448,6 +448,38 @@ export interface MealLog {
   dataSource?: 'ai-vision' | 'template' // Data provenance - always from photo AI or saved template
   usdaVerified?: boolean // True if all food items were USDA validated
   confidenceScore?: number // Overall confidence (0-100) from AI + USDA validation
+  /**
+   * Source provenance — a more general taxonomy than the legacy
+   * `dataSource`. New code (recipe-completion path, multi-eater
+   * meal logs) writes this; existing AI / template flows keep
+   * working unchanged via `dataSource`.
+   */
+  source?: 'ai-photo' | 'recipe' | 'manual' | 'barcode-scan' | 'leftover'
+  /**
+   * Recipe-source linkage — populated when the meal log was
+   * created from a cooked recipe. Lets downstream surfaces show
+   * the recipe link, render per-ingredient disclosure, and
+   * compute leftover-aware portions. Family-meal PRD Commit A.
+   */
+  sourceRefs?: {
+    recipeId?: string
+    /** Snapshot of ingredients as cooked (post-substitution). */
+    cookedIngredients?: Array<{
+      ingredientText: string
+      quantity?: number
+      unit?: string
+      productBarcode?: string
+      productName?: string
+    }>
+    /** How much of the recipe this eater ate. */
+    portion?: {
+      method: 'servings' | 'grams' | 'photo'
+      value: number
+      /** Which family member this log belongs to. Multi-eater
+          meals create N log entries, one per eaterId (Commit B). */
+      eaterId?: string
+    }
+  }
 }
 
 export interface MealTemplate {

@@ -4,7 +4,8 @@ import { useState, useEffect, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import { recipeQueueOperations, cookingSessionOperations } from '@/lib/firebase-operations'
 import { QueuedRecipe } from '@/types'
-import { MEAL_SUGGESTIONS, getRecipeActionLabel } from '@/lib/meal-suggestions'
+import { getRecipeActionLabel } from '@/lib/meal-suggestions'
+import { getRecipeByIdLocal } from '@/lib/firestore-recipes'
 import { createStepTimers } from '@/lib/recipe-timer-parser'
 import { scaleRecipe } from '@/lib/recipe-scaler'
 import { Spinner } from '@/components/ui/Spinner'
@@ -39,7 +40,7 @@ export const RecipeQueue = memo(function RecipeQueue() {
     setStartingRecipe(queueItem.id)
 
     try {
-      const recipe = MEAL_SUGGESTIONS.find(r => r.id === queueItem.recipeId)
+      const recipe = getRecipeByIdLocal(queueItem.recipeId)
       if (!recipe || !recipe.recipeSteps || recipe.recipeSteps.length === 0) {
         toast.error('Recipe not found or has no instructions')
         return
@@ -104,7 +105,7 @@ export const RecipeQueue = memo(function RecipeQueue() {
       const ingredientRecipeMap = new Map<string, string>() // Track which recipe each ingredient is from
 
       queue.forEach((queueItem) => {
-        const recipe = MEAL_SUGGESTIONS.find(r => r.id === queueItem.recipeId)
+        const recipe = getRecipeByIdLocal(queueItem.recipeId)
         if (recipe && recipe.ingredients) {
           // Scale ingredients
           const scaledRecipe = scaleRecipe(recipe, queueItem.servingSize)
@@ -200,7 +201,7 @@ export const RecipeQueue = memo(function RecipeQueue() {
 
       <div className="space-y-3">
         {queue.map((queueItem) => {
-          const recipe = MEAL_SUGGESTIONS.find(r => r.id === queueItem.recipeId)
+          const recipe = getRecipeByIdLocal(queueItem.recipeId)
           const isStarting = startingRecipe === queueItem.id
           const actionLabel = recipe ? getRecipeActionLabel(recipe) : 'Cook'
 

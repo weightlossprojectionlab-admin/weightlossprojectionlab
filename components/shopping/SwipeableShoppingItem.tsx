@@ -13,7 +13,7 @@ import { useSwipeable, SwipeEventData } from 'react-swipeable'
 import { CheckCircleIcon, TrashIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import type { ShoppingItem } from '@/types/shopping'
-import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
+import { getRecipeByIdLocal } from '@/lib/firestore-recipes'
 import { FamilyMemberBadge } from './FamilyMemberBadge'
 
 interface SwipeableShoppingItemProps {
@@ -41,7 +41,7 @@ export function SwipeableShoppingItem({
   // Look up recipe name if primaryRecipeId exists
   const recipeName = useMemo(() => {
     if (!item.primaryRecipeId) return null
-    const recipe = MEAL_SUGGESTIONS.find(r => r.id === item.primaryRecipeId)
+    const recipe = item.primaryRecipeId ? getRecipeByIdLocal(item.primaryRecipeId) : null
     return recipe?.name || null
   }, [item.primaryRecipeId])
 

@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger'
 import { uploadRecipeImages } from '@/lib/recipe-upload'
 import RecipeForm, { RecipeFormData } from '@/components/admin/RecipeForm'
 import { clearRecipeCache } from '@/hooks/useRecipes'
-import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
+import { getRecipeByIdLocal } from '@/lib/firestore-recipes'
 import { ArrowLeftIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -157,7 +157,7 @@ export default function EditRecipePage() {
       // If media-only doc (no name), try to merge with hardcoded recipe
       let recipe = firestoreRecipe
       if (!firestoreRecipe.name) {
-        const hardcoded = MEAL_SUGGESTIONS.find(r => r.id === recipeId)
+        const hardcoded = getRecipeByIdLocal(recipeId)
         if (hardcoded) {
           recipe = { ...hardcoded, ...firestoreRecipe }
         } else {

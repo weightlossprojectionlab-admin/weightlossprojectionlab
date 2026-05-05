@@ -22,10 +22,24 @@ import {
   increment
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { MealSuggestion, RecipeStatus, MealType } from './meal-suggestions'
+import { MealSuggestion, RecipeStatus, MealType, MEAL_SUGGESTIONS } from './meal-suggestions'
 import { logger } from '@/lib/logger'
 
 const RECIPES_COLLECTION = 'recipes'
+
+/**
+ * Sync lookup against the bundled MEAL_SUGGESTIONS catalog. Returns
+ * the recipe when its id matches one of the hardcoded entries; null
+ * otherwise. No network — safe for render-time access.
+ *
+ * Use when the caller knows the recipe id is hardcoded (deep-link,
+ * recipe queue, cooking session pulled from a session.recipeId
+ * that was set from a hardcoded recipe). When the source is
+ * unknown, prefer the async getRecipeById which checks both.
+ */
+export function getRecipeByIdLocal(recipeId: string): MealSuggestion | null {
+  return MEAL_SUGGESTIONS.find((r) => r.id === recipeId) ?? null
+}
 
 /**
  * Convert Firestore document data to MealSuggestion
@@ -88,9 +102,23 @@ export async function saveRecipeToFirestore(
 }
 
 /**
- * Get a single recipe by ID
+ * Get a single recipe by ID — canonical lookup.
+ *
+ * Resolution order:
+ *   1. Bundled MEAL_SUGGESTIONS catalog (sync, no network) — covers
+ *      deep-links to hardcoded recipes (dn006, etc.) which are the
+ *      majority of cooked / queued / shopped-for recipes today.
+ *   2. Firestore /recipes/{id} — for admin-created recipes.
+ *
+ * Returns null when neither source has the id. Single source of
+ * truth for "look up a recipe by id" — replaces the 7 ad-hoc
+ * MEAL_SUGGESTIONS.find(r => r.id === id) patterns scattered
+ * across the codebase, plus the original Firestore-only lookup.
  */
 export async function getRecipeById(recipeId: string): Promise<MealSuggestion | null> {
+  const local = getRecipeByIdLocal(recipeId)
+  if (local) return local
+
   try {
     const recipeRef = doc(db, RECIPES_COLLECTION, recipeId)
     const recipeDoc = await getDoc(recipeRef)
