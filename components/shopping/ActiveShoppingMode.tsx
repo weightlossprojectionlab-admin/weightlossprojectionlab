@@ -972,11 +972,16 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
         onChange={handlePhotoFile}
       />
 
-      {/* Barcode scanner overlay. */}
+      {/* Barcode scanner overlay. context="purchase" so the modal
+          title and instructions read for in-store shopping ("Scan
+          Item" + "Position the barcode within the frame…") rather
+          than the default meal-log copy ("Scan Food Barcode" + "log
+          it as a meal"). */}
       <BarcodeScanner
         isOpen={scannerOpen}
         onScan={handleScan}
         onClose={() => setScannerOpen(false)}
+        context="purchase"
       />
 
       {/* Confirmation modals — branches (b) and (c). */}
