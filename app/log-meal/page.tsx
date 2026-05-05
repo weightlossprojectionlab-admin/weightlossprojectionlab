@@ -14,6 +14,7 @@ import { auth } from '@/lib/firebase'
 import { getCSRFToken } from '@/lib/csrf'
 import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
 import { getRecipeByIdLocal } from '@/lib/firestore-recipes'
+import { computeRecommendedServings } from '@/lib/portion-recommendation'
 import { formatFileSize } from '@/lib/image-compression'
 import { shareMeal, shareToPlatform, getPlatformInfo } from '@/lib/share-utils'
 import { SharePreviewModal } from '@/components/social/SharePreviewModal'
@@ -153,6 +154,29 @@ function LogMealContent() {
       unit?: string
     }>
     servingsConsumed: number
+  } | null>(null)
+  // 3.A.3 — recipe-completion card state. recipeServings is the
+  // user-controlled stepper value (defaults to the engine's
+  // recommendation when a profile is available, else 1).
+  // recipePerServing is the divided-down nutrition we display +
+  // multiply at save (cooked-batch totals from session ÷ batch
+  // servingSize). recipeRecommendation drives the caption.
+  const [recipeServings, setRecipeServings] = useState<number>(1)
+  const [recipePerServing, setRecipePerServing] = useState<{
+    calories: number
+    protein: number
+    carbs: number
+    fat: number
+    fiber: number
+  } | null>(null)
+  const [recipeRecommendation, setRecipeRecommendation] = useState<{
+    recommended: number
+    reason: string
+    warnings: string[]
+  } | null>(null)
+  const [recipeMeta, setRecipeMeta] = useState<{
+    name: string
+    imageUrl?: string
   } | null>(null)
   const [saving, setSaving] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string>('')
@@ -438,16 +462,61 @@ function LogMealContent() {
           // is a string[] today; we wrap each into the
           // structured shape the schema expects so future
           // surfaces can render per-ingredient disclosure).
-          // servingsConsumed defaults to 1 in single-eater mode;
-          // the Commit B stepper will let the user adjust.
-          const servingsConsumed = parseFloat(servings || '1') || 1
+          // servingsConsumed starts at the engine's recommendation
+          // (or 1 when no profile is available); user can adjust
+          // via the stepper before saving.
+          const initialFromUrl = parseFloat(servings || '1') || 1
           setRecipeSourceRefs({
             recipeId,
             cookedIngredients: (session.scaledIngredients || []).map(
               (ing: string) => ({ ingredientText: ing })
             ),
-            servingsConsumed,
+            servingsConsumed: initialFromUrl,
           })
+
+          // Per-serving nutrition for the card display + scaled-
+          // save math. session.scaledCalories is the cooked-batch
+          // total at session.servingSize servings; divide to get
+          // per-serving. Guard against missing/0 servingSize so
+          // we don't NaN out.
+          const batchServings = Math.max(1, session.servingSize || 1)
+          setRecipePerServing({
+            calories: Math.round(session.scaledCalories / batchServings),
+            protein: Math.round((session.scaledMacros?.protein ?? 0) / batchServings),
+            carbs: Math.round((session.scaledMacros?.carbs ?? 0) / batchServings),
+            fat: Math.round((session.scaledMacros?.fat ?? 0) / batchServings),
+            fiber: Math.round((session.scaledMacros?.fiber ?? 0) / batchServings),
+          })
+          setRecipeMeta({
+            name: recipe.name,
+            imageUrl:
+              recipe.imageUrls?.[0] ?? recipe.imageUrl ?? undefined,
+          })
+
+          // Recommendation: only when a patient profile is in
+          // scope (the /patients/{id} → /log-meal entry path). For
+          // the user's own meal log without an explicit profile,
+          // we don't have the medical context to compute a real
+          // recommendation, so the stepper just defaults to the
+          // URL-supplied servings (typically 1).
+          if (patientProfile) {
+            try {
+              const rec = computeRecommendedServings(
+                recipe,
+                patientProfile,
+                mealType ?? recipe.mealType ?? 'dinner'
+              )
+              setRecipeRecommendation(rec)
+              setRecipeServings(rec.recommended)
+            } catch (err) {
+              logger.warn('[log-meal] recommendation failed; defaulting to 1', {
+                error: (err as Error).message,
+              })
+              setRecipeServings(initialFromUrl)
+            }
+          } else {
+            setRecipeServings(initialFromUrl)
+          }
 
           toast.success(`Ready to log your ${recipe.name}!`, { duration: 3000 })
         }
@@ -1350,17 +1419,39 @@ function LogMealContent() {
           photoUrlType: typeof photoUrl
         })
 
+        // 3.A.3 — when this is a recipe-completion log AND we have
+        // per-serving nutrition + a stepper value, scale the
+        // analysis nutrition by recipeServings so what gets logged
+        // matches what the user said they ate (not the whole
+        // cooked batch). Other paths (AI photo, manual, template)
+        // pass aiAnalysis through unchanged.
+        const scaledAnalysis: AIAnalysis | undefined =
+          recipeSourceRefs && recipePerServing && aiAnalysis
+            ? {
+                ...aiAnalysis,
+                totalCalories: Math.round(recipePerServing.calories * recipeServings),
+                totalMacros: {
+                  protein: Math.round(recipePerServing.protein * recipeServings * 10) / 10,
+                  carbs: Math.round(recipePerServing.carbs * recipeServings * 10) / 10,
+                  fat: Math.round(recipePerServing.fat * recipeServings * 10) / 10,
+                  fiber: Math.round(recipePerServing.fiber * recipeServings * 10) / 10,
+                },
+              }
+            : aiAnalysis || undefined
+
         const response = await mealLogOperations.createMealLog({
           mealType: selectedMealType,
           photoUrl: photoUrl || undefined,
           // additionalPhotos field removed - MealLog type only supports single photoUrl
-          aiAnalysis: aiAnalysis || undefined,
+          aiAnalysis: scaledAnalysis,
           loggedAt: new Date().toISOString(),
           // Family-meal PRD Commit A — recipe-source linkage. Only
           // populated when the user landed via ?fromRecipe=true and
-          // the cooking session loaded successfully. Single-eater
-          // mode for now (no eaterId); Commit B adds multi-eater
-          // rows that fan out to N MealLog entries.
+          // the cooking session loaded successfully. portion.value
+          // tracks the stepper, so the back-end audit row matches
+          // what the user actually said they ate. Single-eater mode
+          // for now (no eaterId); Commit B adds multi-eater rows
+          // that fan out to N MealLog entries.
           ...(recipeSourceRefs
             ? {
                 source: 'recipe' as const,
@@ -1369,7 +1460,7 @@ function LogMealContent() {
                   cookedIngredients: recipeSourceRefs.cookedIngredients,
                   portion: {
                     method: 'servings' as const,
-                    value: recipeSourceRefs.servingsConsumed,
+                    value: recipeServings,
                   },
                 },
               }
@@ -1402,6 +1493,10 @@ function LogMealContent() {
       setAiAnalysis(null)
       setAdditionalPhotos([])
       setRecipeSourceRefs(null)
+      setRecipePerServing(null)
+      setRecipeRecommendation(null)
+      setRecipeMeta(null)
+      setRecipeServings(1)
 
     } catch (error) {
       logger.error('💥 Save error:', error as Error)
@@ -1728,8 +1823,128 @@ function LogMealContent() {
       />
 
       <div className="container-narrow py-6 space-y-6">
-        {/* Camera/Photo Section */}
-        <div className="card">
+        {/* 3.A.3 — Recipe-completion card. Shown when the user
+            landed via ?fromRecipe=true and the cooking session
+            loaded. Replaces the photo-first entry path with a
+            servings-stepper + recommendation flow tuned for the
+            "I just cooked, log what I ate" moment. The Take Photo
+            card below stays available as a secondary path (Add
+            photo button below jumps to it). */}
+        {fromRecipe && recipeMeta && recipePerServing && (
+          <div className="card">
+            <div className="flex items-start gap-3 mb-4">
+              {recipeMeta.imageUrl ? (
+                <img
+                  src={recipeMeta.imageUrl}
+                  alt={recipeMeta.name}
+                  className="w-16 h-16 rounded object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded bg-muted flex items-center justify-center text-3xl flex-shrink-0">
+                  🍽️
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                  You cooked
+                </p>
+                <h2 className="text-lg font-bold text-foreground leading-tight">
+                  {recipeMeta.name}
+                </h2>
+              </div>
+            </div>
+
+            {/* Servings stepper. Defaults to recommendation when a
+                profile is available, else 1. Step is 0.5 since
+                half-servings are a real eating pattern (kids, light
+                meals). */}
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Servings eaten</p>
+                {recipeRecommendation && (
+                  <p className="text-xs text-muted-foreground">
+                    Recommended {recipeRecommendation.recommended}
+                    {recipeRecommendation.reason !== 'default' &&
+                      ` · ${recipeRecommendation.reason}-capped`}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRecipeServings((v) => Math.max(0.5, v - 0.5))}
+                  className="w-10 h-10 rounded-full bg-muted text-foreground text-xl font-bold active:bg-muted/80"
+                  aria-label="Decrease servings"
+                >
+                  −
+                </button>
+                <span className="min-w-[3rem] text-center text-2xl font-bold tabular-nums">
+                  {recipeServings % 1 === 0 ? recipeServings.toFixed(0) : recipeServings.toFixed(1)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRecipeServings((v) => v + 0.5)}
+                  className="w-10 h-10 rounded-full bg-muted text-foreground text-xl font-bold active:bg-muted/80"
+                  aria-label="Increase servings"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Scaled nutrition preview — what'll be logged. */}
+            <div className="border-t border-border pt-3 mb-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm text-muted-foreground">You'll log</span>
+                <span className="text-2xl font-bold text-foreground tabular-nums">
+                  {Math.round(recipePerServing.calories * recipeServings)} cal
+                </span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span>P {(recipePerServing.protein * recipeServings).toFixed(0)}g</span>
+                <span>C {(recipePerServing.carbs * recipeServings).toFixed(0)}g</span>
+                <span>F {(recipePerServing.fat * recipeServings).toFixed(0)}g</span>
+                <span>Fiber {(recipePerServing.fiber * recipeServings).toFixed(0)}g</span>
+              </div>
+            </div>
+
+            {/* Recommendation warnings (high protein / high sodium /
+                etc.). Soft signals; don't block save. */}
+            {recipeRecommendation?.warnings && recipeRecommendation.warnings.length > 0 && (
+              <ul className="text-xs text-amber-700 dark:text-amber-200 mb-3 space-y-1">
+                {recipeRecommendation.warnings.map((w, i) => (
+                  <li key={i}>⚠ {w}</li>
+                ))}
+              </ul>
+            )}
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => saveMeal()}
+                disabled={saving}
+                className="btn btn-primary w-full"
+              >
+                {saving ? 'Logging…' : 'Log Meal'}
+              </button>
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={saving}
+                className="btn btn-secondary w-full"
+              >
+                📸 Add a photo (optional)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Camera/Photo Section — hidden when in the recipe-
+            completion flow (the card above takes over). The hidden
+            photoInputRef stays mounted so Add a photo above can
+            still trigger it, and so the existing manual / template
+            / barcode paths keep working when fromRecipe is false. */}
+        <div className={`card${fromRecipe ? ' hidden' : ''}`}>
           <h2 className="mb-4">Take Photo</h2>
 
             {!capturedImage && !showManualEntry && (
