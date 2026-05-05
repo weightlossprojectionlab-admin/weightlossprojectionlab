@@ -14,6 +14,39 @@ export interface BarcodeScannerProps {
 }
 
 /**
+ * Barcode formats the scanner attempts to decode. Shared between the live
+ * camera scanner and the file-upload fallback path so they stay in sync.
+ *
+ * Coverage rationale (grocery / kitchen inventory context):
+ * - UPC-A/E + EAN-13/8: standard retail barcodes (US/intl).
+ * - UPC_EAN_EXTENSION: 2/5-digit add-ons next to magazines/books.
+ * - CODE_128/39/93: general industrial; some private-label products use these.
+ * - ITF: multi-pack case codes / shipping cartons (often 14-digit).
+ * - RSS_14 / RSS_EXPANDED: GS1 DataBar — used on produce stickers, fresh
+ *   meat, deli items, coupons. Critical for grocery.
+ * - DATA_MATRIX: increasingly used on small packaged goods.
+ * - QR_CODE: future-proof (recipe links, in-pkg promos, etc.).
+ *
+ * Skipped: AZTEC (boarding passes), MAXICODE (UPS), PDF_417 (driver's
+ * licenses), CODABAR (libraries) — irrelevant for this app.
+ */
+const SUPPORTED_BARCODE_FORMATS = [
+  Html5QrcodeSupportedFormats.EAN_13,
+  Html5QrcodeSupportedFormats.EAN_8,
+  Html5QrcodeSupportedFormats.UPC_A,
+  Html5QrcodeSupportedFormats.UPC_E,
+  Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION,
+  Html5QrcodeSupportedFormats.CODE_128,
+  Html5QrcodeSupportedFormats.CODE_39,
+  Html5QrcodeSupportedFormats.CODE_93,
+  Html5QrcodeSupportedFormats.ITF,
+  Html5QrcodeSupportedFormats.RSS_14,
+  Html5QrcodeSupportedFormats.RSS_EXPANDED,
+  Html5QrcodeSupportedFormats.DATA_MATRIX,
+  Html5QrcodeSupportedFormats.QR_CODE
+]
+
+/**
  * Check if camera API is supported
  */
 function isCameraSupported(): boolean {
@@ -44,6 +77,12 @@ function isSecureContext(): boolean {
 export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', title }: BarcodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // The active MediaStreamTrack from the camera. Captured by reaching into
+  // html5-qrcode's <video> element after .start() resolves; the library
+  // doesn't expose it directly. Held in a ref because torch/focus calls
+  // don't need to trigger re-renders.
+  const trackRef = useRef<MediaStreamTrack | null>(null)
+  const capsRef = useRef<any>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showManualEntry, setShowManualEntry] = useState(false)
@@ -52,6 +91,18 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
   const [permissionState, setPermissionState] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown')
   const [cameraSupported, setCameraSupported] = useState(true)
   const [secureContext, setSecureContext] = useState(true)
+  // Capability-gated UI: only render the torch button when the active track
+  // reports torch support, and only attempt applyConstraints for focus when
+  // pointsOfInterest is exposed. iOS Safari currently exposes neither, so
+  // the buttons stay hidden and tap-to-focus silently no-ops there.
+  const [torchSupported, setTorchSupported] = useState(false)
+  const [torchOn, setTorchOn] = useState(false)
+  const [focusSupported, setFocusSupported] = useState(false)
+  const [focusRing, setFocusRing] = useState<{ x: number; y: number; key: number } | null>(null)
+  // Delayed prompt that nudges the user toward the OS camera (capture="environment")
+  // when the live decoder hasn't decoded anything within 8s. Native autofocus
+  // on a still photo is far more reliable than html5-qrcode's continuous stream.
+  const [showTroubleCallout, setShowTroubleCallout] = useState(false)
 
   useEffect(() => {
     if (!isOpen) {
@@ -116,15 +167,7 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
       // Initialize scanner
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode('barcode-reader', {
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.UPC_A,
-            Html5QrcodeSupportedFormats.UPC_E,
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.QR_CODE
-          ],
+          formatsToSupport: SUPPORTED_BARCODE_FORMATS,
           verbose: false
         })
       }
@@ -150,12 +193,26 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
         platform: detectPlatform()
       })
 
-      // Start scanning with specific camera ID (better than facingMode on some devices)
+      // Start scanning with specific camera ID (better than facingMode on some devices).
+      // qrbox is a function so the acquisition area scales to the viewfinder's
+      // shorter dimension on every device. We use a wide-and-short rectangle
+      // (85% × 40%) because UPC/EAN barcodes are ~2:1 rectangles — the dotted
+      // overlay now visually matches what users are aiming at, and the
+      // smaller decode area speeds up per-frame processing. Still tall
+      // enough to enclose a QR code at typical hold distance.
+      // fps bumped from 10 → 15: hand-shake at 10fps frequently skipped the
+      // decode window. 15 is supported on essentially all devices.
       await scannerRef.current.start(
         cameraId,
         {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
+          fps: 15,
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            const minDim = Math.min(viewfinderWidth, viewfinderHeight)
+            return {
+              width: Math.floor(minDim * 0.85),
+              height: Math.floor(minDim * 0.4)
+            }
+          },
           aspectRatio: 1.0
         },
         (decodedText) => {
@@ -170,6 +227,11 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
 
       setIsScanning(true)
       setPermissionState('granted')
+
+      // Capture the live MediaStreamTrack so torch / tap-to-focus can call
+      // applyConstraints on it. The library mounts the <video> element
+      // asynchronously; poll briefly until it's there.
+      void captureMediaStreamTrack()
     } catch (err: any) {
       // Log detailed error info for debugging
       console.error('[BarcodeScanner] Scanner error details:', {
@@ -227,7 +289,111 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
       }
       setIsScanning(false)
     }
+    // Reset capability-driven state — the track is gone, so torch/focus
+    // affordances must hide and re-detect on the next start.
+    trackRef.current = null
+    capsRef.current = null
+    setTorchOn(false)
+    setTorchSupported(false)
+    setFocusSupported(false)
+    setFocusRing(null)
+    setShowTroubleCallout(false)
   }
+
+  /**
+   * Reach into html5-qrcode's <video> element to grab the underlying
+   * MediaStreamTrack. The library doesn't expose it through its public API,
+   * so we DOM-query it. Polls briefly because the video element is mounted
+   * asynchronously after .start() resolves.
+   */
+  const captureMediaStreamTrack = async () => {
+    const maxAttempts = 20
+    for (let i = 0; i < maxAttempts; i++) {
+      const containerEl = document.getElementById('barcode-reader')
+      const video = containerEl?.querySelector('video') as HTMLVideoElement | null
+      const stream = video?.srcObject as MediaStream | null
+      const track = stream?.getVideoTracks?.()[0] ?? null
+      if (track) {
+        trackRef.current = track
+        const caps = (track.getCapabilities?.() as any) || {}
+        capsRef.current = caps
+        setTorchSupported(!!caps.torch)
+        setFocusSupported(!!(caps.focusMode && caps.pointsOfInterest))
+        return
+      }
+      await new Promise(r => setTimeout(r, 50))
+    }
+    // Couldn't grab the track — torch/focus features stay hidden, no error
+    // surfaced to the user. Still scans normally.
+    logger.debug('[BarcodeScanner] Could not capture MediaStreamTrack — torch/focus disabled')
+  }
+
+  /**
+   * Toggle the camera torch (phone flashlight). Feature-gated by
+   * capabilities; the button doesn't render unless torch is supported.
+   */
+  const toggleTorch = async () => {
+    const track = trackRef.current
+    if (!track) return
+    const next = !torchOn
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next } as any] })
+      setTorchOn(next)
+    } catch (err) {
+      logger.error('[BarcodeScanner] Torch toggle failed', err as Error)
+      toast.error("Couldn't toggle flashlight")
+    }
+  }
+
+  /**
+   * Re-trigger autofocus at the tap location. Mobile cameras frequently
+   * lock focus once the stream is held; tap-to-focus is the standard way
+   * to nudge them back. The visual ring renders on every supported
+   * platform; the actual applyConstraints call is gated on capabilities
+   * so iOS Safari (which doesn't expose pointsOfInterest) silently
+   * no-ops the constraint while still showing the ring.
+   */
+  const handleTapToFocus = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const localX = e.clientX - rect.left
+    const localY = e.clientY - rect.top
+    setFocusRing({ x: localX, y: localY, key: Date.now() })
+
+    const track = trackRef.current
+    const caps = capsRef.current
+    if (!track || !caps?.focusMode || !caps?.pointsOfInterest) return
+
+    const x = localX / rect.width
+    const y = localY / rect.height
+    const focusMode = Array.isArray(caps.focusMode) && caps.focusMode.includes('single-shot')
+      ? 'single-shot'
+      : 'manual'
+
+    track.applyConstraints({
+      advanced: [{ pointsOfInterest: [{ x, y }], focusMode } as any]
+    }).catch(() => {
+      // Best-effort — silently swallow failures. The user already saw the
+      // ring, so the interaction feels acknowledged either way.
+    })
+  }
+
+  // Auto-clear the focus ring after 700ms.
+  useEffect(() => {
+    if (!focusRing) return
+    const timer = setTimeout(() => setFocusRing(null), 700)
+    return () => clearTimeout(timer)
+  }, [focusRing])
+
+  // Show the "Having trouble?" callout 8s after a scan session starts and
+  // hasn't decoded anything yet. Re-armed on every fresh scan session.
+  useEffect(() => {
+    if (!isScanning || showManualEntry) {
+      setShowTroubleCallout(false)
+      return
+    }
+    const timer = setTimeout(() => setShowTroubleCallout(true), 8000)
+    return () => clearTimeout(timer)
+  }, [isScanning, showManualEntry])
 
   const handleScanSuccess = (barcode: string) => {
     // Vibrate on success (if supported)
@@ -296,15 +462,7 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
       // Initialize scanner if needed
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode('barcode-reader', {
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.UPC_A,
-            Html5QrcodeSupportedFormats.UPC_E,
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.QR_CODE
-          ],
+          formatsToSupport: SUPPORTED_BARCODE_FORMATS,
           verbose: false
         })
       }
@@ -390,11 +548,90 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
             }`}
           ></div>
 
+          {/* Animated scan line. Visual cue that the camera is actively
+              decoding — without it, users with a borderline scan don't know
+              whether to hold steady or move. Sized to match the qrbox
+              (85% × 40% of the square viewfinder). pointer-events-none so
+              taps still reach the tap-to-focus overlay below. */}
+          {isScanning && !showManualEntry && (
+            <>
+              <style>{`
+                @keyframes barcodeScanLine {
+                  0%, 100% { top: 0%;                  opacity: 0.55; }
+                  50%      { top: calc(100% - 2px);   opacity: 1;    }
+                }
+              `}</style>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div
+                  className="relative"
+                  style={{ width: '85%', aspectRatio: '85 / 40' }}
+                >
+                  <div
+                    className="absolute inset-x-0 h-0.5 bg-red-500 rounded-full"
+                    style={{
+                      top: 0,
+                      animation: 'barcodeScanLine 1.6s ease-in-out infinite',
+                      boxShadow: '0 0 8px rgba(239, 68, 68, 0.85)'
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Tap-to-focus overlay. Sits over the entire scanner area, captures
+              taps to nudge autofocus, and hosts the visual focus ring.
+              Pointer events are limited to this layer so the OS keyboard /
+              page scroll outside aren't affected. */}
+          {isScanning && !showManualEntry && (
+            <div
+              className="absolute inset-0 cursor-crosshair touch-manipulation"
+              onPointerDown={handleTapToFocus}
+              role="button"
+              aria-label="Tap to focus"
+            >
+              {focusRing && (
+                <div
+                  key={focusRing.key}
+                  className="absolute pointer-events-none rounded-full border-2 border-white"
+                  style={{
+                    left: focusRing.x - 25,
+                    top: focusRing.y - 25,
+                    width: 50,
+                    height: 50,
+                    boxShadow: '0 0 0 1px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(0,0,0,0.5)'
+                  }}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Torch toggle. Only renders when the active MediaStreamTrack
+              reports torch capability — Android Chrome typically does, iOS
+              Safari currently doesn't. */}
+          {torchSupported && isScanning && !showManualEntry && (
+            <button
+              type="button"
+              onClick={toggleTorch}
+              className={`absolute top-2 right-2 z-10 p-2 rounded-full text-white transition-colors ${
+                torchOn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-black/60 hover:bg-black/80'
+              }`}
+              aria-label={torchOn ? 'Turn flashlight off' : 'Turn flashlight on'}
+              aria-pressed={torchOn}
+            >
+              <svg className="w-6 h-6" fill={torchOn ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 2h6l-1 5h-4L9 2zm1 5h4v3a2 2 0 01-2 2 2 2 0 01-2-2V7zm0 7h4v8h-4v-8z" />
+              </svg>
+            </button>
+          )}
+
           {/* Overlay instructions */}
           {isScanning && !showManualEntry && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="absolute inset-x-0 bottom-2 flex items-center justify-center pointer-events-none">
               <div className="text-center text-white bg-black/50 px-4 py-2 rounded-lg">
-                <p className="text-sm font-medium">Scanning...</p>
+                <p className="text-sm font-medium">
+                  Scanning{focusSupported ? ' · tap to focus' : ''}
+                </p>
               </div>
             </div>
           )}
@@ -444,6 +681,29 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
           </div>
         )}
 
+        {/* "Having trouble?" callout — appears 8s into a still-scanning
+            session to nudge the user toward a still photo, which uses the
+            OS's native autofocus + flash and decodes far more reliably than
+            the live html5-qrcode stream. */}
+        {showTroubleCallout && isScanning && !showManualEntry && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-4 mb-4">
+            <p className="text-sm text-amber-900 dark:text-amber-100 mb-3">
+              <span className="font-semibold">Having trouble scanning?</span> Snap a photo instead — your camera's autofocus usually catches it on the first try.
+            </p>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Take a photo
+            </button>
+          </div>
+        )}
+
         {/* Tips */}
         <div className="bg-secondary-light rounded-lg p-4">
           <p className="text-xs text-blue-900">
@@ -463,8 +723,17 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
             className="hidden"
           />
 
-          {/* Camera not working options */}
-          {!isScanning && !showManualEntry && (
+          {/* Camera-failed fallback options. Previously rendered on
+              !isScanning, which included the brief camera-init
+              window — so users saw the buttons flash up, then
+              disappear when the camera kicked in (the "starts here,
+              goes here" jank). Now gated on actual failure modes
+              (error set, camera unsupported, or insecure context)
+              so the buttons appear only when the camera truly
+              can't work. The 8-second showTroubleCallout above
+              still surfaces "Take a photo" inline once the camera
+              IS running but isn't decoding. */}
+          {(error || !cameraSupported || !secureContext) && !showManualEntry && (
             <>
               {/* Upload Photo Button */}
               <button
