@@ -17,6 +17,7 @@ import { medicalOperations } from '@/lib/medical-operations'
 import { useRouter } from 'next/navigation'
 import { useAccount } from '@/contexts/AccountContext'
 import { formatHumanAgeDisplay, getHumanLifeStage } from '@/lib/life-stage-utils'
+import { getSpeciesEmoji } from '@/lib/pet-health-config'
 
 interface PatientCardProps {
   patient: PatientProfile
@@ -330,7 +331,14 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
 
           {patient.type === 'pet' && patient.breed && (
             <div className="flex items-center gap-2">
-              <HeartIcon className="w-4 h-4" />
+              {/* Species emoji — same glyph the page header /
+                  detail view uses (DRY: getSpeciesEmoji from
+                  lib/pet-health-config). Mirrors the human path's
+                  age+gender emoji approach so all family members
+                  on the listing read consistently at a glance. */}
+              <span className="text-base leading-none" aria-hidden>
+                {getSpeciesEmoji(patient.species)}
+              </span>
               <span>{patient.breed}</span>
             </div>
           )}
@@ -504,7 +512,14 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
           )}
           {patient.type === 'pet' && patient.breed && (
             <div className="flex items-center gap-2">
-              <HeartIcon className="w-4 h-4" />
+              {/* Species emoji — same glyph the page header /
+                  detail view uses (DRY: getSpeciesEmoji from
+                  lib/pet-health-config). Mirrors the human path's
+                  age+gender emoji approach so all family members
+                  on the listing read consistently at a glance. */}
+              <span className="text-base leading-none" aria-hidden>
+                {getSpeciesEmoji(patient.species)}
+              </span>
               <span>{patient.breed}</span>
             </div>
           )}
