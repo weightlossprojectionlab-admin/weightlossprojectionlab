@@ -290,12 +290,23 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
 
         {/* Details */}
         <div className="space-y-2 text-sm text-muted-foreground">
-          {/* Age / DOB */}
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4" />
-            <span>
-              {patient.type === 'human' ? `${formatHumanAgeDisplay(patient.dateOfBirth) || age + ' years old'}` : `Born ${new Date(patient.dateOfBirth).toLocaleDateString()}`}
-            </span>
+          {/* Age + DOB. Humans render age and birthdate on a
+              single line with a "·" separator; the birthdate
+              wraps to its own visual line on narrow cards via
+              flex-wrap. Pets keep the existing "Born MM/DD/YYYY"
+              wording (their canonical display today). */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <CalendarIcon className="w-4 h-4 flex-shrink-0" />
+            {patient.type === 'human' ? (
+              <span className="flex flex-wrap items-baseline gap-x-2">
+                <span>{formatHumanAgeDisplay(patient.dateOfBirth) || age + ' years old'}</span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(patient.dateOfBirth).toLocaleDateString()}
+                </span>
+              </span>
+            ) : (
+              <span>Born {new Date(patient.dateOfBirth).toLocaleDateString()}</span>
+            )}
           </div>
 
           {/* Type-specific info */}
@@ -473,13 +484,24 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
             via a separate render). Full detail (chips, prep
             needs) lives on /patients/{id}. */}
         <div className="space-y-2 text-sm text-muted-foreground mb-4">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4" />
-            <span>
-              {patient.type === 'human'
-                ? `${formatHumanAgeDisplay(patient.dateOfBirth) || calculateAge(patient.dateOfBirth) + ' years old'}`
-                : `Born ${new Date(patient.dateOfBirth).toLocaleDateString()}`}
-            </span>
+          {/* Age + DOB. Humans render age and birthdate together
+              with a smaller-text DOB; pets keep their canonical
+              "Born MM/DD/YYYY" wording. */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <CalendarIcon className="w-4 h-4 flex-shrink-0" />
+            {patient.type === 'human' ? (
+              <span className="flex flex-wrap items-baseline gap-x-2">
+                <span>
+                  {formatHumanAgeDisplay(patient.dateOfBirth) ||
+                    calculateAge(patient.dateOfBirth) + ' years old'}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(patient.dateOfBirth).toLocaleDateString()}
+                </span>
+              </span>
+            ) : (
+              <span>Born {new Date(patient.dateOfBirth).toLocaleDateString()}</span>
+            )}
           </div>
           {patient.type === 'human' && patient.gender && (
             <div className="flex items-center gap-2">
