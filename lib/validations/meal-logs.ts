@@ -103,6 +103,15 @@ const SourceRefsSchema = z.object({
     .optional(),
 })
 
+// Family-meal PRD Commit B — allergen-exposure flag. The user
+// confirmed this eater consumed a flagged allergen. Surfaces in
+// clinical timelines for caregiver / pediatrician review.
+const AllergenExposureSchema = z.object({
+  tags: z.array(z.string()).min(1),
+  confirmed: z.literal(true),
+  confirmedAt: z.string().datetime(),
+})
+
 // Base schema without refinement (supports .partial() for updates)
 const CreateMealLogRequestBaseSchema = z.object({
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
@@ -119,6 +128,9 @@ const CreateMealLogRequestBaseSchema = z.object({
   // optional eaterId).
   source: z.enum(['ai-photo', 'recipe', 'manual', 'barcode-scan', 'leftover']).optional(),
   sourceRefs: SourceRefsSchema.optional(),
+  // Family-meal PRD Commit B — when present, the user explicitly
+  // confirmed this eater consumed a flagged allergen.
+  allergenExposure: AllergenExposureSchema.optional(),
 })
 
 // For CREATE operations - requires either aiAnalysis or manualEntries

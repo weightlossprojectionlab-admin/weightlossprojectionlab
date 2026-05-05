@@ -480,6 +480,26 @@ export interface MealLog {
       eaterId?: string
     }
   }
+  /**
+   * Allergen-exposure flag — populated when the user explicitly
+   * confirmed that this eater consumed an ingredient flagged in
+   * their foodAllergies (intentional or accidental). Family-meal
+   * Commit B. Surfaces in clinical timelines for caregiver /
+   * pediatrician review. Distinct from the recipe-context
+   * "override" pattern (which we removed): logging records reality;
+   * planning prevents action. Both gated by per-eater allergen
+   * intersection but with different UX semantics.
+   */
+  allergenExposure?: {
+    /** Allergen tags that were intersected at log time. */
+    tags: string[]
+    /** Always true when this object is present (the field's
+        existence IS the confirmation). Stored explicitly so
+        Firestore queries can filter on confirmed events. */
+    confirmed: true
+    /** When the user confirmed the exposure. ISO8601. */
+    confirmedAt: string
+  }
 }
 
 export interface MealTemplate {

@@ -13,7 +13,7 @@ import { useConfirm } from '@/hooks/useConfirm'
 import { auth } from '@/lib/firebase'
 import { getCSRFToken } from '@/lib/csrf'
 import { MEAL_SUGGESTIONS } from '@/lib/meal-suggestions'
-import { getRecipeByIdLocal } from '@/lib/firestore-recipes'
+import { getRecipeByIdLocal, getRecipeById } from '@/lib/firestore-recipes'
 import { computeRecommendedServings } from '@/lib/portion-recommendation'
 import { formatFileSize } from '@/lib/image-compression'
 import { shareMeal, shareToPlatform, getPlatformInfo } from '@/lib/share-utils'
@@ -30,6 +30,7 @@ import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
 import { logger } from '@/lib/logger'
 import { medicalOperations } from '@/lib/medical-operations'
+import { EaterMultiSelect, type EaterSelection } from '@/components/log-meal/EaterMultiSelect'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
 import { getProductLabel } from '@/lib/messaging/terminology'
@@ -177,7 +178,17 @@ function LogMealContent() {
   const [recipeMeta, setRecipeMeta] = useState<{
     name: string
     imageUrl?: string
+    // Family-meal Commit B — per-ingredient allergen tags from
+    // the classifier (Commit D). Drives per-eater conflict checks
+    // in EaterMultiSelect. Optional — recipes that haven't been
+    // backfilled yet just don't trigger the per-eater warning.
+    ingredientAllergens?: import('@/lib/meal-suggestions').AllergyTag[][]
   } | null>(null)
+  // Family-meal Commit B — multi-eater selection. Drives the save
+  // fan-out: one MealLog write per selected eater, each carrying
+  // their own sourceRefs.portion.eaterId and (when applicable) an
+  // allergenExposure flag for clinical timeline review.
+  const [eaterSelection, setEaterSelection] = useState<EaterSelection[]>([])
   const [saving, setSaving] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string>('')
   const [expandedMealId, setExpandedMealId] = useState<string | null>(null)
@@ -429,9 +440,14 @@ function LogMealContent() {
         setSelectedMealType(mealType)
       }
 
-      // Load the cooking session to get exact nutrition data
-      cookingSessionOperations.getCookingSession(sessionId).then((session: any) => {
-        const recipe = getRecipeByIdLocal(recipeId)
+      // Load the cooking session to get exact nutrition data.
+      // Recipe lookup uses the async getRecipeById so it covers
+      // both bundled (MEAL_SUGGESTIONS) and Firestore-only
+      // (admin-created) recipes — needed for Commit B's per-eater
+      // allergen check, which depends on recipe.ingredientAllergens
+      // populated by the Commit D classifier on Firestore recipes.
+      cookingSessionOperations.getCookingSession(sessionId).then(async (session: any) => {
+        const recipe = await getRecipeById(recipeId)
 
         if (session && recipe) {
           // Pre-fill AI analysis with exact recipe data
@@ -491,6 +507,7 @@ function LogMealContent() {
             name: recipe.name,
             imageUrl:
               recipe.imageUrls?.[0] ?? recipe.imageUrl ?? undefined,
+            ingredientAllergens: recipe.ingredientAllergens,
           })
 
           // Recommendation: only when a patient profile is in
@@ -1381,8 +1398,102 @@ function LogMealContent() {
       setUploadProgress('Saving meal data...')
       logger.debug('💾 Saving meal log to Firestore...')
 
-      // If logging for a patient, use patient meal logs
-      if (patientIdParam && patientProfile) {
+      // Family-meal Commit B — multi-eater fan-out path. Engages
+      // when the user landed via ?fromRecipe=true and the
+      // EaterMultiSelect has at least one selection. Writes one
+      // MealLog per eater, each carrying their own
+      // sourceRefs.portion.eaterId and (when applicable) the
+      // allergenExposure flag for clinical timeline review.
+      // Non-recipe paths (photo, manual, template) fall through to
+      // the legacy single-eater branches below.
+      if (fromRecipe && eaterSelection.length > 0) {
+        // Scaled analysis — same scaling logic used by the legacy
+        // single-eater user path. Computed once, shared across all
+        // fan-out writes.
+        const scaledAnalysis: AIAnalysis | undefined =
+          recipeSourceRefs && recipePerServing && aiAnalysis
+            ? {
+                ...aiAnalysis,
+                totalCalories: Math.round(recipePerServing.calories * recipeServings),
+                totalMacros: {
+                  protein: Math.round(recipePerServing.protein * recipeServings * 10) / 10,
+                  carbs: Math.round(recipePerServing.carbs * recipeServings * 10) / 10,
+                  fat: Math.round(recipePerServing.fat * recipeServings * 10) / 10,
+                  fiber: Math.round(recipePerServing.fiber * recipeServings * 10) / 10,
+                },
+              }
+            : aiAnalysis || undefined
+
+        const baseSourceRefs = recipeSourceRefs
+          ? {
+              recipeId: recipeSourceRefs.recipeId,
+              cookedIngredients: recipeSourceRefs.cookedIngredients,
+            }
+          : null
+        const loggedAtIso = new Date().toISOString()
+
+        for (const eater of eaterSelection) {
+          const perEaterSourceRefs = baseSourceRefs
+            ? {
+                ...baseSourceRefs,
+                portion: {
+                  method: 'servings' as const,
+                  value: recipeServings,
+                  ...(eater.patientId ? { eaterId: eater.patientId } : {}),
+                },
+              }
+            : undefined
+
+          if (eater.patientId) {
+            await medicalOperations.mealLogs.logMeal(eater.patientId, {
+              mealType: selectedMealType,
+              foodItems: scaledAnalysis?.foodItems?.map((item) => item.name) || [],
+              description: scaledAnalysis?.foodItems
+                ?.map((item) => `${item.name} (${item.portion})`)
+                .join(', '),
+              photoUrl: photoUrl || undefined,
+              calories: scaledAnalysis?.totalCalories,
+              protein: scaledAnalysis?.totalMacros?.protein,
+              carbs: scaledAnalysis?.totalMacros?.carbs,
+              fat: scaledAnalysis?.totalMacros?.fat,
+              fiber: scaledAnalysis?.totalMacros?.fiber,
+              loggedAt: loggedAtIso,
+              consumedAt: loggedAtIso,
+              aiAnalyzed: !!aiAnalysis,
+              aiConfidence: aiAnalysis ? 0.9 : undefined,
+              tags: [],
+              source: 'recipe',
+              ...(perEaterSourceRefs ? { sourceRefs: perEaterSourceRefs } : {}),
+              ...(eater.allergenExposure ? { allergenExposure: eater.allergenExposure } : {}),
+            } as any)
+          } else {
+            await mealLogOperations.createMealLog({
+              mealType: selectedMealType,
+              photoUrl: photoUrl || undefined,
+              aiAnalysis: scaledAnalysis,
+              loggedAt: loggedAtIso,
+              source: 'recipe' as const,
+              ...(perEaterSourceRefs ? { sourceRefs: perEaterSourceRefs } : {}),
+              ...(eater.allergenExposure ? { allergenExposure: eater.allergenExposure } : {}),
+            } as any)
+          }
+        }
+
+        const exposureCount = eaterSelection.filter((e) => e.allergenExposure).length
+        const exposureSuffix =
+          exposureCount > 0
+            ? ` (${exposureCount} allergen exposure${exposureCount > 1 ? 's' : ''} flagged)`
+            : ''
+        toast.success(
+          eaterSelection.length === 1
+            ? `Meal logged for ${eaterSelection[0].name}${exposureSuffix}`
+            : `Logged for ${eaterSelection.length} eaters${exposureSuffix}`,
+        )
+        logger.debug('✅ Multi-eater meal log fan-out complete', {
+          eaters: eaterSelection.length,
+          exposures: exposureCount,
+        })
+      } else if (patientIdParam && patientProfile) {
         // CRITICAL DEBUG: Log photoUrl value right before API call (patient path)
         logger.debug('📸 Saving patient meal data with photoUrl:', {
           photoUrl,
@@ -1918,14 +2029,32 @@ function LogMealContent() {
               </ul>
             )}
 
+            {/* Family-meal Commit B — multi-eater selector with
+                per-eater allergen badges + exposure-confirmation
+                toggle. The save handler fans out one MealLog per
+                selected eater (3.B.4). */}
+            <div className="border-t border-border pt-3 mb-3">
+              <EaterMultiSelect
+                ingredientAllergens={recipeMeta.ingredientAllergens}
+                scopedToPatientId={patientIdParam ?? undefined}
+                onChange={setEaterSelection}
+              />
+            </div>
+
             <div className="space-y-2">
               <button
                 type="button"
                 onClick={() => saveMeal()}
-                disabled={saving}
+                disabled={saving || eaterSelection.length === 0}
                 className="btn btn-primary w-full"
               >
-                {saving ? 'Logging…' : 'Log Meal'}
+                {saving
+                  ? 'Logging…'
+                  : eaterSelection.length === 0
+                    ? 'Pick at least one eater'
+                    : eaterSelection.length === 1
+                      ? `Log Meal for ${eaterSelection[0].name}`
+                      : `Log Meal for ${eaterSelection.length} eaters`}
               </button>
               <button
                 type="button"

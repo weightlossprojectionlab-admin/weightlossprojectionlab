@@ -126,6 +126,9 @@ export async function POST(request: NextRequest) {
       // existing AI/manual flows omit and behave unchanged.
       source: clientSource,
       sourceRefs,
+      // Family-meal PRD Commit B — explicit allergen-exposure
+      // flag for clinical timeline.
+      allergenExposure,
     } = validatedData
 
     // Check for duplicate meal type on the same day (except snacks)

@@ -123,6 +123,13 @@ export async function POST(
     if (body.notes) mealLog.notes = body.notes
     if (body.location) mealLog.location = body.location
     if (body.aiConfidence) mealLog.aiConfidence = body.aiConfidence
+    // Family-meal Commit B — recipe-source linkage and per-eater
+    // allergen-exposure flag. The user-meal-log API
+    // (/api/meal-logs) already accepts these; the patient API
+    // didn't, which would have silently dropped them on save.
+    if (body.source) mealLog.source = body.source
+    if (body.sourceRefs) mealLog.sourceRefs = body.sourceRefs
+    if (body.allergenExposure) mealLog.allergenExposure = body.allergenExposure
 
     const docRef = await adminDb
       .collection('users')
