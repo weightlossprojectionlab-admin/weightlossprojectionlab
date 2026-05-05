@@ -244,7 +244,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
               <h3 className="font-bold text-xl text-foreground">
                 {patient.name}
               </h3>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getRelationshipColor(patient.relationship)}`}>
                   {['Newborn', 'Child'].includes(patient.relationship) ? lifeStageLabel : patient.relationship}
                 </span>
@@ -253,6 +253,35 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                     {patient.species}
                   </span>
                 )}
+                {/* Special-needs alert pin — fires when any food
+                    profile field is populated (foodAllergies /
+                    preferredFoods / aversions / preparationNeeds).
+                    Compact; full detail lives on /patients/{id}.
+                    Allergies bias the chip color toward error so
+                    the safety-critical case reads at a glance,
+                    even though one pin covers all four sources. */}
+                {(() => {
+                  const hasAllergies = (patient.foodAllergies?.length ?? 0) > 0
+                  const hasPrefs = (patient.preferredFoods?.length ?? 0) > 0
+                  const hasAvers = (patient.aversions?.length ?? 0) > 0
+                  const prep = patient.preparationNeeds
+                  const hasPrep =
+                    !!prep &&
+                    (prep.texture || prep.cutSize || prep.temperature || prep.separated || prep.notes)
+                  if (!hasAllergies && !hasPrefs && !hasAvers && !hasPrep) return null
+                  const tone = hasAllergies
+                    ? 'bg-error/10 text-error border-error/30'
+                    : 'bg-primary/10 text-primary border-primary/30'
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${tone}`}
+                      title="This family member has special dietary needs. Open the dashboard for the full profile."
+                    >
+                      <span aria-hidden>⚠</span>
+                      <span>Special needs</span>
+                    </span>
+                  )
+                })()}
               </div>
             </div>
           </div>
@@ -271,7 +300,30 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
           {/* Type-specific info */}
           {patient.type === 'human' && patient.gender && (
             <div className="flex items-center gap-2">
-              <UserIcon className="w-4 h-4" />
+              {/* Age-band + gender emoji. Doesn't auto-assign or
+                  sex-code visual identity (per family-meal PRD —
+                  no auto blue/pink); just renders the appropriate
+                  human glyph for the user-supplied gender within
+                  the user-supplied life stage. Falls back to 🧑
+                  for 'other' / 'prefer-not-to-say' / unrecognized. */}
+              <span className="text-base leading-none" aria-hidden>
+                {(() => {
+                  const stage = patient.dateOfBirth
+                    ? getHumanLifeStage(patient.dateOfBirth).stage
+                    : 'adult'
+                  const isChild = ['newborn', 'infant', 'toddler', 'child', 'teen'].includes(
+                    stage as string
+                  )
+                  const isSenior = stage === 'senior'
+                  if (patient.gender === 'male') {
+                    return isSenior ? '👴' : isChild ? '👦' : '👨'
+                  }
+                  if (patient.gender === 'female') {
+                    return isSenior ? '👵' : isChild ? '👧' : '👩'
+                  }
+                  return '🧑'
+                })()}
+              </span>
               <span className="capitalize">{patient.gender}</span>
             </div>
           )}
@@ -364,7 +416,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
               <h3 className="font-bold text-xl text-foreground">
                 {patient.name}
               </h3>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getRelationshipColor(patient.relationship)}`}>
                   {['Newborn', 'Child'].includes(patient.relationship) ? lifeStageLabel : patient.relationship}
                 </span>
@@ -373,36 +425,89 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                     {patient.species}
                   </span>
                 )}
+                {/* Special-needs alert pin — fires when any food
+                    profile field is populated (foodAllergies /
+                    preferredFoods / aversions / preparationNeeds).
+                    Compact; full detail lives on /patients/{id}.
+                    Allergies bias the chip color toward error so
+                    the safety-critical case reads at a glance,
+                    even though one pin covers all four sources. */}
+                {(() => {
+                  const hasAllergies = (patient.foodAllergies?.length ?? 0) > 0
+                  const hasPrefs = (patient.preferredFoods?.length ?? 0) > 0
+                  const hasAvers = (patient.aversions?.length ?? 0) > 0
+                  const prep = patient.preparationNeeds
+                  const hasPrep =
+                    !!prep &&
+                    (prep.texture || prep.cutSize || prep.temperature || prep.separated || prep.notes)
+                  if (!hasAllergies && !hasPrefs && !hasAvers && !hasPrep) return null
+                  const tone = hasAllergies
+                    ? 'bg-error/10 text-error border-error/30'
+                    : 'bg-primary/10 text-primary border-primary/30'
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${tone}`}
+                      title="This family member has special dietary needs. Open the dashboard for the full profile."
+                    >
+                      <span aria-hidden>⚠</span>
+                      <span>Special needs</span>
+                    </span>
+                  )
+                })()}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Details */}
+        {/* Details — demographics, vertical stack as before. Card
+            keeps its original dimensions; the food-profile signal
+            lives as a small alert pin in the header (added below
+            via a separate render). Full detail (chips, prep
+            needs) lives on /patients/{id}. */}
         <div className="space-y-2 text-sm text-muted-foreground mb-4">
-          {/* Age / DOB */}
           <div className="flex items-center gap-2">
             <CalendarIcon className="w-4 h-4" />
             <span>
-              {patient.type === 'human' ? `${formatHumanAgeDisplay(patient.dateOfBirth) || calculateAge(patient.dateOfBirth) + ' years old'}` : `Born ${new Date(patient.dateOfBirth).toLocaleDateString()}`}
+              {patient.type === 'human'
+                ? `${formatHumanAgeDisplay(patient.dateOfBirth) || calculateAge(patient.dateOfBirth) + ' years old'}`
+                : `Born ${new Date(patient.dateOfBirth).toLocaleDateString()}`}
             </span>
           </div>
-
-          {/* Type-specific info */}
           {patient.type === 'human' && patient.gender && (
             <div className="flex items-center gap-2">
-              <UserIcon className="w-4 h-4" />
+              {/* Age-band + gender emoji. Doesn't auto-assign or
+                  sex-code visual identity (per family-meal PRD —
+                  no auto blue/pink); just renders the appropriate
+                  human glyph for the user-supplied gender within
+                  the user-supplied life stage. Falls back to 🧑
+                  for 'other' / 'prefer-not-to-say' / unrecognized. */}
+              <span className="text-base leading-none" aria-hidden>
+                {(() => {
+                  const stage = patient.dateOfBirth
+                    ? getHumanLifeStage(patient.dateOfBirth).stage
+                    : 'adult'
+                  const isChild = ['newborn', 'infant', 'toddler', 'child', 'teen'].includes(
+                    stage as string
+                  )
+                  const isSenior = stage === 'senior'
+                  if (patient.gender === 'male') {
+                    return isSenior ? '👴' : isChild ? '👦' : '👨'
+                  }
+                  if (patient.gender === 'female') {
+                    return isSenior ? '👵' : isChild ? '👧' : '👩'
+                  }
+                  return '🧑'
+                })()}
+              </span>
               <span className="capitalize">{patient.gender}</span>
             </div>
           )}
-
           {patient.type === 'pet' && patient.breed && (
             <div className="flex items-center gap-2">
               <HeartIcon className="w-4 h-4" />
               <span>{patient.breed}</span>
             </div>
           )}
-
           {patient.type === 'pet' && patient.microchipNumber && (
             <div className="text-xs">
               <span className="font-medium">Microchip:</span> {patient.microchipNumber}
