@@ -18,6 +18,7 @@ import type {
   LabResultEntry,
   ExtractedMedicationEntry
 } from '@/types/medical'
+import { DocumentExtractionResponseSchema } from '@/lib/validations/medical'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
@@ -71,8 +72,29 @@ export async function extractStructuredData(
     const response = await result.response
     const jsonText = response.text()
 
-    const parsed = JSON.parse(jsonText)
-    const structured = normalizeExtractionResult(parsed, classification.confidence)
+    const parsedRaw = JSON.parse(jsonText)
+
+    // Runtime schema gate. Output flows into patient labResults /
+    // medications / diagnoses — high-PHI risk if a malformed shape
+    // (e.g., labResults as an object instead of array, value as a
+    // bare null, medications missing name) sneaks past the existing
+    // manual coercion. On failure: log structural metadata only and
+    // return null (matches the catch-block fallback).
+    const validated = DocumentExtractionResponseSchema.safeParse(parsedRaw)
+    if (!validated.success) {
+      logger.warn('[DocumentExtractor] Output failed schema validation', {
+        textLength: ocrText.length,
+        docTypeHint,
+        issueCount: validated.error.issues.length,
+        issues: validated.error.issues.slice(0, 5).map((i) => ({
+          path: i.path.join('.'),
+          code: i.code,
+        })),
+      })
+      return null
+    }
+
+    const structured = normalizeExtractionResult(validated.data, classification.confidence)
 
     logger.info('[DocumentExtractor] Extraction complete', {
       documentType: structured.documentType,

@@ -580,6 +580,54 @@ export const familyInvitationFormSchema = familyInvitationSchema.omit({
   permissions: familyMemberPermissionsSchema.partial() // Allow partial permissions for easier form handling
 })
 
+// ==================== DOCUMENT OCR — GEMINI EXTRACTION OUTPUT ====================
+//
+// Runtime gate at the JSON.parse boundary in lib/document-data-extractor.ts.
+// Gemini parses uploaded medical-document OCR text into a structured
+// shape that flows into patient labResults / medications / diagnoses
+// records — high-PHI risk if a malformed shape (e.g., status as an
+// arbitrary string, value as null instead of optional) sneaks past
+// the existing manual coercion in normalizeExtractionResult.
+//
+// Schema is intentionally permissive on enum-like fields (status,
+// documentType) — the existing normalizer at lib/document-data-extractor
+// .ts:148 filters bad enum values to undefined. Zod's job here is to
+// reject SHAPE drift (objects becoming strings, arrays becoming
+// objects, missing required fields), not enum drift.
+
+const LabResultEntryGeminiSchema = z.object({
+  testName: z.string(),
+  // Gemini sometimes returns numbers, sometimes strings. Accept both;
+  // normalizer coerces to string.
+  value: z.union([z.string(), z.number()]),
+  unit: z.string().nullable().optional(),
+  referenceRange: z.string().nullable().optional(),
+  // Loose — normalizer enforces the enum.
+  status: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+})
+
+const ExtractedMedicationEntryGeminiSchema = z.object({
+  name: z.string(),
+  dosage: z.string().nullable().optional(),
+  frequency: z.string().nullable().optional(),
+  prescribedFor: z.string().nullable().optional(),
+  prescribedBy: z.string().nullable().optional(),
+})
+
+export const DocumentExtractionResponseSchema = z.object({
+  documentType: z.string().optional(),
+  labResults: z.array(LabResultEntryGeminiSchema).optional(),
+  medications: z.array(ExtractedMedicationEntryGeminiSchema).optional(),
+  diagnoses: z.array(z.string()).optional(),
+  procedures: z.array(z.string()).optional(),
+  providerName: z.string().nullable().optional(),
+  facilityName: z.string().nullable().optional(),
+  documentDate: z.string().nullable().optional(),
+})
+
+export type DocumentExtractionResponse = z.infer<typeof DocumentExtractionResponseSchema>
+
 // ==================== EXPORT ALL SCHEMAS ====================
 
 export const medicalSchemas = {
