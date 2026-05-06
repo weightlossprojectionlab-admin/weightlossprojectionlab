@@ -2183,7 +2183,7 @@ export function RecipeModal({
                   <span className="flex-1">
                     <span className="block">Add to Shopping List</span>
                     <span className="block text-xs font-normal opacity-90">
-                      I don&apos;t have it — remind me to buy it
+                      I don&apos;t have it — need to buy it
                     </span>
                   </span>
                 </button>
