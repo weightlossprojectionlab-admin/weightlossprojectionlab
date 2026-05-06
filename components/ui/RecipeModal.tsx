@@ -2139,6 +2139,54 @@ export function RecipeModal({
                 <strong>{fixInventoryFor.ingredientName}</strong>
               </p>
               <div className="space-y-2 mb-4">
+                {/* Three semantically-distinct paths for resolving a
+                    missing ingredient:
+                    - Add to Shopping List: "I don't have it"
+                    - Scan: "I have it (boxed)"
+                    - Adjust: "I have it (produce, no barcode)"
+                    Backend treats all three as inventory-adjustment
+                    events; the user-facing labels make the intent
+                    explicit. */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const ingredient = fixInventoryFor.ingredientName
+                    setFixInventoryFor(null)
+                    if (!auth.currentUser?.uid) {
+                      toast.error('You must be logged in')
+                      return
+                    }
+                    try {
+                      const { newCount, linkedCount } =
+                        await addRecipeIngredientsToShoppingList(
+                          auth.currentUser.uid,
+                          [ingredient],
+                          suggestion.id,
+                          patientId,
+                        )
+                      await refreshShoppingList()
+                      if (newCount > 0) {
+                        toast.success(`✓ Added "${ingredient}" to shopping list`)
+                      } else if (linkedCount > 0) {
+                        toast.success(
+                          `✓ Linked "${ingredient}" (already on your list) to this recipe`,
+                        )
+                      }
+                    } catch (err) {
+                      logger.error('add-to-shopping single-item failed', err as Error)
+                      toast.error('Failed to add to shopping list')
+                    }
+                  }}
+                  className="w-full px-4 py-3 min-h-[44px] bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 active:bg-amber-700 flex items-center gap-3 text-left"
+                >
+                  <span className="text-xl">📋</span>
+                  <span className="flex-1">
+                    <span className="block">Add to Shopping List</span>
+                    <span className="block text-xs font-normal opacity-90">
+                      I don&apos;t have it — remind me to buy it
+                    </span>
+                  </span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -2149,9 +2197,9 @@ export function RecipeModal({
                 >
                   <span className="text-xl">📷</span>
                   <span className="flex-1">
-                    <span className="block">Scan barcode</span>
+                    <span className="block">Scan</span>
                     <span className="block text-xs font-normal opacity-90">
-                      Boxed, jarred, or packaged items
+                      I have it — boxed, jarred, or packaged
                     </span>
                   </span>
                 </button>
@@ -2170,8 +2218,8 @@ export function RecipeModal({
                     // pendingScanProduct entry. addItem treats the
                     // OpenFoodFactsProduct's `code` as the barcode,
                     // so the synthetic "manual:xxx" key gives us
-                    // dedup against future "Count it" repeats for
-                    // the same ingredient string.
+                    // dedup against future "Adjust" repeats for the
+                    // same ingredient string.
                     setPendingScanProduct({
                       barcode: synthetic,
                       name,
@@ -2182,13 +2230,13 @@ export function RecipeModal({
                     })
                     setScanQuantity(1)
                   }}
-                  className="w-full px-4 py-3 min-h-[44px] bg-secondary text-secondary-foreground border-2 border-border rounded-lg font-medium hover:bg-muted active:bg-muted/80 flex items-center gap-3 text-left"
+                  className="w-full px-4 py-3 min-h-[44px] bg-success text-white rounded-lg font-medium hover:bg-success-hover active:bg-success-hover flex items-center gap-3 text-left"
                 >
                   <span className="text-xl">🔢</span>
                   <span className="flex-1">
-                    <span className="block">Count it</span>
-                    <span className="block text-xs font-normal opacity-80">
-                      Produce, herbs, anything without a barcode
+                    <span className="block">Adjust</span>
+                    <span className="block text-xs font-normal opacity-90">
+                      I have it — produce, herbs, no barcode
                     </span>
                   </span>
                 </button>
