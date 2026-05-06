@@ -42,6 +42,7 @@ const FACTORS: Record<QuantityUnit, { dim: Dimension; toBase: number }> = {
 
   // Count — dimensionless, all 1:1 with each other
   count: { dim: 'count', toBase: 1 },
+  each: { dim: 'count', toBase: 1 },
   bunch: { dim: 'count', toBase: 1 },
   head: { dim: 'count', toBase: 1 },
   bag: { dim: 'count', toBase: 1 },
