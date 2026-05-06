@@ -20,10 +20,10 @@
  * /api/admin/recipes/classify-allergens.
  */
 
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
+import { SchemaType } from '@google/generative-ai'
 import type { AllergyTag } from './meal-suggestions'
 import { logger } from './logger'
-import { logGeminiInvocation } from './gemini-invocations'
+import { generateGeminiJSON } from '@/lib/ai/gemini-client'
 import { ALLERGY_TAG_VALUES } from './allergen-pack'
 
 // Re-export the pure pack/unpack utilities from allergen-pack for
@@ -92,28 +92,11 @@ export async function classifyIngredientAllergens(
     return ingredients.map(() => [])
   }
 
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error('[ingredient-allergen-classifier] GEMINI_API_KEY missing')
-  }
+  const numbered = ingredients
+    .map((ing, i) => `${i + 1}. ${ing}`)
+    .join('\n')
 
-  const startedAt = Date.now()
-
-  try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-    const model = genAI.getGenerativeModel({
-      model: MODEL_ID,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: classifierSchema,
-        temperature: 0.1,
-      },
-    })
-
-    const numbered = ingredients
-      .map((ing, i) => `${i + 1}. ${ing}`)
-      .join('\n')
-
-    const prompt = `You are a food-allergen classifier. For each ingredient, determine which of the following canonical allergen tags it carries. Only use tags from this set:
+  const prompt = `You are a food-allergen classifier. For each ingredient, determine which of the following canonical allergen tags it carries. Only use tags from this set:
 
 dairy — cow's milk, cheese, butter, cream, yogurt, whey, casein, ghee
 gluten — wheat, barley, rye, conventional flour, breadcrumbs, soy sauce (contains wheat)
@@ -156,73 +139,53 @@ Return strictly this shape:
 
 The outer array MUST have exactly ${ingredients.length} entries (one per ingredient, in order).`
 
-    const result = await model.generateContent(prompt)
-    const response = result.response.text()
-    const parsed = JSON.parse(response) as {
-      ingredientAllergens?: unknown
-    }
+  // Reference impl for the shared Gemini client (T5.14). The client
+  // owns SDK init, JSON.parse, and the gemini_invocations log;
+  // classifier owns the prompt + the post-processing tag filter.
+  // No Zod gate here — we deliberately allow unknown tags through
+  // the boundary and filter them out below (Gemini sometimes emits
+  // taxonomy variants like "tree-nuts" that we want to coerce).
+  const parsed = await generateGeminiJSON<{ ingredientAllergens?: unknown }>({
+    fnName: 'classifyIngredientAllergens',
+    model: MODEL_ID,
+    prompt,
+    geminiSchema: classifierSchema,
+    temperature: 0.1,
+    inputSize: ingredients.length,
+    metadata: { recipeAllergens },
+  })
 
-    const raw = parsed.ingredientAllergens
-    if (!Array.isArray(raw)) {
-      logger.warn('[ingredient-allergen-classifier] response missing ingredientAllergens array')
-      return ingredients.map(() => [])
-    }
-
-    // Coerce: must be exactly the right length, each entry must be
-    // a string array of valid AllergyTag values. Pad / truncate to
-    // match. Filter unknown tags so a stray value doesn't propagate.
-    const out: AllergyTag[][] = ingredients.map((_, i) => {
-      const entry = raw[i]
-      if (!Array.isArray(entry)) return []
-      const tags = (entry as unknown[])
-        .filter((t): t is AllergyTag =>
-          typeof t === 'string' && (ALLERGY_TAG_VALUES as string[]).includes(t)
-        )
-      return Array.from(new Set(tags))
-    })
-
-    const taggedCount = out.filter((tags) => tags.length > 0).length
-
-    logger.info('[ingredient-allergen-classifier] classified', {
-      ingredientCount: ingredients.length,
-      taggedCount,
-      recipeAllergens,
-    })
-
-    await logGeminiInvocation({
-      fnName: 'classifyIngredientAllergens',
-      model: MODEL_ID,
-      latencyMs: Date.now() - startedAt,
-      success: true,
-      inputSize: ingredients.length,
-      outputSize: taggedCount,
-      metadata: { recipeAllergens },
-    })
-
-    return out
-  } catch (err) {
-    logger.error(
-      '[ingredient-allergen-classifier] classification failed',
-      err as Error,
-    )
-
-    await logGeminiInvocation({
-      fnName: 'classifyIngredientAllergens',
-      model: MODEL_ID,
-      latencyMs: Date.now() - startedAt,
-      success: false,
-      error: err instanceof Error ? err.message : String(err),
-      inputSize: ingredients.length,
-      metadata: { recipeAllergens },
-    })
-
-    throw err
+  const raw = parsed.ingredientAllergens
+  if (!Array.isArray(raw)) {
+    logger.warn('[ingredient-allergen-classifier] response missing ingredientAllergens array')
+    return ingredients.map(() => [])
   }
+
+  // Coerce: must be exactly the right length, each entry must be
+  // a string array of valid AllergyTag values. Pad / truncate to
+  // match. Filter unknown tags so a stray value doesn't propagate.
+  const out: AllergyTag[][] = ingredients.map((_, i) => {
+    const entry = raw[i]
+    if (!Array.isArray(entry)) return []
+    const tags = (entry as unknown[])
+      .filter((t): t is AllergyTag =>
+        typeof t === 'string' && (ALLERGY_TAG_VALUES as string[]).includes(t)
+      )
+    return Array.from(new Set(tags))
+  })
+
+  logger.info('[ingredient-allergen-classifier] classified', {
+    ingredientCount: ingredients.length,
+    taggedCount: out.filter((tags) => tags.length > 0).length,
+    recipeAllergens,
+  })
+
+  return out
 }
 
 // needsClassification, packIngredientAllergens, unpackIngredientAllergens,
 // IngredientAllergenEntry, and ALLERGY_TAG_VALUES live in lib/allergen-pack.ts
 // and are re-exported above. Don't add their definitions back here — the
-// pure utilities can't depend on this file (which imports gemini-invocations
-// → firebase-admin → child_process), or client components break at build
-// time with 'Module not found: Can't resolve "child_process"'.
+// pure utilities can't depend on this file (which imports gemini-client
+// → gemini-invocations → firebase-admin → child_process), or client
+// components break at build time with 'Module not found: child_process'.
