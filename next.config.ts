@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
   // Vercel handles standalone mode automatically, Netlify needs it explicit
   output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : (process.env.VERCEL ? undefined : 'standalone'),
 
+  // Allow LAN-IP access in dev so phones / other devices on the same
+  // network can hit the dev server without tripping Next.js's cross-
+  // origin guard for /_next/* assets. Add more IPs here if you switch
+  // networks (DHCP-assigned IPs change). For broader access during dev
+  // testing, wildcards like '192.168.*.*' are also supported.
+  allowedDevOrigins: ['192.168.1.159'],
+
   // Externalize Firebase Admin packages to reduce Lambda bundle size
   serverExternalPackages: [
     'firebase-admin',
@@ -171,11 +178,11 @@ const nextConfig: NextConfig = {
             value: process.env.NODE_ENV === 'production'
               ? [
                   "default-src 'self'",
-                  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://cdn.jsdelivr.net https://unpkg.com",
+                  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://cdn.jsdelivr.net https://unpkg.com https://va.vercel-scripts.com",
                   "style-src 'self' 'unsafe-inline'",
                   "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://images.unsplash.com https://picsum.photos https://images.openfoodfacts.org https://static.openfoodfacts.org",
                   "font-src 'self' data:",
-                  "connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://firebasestorage.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://api.stripe.com https://generativelanguage.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://lh3.googleusercontent.com https://images.unsplash.com https://picsum.photos https://api.openai.com",
+                  "connect-src 'self' https://firestore.googleapis.com https://firebase.googleapis.com https://firebasestorage.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://api.stripe.com https://generativelanguage.googleapis.com https://accounts.google.com https://oauth2.googleapis.com https://lh3.googleusercontent.com https://images.unsplash.com https://picsum.photos https://api.openai.com https://vitals.vercel-insights.com",
                   "frame-src https://js.stripe.com https://firebasestorage.googleapis.com https://accounts.google.com https://weightlossprojectionlab-8b284.firebaseapp.com https://app.netlify.com",
                   "frame-ancestors 'none'",
                   "base-uri 'self'",
@@ -184,7 +191,7 @@ const nextConfig: NextConfig = {
               : [
                   // Development: More permissive but still structured
                   "default-src 'self'",
-                  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://cdn.jsdelivr.net https://unpkg.com",
+                  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://cdn.jsdelivr.net https://unpkg.com https://va.vercel-scripts.com",
                   "style-src 'self' 'unsafe-inline'",
                   "img-src * data: blob:",
                   "font-src 'self' data:",
