@@ -417,46 +417,22 @@ For issues or questions:
 
 ### Phase 3 Overview
 
-Phase 3 adds the AI orchestration layer and user-facing dashboards:
-- **AI Orchestration**: Prompt templates, PII redaction, model routing, decision logging
+Phase 3 originally added an OpenAI-based AI orchestration layer
+(prompt templates, PII redaction, model routing, decision logging at
+`lib/ai/orchestrator.ts` + `/api/ai/orchestrate`). That layer was
+**removed** in the lib/ai graveyard cleanup once the codebase
+standardized on Gemini for every AI surface; the orchestrator was
+never wired to a frontend caller. Going-forward observability lives
+in `lib/gemini-invocations.ts` writing to the `api_usage_logs`
+collection with `kind:'gemini'`.
+
+What remains from Phase 3:
 - **Trust & Safety**: Risk scoring, moderation dashboard foundation
 - **User Dashboards**: Coaching, Missions, Groups pages
-- **API Routes**: `/api/ai/orchestrate`, `/api/trust-safety/*`, `/api/perks/*`
+- **API Routes**: `/api/trust-safety/*`, `/api/perks/*` (the
+  `/api/ai/orchestrate` route was deleted with the orchestrator).
 
 ### Phase 3 Testing
-
-#### Test AI Orchestration
-
-```typescript
-// test-orchestration.ts
-import { orchestrateAI } from './lib/ai/orchestrator';
-
-const request = {
-  templateId: 'nudge_motivation',
-  variables: {
-    recentAction: 'logged weight',
-    daysSinceLastLog: '1',
-    currentGoal: 'lose 10kg',
-    tone: 'supportive',
-  },
-  userId: 'test-user-123',
-  dataSensitivity: 'Public' as const,
-};
-
-orchestrateAI(request)
-  .then((result) => {
-    console.log('✅ Decision ID:', result.decisionId);
-    console.log('✅ Result:', result.result);
-    console.log('✅ Confidence:', result.confidence);
-    console.log('✅ Model:', result.model);
-  })
-  .catch((err) => console.error('❌ Error:', err));
-```
-
-Run:
-```bash
-npx ts-node test-orchestration.ts
-```
 
 #### Test Risk Scoring
 
@@ -484,33 +460,11 @@ console.log('✅ Confidence:', result.confidence);
 console.log('✅ Signals:', result.signals.map((s) => s.signal));
 ```
 
-#### Test API Routes
-
-```bash
-# Test AI Orchestration Endpoint
-curl -X POST http://localhost:3000/api/ai/orchestrate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "templateId": "nudge_motivation",
-    "variables": {
-      "recentAction": "logged weight",
-      "daysSinceLastLog": "1",
-      "currentGoal": "lose 10kg",
-      "tone": "supportive"
-    },
-    "userId": "test123",
-    "dataSensitivity": "Public"
-  }'
-```
-
 #### Run Unit Tests
 
 ```bash
 # All tests
 npm test
-
-# AI Orchestration tests
-npm test -- ai-orchestration.test.ts
 
 # Watch mode
 npm test -- --watch
@@ -561,11 +515,12 @@ TS_SLA_RESOLUTION_HOURS=72
 Create indexes in Firebase Console:
 
 ```javascript
-// ai_decisions indexes
-db.collection('ai_decisions')
-  .createIndex({ executedBy: 'asc', timestamp: 'desc' });
-db.collection('ai_decisions')
-  .createIndex({ confidence: 'asc', timestamp: 'desc' });
+// ai-decisions indexes (low-confidence AI output review queue;
+// written to by /api/ai/health-profile/generate + /api/ai/meal-safety)
+db.collection('ai-decisions')
+  .createIndex({ userId: 'asc', createdAt: 'desc' });
+db.collection('ai-decisions')
+  .createIndex({ confidence: 'asc', createdAt: 'desc' });
 
 // disputes indexes
 db.collection('disputes')
