@@ -116,7 +116,18 @@ function InventoryContent() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-foreground mb-1">{household.name}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {household.address || 'No address set'}
+                        {(() => {
+                          const a = household.address as
+                            | string
+                            | { street?: string; apartmentUnit?: string; city?: string; state?: string; zipCode?: string }
+                            | undefined
+                          if (!a) return 'No address set'
+                          if (typeof a === 'string') return a || 'No address set'
+                          const line1 = [a.street, a.apartmentUnit].filter(Boolean).join(', ')
+                          const line2 = [a.city, a.state].filter(Boolean).join(', ')
+                          const formatted = [line1, line2, a.zipCode].filter(Boolean).join(' • ')
+                          return formatted || 'No address set'
+                        })()}
                       </p>
                       <p className="text-sm text-primary mt-2">
                         View Kitchen Inventory →
