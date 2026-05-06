@@ -11,9 +11,9 @@ import {
   type ChatMessage
 } from '@/lib/ai-coach'
 import { logger } from '@/lib/logger'
-import { aiRateLimit, dailyRateLimit, getRateLimitHeaders } from '@/lib/utils/rate-limit'
 import { ErrorHandler } from '@/lib/utils/error-handler'
 import { errorResponse } from '@/lib/api-response'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -23,6 +23,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
  * Send a message to the AI Coach and get a response
  */
 export async function POST(request: NextRequest) {
+  // T5.17 — canonical rate limit (per-minute + per-day). Legacy
+  // aiRateLimit/dailyRateLimit imports were dead code (never invoked).
+  const minuteLimit = await rateLimit(request, 'ai:gemini')
+  if (minuteLimit) return minuteLimit
+  const dailyLimit = await rateLimit(request, 'ai:gemini-daily')
+  if (dailyLimit) return dailyLimit
+
   try {
     // Verify authentication
     const authHeader = request.headers.get('authorization')
@@ -48,31 +55,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check rate limits (both per-minute and daily)
-    const [minuteLimit, dayLimit] = await Promise.all([
-      aiRateLimit?.limit(userId),
-      dailyRateLimit?.limit(userId)
-    ])
-
-    if (minuteLimit && !minuteLimit.success) {
-      return NextResponse.json(
-        { error: 'Rate limit: 10 requests per minute. Please try again in a moment.' },
-        {
-          status: 429,
-          headers: getRateLimitHeaders(minuteLimit)
-        }
-      )
-    }
-
-    if (dayLimit && !dayLimit.success) {
-      return NextResponse.json(
-        { error: 'Daily limit reached (500 requests). Please try again tomorrow.' },
-        {
-          status: 429,
-          headers: getRateLimitHeaders(dayLimit)
-        }
-      )
-    }
+    // (T5.17 rate limits already enforced at the top of POST -- per-minute
+    // 'ai:gemini' + per-day 'ai:gemini-daily' via the canonical limiter.
+    // Plan-based per-user usage limits below remain separate from quota.)
 
     // Check plan-based daily chat limit
     const userDoc = await adminDb.collection('users').doc(userId).get()

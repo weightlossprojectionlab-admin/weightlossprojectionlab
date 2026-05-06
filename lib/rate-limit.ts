@@ -154,6 +154,14 @@ export const fetchUrlLimiter = createRateLimiter(10, 1, 'm', 'fetch-url')
 // Gemini AI endpoints: 20 requests per minute (Gemini free tier)
 export const geminiLimiter = createRateLimiter(20, 1, 'm', 'ai:gemini')
 
+// Per-user daily cap on AI calls — layered ON TOP OF the per-minute
+// 'ai:gemini' slot. Protects against single-user runaway burning the
+// daily Gemini quota across an extended session. 1000/day matches the
+// legacy lib/utils/rate-limit dailyRateLimit so analyze-meal,
+// analyze-weight, and chat can migrate off the in-memory legacy
+// limiter onto this Upstash-backed canonical one.
+export const geminiDailyLimiter = createRateLimiter(1000, 1, 'd', 'ai:gemini-daily')
+
 // Admin grant-role: 5 requests per hour
 export const adminGrantRoleLimiter = createRateLimiter(5, 1, 'h', 'admin:grant-role')
 
@@ -197,7 +205,7 @@ export function getRateLimitHeaders(result: {
  */
 export async function rateLimit(
   request: NextRequest,
-  limiterType: 'fetch-url' | 'ai:gemini' | 'admin:grant-role' | 'email' | 'public-forms' | 'authenticated' | 'admin',
+  limiterType: 'fetch-url' | 'ai:gemini' | 'ai:gemini-daily' | 'admin:grant-role' | 'email' | 'public-forms' | 'authenticated' | 'admin',
   identifier?: string
 ): Promise<NextResponse | null> {
   // Select the appropriate limiter
@@ -208,6 +216,9 @@ export async function rateLimit(
       break
     case 'ai:gemini':
       limiter = geminiLimiter
+      break
+    case 'ai:gemini-daily':
+      limiter = geminiDailyLimiter
       break
     case 'admin:grant-role':
       limiter = adminGrantRoleLimiter

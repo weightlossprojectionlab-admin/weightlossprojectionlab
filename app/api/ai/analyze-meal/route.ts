@@ -3,12 +3,19 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { generateMealTitle } from '@/lib/meal-title-utils'
 import { batchValidateWithUSDA } from '@/lib/usda-nutrition'
 import { logger } from '@/lib/logger'
-import { aiRateLimit, dailyRateLimit } from '@/lib/utils/rate-limit'
 import { ErrorHandler } from '@/lib/utils/error-handler'
 import { analyzeMealImage } from '@/lib/ai-vision-service'
 import { incrementUsageOnly } from '@/lib/usage-tracking'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  // T5.17 — canonical rate limit (per-minute + per-day). Legacy
+  // aiRateLimit/dailyRateLimit imports were dead code (never invoked).
+  const minuteLimit = await rateLimit(request, 'ai:gemini')
+  if (minuteLimit) return minuteLimit
+  const dailyLimit = await rateLimit(request, 'ai:gemini-daily')
+  if (dailyLimit) return dailyLimit
+
   try {
     // Verify authentication
     const authHeader = request.headers.get('Authorization')
@@ -130,24 +137,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check rate limits first (per-minute and daily)
-    const [minuteLimit, dayLimit] = await Promise.all([
-      aiRateLimit?.limit(userId),
-      dailyRateLimit?.limit(userId)
-    ])
-
-    const rateLimitExceeded = (minuteLimit && !minuteLimit.success) || (dayLimit && !dayLimit.success)
-
-    if (rateLimitExceeded) {
-      const reason = minuteLimit && !minuteLimit.success
-        ? 'Rate limit: 10 requests per minute'
-        : 'Daily limit reached (500 requests)'
-      logger.warn(reason)
-      return NextResponse.json(
-        { error: reason },
-        { status: 429 }
-      )
-    }
+    // (T5.17 rate limits already enforced at the top of POST -- per-minute
+    // 'ai:gemini' + per-day 'ai:gemini-daily' via the canonical limiter.)
 
     // Use AI vision service. Returns { analysis: null, provider: 'failed' }
     // when the underlying provider call fails — surface that to the

@@ -7,13 +7,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { adminAuth } from '@/lib/firebase-admin'
-import { aiRateLimit, dailyRateLimit, getRateLimitHeaders } from '@/lib/utils/rate-limit'
 import { ErrorHandler } from '@/lib/utils/error-handler'
 import { errorResponse } from '@/lib/api-response'
 import { WeightScaleOCRResponseSchema } from '@/lib/validations/weight-logs'
 import { generateGeminiJSON } from '@/lib/ai/gemini-client'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  // T5.17 — canonical rate limit. Legacy aiRateLimit/dailyRateLimit
+  // imports were dead code (never invoked); switch to the Upstash-
+  // backed canonical limiter with both per-minute and per-day caps.
+  const minuteLimit = await rateLimit(request, 'ai:gemini')
+  if (minuteLimit) return minuteLimit
+  const dailyLimit = await rateLimit(request, 'ai:gemini-daily')
+  if (dailyLimit) return dailyLimit
+
   try {
     // Verify authentication
     const authHeader = request.headers.get('Authorization')
