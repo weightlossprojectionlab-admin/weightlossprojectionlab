@@ -168,7 +168,7 @@ export function StorePicker({
                     setShowAddStore(false)
                     setNewStoreName('')
                   }}
-                  className="flex-1 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-lg transition-colors"
+                  className="btn btn-ghost flex-1"
                   disabled={adding}
                 >
                   Cancel
@@ -176,7 +176,7 @@ export function StorePicker({
                 <button
                   type="submit"
                   disabled={!newStoreName.trim() || adding}
-                  className="flex-1 px-3 py-2 text-sm bg-secondary hover:bg-secondary-hover text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn btn-primary flex-1"
                 >
                   {adding ? 'Adding...' : 'Add'}
                 </button>

@@ -139,10 +139,10 @@ export function QuantityAdjustModal({
               <button
                 key={num}
                 onClick={() => setQuantity(num)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`min-h-[44px] inline-flex items-center justify-center px-4 rounded-lg text-sm font-medium transition-colors ${
                   quantity === num
                     ? 'bg-primary text-white'
-                    : 'bg-muted text-foreground hover:bg-gray-200'
+                    : 'bg-muted text-foreground hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
                 {num}

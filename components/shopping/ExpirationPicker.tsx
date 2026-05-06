@@ -101,7 +101,7 @@ export function ExpirationPicker({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 hover:bg-muted rounded-full transition-colors"
+            className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] hover:bg-muted rounded-full transition-colors"
             aria-label="Close"
           >
             <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">

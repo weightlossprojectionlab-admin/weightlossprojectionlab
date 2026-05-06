@@ -11,7 +11,7 @@
  * - Expiring items alerts
  */
 
-import { useState, Suspense, useMemo, useEffect } from 'react'
+import { useState, Suspense, useMemo, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
@@ -41,6 +41,7 @@ import { logger } from '@/lib/logger'
 import { auth } from '@/lib/firebase'
 import { addManualShoppingItem, clearAllShoppingItems } from '@/lib/shopping-operations'
 import { patientOperations } from '@/lib/medical-operations'
+import { containsAllergen, getPatientAllergies } from '@/lib/ai-shopping-suggestions'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { BlockedOperationModal } from '@/components/shopping/BlockedOperationModal'
 import { useActiveShoppingSessions } from '@/hooks/useActiveShoppingSessions'
@@ -232,6 +233,22 @@ function ShoppingListContent() {
     }
     fetchMembers()
   }, [])
+
+  // SAFETY: derive the active member's allergens once per render so we
+  // can flag any list item that would expose them. Reads canonical
+  // foodAllergies + legacy fields via getPatientAllergies. Empty when
+  // no member context (household view) — no eater to filter against.
+  const patientAllergies = useMemo(
+    () => getPatientAllergies(memberId ? members[memberId] : null),
+    [memberId, members]
+  )
+  const allergenWarningFor = useCallback(
+    (productName: string) => {
+      const r = containsAllergen(productName, patientAllergies)
+      return r.matched ? { allergen: r.allergen!, keyword: r.keyword! } : undefined
+    },
+    [patientAllergies]
+  )
 
   // Resolve caregiver auth uids → display names so badges and "Purchased
   // by" lines read like names instead of generic "Member". Items added
@@ -728,7 +745,7 @@ function ShoppingListContent() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-                    Viewing shopping list for this family member
+                    Viewing shopping list for {memberId && members[memberId]?.name ? members[memberId].name : 'this family member'}
                   </h3>
                   <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                     Items shown are specific to this person's needs. The household shares one inventory.
@@ -922,6 +939,7 @@ function ShoppingListContent() {
                         onFixOrphaned={handleFixOrphanedItem}
                         searchQuery={searchQuery}
                         getMemberName={getMemberName}
+                        allergenWarning={allergenWarningFor(item.productName)}
                       />
                     ))}
                   </div>
@@ -960,7 +978,7 @@ function ShoppingListContent() {
                     {allItems.length > 0 && (
                       <button
                         onClick={() => setShowDeleteAllConfirm(true)}
-                        className="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                        className="inline-flex items-center justify-center min-h-[44px] px-4 text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
                       >
                         Clear List
                       </button>
@@ -979,6 +997,7 @@ function ShoppingListContent() {
                           showDebugInfo={showDebugMode}
                           searchQuery={searchQuery}
                           getMemberName={getMemberName}
+                          allergenWarning={allergenWarningFor(item.productName)}
                         />
                       ))}
                   </div>
@@ -1006,6 +1025,7 @@ function ShoppingListContent() {
                           showDebugInfo={showDebugMode}
                           searchQuery={searchQuery}
                           getMemberName={getMemberName}
+                          allergenWarning={allergenWarningFor(item.productName)}
                         />
                       ))}
                   </div>
@@ -1199,7 +1219,8 @@ function ShoppingItemCard({
   showDebugInfo,
   onFixOrphaned,
   searchQuery,
-  getMemberName
+  getMemberName,
+  allergenWarning
 }: {
   item: ShoppingItem
   onToggle: (id: string, current: boolean) => void
@@ -1209,6 +1230,7 @@ function ShoppingItemCard({
   onFixOrphaned?: (itemId: string, itemName: string) => void
   searchQuery?: string
   getMemberName?: (userId?: string) => string
+  allergenWarning?: { allergen: string; keyword: string }
 }) {
   const categoryMeta = getCategoryMetadata(item.category)
   const isOrphaned = !item.inStock && !item.needed && item.quantity === 0
@@ -1236,7 +1258,7 @@ function ShoppingItemCard({
 
   return (
     <div
-      className={`bg-card rounded-lg shadow p-4 flex items-center gap-4 ${isOrphaned ? 'border-2 border-red-200 dark:border-red-800' : ''} ${onClick ? 'cursor-pointer hover:bg-background transition-colors' : ''}`}
+      className={`bg-card rounded-lg shadow p-4 flex items-center gap-4 ${isOrphaned ? 'border-2 border-red-200 dark:border-red-800' : ''} ${allergenWarning ? 'border-2 border-red-400 dark:border-red-600 ring-1 ring-red-300 dark:ring-red-700' : ''} ${onClick ? 'cursor-pointer hover:bg-background transition-colors' : ''}`}
       onClick={() => onClick?.(item)}
     >
       {/* Product Image */}
@@ -1254,6 +1276,15 @@ function ShoppingItemCard({
 
       {/* Product Info */}
       <div className="flex-1 min-w-0">
+        {allergenWarning && (
+          <div
+            className="inline-flex items-center gap-1.5 mb-1.5 px-2 py-1 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded text-xs font-semibold text-red-900 dark:text-red-100"
+            title={`Matched on "${allergenWarning.keyword}" — patient is allergic to ${allergenWarning.allergen}`}
+          >
+            <span aria-hidden="true">⚠️</span>
+            <span>Contains {allergenWarning.allergen}</span>
+          </div>
+        )}
         <h3 className="font-semibold text-foreground truncate">
           {highlightText(item.productName)}
         </h3>

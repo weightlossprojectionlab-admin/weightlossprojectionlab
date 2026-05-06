@@ -46,6 +46,197 @@ const CACHE_TTL = 5 * 60 * 1000
 const suggestionsCache = new Map<string, { data: HealthSuggestionsResponse; timestamp: number }>()
 
 /**
+ * Allergen → product-name keyword map (FDA Big 9 + canonical synonyms).
+ *
+ * SAFETY-CRITICAL: when a patient's `foodAllergies` contains an entry
+ * whose normalized form matches a key here, every keyword in the value
+ * list is treated as banned in product names. Substring match — so
+ * "Whole Milk" hits 'milk', "Greek Yogurt" hits 'yogurt' (mapped under
+ * `milk`), "Almond Butter" hits 'almond' under `tree nuts`, etc.
+ *
+ * Keys are lowercase. Anything not in the map falls back to a
+ * literal-name match (so a patient with "kiwi" allergy still gets
+ * filtered against any "kiwi" suggestion).
+ */
+const ALLERGEN_KEYWORD_MAP: Record<string, string[]> = {
+  // Milk / Dairy
+  milk: ['milk', 'yogurt', 'cheese', 'butter', 'cream', 'dairy', 'whey', 'casein', 'lactose', 'ghee'],
+  dairy: ['milk', 'yogurt', 'cheese', 'butter', 'cream', 'dairy', 'whey', 'casein', 'lactose', 'ghee'],
+  lactose: ['milk', 'yogurt', 'cheese', 'butter', 'cream', 'dairy', 'whey', 'lactose'],
+  // Eggs
+  egg: ['egg'],
+  eggs: ['egg'],
+  // Peanuts (separate from tree nuts per FDA)
+  peanut: ['peanut'],
+  peanuts: ['peanut'],
+  // Tree nuts
+  'tree nuts': ['almond', 'walnut', 'cashew', 'pecan', 'pistachio', 'hazelnut', 'macadamia', 'brazil nut'],
+  'tree nut': ['almond', 'walnut', 'cashew', 'pecan', 'pistachio', 'hazelnut', 'macadamia', 'brazil nut'],
+  nuts: ['almond', 'walnut', 'cashew', 'pecan', 'pistachio', 'hazelnut', 'macadamia', 'brazil nut', 'peanut'],
+  // Fish
+  fish: ['salmon', 'tuna', 'cod', 'mackerel', 'sardine', 'anchovy', 'tilapia', 'fish'],
+  // Shellfish
+  shellfish: ['shrimp', 'crab', 'lobster', 'oyster', 'mussel', 'clam', 'shellfish', 'prawn', 'scallop'],
+  // Wheat / Gluten
+  wheat: ['wheat', 'flour', 'bread', 'pasta', 'cereal', 'gluten', 'cracker'],
+  gluten: ['wheat', 'flour', 'bread', 'pasta', 'cereal', 'gluten', 'barley', 'rye', 'cracker'],
+  // Soy
+  soy: ['soy', 'tofu', 'edamame', 'tempeh', 'miso'],
+  soybean: ['soy', 'tofu', 'edamame', 'tempeh', 'miso'],
+  // Sesame (FDA Big 9 since 2023)
+  sesame: ['sesame', 'tahini'],
+}
+
+/**
+ * Some allergen keywords are too broad on their own — `butter` is a
+ * milk product, but "peanut butter" / "almond butter" / "apple butter"
+ * are not dairy. When a keyword would match but is preceded by one of
+ * its excluded prefixes (taken as the immediately preceding whitespace-
+ * delimited word), we treat it as a non-match for that allergen.
+ */
+const KEYWORD_PREFIX_EXCLUSIONS: Record<string, string[]> = {
+  butter: ['peanut', 'almond', 'cashew', 'sunflower', 'apple', 'body', 'cocoa', 'shea', 'soy', 'pumpkin', 'hazelnut', 'macadamia', 'pistachio', 'walnut'],
+  // Plant-based milks: not dairy. (Tree-nut-allergic users still get
+  // a hit via the 'almond'/'cashew'/'hazelnut' tree-nut keywords.)
+  milk: ['almond', 'soy', 'oat', 'rice', 'coconut', 'cashew', 'hazelnut', 'hemp', 'flax', 'pea'],
+}
+
+/**
+ * Allergen-check order: more-specific allergens first so that on a
+ * product like "peanut butter" with `['milk', 'peanuts']`, peanut wins
+ * over milk's `butter` keyword. Anything not in this list is checked
+ * after the listed ones (in the user's original order).
+ */
+const ALLERGEN_PRIORITY = [
+  'peanut', 'peanuts',
+  'tree nuts', 'tree nut', 'nuts',
+  'sesame',
+  'fish',
+  'shellfish',
+  'egg', 'eggs',
+  'soy', 'soybean',
+  'wheat', 'gluten',
+  'milk', 'dairy', 'lactose',
+]
+
+/**
+ * Word-boundary keyword match. Avoids false positives like 'cream'
+ * matching inside 'creamy', or 'egg' matching 'eggplant'. Honors
+ * KEYWORD_PREFIX_EXCLUSIONS so e.g. "peanut butter" doesn't trip the
+ * milk→butter rule.
+ */
+function matchesAllergenKeyword(productName: string, keyword: string): boolean {
+  const lower = productName.toLowerCase()
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`\\b${escaped}\\b`, 'i')
+  const m = lower.match(re)
+  if (!m || m.index === undefined) return false
+
+  const exclusions = KEYWORD_PREFIX_EXCLUSIONS[keyword]
+  if (exclusions && exclusions.length > 0) {
+    const before = lower.slice(0, m.index).trim()
+    const lastWord = before.split(/\s+/).pop() || ''
+    if (exclusions.includes(lastWord)) return false
+  }
+  return true
+}
+
+/**
+ * Returns true if `productName` would expose someone with any of the
+ * given allergies. Exported because both the engine (filter at
+ * generation) and the render layer (defense-in-depth filter at display)
+ * need it — single source of truth for allergen matching.
+ *
+ * Implementation notes:
+ *  - Word-boundary matching ('cream' won't match 'creamy', 'egg' won't
+ *    match 'eggplant').
+ *  - Prefix exclusions ('butter' preceded by 'peanut' / 'almond' / etc.
+ *    is not dairy).
+ *  - Allergen priority order: more-specific allergens (peanut, tree
+ *    nuts, sesame, etc.) are checked before the broader milk/wheat
+ *    families so labeling reflects the dominant allergen on compound
+ *    products like "peanut butter".
+ */
+export function containsAllergen(
+  productName: string,
+  allergies: string[] | undefined
+): { matched: boolean; allergen?: string; keyword?: string } {
+  if (!allergies || allergies.length === 0) return { matched: false }
+
+  const sortedAllergies = [...allergies].sort((a, b) => {
+    const ai = ALLERGEN_PRIORITY.indexOf(a.toLowerCase().trim())
+    const bi = ALLERGEN_PRIORITY.indexOf(b.toLowerCase().trim())
+    return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi)
+  })
+
+  for (const allergy of sortedAllergies) {
+    const key = allergy.toLowerCase().trim()
+    if (!key) continue
+    const keywords = ALLERGEN_KEYWORD_MAP[key] || [key]
+    for (const kw of keywords) {
+      if (matchesAllergenKeyword(productName, kw)) {
+        return { matched: true, allergen: allergy, keyword: kw }
+      }
+    }
+  }
+  return { matched: false }
+}
+
+/**
+ * Read the patient's allergies from any of the supported field
+ * locations and return a deduplicated, trimmed list. Canonical field
+ * is `foodAllergies` (per family-meal PRD); the legacy `allergies` and
+ * `dietaryPreferences.allergies` are honored too so older profiles
+ * still get safety filtering.
+ *
+ * Exported so other surfaces (shopping list rendering, log-meal
+ * pre-flight, etc.) can read allergies through one canonical path.
+ */
+export function getPatientAllergies(patient: { foodAllergies?: string[]; allergies?: string[]; dietaryPreferences?: { allergies?: string[] } } | null | undefined): string[] {
+  if (!patient) return []
+  const merged = [
+    ...(patient.foodAllergies || []),
+    ...(patient.dietaryPreferences?.allergies || []),
+    ...(patient.allergies || []),
+  ]
+    .map(a => (a || '').trim())
+    .filter(a => a.length > 0)
+  return Array.from(new Set(merged))
+}
+
+/**
+ * Filter out suggestions that would expose a patient to one of their
+ * allergens. SAFETY-CRITICAL: this gate runs after `filterUnhealthyFoods`
+ * and before suggestions reach the response. The render layer also
+ * filters as defense-in-depth (see HealthSuggestions.tsx).
+ */
+function filterAllergens(
+  suggestions: HealthBasedSuggestion[],
+  allergies: string[]
+): HealthBasedSuggestion[] {
+  if (!allergies || allergies.length === 0) return suggestions
+  const filtered = suggestions.filter(suggestion => {
+    const result = containsAllergen(suggestion.productName, allergies)
+    if (result.matched) {
+      logger.warn('[AI Shopping] Filtered allergen from suggestions', {
+        productName: suggestion.productName,
+        matchedAllergen: result.allergen,
+        matchedKeyword: result.keyword,
+        patientAllergies: allergies,
+      })
+    }
+    return !result.matched
+  })
+  logger.info('[AI Shopping] Allergen filter applied', {
+    before: suggestions.length,
+    after: filtered.length,
+    removed: suggestions.length - filtered.length,
+    allergies,
+  })
+  return filtered
+}
+
+/**
  * Unhealthy Food Blacklist
  * These items should NEVER appear in health-based suggestions
  */
@@ -254,7 +445,7 @@ export async function generateHealthSuggestions(
           : undefined,
         conditions: patient.conditions || [],
         dietaryRestrictions: patient.dietaryPreferences?.restrictions || [],
-        allergies: patient.dietaryPreferences?.allergies || patient.allergies || [],
+        allergies: getPatientAllergies(patient),
         goals: patient.healthGoals ? [patient.healthGoals.weightGoal || 'general_health'] : []
       },
       itemsToAvoid,
@@ -581,9 +772,15 @@ function generateFirebaseBasedSuggestions(
   // Filter out unhealthy junk food
   const healthySuggestions = filterUnhealthyFoods(suggestions)
 
-  logger.info('[AI Shopping] Total healthy suggestions before limit', { count: healthySuggestions.length })
+  // SAFETY: drop anything that would expose the patient to one of
+  // their allergens. Runs AFTER unhealthy-food filtering so the
+  // logging count reflects the real after-state.
+  const allergies = getPatientAllergies(patient)
+  const safeSuggestions = filterAllergens(healthySuggestions, allergies)
 
-  return healthySuggestions.slice(0, 20) // Limit to top 20
+  logger.info('[AI Shopping] Total safe suggestions before limit', { count: safeSuggestions.length })
+
+  return safeSuggestions.slice(0, 20) // Limit to top 20
 }
 
 /**
@@ -1159,15 +1356,13 @@ function generateAvoidanceWarnings(
 ): Array<{ productName: string; reason: string; severity: 'critical' | 'warning' | 'info' }> {
   const warnings: Array<{ productName: string; reason: string; severity: 'critical' | 'warning' | 'info' }> = []
 
-  // Allergies - CRITICAL
-  if (patient.dietaryPreferences?.allergies) {
-    for (const allergy of patient.dietaryPreferences.allergies) {
-      warnings.push({
-        productName: allergy,
-        reason: `Severe allergy risk. Avoid all products containing ${allergy}.`,
-        severity: 'critical'
-      })
-    }
+  // Allergies - CRITICAL. Read from canonical foodAllergies + legacy fields.
+  for (const allergy of getPatientAllergies(patient)) {
+    warnings.push({
+      productName: allergy,
+      reason: `Severe allergy risk. Avoid all products containing ${allergy}.`,
+      severity: 'critical'
+    })
   }
 
   // Condition-specific warnings

@@ -17,7 +17,7 @@ import type {
   HealthSuggestionsGroup,
   HealthSuggestionsResponse
 } from '@/types/shopping'
-import { generateHealthSuggestions } from '@/lib/ai-shopping-suggestions'
+import { generateHealthSuggestions, containsAllergen } from '@/lib/ai-shopping-suggestions'
 import { logger } from '@/lib/logger'
 import { Spinner } from '@/components/ui/Spinner'
 import toast from 'react-hot-toast'
@@ -276,6 +276,17 @@ export function HealthSuggestions({
       {selectedGroupData && (() => {
         const query = searchQuery.toLowerCase().trim()
         let filteredSuggestions = selectedGroupData.suggestions
+
+        // SAFETY (defense-in-depth): drop anything that would expose
+        // the patient to a known allergen. Engine should already have
+        // filtered, but a stale cache or future regression could leak.
+        // Cheap belt-and-suspenders for a child-safety surface.
+        const allergies = suggestions?.healthSummary?.allergies || []
+        if (allergies.length > 0) {
+          filteredSuggestions = filteredSuggestions.filter(
+            s => !containsAllergen(s.productName, allergies).matched
+          )
+        }
 
         // Apply text search
         if (query) {
