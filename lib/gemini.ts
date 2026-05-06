@@ -11,6 +11,10 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 import { AIHealthProfile, MealSafetyCheck, UserProfile } from '@/types'
 import { logger } from '@/lib/logger'
+import {
+  AIHealthProfileResponseSchema,
+  MealSafetyResponseSchema,
+} from '@/lib/validations/health-vitals'
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -361,13 +365,35 @@ If NO health conditions are reported, return empty restrictions with 100 confide
     const response = result.response.text()
     const parsed = JSON.parse(response)
 
+    // Runtime schema gate. Gemini's responseSchema config tells it
+    // what shape to AIM for, but malformed outputs still slip through
+    // (especially under load / retries). PHI safety: reject malformed
+    // output before it reaches Firestore. Log only structural metadata
+    // (issue path + code), never the value.
+    const validated = AIHealthProfileResponseSchema.safeParse(parsed)
+    if (!validated.success) {
+      logger.warn('[Gemini] Health profile output failed schema validation', {
+        issueCount: validated.error.issues.length,
+        issues: validated.error.issues.slice(0, 5).map((i) => ({
+          path: i.path.join('.'),
+          code: i.code,
+        })),
+      })
+      return {
+        restrictions: {},
+        confidence: 0,
+        monitorNutrients: [],
+        criticalWarnings: ['AI output failed schema validation - manual review required']
+      }
+    }
+
     logger.info('[Gemini] Health profile generated', {
       conditions: profile.healthConditions,
-      confidence: parsed.confidence,
-      restrictionsCount: Object.keys(parsed.restrictions || {}).length
+      confidence: validated.data.confidence,
+      restrictionsCount: Object.keys(validated.data.restrictions || {}).length
     })
 
-    return parsed
+    return validated.data
   } catch (error) {
     logger.error('[Gemini] Health profile generation failed', error as Error)
 
@@ -464,14 +490,34 @@ IMPORTANT:
     const response = result.response.text()
     const parsed = JSON.parse(response)
 
+    // Runtime schema gate (see callGeminiHealthProfile for rationale).
+    // On failure: err on the side of caution — flag for manual review
+    // rather than letting an unverified isSafe:true through.
+    const validated = MealSafetyResponseSchema.safeParse(parsed)
+    if (!validated.success) {
+      logger.warn('[Gemini] Meal safety output failed schema validation', {
+        issueCount: validated.error.issues.length,
+        issues: validated.error.issues.slice(0, 5).map((i) => ({
+          path: i.path.join('.'),
+          code: i.code,
+        })),
+      })
+      return {
+        isSafe: false,
+        warnings: ['Safety check output malformed - please review meal manually'],
+        severity: 'caution',
+        confidence: 0
+      }
+    }
+
     logger.info('[Gemini] Meal safety check completed', {
-      isSafe: parsed.isSafe,
-      severity: parsed.severity,
-      warningsCount: parsed.warnings.length,
-      confidence: parsed.confidence
+      isSafe: validated.data.isSafe,
+      severity: validated.data.severity,
+      warningsCount: validated.data.warnings.length,
+      confidence: validated.data.confidence
     })
 
-    return parsed
+    return validated.data
   } catch (error) {
     logger.error('[Gemini] Meal safety check failed', error as Error)
 

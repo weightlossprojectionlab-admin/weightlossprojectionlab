@@ -106,28 +106,39 @@ export const GetHealthVitalsQuerySchema = z.object({
 export type GetHealthVitalsQuery = z.infer<typeof GetHealthVitalsQuerySchema>
 
 // ============================================
-// AI HEALTH PROFILE GENERATION SCHEMA
+// AI HEALTH PROFILE — REQUEST + GEMINI OUTPUT SCHEMAS
 // ============================================
+//
+// AIRestrictionSchema and AIHealthProfileResponseSchema mirror the
+// AIRestriction / AIHealthProfile types in types/index.ts and the
+// runtime shape that lib/gemini.ts callGeminiHealthProfile actually
+// returns (see the SchemaType definition there). Schemas here are
+// the runtime gate at the parse point — JSON.parse + safeParse
+// rejects malformed Gemini output before it reaches Firestore.
 
-export const DietaryRestrictionSchema = z.object({
-  limit: z.boolean(),
-  reason: z.string(),
-  alternatives: z.array(z.string()).optional(),
-  severity: z.enum(['mild', 'moderate', 'severe']).optional(),
+export const AIRestrictionSchema = z.object({
+  limit: z.number().optional(),
+  unit: z.enum(['mg', 'g', 'kcal', '%', 'IU']).optional(),
+  reason: z.string().optional(),
 })
 
-export const AIHealthProfileRestrictionsSchema = z.object({
-  sodium: DietaryRestrictionSchema.optional(),
-  sugar: DietaryRestrictionSchema.optional(),
-  saturatedFat: DietaryRestrictionSchema.optional(),
-  cholesterol: DietaryRestrictionSchema.optional(),
-  alcohol: DietaryRestrictionSchema.optional(),
-  caffeine: DietaryRestrictionSchema.optional(),
-  potassium: DietaryRestrictionSchema.optional(),
-  phosphorus: DietaryRestrictionSchema.optional(),
-  protein: DietaryRestrictionSchema.optional(),
-  carbohydrates: DietaryRestrictionSchema.optional(),
-})
+// Restrictions object is open-ended: the prompt asks for known
+// nutrients (sodium/potassium/etc.) but Gemini may emit additional
+// keys when conditions warrant. catchall mirrors the
+// `[key: string]: AIRestriction | undefined` index signature on
+// AIHealthProfile.restrictions.
+export const AIHealthProfileRestrictionsSchema = z
+  .object({
+    sodium: AIRestrictionSchema.optional(),
+    potassium: AIRestrictionSchema.optional(),
+    phosphorus: AIRestrictionSchema.optional(),
+    protein: AIRestrictionSchema.optional(),
+    carbs: AIRestrictionSchema.optional(),
+    sugar: AIRestrictionSchema.optional(),
+    saturatedFat: AIRestrictionSchema.optional(),
+    cholesterol: AIRestrictionSchema.optional(),
+  })
+  .catchall(AIRestrictionSchema.optional())
 
 export const GenerateHealthProfileRequestSchema = z.object({
   healthConditions: z.array(z.string()).min(1, 'At least one health condition is required'),
@@ -140,18 +151,46 @@ export const GenerateHealthProfileRequestSchema = z.object({
 
 export const AIHealthProfileResponseSchema = z.object({
   restrictions: AIHealthProfileRestrictionsSchema,
+  calorieAdjustment: z
+    .object({
+      multiplier: z.number().optional(),
+      reason: z.string().optional(),
+    })
+    .optional(),
+  monitorNutrients: z.array(z.string()).optional(),
+  criticalWarnings: z.array(z.string()).optional(),
   confidence: z.number().min(0).max(100),
-  reasoning: z.string(),
-  warnings: z.array(z.string()).optional(),
-  disclaimers: z.array(z.string()).optional(),
-  reviewStatus: z.enum(['unreviewed', 'approved', 'rejected']).optional(),
-  generatedAt: z.string().datetime().optional(),
 })
 
-export type DietaryRestriction = z.infer<typeof DietaryRestrictionSchema>
+// AIRestriction type lives in @/types (canonical). Don't re-export
+// the Zod-inferred shape under the same name — keeps `import { AIRestriction }`
+// unambiguous.
 export type AIHealthProfileRestrictions = z.infer<typeof AIHealthProfileRestrictionsSchema>
 export type GenerateHealthProfileRequest = z.infer<typeof GenerateHealthProfileRequestSchema>
 export type AIHealthProfileResponse = z.infer<typeof AIHealthProfileResponseSchema>
+
+// ============================================
+// AI MEAL SAFETY — GEMINI OUTPUT SCHEMA
+// ============================================
+
+export const MealSafetyResponseSchema = z.object({
+  isSafe: z.boolean(),
+  warnings: z.array(z.string()),
+  severity: z.enum(['safe', 'caution', 'critical']),
+  nutrientBreakdown: z
+    .record(
+      z.string(),
+      z.object({
+        amount: z.number(),
+        limit: z.number(),
+        percentage: z.number(),
+      }),
+    )
+    .optional(),
+  confidence: z.number().min(0).max(100),
+})
+
+export type MealSafetyResponse = z.infer<typeof MealSafetyResponseSchema>
 
 // ============================================
 // HEALTH VITALS SUMMARY RESPONSE SCHEMA
