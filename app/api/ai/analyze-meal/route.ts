@@ -149,8 +149,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use AI vision service with automatic fallback
+    // Use AI vision service. Returns { analysis: null, provider: 'failed' }
+    // when the underlying provider call fails — surface that to the
+    // client as a 502 so the UI can show a manual-entry fallback
+    // instead of persisting fabricated nutrition values.
     const { analysis, provider, error: analysisError } = await analyzeMealImage(imageData, mealType)
+
+    if (!analysis || provider === 'failed') {
+      logger.warn('AI vision failed; returning 502 to client', { error: analysisError })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'AI vision is temporarily unavailable. Please enter the meal manually.',
+          code: 'AI_VISION_UNAVAILABLE',
+          details: analysisError,
+        },
+        { status: 502 },
+      )
+    }
 
     // Validate AI-generated nutrition data with USDA database
     logger.info('Validating nutrition data with USDA')
@@ -226,23 +242,14 @@ export async function POST(request: NextRequest) {
         foodItems: validatedFoodItems,
         title,
         usdaValidation: usdaMessages.length > 0 ? usdaMessages : undefined,
-        isMockData: provider === 'mock'
       },
       _diagnostics: {
-        isRealAnalysis: provider !== 'mock',
         provider,
         timestamp: new Date().toISOString(),
-        error: analysisError
-      }
+      },
     }
 
-    // Log warning if using mock data
-    if (provider === 'mock') {
-      console.warn('⚠️ WARNING: Returning mock data instead of real analysis')
-      console.warn('⚠️ Reason:', analysisError)
-    } else {
-      logger.info(`✅ Analysis completed with ${provider}`)
-    }
+    logger.info(`✅ Analysis completed with ${provider}`)
 
     return NextResponse.json(response)
 

@@ -81,6 +81,26 @@ export function useMealAnalysis(): UseMealAnalysisReturn {
       logger.debug('Response status:', { status: response.status })
       logger.debug('Response ok:', { ok: response.ok })
 
+      // 502 with code AI_VISION_UNAVAILABLE = upstream provider
+      // failed (Gemini quota / outage / parse error). Surface a
+      // manual-entry path instead of polluting the meal log with
+      // fabricated nutrition values.
+      if (response.status === 502) {
+        let reason = 'AI vision is temporarily unavailable.'
+        try {
+          const body = await response.json()
+          if (body?.error) reason = body.error
+        } catch {
+          /* body not JSON; use default */
+        }
+        logger.warn('AI vision unavailable — prompting manual entry', { reason })
+        toast.error(
+          `${reason} Please enter the meal manually.`,
+          { duration: 6000 },
+        )
+        return null
+      }
+
       if (!response.ok) {
         const errorText = await response.text()
         logger.error('API error response:', new Error(errorText))
@@ -96,18 +116,12 @@ export function useMealAnalysis(): UseMealAnalysisReturn {
       if (result.success && result.data) {
         logger.debug('✅ Analysis successful:', result.data)
 
-        // Check provider and warn if using mock data
-        if (result._diagnostics) {
-          const provider = result._diagnostics.provider
-          if (provider === 'mock') {
-            const reason = result._diagnostics.error || 'AI providers unavailable'
-            console.warn('⚠️ Using mock data:', reason)
-            toast.error(`⚠️ AI Analysis unavailable. Using sample data.`, { duration: 5000 })
-          } else if (provider === 'openai') {
-            toast.success(`✅ Analyzed with OpenAI (Gemini unavailable)`, { duration: 3000 })
-          } else {
-            toast.success(`✅ Meal analyzed successfully`, { duration: 2000 })
-          }
+        // Honest provider signal — no more mock-data branch.
+        const provider = result._diagnostics?.provider
+        if (provider === 'openai') {
+          toast.success(`✅ Analyzed with OpenAI (Gemini unavailable)`, { duration: 3000 })
+        } else {
+          toast.success(`✅ Meal analyzed successfully`, { duration: 2000 })
         }
 
         setAiAnalysis(result.data)

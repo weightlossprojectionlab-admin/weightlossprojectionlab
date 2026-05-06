@@ -33,9 +33,24 @@ export interface MealAnalysis {
   suggestedMealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack'
 }
 
+/**
+ * Result of an attempted meal-image analysis.
+ *
+ * - On success: `analysis` is the structured nutrition data,
+ *   `provider` is the model that produced it.
+ * - On failure: `analysis` is null, `provider` is 'failed',
+ *   `error` carries the reason.
+ *
+ * Until 2026-05-06 a third state existed where the function
+ * returned hand-curated mock data labeled `provider: 'mock'`. That
+ * was a UX-deception bug: callers persisted the fake calorie
+ * numbers as if they were AI-derived. Removed entirely — failure
+ * now surfaces as a real error so the UI can show a manual-entry
+ * fallback path.
+ */
 export interface AnalysisResult {
-  analysis: MealAnalysis
-  provider: 'gemini' | 'openai' | 'mock'
+  analysis: MealAnalysis | null
+  provider: 'gemini' | 'openai' | 'failed'
   error?: string
 }
 
@@ -211,53 +226,12 @@ User specified meal type: ${mealType || 'unspecified'}`
 }
 
 /**
- * Get mock analysis data (fallback when all providers fail)
- */
-function getMockAnalysis(): MealAnalysis {
-  const mockMeals = [
-    {
-      items: [
-        { name: 'Grilled chicken breast', portion: '6 oz', calories: 280, protein: 53, carbs: 0, fat: 6, fiber: 0 },
-        { name: 'Brown rice', portion: '1 cup', calories: 215, protein: 5, carbs: 45, fat: 2, fiber: 3 },
-        { name: 'Steamed broccoli', portion: '1 cup', calories: 55, protein: 4, carbs: 11, fat: 0, fiber: 5 }
-      ],
-      totalCalories: 550,
-      totalMacros: { protein: 62, carbs: 56, fat: 8, fiber: 8 }
-    },
-    {
-      items: [
-        { name: 'Salmon fillet', portion: '5 oz', calories: 290, protein: 39, carbs: 0, fat: 14, fiber: 0 },
-        { name: 'Quinoa', portion: '1 cup', calories: 220, protein: 8, carbs: 39, fat: 4, fiber: 5 },
-        { name: 'Roasted vegetables', portion: '1.5 cups', calories: 90, protein: 3, carbs: 15, fat: 3, fiber: 5 }
-      ],
-      totalCalories: 600,
-      totalMacros: { protein: 50, carbs: 54, fat: 21, fiber: 10 }
-    }
-  ]
-
-  const randomMeal = mockMeals[Math.floor(Math.random() * mockMeals.length)]
-
-  const hour = new Date().getHours()
-  let suggestedType: 'breakfast' | 'lunch' | 'dinner' | 'snack' = 'lunch'
-  if (hour >= 5 && hour < 11) suggestedType = 'breakfast'
-  else if (hour >= 11 && hour < 15) suggestedType = 'lunch'
-  else if (hour >= 15 && hour < 21) suggestedType = 'dinner'
-  else suggestedType = 'snack'
-
-  return {
-    foodItems: randomMeal.items,
-    totalCalories: randomMeal.totalCalories,
-    totalMacros: randomMeal.totalMacros,
-    confidence: 50,
-    suggestions: ['Mock data - AI analysis unavailable'],
-    suggestedMealType: suggestedType
-  }
-}
-
-/**
- * Analyze meal image with automatic fallback between providers
+ * Analyze meal image. Returns the structured analysis on success
+ * or { analysis: null, provider: 'failed', error } on failure.
  *
- * Tries providers in order: Gemini -> OpenAI -> Mock
+ * No mock-data fallback — meal logs must reflect reality, and
+ * fabricated calorie numbers persisted as if they were AI-derived
+ * was the prior failure mode (now removed).
  */
 export async function analyzeMealImage(
   imageData: string,
@@ -275,11 +249,13 @@ export async function analyzeMealImage(
 
     logger.error('Gemini vision failed', undefined, { error: errorMsg, isQuota: isQuotaError })
 
-    // Return error — no fallback to fake data
+    // Return error — no fallback to fake data. Caller must surface
+    // the failure to the user (manual-entry fallback) rather than
+    // persisting fabricated nutrition values.
     return {
-      analysis: getMockAnalysis(),
-      provider: 'mock',
-      error: `Gemini vision failed: ${errorMsg}`
+      analysis: null,
+      provider: 'failed',
+      error: `Gemini vision failed: ${errorMsg}`,
     }
   }
 }
