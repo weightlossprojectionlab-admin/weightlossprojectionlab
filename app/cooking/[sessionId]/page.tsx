@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -27,6 +27,7 @@ function CookingSessionContent() {
   const [loading, setLoading] = useState(true)
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set())
   const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const completionAudioRef = useRef<HTMLAudioElement | null>(null)
 
   // Inventory hook for checking what we have
   const { allItems: inventoryItems } = useInventory()
@@ -63,7 +64,30 @@ function CookingSessionContent() {
     const nextStep = session.currentStep + 1
 
     if (nextStep >= session.totalSteps) {
-      // Completed all steps!
+      // Completed all steps! Fire the recipe-completion alert
+      // before opening the modal — most cooks aren't looking at
+      // the screen when they finish the last step. They need
+      // an audible/haptic signal that the recipe is done.
+      if (completionAudioRef.current) {
+        completionAudioRef.current.play().catch(err =>
+          logger.debug('Recipe-complete audio failed:', err),
+        )
+      }
+      // Distinct vibration pattern for recipe completion — a
+      // longer celebration buzz vs the triple-pulse used by step
+      // timers. Lets the cook recognize the alert by feel alone.
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([300, 100, 300, 100, 500])
+      }
+      // Browser notification if backgrounded — covers the case
+      // where the cook switched tabs / minimized the app.
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('🎉 Recipe Complete!', {
+          body: `${session.recipeName} is ready. Time to log the meal.`,
+          icon: '/icon-192x192.png',
+          tag: 'recipe-complete',
+        })
+      }
       setShowCompletionModal(true)
     } else {
       // Move to next step
@@ -255,6 +279,10 @@ function CookingSessionContent() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-100">
+      {/* Recipe-completion audio. Triggered when the user finishes
+          the final step. Distinct from CookingTimer's per-step
+          chime; this fires once per cook. */}
+      <audio ref={completionAudioRef} src="/notification.mp3" preload="auto" />
       <PageHeader
         title={`${actionParticiple}: ${session.recipeName}`}
         subtitle={`Step ${session.currentStep + 1} of ${session.totalSteps}`}

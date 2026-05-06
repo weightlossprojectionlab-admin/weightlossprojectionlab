@@ -16,6 +16,11 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
   const [isRunning, setIsRunning] = useState(autoStart)
   const [isCompleted, setIsCompleted] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  // One-minute heads-up: fires once when timeLeft crosses the 60s
+  // mark, so the cook gets a "come back to the kitchen" signal
+  // before food finishes. Ref-based so re-renders don't reset it.
+  // Reset by the duration-change effect when a new step starts.
+  const warned1MinRef = useRef(false)
 
   // When the parent passes a new `duration` (e.g., user moved to the
   // next cooking step which has its own duration), reset the timer
@@ -27,6 +32,7 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
     setTimeLeft(duration)
     setIsRunning(autoStart)
     setIsCompleted(false)
+    warned1MinRef.current = false
     // autoStart is intentionally a stable input (set once at mount in
     // practice); we want the reset to fire only when the duration
     // actually changes, not on every parent re-render.
@@ -38,6 +44,30 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
+        // 1-minute heads-up: the second the timer drops to 60s,
+        // fire a lighter alert so the cook can return to the
+        // kitchen before food finishes. Only meaningful when the
+        // original duration was longer than a minute (a 30-second
+        // timer doesn't need a "1 min left" warning).
+        if (prev === 61 && !warned1MinRef.current && duration > 60) {
+          warned1MinRef.current = true
+          if (audioRef.current) {
+            audioRef.current.play().catch(err => logger.debug('1-min warn audio failed:', err))
+          }
+          // Lighter haptic than completion — single pulse, signals
+          // "heads up" not "done." Cook recognizes the difference
+          // by feel.
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate([150, 100, 150])
+          }
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('⏱ 1 minute left', {
+              body: stepText,
+              icon: '/icon-192x192.png',
+              tag: 'cooking-timer-1min',
+            })
+          }
+        }
         if (prev <= 1) {
           setIsRunning(false)
           setIsCompleted(true)
@@ -45,6 +75,15 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
           // Play notification sound
           if (audioRef.current) {
             audioRef.current.play().catch(err => logger.debug('Audio play failed:', err))
+          }
+
+          // Haptic feedback — most cooks aren't looking at the
+          // screen when a step timer fires. Buzz the phone so they
+          // feel it through their pocket. Triple-pulse pattern is
+          // distinct from the single-tap haptic used elsewhere in
+          // the app, so the user can identify it as a cook alert.
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate([200, 100, 200, 100, 200])
           }
 
           // Trigger completion callback
