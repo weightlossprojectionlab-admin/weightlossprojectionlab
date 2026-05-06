@@ -133,6 +133,25 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   const [planningEaters, setPlanningEaters] = useState<EaterSelection[]>([])
   const isMultiEaterMode = servingSize > 1
 
+  // Family-meal Commit B refinement — auto-sync servings to eater
+  // count in one direction: when the user adds an eater that
+  // would push the count above the current servings, bump
+  // servings to match. Removing an eater does NOT auto-decrement
+  // (over-cooking for leftovers is a real intent). The other
+  // direction (manual servings-stepper bumps) is left to the
+  // user; a small "leftovers" hint surfaces when servings >
+  // eater count to make the mismatch explicit.
+  useEffect(() => {
+    if (planningEaters.length > servingSize) {
+      setServingSize(planningEaters.length)
+    }
+  }, [planningEaters.length, servingSize])
+
+  // Down-stepper floor: can't drop below the eater count, since
+  // that would mean you literally don't have enough food for the
+  // people you said are eating.
+  const minServings = Math.max(1, planningEaters.length)
+
   // Cook Now gate:
   //   - servings === 1: existing per-eater hard-block on the
   //     active patient's allergies (Commit D).
@@ -727,9 +746,14 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={decrementServings}
-                      disabled={servingSize <= 1}
+                      disabled={servingSize <= minServings}
                       className="w-8 h-8 rounded-full bg-primary text-white font-bold hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
                       aria-label="Decrease servings"
+                      title={
+                        servingSize <= minServings && minServings > 1
+                          ? `Servings can't drop below the eater count (${minServings}). De-select an eater first.`
+                          : undefined
+                      }
                     >
                       −
                     </button>
@@ -837,6 +861,22 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     mode="plan"
                     onChange={setPlanningEaters}
                   />
+                  {/* Leftovers hint — when the user manually bumped
+                      servings past the eater count. (B) coupling:
+                      adding eaters auto-syncs servings up, so this
+                      can only happen via servings stepper. Make
+                      the mismatch explicit so the user sees why
+                      Cook Now is asking for {servingSize} portions
+                      with only {planningEaters.length} eaters. */}
+                  {servingSize > planningEaters.length && planningEaters.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Cooking {servingSize} servings for {planningEaters.length}{' '}
+                      eater{planningEaters.length === 1 ? '' : 's'} —{' '}
+                      {servingSize - planningEaters.length} extra portion
+                      {servingSize - planningEaters.length === 1 ? '' : 's'} for
+                      leftovers. Add more eaters above or step servings down.
+                    </p>
+                  )}
                 </div>
               )}
 
