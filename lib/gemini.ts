@@ -8,16 +8,14 @@
  * Uses structured JSON output with schemas for type safety
  */
 
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
+import { SchemaType } from '@google/generative-ai'
 import { AIHealthProfile, MealSafetyCheck, UserProfile } from '@/types'
 import { logger } from '@/lib/logger'
 import {
   AIHealthProfileResponseSchema,
   MealSafetyResponseSchema,
 } from '@/lib/validations/health-vitals'
-
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+import { generateGeminiJSON } from '@/lib/ai/gemini-client'
 
 /**
  * Schema for health profile generation
@@ -143,15 +141,6 @@ export async function callGeminiHealthProfile(profile: {
   units?: 'metric' | 'imperial'
 }): Promise<Omit<AIHealthProfile, 'reviewStatus' | 'generatedAt' | 'lastReviewedBy'>> {
   try {
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: healthProfileSchema,
-        temperature: 0.3 // Lower temperature for more consistent medical advice
-      }
-    })
-
     // Calculate BMI if height and weight available
     let bmi: number | undefined
     if (profile.height && profile.currentWeight && profile.units) {
@@ -361,43 +350,39 @@ IMPORTANT:
 
 If NO health conditions are reported, return empty restrictions with 100 confidence.`
 
-    const result = await model.generateContent(prompt)
-    const response = result.response.text()
-    const parsed = JSON.parse(response)
-
-    // Runtime schema gate. Gemini's responseSchema config tells it
-    // what shape to AIM for, but malformed outputs still slip through
-    // (especially under load / retries). PHI safety: reject malformed
-    // output before it reaches Firestore. Log only structural metadata
-    // (issue path + code), never the value.
-    const validated = AIHealthProfileResponseSchema.safeParse(parsed)
-    if (!validated.success) {
-      logger.warn('[Gemini] Health profile output failed schema validation', {
-        issueCount: validated.error.issues.length,
-        issues: validated.error.issues.slice(0, 5).map((i) => ({
-          path: i.path.join('.'),
-          code: i.code,
-        })),
-      })
-      return {
-        restrictions: {},
-        confidence: 0,
-        monitorNutrients: [],
-        criticalWarnings: ['AI output failed schema validation - manual review required']
-      }
-    }
+    // T5.14 — shared client owns SDK init, JSON.parse, Zod validate,
+    // and gemini_invocations log. We pass the Zod schema so the
+    // client throws on shape mismatch (PHI safety: malformed output
+    // never reaches Firestore). The catch below maps the throw to
+    // the existing safe-default branch (no schema-validation failure
+    // path needed inline anymore — same fallback either way).
+    const validated = await generateGeminiJSON({
+      fnName: 'callGeminiHealthProfile',
+      model: 'gemini-2.5-flash',
+      prompt,
+      geminiSchema: healthProfileSchema,
+      validateSchema: AIHealthProfileResponseSchema,
+      temperature: 0.3,
+      metadata: {
+        conditionCount: profile.healthConditions?.length ?? 0,
+        hasMedications: !!profile.medications?.length,
+        hasConditionDetails: !!profile.conditionDetails,
+      },
+    })
 
     logger.info('[Gemini] Health profile generated', {
       conditions: profile.healthConditions,
-      confidence: validated.data.confidence,
-      restrictionsCount: Object.keys(validated.data.restrictions || {}).length
+      confidence: validated.confidence,
+      restrictionsCount: Object.keys(validated.restrictions || {}).length
     })
 
-    return validated.data
+    return validated
   } catch (error) {
     logger.error('[Gemini] Health profile generation failed', error as Error)
 
-    // Fallback: return safe defaults
+    // Fallback: return safe defaults. Covers Gemini network errors,
+    // JSON.parse errors, AND Zod validation failures (all surface
+    // here as a single throw from generateGeminiJSON).
     return {
       restrictions: {},
       confidence: 0,
@@ -435,15 +420,6 @@ export async function callGeminiMealSafety(params: {
         confidence: 100
       }
     }
-
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: mealSafetySchema,
-        temperature: 0.2 // Very low temp for consistent safety checks
-      }
-    })
 
     const prompt = `You are a medical nutrition AI assistant. Check if this meal is safe for a user with specific dietary restrictions.
 
@@ -486,42 +462,36 @@ IMPORTANT:
 - Consider cumulative effect across the day
 - Flag specific foods causing issues`
 
-    const result = await model.generateContent(prompt)
-    const response = result.response.text()
-    const parsed = JSON.parse(response)
-
-    // Runtime schema gate (see callGeminiHealthProfile for rationale).
-    // On failure: err on the side of caution — flag for manual review
-    // rather than letting an unverified isSafe:true through.
-    const validated = MealSafetyResponseSchema.safeParse(parsed)
-    if (!validated.success) {
-      logger.warn('[Gemini] Meal safety output failed schema validation', {
-        issueCount: validated.error.issues.length,
-        issues: validated.error.issues.slice(0, 5).map((i) => ({
-          path: i.path.join('.'),
-          code: i.code,
-        })),
-      })
-      return {
-        isSafe: false,
-        warnings: ['Safety check output malformed - please review meal manually'],
-        severity: 'caution',
-        confidence: 0
-      }
-    }
-
-    logger.info('[Gemini] Meal safety check completed', {
-      isSafe: validated.data.isSafe,
-      severity: validated.data.severity,
-      warningsCount: validated.data.warnings.length,
-      confidence: validated.data.confidence
+    // T5.14 — shared client. validateSchema makes Zod-failure
+    // surface as a thrown error; the catch maps it to the same
+    // safe fallback as a Gemini network error (err on the side of
+    // caution — never let an unverified isSafe:true through).
+    const validated = await generateGeminiJSON({
+      fnName: 'callGeminiMealSafety',
+      model: 'gemini-2.5-flash',
+      prompt,
+      geminiSchema: mealSafetySchema,
+      validateSchema: MealSafetyResponseSchema,
+      temperature: 0.2,
+      metadata: {
+        foodItemCount: meal.foodItems.length,
+        restrictionCount: Object.keys(healthProfile.restrictions).length,
+      },
     })
 
-    return validated.data
+    logger.info('[Gemini] Meal safety check completed', {
+      isSafe: validated.isSafe,
+      severity: validated.severity,
+      warningsCount: validated.warnings.length,
+      confidence: validated.confidence
+    })
+
+    return validated
   } catch (error) {
     logger.error('[Gemini] Meal safety check failed', error as Error)
 
-    // Fallback: err on side of caution
+    // Fallback: err on side of caution. Covers Gemini network errors,
+    // JSON.parse errors, and Zod validation failures.
     return {
       isSafe: false,
       warnings: ['Safety check failed - please review meal manually'],
@@ -531,15 +501,8 @@ IMPORTANT:
   }
 }
 
-/**
- * Validate Gemini API key is configured
- */
-export function validateGeminiConfig(): { valid: boolean; error?: string } {
-  if (!process.env.GEMINI_API_KEY) {
-    return {
-      valid: false,
-      error: 'GEMINI_API_KEY not configured in environment variables'
-    }
-  }
-  return { valid: true }
-}
+// validateGeminiConfig moved to lib/ai/gemini-client.ts (T5.14).
+// Re-exported here so existing `import { validateGeminiConfig } from
+// '@/lib/gemini'` callers (e.g., /api/ai/health-profile/generate)
+// keep working without a coordinated import change.
+export { validateGeminiConfig } from '@/lib/ai/gemini-client'
