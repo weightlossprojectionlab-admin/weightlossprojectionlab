@@ -4,38 +4,25 @@ import { MEAL_SUGGESTIONS, MealSuggestion } from '@/lib/meal-suggestions'
 import { notFound } from 'next/navigation'
 import { adminDb } from '@/lib/firebase-admin'
 import RecipeActions from '@/components/recipes/RecipeActions'
+import { mergeRecipeWithMedia } from '@/lib/recipe-merge'
 
 async function getRecipe(id: string): Promise<MealSuggestion | null> {
-  // Check hardcoded recipes first
-  const local = MEAL_SUGGESTIONS.find(r => r.id === id)
-  if (local) return local
+  // Fetch both sources in parallel — Firestore overlays let admin
+  // edits (regenerated ingredients/steps, uploaded media) take effect
+  // on hardcoded recipes. Source-of-truth rules are in mergeRecipeWithMedia.
+  const hardcoded = MEAL_SUGGESTIONS.find(r => r.id === id) ?? null
 
-  // Fallback to Firestore for admin-created recipes
+  let firestoreDoc: any = null
   try {
     const doc = await adminDb.collection('recipes').doc(id).get()
-    if (!doc.exists) return null
-    const data = doc.data()!
-    return {
-      id: doc.id,
-      name: data.name || '',
-      description: data.description || '',
-      mealType: data.mealType || 'lunch',
-      calories: data.calories || 0,
-      macros: data.macros || { protein: 0, carbs: 0, fat: 0, fiber: 0 },
-      prepTime: data.prepTime || 30,
-      servingSize: data.servingSize || 1,
-      dietaryTags: data.dietaryTags || [],
-      allergens: data.allergens || [],
-      ingredients: data.ingredients || [],
-      recipeSteps: data.recipeSteps || [],
-      cookingTips: data.cookingTips || [],
-      requiresCooking: data.requiresCooking ?? true,
-      imageUrls: data.imageUrls,
-      videoUrl: data.videoUrl,
-    } as MealSuggestion
+    if (doc.exists) {
+      firestoreDoc = { id: doc.id, ...doc.data() }
+    }
   } catch {
-    return null
+    // Firestore error — fall through with hardcoded only
   }
+
+  return mergeRecipeWithMedia(hardcoded, firestoreDoc)
 }
 
 interface PageProps {
@@ -123,26 +110,33 @@ export default async function RecipeDetailPage({ params }: PageProps) {
 
         {/* Recipe Card */}
         <div className="bg-card rounded-lg shadow-xl overflow-hidden">
-          {/* Hero Image */}
+          {/* Hero Image (imageUrls[0]). Alt text uses per-image imageAlts when
+              present (admin-curated for SEO + accessibility); falls back to the
+              recipe name when blank. */}
           {recipe.imageUrls && recipe.imageUrls.length > 0 && (
             <div className="relative w-full h-64 md:h-80">
               <img
                 src={recipe.imageUrls[0]}
-                alt={recipe.name}
+                alt={recipe.imageAlts?.[0]?.trim() || recipe.name}
                 className="w-full h-full object-cover"
               />
-              {recipe.imageUrls && recipe.imageUrls.length > 1 && (
-                <div className="absolute bottom-3 right-3 flex gap-2">
-                  {recipe.imageUrls.slice(1).map((url: string, i: number) => (
-                    <img
-                      key={i}
-                      src={url}
-                      alt={`${recipe.name} ${i + 2}`}
-                      className="h-16 w-16 object-cover rounded-lg border-2 border-white shadow-md"
-                    />
-                  ))}
-                </div>
-              )}
+            </div>
+          )}
+
+          {/* Carousel — additional images below the hero (imageUrls[1..4]).
+              Horizontally scrollable on small screens, grid on larger. */}
+          {recipe.imageUrls && recipe.imageUrls.length > 1 && (
+            <div className="px-4 pt-4 pb-2 overflow-x-auto">
+              <div className="flex gap-3 min-w-max sm:min-w-0 sm:grid sm:grid-cols-4">
+                {recipe.imageUrls.slice(1).map((url: string, i: number) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={recipe.imageAlts?.[i + 1]?.trim() || `${recipe.name} ${i + 2}`}
+                    className="h-24 w-24 sm:h-auto sm:w-full sm:aspect-square object-cover rounded-lg border border-border flex-shrink-0"
+                  />
+                ))}
+              </div>
             </div>
           )}
 

@@ -85,6 +85,14 @@ export interface MealSuggestion {
   id: string
   name: string
   mealType: MealType
+  /**
+   * Optional multi-meal-type tagging. A recipe (frittata, salad, soup)
+   * can legitimately fit more than one meal slot. Admin curates via
+   * /admin/recipes edit form. When set, takes precedence over `mealType`
+   * for filter logic. `mealType` is kept as `mealTypes[0]` for
+   * backwards-compatible consumers that still read the singular field.
+   */
+  mealTypes?: MealType[]
   calories: number
   macros: {
     protein: number
@@ -133,6 +141,14 @@ export interface MealSuggestion {
 
   // Media fields (for admin-uploaded marketing content)
   imageUrls?: string[] // Firebase Storage URLs for images (max 4, first is hero)
+  /**
+   * Per-image alt text, parallel to imageUrls. Position-matched: imageAlts[0]
+   * describes imageUrls[0] (the hero), and so on. Used for accessibility
+   * (WCAG 1.1.1), SEO (Google Images), AEO (featured-snippet image extraction),
+   * and AIO (LLMs scraping recipe pages). Empty string allowed for an image
+   * with no alt yet — render layer falls back to the recipe name in that case.
+   */
+  imageAlts?: string[]
   videoUrl?: string // Firebase Storage URL for 5-7 second video clip
   videoThumbnailUrl?: string // Auto-generated thumbnail from video
   imageStoragePaths?: string[] // Storage paths for deletion

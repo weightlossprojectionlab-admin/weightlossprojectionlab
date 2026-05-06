@@ -41,8 +41,8 @@ export async function uploadRecipeImages(
     throw new Error('No image files provided')
   }
 
-  if (imageFiles.length > 4) {
-    throw new Error('Maximum 4 images allowed')
+  if (imageFiles.length > 5) {
+    throw new Error('Maximum 5 images allowed (1 hero + 4 carousel)')
   }
 
   try {

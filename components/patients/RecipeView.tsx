@@ -516,6 +516,7 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
               <div className="relative">
                 <RecipeImageCarousel
                   images={recipe.imageUrls}
+                  alts={recipe.imageAlts}
                   recipeName={recipe.name}
                   mealType={recipe.mealType}
                 />

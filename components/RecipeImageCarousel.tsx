@@ -7,6 +7,10 @@ import { generateRecipeAltText } from '@/lib/utils'
 
 interface RecipeImageCarouselProps {
   images?: string[]
+  /** Per-image alt text, parallel to `images`. Position-matched. When a slot
+   *  is missing or blank, falls back to `generateRecipeAltText`. Curated
+   *  alts (for accessibility + SEO/AEO/AIO) come from MealSuggestion.imageAlts. */
+  alts?: string[]
   recipeName: string
   mealType: MealType
   className?: string
@@ -21,6 +25,7 @@ const MEAL_TYPE_COLORS: Record<MealType, { bg: string; text: string; emoji: stri
 
 export function RecipeImageCarousel({
   images,
+  alts,
   recipeName,
   mealType,
   className = ''
@@ -42,11 +47,14 @@ export function RecipeImageCarousel({
           <Image
             key={`${recipeName}-${activeIndex}`}
             src={displayImages[activeIndex]}
-            alt={generateRecipeAltText(
-              recipeName || 'Recipe',
-              mealType || 'snack',
-              activeIndex === 0 ? 'hero' : 'angle'
-            )}
+            alt={
+              alts?.[activeIndex]?.trim() ||
+              generateRecipeAltText(
+                recipeName || 'Recipe',
+                mealType || 'snack',
+                activeIndex === 0 ? 'hero' : 'angle'
+              )
+            }
             fill
             className="object-cover transition-opacity duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -79,11 +87,14 @@ export function RecipeImageCarousel({
             >
               <Image
                 src={image}
-                alt={generateRecipeAltText(
-                  recipeName || 'Recipe',
-                  mealType || 'snack',
-                  'thumbnail'
-                )}
+                alt={
+                  alts?.[index]?.trim() ||
+                  generateRecipeAltText(
+                    recipeName || 'Recipe',
+                    mealType || 'snack',
+                    'thumbnail'
+                  )
+                }
                 fill
                 className="object-cover"
                 sizes="64px"

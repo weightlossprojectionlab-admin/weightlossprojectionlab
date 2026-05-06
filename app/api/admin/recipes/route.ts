@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
 
       // Media
       ...(body.imageUrls?.length ? { imageUrls: body.imageUrls } : {}),
+      ...(body.imageAlts?.length ? { imageAlts: body.imageAlts } : {}),
       ...(body.videoUrl ? { videoUrl: body.videoUrl } : {}),
 
       // Status

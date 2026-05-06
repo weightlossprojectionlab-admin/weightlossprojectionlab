@@ -170,10 +170,15 @@ export default function EditRecipePage() {
       setRecipeFetchName(recipe.name || '')
 
       // Map API recipe data to RecipeFormData
-      const formData: Partial<RecipeFormData> & { existingImageUrls?: string[]; aiNutrition?: { calories: number; protein: number; carbs: number; fat: number; fiber: number } } = {
+      const formData: Partial<RecipeFormData> & { existingImageUrls?: string[]; existingImageAlts?: string[]; aiNutrition?: { calories: number; protein: number; carbs: number; fat: number; fiber: number } } = {
         recipeName: recipe.name || '',
         description: recipe.description || '',
         mealType: recipe.mealType || 'lunch',
+        // Multi-meal-type: prefer the array if present, fall back to wrapping
+        // the legacy singular field so old data stays editable.
+        mealTypes: (recipe.mealTypes && recipe.mealTypes.length > 0)
+          ? recipe.mealTypes
+          : (recipe.mealType ? [recipe.mealType] : ['lunch']),
         prepTime: recipe.prepTime ?? 30,
         servingSize: recipe.servingSize ?? 1,
         dietaryTags: recipe.dietaryTags || [],
@@ -185,6 +190,7 @@ export default function EditRecipePage() {
         recipeSteps: recipe.recipeSteps?.length ? recipe.recipeSteps : [''],
         cookingTips: recipe.cookingTips?.length ? recipe.cookingTips : [''],
         existingImageUrls: recipe.imageUrls || [],
+        existingImageAlts: recipe.imageAlts || [],
         ...(recipe.macros || recipe.calories ? {
           aiNutrition: {
             calories: recipe.calories || 0,
@@ -251,6 +257,9 @@ export default function EditRecipePage() {
         name: data.recipeName,
         description: data.description,
         mealType: data.mealType,
+        // Dual-write: mealTypes is the canonical multi-meal-type list;
+        // mealType (singular) is kept as mealTypes[0] for backwards-compat.
+        mealTypes: data.mealTypes,
         prepTime: data.prepTime,
         servingSize: data.servingSize,
         dietaryTags: data.dietaryTags,
@@ -288,6 +297,10 @@ export default function EditRecipePage() {
       if (newImageUrls.length > 0 || existingUrls !== (initialData?.existingImageUrls || [])) {
         recipePayload.imageUrls = [...existingUrls, ...newImageUrls]
       }
+
+      // Per-image alt text — sent on every save so admins editing only alts
+      // (not images) still persist their changes.
+      recipePayload.imageAlts = data.imageAlts
 
       const response = await fetch(`/api/admin/recipes/${recipeId}`, {
         method: 'PUT',

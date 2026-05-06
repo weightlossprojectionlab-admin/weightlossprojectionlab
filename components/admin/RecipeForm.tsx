@@ -38,17 +38,22 @@ interface SelectedProduct {
 export interface RecipeFormData {
   recipeName: string
   description: string
+  /** Legacy singular field — always populated as `mealTypes[0]` for backwards compat. */
   mealType: MealType
+  /** Canonical multi-meal-type list (frittata = breakfast + lunch, etc.). */
+  mealTypes: MealType[]
   prepTime: number
   servingSize: number
   dietaryTags: DietaryTag[]
   ingredients: RecipeIngredient[]
   recipeSteps: string[]
   cookingTips: string[]
+  /** Per-image alt text, parallel to imageUrls. See MealSuggestion.imageAlts. */
+  imageAlts: string[]
 }
 
 interface RecipeFormProps {
-  initialData?: Partial<RecipeFormData> & { existingImageUrls?: string[]; aiNutrition?: { calories: number; protein: number; carbs: number; fat: number; fiber: number } }
+  initialData?: Partial<RecipeFormData> & { existingImageUrls?: string[]; existingImageAlts?: string[]; aiNutrition?: { calories: number; protein: number; carbs: number; fat: number; fiber: number } }
   onSave: (data: RecipeFormData, imageFiles: File[], status: 'draft' | 'published', existingImageUrls?: string[]) => Promise<void>
   saving: boolean
   uploadProgress: number | null
@@ -59,7 +64,16 @@ export default function RecipeForm({ initialData, onSave, saving, uploadProgress
   // Recipe basic info
   const [recipeName, setRecipeName] = useState(initialData?.recipeName || '')
   const [description, setDescription] = useState(initialData?.description || '')
-  const [mealType, setMealType] = useState<MealType>(initialData?.mealType || 'lunch')
+  // Multi-meal-type chips (canonical). `mealType` (singular) is derived
+  // as `mealTypes[0]` at save time for backwards-compat with consumers
+  // that still read the singular field.
+  const [mealTypes, setMealTypes] = useState<MealType[]>(
+    initialData?.mealTypes && initialData.mealTypes.length > 0
+      ? initialData.mealTypes
+      : initialData?.mealType
+        ? [initialData.mealType]
+        : ['lunch']
+  )
   const [prepTime, setPrepTime] = useState(initialData?.prepTime ?? 30)
   const [servingSize, setServingSize] = useState(initialData?.servingSize ?? 1)
   const [dietaryTags, setDietaryTags] = useState<DietaryTag[]>(initialData?.dietaryTags || [])
@@ -77,6 +91,10 @@ export default function RecipeForm({ initialData, onSave, saving, uploadProgress
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>(initialData?.existingImageUrls || [])
+  // Alt text — parallel arrays to existingImageUrls and imagePreviews. Required
+  // for WCAG 1.1.1, SEO/Google Images, AEO snippet extraction, and AIO LLM scrapers.
+  const [existingImageAlts, setExistingImageAlts] = useState<string[]>(initialData?.existingImageAlts || [])
+  const [imageAlts, setImageAlts] = useState<string[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -85,7 +103,11 @@ export default function RecipeForm({ initialData, onSave, saving, uploadProgress
     if (initialData) {
       if (initialData.recipeName !== undefined) setRecipeName(initialData.recipeName)
       if (initialData.description !== undefined) setDescription(initialData.description)
-      if (initialData.mealType !== undefined) setMealType(initialData.mealType)
+      if (initialData.mealTypes && initialData.mealTypes.length > 0) {
+        setMealTypes(initialData.mealTypes)
+      } else if (initialData.mealType !== undefined) {
+        setMealTypes([initialData.mealType])
+      }
       if (initialData.prepTime !== undefined) setPrepTime(initialData.prepTime)
       if (initialData.servingSize !== undefined) setServingSize(initialData.servingSize)
       if (initialData.dietaryTags !== undefined) setDietaryTags(initialData.dietaryTags)
@@ -93,6 +115,7 @@ export default function RecipeForm({ initialData, onSave, saving, uploadProgress
       if (initialData.recipeSteps?.length) setRecipeSteps(initialData.recipeSteps)
       if (initialData.cookingTips?.length) setCookingTips(initialData.cookingTips)
       if (initialData.existingImageUrls) setExistingImageUrls(initialData.existingImageUrls)
+      if (initialData.existingImageAlts) setExistingImageAlts(initialData.existingImageAlts)
     }
   }, [initialData])
 
@@ -103,8 +126,8 @@ export default function RecipeForm({ initialData, onSave, saving, uploadProgress
       return
     }
     const totalFiles = imageFiles.length + existingImageUrls.length + newFiles.length
-    if (totalFiles > 4) {
-      toast.error('Maximum 4 images allowed')
+    if (totalFiles > 5) {
+      toast.error('Maximum 5 images allowed (1 hero + 4 carousel)')
       return
     }
     for (const file of newFiles) {
@@ -116,16 +139,20 @@ export default function RecipeForm({ initialData, onSave, saving, uploadProgress
     setImageFiles(prev => [...prev, ...newFiles])
     const newPreviews = newFiles.map(f => URL.createObjectURL(f))
     setImagePreviews(prev => [...prev, ...newPreviews])
+    // Keep alt array in sync — empty strings for new files; admin fills them in.
+    setImageAlts(prev => [...prev, ...newFiles.map(() => '')])
   }, [imageFiles.length, existingImageUrls.length])
 
   const handleRemoveImage = (index: number) => {
     URL.revokeObjectURL(imagePreviews[index])
     setImageFiles(prev => prev.filter((_, i) => i !== index))
     setImagePreviews(prev => prev.filter((_, i) => i !== index))
+    setImageAlts(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleRemoveExistingImage = (index: number) => {
     setExistingImageUrls(prev => prev.filter((_, i) => i !== index))
+    setExistingImageAlts(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -277,6 +304,16 @@ export default function RecipeForm({ initialData, onSave, saving, uploadProgress
     }
   }
 
+  const toggleMealType = (mt: MealType) => {
+    if (mealTypes.includes(mt)) {
+      // Don't allow zero meal types — keep at least one selected.
+      if (mealTypes.length === 1) return
+      setMealTypes(mealTypes.filter(t => t !== mt))
+    } else {
+      setMealTypes([...mealTypes, mt])
+    }
+  }
+
   const handleSave = async (status: 'draft' | 'published') => {
     // Validation
     if (!recipeName.trim()) {
@@ -297,13 +334,18 @@ export default function RecipeForm({ initialData, onSave, saving, uploadProgress
     const data: RecipeFormData = {
       recipeName,
       description,
-      mealType,
+      // Singular mealType derived from mealTypes[0] for backwards compat.
+      // Both fields ship in the payload so legacy and new readers both work.
+      mealType: mealTypes[0] || 'lunch',
+      mealTypes,
       prepTime,
       servingSize,
       dietaryTags,
       ingredients,
       recipeSteps: recipeSteps.filter(s => s.trim()),
-      cookingTips: cookingTips.filter(t => t.trim())
+      cookingTips: cookingTips.filter(t => t.trim()),
+      // Combined alts in final imageUrls order: existing first, new uploads after.
+      imageAlts: [...existingImageAlts, ...imageAlts],
     }
 
     await onSave(data, imageFiles, status, existingImageUrls)
@@ -348,7 +390,9 @@ export default function RecipeForm({ initialData, onSave, saving, uploadProgress
 
           {/* Recipe Image Upload */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-foreground mb-1">Recipe Images (max 4)</label>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Recipe Images <span className="text-xs text-muted-foreground font-normal">(max 5 — 1 hero + 4 carousel)</span>
+            </label>
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -441,20 +485,96 @@ export default function RecipeForm({ initialData, onSave, saving, uploadProgress
                 <p className="text-xs text-muted-foreground mt-1">Uploading images... {uploadProgress}%</p>
               </div>
             )}
+
+            {/* Per-image alt text — accessibility (WCAG 1.1.1) + SEO/AEO/AIO.
+                One input per image. Empty is allowed but render layer falls
+                back to the recipe name, which is a worse experience for
+                screen readers and Google Images. */}
+            {(existingImageUrls.length > 0 || imagePreviews.length > 0) && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Image alt text
+                  <span className="ml-2 text-xs text-muted-foreground font-normal">
+                    accessibility + SEO/AEO/AIO
+                  </span>
+                </label>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Describe each image in one short sentence. Don't just repeat the recipe name —
+                  screen readers, Google Images, and AI assistants all read this.
+                </p>
+                <div className="space-y-2">
+                  {existingImageUrls.map((src, i) => (
+                    <div key={`alt-existing-${i}`} className="flex items-center gap-3">
+                      <img
+                        src={src}
+                        alt=""
+                        className="h-12 w-12 object-cover rounded border border-border flex-shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={existingImageAlts[i] || ''}
+                        onChange={(e) => {
+                          const next = [...existingImageAlts]
+                          next[i] = e.target.value
+                          setExistingImageAlts(next)
+                        }}
+                        placeholder={i === 0 && imagePreviews.length === 0
+                          ? 'Hero image alt text…'
+                          : `Image ${i + 1} alt text…`}
+                        maxLength={200}
+                        className="flex-1 px-3 py-2 border border-border bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  ))}
+                  {imagePreviews.map((src, i) => (
+                    <div key={`alt-new-${i}`} className="flex items-center gap-3">
+                      <img
+                        src={src}
+                        alt=""
+                        className="h-12 w-12 object-cover rounded border border-border flex-shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={imageAlts[i] || ''}
+                        onChange={(e) => {
+                          const next = [...imageAlts]
+                          next[i] = e.target.value
+                          setImageAlts(next)
+                        }}
+                        placeholder={`New image ${existingImageUrls.length + i + 1} alt text…`}
+                        maxLength={200}
+                        className="flex-1 px-3 py-2 border border-border bg-background text-foreground rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Meal Type</label>
-            <select
-              value={mealType}
-              onChange={(e) => setMealType(e.target.value as MealType)}
-              className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="breakfast">Breakfast</option>
-              <option value="lunch">Lunch</option>
-              <option value="dinner">Dinner</option>
-              <option value="snack">Snack</option>
-            </select>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Meal Type
+              <span className="ml-2 text-xs text-muted-foreground font-normal">
+                pick one or more (frittata = breakfast + lunch, salad = lunch + dinner)
+              </span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(mt => (
+                <button
+                  type="button"
+                  key={mt}
+                  onClick={() => toggleMealType(mt)}
+                  className={`px-3 py-1 rounded-full text-sm font-medium capitalize transition-colors ${
+                    mealTypes.includes(mt)
+                      ? 'bg-primary text-white'
+                      : 'bg-muted text-foreground hover:bg-gray-200'
+                  }`}
+                >
+                  {mt}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>

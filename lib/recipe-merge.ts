@@ -16,6 +16,7 @@ interface FirestoreDoc {
   recipeSteps?: string[]
   imageUrls?: string[]
   imageUrl?: string
+  imageAlts?: string[]
   videoUrl?: string
   videoThumbnailUrl?: string
   imageStoragePaths?: string[]
@@ -93,6 +94,7 @@ export function mergeRecipeWithMedia(
     videoStoragePath: firestoreDoc.videoStoragePath,
     imageUrl: imageUrls?.[0],
     imageStoragePath: imageStoragePaths?.[0],
+    ...(firestoreDoc.imageAlts?.length ? { imageAlts: firestoreDoc.imageAlts } : {}),
     ...(firestoreDoc.calories ? { calories: firestoreDoc.calories } : {}),
     ...(firestoreDoc.macros ? { macros: firestoreDoc.macros } : {}),
     ...(firestoreDoc.recipeSteps?.length ? { recipeSteps: firestoreDoc.recipeSteps } : {}),

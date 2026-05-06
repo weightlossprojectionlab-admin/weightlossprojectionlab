@@ -15,7 +15,12 @@ import toast from 'react-hot-toast'
 
 export default function CreateRecipePage() {
   const router = useRouter()
-  const { isAdmin } = useAdminAuth()
+  const { isAdmin, role } = useAdminAuth()
+  // Catalog writes (recipe creation) are platform-admin only — same lockdown
+  // as the Import Recipe button on /recipes. Moderator/support tiers and
+  // franchise admins must NOT create global catalog entries (prevents
+  // duplicate-recipe pollution from non-curating roles).
+  const canWriteCatalog = role === 'admin'
 
   const [saving, setSaving] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
@@ -214,6 +219,8 @@ export default function CreateRecipePage() {
         name: data.recipeName,
         description: data.description,
         mealType: data.mealType,
+        // Dual-write canonical mealTypes alongside legacy mealType.
+        mealTypes: data.mealTypes,
         prepTime: data.prepTime,
         servingSize: data.servingSize,
         dietaryTags: data.dietaryTags,
@@ -226,7 +233,10 @@ export default function CreateRecipePage() {
         cookingTips: data.cookingTips,
         status,
         allergens: [],
-        ...(existingImageUrls?.length ? { imageUrls: existingImageUrls } : {})
+        ...(existingImageUrls?.length ? { imageUrls: existingImageUrls } : {}),
+        // Per-image alt text — accessibility + SEO/AEO/AIO. Send always;
+        // create API filters via `imageAlts?.length` on the server.
+        imageAlts: data.imageAlts,
       }
 
       const response = await fetch('/api/admin/recipes', {
@@ -264,7 +274,9 @@ export default function CreateRecipePage() {
               'X-CSRF-Token': csrfToken,
               'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ imageUrls })
+            // Send imageAlts alongside the now-final imageUrls so the
+            // parallel arrays stay aligned for accessibility + SEO.
+            body: JSON.stringify({ imageUrls, imageAlts: data.imageAlts })
           })
         } catch (uploadErr) {
           logger.error('Image upload error:', uploadErr as Error)
@@ -285,13 +297,14 @@ export default function CreateRecipePage() {
     }
   }
 
-  if (!isAdmin) {
+  if (!canWriteCatalog) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
           <h2 className="text-xl font-bold text-red-900 dark:text-red-200 mb-2">Access Denied</h2>
           <p className="text-error-dark dark:text-red-300">
-            You do not have permission to create recipes.
+            Recipe creation is restricted to platform admins to keep the global
+            catalog clean. {isAdmin ? 'Your moderator/support role can edit and moderate recipes, but not create new ones.' : 'You do not have permission to create recipes.'}
           </p>
         </div>
       </div>

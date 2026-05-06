@@ -24,11 +24,16 @@ export default function RecipeIndexPage() {
   const searchParams = useSearchParams()
   const memberId = searchParams.get('memberId') // Support ?memberId= for personalization
 
-  const { isAdmin } = useAdminAuth()
+  const { isAdmin, role } = useAdminAuth()
   const { recipes, loading: recipesLoading } = useRecipes()
   const { items: inventoryItems } = useShopping() // Household inventory
 
   const isAdminMode = isAdmin
+  // Recipe-catalog writes (URL import, AI-generate, etc.) are platform-admin
+  // only. Moderator/support tiers and franchise admins must NOT see these
+  // entry points — multiple users importing the same recipe pollutes the
+  // global catalog with duplicates.
+  const canWriteCatalog = role === 'admin'
   const [selectedRecipeForEdit, setSelectedRecipeForEdit] = useState<MealSuggestion | null>(null)
   const [showImportModal, setShowImportModal] = useState(false)
   const [selectedMealType, setSelectedMealType] = useState<MealType | 'all'>('all')
@@ -255,7 +260,7 @@ export default function RecipeIndexPage() {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Browse 28 delicious, macro-friendly recipes. Track them automatically with our WPL-powered app.
           </p>
-          {isAdminMode && (
+          {canWriteCatalog && (
             <div className="mt-4 space-y-3">
               <div>
                 <button
@@ -348,6 +353,7 @@ export default function RecipeIndexPage() {
                 <div className="relative">
                   <RecipeImageCarousel
                     images={recipe.imageUrls}
+                    alts={recipe.imageAlts}
                     recipeName={recipe.name}
                     mealType={recipe.mealType}
                   />

@@ -95,9 +95,9 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
-    // Validate that we have between 1-4 files
-    if (files.length > 4) {
-      toast.error('You can upload a maximum of 4 images')
+    // Validate that we have between 1-5 files (1 hero + 4 carousel)
+    if (files.length > 5) {
+      toast.error('You can upload a maximum of 5 images (1 hero + 4 carousel)')
       return
     }
 
@@ -282,9 +282,9 @@ export function RecipeMediaUpload({ recipe, onClose, onSuccess }: RecipeMediaUpl
     const files = Array.from(e.dataTransfer.files)
     if (files.length === 0) return
 
-    // Validate that we have between 1-4 files
-    if (files.length > 4) {
-      toast.error('You can upload a maximum of 4 images')
+    // Validate that we have between 1-5 files (1 hero + 4 carousel)
+    if (files.length > 5) {
+      toast.error('You can upload a maximum of 5 images (1 hero + 4 carousel)')
       return
     }
 
