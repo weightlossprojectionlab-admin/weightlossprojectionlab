@@ -35,6 +35,49 @@ export function extractIngredientName(ingredient: string): string {
  * Check if ingredient matches inventory item
  * Uses keyword-based matching (brand-agnostic) for flexibility
  */
+/**
+ * Disambiguator words — when one ingredient has the word and the
+ * other doesn't, the products are different even though they share
+ * other tokens. Used to short-circuit the loose substring/word
+ * matching below before it produces false positives like:
+ *   - "creamy peanut butter" → "Sweet Cream Salted Butter" (BAD)
+ *   - "heavy cream" → "Sweet Cream Salted Butter" (BAD)
+ *   - "cream cheese" → "Cheese Product Slices" (BAD: cream missing)
+ *   - "coconut milk" → "Whole Milk" (BAD: dairy vs plant-based)
+ *
+ * Symmetric check — applies in both directions.
+ */
+const INGREDIENT_DISAMBIGUATORS = [
+  // Nuts / nut-butters (different from dairy butter)
+  'peanut', 'almond', 'cashew', 'walnut', 'pecan', 'hazelnut',
+  'pistachio', 'macadamia', 'brazil',
+  // Seed butters / pastes
+  'sunflower', 'pumpkin', 'sesame', 'tahini',
+  // Plant-based dairy alternatives
+  'coconut', 'oat', 'soy', 'rice', 'hemp', 'flax',
+  // Cream / dairy modifiers (heavy cream ≠ salted butter ≠ ice cream)
+  'heavy', 'whipping', 'sour', 'whipped', 'half-and-half',
+  // Cheese family disambiguators
+  'cream', 'cottage', 'cheddar', 'mozzarella', 'parmesan', 'feta',
+  'swiss', 'ricotta', 'blue', 'brie', 'goat',
+  // Common produce confusables
+  'cherry', 'roma', 'beefsteak', 'grape',
+]
+
+function hasIncompatibleDisambiguator(a: string, b: string): boolean {
+  // Tokenize on non-letter boundaries so "creamy" and "cream" count
+  // as the same token base. We could stem more, but lowercase split-
+  // and-substring catches the common cooking-name patterns.
+  const aTokens = a.toLowerCase().split(/[^a-z]+/).filter(Boolean)
+  const bTokens = b.toLowerCase().split(/[^a-z]+/).filter(Boolean)
+  for (const word of INGREDIENT_DISAMBIGUATORS) {
+    const aHas = aTokens.some((t) => t === word || t.startsWith(word))
+    const bHas = bTokens.some((t) => t === word || t.startsWith(word))
+    if (aHas !== bHas) return true
+  }
+  return false
+}
+
 export function matchIngredientToItem(
   ingredientText: string,
   inventoryItem: ShoppingItem
@@ -42,6 +85,14 @@ export function matchIngredientToItem(
   const ingredientName = extractIngredientName(ingredientText)
   const itemName = inventoryItem.productName.toLowerCase()
   const category = inventoryItem.category
+
+  // Disambiguator pre-check — short-circuit before ANY substring or
+  // token match attempt. If the ingredient says "peanut butter" and
+  // the inventory item is "Sweet Cream Salted Butter", they're not
+  // the same product even though both contain the word "butter".
+  if (hasIncompatibleDisambiguator(ingredientName, itemName)) {
+    return false
+  }
 
   // Direct keyword match (ignore brand)
   if (itemName.includes(ingredientName) || ingredientName.includes(itemName)) {
@@ -165,6 +216,13 @@ export function getMatchConfidence(
 ): number {
   const ingredientName = extractIngredientName(ingredientText)
   const itemName = inventoryItem.productName.toLowerCase()
+
+  // Same disambiguator pre-check as matchIngredientToItem.
+  // Prevents findBestMatch from giving high confidence to items
+  // that share tokens but aren't the same product class.
+  if (hasIncompatibleDisambiguator(ingredientName, itemName)) {
+    return 0
+  }
 
   // Exact match
   if (ingredientName === itemName) {
