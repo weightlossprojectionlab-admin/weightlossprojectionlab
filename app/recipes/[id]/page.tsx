@@ -54,6 +54,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const description = `${recipe.description} - ${recipe.calories} calories, ${recipe.macros?.protein ?? 0}g protein, ready in ${recipe.prepTime} minutes.`
 
+  // Hero image is imageUrls[0] (the same one rendered as the recipe
+  // hero). Don't hard-code width/height — these images come from
+  // mixed sources (Unsplash, admin uploads) with varying aspect
+  // ratios; OG crawlers detect dimensions on fetch.
+  const heroImage = recipe.imageUrls?.[0]
+  const heroAlt = recipe.imageAlts?.[0]?.trim() || recipe.name
+  const canonicalUrl = `/recipes/${recipe.id}`
+
   return {
     title: `${recipe.name} Recipe | Weight Loss Project Lab`,
     description,
@@ -65,16 +73,28 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       `${recipe.mealType} recipe`,
       'meal prep'
     ].join(', '),
+    // Per-recipe canonical overrides the root layout's site-level
+    // canonical so each recipe URL self-references (avoids dupe-content
+    // signal to search engines when the recipe is reachable via filters).
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title: recipe.name,
       description,
       type: 'article',
-      url: `/recipes/${recipe.id}`,
+      url: canonicalUrl,
+      siteName: 'Weight Loss Project Lab',
+      images: heroImage
+        ? [{ url: heroImage, alt: heroAlt }]
+        : undefined,
+      tags: recipe.dietaryTags,
     },
     twitter: {
       card: 'summary_large_image',
       title: recipe.name,
       description,
+      images: heroImage ? [heroImage] : undefined,
     },
   }
 }
