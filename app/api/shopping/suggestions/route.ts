@@ -15,6 +15,7 @@ import type {
   ProductCategory
 } from '@/types/shopping'
 import type { PatientProfile } from '@/types/medical'
+import { ShoppingSuggestionsResponseSchema } from '@/lib/validations/shopping'
 
 // Initialize Gemini AI (server-side only)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
@@ -266,9 +267,26 @@ async function generateAISuggestions(
     const response = await result.response
     const text = response.text()
 
-    const aiResponse = JSON.parse(text)
+    const aiResponseRaw = JSON.parse(text)
 
-    const suggestions: HealthBasedSuggestion[] = aiResponse.suggestions.map((s: any) => ({
+    // Runtime schema gate. The Gemini responseSchema config above
+    // tells the model what shape to emit, but malformed outputs
+    // slip through under load. These suggestions are derived from
+    // PHI inputs (vitals, conditions, allergies) — bad shapes pollute
+    // the patient-facing UI as if they were AI-validated guidance.
+    const validated = ShoppingSuggestionsResponseSchema.safeParse(aiResponseRaw)
+    if (!validated.success) {
+      logger.warn('[AI Shopping API] Suggestions output failed schema validation', {
+        issueCount: validated.error.issues.length,
+        issues: validated.error.issues.slice(0, 5).map((i) => ({
+          path: i.path.join('.'),
+          code: i.code,
+        })),
+      })
+      return []
+    }
+
+    const suggestions: HealthBasedSuggestion[] = validated.data.suggestions.map((s) => ({
       id: `suggestion-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       productName: s.productName,
       category: mapToProductCategory(s.category),

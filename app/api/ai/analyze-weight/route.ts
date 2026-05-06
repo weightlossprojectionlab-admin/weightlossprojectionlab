@@ -11,6 +11,7 @@ import { adminAuth } from '@/lib/firebase-admin'
 import { aiRateLimit, dailyRateLimit, getRateLimitHeaders } from '@/lib/utils/rate-limit'
 import { ErrorHandler } from '@/lib/utils/error-handler'
 import { errorResponse } from '@/lib/api-response'
+import { WeightScaleOCRResponseSchema } from '@/lib/validations/weight-logs'
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -101,12 +102,12 @@ Analyze the image now:`
     const text = response.text()
 
     // Parse JSON response
-    let analysis
+    let parsedRaw
     try {
       // Extract JSON from markdown code blocks if present
       const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/)
       const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text
-      analysis = JSON.parse(jsonStr.trim())
+      parsedRaw = JSON.parse(jsonStr.trim())
     } catch (parseError) {
     return errorResponse(parseError, {
       route: '/api/ai/analyze-weight',
@@ -114,13 +115,25 @@ Analyze the image now:`
     })
   }
 
-    // Validate the response structure
-    if (!analysis || typeof analysis.weight === 'undefined') {
+    // Runtime schema gate. Bare typeof checks let through bad shapes
+    // (e.g., weight as a string, missing readable, confidence > 100).
+    // Reject malformed Gemini output before it becomes a patient
+    // weight reading.
+    const validated = WeightScaleOCRResponseSchema.safeParse(parsedRaw)
+    if (!validated.success) {
+      logger.warn('[AI Weight] OCR output failed schema validation', {
+        issueCount: validated.error.issues.length,
+        issues: validated.error.issues.slice(0, 5).map((i) => ({
+          path: i.path.join('.'),
+          code: i.code,
+        })),
+      })
       return NextResponse.json(
-        { success: false, error: 'Invalid response format from AI', analysis },
-        { status: 500 }
+        { success: false, error: 'Invalid response format from AI' },
+        { status: 502 }
       )
     }
+    const analysis = validated.data
 
     // Check if scale was readable
     if (!analysis.readable || analysis.error) {
@@ -131,8 +144,9 @@ Analyze the image now:`
       }, { status: 400 })
     }
 
-    // Validate weight is in reasonable range
-    const weight = parseFloat(analysis.weight)
+    // Validate weight is in reasonable range. (analysis.weight is
+    // already typed as `number` post-Zod; no parseFloat needed.)
+    const weight = analysis.weight
     const unit = analysis.unit || expectedUnit || 'lbs'
 
     // Convert to pounds for validation

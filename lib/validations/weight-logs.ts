@@ -40,6 +40,28 @@ export const WeightLogSchema = z.object({
 export type WeightLog = z.infer<typeof WeightLogSchema>
 
 // ============================================
+// WEIGHT-SCALE OCR — GEMINI VISION OUTPUT SCHEMA
+// ============================================
+//
+// Runtime gate at the JSON.parse boundary in
+// /api/ai/analyze-weight. The Gemini prompt requests this exact
+// shape, but vision-model retries / load conditions occasionally
+// emit malformed objects. Parsing them as patient weight readings
+// is a clinical-data-quality risk.
+
+export const WeightScaleOCRResponseSchema = z.object({
+  weight: z.number(),
+  unit: z.enum(['lbs', 'kg']),
+  confidence: z.number().min(0).max(100),
+  scaleType: z.string().optional(),
+  readable: z.boolean(),
+  // Some Gemini outputs use null, some omit; accept both.
+  error: z.string().nullable().optional(),
+})
+
+export type WeightScaleOCRResponse = z.infer<typeof WeightScaleOCRResponseSchema>
+
+// ============================================
 // QUERY PARAMETERS SCHEMA
 // ============================================
 
