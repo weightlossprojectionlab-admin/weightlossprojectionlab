@@ -27,6 +27,8 @@ import { ExpirationPicker } from '@/components/shopping/ExpirationPicker'
 import { RecipeLinks } from '@/components/shopping/RecipeLinks'
 import { QuantityAdjustModal } from '@/components/shopping/QuantityAdjustModal'
 import { RenameProductModal } from '@/components/shopping/RenameProductModal'
+import { InventoryItemEditModal } from '@/components/inventory/InventoryItemEditModal'
+import type { ShoppingItem } from '@/types/shopping'
 import { simplifyProduct } from '@/lib/openfoodfacts-api'
 import { lookupBarcodeWithCache } from '@/lib/cached-product-lookup'
 import { addManualShoppingItem } from '@/lib/shopping-operations'
@@ -92,6 +94,10 @@ function KitchenInventoryContent() {
     containerUnit?: import('@/types/shopping').QuantityUnit
     remainingAmount?: number
   } | null>(null)
+
+  // Tabbed item editor — Details (working) + UPC/Image (stubs deep-linking
+  // to /admin/barcodes). See components/inventory/InventoryItemEditModal.tsx.
+  const [editItem, setEditItem] = useState<ShoppingItem | null>(null)
 
   /**
    * Rename modal state — used both by the inline pencil on existing rows
@@ -572,6 +578,14 @@ function KitchenInventoryContent() {
                       <div className="flex flex-col gap-2">
                         <button
                           type="button"
+                          onClick={() => setEditItem(item)}
+                          className="px-3 py-1 text-xs bg-muted text-foreground rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                          title="Edit category, quantity, unit"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => {
                             setQtyModal({
                               mode: 'used-up',
@@ -813,6 +827,26 @@ function KitchenInventoryContent() {
           />
           )
         })()}
+
+        {/* Tabbed item editor — Details (working) / UPC + Image (stubs that
+            deep-link to /admin/barcodes per the consolidated deferred memory). */}
+        {editItem && (
+          <InventoryItemEditModal
+            item={editItem}
+            isOpen={true}
+            onClose={() => setEditItem(null)}
+            onSave={async (updates) => {
+              try {
+                await updateItem(editItem.id, updates)
+                toast.success('Item updated')
+              } catch (error: any) {
+                logger.error('[Inventory] Item edit failed', error as Error, { itemId: editItem.id })
+                toast.error(`Failed: ${error?.message || 'Unknown error'}`)
+                throw error
+              }
+            }}
+          />
+        )}
       </div>
     </AuthGuard>
   )

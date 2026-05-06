@@ -377,6 +377,11 @@ export function formatQuantityDisplay(quantity: number, unit?: import('@/types/s
     return quantity === 1 ? '1 item' : `${quantity} items`
   }
 
+  // Retail-standard "each" — abbreviated to "ea" in display.
+  if (unit === 'each') {
+    return `${quantity} ea`
+  }
+
   // Handle pluralization for count-based units
   const countUnits = ['bunch', 'head', 'bag', 'package', 'can', 'bottle', 'container']
   if (countUnits.includes(unit) && quantity !== 1) {

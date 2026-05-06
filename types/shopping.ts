@@ -62,6 +62,7 @@ export type QuantityUnit =
   | 'pt'           // Pints
   // Count
   | 'count'        // Individual items (e.g., "3 apples")
+  | 'each'         // Each — retail single unit (e.g., "1 ea")
   | 'bunch'        // Bunch (e.g., bananas, herbs)
   | 'head'         // Head (e.g., lettuce)
   | 'bag'          // Bag
