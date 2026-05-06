@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -17,6 +17,7 @@ import { useInventory } from '@/hooks/useInventory'
 import { useShopping } from '@/hooks/useShopping'
 import { checkIngredientsWithQuantities, filterRecipeRelevantItems } from '@/lib/ingredient-matcher'
 import { convertUnit } from '@/lib/unit-conversion'
+import { playRecipeDoneChime } from '@/lib/cook-chime'
 
 function CookingSessionContent() {
   const router = useRouter()
@@ -27,7 +28,6 @@ function CookingSessionContent() {
   const [loading, setLoading] = useState(true)
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set())
   const [showCompletionModal, setShowCompletionModal] = useState(false)
-  const completionAudioRef = useRef<HTMLAudioElement | null>(null)
 
   // Inventory hook for checking what we have
   const { allItems: inventoryItems } = useInventory()
@@ -68,11 +68,8 @@ function CookingSessionContent() {
       // before opening the modal — most cooks aren't looking at
       // the screen when they finish the last step. They need
       // an audible/haptic signal that the recipe is done.
-      if (completionAudioRef.current) {
-        completionAudioRef.current.play().catch(err =>
-          logger.debug('Recipe-complete audio failed:', err),
-        )
-      }
+      // Three-note ascending major triad (synthesized).
+      playRecipeDoneChime()
       // Distinct vibration pattern for recipe completion — a
       // longer celebration buzz vs the triple-pulse used by step
       // timers. Lets the cook recognize the alert by feel alone.
@@ -279,10 +276,6 @@ function CookingSessionContent() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-100">
-      {/* Recipe-completion audio. Triggered when the user finishes
-          the final step. Distinct from CookingTimer's per-step
-          chime; this fires once per cook. */}
-      <audio ref={completionAudioRef} src="/notification.mp3" preload="auto" />
       <PageHeader
         title={`${actionParticiple}: ${session.recipeName}`}
         subtitle={`Step ${session.currentStep + 1} of ${session.totalSteps}`}

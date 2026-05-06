@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { formatDuration } from '@/lib/recipe-timer-parser'
-import { logger } from '@/lib/logger'
+import { playStepDoneChime, playWarningChime } from '@/lib/cook-chime'
 
 interface CookingTimerProps {
   duration: number // Duration in seconds
@@ -15,7 +15,6 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
   const [timeLeft, setTimeLeft] = useState(duration)
   const [isRunning, setIsRunning] = useState(autoStart)
   const [isCompleted, setIsCompleted] = useState(false)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   // One-minute heads-up: fires once when timeLeft crosses the 60s
   // mark, so the cook gets a "come back to the kitchen" signal
   // before food finishes. Ref-based so re-renders don't reset it.
@@ -51,9 +50,7 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
         // timer doesn't need a "1 min left" warning).
         if (prev === 61 && !warned1MinRef.current && duration > 60) {
           warned1MinRef.current = true
-          if (audioRef.current) {
-            audioRef.current.play().catch(err => logger.debug('1-min warn audio failed:', err))
-          }
+          playWarningChime()
           // Lighter haptic than completion — single pulse, signals
           // "heads up" not "done." Cook recognizes the difference
           // by feel.
@@ -72,10 +69,8 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
           setIsRunning(false)
           setIsCompleted(true)
 
-          // Play notification sound
-          if (audioRef.current) {
-            audioRef.current.play().catch(err => logger.debug('Audio play failed:', err))
-          }
+          // Two-note ascending chime (synthesized via Web Audio).
+          playStepDoneChime()
 
           // Haptic feedback — most cooks aren't looking at the
           // screen when a step timer fires. Buzz the phone so they
@@ -147,9 +142,6 @@ export function CookingTimer({ duration, onComplete, autoStart = false, stepText
 
   return (
     <div className="bg-gradient-to-r from-primary-light to-blue-50 border-2 border-primary rounded-lg p-6">
-      {/* Hidden audio element for notification sound */}
-      <audio ref={audioRef} src="/notification.mp3" preload="auto" />
-
       <div className="text-center mb-4">
         {/* Timer Display */}
         <div className={`text-5xl font-bold mb-2 ${isCompleted ? 'text-success' : getTimerColor()}`}>
