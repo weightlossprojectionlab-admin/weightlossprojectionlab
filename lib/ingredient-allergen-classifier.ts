@@ -23,10 +23,23 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 import type { AllergyTag } from './meal-suggestions'
 import { logger } from './logger'
+import { logGeminiInvocation } from './gemini-invocations'
+import { ALLERGY_TAG_VALUES } from './allergen-pack'
 
-const ALLERGY_TAG_VALUES: AllergyTag[] = [
-  'dairy', 'gluten', 'nuts', 'shellfish', 'soy', 'eggs', 'fish',
-]
+// Re-export the pure pack/unpack utilities from allergen-pack for
+// backwards compat with existing server-route imports. The actual
+// definitions live in lib/allergen-pack.ts (a server-import-free module
+// that client code can safely use without dragging firebase-admin into
+// the browser bundle).
+export {
+  ALLERGY_TAG_VALUES,
+  needsClassification,
+  packIngredientAllergens,
+  unpackIngredientAllergens,
+} from './allergen-pack'
+export type { IngredientAllergenEntry } from './allergen-pack'
+
+const MODEL_ID = 'gemini-2.5-flash'
 
 // Schema follows the @google/generative-ai shape. Inner items use
 // SchemaType.STRING without enum constraint (the SDK's EnumStringSchema
@@ -83,10 +96,12 @@ export async function classifyIngredientAllergens(
     throw new Error('[ingredient-allergen-classifier] GEMINI_API_KEY missing')
   }
 
+  const startedAt = Date.now()
+
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: MODEL_ID,
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: classifierSchema,
@@ -166,10 +181,22 @@ The outer array MUST have exactly ${ingredients.length} entries (one per ingredi
       return Array.from(new Set(tags))
     })
 
+    const taggedCount = out.filter((tags) => tags.length > 0).length
+
     logger.info('[ingredient-allergen-classifier] classified', {
       ingredientCount: ingredients.length,
-      taggedCount: out.filter((tags) => tags.length > 0).length,
+      taggedCount,
       recipeAllergens,
+    })
+
+    await logGeminiInvocation({
+      fnName: 'classifyIngredientAllergens',
+      model: MODEL_ID,
+      latencyMs: Date.now() - startedAt,
+      success: true,
+      inputSize: ingredients.length,
+      outputSize: taggedCount,
+      metadata: { recipeAllergens },
     })
 
     return out
@@ -178,64 +205,24 @@ The outer array MUST have exactly ${ingredients.length} entries (one per ingredi
       '[ingredient-allergen-classifier] classification failed',
       err as Error,
     )
+
+    await logGeminiInvocation({
+      fnName: 'classifyIngredientAllergens',
+      model: MODEL_ID,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+      inputSize: ingredients.length,
+      metadata: { recipeAllergens },
+    })
+
     throw err
   }
 }
 
-/**
- * Returns true when the cached `ingredientAllergens` is missing or
- * out-of-sync with the current `ingredients` (length mismatch =
- * stale = recompute).
- */
-export function needsClassification(
-  ingredients: string[] | undefined,
-  ingredientAllergens: AllergyTag[][] | undefined,
-): boolean {
-  if (!ingredients?.length) return false
-  if (!ingredientAllergens) return true
-  return ingredientAllergens.length !== ingredients.length
-}
-
-/**
- * Firestore disallows nested arrays. Pack the per-ingredient
- * allergen list into an array of objects for persistence:
- *   [['gluten'], ['dairy'], []]
- *     ↓
- *   [{ tags: ['gluten'] }, { tags: ['dairy'] }, { tags: [] }]
- *
- * Pair with `unpackIngredientAllergens` on read.
- */
-export interface IngredientAllergenEntry {
-  tags: AllergyTag[]
-}
-
-export function packIngredientAllergens(
-  tags: AllergyTag[][],
-): IngredientAllergenEntry[] {
-  return tags.map((t) => ({ tags: t }))
-}
-
-export function unpackIngredientAllergens(
-  stored: unknown,
-): AllergyTag[][] | undefined {
-  if (!Array.isArray(stored)) return undefined
-  return stored.map((entry) => {
-    // Idempotent: tolerate already-unpacked input (entry is an array
-    // of strings) so callers like RecipeModal can normalize defensively
-    // even when an upstream read path didn't unwrap.
-    if (Array.isArray(entry)) {
-      return (entry as unknown[]).filter(
-        (t): t is AllergyTag =>
-          typeof t === 'string' && (ALLERGY_TAG_VALUES as string[]).includes(t),
-      )
-    }
-    // Packed shape: entry is { tags: [...] } as persisted by
-    // packIngredientAllergens.
-    const tags = (entry as { tags?: unknown })?.tags
-    if (!Array.isArray(tags)) return []
-    return (tags as unknown[]).filter(
-      (t): t is AllergyTag =>
-        typeof t === 'string' && (ALLERGY_TAG_VALUES as string[]).includes(t),
-    )
-  })
-}
+// needsClassification, packIngredientAllergens, unpackIngredientAllergens,
+// IngredientAllergenEntry, and ALLERGY_TAG_VALUES live in lib/allergen-pack.ts
+// and are re-exported above. Don't add their definitions back here — the
+// pure utilities can't depend on this file (which imports gemini-invocations
+// → firebase-admin → child_process), or client components break at build
+// time with 'Module not found: Can't resolve "child_process"'.
