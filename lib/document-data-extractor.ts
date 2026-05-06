@@ -10,7 +10,6 @@
  *   3. Report integration (health-summary-generator.ts) → health reports
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { logger } from '@/lib/logger'
 import { classifyDocumentType } from '@/lib/ocr-service'
 import type {
@@ -20,8 +19,7 @@ import type {
 } from '@/types/medical'
 import { DocumentExtractionResponseSchema } from '@/lib/validations/medical'
 import { checkLabPlausibility } from '@/lib/lab-plausibility'
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+import { generateGeminiJSON, validateGeminiConfig } from '@/lib/ai/gemini-client'
 
 /**
  * Extract structured data from raw OCR text using Gemini AI.
@@ -41,7 +39,8 @@ export async function extractStructuredData(
     return null
   }
 
-  if (!process.env.GEMINI_API_KEY) {
+  const configCheck = validateGeminiConfig()
+  if (!configCheck.valid) {
     logger.error('[DocumentExtractor] GEMINI_API_KEY not configured')
     return null
   }
@@ -57,45 +56,22 @@ export async function extractStructuredData(
       classificationConfidence: classification.confidence
     })
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        temperature: 0.1,
-        topK: 32,
-        topP: 1,
-        maxOutputTokens: 4096,
-        responseMimeType: 'application/json'
-      }
+    const prompt = buildExtractionPrompt(ocrText, docTypeHint)
+
+    // T5.14 — shared client. maxOutputTokens:4096 needed for long
+    // medical documents (lab panels with 30+ analytes). Throws on
+    // any failure (missing key, network, JSON.parse, Zod) -- caught
+    // below to map to the existing null fallback.
+    const validated = await generateGeminiJSON({
+      fnName: 'extractStructuredData',
+      prompt,
+      validateSchema: DocumentExtractionResponseSchema,
+      maxOutputTokens: 4096,
+      inputSize: ocrText.length,
+      metadata: { docTypeHint },
     })
 
-    const prompt = buildExtractionPrompt(ocrText, docTypeHint)
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const jsonText = response.text()
-
-    const parsedRaw = JSON.parse(jsonText)
-
-    // Runtime schema gate. Output flows into patient labResults /
-    // medications / diagnoses — high-PHI risk if a malformed shape
-    // (e.g., labResults as an object instead of array, value as a
-    // bare null, medications missing name) sneaks past the existing
-    // manual coercion. On failure: log structural metadata only and
-    // return null (matches the catch-block fallback).
-    const validated = DocumentExtractionResponseSchema.safeParse(parsedRaw)
-    if (!validated.success) {
-      logger.warn('[DocumentExtractor] Output failed schema validation', {
-        textLength: ocrText.length,
-        docTypeHint,
-        issueCount: validated.error.issues.length,
-        issues: validated.error.issues.slice(0, 5).map((i) => ({
-          path: i.path.join('.'),
-          code: i.code,
-        })),
-      })
-      return null
-    }
-
-    const structured = normalizeExtractionResult(validated.data, classification.confidence)
+    const structured = normalizeExtractionResult(validated, classification.confidence)
 
     logger.info('[DocumentExtractor] Extraction complete', {
       documentType: structured.documentType,

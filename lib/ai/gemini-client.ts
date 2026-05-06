@@ -94,6 +94,9 @@ export interface GenerateGeminiJSONOpts<T> {
   validateSchema?: ZodSchema<T>
   /** Sampling temperature. Default 0.1 for medical/structured outputs. */
   temperature?: number
+  /** Cap on response token count. Default unset (uses Gemini's default). Long-form
+   *  document extraction needs ~4096; structured tag classification needs ~512. */
+  maxOutputTokens?: number
   /** Function-specific input scale (chars, item count, etc.) — recorded in the invocation log. */
   inputSize?: number
   /** Function-specific structural metadata for the invocation log. MUST NOT contain PHI. */
@@ -124,6 +127,7 @@ export async function generateGeminiJSON<T = unknown>(
     geminiSchema,
     validateSchema,
     temperature = 0.1,
+    maxOutputTokens,
     inputSize,
     metadata,
   } = opts
@@ -137,6 +141,7 @@ export async function generateGeminiJSON<T = unknown>(
       generationConfig: {
         responseMimeType: 'application/json',
         ...(geminiSchema ? { responseSchema: geminiSchema } : {}),
+        ...(maxOutputTokens ? { maxOutputTokens } : {}),
         temperature,
       },
     })

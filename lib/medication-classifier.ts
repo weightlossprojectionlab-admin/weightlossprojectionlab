@@ -11,12 +11,11 @@
  * - Maps multi-condition medications (e.g., Metformin = T2D + PCOS)
  */
 
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
+import { SchemaType } from '@google/generative-ai'
 import { logger } from '@/lib/logger'
 import type { ScannedMedication } from './medication-lookup'
 import { MedicationClassifierResponseSchema } from '@/lib/validations/medication'
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+import { generateGeminiJSON } from '@/lib/ai/gemini-client'
 
 export interface MedicationConditionMapping {
   medicationName: string
@@ -69,15 +68,6 @@ export async function classifyMedicationConditions(
 
     logger.info('[Medication Classifier] Classifying medications', {
       count: medications.length
-    })
-
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: medicationClassificationSchema,
-        temperature: 0.2 // Low temperature for consistent medical classification
-      }
     })
 
     // Build medication list for prompt
@@ -155,37 +145,20 @@ Return confidence scores:
 
 For each medication in the list above, return its classification.`
 
-    const result = await model.generateContent(prompt)
-    const response = result.response.text()
-    const parsedRaw = JSON.parse(response)
+    // T5.14 — shared client owns SDK init, JSON.parse, Zod validate,
+    // and gemini_invocations log. Throws on Zod failure / network /
+    // missing key; the catch maps to the existing per-med empty
+    // entries fallback.
+    const validated = await generateGeminiJSON({
+      fnName: 'classifyMedicationConditions',
+      prompt,
+      geminiSchema: medicationClassificationSchema,
+      validateSchema: MedicationClassifierResponseSchema,
+      temperature: 0.2,
+      inputSize: medications.length,
+    })
 
-    // Runtime schema gate. Classifications drive condition suggestions
-    // surfaced on the patient profile — a malformed shape (e.g.,
-    // likelyConditions as a string instead of array, confidence
-    // missing) silently turned into empty/wrong condition pickers
-    // for caregivers. Now rejected with structural-only logging.
-    const validated = MedicationClassifierResponseSchema.safeParse(parsedRaw)
-    if (!validated.success) {
-      logger.warn('[Medication Classifier] Output failed schema validation', {
-        medicationCount: medications.length,
-        issueCount: validated.error.issues.length,
-        issues: validated.error.issues.slice(0, 5).map((i) => ({
-          path: i.path.join('.'),
-          code: i.code,
-        })),
-      })
-      // Fall through to the catch-equivalent: empty per-med entries
-      // so callers get the same "no classification available" shape.
-      return medications.map(med => ({
-        medicationName: med.name,
-        likelyConditions: [],
-        confidence: 0,
-        reasoning: 'AI classification output malformed',
-        isPrimaryTreatment: false
-      }))
-    }
-
-    const classifications: MedicationConditionMapping[] = validated.data.classifications
+    const classifications: MedicationConditionMapping[] = validated.classifications
 
     logger.info('[Medication Classifier] Classification complete', {
       medicationCount: medications.length,
