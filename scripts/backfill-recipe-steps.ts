@@ -46,9 +46,12 @@ async function main() {
 
   const candidates = MEAL_SUGGESTIONS.filter((r) => {
     if (ONLY_ID && r.id !== ONLY_ID) return false
-    if (FORCE) return true
-    // Skip if the bundled source already has steps
+    // ALWAYS preserve hand-crafted hardcoded steps. Even with
+    // FORCE=1, we don't overwrite curated source-of-truth content
+    // with Gemini output — the bundled recipes whose source has
+    // steps (br001-br006 etc.) are hand-written and trusted.
     if (r.recipeSteps && r.recipeSteps.length > 0) return false
+    if (FORCE) return true
     // Skip if Firestore overlay already provides steps
     const overlay = overlayById.get(r.id)
     if (overlay?.recipeSteps?.length > 0) return false

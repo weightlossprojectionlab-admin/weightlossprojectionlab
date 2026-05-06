@@ -93,6 +93,30 @@ Write step-by-step cooking instructions that a home cook can follow. Be specific
 - Write an SEO-friendly description (2-3 sentences) that captures the essence of the recipe, includes key ingredients and cooking method, and is optimized for search engines and NLP indexing
 - Detect applicable dietary tags from: vegan, vegetarian, keto, paleo, gluten-free, dairy-free, high-protein, low-carb. Only include tags that genuinely apply based on the ingredients
 
+CRITICAL — quantity-agnostic step text (recipes scale to different
+serving sizes; instructions must work at any scale):
+- When referencing INGREDIENTS in step text, use generic terms like
+  "the eggs", "the chicken", "the potatoes", "the tomatoes",
+  "the salmon" — NOT specific quantities like "2 eggs", "1 lb chicken",
+  "3 potatoes", "the 4 tomatoes".
+- Readers cross-reference the ingredient list above the instructions,
+  which IS scaled to the chosen servings. Embedding "2 eggs" in step
+  text creates a contradiction at servings=2 (where the list says
+  "4 eggs") or servings=4 (list says "8 eggs"). The bug compounds
+  across the catalog: potatoes, tomatoes, chicken breasts, fillets,
+  slices, taco shells — anything quantified-and-countable.
+- DO keep specific numbers for values that DON'T scale with servings:
+  cooking times (10-12 minutes), oven temperatures (350°F), water
+  depth (1 inch above ingredients), pan size, salt-for-boiling-water
+  (1 teaspoon), and similar process measurements.
+- Examples:
+  GOOD: "Place the eggs in a single layer in a saucepan."
+   BAD: "Place the 2 eggs in a single layer in a saucepan."
+  GOOD: "Slice the chicken thinly against the grain."
+   BAD: "Slice 4 oz lean beef thinly against the grain."
+  GOOD: "Add the potatoes to the boiling water; cook 12-15 min."
+   BAD: "Add 3 potatoes to the boiling water; cook 12-15 min."
+
 Return a JSON object with this exact structure:
 {
   "recipeSteps": ["step 1", "step 2", ...],
