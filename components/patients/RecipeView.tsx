@@ -707,6 +707,7 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
           userDietaryPreferences={memberProfile?.dietaryRestrictions}
           userAllergies={memberProfile?.foodAllergies}
           patientId={patientId}
+          patientName={memberProfile?.name}
         />
       )}
     </div>

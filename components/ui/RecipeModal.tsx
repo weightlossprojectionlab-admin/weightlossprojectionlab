@@ -75,9 +75,24 @@ interface RecipeModalProps {
   userDietaryPreferences?: string[]
   userAllergies?: string[]
   patientId?: string
+  /**
+   * The patient's display name. When present, allergen-conflict
+   * copy reads "...flagged in Steve's allergy profile" instead of
+   * the generic "the eater's allergy profile". Falls back to the
+   * generic copy when omitted (e.g., in non-patient contexts).
+   */
+  patientName?: string
 }
 
-export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreferences, userAllergies, patientId }: RecipeModalProps) {
+export function RecipeModal({
+  suggestion,
+  isOpen,
+  onClose,
+  userDietaryPreferences,
+  userAllergies,
+  patientId,
+  patientName,
+}: RecipeModalProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'recipe' | 'shopping'>('recipe')
   const [showShareMenu, setShowShareMenu] = useState(false)
@@ -115,9 +130,42 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
   // safe to recompute. When the recipe carries no allergens or
   // the eater has no foodAllergies set, returns []. Drives the
   // Cook Now gate + the warning panel below.
+  // Effective allergen set — derived from the recipe's per-ingredient
+  // classification, MINUS any tags that come from ingredients the user
+  // has substituted away. Substitutions in lib/ingredient-substitutions
+  // already filter to allergy-safe alternatives, so a swap means that
+  // ingredient no longer contributes the original allergen.
+  //
+  // Without this re-derivation, the Allergen Conflict panel would still
+  // say "contains milk" even after the user swapped all the dairy
+  // ingredients to dairy-free alternatives — fighting the user's intent
+  // and forcing them to "pick a different recipe" when they've already
+  // resolved the conflict in place.
+  const effectiveAllergenSet = useMemo(() => {
+    const unpacked = unpackIngredientAllergens(suggestion.ingredientAllergens)
+    if (!unpacked?.length) {
+      // No per-ingredient classification — fall back to the recipe-
+      // level allergen list (substitutions can't selectively clear
+      // individual tags without ingredient-level resolution).
+      return suggestion.allergens || []
+    }
+    const tagSet = new Set<string>()
+    suggestion.ingredients.forEach((_, idx) => {
+      if (swappedIngredients.has(idx)) return
+      const tags = unpacked[idx]
+      if (tags) tags.forEach((t) => tagSet.add(t))
+    })
+    return Array.from(tagSet) as typeof suggestion.allergens
+  }, [
+    suggestion.ingredients,
+    suggestion.ingredientAllergens,
+    suggestion.allergens,
+    swappedIngredients,
+  ])
+
   const allergenMatches = useMemo(
-    () => findAllergenOverlap(suggestion.allergens, userAllergies),
-    [suggestion.allergens, userAllergies]
+    () => findAllergenOverlap(effectiveAllergenSet, userAllergies),
+    [effectiveAllergenSet, userAllergies]
   )
   const hasAllergenConflict = allergenMatches.length > 0
 
@@ -182,6 +230,10 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
     )
     if (!ingredientAllergens?.length || !userAllergies?.length) return map
     suggestion.ingredients.forEach((_, idx) => {
+      // Swapped → alternative is allergy-safe per substitution
+      // suggestions filter; don't render the original allergen flag
+      // on a row whose ingredient is no longer the original.
+      if (swappedIngredients.has(idx)) return
       const tags = ingredientAllergens[idx]
       if (!tags?.length) return
       const overlaps = findAllergenOverlap(tags, userAllergies)
@@ -190,7 +242,12 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
       }
     })
     return map
-  }, [suggestion.ingredients, suggestion.ingredientAllergens, userAllergies])
+  }, [
+    suggestion.ingredients,
+    suggestion.ingredientAllergens,
+    userAllergies,
+    swappedIngredients,
+  ])
 
   // Prevent duplicate session creation
   const sessionCreationRef = useRef(false)
@@ -903,14 +960,50 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                       <strong>
                         {allergenMatches.map((m) => m.userTerm).join(', ')}
                       </strong>{' '}
-                      — flagged in the eater&apos;s allergy profile.
+                      — flagged in{' '}
+                      <strong>
+                        {patientName ? `${patientName}'s` : 'the eater’s'}
+                      </strong>{' '}
+                      allergy profile.
                     </p>
                     <p className="text-xs text-error mb-3">
-                      Cook Now and shopping-list actions are blocked
-                      for this eater. Consider a substitution from the
-                      ingredient list, or pick a different recipe.
+                      To proceed, swap the conflicting ingredients
+                      below for allergen-safe alternatives. Once every
+                      flagged item is substituted, Cook Now will
+                      unblock automatically.
                     </p>
-                    <label className="flex items-start gap-2 text-sm cursor-not-allowed text-muted-foreground opacity-60">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Find the first conflicting ingredient, expand
+                        // its substitution panel, and scroll the row
+                        // into view. If multiple conflicts, the user
+                        // can re-click after picking the first to walk
+                        // to the next.
+                        const firstConflictIdx = Array.from(
+                          perIngredientConflicts.keys(),
+                        ).sort((a, b) => a - b)[0]
+                        if (firstConflictIdx === undefined) return
+                        setExpandedIngredient(firstConflictIdx)
+                        // Defer scroll to next paint so the expand
+                        // animation has the row in DOM.
+                        setTimeout(() => {
+                          const row = document.querySelector(
+                            `[data-ingredient-idx="${firstConflictIdx}"]`,
+                          )
+                          if (row) {
+                            row.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'center',
+                            })
+                          }
+                        }, 100)
+                      }}
+                      className="w-full px-3 py-2 bg-error text-white rounded font-medium text-sm hover:opacity-90 transition-opacity mb-2"
+                    >
+                      Substitute conflicting ingredients
+                    </button>
+                    <label className="flex items-start gap-2 text-xs cursor-not-allowed text-muted-foreground opacity-60">
                       <input
                         type="checkbox"
                         checked={false}
@@ -919,7 +1012,9 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                         className="w-4 h-4 mt-0.5 rounded border-border cursor-not-allowed"
                       />
                       <span>
-                        Override unavailable — this eater is allergic.
+                        Override unavailable — {patientName || 'this eater'} is
+                        allergic. Substitute the conflicting ingredients
+                        instead.
                       </span>
                     </label>
                   </div>
@@ -1042,7 +1137,11 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     const hasIngredient = haveIngredients.has(idx)
 
                     return (
-                      <div key={idx} className="border border-border rounded-lg overflow-hidden">
+                      <div
+                        key={idx}
+                        data-ingredient-idx={idx}
+                        className="border border-border rounded-lg overflow-hidden"
+                      >
                         {/* Main Ingredient */}
                         <div className={`p-3 flex items-start ${isSwapped ? 'bg-primary-light dark:bg-purple-900/20' : ''} transition-colors`}>
                           {/* Checkbox - I have this */}
