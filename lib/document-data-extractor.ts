@@ -19,6 +19,7 @@ import type {
   ExtractedMedicationEntry
 } from '@/types/medical'
 import { DocumentExtractionResponseSchema } from '@/lib/validations/medical'
+import { checkLabPlausibility } from '@/lib/lab-plausibility'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
@@ -165,6 +166,40 @@ Rules:
 }
 
 /**
+ * Walk lab results and drop ones whose numeric value falls outside
+ * the plausibility bounds in lib/lab-plausibility.ts. Logs a sample
+ * of the drops (capped at 5) for telemetry. Caller should pass the
+ * already-shaped list (post-coercion to strings).
+ */
+function filterImplausibleLabs(shaped: LabResultEntry[]): LabResultEntry[] {
+  const samples: Array<{ testName: string; value: string; reason: string; matched?: string }> = []
+
+  const kept = shaped.filter((lr) => {
+    const check = checkLabPlausibility(lr.testName, lr.value)
+    if (check.inRange) return true
+    if (samples.length < 5) {
+      samples.push({
+        testName: lr.testName,
+        value: lr.value,
+        reason: check.reason ?? 'unknown',
+        matched: check.matchedKeyword,
+      })
+    }
+    return false
+  })
+
+  if (kept.length !== shaped.length) {
+    logger.warn('[DocumentExtractor] Dropped implausible lab results', {
+      droppedCount: shaped.length - kept.length,
+      keptCount: kept.length,
+      samples,
+    })
+  }
+
+  return kept
+}
+
+/**
  * Normalize the AI extraction result into the expected TypeScript interface.
  */
 function normalizeExtractionResult(
@@ -173,7 +208,7 @@ function normalizeExtractionResult(
 ): DocumentStructuredData {
   const documentType = parsed.documentType || 'other'
 
-  const labResults: LabResultEntry[] | undefined = parsed.labResults?.map((lr: any) => ({
+  const shapedLabResults: LabResultEntry[] | undefined = parsed.labResults?.map((lr: any) => ({
     testName: String(lr.testName || ''),
     value: String(lr.value || ''),
     unit: lr.unit || undefined,
@@ -181,6 +216,17 @@ function normalizeExtractionResult(
     status: ['normal', 'high', 'low', 'critical'].includes(lr.status) ? lr.status : undefined,
     category: lr.category || undefined
   })).filter((lr: LabResultEntry) => lr.testName && lr.value)
+
+  // T3.8 plausibility gate. Drop results whose numeric value falls
+  // outside per-test-type ranges in lib/lab-plausibility.ts. Catches
+  // OCR garbage ("blood glucose 9999 mg/dL", "sodium 9000 mEq/L")
+  // that satisfies the Zod shape but would corrupt the patient
+  // record. Unrecognized test names pass through unchecked (we'd
+  // rather preserve a result we don't have ranges for than silently
+  // drop unusual labs).
+  const labResults = shapedLabResults
+    ? filterImplausibleLabs(shapedLabResults)
+    : undefined
 
   const medications: ExtractedMedicationEntry[] | undefined = parsed.medications?.map((m: any) => ({
     name: String(m.name || ''),
