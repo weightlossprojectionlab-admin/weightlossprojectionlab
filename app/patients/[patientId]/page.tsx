@@ -767,7 +767,7 @@ function PatientDetailContent() {
                       className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-muted hover:bg-muted/80 text-foreground"
                     >
                       <span className="text-5xl lg:text-xl">📅</span>
-                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Appt</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Schedule Appt</span>
                     </button>
                   )}
 
@@ -825,7 +825,7 @@ function PatientDetailContent() {
                       }`}
                     >
                       <span className="text-5xl lg:text-xl">📋</span>
-                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">{isPet ? 'Vet Appts' : 'Appts'}</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">{isPet ? 'View Vet Appts' : 'View Appointments'}</span>
                     </button>
                   )}
                   {/* Shopping - Always visible */}
@@ -2140,7 +2140,7 @@ function PatientDetailContent() {
                         setAutoOpenFeedingModal(true)
                         setActiveTab('feeding')
                       }}
-                      className="text-sm text-primary hover:text-primary-dark font-medium"
+                      className="inline-flex items-center justify-center gap-1.5 w-full px-4 py-3 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors"
                     >
                       Log Feed →
                     </button>
@@ -2185,7 +2185,7 @@ function PatientDetailContent() {
                     ))}
                     <Link
                       href={`/log-meal?patientId=${patientId}`}
-                      className="block text-center text-sm text-primary hover:text-primary-dark font-medium mt-3"
+                      className="inline-flex items-center justify-center gap-1.5 w-full mt-3 px-4 py-3 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors"
                     >
                       Log New Meal →
                     </Link>
@@ -2195,7 +2195,7 @@ function PatientDetailContent() {
                     <p className="text-sm text-muted-foreground mb-2">No meals logged yet</p>
                     <Link
                       href={`/log-meal?patientId=${patientId}`}
-                      className="text-sm text-primary hover:text-primary-dark font-medium"
+                      className="inline-flex items-center justify-center gap-1.5 w-full px-4 py-3 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors"
                     >
                       Log First Meal →
                     </Link>
@@ -2387,7 +2387,7 @@ function PatientDetailContent() {
                   {canUploadDocuments && (
                     <button
                       onClick={() => setShowDocumentUpload(true)}
-                      className="text-sm text-primary hover:text-primary-dark font-medium"
+                      className="inline-flex items-center justify-center gap-1.5 w-full px-4 py-3 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors"
                     >
                       Upload First Document →
                     </button>
