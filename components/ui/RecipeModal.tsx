@@ -210,6 +210,21 @@ export function RecipeModal({
     ? planningEaters.length === 0
     : hasAllergenConflict && !allergenOverride
 
+  // Are any ingredients missing from inventory (or insufficient
+  // quantity)? Drives the "Try This Recipe" gate — there's no
+  // point opening the cooking-options modal when the recipe is
+  // unbuildable. Empty results array = inventory check hasn't run
+  // yet (modal just opened); allow click while we wait. The
+  // cookingOptions modal has its own missing-ingredients prompt
+  // for the case where the user wants to add to shopping list
+  // anyway.
+  const hasMissingIngredients = useMemo(() => {
+    if (ingredientResults.length === 0) return false
+    return ingredientResults.some((r) => !r.matched || r.hasEnough === false)
+  }, [ingredientResults])
+
+  const tryRecipeBlocked = cookNowBlocked || hasMissingIngredients
+
   // Family-meal Commit D — per-ingredient allergen conflicts.
   // `ingredientAllergens` is the cached per-row classification
   // populated at recipe write time by the Gemini classifier
@@ -1665,17 +1680,36 @@ export function RecipeModal({
         <div className="sticky bottom-0 bg-card border-t border-border p-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
-              {/* Try This Recipe Button */}
+              {/* Try This Recipe Button. Disabled when:
+                  - allergen conflict isn't resolved (cookNowBlocked)
+                  - any ingredient is missing/insufficient AND no
+                    substitute has been chosen (hasMissingIngredients)
+                  Avoids the bait-and-switch where the green button
+                  looks ready but opens a dead-end modal saying
+                  "you can't actually cook this." */}
               {suggestion.recipeSteps && suggestion.recipeSteps.length > 0 && (
                 <button
                   onClick={() => setShowCookingOptions(true)}
-                  className="px-4 py-2 bg-success text-white rounded-lg hover:bg-success-hover transition-colors font-medium flex items-center space-x-2"
-                  disabled={startingSession}
+                  className="px-4 py-2 bg-success text-white rounded-lg hover:bg-success-hover transition-colors font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-success"
+                  disabled={startingSession || tryRecipeBlocked}
+                  title={
+                    cookNowBlocked
+                      ? `Allergen conflict — substitute the flagged ingredients first`
+                      : hasMissingIngredients
+                        ? `Missing ingredients — add them to inventory or your shopping list first`
+                        : undefined
+                  }
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  <span>Try This Recipe</span>
+                  <span>
+                    {cookNowBlocked
+                      ? 'Allergen conflict'
+                      : hasMissingIngredients
+                        ? 'Missing ingredients'
+                        : 'Try This Recipe'}
+                  </span>
                 </button>
               )}
 
