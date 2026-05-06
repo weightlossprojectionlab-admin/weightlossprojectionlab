@@ -63,12 +63,30 @@ interface EaterMultiSelectProps {
   scopedToPatientId?: string
   /** Callback fired when the selection changes. */
   onChange: (selection: EaterSelection[]) => void
+  /**
+   * Context mode — controls the per-eater allergen UX:
+   *
+   * - `'log'` (default): records reality. A conflicting eater is
+   *   hard-skipped from the output by default, with an explicit
+   *   "Confirm allergen exposure" toggle that lets the caregiver
+   *   record an actual ingestion event for clinical timeline
+   *   review. Used at /log-meal.
+   *
+   * - `'plan'`: gates an action (cooking, shopping). A conflicting
+   *   eater is auto-disabled — checkbox is non-interactive, no
+   *   exposure toggle. Mirrors the recipe-context hard-block
+   *   shipped in Commit D: there is no scenario in which it's
+   *   correct to plan to feed a kid an allergen. Used in
+   *   RecipeModal when servings > 1.
+   */
+  mode?: 'log' | 'plan'
 }
 
 export function EaterMultiSelect({
   ingredientAllergens,
   scopedToPatientId,
   onChange,
+  mode = 'log',
 }: EaterMultiSelectProps) {
   const [patients, setPatients] = useState<PatientProfile[]>([])
   const [loading, setLoading] = useState(true)
@@ -173,18 +191,20 @@ export function EaterMultiSelect({
     for (const row of roster) {
       if (!selectedIds.has(row.id)) continue
       const conflictTags = conflictByEaterId.get(row.id)
-      if (conflictTags && !exposureConfirmed.has(row.id)) {
-        // Conflicting eater without exposure confirmation is HARD-
-        // skipped — they don't get a log. Caregiver sees inline
-        // explanation in the row.
-        continue
+      if (conflictTags) {
+        // Conflicting eater handling diverges by mode:
+        //   - plan: hard-skip always. Action context. No override.
+        //   - log: hard-skip unless exposure was explicitly
+        //     confirmed (records the clinical event).
+        if (mode === 'plan') continue
+        if (!exposureConfirmed.has(row.id)) continue
       }
       out.push({
         id: row.id,
         patientId: row.patientId,
         name: row.name,
         allergenExposure:
-          conflictTags && exposureConfirmed.has(row.id)
+          mode === 'log' && conflictTags && exposureConfirmed.has(row.id)
             ? {
                 tags: conflictTags,
                 confirmed: true,
@@ -200,6 +220,7 @@ export function EaterMultiSelect({
     selectedIds,
     exposureConfirmed,
     conflictByEaterId,
+    mode,
     onChange,
   ])
 
@@ -253,27 +274,51 @@ export function EaterMultiSelect({
             const conflictTags = conflictByEaterId.get(row.id)
             const hasConflict = !!conflictTags
             const confirmed = exposureConfirmed.has(row.id)
-            const blocked = isSelected && hasConflict && !confirmed
+            // In 'plan' mode, conflict ALWAYS disables the row;
+            // checkbox can't be toggled, no exposure path exists.
+            // In 'log' mode, conflict-without-confirmation makes
+            // the row "blocked" (selected but won't be logged) so
+            // the user can either de-select or confirm exposure.
+            const planDisabled = mode === 'plan' && hasConflict
+            const blocked =
+              mode === 'log' && isSelected && hasConflict && !confirmed
             return (
               <li
                 key={row.id}
                 className={`rounded-lg border p-3 ${
-                  blocked
-                    ? 'bg-error/5 border-error'
-                    : isSelected
-                      ? 'bg-primary-light/30 border-primary'
-                      : 'bg-muted/40 border-border'
+                  planDisabled
+                    ? 'bg-error/5 border-error opacity-70'
+                    : blocked
+                      ? 'bg-error/5 border-error'
+                      : isSelected
+                        ? 'bg-primary-light/30 border-primary'
+                        : 'bg-muted/40 border-border'
                 }`}
               >
-                <label className="flex items-start gap-3 cursor-pointer">
+                <label
+                  className={`flex items-start gap-3 ${
+                    planDisabled ? 'cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                >
                   <input
                     type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleSelected(row.id)}
-                    className="w-5 h-5 mt-0.5 rounded"
+                    checked={planDisabled ? false : isSelected}
+                    disabled={planDisabled}
+                    onChange={() => {
+                      if (!planDisabled) toggleSelected(row.id)
+                    }}
+                    className={`w-5 h-5 mt-0.5 rounded ${
+                      planDisabled ? 'cursor-not-allowed' : ''
+                    }`}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-foreground">
+                    <div
+                      className={`font-medium ${
+                        planDisabled
+                          ? 'text-muted-foreground'
+                          : 'text-foreground'
+                      }`}
+                    >
                       {row.name}
                       {row.relationship && (
                         <span className="ml-2 text-xs text-muted-foreground capitalize">
@@ -285,22 +330,30 @@ export function EaterMultiSelect({
                       <p className="text-xs text-error font-medium mt-1 flex items-start gap-1">
                         <span>⚠</span>
                         <span>
-                          Recipe contains{' '}
-                          <strong>{conflictTags!.join(', ')}</strong> —
-                          flagged in {row.name}&apos;s allergy profile.
+                          {mode === 'plan' ? (
+                            <>
+                              Auto-excluded — recipe contains{' '}
+                              <strong>{conflictTags!.join(', ')}</strong>,
+                              flagged in {row.name}&apos;s allergy profile.
+                            </>
+                          ) : (
+                            <>
+                              Recipe contains{' '}
+                              <strong>{conflictTags!.join(', ')}</strong> —
+                              flagged in {row.name}&apos;s allergy profile.
+                            </>
+                          )}
                         </span>
                       </p>
                     )}
                   </div>
                 </label>
                 {/* Per-eater "Confirm allergen exposure" toggle.
-                    Only rendered when the eater has a conflict AND
-                    is selected. Distinct semantic from the recipe-
-                    context override we removed: this records that
-                    the eater actually consumed the allergen
-                    (intentional or accidental); meal log gets a
-                    flag visible to caregiver / clinician review. */}
-                {isSelected && hasConflict && (
+                    Only rendered in 'log' mode when the eater has
+                    a conflict AND is selected. The 'plan' mode
+                    intentionally has no override — that's the
+                    Commit D hard-block semantic. */}
+                {mode === 'log' && isSelected && hasConflict && (
                   <div className="mt-3 ml-8 border-t border-error/30 pt-2">
                     <label className="flex items-start gap-2 text-xs cursor-pointer text-foreground">
                       <input

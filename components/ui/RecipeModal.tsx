@@ -33,6 +33,7 @@ import {
 import { addRecipeIngredientsToShoppingList } from '@/lib/shopping-operations'
 import { findAllergenOverlap } from '@/lib/allergen-cross-check'
 import { unpackIngredientAllergens } from '@/lib/ingredient-allergen-classifier'
+import { EaterMultiSelect, type EaterSelection } from '@/components/log-meal/EaterMultiSelect'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { auth } from '@/lib/firebase'
 import toast from 'react-hot-toast'
@@ -119,7 +120,28 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
     [suggestion.allergens, userAllergies]
   )
   const hasAllergenConflict = allergenMatches.length > 0
-  const cookNowBlocked = hasAllergenConflict && !allergenOverride
+
+  // Family-meal Commit B (RecipeModal extension) — multi-eater
+  // selector engages when servings > 1. Below this threshold the
+  // recipe is implicitly cooked for the active eater (the
+  // patient context the modal opened in), and the existing
+  // single-eater allergen panel handles the gate. At >1 servings,
+  // surface the family roster so the user can declare WHO the
+  // additional servings are for; auto-disable any family member
+  // whose allergies conflict with the recipe (planning mode =
+  // hard-block, no override, mirrors Commit D).
+  const [planningEaters, setPlanningEaters] = useState<EaterSelection[]>([])
+  const isMultiEaterMode = servingSize > 1
+
+  // Cook Now gate:
+  //   - servings === 1: existing per-eater hard-block on the
+  //     active patient's allergies (Commit D).
+  //   - servings > 1: at least one selected planning-eater must
+  //     survive the auto-disable. Empty set = nobody to cook for
+  //     = block.
+  const cookNowBlocked = isMultiEaterMode
+    ? planningEaters.length === 0
+    : hasAllergenConflict && !allergenOverride
 
   // Family-meal Commit D — per-ingredient allergen conflicts.
   // `ingredientAllergens` is the cached per-row classification
@@ -408,10 +430,14 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
     // attribute gets bypassed (programmatic click, accessibility
     // tools, etc.).
     if (cookNowBlocked) {
-      const names = allergenMatches.map((m) => m.userTerm).join(', ')
-      toast.error(
-        `Recipe contains ${names} — unsafe for this eater. Pick a different recipe.`
-      )
+      if (isMultiEaterMode) {
+        toast.error('Pick at least one eligible eater above before cooking.')
+      } else {
+        const names = allergenMatches.map((m) => m.userTerm).join(', ')
+        toast.error(
+          `Recipe contains ${names} — unsafe for this eater. Pick a different recipe.`
+        )
+      }
       return
     }
 
@@ -492,10 +518,16 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
     // when cookNowBlocked, but a programmatic / accessibility-tool
     // click could still hit this path. Toast and bail.
     if (cookNowBlocked) {
-      const names = allergenMatches.map((m) => m.userTerm).join(', ')
-      toast.error(
-        `Recipe contains ${names} — unsafe for this eater. Pick a different recipe.`
-      )
+      if (isMultiEaterMode) {
+        toast.error(
+          'Pick at least one eligible eater above before adding to the shopping list.'
+        )
+      } else {
+        const names = allergenMatches.map((m) => m.userTerm).join(', ')
+        toast.error(
+          `Recipe contains ${names} — unsafe for this eater. Pick a different recipe.`
+        )
+      }
       return
     }
 
@@ -788,7 +820,29 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                 </div>
               )}
 
-              {/* Allergens — two states:
+              {/* Family-meal Commit B (RecipeModal extension) —
+                  multi-eater selector when servings > 1. Asks who
+                  the additional servings are for. Auto-disables
+                  any family member whose foodAllergies overlap any
+                  classified ingredient. plan mode = no override
+                  toggle (Commit D semantic). */}
+              {isMultiEaterMode && (
+                <div>
+                  <h3 className="font-semibold text-foreground mb-2">
+                    Cooking for {servingSize} — who else is eating?
+                  </h3>
+                  <EaterMultiSelect
+                    ingredientAllergens={suggestion.ingredientAllergens}
+                    scopedToPatientId={patientId}
+                    mode="plan"
+                    onChange={setPlanningEaters}
+                  />
+                </div>
+              )}
+
+              {/* Allergens — two states (only rendered at servings
+                  = 1; at >1, the EaterMultiSelect above handles
+                  per-eater conflict messaging):
                   1. hasAllergenConflict: this recipe contains an
                      allergen the active eater is allergic to.
                      Render a red gating panel — Cook Now and
@@ -798,7 +852,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                      override here would just be a footgun.
                   2. No conflict but recipe carries allergens:
                      passive orange "Contains:" label as before. */}
-              {hasAllergenConflict ? (
+              {!isMultiEaterMode && (hasAllergenConflict ? (
                 <div>
                   <h3 className="font-semibold text-error mb-2">
                     Allergen Conflict
@@ -853,7 +907,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     </div>
                   </div>
                 )
-              )}
+              ))}
 
               {/* Ingredients - Scaled with Substitutions */}
               <div>
@@ -1244,6 +1298,11 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                       <p className="text-sm text-muted-foreground">For {servingSize} serving{servingSize > 1 ? 's' : ''}</p>
                     </div>
 
+                    {/* Family-meal Commit B (RecipeModal extension) —
+                        when servings > 1 the multi-eater UI on the
+                        Recipe tab handles per-eater conflict messaging,
+                        so we suppress the duplicate panel on the
+                        Shopping List tab to avoid stacking. */}
                     {/* Family-meal Commit D — allergen pre-flight on
                         the Shopping List path. Same hard-block as the
                         Cook Now panel. Override is disabled because
@@ -1251,7 +1310,7 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                         scenario where bulk-adding allergen-containing
                         ingredients to the shopping list for this
                         eater is the right action. */}
-                    {hasAllergenConflict && (
+                    {!isMultiEaterMode && hasAllergenConflict && (
                       <div className="bg-error/10 border-2 border-error rounded-lg p-3 mb-4">
                         <h4 className="text-sm font-semibold text-error mb-1">
                           Allergen Conflict
@@ -1321,7 +1380,9 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                             {addingToShoppingList
                               ? 'Adding...'
                               : cookNowBlocked
-                                ? 'Unsafe for this eater — pick a different recipe'
+                                ? isMultiEaterMode
+                                  ? 'Pick at least one eligible eater above'
+                                  : 'Unsafe for this eater — pick a different recipe'
                                 : itemsOnList > 0
                                   ? `Add ${remainingCount} More Item${remainingCount > 1 ? 's' : ''} to Shopping List`
                                   : `Add ${neededCount} Missing Item${neededCount > 1 ? 's' : ''} to Shopping List`
@@ -1671,9 +1732,20 @@ export function RecipeModal({ suggestion, isOpen, onClose, userDietaryPreference
                     backstop in handleCookNow keep the gate held. */}
                 {cookNowBlocked && (
                   <div className="bg-error/10 border-2 border-error rounded-lg p-3 text-sm text-error">
-                    Allergen conflict ({allergenMatches.map((m) => m.userTerm).join(', ')}) —
-                    unsafe for this eater. Cook Now is blocked. Choose a
-                    different recipe or substitute the conflicting ingredients.
+                    {isMultiEaterMode ? (
+                      <>
+                        No eligible eater for this recipe. Every selected
+                        family member has an allergen conflict, or none
+                        selected. Pick someone in &quot;Who else is eating?&quot;
+                        above, or reduce servings to 1.
+                      </>
+                    ) : (
+                      <>
+                        Allergen conflict ({allergenMatches.map((m) => m.userTerm).join(', ')}) —
+                        unsafe for this eater. Cook Now is blocked. Choose a
+                        different recipe or substitute the conflicting ingredients.
+                      </>
+                    )}
                   </div>
                 )}
                 <button

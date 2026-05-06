@@ -27,6 +27,83 @@ interface FirestoreDoc {
 }
 
 /**
+ * Convert a "full" Firestore recipe doc (one with name + status +
+ * recipeSteps) to a MealSuggestion with safe defaults on every
+ * collection field. Centralizes the shape contract so both the
+ * single-recipe merge and the list merge produce identical objects —
+ * consumers can rely on .length / .map() without optional chaining.
+ */
+function firestoreToFullRecipe(doc: FirestoreDoc): MealSuggestion {
+  return {
+    ...doc,
+    id: doc.id || doc.docId,
+    createdAt: doc.createdAt?.toDate?.() || doc.createdAt,
+    updatedAt: doc.updatedAt?.toDate?.() || doc.updatedAt,
+    mediaUploadedAt: doc.mediaUploadedAt?.toDate?.() || doc.mediaUploadedAt,
+    ingredientAllergens: unpackIngredientAllergens(doc.ingredientAllergens),
+    dietaryTags: doc.dietaryTags || [],
+    allergens: doc.allergens || [],
+    ingredients: doc.ingredients || [],
+    recipeSteps: doc.recipeSteps || [],
+    cookingTips: doc.cookingTips || [],
+    macros: doc.macros || { protein: 0, carbs: 0, fat: 0, fiber: 0 },
+  } as MealSuggestion
+}
+
+/**
+ * Single-recipe merge — returns one MealSuggestion given a hardcoded
+ * base (or null) and a Firestore overlay doc (or null).
+ *
+ * Mirrors the list-merge rules:
+ *  - If the Firestore doc is a "full recipe" (has name+status+recipeSteps),
+ *    it's used directly — admin-created entries.
+ *  - Otherwise the hardcoded recipe is used as the base and the Firestore
+ *    doc overlays present fields (media, AI-regenerated data, etc.).
+ *  - Returns null if neither source has data.
+ *
+ * Used by the consumer detail page (server component) so it gets the
+ * same overlay behavior as the public list and admin list. Without
+ * this, admin edits to hardcoded recipes (regenerate ingredients,
+ * upload media) wouldn't appear on the detail page.
+ */
+export function mergeRecipeWithMedia(
+  hardcoded: MealSuggestion | null,
+  firestoreDoc: FirestoreDoc | null
+): MealSuggestion | null {
+  // Full Firestore recipe — admin-created or fully-edited entry
+  if (firestoreDoc?.name && firestoreDoc?.status && firestoreDoc?.recipeSteps) {
+    return firestoreToFullRecipe(firestoreDoc)
+  }
+
+  if (!hardcoded) return null
+  if (!firestoreDoc) return hardcoded
+
+  // Overlay: hardcoded as base, Firestore overlays present fields
+  const imageUrls = firestoreDoc.imageUrls || (firestoreDoc.imageUrl ? [firestoreDoc.imageUrl] : undefined)
+  const imageStoragePaths =
+    firestoreDoc.imageStoragePaths ||
+    (firestoreDoc.imageStoragePath ? [firestoreDoc.imageStoragePath] : undefined)
+
+  return {
+    ...hardcoded,
+    imageUrls,
+    imageStoragePaths,
+    videoUrl: firestoreDoc.videoUrl,
+    videoThumbnailUrl: firestoreDoc.videoThumbnailUrl,
+    videoStoragePath: firestoreDoc.videoStoragePath,
+    imageUrl: imageUrls?.[0],
+    imageStoragePath: imageStoragePaths?.[0],
+    ...(firestoreDoc.calories ? { calories: firestoreDoc.calories } : {}),
+    ...(firestoreDoc.macros ? { macros: firestoreDoc.macros } : {}),
+    ...(firestoreDoc.recipeSteps?.length ? { recipeSteps: firestoreDoc.recipeSteps } : {}),
+    ...(firestoreDoc.cookingTips?.length ? { cookingTips: firestoreDoc.cookingTips } : {}),
+    ...(firestoreDoc.ingredients?.length ? { ingredients: firestoreDoc.ingredients } : {}),
+    ...(firestoreDoc.mealTypes?.length ? { mealTypes: firestoreDoc.mealTypes } : {}),
+    ...(firestoreDoc.mealType ? { mealType: firestoreDoc.mealType } : {}),
+  } as MealSuggestion
+}
+
+/**
  * Merge Firestore docs with hardcoded MEAL_SUGGESTIONS
  *
  * - Full recipes (have name + status + recipeSteps) are used directly
@@ -51,21 +128,14 @@ export function mergeRecipesWithMedia(
     }
   }
 
-  // Separate full recipes (admin-created with name + status) from media-only docs
+  // Separate full recipes (admin-created with name + status) from media-only docs.
+  // Family-meal Commit D — firestoreToFullRecipe also unpacks ingredientAllergens
+  // from its Firestore-stored shape ([{tags:[...]}, ...]) back to the
+  // consumer-facing AllergyTag[][] form. Without this, RecipeModal
+  // sees the packed objects and silently bails on per-row chips.
   let fullRecipes = firestoreDocs
     .filter(doc => doc.name && doc.status && doc.recipeSteps)
-    .map(doc => ({
-      ...doc,
-      id: doc.id || doc.docId,
-      createdAt: doc.createdAt?.toDate?.() || doc.createdAt,
-      updatedAt: doc.updatedAt?.toDate?.() || doc.updatedAt,
-      mediaUploadedAt: doc.mediaUploadedAt?.toDate?.() || doc.mediaUploadedAt,
-      // Family-meal Commit D — unpack ingredientAllergens from its
-      // Firestore-stored shape ([{tags:[...]}, ...]) back to the
-      // consumer-facing AllergyTag[][] form. Without this, RecipeModal
-      // sees the packed objects and silently bails on per-row chips.
-      ingredientAllergens: unpackIngredientAllergens(doc.ingredientAllergens),
-    } as MealSuggestion))
+    .map(firestoreToFullRecipe)
 
   // Apply status filter if provided
   if (statusFilter && statusFilter !== 'all') {
