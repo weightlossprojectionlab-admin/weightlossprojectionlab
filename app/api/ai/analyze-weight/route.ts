@@ -5,16 +5,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { logger } from '@/lib/logger'
 import { adminAuth } from '@/lib/firebase-admin'
 import { aiRateLimit, dailyRateLimit, getRateLimitHeaders } from '@/lib/utils/rate-limit'
 import { ErrorHandler } from '@/lib/utils/error-handler'
 import { errorResponse } from '@/lib/api-response'
 import { WeightScaleOCRResponseSchema } from '@/lib/validations/weight-logs'
-
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+import { generateGeminiJSON } from '@/lib/ai/gemini-client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,9 +50,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use Gemini Pro Vision model
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
-
     // Craft prompt for scale reading
     const prompt = `You are a precise scale reading assistant. Analyze this image and extract the weight measurement shown on the scale display.
 
@@ -87,53 +81,28 @@ Examples:
 
 Analyze the image now:`
 
-    // Generate content with image
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          mimeType: 'image/jpeg',
-          data: imageBase64.replace(/^data:image\/\w+;base64,/, '')
-        }
-      }
-    ])
-
-    const response = await result.response
-    const text = response.text()
-
-    // Parse JSON response
-    let parsedRaw
+    // T5.14 — shared Gemini client owns SDK init, vision parts
+    // assembly, JSON.parse, Zod validation, and gemini_invocations
+    // log. The client throws on any failure (network, malformed
+    // JSON, schema mismatch); the outer catch maps to errorResponse.
+    let analysis
     try {
-      // Extract JSON from markdown code blocks if present
-      const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/)
-      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text
-      parsedRaw = JSON.parse(jsonStr.trim())
-    } catch (parseError) {
-    return errorResponse(parseError, {
-      route: '/api/ai/analyze-weight',
-      operation: 'create'
-    })
-  }
-
-    // Runtime schema gate. Bare typeof checks let through bad shapes
-    // (e.g., weight as a string, missing readable, confidence > 100).
-    // Reject malformed Gemini output before it becomes a patient
-    // weight reading.
-    const validated = WeightScaleOCRResponseSchema.safeParse(parsedRaw)
-    if (!validated.success) {
-      logger.warn('[AI Weight] OCR output failed schema validation', {
-        issueCount: validated.error.issues.length,
-        issues: validated.error.issues.slice(0, 5).map((i) => ({
-          path: i.path.join('.'),
-          code: i.code,
-        })),
+      analysis = await generateGeminiJSON({
+        fnName: 'analyzeWeightScale',
+        prompt,
+        images: [{ data: imageBase64, mimeType: 'image/jpeg' }],
+        validateSchema: WeightScaleOCRResponseSchema,
+        metadata: { expectedUnit: expectedUnit || 'lbs' },
+      })
+    } catch (err) {
+      logger.warn('[AI Weight] OCR call failed or output invalid', {
+        error: err instanceof Error ? err.message : String(err),
       })
       return NextResponse.json(
         { success: false, error: 'Invalid response format from AI' },
         { status: 502 }
       )
     }
-    const analysis = validated.data
 
     // Check if scale was readable
     if (!analysis.readable || analysis.error) {

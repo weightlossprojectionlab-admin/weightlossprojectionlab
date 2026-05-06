@@ -68,11 +68,24 @@ export function validateGeminiConfig(): { valid: boolean; error?: string } {
   return { valid: true }
 }
 
+export interface GeminiImagePart {
+  /**
+   * Base64 image data. Can be a raw base64 string OR a data URL
+   * (`data:image/jpeg;base64,...`); the data-URL prefix is stripped
+   * automatically.
+   */
+  data: string
+  /** Defaults to 'image/jpeg' when omitted. */
+  mimeType?: string
+}
+
 export interface GenerateGeminiJSONOpts<T> {
   /** Function or route name for the invocation log (e.g., 'classifyIngredientAllergens'). */
   fnName: string
   /** Prompt text passed to model.generateContent. */
   prompt: string
+  /** Optional image parts for vision calls (medication-OCR, weight-OCR, document-OCR). */
+  images?: GeminiImagePart[]
   /** Override the default model. */
   model?: string
   /** Gemini SDK schema (SchemaType-based). When set, the SDK enforces shape during generation. */
@@ -106,6 +119,7 @@ export async function generateGeminiJSON<T = unknown>(
   const {
     fnName,
     prompt,
+    images,
     model: modelId = DEFAULT_GEMINI_MODEL,
     geminiSchema,
     validateSchema,
@@ -127,7 +141,22 @@ export async function generateGeminiJSON<T = unknown>(
       },
     })
 
-    const result = await model.generateContent(prompt)
+    // Build the request as a parts array when images are provided
+    // (vision call), otherwise pass the prompt string directly. Both
+    // forms are accepted by model.generateContent; the parts form is
+    // required for inlineData.
+    const result = images && images.length > 0
+      ? await model.generateContent([
+          prompt,
+          ...images.map((img) => ({
+            inlineData: {
+              data: img.data.replace(/^data:image\/\w+;base64,/, ''),
+              mimeType: img.mimeType ?? 'image/jpeg',
+            },
+          })),
+        ])
+      : await model.generateContent(prompt)
+
     const text = result.response.text()
     const parsed: unknown = JSON.parse(text)
 

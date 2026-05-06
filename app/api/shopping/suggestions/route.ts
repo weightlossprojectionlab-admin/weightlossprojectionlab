@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
+import { SchemaType } from '@google/generative-ai'
 import { patientOperations, vitalOperations } from '@/lib/medical-operations'
 import { logger } from '@/lib/logger'
 import type {
@@ -16,9 +16,7 @@ import type {
 } from '@/types/shopping'
 import type { PatientProfile } from '@/types/medical'
 import { ShoppingSuggestionsResponseSchema } from '@/lib/validations/shopping'
-
-// Initialize Gemini AI (server-side only)
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
+import { generateGeminiJSON, validateGeminiConfig } from '@/lib/ai/gemini-client'
 
 /**
  * Gemini AI schema for shopping suggestions
@@ -245,48 +243,34 @@ async function generateAISuggestions(
   vitals: any,
   analysis: { needs: HealthSuggestionReason[]; priorities: Map<HealthSuggestionReason, 'high' | 'medium' | 'low'> }
 ): Promise<HealthBasedSuggestion[]> {
-  if (!GEMINI_API_KEY) {
+  const configCheck = validateGeminiConfig()
+  if (!configCheck.valid) {
     logger.warn('[AI Shopping API] No Gemini API key, using fallback')
     return []
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: shoppingSuggestionsSchema
-      }
-    })
-
     const prompt = buildGeminiPrompt(patient, vitals, analysis)
 
     logger.info('[AI Shopping API] Calling Gemini AI')
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const text = response.text()
 
-    const aiResponseRaw = JSON.parse(text)
+    // T5.14 — shared client. Throws on Gemini error / Zod validation
+    // failure; the catch maps both to the existing empty-array
+    // fallback so the suggestions feature degrades gracefully when
+    // AI is unavailable or returns malformed output.
+    const validated = await generateGeminiJSON({
+      fnName: 'generateShoppingSuggestions',
+      prompt,
+      geminiSchema: shoppingSuggestionsSchema,
+      validateSchema: ShoppingSuggestionsResponseSchema,
+      metadata: {
+        needsCount: analysis.needs.length,
+        conditionCount: patient.healthConditions?.length ?? 0,
+        allergyCount: patient.foodAllergies?.length ?? 0,
+      },
+    })
 
-    // Runtime schema gate. The Gemini responseSchema config above
-    // tells the model what shape to emit, but malformed outputs
-    // slip through under load. These suggestions are derived from
-    // PHI inputs (vitals, conditions, allergies) — bad shapes pollute
-    // the patient-facing UI as if they were AI-validated guidance.
-    const validated = ShoppingSuggestionsResponseSchema.safeParse(aiResponseRaw)
-    if (!validated.success) {
-      logger.warn('[AI Shopping API] Suggestions output failed schema validation', {
-        issueCount: validated.error.issues.length,
-        issues: validated.error.issues.slice(0, 5).map((i) => ({
-          path: i.path.join('.'),
-          code: i.code,
-        })),
-      })
-      return []
-    }
-
-    const suggestions: HealthBasedSuggestion[] = validated.data.suggestions.map((s) => ({
+    const suggestions: HealthBasedSuggestion[] = validated.suggestions.map((s) => ({
       id: `suggestion-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       productName: s.productName,
       category: mapToProductCategory(s.category),
