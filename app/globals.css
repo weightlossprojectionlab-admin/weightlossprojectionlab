@@ -173,8 +173,12 @@
     @apply italic;
   }
 
-  /* Link styles */
-  a {
+  /* Link styles. `:where(a)` drops the selector's specificity to 0 so any
+     explicit Tailwind text-color utility (e.g. `text-white` on a button-
+     styled <Link>) wins automatically. Without :where(), the global
+     a:hover would override `text-white` on hover and turn button text
+     invisible against the darkened background. */
+  :where(a) {
     @apply text-primary hover:text-primary-hover underline-offset-4 transition-colors;
   }
 
