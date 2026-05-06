@@ -851,7 +851,7 @@ export function RecipeModal({
                     <button
                       onClick={decrementServings}
                       disabled={servingSize <= minServings}
-                      className="w-8 h-8 rounded-full bg-primary text-white font-bold hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
+                      className="w-11 h-11 rounded-full bg-primary text-white text-xl font-bold hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                       aria-label="Decrease servings"
                       title={
                         servingSize <= minServings && minServings > 1
@@ -868,7 +868,7 @@ export function RecipeModal({
                     <button
                       onClick={incrementServings}
                       disabled={servingSize >= 8}
-                      className="w-8 h-8 rounded-full bg-primary text-white font-bold hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
+                      className="w-11 h-11 rounded-full bg-primary text-white text-xl font-bold hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                       aria-label="Increase servings"
                     >
                       +
@@ -879,7 +879,7 @@ export function RecipeModal({
                   <div className="mt-3 text-center">
                     <button
                       onClick={resetServings}
-                      className="text-xs text-primary hover:text-primary-hover font-medium underline"
+                      className="inline-flex items-center px-3 py-2 min-h-[36px] text-xs text-primary hover:bg-primary/10 active:bg-primary/20 font-medium rounded-md transition-colors"
                     >
                       Reset to original ({suggestion.servingSize} serving{suggestion.servingSize > 1 ? 's' : ''})
                     </button>
@@ -1098,14 +1098,14 @@ export function RecipeModal({
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={handleSelectAllIngredients}
-                      className="text-xs text-primary hover:text-primary-hover font-medium"
+                      className="px-3 py-2 min-h-[36px] text-xs text-primary hover:bg-primary/10 active:bg-primary/20 font-medium rounded-md transition-colors"
                     >
                       I have all
                     </button>
                     <span className="text-xs text-muted-foreground">•</span>
                     <button
                       onClick={handleClearAllIngredients}
-                      className="text-xs text-muted-foreground hover:text-foreground"
+                      className="px-3 py-2 min-h-[36px] text-xs text-muted-foreground hover:bg-muted active:bg-muted/80 rounded-md transition-colors"
                     >
                       Clear all
                     </button>
@@ -1258,7 +1258,7 @@ export function RecipeModal({
                                             e.stopPropagation()
                                             setShowScanner(true)
                                           }}
-                                          className="inline-flex items-center gap-1 text-primary font-medium hover:text-primary-hover underline-offset-2 hover:underline"
+                                          className="inline-flex items-center gap-1 px-3 py-2 min-h-[36px] text-xs bg-primary/10 text-primary font-medium rounded-md hover:bg-primary/20 active:bg-primary/30 transition-colors"
                                         >
                                           <span>📷</span>
                                           <span>Scan to fix</span>
@@ -1287,7 +1287,7 @@ export function RecipeModal({
                                             e.stopPropagation()
                                             setShowScanner(true)
                                           }}
-                                          className="inline-flex items-center gap-1 text-primary font-medium hover:text-primary-hover underline-offset-2 hover:underline"
+                                          className="inline-flex items-center gap-1 px-3 py-2 min-h-[36px] text-xs bg-primary/10 text-primary font-medium rounded-md hover:bg-primary/20 active:bg-primary/30 transition-colors"
                                         >
                                           <span>📷</span>
                                           <span>Scan to fix</span>
@@ -1753,7 +1753,7 @@ export function RecipeModal({
               {suggestion.recipeSteps && suggestion.recipeSteps.length > 0 && (
                 <button
                   onClick={() => setShowCookingOptions(true)}
-                  className="px-4 py-2 bg-success text-white rounded-lg hover:bg-success-hover transition-colors font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-success"
+                  className="px-5 py-3 min-h-[44px] bg-success text-white rounded-lg hover:bg-success-hover transition-colors font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-success"
                   disabled={startingSession || tryRecipeBlocked}
                   title={
                     cookNowBlocked
