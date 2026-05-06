@@ -356,36 +356,73 @@ export default function ProductEditPage() {
             </select>
           </div>
 
-          {/* Container Size — Phase 2a foundation. Sourced from USDA's
-              package_weight at import time; read-only here for now. Used
-              by Phase 2b's amount-aware pill to compute % remaining once
-              inventory tracks remainingAmount. */}
+          {/* Container Size — admin-editable. Pre-filled from USDA's
+              package_weight at import time when available; admins can
+              override or fill in for products without USDA data. Used
+              by Phase 2b's amount-aware pill to compute % remaining
+              once inventory tracks remainingAmount. */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-foreground mb-1">
               Container Size
             </label>
-            <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg text-sm">
-              {formData.containerSize && formData.containerUnit ? (
-                <>
-                  <span className="font-semibold text-foreground">
-                    {formData.containerSize} {formData.containerUnit}
-                  </span>
-                  {formData.packageWeightRaw && (
-                    <span className="text-xs text-muted-foreground">
-                      (from USDA: &ldquo;{formData.packageWeightRaw}&rdquo;)
-                    </span>
-                  )}
-                </>
-              ) : formData.packageWeightRaw ? (
-                <span className="text-muted-foreground">
-                  Couldn&apos;t parse &ldquo;{formData.packageWeightRaw}&rdquo; — admin will need to fix in a future release
-                </span>
-              ) : (
-                <span className="text-muted-foreground">
-                  Not set. Run <code className="font-mono">npm run backfill:container</code> with the USDA branded_food.csv to populate.
-                </span>
-              )}
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.containerSize ?? ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    containerSize: e.target.value === '' ? null : parseFloat(e.target.value),
+                  })
+                }
+                placeholder="e.g., 16"
+                className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <select
+                value={formData.containerUnit ?? ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    containerUnit: e.target.value || null,
+                  })
+                }
+                className="w-full px-4 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">— Unit —</option>
+                <optgroup label="Weight">
+                  <option value="oz">oz</option>
+                  <option value="lbs">lbs</option>
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
+                </optgroup>
+                <optgroup label="Volume">
+                  <option value="fl oz">fl oz</option>
+                  <option value="ml">ml</option>
+                  <option value="l">l</option>
+                  <option value="cup">cup</option>
+                  <option value="gal">gal</option>
+                  <option value="qt">qt</option>
+                  <option value="pt">pt</option>
+                </optgroup>
+                <optgroup label="Count">
+                  <option value="count">count</option>
+                  <option value="each">each</option>
+                  <option value="package">package</option>
+                  <option value="can">can</option>
+                  <option value="bottle">bottle</option>
+                  <option value="container">container</option>
+                </optgroup>
+              </select>
             </div>
+            {formData.packageWeightRaw && (
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Source: USDA package_weight &ldquo;{formData.packageWeightRaw}&rdquo;
+                {(!formData.containerSize || !formData.containerUnit) &&
+                  ' — couldn’t auto-parse; please set manually.'}
+              </p>
+            )}
           </div>
         </div>
       </div>
