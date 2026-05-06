@@ -110,6 +110,19 @@ export function RecipeModal({
   const [showCookingOptions, setShowCookingOptions] = useState(false)
   const [showMissingIngredientsModal, setShowMissingIngredientsModal] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+  // After an inline "Scan to fix" succeeds, hold the looked-up
+  // product here while the user confirms the on-hand quantity.
+  // Hardcoding "1" was misleading — a scanned barcode usually
+  // means "I have at least one of these," but a box of graham
+  // cracker crumbs isn't actually a single unit of crumbs to the
+  // recipe matcher. Prompt for the count so inventory reflects
+  // reality.
+  const [pendingScanProduct, setPendingScanProduct] = useState<{
+    barcode: string
+    name: string
+    productData: any
+  } | null>(null)
+  const [scanQuantity, setScanQuantity] = useState<number>(1)
   const [missingIngredients, setMissingIngredients] = useState<string[]>([])
   const [scannedItems, setScannedItems] = useState<Set<string>>(new Set())
   const [scanningInProgress, setScanningInProgress] = useState(false)
@@ -695,7 +708,26 @@ export function RecipeModal({
         return
       }
 
-      // Add to inventory
+      // Per-row inline scan path — user clicked "Scan to fix" on a
+      // single missing ingredient row. Defer the inventory write
+      // until they tell us the on-hand quantity (could be 1, 2, 5,
+      // a half-empty box, etc.). The batch-modal flow below
+      // continues to assume +1 per scan to keep that flow fast.
+      if (!scanningInProgress) {
+        setShowScanner(false)
+        toast.dismiss('barcode-scan')
+        setPendingScanProduct({
+          barcode,
+          name: product.name,
+          productData: response.product,
+        })
+        setScanQuantity(1)
+        return
+      }
+
+      // Batch path — existing missing-ingredients-modal flow.
+      // Add +1 of the scanned item without prompting (speed of
+      // batch scanning trumps quantity precision here).
       const existing = allInventoryItems.find(item => item.barcode === barcode)
 
       if (existing) {
@@ -719,16 +751,6 @@ export function RecipeModal({
       refreshInventory()
 
       toast.success(`✓ Added ${product.name} to inventory`, { id: 'barcode-scan' })
-
-      // Per-row inline scan path — user clicked "Scan to fix" on a
-      // single missing ingredient row. Just close the scanner and
-      // let the inventory refresh update the row inline. Don't
-      // run the cascade (proceed to cooking) — that's only for the
-      // batch missing-ingredients-modal flow.
-      if (!scanningInProgress) {
-        setShowScanner(false)
-        return
-      }
 
       // Check if we've scanned all missing items
       // Note: This is simplified - ideally we'd match barcodes to specific ingredients
@@ -2074,16 +2096,116 @@ export function RecipeModal({
           </div>
         )}
 
+        {/* Quantity confirmation prompt — fires after a successful
+            inline "Scan to fix" lookup. User tells us how many they
+            actually have on hand before we touch the inventory. */}
+        {pendingScanProduct && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-card border border-border rounded-lg shadow-xl max-w-sm w-full p-6">
+              <h3 className="text-lg font-bold text-foreground mb-2">
+                How many do you have?
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                <strong>{pendingScanProduct.name}</strong> — confirm the
+                on-hand count before adding to inventory.
+              </p>
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setScanQuantity((q) => Math.max(1, q - 1))}
+                  className="w-11 h-11 rounded-full bg-muted text-foreground text-2xl font-bold active:bg-muted/80"
+                  aria-label="Decrease quantity"
+                  disabled={scanQuantity <= 1}
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  value={scanQuantity}
+                  onChange={(e) => {
+                    const n = parseInt(e.target.value, 10)
+                    if (!isNaN(n) && n >= 1 && n <= 999) setScanQuantity(n)
+                  }}
+                  className="w-20 text-center text-3xl font-bold tabular-nums bg-muted rounded-lg px-2 py-1 text-foreground"
+                />
+                <button
+                  type="button"
+                  onClick={() => setScanQuantity((q) => Math.min(999, q + 1))}
+                  className="w-11 h-11 rounded-full bg-muted text-foreground text-2xl font-bold active:bg-muted/80"
+                  aria-label="Increase quantity"
+                  disabled={scanQuantity >= 999}
+                >
+                  +
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPendingScanProduct(null)}
+                  className="flex-1 px-4 py-3 bg-muted text-foreground rounded-lg font-medium active:bg-muted/80"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const { barcode, name, productData } = pendingScanProduct
+                    try {
+                      const existing = allInventoryItems.find((item) => item.barcode === barcode)
+                      if (existing) {
+                        await updateItem(existing.id, {
+                          inStock: true,
+                          quantity: existing.quantity + scanQuantity,
+                          needed: false,
+                        })
+                      } else {
+                        await addItem(productData, {
+                          inStock: true,
+                          needed: false,
+                          quantity: scanQuantity,
+                        })
+                      }
+                      refreshInventory()
+                      toast.success(
+                        `✓ Added ${scanQuantity} × ${name} to inventory`,
+                      )
+                    } catch (err) {
+                      logger.error('inline-scan add failed', err as Error)
+                      toast.error('Failed to update inventory')
+                    } finally {
+                      setPendingScanProduct(null)
+                    }
+                  }}
+                  className="flex-1 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary-hover active:bg-primary-hover"
+                >
+                  Add to inventory
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Barcode Scanner */}
         <BarcodeScanner
           isOpen={showScanner}
           onScan={handleBarcodeScan}
           onClose={() => {
             setShowScanner(false)
-            setShowMissingIngredientsModal(true) // Return to missing ingredients modal
+            // Only return to the missing-ingredients modal when the
+            // user opened the scanner from THAT modal (batch flow).
+            // Inline "Scan to fix" closes silently.
+            if (scanningInProgress) {
+              setShowMissingIngredientsModal(true)
+            }
           }}
           context="inventory"
-          title={`Scan Ingredients (${scannedItems.size}/${missingIngredients.length})`}
+          title={
+            scanningInProgress
+              ? `Scan Ingredients (${scannedItems.size}/${missingIngredients.length})`
+              : 'Scan to add to inventory'
+          }
         />
       </div>
     </div>
