@@ -5,6 +5,8 @@ import { notFound } from 'next/navigation'
 import { adminDb } from '@/lib/firebase-admin'
 import RecipeActions from '@/components/recipes/RecipeActions'
 import { mergeRecipeWithMedia } from '@/lib/recipe-merge'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { recipeSchema } from '@/lib/json-ld'
 
 async function getRecipe(id: string): Promise<MealSuggestion | null> {
   // Fetch both sources in parallel — Firestore overlays let admin
@@ -87,8 +89,47 @@ export default async function RecipeDetailPage({ params }: PageProps) {
     notFound()
   }
 
+  // schema.org Recipe rich-result schema. Server-rendered into the page
+  // so Google / Bing / AI crawlers (Perplexity, ChatGPT, Gemini) can parse
+  // it. Mirrors what's currently rendered to users — when ingredient/step
+  // gating lands, the corresponding fields must be omitted to avoid
+  // cloaking penalties.
+  const ingredientStrings: string[] | undefined = (() => {
+    const list: unknown = (recipe as unknown as { ingredients?: unknown }).ingredients
+    if (!Array.isArray(list)) return undefined
+    const flat = list
+      .map((i: unknown) => {
+        if (typeof i === 'string') return i
+        if (i && typeof i === 'object' && 'ingredientText' in i) {
+          return String((i as { ingredientText: unknown }).ingredientText)
+        }
+        return ''
+      })
+      .filter(Boolean)
+    return flat.length > 0 ? flat : undefined
+  })()
+
+  const schema = recipeSchema({
+    id: recipe.id,
+    name: recipe.name,
+    description: recipe.description,
+    imageUrls: recipe.imageUrls,
+    imageAlts: recipe.imageAlts,
+    mealType: recipe.mealType,
+    prepTimeMinutes: recipe.prepTime,
+    servingSize: recipe.servingSize,
+    calories: recipe.calories,
+    macros: recipe.macros,
+    dietaryTags: recipe.dietaryTags,
+    allergens: recipe.allergens,
+    ingredientStrings,
+    recipeSteps: recipe.recipeSteps,
+    cookingTips: recipe.cookingTips,
+  })
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-100">
+      <JsonLd data={schema} />
       {/* Marketing Banner */}
       <div className="bg-gradient-to-r from-primary to-accent text-white py-3 px-4 text-center">
         <p className="text-sm font-medium">
