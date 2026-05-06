@@ -93,6 +93,23 @@ Write step-by-step cooking instructions that a home cook can follow. Be specific
 - Write an SEO-friendly description (2-3 sentences) that captures the essence of the recipe, includes key ingredients and cooking method, and is optimized for search engines and NLP indexing
 - Detect applicable dietary tags from: vegan, vegetarian, keto, paleo, gluten-free, dairy-free, high-protein, low-carb. Only include tags that genuinely apply based on the ingredients
 
+CRITICAL — suggestedIngredients is for GROCERY items only:
+- The "suggestedIngredients" array is for items the user must buy or
+  have in inventory. NEVER include ambient resources or equipment.
+- AMBIENT (always available — DO NOT include in suggestedIngredients):
+  cold water, hot water, warm water, tap water, ice, ice cubes, ice
+  bath, salt to taste, pepper to taste, salt and pepper to taste,
+  cooking spray, oil for greasing the pan, water for boiling,
+  flour for dusting (when not a primary ingredient).
+- EQUIPMENT (not consumed — DO NOT include in suggestedIngredients):
+  aluminum foil, parchment paper, plastic wrap, ziploc bags, paper
+  towels, toothpicks (for tests), kitchen string. Reference these
+  freely in cooking steps but they're not grocery items.
+- These resources can and SHOULD be referenced in the cooking STEPS
+  (e.g., "Cover the eggs with cold water by about 1 inch"). They
+  just don't belong in the ingredient list because they're not
+  groceries.
+
 CRITICAL — quantity-agnostic step text (recipes scale to different
 serving sizes; instructions must work at any scale):
 - When referencing INGREDIENTS in step text, use generic terms like
