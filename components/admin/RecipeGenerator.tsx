@@ -3,10 +3,32 @@
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { MealType, DietaryTag, MealSuggestion } from '@/lib/meal-suggestions'
-import { generateRecipeSteps } from '@/lib/ai-recipe-generator'
 import { saveRecipeToFirestore } from '@/lib/firestore-recipes'
 import { requiresCooking, getRecipeActionLabel } from '@/lib/meal-suggestions'
 import { logger } from '@/lib/logger'
+
+// Server-endpoint shape mirrors lib/ai-recipe-generator.ts's
+// GenerateRecipeStepsResult — kept inline here to avoid pulling
+// the lib (and its Gemini SDK init) into the client bundle.
+interface GeneratedStepsResponse {
+  recipeSteps: string[]
+  cookingTips?: string[]
+  requiresCooking: boolean
+}
+
+async function generateRecipeStepsViaApi(
+  recipe: MealSuggestion,
+): Promise<GeneratedStepsResponse> {
+  const res = await fetch('/api/recipes/generate-steps', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipe }),
+  })
+  if (!res.ok) {
+    throw new Error(`generate-steps endpoint returned ${res.status}`)
+  }
+  return res.json() as Promise<GeneratedStepsResponse>
+}
 import {
   XMarkIcon,
   SparklesIcon,
@@ -92,8 +114,11 @@ export function RecipeGenerator({ onClose, onSuccess }: RecipeGeneratorProps) {
         }
 
         try {
-          // Generate steps with AI
-          const generated = await generateRecipeSteps({ recipe: baseRecipe })
+          // Generate steps via the server endpoint. Don't import
+          // ai-recipe-generator directly — that bundles the Gemini
+          // SDK + key init into the client. The endpoint runs
+          // server-side and reads GEMINI_API_KEY (server-only).
+          const generated = await generateRecipeStepsViaApi(baseRecipe)
 
           // Update recipe with AI-generated data
           baseRecipe.recipeSteps = generated.recipeSteps

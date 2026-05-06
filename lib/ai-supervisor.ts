@@ -7,11 +7,17 @@
  * - Provides real-time training and best practices
  * - Ensures quality care documentation
  * - Guides caregivers through proper procedures
+ *
+ * SECURITY NOTE — until 2026-05-06 this file imported the
+ * GoogleGenerativeAI SDK and initialized it with
+ * NEXT_PUBLIC_GEMINI_API_KEY. The genAI instance was never used
+ * (dead code) but the import + module-init bundled the env var
+ * reference into the client JS via SupervisedVitalsWizard.tsx
+ * which imports this module. Removed entirely; this file is now
+ * pure rule-based threshold logic with no external API dependency.
+ * Any Gemini-augmented features should call a server-side endpoint
+ * via fetch() — see app/api/ai/* for the pattern.
  */
-
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '')
 
 // ============================================================================
 // VITAL SIGNS VALIDATION

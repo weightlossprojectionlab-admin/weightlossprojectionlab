@@ -3,13 +3,21 @@
  *
  * Generates missing recipe instructions using Gemini AI
  * Ensures cook/prepare detection works by including appropriate keywords
+ *
+ * SERVER-ONLY — this module performs Gemini calls and reads
+ * GEMINI_API_KEY (server-only env var). Until 2026-05-06 the env
+ * lookup also fell back to NEXT_PUBLIC_GEMINI_API_KEY, which is
+ * exposed in the client bundle. Removed: any client-side caller
+ * (e.g., the admin RecipeGenerator UI) must invoke this through
+ * the /api/recipes/generate-steps server endpoint via fetch(),
+ * not by importing this module directly.
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { MealSuggestion } from './meal-suggestions'
 import { logger } from '@/lib/logger'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '')
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export interface GenerateRecipeStepsOptions {
   recipe: MealSuggestion
