@@ -414,20 +414,53 @@ function AuthContent() {
       <div className="w-full max-w-md space-y-8">
         {/* Header */}
         <div className="text-center">
-          <Link href="/" className="text-2xl font-bold text-foreground">
-            WPL
+          <Link href="/" className="inline-block" aria-label="Wellness Projection Lab home">
+            <img
+              src="/icon-512x512.png"
+              alt=""
+              width={128}
+              height={128}
+              className="mx-auto rounded-2xl shadow-md"
+              aria-hidden="true"
+            />
+            <div className="mt-3 text-2xl font-bold text-foreground leading-tight">
+              Wellness Projection Lab
+            </div>
           </Link>
-          <h2 className="mt-4">
-            {isInvitationFlow
-              ? 'Create account to accept invitation'
-              : (isSignUp ? 'Create your account' : 'Sign in to your account')}
-          </h2>
-          <p className="mt-2 text-body-sm text-muted-foreground">
-            {isInvitationFlow
-              ? 'Sign up to view and accept your family care invitation'
-              : 'Track your weight loss journey with AI-powered insights'}
-          </p>
+          {/* Tagline + value props are pre-commit marketing — only shown to
+              first-time visitors (sign-up / invitation). Returning sign-in
+              users came to log in; we get out of their way. */}
+          {(isSignUp || isInvitationFlow) && (
+            <p className="mt-3 text-body-sm text-muted-foreground">
+              {isInvitationFlow
+                ? 'Sign up to view and accept your family care invitation'
+                : 'Care for the people you love — meals, vitals, medications, all in one place.'}
+            </p>
+          )}
         </div>
+
+        {/* Value props — practitioner voice, frames the work for caregivers/families.
+            Hidden on sign-in mode (semantic intent: returning users want the form fast). */}
+        {(isSignUp || isInvitationFlow) && (
+          <ul className="space-y-2 text-sm text-muted-foreground" aria-label="What you can do with WPL">
+            <li className="flex items-start gap-2.5">
+              <span aria-hidden="true" className="text-base leading-tight">🍽️</span>
+              <span>Meals tailored to every member of your family</span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <span aria-hidden="true" className="text-base leading-tight">🩺</span>
+              <span>Vitals trends that flag overdue check-ins</span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <span aria-hidden="true" className="text-base leading-tight">👥</span>
+              <span>One household, every caregiver in sync</span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <span aria-hidden="true" className="text-base leading-tight">⚠️</span>
+              <span>Allergen-aware everywhere — recipes, shopping, and meal log</span>
+            </li>
+          </ul>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -502,7 +535,15 @@ function AuthContent() {
 
         {/* Auth Form */}
         {!showBiometricSetup && (
-          <>
+          <div className="bg-card rounded-xl shadow-lg p-6 sm:p-8 space-y-6">
+            {/* Heading lives INSIDE the card so it labels the form it
+                actually belongs to — semantic-intent fix per
+                feedback_semantic_intent. */}
+            <h2 className="text-xl font-semibold text-foreground text-center">
+              {isInvitationFlow
+                ? 'Create account to accept invitation'
+                : (isSignUp ? 'Create your account' : 'Sign in to your account')}
+            </h2>
             <form onSubmit={handleEmailAuth} className="space-y-6">
               <div className="space-y-4">
                 {isSignUp && (
@@ -661,13 +702,8 @@ function AuthContent() {
                 }
               </button>
             </div>
-          </>
+          </div>
         )}
-
-        {/* Accessibility Note */}
-        <div className="text-center text-xs text-muted-foreground">
-          <p>Fully accessible • Touch-optimized • Privacy-focused</p>
-        </div>
       </div>
     </main>
   )
