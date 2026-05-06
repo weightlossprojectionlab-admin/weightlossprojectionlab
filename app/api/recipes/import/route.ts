@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { DietaryTag } from '@/lib/meal-suggestions'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const maxDuration = 60 // Recipe imports can take time
 
@@ -388,6 +389,10 @@ export async function GET(request: NextRequest) {
  * POST /api/recipes/import (legacy — kept for backward compatibility)
  */
 export async function POST(request: NextRequest) {
+  // T5.17 — rate limit before fetch + Gemini call.
+  const rateLimitResponse = await rateLimit(request, 'ai:gemini')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

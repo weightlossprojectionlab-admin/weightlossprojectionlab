@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { rateLimit } from '@/lib/rate-limit'
 
 /**
  * AI Service Health Check Endpoint
@@ -8,6 +9,11 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
  * Used for production diagnostics
  */
 export async function GET(request: NextRequest) {
+  // T5.17 — rate limit even diagnostic endpoints; this one issues a
+  // real Gemini call so it costs money and could be abused.
+  const rateLimitResponse = await rateLimit(request, 'ai:gemini')
+  if (rateLimitResponse) return rateLimitResponse
+
   const diagnostics = {
     timestamp: new Date().toISOString(),
     environment: {

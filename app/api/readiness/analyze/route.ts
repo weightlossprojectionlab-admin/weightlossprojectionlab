@@ -12,8 +12,12 @@ import { getAuth } from 'firebase-admin/auth'
 import { analyzeUserReadiness, getLatestAnalysis } from '@/lib/readiness-analyzer'
 import { initAdmin } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { rateLimit } from '@/lib/rate-limit'
 
-// Rate limiting: Store last analysis time per user
+// Per-user analysis cooldown (1 hour) layered ON TOP OF the standard
+// 'ai:gemini' edge rate limit. The cooldown protects against repeated
+// LLM-driven readiness re-runs within the same session; the rate
+// limit protects the broader Gemini quota / cost budget.
 const analysisCache = new Map<string, number>()
 const ANALYSIS_COOLDOWN_MS = 60 * 60 * 1000 // 1 hour between analyses
 
@@ -23,6 +27,10 @@ const ANALYSIS_COOLDOWN_MS = 60 * 60 * 1000 // 1 hour between analyses
  * Trigger a new readiness analysis for the authenticated user
  */
 export async function POST(request: NextRequest) {
+  // T5.17 — rate limit before any auth/Firestore work.
+  const rateLimitResponse = await rateLimit(request, 'ai:gemini')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     // Initialize Firebase Admin
     initAdmin()

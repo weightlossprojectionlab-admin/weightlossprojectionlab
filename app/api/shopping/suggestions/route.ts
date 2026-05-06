@@ -17,6 +17,7 @@ import type {
 import type { PatientProfile } from '@/types/medical'
 import { ShoppingSuggestionsResponseSchema } from '@/lib/validations/shopping'
 import { generateGeminiJSON, validateGeminiConfig } from '@/lib/ai/gemini-client'
+import { rateLimit } from '@/lib/rate-limit'
 
 /**
  * Gemini AI schema for shopping suggestions
@@ -64,6 +65,10 @@ const shoppingSuggestionsSchema = {
 }
 
 export async function POST(request: NextRequest) {
+  // T5.17 — rate limit before patient/vitals fetch + Gemini call.
+  const rateLimitResponse = await rateLimit(request, 'ai:gemini')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const body = await request.json()
     const { patientId, userId } = body

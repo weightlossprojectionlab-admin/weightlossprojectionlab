@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { extractTextFromImageWithGemini } from '@/lib/ocr-gemini'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const maxDuration = 60 // Allow up to 60 seconds for OCR processing
 
@@ -28,6 +29,11 @@ export const maxDuration = 60 // Allow up to 60 seconds for OCR processing
  * }
  */
 export async function POST(request: NextRequest) {
+  // T5.17 — rate limit before any expensive work (Gemini Vision call,
+  // patient-access RBAC, Firestore writes).
+  const rateLimitResponse = await rateLimit(request, 'ai:gemini')
+  if (rateLimitResponse) return rateLimitResponse
+
   console.log('[Document OCR] ========== NEW REQUEST ==========')
   try {
     const body = await request.json()

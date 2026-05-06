@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { extractTextFromImageWithGemini } from '@/lib/ocr-gemini'
 import { logger } from '@/lib/logger'
 import { getAdminStorage } from '@/lib/firebase-admin'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60 // 60 seconds for complex documents
@@ -71,6 +72,10 @@ async function fetchImageAsBase64(url: string): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
+  // T5.17 — rate limit before image fetch + Gemini Vision call.
+  const rateLimitResponse = await rateLimit(request, 'ai:gemini')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const body = await request.json()
     const { imageData, imageUrl } = body

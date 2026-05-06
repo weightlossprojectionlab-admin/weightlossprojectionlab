@@ -10,12 +10,18 @@ import { isSuperAdmin } from '@/lib/admin/permissions'
 import { getCurrentStage, buildContentPrompt } from '@/lib/content-strategy'
 import { logger } from '@/lib/logger'
 import { errorResponse, forbiddenResponse, unauthorizedResponse } from '@/lib/api-response'
+import { rateLimit } from '@/lib/rate-limit'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export const maxDuration = 30
 
 export async function POST(request: NextRequest) {
+  // T5.17 — rate limit before admin auth + Gemini call. Even admin
+  // routes need quota protection (cost containment).
+  const rateLimitResponse = await rateLimit(request, 'ai:gemini')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const authHeader = request.headers.get('authorization')
     const idToken = authHeader?.replace('Bearer ', '')

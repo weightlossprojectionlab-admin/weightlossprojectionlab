@@ -15,8 +15,13 @@ import { logger } from '@/lib/logger'
 import type { AIHealthProfile, MealSafetyCheck } from '@/types'
 import { verifyAuthToken } from '@/lib/rbac-middleware'
 import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  // T5.17 — rate limit (20 req/min per IP/user via 'ai:gemini' slot).
+  const rateLimitResponse = await rateLimit(request, 'ai:gemini')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     // 1. Verify authentication
     const authHeader = request.headers.get('Authorization')
