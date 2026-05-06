@@ -123,6 +123,15 @@ export function RecipeModal({
     productData: any
   } | null>(null)
   const [scanQuantity, setScanQuantity] = useState<number>(1)
+  // "Fix inventory" chooser — shown when user clicks the per-row
+  // CTA on a missing ingredient. Lets them pick between scanning a
+  // barcode (boxed/packaged) or counting manually (produce, herbs,
+  // anything without a barcode). Backend term is "inventory
+  // adjustment"; the UI calls it "Fix inventory" so the affordance
+  // is consistent regardless of the chosen path.
+  const [fixInventoryFor, setFixInventoryFor] = useState<{
+    ingredientName: string
+  } | null>(null)
   const [missingIngredients, setMissingIngredients] = useState<string[]>([])
   const [scannedItems, setScannedItems] = useState<Set<string>>(new Set())
   const [scanningInProgress, setScanningInProgress] = useState(false)
@@ -1256,12 +1265,21 @@ export function RecipeModal({
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation()
-                                            setShowScanner(true)
+                                            // Both rows pass the
+                                            // displayIngredient text — that's
+                                            // the user-visible name we'd want
+                                            // to surface in the chooser
+                                            // (e.g., "1 cup graham cracker
+                                            // crumbs" → user sees what
+                                            // they're fixing inventory for).
+                                            setFixInventoryFor({
+                                              ingredientName: displayIngredient,
+                                            })
                                           }}
                                           className="inline-flex items-center gap-1 px-3 py-2 min-h-[36px] text-xs bg-primary/10 text-primary font-medium rounded-md hover:bg-primary/20 active:bg-primary/30 transition-colors"
                                         >
-                                          <span>📷</span>
-                                          <span>Scan to fix</span>
+                                          <span>🔧</span>
+                                          <span>Fix inventory</span>
                                         </button>
                                       </div>
                                     )}
@@ -1285,12 +1303,21 @@ export function RecipeModal({
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation()
-                                            setShowScanner(true)
+                                            // Both rows pass the
+                                            // displayIngredient text — that's
+                                            // the user-visible name we'd want
+                                            // to surface in the chooser
+                                            // (e.g., "1 cup graham cracker
+                                            // crumbs" → user sees what
+                                            // they're fixing inventory for).
+                                            setFixInventoryFor({
+                                              ingredientName: displayIngredient,
+                                            })
                                           }}
                                           className="inline-flex items-center gap-1 px-3 py-2 min-h-[36px] text-xs bg-primary/10 text-primary font-medium rounded-md hover:bg-primary/20 active:bg-primary/30 transition-colors"
                                         >
-                                          <span>📷</span>
-                                          <span>Scan to fix</span>
+                                          <span>🔧</span>
+                                          <span>Fix inventory</span>
                                         </button>
                                       </div>
                                     )}
@@ -2096,9 +2123,92 @@ export function RecipeModal({
           </div>
         )}
 
+        {/* "Fix inventory" chooser — picks between barcode scan
+            (boxed / packaged items) and manual count (produce,
+            herbs, loose items with no barcode). Both paths feed
+            the same quantity-prompt below. Backend logs the change
+            as an "inventory adjustment" regardless of which path
+            was used. */}
+        {fixInventoryFor && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-card border border-border rounded-lg shadow-xl max-w-sm w-full p-6">
+              <h3 className="text-lg font-bold text-foreground mb-1">
+                Fix inventory
+              </h3>
+              <p className="text-sm text-muted-foreground mb-5 break-words">
+                <strong>{fixInventoryFor.ingredientName}</strong>
+              </p>
+              <div className="space-y-2 mb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFixInventoryFor(null)
+                    setShowScanner(true)
+                  }}
+                  className="w-full px-4 py-3 min-h-[44px] bg-primary text-white rounded-lg font-medium hover:bg-primary-hover active:bg-primary-hover flex items-center gap-3 text-left"
+                >
+                  <span className="text-xl">📷</span>
+                  <span className="flex-1">
+                    <span className="block">Scan barcode</span>
+                    <span className="block text-xs font-normal opacity-90">
+                      Boxed, jarred, or packaged items
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const name = fixInventoryFor.ingredientName
+                    const slug = name
+                      .toLowerCase()
+                      .replace(/[^a-z0-9]+/g, '-')
+                      .replace(/(^-|-$)/g, '')
+                      .slice(0, 60)
+                    const synthetic = `manual:${slug || 'item'}`
+                    setFixInventoryFor(null)
+                    // Reuse the existing quantity-prompt by faking a
+                    // pendingScanProduct entry. addItem treats the
+                    // OpenFoodFactsProduct's `code` as the barcode,
+                    // so the synthetic "manual:xxx" key gives us
+                    // dedup against future "Count it" repeats for
+                    // the same ingredient string.
+                    setPendingScanProduct({
+                      barcode: synthetic,
+                      name,
+                      productData: {
+                        code: synthetic,
+                        product_name: name,
+                      },
+                    })
+                    setScanQuantity(1)
+                  }}
+                  className="w-full px-4 py-3 min-h-[44px] bg-secondary text-secondary-foreground border-2 border-border rounded-lg font-medium hover:bg-muted active:bg-muted/80 flex items-center gap-3 text-left"
+                >
+                  <span className="text-xl">🔢</span>
+                  <span className="flex-1">
+                    <span className="block">Count it</span>
+                    <span className="block text-xs font-normal opacity-80">
+                      Produce, herbs, anything without a barcode
+                    </span>
+                  </span>
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFixInventoryFor(null)}
+                className="w-full px-4 py-3 min-h-[44px] text-muted-foreground hover:bg-muted/50 rounded-lg font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Quantity confirmation prompt — fires after a successful
-            inline "Scan to fix" lookup. User tells us how many they
-            actually have on hand before we touch the inventory. */}
+            inline "Fix inventory" lookup (Scan path) or directly
+            after the chooser's "Count it" path. User tells us how
+            many they actually have on hand before we touch the
+            inventory. */}
         {pendingScanProduct && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-card border border-border rounded-lg shadow-xl max-w-sm w-full p-6">
