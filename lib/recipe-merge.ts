@@ -6,7 +6,7 @@
  */
 
 import { MEAL_SUGGESTIONS, MealSuggestion } from './meal-suggestions'
-import { unpackIngredientAllergens } from './ingredient-allergen-classifier'
+import { unpackIngredientAllergens } from './allergen-pack'
 
 interface FirestoreDoc {
   docId?: string

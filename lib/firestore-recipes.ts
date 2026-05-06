@@ -27,7 +27,7 @@ import { logger } from '@/lib/logger'
 import {
   packIngredientAllergens,
   unpackIngredientAllergens,
-} from './ingredient-allergen-classifier'
+} from './allergen-pack'
 
 const RECIPES_COLLECTION = 'recipes'
 

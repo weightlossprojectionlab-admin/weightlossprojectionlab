@@ -32,7 +32,7 @@ import {
 } from '@/lib/ingredient-matcher'
 import { addRecipeIngredientsToShoppingList } from '@/lib/shopping-operations'
 import { findAllergenOverlap } from '@/lib/allergen-cross-check'
-import { unpackIngredientAllergens } from '@/lib/ingredient-allergen-classifier'
+import { unpackIngredientAllergens } from '@/lib/allergen-pack'
 import { EaterMultiSelect, type EaterSelection } from '@/components/log-meal/EaterMultiSelect'
 import { lookupBarcode, simplifyProduct } from '@/lib/openfoodfacts-api'
 import { auth } from '@/lib/firebase'
