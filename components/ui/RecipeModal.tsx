@@ -720,6 +720,16 @@ export function RecipeModal({
 
       toast.success(`✓ Added ${product.name} to inventory`, { id: 'barcode-scan' })
 
+      // Per-row inline scan path — user clicked "Scan to fix" on a
+      // single missing ingredient row. Just close the scanner and
+      // let the inventory refresh update the row inline. Don't
+      // run the cascade (proceed to cooking) — that's only for the
+      // batch missing-ingredients-modal flow.
+      if (!scanningInProgress) {
+        setShowScanner(false)
+        return
+      }
+
       // Check if we've scanned all missing items
       // Note: This is simplified - ideally we'd match barcodes to specific ingredients
       const newScannedCount = scannedItems.size + 1
@@ -1210,26 +1220,57 @@ export function RecipeModal({
                                       </p>
                                     )}
                                     {ingredientResults[idx].hasEnough === false && ingredientResults[idx].matched && (
-                                      <p className="text-xs text-orange-700 dark:text-orange-400 flex items-center gap-1">
-                                        <span>⚠️</span>
-                                        <span>{ingredientResults[idx].comparison}</span>
+                                      <div className="text-xs text-orange-700 dark:text-orange-400 flex items-center gap-2 flex-wrap">
+                                        <span className="flex items-center gap-1">
+                                          <span>⚠️</span>
+                                          <span>{ingredientResults[idx].comparison}</span>
+                                        </span>
                                         {isIngredientOnShoppingList(ingredient) && (
-                                          <span className="ml-1 inline-flex items-center gap-0.5 text-primary font-medium">
+                                          <span className="inline-flex items-center gap-0.5 text-primary font-medium">
                                             <span>📋</span> On Shopping List
                                           </span>
                                         )}
-                                      </p>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            setShowScanner(true)
+                                          }}
+                                          className="inline-flex items-center gap-1 text-primary font-medium hover:text-primary-hover underline-offset-2 hover:underline"
+                                        >
+                                          <span>📷</span>
+                                          <span>Scan to fix</span>
+                                        </button>
+                                      </div>
                                     )}
                                     {!ingredientResults[idx].matched && (
-                                      <p className="text-xs text-error-dark flex items-center gap-1">
-                                        <span>❌</span>
-                                        <span>{ingredientResults[idx].comparison}</span>
+                                      <div className="text-xs text-error-dark flex items-center gap-2 flex-wrap">
+                                        <span className="flex items-center gap-1">
+                                          <span>❌</span>
+                                          <span>{ingredientResults[idx].comparison}</span>
+                                        </span>
                                         {isIngredientOnShoppingList(ingredient) && (
-                                          <span className="ml-1 inline-flex items-center gap-0.5 text-primary font-medium">
+                                          <span className="inline-flex items-center gap-0.5 text-primary font-medium">
                                             <span>📋</span> On Shopping List
                                           </span>
                                         )}
-                                      </p>
+                                        {/* Inline "Scan to fix" — for the case
+                                            where the user actually has the
+                                            ingredient at home but it's not in
+                                            the app's inventory. One scan adds
+                                            it; the row updates inline. */}
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            setShowScanner(true)
+                                          }}
+                                          className="inline-flex items-center gap-1 text-primary font-medium hover:text-primary-hover underline-offset-2 hover:underline"
+                                        >
+                                          <span>📷</span>
+                                          <span>Scan to fix</span>
+                                        </button>
+                                      </div>
                                     )}
                                     {ingredientResults[idx].hasEnough === null && ingredientResults[idx].matched && (
                                       <p className="text-xs text-muted-foreground flex items-center gap-1">
