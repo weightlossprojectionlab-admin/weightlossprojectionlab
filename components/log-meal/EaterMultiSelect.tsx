@@ -31,6 +31,23 @@ import type { AllergyTag } from '@/lib/meal-suggestions'
 import { findAllergenOverlap } from '@/lib/allergen-cross-check'
 import { medicalOperations } from '@/lib/medical-operations'
 
+/**
+ * Compute eater age in whole months from an ISO/Date string.
+ * Returns null when DOB is missing/invalid (eligibility check
+ * defaults to "include" — don't block on missing data).
+ */
+function computeAgeInMonths(dob: string | undefined): number | null {
+  if (!dob) return null
+  const d = new Date(dob)
+  if (isNaN(d.getTime())) return null
+  const now = new Date()
+  const months =
+    (now.getFullYear() - d.getFullYear()) * 12 +
+    (now.getMonth() - d.getMonth()) -
+    (now.getDate() < d.getDate() ? 1 : 0)
+  return months
+}
+
 export interface EaterSelection {
   /** Stable id — patient.id for family members, 'self' for the
       logged-in user. */
@@ -95,19 +112,30 @@ export function EaterMultiSelect({
     new Set(),
   )
 
-  // Load family roster on mount. Non-human members (pets) are
-  // excluded — pet nutrition is a separate domain.
+  // Load family roster on mount. Two filters applied:
+  //   1. Non-human members (pets, species != 'human') — pet
+  //      nutrition is a separate domain.
+  //   2. Under 6 months — per CDC/Mayo developmental roadmap,
+  //      infants <6mo are not yet eaters of table food. Their
+  //      nutrition is breastmilk/formula, tracked separately.
+  //      Including them in a meal-eater picker is noise.
+  // Reference: project_eater_eligibility_age_gate.md
   useEffect(() => {
     let cancelled = false
     medicalOperations.patients
       .getPatients()
       .then((all) => {
         if (cancelled) return
-        const humans = (all || []).filter((p) => {
+        const eligible = (all || []).filter((p) => {
           const species = (p as { species?: string }).species
-          return !species || species === 'human'
+          if (species && species !== 'human') return false
+          const ageMonths = computeAgeInMonths(
+            (p as { dateOfBirth?: string }).dateOfBirth,
+          )
+          if (ageMonths !== null && ageMonths < 6) return false
+          return true
         })
-        setPatients(humans)
+        setPatients(eligible)
         // Default selection: scoped patient if provided, else self.
         if (scopedToPatientId) {
           setSelectedIds(new Set([scopedToPatientId]))
@@ -262,7 +290,16 @@ export function EaterMultiSelect({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium text-foreground">Who ate this meal?</p>
+      {/* Inner heading is mode-aware. In log mode (/log-meal), the
+          parent doesn't provide a heading so we render one here.
+          In plan mode (RecipeModal), the parent provides
+          "Cooking for N — who else is eating?" so we suppress this
+          to avoid stacking redundant headings. */}
+      {mode === 'log' && (
+        <p className="text-sm font-medium text-foreground">
+          Who ate this meal?
+        </p>
+      )}
       {roster.length === 0 ? (
         <p className="text-xs text-muted-foreground">
           No family members found.
