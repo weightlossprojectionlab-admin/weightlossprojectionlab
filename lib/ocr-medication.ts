@@ -430,11 +430,16 @@ export function parseMedicationFromText(text: string): ExtractedMedicationText |
  * (fallback for low-confidence OCR)
  *
  * @param imageFile - Image file containing medication label
- * @returns Parsed medication information from Gemini Vision
+ * @param side      - Optional hint: 'front' | 'back'. When set, the server biases
+ *                    Gemini's extraction to fields likely to appear on that side
+ *                    (front = identity; back = dosage/refills/NDC/dates/warnings).
  */
-async function extractMedicationWithGemini(imageFile: File | Blob): Promise<ExtractedMedicationText | null> {
+async function extractMedicationWithGemini(
+  imageFile: File | Blob,
+  side?: 'front' | 'back'
+): Promise<ExtractedMedicationText | null> {
   try {
-    logger.info('[Gemini OCR] Using server-side Gemini Vision API for medication extraction')
+    logger.info('[Gemini OCR] Using server-side Gemini Vision API for medication extraction', { side })
 
     // Get current user token for API auth
     const user = auth.currentUser
@@ -462,7 +467,7 @@ async function extractMedicationWithGemini(imageFile: File | Blob): Promise<Extr
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ imageData })
+      body: JSON.stringify({ imageData, side })
     })
 
     if (!response.ok) {
@@ -497,20 +502,22 @@ async function extractMedicationWithGemini(imageFile: File | Blob): Promise<Extr
  *
  * @param imageFile - Image file containing medication label
  * @param onProgress - Optional progress callback (0-100)
- * @returns Parsed medication information
+ * @param side      - Optional 'front' | 'back' hint to bias Gemini extraction toward
+ *                    the fields most likely visible on that side.
  */
 export async function extractMedicationFromImage(
   imageFile: File | Blob,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  side?: 'front' | 'back'
 ): Promise<ExtractedMedicationText | null> {
   try {
-    logger.info('[OCR] Extracting medication from image - ACCURACY MODE: Using Gemini Vision AI first')
+    logger.info('[OCR] Extracting medication from image - ACCURACY MODE: Using Gemini Vision AI first', { side })
 
     // ACCURACY PRIORITY: Try Gemini Vision AI FIRST for maximum accuracy
     // Gemini understands context, handles poor quality images, and extracts structured data reliably
     try {
-      logger.info('[OCR] Attempting Gemini Vision AI (primary method)')
-      const geminiResult = await extractMedicationWithGemini(imageFile)
+      logger.info('[OCR] Attempting Gemini Vision AI (primary method)', { side })
+      const geminiResult = await extractMedicationWithGemini(imageFile, side)
 
       if (geminiResult && geminiResult.medicationName && geminiResult.medicationName !== 'Unknown') {
         logger.info('[OCR] ✅ Gemini Vision succeeded - high accuracy extraction')
@@ -550,6 +557,88 @@ export async function extractMedicationFromImage(
     logger.error('[OCR] Medication extraction failed', error as Error)
     return null
   }
+}
+
+/**
+ * Merge two ExtractedMedicationText records (front + back of the same bottle).
+ * Front is preferred for identity fields (drug name, strength, Rx#, prescriber, patient).
+ * Back is preferred for instruction/admin fields (frequency, NDC, refills, dates, warnings).
+ */
+function mergeExtractedMedications(
+  front: ExtractedMedicationText | null,
+  back: ExtractedMedicationText | null
+): ExtractedMedicationText | null {
+  if (!front && !back) return null
+  if (!front) return back
+  if (!back) return front
+
+  const dedupedWarnings = Array.from(new Set([...(back.warnings ?? []), ...(front.warnings ?? [])]))
+
+  return {
+    // Identity — front wins
+    medicationName: front.medicationName || back.medicationName,
+    strength: front.strength ?? back.strength,
+    dosageForm: front.dosageForm ?? back.dosageForm,
+    rxNumber: front.rxNumber ?? back.rxNumber,
+    prescribingDoctor: front.prescribingDoctor ?? back.prescribingDoctor,
+    patientName: front.patientName ?? back.patientName,
+    patientAddress: front.patientAddress ?? back.patientAddress,
+    pharmacy: front.pharmacy ?? back.pharmacy,
+    pharmacyPhone: front.pharmacyPhone ?? back.pharmacyPhone,
+
+    // Instructions / admin — back wins
+    frequency: back.frequency ?? front.frequency,
+    ndc: back.ndc ?? front.ndc,
+    quantity: back.quantity ?? front.quantity,
+    refills: back.refills ?? front.refills,
+    fillDate: back.fillDate ?? front.fillDate,
+    expirationDate: back.expirationDate ?? front.expirationDate,
+    warnings: dedupedWarnings.length > 0 ? dedupedWarnings : undefined,
+
+    rawText: `--- Front ---\n${front.rawText}\n\n--- Back ---\n${back.rawText}`,
+    suggestedConditions: front.suggestedConditions ?? back.suggestedConditions,
+  }
+}
+
+/**
+ * Extract medication info from one or two photos of a prescription label.
+ *
+ * Reads each image independently via the proven single-image pipeline, then merges
+ * the two records. Two smaller Gemini calls are far more reliable than one combined
+ * call, which often hit the response token cap and returned malformed JSON.
+ *
+ * @param frontImage - REQUIRED. The front (small main label) photo.
+ * @param backImage  - OPTIONAL. The back/wraparound panel photo.
+ * @param onProgress - Optional progress callback (0-100). Currently only forwarded for the front image.
+ */
+export async function extractMedicationFromTwoImages(
+  frontImage: File | Blob,
+  backImage: File | Blob | null,
+  onProgress?: (progress: number) => void
+): Promise<ExtractedMedicationText | null> {
+  logger.info('[OCR] Extracting medication from two images', { hasBack: !!backImage })
+
+  if (!backImage) {
+    return extractMedicationFromImage(frontImage, onProgress, 'front')
+  }
+
+  const [front, back] = await Promise.all([
+    extractMedicationFromImage(frontImage, onProgress, 'front'),
+    extractMedicationFromImage(backImage, undefined, 'back'),
+  ])
+
+  if (!front && !back) {
+    logger.error('[OCR] Both single-image extractions failed')
+    return null
+  }
+
+  const merged = mergeExtractedMedications(front, back)
+  logger.info('[OCR] ✅ Two-image extraction merged', {
+    hadFront: !!front,
+    hadBack: !!back,
+    medicationName: merged?.medicationName,
+  })
+  return merged
 }
 
 /**

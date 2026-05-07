@@ -1,6 +1,7 @@
-import { storage } from '@/lib/firebase'
+import { storage, auth } from '@/lib/firebase'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { logger } from '@/lib/logger'
+import type { MedicationImage } from '@/types/medical'
 
 /**
  * Upload medication image to Firebase Storage
@@ -62,5 +63,66 @@ export async function uploadMedicationImage(
     console.error('[Medication Image Upload] Error details:', errorDetails)
 
     throw error
+  }
+}
+
+/**
+ * Read image dimensions from a File using an off-screen Image element.
+ */
+async function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      resolve({ width: img.width, height: img.height })
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Failed to load image'))
+    }
+
+    img.src = url
+  })
+}
+
+/**
+ * Upload a medication image and return a fully populated MedicationImage record.
+ *
+ * Path scheme: medications/{userId}/{patientId}/{medicationId}/{imageId}_{filename}
+ * Used by both the create-flow (MedicationReviewModal after addMedication returns an id)
+ * and the after-the-fact MedicationImageManager.
+ */
+export async function uploadMedicationImageRecord(
+  file: File,
+  userId: string,
+  patientId: string,
+  medicationId: string,
+  label: MedicationImage['label'],
+  isPrimary: boolean
+): Promise<MedicationImage> {
+  const imageId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const storagePath = `medications/${userId}/${patientId}/${medicationId}/${imageId}_${sanitizedName}`
+  const storageRef = ref(storage, storagePath)
+
+  await uploadBytes(storageRef, file)
+  const url = await getDownloadURL(storageRef)
+  const dimensions = await getImageDimensions(file)
+
+  return {
+    id: imageId,
+    url,
+    storagePath,
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: userId,
+    label,
+    ocrProcessed: false,
+    isPrimary,
+    width: dimensions.width,
+    height: dimensions.height,
+    fileSize: file.size
   }
 }

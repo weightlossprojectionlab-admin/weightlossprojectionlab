@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { PatientMedication } from '@/types/medical'
+import { useState, useMemo } from 'react'
+import { PatientMedication, MedicationImage } from '@/types/medical'
 import { ScannedMedication } from '@/lib/medication-lookup'
-import { XMarkIcon, ClockIcon, CalendarIcon, ExclamationTriangleIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, ClockIcon, CalendarIcon, ExclamationTriangleIcon, DocumentTextIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import MedicationAdherenceHistory from '@/components/patients/MedicationAdherenceHistory'
 import { DocumentReader } from '@/components/medications/DocumentReader'
 import { ParsedMedicationData } from '@/lib/medication-parser'
@@ -25,6 +25,41 @@ export default function MedicationDetailModal({ medication, onClose, patientId, 
   const [extractedData, setExtractedData] = useState<ParsedMedicationData | null>(null)
   const [applying, setApplying] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+
+  // Build the carousel slide list. Prefer the new images[] array (front/back/etc).
+  // Fall back to the legacy single imageUrl/photoUrl so older records still render.
+  const carouselImages = useMemo<Array<{ url: string; label?: MedicationImage['label'] }>>(() => {
+    const imagesArray = 'images' in medication ? medication.images : undefined
+    if (imagesArray && imagesArray.length > 0) {
+      // Sort: primary first, then front, back, then everything else
+      const labelRank: Record<string, number> = { front: 1, back: 2, bottle: 3, label: 4, information: 5, other: 6 }
+      const sorted = [...imagesArray].sort((a, b) => {
+        if (a.isPrimary && !b.isPrimary) return -1
+        if (b.isPrimary && !a.isPrimary) return 1
+        return (labelRank[a.label] ?? 99) - (labelRank[b.label] ?? 99)
+      })
+      return sorted.map(img => ({ url: img.url, label: img.label }))
+    }
+    const legacyUrl = medication.imageUrl || medication.photoUrl
+    return legacyUrl ? [{ url: legacyUrl }] : []
+  }, [medication])
+
+  const currentImage = carouselImages[currentImageIndex]
+  const hasMultipleImages = carouselImages.length > 1
+
+  const goToPrevImage = () => setCurrentImageIndex(i => (i - 1 + carouselImages.length) % carouselImages.length)
+  const goToNextImage = () => setCurrentImageIndex(i => (i + 1) % carouselImages.length)
+
+  const formatLabel = (label?: MedicationImage['label']) => {
+    if (!label) return ''
+    if (label === 'front') return 'Front'
+    if (label === 'back') return 'Back'
+    if (label === 'bottle') return 'Bottle'
+    if (label === 'label') return 'Label'
+    if (label === 'information') return 'Info Sheet'
+    return 'Photo'
+  }
 
   // Type guard to check if medication is ScannedMedication
   const isScannedMedication = (med: PatientMedication | ScannedMedication): med is ScannedMedication => {
@@ -59,7 +94,7 @@ export default function MedicationDetailModal({ medication, onClose, patientId, 
   // Handle "Read Label" button click - start OCR directly
   const handleReadLabel = async () => {
     console.log('[MedicationDetailModal] ===== READ LABEL CLICKED =====')
-    const imageUrl = medication.imageUrl || medication.photoUrl
+    const imageUrl = currentImage?.url || medication.imageUrl || medication.photoUrl
     console.log('[MedicationDetailModal] Image URL:', imageUrl)
 
     if (!imageUrl) {
@@ -226,11 +261,18 @@ export default function MedicationDetailModal({ medication, onClose, patientId, 
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Medication Image */}
-          {(medication.imageUrl || medication.photoUrl) && (
+          {/* Medication Image(s) — carousel for multi-photo records, single image for legacy */}
+          {currentImage && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Medication Bottle Image</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Medication Bottle Image
+                  {hasMultipleImages && (
+                    <span className="ml-2 text-xs font-normal normal-case text-muted-foreground">
+                      ({currentImageIndex + 1} of {carouselImages.length})
+                    </span>
+                  )}
+                </h3>
                 <button
                   onClick={handleReadLabel}
                   disabled={isExtracting}
@@ -250,14 +292,61 @@ export default function MedicationDetailModal({ medication, onClose, patientId, 
                 </button>
               </div>
               <div className="bg-muted rounded-lg p-4">
-                <img
-                  src={medication.imageUrl || medication.photoUrl}
-                  alt={`${medication.name} bottle`}
-                  className="w-full max-w-md mx-auto rounded-lg border-2 border-border hover:border-primary transition-all cursor-pointer"
-                  onClick={() => window.open(medication.imageUrl || medication.photoUrl, '_blank')}
-                />
+                <div className="relative max-w-md mx-auto">
+                  <img
+                    src={currentImage.url}
+                    alt={`${medication.name} ${formatLabel(currentImage.label)}`.trim()}
+                    className="w-full rounded-lg border-2 border-border hover:border-primary transition-all cursor-pointer"
+                    onClick={() => window.open(currentImage.url, '_blank')}
+                  />
+
+                  {currentImage.label && (
+                    <div className="absolute top-2 left-2 bg-black/70 text-white text-xs font-semibold px-2 py-1 rounded-full backdrop-blur-sm">
+                      {formatLabel(currentImage.label)}
+                    </div>
+                  )}
+
+                  {hasMultipleImages && (
+                    <>
+                      <button
+                        onClick={goToPrevImage}
+                        aria-label="Previous image"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors touch-manipulation"
+                      >
+                        <ChevronLeftIcon className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={goToNextImage}
+                        aria-label="Next image"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors touch-manipulation"
+                      >
+                        <ChevronRightIcon className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {hasMultipleImages && (
+                  <div className="flex justify-center gap-2 mt-3" role="tablist" aria-label="Image selector">
+                    {carouselImages.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentImageIndex(idx)}
+                        role="tab"
+                        aria-selected={idx === currentImageIndex}
+                        aria-label={`Show image ${idx + 1}`}
+                        className={`h-2.5 rounded-full transition-all ${
+                          idx === currentImageIndex
+                            ? 'bg-primary w-8'
+                            : 'bg-border w-2.5 hover:bg-muted-foreground'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+
                 <p className="text-xs text-muted-foreground text-center mt-2">
-                  Click to enlarge
+                  Tap image to enlarge
                 </p>
               </div>
             </div>

@@ -3,8 +3,9 @@
 import { useState, useRef } from 'react'
 import { MedicationImage } from '@/types/medical'
 import { storage, auth } from '@/lib/firebase'
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+import { ref, deleteObject } from 'firebase/storage'
 import { extractTextFromImage, extractMedicationFromImage } from '@/lib/ocr-medication'
+import { uploadMedicationImageRecord } from '@/lib/medication-image-upload'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 import {
@@ -48,56 +49,14 @@ export function MedicationImageManager({
     const user = auth.currentUser
     if (!user) throw new Error('User not authenticated')
 
-    const imageId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const storagePath = `medications/${user.uid}/${patientId}/${medicationId}/${imageId}_${file.name}`
-    const storageRef = ref(storage, storagePath)
-
-    // Upload file
-    await uploadBytes(storageRef, file)
-
-    // Get download URL
-    const url = await getDownloadURL(storageRef)
-
-    // Get image dimensions
-    const dimensions = await getImageDimensions(file)
-
-    const image: MedicationImage = {
-      id: imageId,
-      url,
-      storagePath,
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: user.uid,
+    return uploadMedicationImageRecord(
+      file,
+      user.uid,
+      patientId,
+      medicationId,
       label,
-      ocrProcessed: false,
-      isPrimary: images.length === 0, // First image is primary
-      width: dimensions.width,
-      height: dimensions.height,
-      fileSize: file.size
-    }
-
-    return image
-  }
-
-  /**
-   * Get image dimensions from file
-   */
-  const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      const url = URL.createObjectURL(file)
-
-      img.onload = () => {
-        URL.revokeObjectURL(url)
-        resolve({ width: img.width, height: img.height })
-      }
-
-      img.onerror = () => {
-        URL.revokeObjectURL(url)
-        reject(new Error('Failed to load image'))
-      }
-
-      img.src = url
-    })
+      images.length === 0
+    )
   }
 
   /**

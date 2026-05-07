@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { medicalOperations } from '@/lib/medical-operations'
-import { DocumentReader } from '@/components/medications/DocumentReader'
+import { MedicationLabelCapture } from '@/components/medications/MedicationLabelCapture'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 
@@ -13,7 +13,7 @@ interface MedicationFormProps {
 
 export function MedicationForm({ patientId, onSuccess }: MedicationFormProps) {
   const [loading, setLoading] = useState(false)
-  const [showDocumentReader, setShowDocumentReader] = useState(false)
+  const [showLabelCapture, setShowLabelCapture] = useState(false)
 
   // Debug: Log patientId on mount and when it changes
   console.log('🔍 [MedicationForm] patientId =', patientId)
@@ -78,15 +78,15 @@ export function MedicationForm({ patientId, onSuccess }: MedicationFormProps) {
   return (
     <>
       <div>
-        {/* Scanner option */}
+        {/* Photo capture option */}
         <button
-          onClick={() => setShowDocumentReader(true)}
+          onClick={() => setShowLabelCapture(true)}
           className="w-full mb-4 px-4 py-3 bg-primary-light text-primary-dark rounded-lg hover:bg-primary/10 transition-colors flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          Scan Medication Label
+          Photograph Prescription Label
         </button>
 
         <div className="text-center text-sm text-muted-foreground mb-4">or enter manually</div>
@@ -205,13 +205,13 @@ export function MedicationForm({ patientId, onSuccess }: MedicationFormProps) {
       </form>
       </div>
 
-      {/* Document Reader Modal */}
-      <DocumentReader
-        isOpen={showDocumentReader}
-        onClose={() => setShowDocumentReader(false)}
+      {/* Two-photo Label Capture */}
+      <MedicationLabelCapture
+        isOpen={showLabelCapture}
+        onClose={() => setShowLabelCapture(false)}
         onSuccess={() => {
-          logger.info('[MedicationForm] Medication saved successfully from review modal')
-          setShowDocumentReader(false)
+          logger.info('[MedicationForm] Medication saved successfully from label capture')
+          setShowLabelCapture(false)
           onSuccess?.()
         }}
         patientId={patientId}

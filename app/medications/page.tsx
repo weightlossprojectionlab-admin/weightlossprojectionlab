@@ -14,7 +14,7 @@ import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import { PlusIcon, FunnelIcon, UserGroupIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { Spinner } from '@/components/ui/Spinner'
-import { DocumentReader } from '@/components/medications/DocumentReader'
+import { MedicationLabelCapture } from '@/components/medications/MedicationLabelCapture'
 
 export default function MedicationsPage() {
   return (
@@ -27,7 +27,7 @@ export default function MedicationsPage() {
 function MedicationsContent() {
   const { user } = useAuth()
   const { profile } = useUserProfile()
-  const [showDocumentReader, setShowDocumentReader] = useState(false)
+  const [showLabelCapture, setShowLabelCapture] = useState(false)
   const [filterByCondition, setFilterByCondition] = useState<string | null>(null)
 
   // Patient and medication state
@@ -216,13 +216,13 @@ function MedicationsContent() {
                 toast.error('Please select a patient first')
                 return
               }
-              setShowDocumentReader(true)
+              setShowLabelCapture(true)
             }}
             disabled={!selectedPatientId}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <DocumentTextIcon className="w-5 h-5" />
-            Scan Medication Label
+            Photograph Prescription Label
           </button>
         }
       />
@@ -327,7 +327,7 @@ function MedicationsContent() {
             <div className="text-6xl mb-4">💊</div>
             <p className="text-xl font-bold text-foreground mb-2">No Medications Yet</p>
             <p className="text-muted-foreground">
-              Start tracking medications for {selectedPatient?.name || 'this patient'} by clicking "Scan Medication Label" above
+              Start tracking medications for {selectedPatient?.name || 'this patient'} by clicking "Photograph Prescription Label" above
             </p>
           </div>
         ) : filteredMedications.length === 0 ? (
@@ -374,13 +374,13 @@ function MedicationsContent() {
           />
         )}
 
-        {/* Document Reader Modal */}
-        <DocumentReader
-          isOpen={showDocumentReader && !!selectedPatientId}
-          onClose={() => setShowDocumentReader(false)}
+        {/* Two-photo Label Capture */}
+        <MedicationLabelCapture
+          isOpen={showLabelCapture && !!selectedPatientId}
+          onClose={() => setShowLabelCapture(false)}
           onSuccess={() => {
-            logger.info('[Medications Page] Medication saved successfully from review modal')
-            setShowDocumentReader(false)
+            logger.info('[Medications Page] Medication saved successfully from label capture')
+            setShowLabelCapture(false)
           }}
           patientId={selectedPatientId || ''}
         />

@@ -82,7 +82,9 @@ service firebase.storage {
     }
 
     // Medication images (scanned medication bottles)
-    match /medications/{userId}/{patientId}/{imageId} {
+    // Matches both the legacy single-image path (medications/{userId}/{patientId}/{imageId})
+    // and the paired front/back path (medications/{userId}/{patientId}/{medicationId}/{imageId}_{filename}).
+    match /medications/{userId}/{patientId}/{allPaths=**} {
       allow read: if isAuthenticated();
       allow write: if isOwner(userId) && isValidImage() && isValidImageSize();
       allow delete: if isOwner(userId);

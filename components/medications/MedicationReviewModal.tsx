@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react'
 import { XMarkIcon, CheckIcon, PencilIcon } from '@heroicons/react/24/outline'
 import { ParsedMedicationData } from '@/lib/medication-parser'
-import { uploadMedicationImage } from '@/lib/medication-image-upload'
+import { uploadMedicationImage, uploadMedicationImageRecord } from '@/lib/medication-image-upload'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useAuth } from '@/hooks/useAuth'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
-import { PatientProfile } from '@/types/medical'
+import { PatientProfile, MedicationImage } from '@/types/medical'
 
 interface MedicationReviewModalProps {
   isOpen: boolean
@@ -17,8 +17,12 @@ interface MedicationReviewModalProps {
   patientId: string
   parsedData: ParsedMedicationData
   extractedText: string
+  // Legacy single-image props (used by DocumentReader re-OCR flow)
   imageFile?: File
   imagePreview?: string
+  // Paired-image props (used by MedicationLabelCapture two-photo flow)
+  imageFiles?: { front?: File; back?: File }
+  imagePreviews?: { front?: string; back?: string }
 }
 
 export function MedicationReviewModal({
@@ -29,7 +33,9 @@ export function MedicationReviewModal({
   parsedData,
   extractedText,
   imageFile,
-  imagePreview
+  imagePreview,
+  imageFiles,
+  imagePreviews
 }: MedicationReviewModalProps) {
   console.log('🔍 [MedicationReviewModal] patientId =', patientId)
   const { user } = useAuth()
@@ -112,12 +118,99 @@ export function MedicationReviewModal({
     setIsSaving(true)
 
     try {
+      const usingPairedFlow = !!(imageFiles?.front || imageFiles?.back)
+
+      if (usingPairedFlow) {
+        // Two-photo flow: create medication first (we need its id for the storage path),
+        // then upload both images, then update the medication with the populated images array.
+        logger.info('[MedicationReviewModal] Saving medication (paired-image flow)', {
+          selectedPatientId,
+          medicationName: editedData.name,
+          hasFront: !!imageFiles?.front,
+          hasBack: !!imageFiles?.back
+        })
+
+        const created = await medicalOperations.medications.addMedication(selectedPatientId, {
+          name: editedData.name,
+          brandName: editedData.brandName,
+          strength: editedData.strength,
+          dosageForm: editedData.dosageForm || 'Unknown',
+          frequency: editedData.frequency,
+          prescribedFor: editedData.prescribedFor,
+          prescribingDoctor: editedData.prescribingDoctor,
+          rxNumber: editedData.rxNumber,
+          ndc: editedData.ndc,
+          quantity: editedData.quantity,
+          refills: editedData.refills,
+          fillDate: editedData.fillDate,
+          expirationDate: editedData.expirationDate,
+          pharmacyName: editedData.pharmacyName,
+          pharmacyPhone: editedData.pharmacyPhone,
+          warnings: editedData.warnings,
+          extractedText: extractedText,
+          images: [],
+          scannedAt: new Date().toISOString()
+        })
+
+        const uploaded: MedicationImage[] = []
+        try {
+          if (imageFiles?.front) {
+            const front = await uploadMedicationImageRecord(
+              imageFiles.front,
+              user.uid,
+              selectedPatientId,
+              created.id,
+              'front',
+              true
+            )
+            front.ocrProcessed = true
+            front.ocrExtractedText = extractedText || undefined
+            front.ocrConfidence = 95
+            uploaded.push(front)
+          }
+          if (imageFiles?.back) {
+            const back = await uploadMedicationImageRecord(
+              imageFiles.back,
+              user.uid,
+              selectedPatientId,
+              created.id,
+              'back',
+              !imageFiles.front // back becomes primary only if no front was provided
+            )
+            back.ocrProcessed = true
+            back.ocrConfidence = 95
+            uploaded.push(back)
+          }
+        } catch (uploadError) {
+          logger.error('[MedicationReviewModal] Image upload failed (paired flow)', uploadError as Error)
+          toast.error('Saved medication, but image upload failed.')
+        }
+
+        if (uploaded.length > 0) {
+          try {
+            const primary = uploaded.find(img => img.isPrimary) || uploaded[0]
+            await medicalOperations.medications.updateMedication(selectedPatientId, created.id, {
+              images: uploaded,
+              imageUrl: primary.url
+            })
+          } catch (updateError) {
+            logger.error('[MedicationReviewModal] Failed to attach images to medication', updateError as Error)
+            toast.error('Saved medication, but failed to attach photos.')
+          }
+        }
+
+        toast.success(`${editedData.name} added successfully!`)
+        onSuccess()
+        onClose()
+        return
+      }
+
+      // Legacy single-image flow (DocumentReader re-OCR path)
       let imageUrl: string | undefined = undefined
 
-      // Upload image to Firebase Storage if available
       if (imageFile) {
         try {
-          logger.info('[MedicationReviewModal] Uploading medication image')
+          logger.info('[MedicationReviewModal] Uploading medication image (legacy flow)')
           imageUrl = await uploadMedicationImage(imageFile, user.uid, selectedPatientId)
           logger.info('[MedicationReviewModal] Image uploaded successfully', { imageUrl })
         } catch (uploadError) {
@@ -126,7 +219,6 @@ export function MedicationReviewModal({
         }
       }
 
-      // Save medication to Firestore
       logger.info('[MedicationReviewModal] Saving medication', {
         selectedPatientId,
         medicationName: editedData.name
@@ -215,8 +307,53 @@ export function MedicationReviewModal({
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column - Image Preview */}
-            {imagePreview && (
+            {/* Left Column - Image Preview(s) */}
+            {(imagePreviews?.front || imagePreviews?.back) ? (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground">Photographed Labels</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {imagePreviews?.front && (
+                    <div>
+                      <div className="border border-border rounded-lg overflow-hidden">
+                        <img
+                          src={imagePreviews.front}
+                          alt="Front of label"
+                          className="w-full h-auto object-contain bg-muted"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground text-center mt-1">Front</p>
+                    </div>
+                  )}
+                  {imagePreviews?.back && (
+                    <div>
+                      <div className="border border-border rounded-lg overflow-hidden">
+                        <img
+                          src={imagePreviews.back}
+                          alt="Back of label"
+                          className="w-full h-auto object-contain bg-muted"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground text-center mt-1">Back</p>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setShowRawText(!showRawText)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {showRawText ? 'Hide' : 'Show'} extracted text
+                </button>
+
+                {showRawText && (
+                  <div className="bg-muted rounded-lg p-4 max-h-64 overflow-y-auto">
+                    <pre className="whitespace-pre-wrap text-xs text-foreground font-mono">
+                      {extractedText}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ) : imagePreview ? (
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-foreground">Scanned Label</h3>
                 <div className="border border-border rounded-lg overflow-hidden">
@@ -243,7 +380,7 @@ export function MedicationReviewModal({
                   </div>
                 )}
               </div>
-            )}
+            ) : null}
 
             {/* Right Column - Editable Fields */}
             <div className="space-y-4">

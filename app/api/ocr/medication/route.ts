@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { adminAuth } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { classifyMedicationConditions, normalizeConditionName } from '@/lib/medication-classifier'
+import { MedicationOCRResponseSchema } from '@/lib/validations/medication'
 
 export const maxDuration = 60 // Allow up to 60 seconds for OCR processing
 
@@ -67,27 +68,37 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { imageData } = body
-
-    if (!imageData) {
-      return NextResponse.json(
-        { error: 'Image data is required' },
-        { status: 400 }
-      )
+    const { imageData, images, side } = body as {
+      imageData?: string
+      images?: Array<{ data: string; label: 'front' | 'back' }>
+      side?: 'front' | 'back'
     }
 
-    // Validate image data is a string
-    if (typeof imageData !== 'string') {
-      return NextResponse.json(
-        { error: 'Image data must be a base64 string' },
-        { status: 400 }
-      )
-    }
+    // Normalize input: accept either legacy `imageData` (single image) or new `images` array.
+    type LabeledImage = { data: string; label: 'front' | 'back' | 'unspecified' }
+    const labeledImages: LabeledImage[] = []
 
-    // Validate image data format
-    if (!imageData.startsWith('data:image/')) {
+    if (Array.isArray(images) && images.length > 0) {
+      for (const img of images) {
+        if (!img || typeof img.data !== 'string' || !img.data.startsWith('data:image/')) {
+          return NextResponse.json(
+            { error: 'Invalid image format in images[]. Each entry must include a valid base64 data URL.' },
+            { status: 400 }
+          )
+        }
+        labeledImages.push({ data: img.data, label: img.label === 'back' ? 'back' : img.label === 'front' ? 'front' : 'unspecified' })
+      }
+    } else if (typeof imageData === 'string') {
+      if (!imageData.startsWith('data:image/')) {
+        return NextResponse.json(
+          { error: 'Invalid image format. Please provide a valid base64 image.' },
+          { status: 400 }
+        )
+      }
+      labeledImages.push({ data: imageData, label: 'unspecified' })
+    } else {
       return NextResponse.json(
-        { error: 'Invalid image format. Please provide a valid base64 image.' },
+        { error: 'Image data is required (provide imageData or images[]).' },
         { status: 400 }
       )
     }
@@ -101,11 +112,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    logger.info('[OCR API] Processing medication image with Gemini Vision', { userId })
+    logger.info('[OCR API] Processing medication image with Gemini Vision', {
+      userId,
+      imageCount: labeledImages.length,
+      labels: labeledImages.map(i => i.label)
+    })
 
-    // Convert base64 image to Gemini format
-    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '')
-    const mimeType = imageData.match(/data:(image\/\w+);base64,/)?.[1] || 'image/jpeg'
+    // Convert each labeled image to a Gemini inlineData part
+    const imageParts = labeledImages.map(img => {
+      const base64Data = img.data.replace(/^data:image\/\w+;base64,/, '')
+      const mimeType = img.data.match(/data:(image\/\w+);base64,/)?.[1] || 'image/jpeg'
+      return {
+        inlineData: {
+          data: base64Data,
+          mimeType
+        }
+      }
+    })
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
@@ -119,16 +142,25 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const imagePart = {
-      inlineData: {
-        data: base64Data,
-        mimeType: mimeType
-      }
-    }
+    const hasTwoSides = labeledImages.length >= 2
+    const singleImageSide: 'front' | 'back' | undefined =
+      side === 'front' || side === 'back' ? side : (labeledImages.length === 1 ? labeledImages[0].label as 'front' | 'back' | undefined : undefined)
 
-    const prompt = `Analyze this prescription medication label and extract ALL information visible. Look carefully at EVERY line of text on the label, even if blurry or at an angle.
+    const frontFocus = `This is the FRONT of a prescription bottle — the small main sticker. PRIORITIZE these fields if visible: medicationName, strength, dosageForm, rxNumber, prescribingDoctor, patientName, patientAddress, pharmacy. Dosage instructions, refills, NDC, and dates may be truncated or absent on the front — extract whatever IS visible but expect the back panel to be authoritative for those.`
+    const backFocus = `This is the BACK / wraparound panel of a prescription bottle. PRIORITIZE these fields and read them in full: frequency (COMPLETE dosage instructions — do NOT truncate), ndc, quantity, refills, fillDate, expirationDate, warnings. The medication name, strength, and Rx number may also appear here — extract them too if present.`
+    const genericFocus = `You are looking at ONE photo of a prescription bottle. It may be the front (drug name, strength, Rx number, prescriber) or the back/wraparound panel (dosage instructions, warnings, refills, NDC). Extract everything visible.`
 
-This may be the FRONT label (showing dosage instructions) or BACK label (showing NDC barcode, Rx number, pharmacy info).
+    const labelHeader = hasTwoSides
+      ? `You are looking at TWO photos of the SAME prescription bottle: image 1 is the FRONT (small main label with drug name, strength, Rx number, prescriber) and image 2 is the BACK/wraparound panel (dosage instructions, warnings, refills, NDC, fill/expiration dates). Merge both photos into a SINGLE record. If a field appears on both sides, prefer the FRONT for identity fields (medicationName, strength, rxNumber, prescribingDoctor) and the BACK for instruction fields (frequency, warnings, ndc, refills, fillDate, expirationDate).`
+      : singleImageSide === 'front'
+        ? frontFocus
+        : singleImageSide === 'back'
+          ? backFocus
+          : genericFocus
+
+    const prompt = `${labelHeader}
+
+Look carefully at EVERY line of text on the label(s), even if blurry or at an angle.
 
 Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
 {
@@ -190,15 +222,38 @@ If any field is not visible or unclear, use null for that field. Focus on ACCURA
 
 IMPORTANT: Make your best effort to find the prescribing doctor name - this is critical medical information.`
 
-    const result = await model.generateContent([prompt, imagePart])
+    const result = await model.generateContent([prompt, ...imageParts])
     const response = await result.response
     const text = response.text()
 
     // Parse JSON response
     const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    const parsed = JSON.parse(cleanedText)
+    const parsedRaw = JSON.parse(cleanedText)
 
-    if (!parsed.medicationName) {
+    // Runtime schema gate. Output flows into a patient medication
+    // record (PHI: patient name, prescriber, NDC, etc.). A malformed
+    // shape — wrong types, missing medicationName, warnings as a
+    // single string — silently corrupted the record before. Now
+    // rejected with structural-only logging (no PHI in logs).
+    const validated = MedicationOCRResponseSchema.safeParse(parsedRaw)
+    if (!validated.success) {
+      logger.warn('[OCR API] Medication OCR output failed schema validation', {
+        userId,
+        issueCount: validated.error.issues.length,
+        issues: validated.error.issues.slice(0, 5).map((i) => ({
+          path: i.path.join('.'),
+          code: i.code,
+        })),
+      })
+      return NextResponse.json(
+        { error: 'Could not identify medication in image. Please try a clearer photo.' },
+        { status: 502 }
+      )
+    }
+    const parsed = validated.data
+
+    // Schema requires medicationName, but treat empty string as missing.
+    if (!parsed.medicationName.trim()) {
       logger.warn('[OCR API] No medication name found in image')
       return NextResponse.json(
         { error: 'Could not identify medication in image. Please try a clearer photo.' },
