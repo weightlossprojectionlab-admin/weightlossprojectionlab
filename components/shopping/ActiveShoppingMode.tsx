@@ -38,7 +38,8 @@
  *     primitives, surface-agnostic.
  *   - markItemAsPurchased — extended in this commit to accept
  *     foundInStore + purchasedBy options.
- *   - notification.mp3 — same chime CookingTimer uses.
+ *   - playStepDoneChime — synthesized two-note doorbell from
+ *     lib/cook-chime.ts (no asset dependency).
  */
 
 import { Fragment, useState, useMemo, useRef, useEffect } from 'react'
@@ -56,6 +57,7 @@ import {
 } from '@/lib/shopping-operations'
 import { addProductImage } from '@/lib/product-image-upload'
 import { barcodeVariants } from '@/lib/barcode-variants'
+import { playStepDoneChime } from '@/lib/cook-chime'
 import type { ShoppingItem } from '@/types/shopping'
 import { ScanItemCard } from './ScanItemCard'
 
@@ -117,7 +119,6 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   // as a surprise when the data starts populating.
   const [listTab, setListTab] = useState<'to-pick' | 'in-review' | 'done'>('to-pick')
 
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   const photoInputRef = useRef<HTMLInputElement | null>(null)
 
   // Snapshot the items on open. After that, derive found/pending
@@ -268,12 +269,13 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
         purchasedBy: userId,
       })
 
-      // Haptic + audible confirmation.
+      // Haptic + audible confirmation. Synthesized chime (no asset
+      // file) so this works even when /notification.mp3 is missing.
       try {
         if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
           navigator.vibrate(50)
         }
-        audioRef.current?.play().catch(() => {})
+        playStepDoneChime()
       } catch {
         // Best-effort feedback; never block.
       }
@@ -511,9 +513,6 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
-      {/* Notification chime (preloaded). */}
-      <audio ref={audioRef} src="/notification.mp3" preload="auto" />
-
       {/* Header */}
       <header className="px-4 py-3 border-b border-border flex items-center justify-between bg-card sticky top-0">
         <div>
