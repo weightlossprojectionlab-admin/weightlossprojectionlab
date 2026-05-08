@@ -24,6 +24,13 @@
  */
 
 import { useState } from 'react'
+import {
+  CalendarDaysIcon,
+  QuestionMarkCircleIcon,
+  ChatBubbleOvalLeftIcon,
+  CameraIcon,
+  ChevronRightIcon,
+} from '@heroicons/react/24/outline'
 
 interface ScanItemCardProps {
   item: {
@@ -206,15 +213,24 @@ export function ScanItemCard({
         onCantFindItem ||
         onMessageFor ||
         (showAddPhoto && onPhotoRequested)) && (
-        <div className="px-4 pb-4 border-t border-border pt-3 flex flex-col items-start gap-3">
+        // Mobile-first secondary actions: full-width bordered tile rows
+        // with icon + label + chevron. Each row is its own ≥56px tap
+        // target, divided by borders for clear separation. Replaces the
+        // earlier text-only purple links which were too small to tap
+        // reliably on a phone with one hand.
+        <div className="px-4 pb-4 border-t border-border pt-3 flex flex-col gap-2">
           {onCheckExpiration && (
             <button
               type="button"
               onClick={onCheckExpiration}
               disabled={disabled}
-              className="text-sm font-medium text-primary disabled:opacity-50"
+              className="w-full min-h-[56px] px-4 py-3 flex items-center gap-3 bg-card border border-border rounded-lg hover:bg-muted active:bg-muted/80 transition-colors disabled:opacity-50 text-left"
             >
-              Check expiration date
+              <CalendarDaysIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <span className="flex-1 text-sm font-medium text-foreground">
+                Check expiration date
+              </span>
+              <ChevronRightIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
             </button>
           )}
           {onCantFindItem && (
@@ -222,9 +238,13 @@ export function ScanItemCard({
               type="button"
               onClick={onCantFindItem}
               disabled={disabled}
-              className="text-sm font-medium text-primary disabled:opacity-50"
+              className="w-full min-h-[56px] px-4 py-3 flex items-center gap-3 bg-card border border-border rounded-lg hover:bg-muted active:bg-muted/80 transition-colors disabled:opacity-50 text-left"
             >
-              Can&apos;t find item
+              <QuestionMarkCircleIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <span className="flex-1 text-sm font-medium text-foreground">
+                Can&apos;t find item
+              </span>
+              <ChevronRightIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
             </button>
           )}
           {onMessageFor && (
@@ -232,9 +252,13 @@ export function ScanItemCard({
               type="button"
               onClick={onMessageFor}
               disabled={disabled}
-              className="text-sm font-medium text-primary disabled:opacity-50"
+              className="w-full min-h-[56px] px-4 py-3 flex items-center gap-3 bg-card border border-border rounded-lg hover:bg-muted active:bg-muted/80 transition-colors disabled:opacity-50 text-left"
             >
-              Message {forMember?.name ?? 'family'}
+              <ChatBubbleOvalLeftIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <span className="flex-1 text-sm font-medium text-foreground">
+                Message {forMember?.name ?? 'family'}
+              </span>
+              <ChevronRightIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
             </button>
           )}
           {showAddPhoto && onPhotoRequested && (
@@ -242,9 +266,13 @@ export function ScanItemCard({
               type="button"
               onClick={onPhotoRequested}
               disabled={disabled}
-              className="text-sm font-medium text-primary disabled:opacity-50"
+              className="w-full min-h-[56px] px-4 py-3 flex items-center gap-3 bg-card border border-border rounded-lg hover:bg-muted active:bg-muted/80 transition-colors disabled:opacity-50 text-left"
             >
-              Add product photo
+              <CameraIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <span className="flex-1 text-sm font-medium text-foreground">
+                Add product photo
+              </span>
+              <ChevronRightIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
             </button>
           )}
         </div>

@@ -45,7 +45,16 @@
 import { Fragment, useState, useMemo, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import toast from 'react-hot-toast'
-import { ChatBubbleOvalLeftIcon } from '@heroicons/react/24/outline'
+import {
+  ChatBubbleOvalLeftIcon,
+  PlusIcon,
+  TrashIcon,
+  EllipsisVerticalIcon,
+  CameraIcon,
+  ShareIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+} from '@heroicons/react/24/outline'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import {
@@ -54,6 +63,7 @@ import {
   linkBarcodeToManualItem,
   logStoreVisit,
   deleteShoppingItem,
+  updateShoppingItem,
 } from '@/lib/shopping-operations'
 import { addProductImage } from '@/lib/product-image-upload'
 import { barcodeVariants } from '@/lib/barcode-variants'
@@ -89,21 +99,23 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  // Quantity Found screen — opens after a scan succeeds (any
-  // branch a/b/c). User enters the actual qty grabbed (defaults
-  // to item.quantity); confirm fires markItemAsFoundInStore with
-  // that qty. Decoupled from the stepper-on-card pattern because
-  // the actual qty grabbed is determined at the shelf, not pre-
-  // scan, and capturing it post-scan is more accurate (esp. for
-  // produce / weighed items).
-  const [qtyFoundOpen, setQtyFoundOpen] = useState(false)
-  const [qtyFoundValue, setQtyFoundValue] = useState('')
-  const [qtyFoundLinkedBarcode, setQtyFoundLinkedBarcode] = useState<string | undefined>(undefined)
   // 2.4 — Summary screen state. End button opens this; Save & exit
   // logs the StoreVisit then router.backs.
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [summaryStoreName, setSummaryStoreName] = useState('')
-  const [summaryRemoveSkipped, setSummaryRemoveSkipped] = useState(false)
+  // Skipped-items decision — explicit either/or instead of a passive default.
+  // Required when there ARE skipped items: the purchase-complete gate stays
+  // disabled until the user picks. Forces an active decision rather than
+  // letting stale items sit on the list silently.
+  //   null   = no decision yet (gates Confirm Purchase)
+  //   'remove' = bulk-delete on confirm
+  //   'keep'   = leave on list for next trip
+  const [summarySkippedDecision, setSummarySkippedDecision] = useState<'remove' | 'keep' | null>(
+    null,
+  )
+  // Convenience derived value used at confirm-time and in the existing
+  // delete loop. Replaces the old `summaryRemoveSkipped` flag.
+  const summaryRemoveSkipped = summarySkippedDecision === 'remove'
   const [summarySaving, setSummarySaving] = useState(false)
   // Gating checkbox on the trip summary — Confirm Purchase only
   // enables once the shopper confirms checkout completed at the
@@ -131,11 +143,9 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       setPendingConfirm(null)
       setSummaryOpen(false)
       setSummaryStoreName('')
-      setSummaryRemoveSkipped(false)
+      setSummarySkippedDecision(null)
       setTransactionConfirmed(false)
-      setQtyFoundOpen(false)
-      setQtyFoundValue('')
-      setQtyFoundLinkedBarcode(undefined)
+      setAdjustQtyTarget(null)
       setListTab('to-pick')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,11 +188,26 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   // Sort: pending items first (in original order), found items last
   // and visually distinct. Done in a memo so the order doesn't churn
   // every render.
+  // Derive rows from sessionItems (preserves session order + membership)
+  // crossed with liveItemsById (real-time deletes / updates from
+  // useShopping's onSnapshot subscription).
+  //
+  // Deletion handling: when a row is removed via the trash button, the
+  // Firestore onSnapshot fires, useShopping re-emits items WITHOUT the
+  // deleted row, liveItemsById drops that id, and we SKIP it here. The
+  // previous `?? snap` fallback was resurrecting the cached snapshot —
+  // deleted items kept showing until session re-open. Now the trash
+  // tap reflects in the UI within ~one frame of the Firestore round-trip.
+  //
+  // totalCount also derives from the live filtered count (not raw
+  // sessionItems.length) so "1 of 3 found" doesn't keep counting items
+  // the user explicitly dropped from the list.
   const orderedSessionRows = useMemo(() => {
     const pending: ShoppingItem[] = []
     const found: ShoppingItem[] = []
     for (const snap of sessionItems) {
-      const live = liveItemsById.get(snap.id) ?? snap
+      const live = liveItemsById.get(snap.id)
+      if (!live) continue // deleted — drop from rows
       if (live.foundInStore || !live.needed) {
         found.push(live)
       } else {
@@ -192,7 +217,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
     return { pending, found }
   }, [sessionItems, liveItemsById])
 
-  const totalCount = sessionItems.length
+  const totalCount = orderedSessionRows.pending.length + orderedSessionRows.found.length
   const foundCount = orderedSessionRows.found.length
 
   // Group pending items by category so the shopper walks the store
@@ -224,21 +249,90 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   const closeItem = () => {
     setActiveItemId(null)
     setPendingConfirm(null)
-    setQtyFoundOpen(false)
-    setQtyFoundValue('')
-    setQtyFoundLinkedBarcode(undefined)
   }
 
-  // Open the Quantity Found screen for the active item. Called
-  // after every scan-success path (a/b/c). Default value seeded
-  // from item.quantity so the common case (got what you asked
-  // for) is one tap.
-  const openQuantityFound = (linkedBarcode?: string) => {
-    if (!activeItem) return
-    setQtyFoundLinkedBarcode(linkedBarcode)
-    setQtyFoundValue(String(activeItem.quantity || 1))
-    setQtyFoundOpen(true)
+  // Per-row "remove from list" — friction-minimum tap target with a real
+  // UI confirmation modal (NOT browser native confirm — looks broken on
+  // mobile and out of step with the design language). Available on both
+  // TO-PICK and DONE rows so the shopper can drop an item from either
+  // state without leaving the active screen. Confirmation target carries
+  // the full item so the modal can show thumbnail + name for clarity.
+  const [removeConfirmTarget, setRemoveConfirmTarget] = useState<ShoppingItem | null>(null)
+  const [removeSubmitting, setRemoveSubmitting] = useState(false)
+
+  const requestRemoveItem = (item: ShoppingItem, event?: React.MouseEvent) => {
+    if (event) event.stopPropagation()
+    setRemoveConfirmTarget(item)
   }
+
+  // Cancel-trip prompt — surfaces when the user removes the last item from
+  // an active session (deliberately or by accident). An empty trip is
+  // useless; prompting lets them either bail out cleanly or stay in to
+  // re-build via the + Add button. Without this prompt, users would sit on
+  // a "0 of 0 found" screen wondering what to do next.
+  const [showCancelTripPrompt, setShowCancelTripPrompt] = useState(false)
+
+  // 3-dot menu — header overflow for less-frequent actions (Snap receipt,
+  // Message family, Export list, Cancel trip). Bottom sheet on mobile so
+  // each option gets a real tap target instead of cramming a popover.
+  // Some entries are semantic placeholders for features we'll wire later
+  // (receipt OCR, in-app chat, share/export); the menu structure defines
+  // the IA up front so each feature lands in a known place.
+  const [tripMenuOpen, setTripMenuOpen] = useState(false)
+
+  const confirmRemoveItem = async () => {
+    const item = removeConfirmTarget
+    if (!item) return
+    setRemoveSubmitting(true)
+    // Snapshot the live total BEFORE the delete fires. If we're at 1 and
+    // about to delete it, the post-delete state will be 0 — that's our
+    // empty-trip trigger.
+    const willBeEmpty = totalCount === 1
+    try {
+      await deleteShoppingItem(item.id)
+      // If the user just removed the active item, close the per-item card.
+      if (activeItemId === item.id) closeItem()
+      toast.success(`Removed: ${item.productName}`)
+      setRemoveConfirmTarget(null)
+      if (willBeEmpty) {
+        setShowCancelTripPrompt(true)
+      }
+    } catch (err) {
+      logger.error('[ActiveShopping] remove failed', err as Error, { itemId: item.id })
+      toast.error('Could not remove item. Try again.')
+    } finally {
+      setRemoveSubmitting(false)
+    }
+  }
+
+  // Friction-minimum scan flow — every successful scan fulfills the active
+  // item AT THE LIST QUANTITY immediately. No qty-confirm modal in the
+  // common case (shopper grabbed what the list asked for, hardly anyone
+  // grabs a different number). Edge case (shelf had 1, list said 2): the
+  // success toast carries a "Got 2 — tap to adjust" affordance so the user
+  // can correct without backtracking. The Adjust path opens
+  // QtyAdjustModal (below) which is the only place the modal still
+  // surfaces.
+  //
+  // North star (per user direction): get the shopper out of the store fast.
+  // Every modal between scan and "next item" is friction. The tappable
+  // toast keeps adjustment possible without imposing it on the 95% case.
+  const autoFulfillFromScan = (linkedBarcode?: string) => {
+    if (!activeItem) return
+    const qty = activeItem.quantity || 1
+    void fulfillActiveItem(qty, linkedBarcode ? { linkedBarcode } : undefined)
+  }
+
+  // Pending adjustment — set when the user taps the toast affordance after
+  // an auto-fulfill, indicating they want to change the qty. The modal
+  // reads this to know which item + which originally-applied qty to adjust.
+  const [adjustQtyTarget, setAdjustQtyTarget] = useState<{
+    itemId: string
+    productName: string
+    listedQty: number
+    appliedQty: number
+    unit?: string
+  } | null>(null)
 
   // Confirm the entered Quantity Found and persist. Writes the
   // foundInStore flag with the chosen quantity, optionally writing
@@ -280,7 +374,48 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
         // Best-effort feedback; never block.
       }
 
-      toast.success(`In cart: ${activeItem.productName}`)
+      // Friction-minimum success toast. Carries enough info that the user
+      // can verify the right thing happened (product name + qty) AND tap
+      // to adjust if shelf reality didn't match list qty (partial / extra).
+      // The Adjust path opens the qty modal — the only place that modal
+      // surfaces, and only when the user explicitly asks for it.
+      const fulfilledItem = activeItem
+      const unit = fulfilledItem.unit ?? ''
+      const unitLabel = quantity === 1 ? unit : `${unit}${unit && !unit.endsWith('s') ? 's' : ''}`
+      const qtySummary = unit
+        ? `${quantity} ${unitLabel.trim()}`
+        : `${quantity}`
+      toast.success(
+        (t) => (
+          <div className="flex items-center gap-3 max-w-xs">
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold truncate">
+                ✓ Got {qtySummary}
+              </div>
+              <div className="text-xs opacity-80 truncate">
+                {fulfilledItem.productName}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                toast.dismiss(t.id)
+                setAdjustQtyTarget({
+                  itemId: fulfilledItem.id,
+                  productName: fulfilledItem.productName,
+                  listedQty: fulfilledItem.quantity || 1,
+                  appliedQty: quantity,
+                  unit: fulfilledItem.unit,
+                })
+              }}
+              className="text-xs font-semibold underline whitespace-nowrap"
+            >
+              Adjust
+            </button>
+          </div>
+        ),
+        { duration: 4000 },
+      )
       closeItem()
     } catch (err) {
       logger.error('[ActiveShopping] mark-found failed', err as Error, {
@@ -312,8 +447,10 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       const scannedVariants = barcodeVariants(cleaned)
       const matchesActive = scannedVariants.some((v) => itemVariants.has(v))
       if (matchesActive) {
-        // Branch (a): exact match → Quantity Found.
-        openQuantityFound()
+        // Branch (a): exact match → friction-minimum auto-fulfill at list
+        // qty. The success toast (fired inside fulfillActiveItem) is the
+        // entry point to qty adjustment for the rare partial case.
+        autoFulfillFromScan()
         return
       }
     }
@@ -336,14 +473,17 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
               <button
                 onClick={() => {
                   toast.dismiss(t.id)
-                  // The scanned barcode matched this OTHER item's
-                  // barcode (that's how branch d found the match),
-                  // so we can go straight to Quantity Found for it
-                  // — no second scan needed.
+                  // Friction-minimum: the scanned barcode matched this
+                  // OTHER item's barcode (branch d), so we switch active
+                  // and immediately auto-fulfill at the OTHER item's
+                  // list qty — no second scan, no qty modal. User can
+                  // adjust via the success toast if needed.
                   setActiveItemId(otherMatch.id)
-                  setQtyFoundLinkedBarcode(undefined)
-                  setQtyFoundValue(String(otherMatch.quantity || 1))
-                  setQtyFoundOpen(true)
+                  // Defer one frame so activeItem reflects the new id
+                  // before fulfillActiveItem reads it.
+                  setTimeout(() => {
+                    void fulfillActiveItem(otherMatch.quantity || 1)
+                  }, 0)
                 }}
                 className="px-3 py-1 bg-primary text-white rounded text-sm"
               >
@@ -524,21 +664,34 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
           </p>
         </div>
         {!summaryOpen && (
-          /* Header is utility-only: the in-app chat icon. The
-              trip-end gesture lives in the body (Wrap up trip CTA
-              on the all-found state and at the top of the DONE
-              tab). The previous Mark multiple button has been
-              removed — the unified Confirm Purchase flow on the
-              trip summary now covers what bulk-mark used to do,
-              with a real "purchase actually happened" gate. */
-          <button
-            type="button"
-            onClick={() => toast('Family chat coming soon', { icon: '💬' })}
-            className="p-2 bg-muted text-foreground rounded-lg active:bg-muted/80"
-            aria-label="Open family chat"
-          >
-            <ChatBubbleOvalLeftIcon className="w-5 h-5" />
-          </button>
+          /* Header utility actions:
+             1. "+ Add" — primary, frequent action: add a non-list item to
+                the cart on the fly. Filled button so it stands out.
+             2. "⋮ menu" — overflow for everything else (Snap receipt,
+                Message family, Export list, Cancel trip). Bottom sheet
+                surfaces those without crowding the header.
+          */
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                toast('Add to cart on the fly — coming soon', { icon: '🛒' })
+              }
+              className="min-h-[44px] px-3 py-2 flex items-center gap-1.5 bg-primary text-white rounded-lg font-medium text-sm active:bg-primary-dark transition-colors"
+              aria-label="Add item to cart"
+            >
+              <PlusIcon className="w-4 h-4" />
+              <span>Add</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTripMenuOpen(true)}
+              className="min-h-[44px] min-w-[44px] p-2 bg-muted text-foreground rounded-lg active:bg-muted/80"
+              aria-label="More trip options"
+            >
+              <EllipsisVerticalIcon className="w-5 h-5" />
+            </button>
+          </div>
         )}
       </header>
 
@@ -573,7 +726,11 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
             />
           </div>
 
-          {/* Skipped items + bulk-remove option */}
+          {/* Skipped items — required either/or decision before the user
+              can confirm purchase. Two button-style options ("Remove from
+              list" / "Keep for next trip") so the choice is explicit and
+              both default outcomes are clearly named. The Confirm Purchase
+              gate below stays disabled until this is answered. */}
           {orderedSessionRows.pending.length > 0 && (
             <div className="px-4 py-4 border-b border-border">
               <p className="text-sm font-medium text-foreground mb-2">
@@ -587,42 +744,79 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                   </li>
                 ))}
               </ul>
-              <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={summaryRemoveSkipped}
-                  onChange={(e) => setSummaryRemoveSkipped(e.target.checked)}
-                  className="w-4 h-4 rounded border-border"
-                />
-                Remove these from my list
-              </label>
-              <p className="text-xs text-muted-foreground mt-1 ml-6">
-                Otherwise they stay on the list for next time.
+              <p className="text-sm text-foreground mb-2">
+                What do you want to do with{' '}
+                {orderedSessionRows.pending.length === 1 ? 'it' : 'them'}?
               </p>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSummarySkippedDecision('keep')}
+                  className={`min-h-[48px] px-4 py-3 rounded-lg text-left text-sm font-medium border-2 transition-colors ${
+                    summarySkippedDecision === 'keep'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-card text-foreground hover:bg-muted'
+                  }`}
+                >
+                  Keep for next trip
+                  <span className="block text-xs font-normal text-muted-foreground mt-0.5">
+                    Items stay on your shopping list.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSummarySkippedDecision('remove')}
+                  className={`min-h-[48px] px-4 py-3 rounded-lg text-left text-sm font-medium border-2 transition-colors ${
+                    summarySkippedDecision === 'remove'
+                      ? 'border-error bg-error/10 text-error-dark'
+                      : 'border-border bg-card text-foreground hover:bg-muted'
+                  }`}
+                >
+                  Remove from list
+                  <span className="block text-xs font-normal text-muted-foreground mt-0.5">
+                    {orderedSessionRows.pending.length === 1 ? "We'll delete it" : "We'll delete them"}{' '}
+                    when you confirm purchase.
+                  </span>
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Transaction confirmation gate — Confirm Purchase
-              only enables once the shopper says checkout cleared
-              at the register. Without this, items would land in
-              inventory before the purchase was actually completed
-              (over-budget item put back, brand swap, etc.). */}
+          {/* Transaction confirmation gate — Confirm Purchase only enables
+              once the shopper says checkout cleared at the register. Without
+              this, items would land in inventory before the purchase was
+              actually completed (over-budget item put back, brand swap, etc.).
+              Additionally gated on the skipped-items decision so the user
+              must consciously address those before checking out. */}
+          {(() => {
+            const skippedDecisionPending =
+              orderedSessionRows.pending.length > 0 && summarySkippedDecision === null
+            return (
           <div className="px-4 py-4 border-b border-border">
-            <label className="flex items-start gap-3 text-sm text-foreground cursor-pointer">
+            <label
+              className={`flex items-start gap-3 text-sm text-foreground ${
+                skippedDecisionPending ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={transactionConfirmed}
                 onChange={(e) => setTransactionConfirmed(e.target.checked)}
-                className="w-5 h-5 rounded border-border mt-0.5"
+                disabled={skippedDecisionPending}
+                className="w-5 h-5 rounded border-border mt-0.5 disabled:cursor-not-allowed"
               />
               <span>
                 I&apos;ve completed my purchase at the register.
                 <span className="block text-xs text-muted-foreground mt-1">
-                  Found items will be added to your inventory.
+                  {skippedDecisionPending
+                    ? 'Choose what to do with skipped items first.'
+                    : 'Found items will be added to your inventory.'}
                 </span>
               </span>
             </label>
           </div>
+            )
+          })()}
 
           {/* Action buttons */}
           <div className="px-4 py-4 space-y-2">
@@ -645,73 +839,6 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
               className="w-full px-6 py-3 bg-muted text-foreground rounded-lg font-medium disabled:opacity-50 active:bg-muted/80"
             >
               Back to shopping
-            </button>
-          </div>
-        </div>
-      ) : qtyFoundOpen && activeItem ? (
-        /* Quantity Found screen — opens after a scan succeeds.
-           User confirms or edits the qty grabbed (default = the
-           list's expected qty). Numeric inputMode triggers the
-           phone keypad. Confirm fires markItemAsFoundInStore via
-           fulfillActiveItem. */
-        <div className="flex-1 flex flex-col">
-          <div className="px-4 py-6 flex-1">
-            <p className="text-base font-semibold text-foreground mb-1">
-              {activeItem.productName}
-            </p>
-            <label
-              htmlFor="qty-found-input"
-              className="block text-sm text-muted-foreground mb-3"
-            >
-              Quantity Found
-            </label>
-            <input
-              id="qty-found-input"
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="any"
-              autoFocus
-              value={qtyFoundValue}
-              onChange={(e) => setQtyFoundValue(e.target.value)}
-              onFocus={(e) => e.target.select()}
-              className="w-full text-4xl font-bold text-right border-b-2 border-border bg-transparent text-foreground focus:outline-none focus:border-success py-2"
-            />
-            {activeItem.unit && (
-              <p className="text-right text-sm text-muted-foreground mt-1">
-                {activeItem.unit}
-              </p>
-            )}
-          </div>
-          <div className="px-4 pb-4 space-y-2 border-t border-border pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                const parsed = parseFloat(qtyFoundValue)
-                if (!isFinite(parsed) || parsed <= 0) {
-                  toast.error('Enter a quantity greater than 0')
-                  return
-                }
-                const linked = qtyFoundLinkedBarcode
-                setQtyFoundOpen(false)
-                void fulfillActiveItem(parsed, linked ? { linkedBarcode: linked } : undefined)
-              }}
-              disabled={submitting}
-              className="w-full px-6 py-4 bg-success text-white rounded-lg font-semibold disabled:opacity-50 active:bg-success-hover"
-            >
-              {submitting ? 'Saving…' : 'Confirm'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setQtyFoundOpen(false)
-                setQtyFoundValue('')
-                setQtyFoundLinkedBarcode(undefined)
-              }}
-              disabled={submitting}
-              className="w-full px-6 py-3 text-muted-foreground text-sm disabled:opacity-50"
-            >
-              Cancel
             </button>
           </div>
         </div>
@@ -832,7 +959,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                       onClick={handleEndPressed}
                       className="mt-4 px-6 py-3 bg-success text-white rounded-lg font-semibold active:bg-success-hover"
                     >
-                      Wrap up trip
+                      Go to Check Out
                     </button>
                   </div>
                 ) : (
@@ -851,11 +978,14 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                           </p>
                         </li>
                         {catItems.map((item) => (
-                          <li key={item.id}>
+                          <li
+                            key={item.id}
+                            className="flex items-stretch active:bg-muted"
+                          >
                             <button
                               type="button"
                               onClick={() => openItem(item)}
-                              className="w-full px-4 py-3 flex items-center gap-3 text-left active:bg-muted"
+                              className="flex-1 px-4 py-3 flex items-center gap-3 text-left min-w-0"
                             >
                               <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
                                 {item.imageUrl ? (
@@ -881,6 +1011,18 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                                   </p>
                                 )}
                               </div>
+                            </button>
+                            {/* Trash — sits OUTSIDE the row's open-item button
+                                so taps don't bubble. stopPropagation + its own
+                                tap target. Confirmation modal handles the
+                                destructive moment. */}
+                            <button
+                              type="button"
+                              onClick={(e) => requestRemoveItem(item, e)}
+                              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-error active:bg-muted/80 mr-2"
+                              aria-label={`Remove ${item.productName} from list`}
+                            >
+                              <TrashIcon className="w-5 h-5" />
                             </button>
                           </li>
                         ))}
@@ -913,16 +1055,18 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                 </div>
               ) : (
                 <>
-                  {/* Wrap up trip CTA at the top of the DONE tab —
-                      the natural finish-line moment. Same handler as
-                      the all-found empty state on TO-PICK. */}
+                  {/* "Go to Check Out" CTA at the top of the DONE tab —
+                      the natural finish-line moment. Same handler as the
+                      all-found empty state on TO-PICK. Copy mirrors the
+                      physical action the shopper is about to take, not
+                      the system action ("wrap up"). */}
                   <div className="px-4 py-3 border-b border-border">
                     <button
                       type="button"
                       onClick={handleEndPressed}
                       className="w-full px-6 py-3 bg-success text-white rounded-lg font-semibold active:bg-success-hover"
                     >
-                      Wrap up trip ({orderedSessionRows.found.length}{' '}
+                      Go to Check Out ({orderedSessionRows.found.length}{' '}
                       {orderedSessionRows.found.length === 1 ? 'item' : 'items'})
                     </button>
                   </div>
@@ -930,9 +1074,9 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                     {orderedSessionRows.found.map((item) => (
                     <li
                       key={item.id}
-                      className="px-4 py-3 flex items-center gap-3 opacity-60"
+                      className="px-4 py-3 flex items-center gap-3"
                     >
-                      <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0 opacity-60">
                         {item.imageUrl ? (
                           <img
                             src={item.imageUrl}
@@ -943,13 +1087,25 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                           <span className="text-3xl">📦</span>
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 opacity-60">
                         <p className="font-medium text-foreground truncate line-through">
                           <span className="font-bold">{item.quantity || 1} ×</span>{' '}
                           {item.productName}
                         </p>
                       </div>
-                      <span className="text-success">✓</span>
+                      <span className="text-success opacity-60">✓</span>
+                      {/* Trash — drop the item from the list entirely (e.g.
+                          "I scanned this but decided to put it back"). Full
+                          opacity so the destructive affordance reads cleanly
+                          even when the rest of the row is dimmed. */}
+                      <button
+                        type="button"
+                        onClick={(e) => requestRemoveItem(item, e)}
+                        className="min-h-[44px] min-w-[44px] p-2 text-muted-foreground hover:text-error active:bg-muted rounded-lg transition-colors"
+                        aria-label={`Remove ${item.productName} from list`}
+                      >
+                        <TrashIcon className="w-5 h-5" />
+                      </button>
                     </li>
                   ))}
                   </ul>
@@ -957,6 +1113,347 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Trip overflow menu — bottom sheet on mobile, mid-screen modal on
+          desktop. Pre-populated with semantic options; placeholders toast
+          for features not yet wired. The structure declares the IA so
+          features land in known slots later (receipt OCR → "Snap receipt",
+          in-app chat → "Message family", etc.). */}
+      {tripMenuOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setTripMenuOpen(false)
+          }}
+        >
+          <div className="bg-card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col">
+            <div className="sm:hidden flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-border" />
+            </div>
+            <div className="px-5 pt-3 pb-2">
+              <h2 className="text-base font-semibold text-foreground">Trip options</h2>
+            </div>
+            <div className="flex flex-col">
+              {/* Go to Check Out — quick access from anywhere in the trip
+                  (also available at the all-found empty state + DONE tab). */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTripMenuOpen(false)
+                  handleEndPressed()
+                }}
+                disabled={foundCount === 0}
+                className="w-full px-5 py-4 flex items-center gap-4 text-left border-t border-border active:bg-muted disabled:opacity-50"
+              >
+                <CheckCircleIcon className="h-5 w-5 text-success flex-shrink-0" />
+                <span className="flex-1 text-sm font-medium text-foreground">
+                  Go to Check Out
+                </span>
+                {foundCount > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {foundCount} found
+                  </span>
+                )}
+              </button>
+
+              {/* Snap receipt — placeholder for the OCR feature we scoped.
+                  Lives here so users see it's coming and the IA slot is
+                  defined; toast for now. */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTripMenuOpen(false)
+                  toast('Receipt scan — coming soon', { icon: '📷' })
+                }}
+                className="w-full px-5 py-4 flex items-center gap-4 text-left border-t border-border active:bg-muted"
+              >
+                <CameraIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <span className="flex-1 text-sm font-medium text-foreground">
+                  Snap receipt
+                </span>
+                <span className="text-xs text-muted-foreground">Coming soon</span>
+              </button>
+
+              {/* Message family — placeholder for in-app chat (PRD-in-app-
+                  chat.md). Surfaces when family coordination is needed mid-
+                  trip ("we ran out of bread, do you want me to substitute"). */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTripMenuOpen(false)
+                  toast('Family chat coming soon', { icon: '💬' })
+                }}
+                className="w-full px-5 py-4 flex items-center gap-4 text-left border-t border-border active:bg-muted"
+              >
+                <ChatBubbleOvalLeftIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <span className="flex-1 text-sm font-medium text-foreground">
+                  Message family
+                </span>
+                <span className="text-xs text-muted-foreground">Coming soon</span>
+              </button>
+
+              {/* Export / share list — placeholder for sharing the list
+                  (text someone, print, save PDF). Common ask for caregivers
+                  who hand off the list to a sitter or relative. */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTripMenuOpen(false)
+                  toast('Share list — coming soon', { icon: '📤' })
+                }}
+                className="w-full px-5 py-4 flex items-center gap-4 text-left border-t border-border active:bg-muted"
+              >
+                <ShareIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <span className="flex-1 text-sm font-medium text-foreground">
+                  Share list
+                </span>
+                <span className="text-xs text-muted-foreground">Coming soon</span>
+              </button>
+
+              {/* Cancel trip — destructive, separated below by visual
+                  weight (red icon + label). Bails out without writing
+                  anything to inventory (like the same-named option on
+                  the empty-trip prompt). */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTripMenuOpen(false)
+                  setShowCancelTripPrompt(true)
+                }}
+                className="w-full px-5 py-4 flex items-center gap-4 text-left border-t border-border active:bg-muted"
+              >
+                <XCircleIcon className="h-5 w-5 text-error flex-shrink-0" />
+                <span className="flex-1 text-sm font-medium text-error">Cancel trip</span>
+              </button>
+
+              {/* Cancel button (closes menu without action) */}
+              <button
+                type="button"
+                onClick={() => setTripMenuOpen(false)}
+                className="w-full px-5 py-4 text-sm font-medium text-muted-foreground border-t border-border active:bg-muted"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel-trip prompt — surfaces when the user just removed the last
+          item from the session. Empty trip is useless; this prompt lets
+          them bail out cleanly OR stay in to re-build via the + Add
+          button. */}
+      {showCancelTripPrompt && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowCancelTripPrompt(false)
+          }}
+        >
+          <div className="bg-card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl p-5 sm:p-6 flex flex-col gap-4">
+            <div className="sm:hidden flex justify-center -mt-2 mb-1">
+              <div className="w-10 h-1 rounded-full bg-border" />
+            </div>
+            <h2 className="text-base font-semibold text-foreground">
+              Your list is empty
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              You&apos;ve removed every item from this trip. Want to end the trip,
+              or keep it open and add items as you go?
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCancelTripPrompt(false)}
+                className="flex-1 h-12 rounded-lg border border-border text-foreground hover:bg-muted active:bg-muted/80 transition-colors font-medium"
+              >
+                Keep shopping
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCancelTripPrompt(false)
+                  // Exit active shopping. Same handler the X close in the
+                  // header uses — no inventory writes (nothing was found).
+                  onClose()
+                }}
+                className="flex-1 h-12 rounded-lg bg-error hover:bg-red-700 text-white font-semibold transition-colors"
+              >
+                End trip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove-from-list confirmation modal — opens when the user taps a
+          trash icon on TO-PICK or DONE rows. Uses real UI confirm (not
+          window.confirm) so the design language is consistent and mobile
+          rendering is clean. Destructive button red, neutral default
+          focuses on Cancel. */}
+      {removeConfirmTarget && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !removeSubmitting)
+              setRemoveConfirmTarget(null)
+          }}
+        >
+          <div className="bg-card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl p-5 sm:p-6 flex flex-col gap-4">
+            <div className="sm:hidden flex justify-center -mt-2 mb-1">
+              <div className="w-10 h-1 rounded-full bg-border" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-lg bg-error/10 flex items-center justify-center flex-shrink-0">
+                <TrashIcon className="h-6 w-6 text-error" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base font-semibold text-foreground">
+                  Remove from list?
+                </h2>
+                <p className="text-sm text-muted-foreground truncate mt-0.5">
+                  {removeConfirmTarget.productName}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This will remove the item from your shopping list. You can always
+              add it again later.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setRemoveConfirmTarget(null)}
+                disabled={removeSubmitting}
+                className="flex-1 h-12 rounded-lg border border-border text-foreground hover:bg-muted active:bg-muted/80 transition-colors font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveItem}
+                disabled={removeSubmitting}
+                className="flex-1 h-12 rounded-lg bg-error hover:bg-red-700 text-white font-semibold transition-colors disabled:opacity-60"
+              >
+                {removeSubmitting ? 'Removing…' : 'Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Qty-adjust modal — opens ONLY when the user taps "Adjust" on a
+          successful-scan toast. Friction-minimum design: the common case
+          (shopper grabbed the listed qty) skips this entirely; partial /
+          stock-up cases get an explicit, clear modal with semantic framing
+          (needed N · got M) instead of a sparse stepper. */}
+      {adjustQtyTarget && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setAdjustQtyTarget(null)
+          }}
+        >
+          <div className="bg-card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl p-5 sm:p-6 flex flex-col gap-4">
+            <div className="sm:hidden flex justify-center -mt-2 mb-1">
+              <div className="w-10 h-1 rounded-full bg-border" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-foreground">
+                How many did you actually find?
+              </h2>
+              <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                {adjustQtyTarget.productName}
+              </p>
+            </div>
+
+            {(() => {
+              // Live snapshot of the row so quantity reflects any prior
+              // adjust (in case the user opens-adjusts-cancels-reopens).
+              const live = liveItemsById.get(adjustQtyTarget.itemId)
+              const currentQty = live?.quantity ?? adjustQtyTarget.appliedQty
+              const needed = adjustQtyTarget.listedQty
+              const tone =
+                currentQty === 0
+                  ? 'text-red-700'
+                  : currentQty < needed
+                    ? 'text-amber-700'
+                    : 'text-green-700'
+              const statusLabel =
+                currentQty === 0
+                  ? 'None found'
+                  : currentQty < needed
+                    ? `Partial — ${currentQty} of ${needed}`
+                    : currentQty === needed
+                      ? `All ${needed} found`
+                      : `Got ${currentQty} (more than needed)`
+              return (
+                <>
+                  <div className="bg-muted/50 rounded-lg p-3 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Listed qty</span>
+                    <span className="text-sm font-semibold text-foreground">{needed}</span>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = Math.max(0, currentQty - 1)
+                        if (next === currentQty) return
+                        void updateShoppingItem(adjustQtyTarget.itemId, { quantity: next })
+                      }}
+                      disabled={submitting || currentQty <= 0}
+                      className="h-12 w-12 rounded-full border-2 border-border bg-card flex items-center justify-center text-2xl font-bold text-foreground active:bg-muted disabled:opacity-40"
+                      aria-label="Decrease"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={currentQty}
+                      onChange={(e) => {
+                        const n = parseInt(e.target.value, 10)
+                        if (Number.isFinite(n) && n >= 0) {
+                          void updateShoppingItem(adjustQtyTarget.itemId, { quantity: n })
+                        }
+                      }}
+                      className="h-12 w-20 text-center text-2xl font-bold text-foreground border-2 border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                      aria-label="Quantity"
+                      min={0}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void updateShoppingItem(adjustQtyTarget.itemId, {
+                          quantity: currentQty + 1,
+                        })
+                      }}
+                      disabled={submitting}
+                      className="h-12 w-12 rounded-full border-2 border-primary bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary active:bg-primary/20"
+                      aria-label="Increase"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <p className={`text-center text-sm font-medium ${tone}`}>
+                    {statusLabel}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => setAdjustQtyTarget(null)}
+                    className="w-full h-12 rounded-lg bg-primary text-white font-semibold active:bg-primary-dark"
+                  >
+                    Done
+                  </button>
+                </>
+              )
+            })()}
+          </div>
         </div>
       )}
 
@@ -1004,7 +1501,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                 onClick={() => {
                   const scanned = pendingConfirm.scannedBarcode
                   setPendingConfirm(null)
-                  openQuantityFound(scanned)
+                  autoFulfillFromScan(scanned)
                 }}
                 className="w-full px-6 py-3 bg-primary text-white rounded-lg font-medium disabled:opacity-50"
               >
