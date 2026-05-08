@@ -44,6 +44,7 @@ import { patientOperations } from '@/lib/medical-operations'
 import { containsAllergen, getPatientAllergies } from '@/lib/ai-shopping-suggestions'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { BlockedOperationModal } from '@/components/shopping/BlockedOperationModal'
+import { useAddSheet } from '@/hooks/useAddSheet'
 import { useActiveShoppingSessions } from '@/hooks/useActiveShoppingSessions'
 import { BulkOperationBlockedError } from '@/lib/permissions-guard'
 import type { BulkOperationPermissionCheck } from '@/lib/permissions-guard'
@@ -187,6 +188,19 @@ function ShoppingListContent() {
   // Sequential shopping flow state
   const [selectedItem, setSelectedItem] = useState<ShoppingItem | null>(null)
   const [showSequentialFlow, setShowSequentialFlow] = useState(false)
+
+  /**
+   * Add-to-list sheet state. Holds the product info + an onConfirm callback
+   * that performs the actual add when the user picks a qty. Surfaces on:
+   *   - HealthSuggestion + tap (qty + on-hand context, then add)
+   *   - Barcode scan add path (only when item isn't already on the list)
+   * Set to null when no sheet is open.
+   */
+  // Add-to-list sheet state owned by the shared hook (DRY across surfaces
+  // that need a qty+on-hand prompt before adding). openSheet({...}) opens
+  // it with per-call config (productName, onConfirm, etc.); the rendered
+  // <sheet/> goes at the bottom of the JSX tree.
+  const { openSheet: openAddSheet, sheet: addSheetNode } = useAddSheet()
 
   /**
    * Scan-time rename prompt state. Set when a barcode lookup returned
@@ -386,13 +400,32 @@ function ShoppingListContent() {
       const product = simplifyProduct(response)
 
       if (!product.found) {
-        toast.error(
-          `Product not found in database (barcode: ${barcode}). This product may need to be added manually.`,
-          {
-            id: 'barcode-lookup',
-            duration: 5000
-          }
-        )
+        // Not in our catalog or any external source. Instead of a dead-end
+        // error toast, surface the AddToShoppingListSheet in editableName
+        // mode — user types the name, picks qty, adds to list. Barcode is
+        // attached to the new row so future scans match.
+        toast.dismiss('barcode-lookup')
+        openAddSheet({
+          productName: '',
+          editableName: true,
+          barcode,
+          inventoryMatch: null,
+          onConfirm: async (qty, nameOverride) => {
+            const finalName = (nameOverride || '').trim()
+            if (!finalName) return
+            await addManualShoppingItem(userId, finalName, {
+              householdId: userId,
+              quantity: qty,
+              barcode,
+            })
+            await refresh()
+            toast.success(
+              qty > 1
+                ? `Added ${qty} × ${finalName} to shopping list`
+                : `Added ${finalName} to shopping list`,
+            )
+          },
+        })
         return
       }
 
@@ -473,18 +506,33 @@ function ShoppingListContent() {
           return
         }
 
-        // Item NOT on list and no duplicates — add it to the shopping list
-        // as needed. We deliberately do NOT write to inventory here:
-        // scanning a product on the shopping-list page means "I want to
-        // buy this," not "I already bought it." Inventory writes happen
-        // only on the inventory page or when an existing on-list item is
-        // checked off via re-scan above.
-        await addItem(response.product!, {
-          inStock: false,
-          needed: true,
-          quantity: 1,
+        // Item NOT on list and no duplicates — open the qty + on-hand
+        // sheet so the user makes an informed qty decision. We do NOT
+        // write to inventory here: scanning on the shopping-list page
+        // means "I want to buy this," not "I already bought it."
+        // Inventory writes happen only on the inventory page or when an
+        // existing on-list item is checked off via re-scan above.
+        const inventoryMatch = memberShoppingData.householdInventory.find(
+          (it) => it.inStock && it.barcode === barcode,
+        ) ?? null
+        openAddSheet({
+          productName: product.name,
+          brand: response.product?.brands || inventoryMatch?.brand,
+          imageUrl: response.product?.image_url || inventoryMatch?.imageUrl || undefined,
+          inventoryMatch,
+          onConfirm: async (qty) => {
+            await addItem(response.product!, {
+              inStock: false,
+              needed: true,
+              quantity: qty,
+            })
+            toast.success(
+              qty > 1
+                ? `Added ${qty} × ${product.name} to shopping list`
+                : `Added ${product.name} to shopping list`,
+            )
+          },
         })
-        toast.success(`Added ${product.name} to shopping list`)
       }
     } catch (error: any) {
       logger.error('[Shopping] Barcode scan error', error as Error, {
@@ -825,19 +873,55 @@ function ShoppingListContent() {
                   return items
                 })()}
                 onAddItem={async (productName: string) => {
-                  if (memberId) {
-                    const category = detectCategory({ product_name: productName })
-                    await memberShoppingData.addItem({
-                      productName,
-                      category,
-                      quantity: 1,
-                      source: 'manual' as any,
-                      reason: 'Health suggestion'
-                    })
-                  } else {
-                    await addManualShoppingItem(userId, productName, { householdId: userId })
-                    await refresh()
-                  }
+                  // Open the qty + on-hand sheet instead of adding silently
+                  // with qty=1. Lookup tries exact name/key match first, then
+                  // falls back to substring containment in either direction
+                  // ("Spinach" matches "Fresh Baby Spinach" both ways) so
+                  // typical name variations don't silently miss. Sheet itself
+                  // handles the no-match case by rendering "Not in your
+                  // kitchen yet."
+                  const lcName = productName.toLowerCase().trim()
+                  const inventory = memberShoppingData.householdInventory.filter(
+                    (it) => it.inStock,
+                  )
+                  const exact =
+                    inventory.find(
+                      (it) =>
+                        (it.productName || '').toLowerCase().trim() === lcName ||
+                        (it.productKey || '').toLowerCase().trim() === lcName,
+                    ) ?? null
+                  const fuzzy =
+                    exact ??
+                    inventory.find((it) => {
+                      const name = (it.productName || '').toLowerCase().trim()
+                      if (!name) return false
+                      return name.includes(lcName) || lcName.includes(name)
+                    }) ??
+                    null
+                  openAddSheet({
+                    productName,
+                    brand: fuzzy?.brand,
+                    imageUrl: fuzzy?.imageUrl || undefined,
+                    inventoryMatch: fuzzy,
+                    onConfirm: async (qty) => {
+                      if (memberId) {
+                        const category = detectCategory({ product_name: productName })
+                        await memberShoppingData.addItem({
+                          productName,
+                          category,
+                          quantity: qty,
+                          source: 'manual' as any,
+                          reason: 'Health suggestion',
+                        })
+                      } else {
+                        await addManualShoppingItem(userId, productName, {
+                          householdId: userId,
+                          quantity: qty,
+                        })
+                        await refresh()
+                      }
+                    },
+                  })
                 }}
                 onUpdateQuantity={async (productName: string, quantity: number) => {
                   // Find the item in the list and update its quantity
@@ -1203,6 +1287,12 @@ function ShoppingListContent() {
             allowOverride={false}
           />
         )}
+
+        {/* Add-to-list qty sheet — surfaces qty + on-hand context when the
+            user adds an item via HealthSuggestion or barcode scan. Owned
+            by useAddSheet so /inventory and other surfaces share the same
+            primitive without each duplicating the state + JSX. */}
+        {addSheetNode}
       </div>
     </AuthGuard>
   )

@@ -15,6 +15,8 @@ interface SearchFilterProps {
   onFilterCategory: (category: ProductCategory | 'all') => void
   selectedCategory?: ProductCategory | 'all'
   searchValue?: string
+  /** Placeholder for the search input. Defaults to the shopping-list copy. */
+  placeholder?: string
   className?: string
 }
 
@@ -41,6 +43,7 @@ export function SearchFilter({
   onFilterCategory,
   selectedCategory = 'all',
   searchValue,
+  placeholder = 'Search shopping list...',
   className = '',
 }: SearchFilterProps) {
   const [searchQuery, setSearchQuery] = useState(searchValue || '')
@@ -71,7 +74,7 @@ export function SearchFilter({
           type="text"
           value={searchQuery}
           onChange={handleSearchChange}
-          placeholder="Search shopping list..."
+          placeholder={placeholder}
           className="w-full pl-10 pr-10 py-2 bg-background border border-border dark:border-gray-600 rounded-lg text-foreground dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         {searchQuery && (

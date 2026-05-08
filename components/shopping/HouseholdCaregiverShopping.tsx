@@ -90,6 +90,7 @@ export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
 
+
   // Mutable "is anything in-flight" flag — read by the polling tick.
   // Stored in a ref (not deps) so the polling timer doesn't restart on
   // every keystroke / busy-state change.

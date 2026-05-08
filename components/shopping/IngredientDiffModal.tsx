@@ -31,9 +31,10 @@ export function IngredientDiffModal({
   onClose,
 }: IngredientDiffModalProps) {
   const { allItems: inventoryItems, loading: inventoryLoading } = useInventory()
-  const { addFromRecipe, loading: addingItems } = useShopping()
+  const { addFromRecipe } = useShopping()
   const [diffs, setDiffs] = useState<IngredientDiff[]>([])
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set())
+  const [addingItems, setAddingItems] = useState(false)
 
   // Compare recipe with inventory on mount
   useEffect(() => {
@@ -58,6 +59,7 @@ export function IngredientDiffModal({
   }
 
   const handleAddToList = async () => {
+    setAddingItems(true)
     try {
       // Get selected diffs
       const selectedDiffs = diffs.filter((_, index) => selectedItems.has(index))
@@ -74,6 +76,8 @@ export function IngredientDiffModal({
       onClose()
     } catch (error) {
       toast.error('Failed to add items to shopping list')
+    } finally {
+      setAddingItems(false)
     }
   }
 
