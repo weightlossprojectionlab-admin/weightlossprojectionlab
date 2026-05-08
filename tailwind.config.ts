@@ -2,6 +2,19 @@ import type { Config } from 'tailwindcss'
 import typography from '@tailwindcss/typography'
 
 const config: Config = {
+  // Light-only platform: <html> is hardcoded with class="light" and the
+  // viewport meta sets colorScheme: 'light' to lock native form elements
+  // (scrollbars, datepickers) to light. Tailwind's default darkMode 'media'
+  // strategy ignores both of those and fires `dark:` variants based purely
+  // on OS preference — which on a dark-mode phone causes `dark:bg-gray-800`
+  // to activate while CSS custom properties stay light, producing white-on-
+  // white / dark-on-dark contrast bugs in input fields and surfaces.
+  // 'class' mode binds dark variants to <html class="dark"> (which we never
+  // set), so existing `dark:` utilities sprinkled through the codebase
+  // become inert no-ops and the entire platform renders consistently light
+  // regardless of the user's system theme. If we ever ship a real dark mode
+  // we'd toggle the class manually here.
+  darkMode: 'class',
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
