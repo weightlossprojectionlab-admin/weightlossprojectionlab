@@ -396,6 +396,26 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
   }, [isScanning, showManualEntry])
 
   const handleScanSuccess = (barcode: string) => {
+    // Validate length BEFORE firing onScan. ZXing occasionally returns a
+    // partial decode (6–7 digits) when the user moves the camera away
+    // before the full read completes. Those partials look like real
+    // success to the parent surface, which then sends the fragment to
+    // /api/products/lookup, gets a 404, and shows "item not found" — a
+    // dead-end the user has to recover from. Better to reject here and
+    // ask them to keep aiming. UPC-E (8) / UPC-A (12) / EAN-13 (13) /
+    // ITF-14 (14) are the legitimate retail lengths.
+    const cleaned = (barcode || '').replace(/\D/g, '')
+    if (cleaned.length < 8) {
+      // Don't close the scanner — let it keep trying. Tell the user the
+      // last read was short so they know to hold steadier / move closer.
+      logger.debug('[BarcodeScanner] rejecting short partial', { length: cleaned.length })
+      toast('Hold steady — barcode wasn\'t fully read', {
+        icon: '📏',
+        duration: 1500,
+      })
+      return
+    }
+
     // Vibrate on success (if supported)
     if (navigator.vibrate) {
       navigator.vibrate(200)
@@ -407,8 +427,11 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
       // Ignore audio errors
     })
 
-    toast.success(`Scanned: ${barcode}`)
-    onScan(barcode)
+    // No toast here — the scanner doesn't know the product yet, so showing
+    // the raw barcode digits ("Scanned: 0016000170032") was unsemantic.
+    // The parent surface looks up the barcode and is responsible for any
+    // user-facing success message (which can carry the actual product name).
+    onScan(cleaned)
 
     // Stop scanning after successful scan
     stopScanning()
@@ -435,7 +458,8 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
       return
     }
 
-    toast.success(`Entered: ${manualBarcode}`)
+    // Same reasoning as handleScanSuccess — no raw-barcode toast here.
+    // The parent looks up the product and toasts the human-readable name.
     onScan(manualBarcode.trim())
     setManualBarcode('')
     setShowManualEntry(false)
@@ -625,12 +649,21 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
             </button>
           )}
 
-          {/* Overlay instructions */}
+          {/* Aim guidance — concrete positioning instructions instead of a
+              generic "Scanning" label. The most common partial-decode cause
+              is the user holding the barcode too close (camera can't focus)
+              or moving while it locks; this copy nudges both at once.
+              Mobile-first: the text sits over the lower portion of the
+              video so it's still legible against typical packaging. */}
           {isScanning && !showManualEntry && (
-            <div className="absolute inset-x-0 bottom-2 flex items-center justify-center pointer-events-none">
-              <div className="text-center text-white bg-black/50 px-4 py-2 rounded-lg">
-                <p className="text-sm font-medium">
-                  Scanning{focusSupported ? ' · tap to focus' : ''}
+            <div className="absolute inset-x-0 bottom-2 flex items-center justify-center pointer-events-none px-3">
+              <div className="text-center text-white bg-black/65 px-4 py-2 rounded-lg max-w-[90%]">
+                <p className="text-sm font-medium leading-tight">
+                  Center the barcode in the box · hold steady
+                </p>
+                <p className="text-[11px] opacity-80 leading-tight mt-0.5">
+                  Keep ~6 inches away
+                  {focusSupported ? ' · tap to focus' : ''}
                 </p>
               </div>
             </div>
@@ -733,29 +766,36 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
               can't work. The 8-second showTroubleCallout above
               still surfaces "Take a photo" inline once the camera
               IS running but isn't decoding. */}
+          {/* Photo upload — only when the camera path itself failed (no
+              camera, insecure context, or hard error). For working-camera-
+              but-no-decode, the 8-second showTroubleCallout above already
+              surfaces a "Take a photo" button inline. */}
           {(error || !cameraSupported || !secureContext) && !showManualEntry && (
-            <>
-              {/* Upload Photo Button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full px-4 py-3 bg-secondary text-white rounded-lg hover:bg-secondary-hover transition-colors font-medium flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Take/Upload Photo
-              </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full px-4 py-3 bg-secondary text-white rounded-lg hover:bg-secondary-hover transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Take/Upload Photo
+            </button>
+          )}
 
-              {/* Manual Entry Toggle */}
-              <button
-                type="button"
-                onClick={() => setShowManualEntry(true)}
-                className="w-full px-4 py-3 bg-muted text-foreground rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
-              >
-                Enter barcode manually
-              </button>
-            </>
+          {/* Manual entry — always available (lifted out of the camera-failed
+              gate). Real grocery barcodes get torn, glare-y, or smudged; even
+              a working camera can fail on those, and damp/cold hands make
+              held-steady aiming hard. Users need a manual escape that doesn't
+              require waiting 8 seconds or hoping the camera fails. */}
+          {!showManualEntry && (
+            <button
+              type="button"
+              onClick={() => setShowManualEntry(true)}
+              className="w-full px-4 py-3 bg-muted text-foreground rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors font-medium"
+            >
+              Enter barcode manually
+            </button>
           )}
 
           {/* Cancel Button */}
