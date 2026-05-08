@@ -1875,8 +1875,15 @@ function KitchenInventoryContent() {
 
   // Single resolver used everywhere images render. Catalog wins, row snapshot
   // is fallback, undefined means "no image — render the placeholder."
+  // Image resolver — ROW FIRST, catalog as fallback. Original design was
+  // catalog-first ("catalog is authoritative"), but if catalog images are
+  // stale (expired download tokens, blocked by CSP, or 503-ing externally
+  // like OFF outages), catalog-first overrides working row URLs with broken
+  // ones — hence the "appear and disappear" symptom users hit in prod.
+  // Row's URL is the user's already-validated state; only fall back to
+  // catalog when the row genuinely has nothing.
   const resolveItemImage = (item: ShoppingItem): string | undefined =>
-    (item.barcode && catalogImagesByBarcode[item.barcode]) || item.imageUrl || undefined
+    item.imageUrl || (item.barcode && catalogImagesByBarcode[item.barcode]) || undefined
 
   /**
    * Fetch household members for display
@@ -4117,15 +4124,15 @@ function KitchenInventoryContent() {
               const tierName = (t?: PackTier): string =>
                 t === 'C' ? 'Case' : t === 'P' ? 'Pack' : t === 'U' ? 'Unit' : 'Primary'
               const tiers: TierEntry[] = []
-              // Resolve image: catalog (admin/barcodes, live via onSnapshot)
-              // first, row's snapshot second. Catalog wins because admin
-              // migrations / OFF lookups / another caregiver's upload can
-              // populate it after the row was first scanned.
+              // Resolve image: row first, catalog as fallback. Same
+              // priority as resolveItemImage above — catalog images can be
+              // stale/blocked/503-ing, so only use them when the row
+              // genuinely has nothing of its own.
               const resolveTierImage = (
                 barcode: string,
                 rowImageUrl: string | undefined,
               ): string | undefined =>
-                catalogImagesByBarcode[barcode] || rowImageUrl || undefined
+                rowImageUrl || catalogImagesByBarcode[barcode] || undefined
               if (selectedItem.barcode) {
                 const subParts: string[] = []
                 if (selectedItem.containerSize !== undefined) {
