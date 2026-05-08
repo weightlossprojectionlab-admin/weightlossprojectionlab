@@ -35,7 +35,7 @@ import { suggestDefaultUnit, formatQuantityDisplay } from './product-categories'
 /**
  * Get the path to a member's shopping list
  */
-function getMemberShoppingListPath(householdId: string, memberId: string): string {
+export function getMemberShoppingListPath(householdId: string, memberId: string): string {
   return `users/${householdId}/${SUBCOLLECTIONS.USERS.MEMBER_SHOPPING_LISTS}/${memberId}/items`
 }
 
