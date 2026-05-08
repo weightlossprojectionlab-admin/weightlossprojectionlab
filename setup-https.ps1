@@ -36,5 +36,5 @@ Write-Host "============================================================" -Foreg
 Write-Host "`nAccess your app at:" -ForegroundColor White
 Write-Host "  https://localhost:3000" -ForegroundColor Yellow
 Write-Host "  https://$localIP:3000 (for mobile)" -ForegroundColor Yellow
-Write-Host "`nStart HTTPS dev server: npm run dev:https" -ForegroundColor Cyan
+Write-Host "`nStart HTTPS dev server: npm run dev" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan

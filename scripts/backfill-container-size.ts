@@ -2,39 +2,71 @@
  * One-shot backfill for Phase 2a: containerSize + containerUnit on
  * existing product_database docs.
  *
- * Streams branded_food.csv, parses each row's package_weight via
- * parsePackageWeight(), and writes containerSize + containerUnit +
- * packageWeightRaw onto the matching product_database doc identified
- * by the normalized gtin_upc.
+ * Approach (efficient direction): load branded_food.csv into an
+ * in-memory Map<upc, {size, unit, raw}>, then iterate product_database
+ * (paged in chunks of 500). For each doc that's missing containerSize,
+ * look up by doc.id in the map and patch it via batched writes.
  *
- * Why a separate script vs re-importing the catalog:
- *   - Re-import deletes + re-creates 456k docs (~3 hours of streaming
- *     nutrient data we already have). This script just patches three
- *     fields per doc.
- *   - Skips docs that already have a containerSize set (idempotent —
- *     re-runs are cheap).
- *   - Doesn't touch docs created via the user-rename flow (their
- *     barcodes won't appear in branded_food.csv).
+ * Why this direction: the catalog has ~456k docs but the CSV has
+ * ~1.99M rows. Iterating the smaller side and looking up the larger
+ * side in memory is ~4x fewer Firestore ops. Each doc gets at most
+ * one read (via the batched listing) and one write.
+ *
+ * Idempotent: skips docs that already have containerSize set, so
+ * re-runs are cheap and safe.
  *
  * Run modes:
  *   --dry  Print a summary, don't write
  *   --live Actually update Firestore
  *
- * Run: npm run backfill:container -- --live
+ * Run: npm run backfill:container -- <path-to-branded_food.csv> --live
  */
 import * as fs from 'fs'
 import * as path from 'path'
 import * as dotenv from 'dotenv'
 import csvParser from 'csv-parser'
-import { parsePackageWeight } from '../lib/package-weight'
+import { parsePackageWeight, type ParsedPackageWeight } from '../lib/package-weight'
 
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') })
 
 const BATCH_LIMIT = 450 // Firestore caps at 500 ops/batch
+const PAGE_SIZE = 500
 const DEFAULT_CSV_PATH = process.env.USDA_BRANDED_CSV_PATH || ''
+
+interface CsvEntry {
+  parsed: ParsedPackageWeight
+  raw: string
+}
 
 function normalizeUpc(raw: string): string {
   return (raw || '').replace(/\D/g, '')
+}
+
+async function loadCsvIntoMap(csvPath: string): Promise<Map<string, CsvEntry>> {
+  console.log('[Backfill] Streaming branded_food.csv into memory…')
+  const map = new Map<string, CsvEntry>()
+  let scanned = 0
+  let kept = 0
+  const stream = fs.createReadStream(csvPath).pipe(csvParser())
+
+  for await (const row of stream as AsyncIterable<Record<string, string>>) {
+    scanned++
+    if (scanned % 250_000 === 0) {
+      console.log(`  scanned ${scanned.toLocaleString()} rows, kept ${kept.toLocaleString()}`)
+    }
+    const upc = normalizeUpc(row.gtin_upc)
+    if (!upc) continue
+    const parsed = parsePackageWeight(row.package_weight || '')
+    if (!parsed) continue
+    // Multiple CSV rows can share a UPC (different fdc_ids); keep the
+    // first one with parseable package_weight. They tend to agree.
+    if (!map.has(upc)) {
+      map.set(upc, { parsed, raw: row.package_weight || '' })
+      kept++
+    }
+  }
+  console.log(`  done: ${scanned.toLocaleString()} scanned, ${kept.toLocaleString()} unique UPCs with parseable package_weight\n`)
+  return map
 }
 
 async function main() {
@@ -55,23 +87,24 @@ async function main() {
     process.exit(1)
   }
 
-  const { adminDb } = await import('../lib/firebase-admin')
-  const collection = adminDb.collection('product_database')
-
   console.log(`\n[Backfill] ${live ? 'LIVE' : 'DRY-RUN'} mode`)
   console.log(`[Backfill] Reading: ${csvPath}\n`)
 
-  let scanned = 0
-  let parsed = 0
-  let updated = 0
-  let skippedNoUpc = 0
-  let skippedUnparseable = 0
-  let skippedNoDoc = 0
-  let skippedAlreadySet = 0
+  const csvMap = await loadCsvIntoMap(csvPath)
+
+  const { adminDb } = await import('../lib/firebase-admin')
+  const collection = adminDb.collection('product_database')
+
+  console.log('[Backfill] Iterating product_database in pages of', PAGE_SIZE)
+
+  let docsScanned = 0
+  let docsAlreadySet = 0
+  let docsNoCsvMatch = 0
+  let docsCandidate = 0
+  let docsUpdated = 0
 
   let batch = adminDb.batch()
   let batchSize = 0
-  let pendingFlush: Promise<unknown> = Promise.resolve()
 
   const flush = async () => {
     if (batchSize === 0) return
@@ -87,66 +120,59 @@ async function main() {
     }
   }
 
-  const stream = fs.createReadStream(csvPath).pipe(csvParser())
+  let lastDocId: string | null = null
+  while (true) {
+    let q: FirebaseFirestore.Query = collection.orderBy('__name__').limit(PAGE_SIZE)
+    if (lastDocId) {
+      const lastSnap = await collection.doc(lastDocId).get()
+      if (lastSnap.exists) q = q.startAfter(lastSnap)
+    }
+    const snap = await q.get()
+    if (snap.empty) break
 
-  for await (const row of stream as AsyncIterable<Record<string, string>>) {
-    scanned++
-    if (scanned % 50_000 === 0) {
-      console.log(`  scanned ${scanned.toLocaleString()}, updated ${updated.toLocaleString()}`)
+    for (const doc of snap.docs) {
+      docsScanned++
+      const data = doc.data()
+      // Idempotency — skip docs that already have containerSize.
+      if (typeof data.containerSize === 'number' && data.containerSize > 0) {
+        docsAlreadySet++
+        continue
+      }
+      const csvHit = csvMap.get(doc.id)
+      if (!csvHit) {
+        docsNoCsvMatch++
+        continue
+      }
+      docsCandidate++
+
+      batch.update(doc.ref, {
+        containerSize: csvHit.parsed.size,
+        containerUnit: csvHit.parsed.unit,
+        packageWeightRaw: csvHit.raw,
+        updatedAt: new Date(),
+      })
+      batchSize++
+      docsUpdated++
+
+      if (batchSize >= BATCH_LIMIT) await flush()
     }
 
-    const upc = normalizeUpc(row.gtin_upc)
-    if (!upc) {
-      skippedNoUpc++
-      continue
-    }
-    const parsedPkg = parsePackageWeight(row.package_weight)
-    if (!parsedPkg) {
-      skippedUnparseable++
-      continue
-    }
-    parsed++
-
-    // Cheap existence/idempotency check — if the doc already has a
-    // containerSize, leave it alone. Saves ~half the writes on re-runs.
-    const docRef = collection.doc(upc)
-    const snap = await docRef.get()
-    if (!snap.exists) {
-      skippedNoDoc++
-      continue
-    }
-    const existing = snap.data() || {}
-    if (typeof existing.containerSize === 'number' && existing.containerSize > 0) {
-      skippedAlreadySet++
-      continue
+    if (docsScanned % 25_000 === 0) {
+      console.log(`  scanned ${docsScanned.toLocaleString()} docs, updated ${docsUpdated.toLocaleString()}`)
     }
 
-    batch.update(docRef, {
-      containerSize: parsedPkg.size,
-      containerUnit: parsedPkg.unit,
-      packageWeightRaw: row.package_weight || '',
-      updatedAt: new Date(),
-    })
-    batchSize++
-    updated++
-
-    if (batchSize >= BATCH_LIMIT) {
-      await pendingFlush
-      pendingFlush = flush()
-    }
+    lastDocId = snap.docs[snap.docs.length - 1].id
+    if (snap.size < PAGE_SIZE) break
   }
-  await pendingFlush
   await flush()
 
   console.log('\n[Backfill] Complete')
-  console.log(`  scanned:           ${scanned.toLocaleString()}`)
-  console.log(`  parsed:            ${parsed.toLocaleString()}`)
-  console.log(`  updated:           ${updated.toLocaleString()} ${live ? '' : '(dry-run, no writes)'}`)
-  console.log(`  skippedNoUpc:      ${skippedNoUpc.toLocaleString()}`)
-  console.log(`  skippedUnparseable:${skippedUnparseable.toLocaleString()}`)
-  console.log(`  skippedNoDoc:      ${skippedNoDoc.toLocaleString()}`)
-  console.log(`  skippedAlreadySet: ${skippedAlreadySet.toLocaleString()}`)
-  if (!live && updated > 0) {
+  console.log(`  docsScanned:     ${docsScanned.toLocaleString()}`)
+  console.log(`  docsAlreadySet:  ${docsAlreadySet.toLocaleString()}`)
+  console.log(`  docsNoCsvMatch:  ${docsNoCsvMatch.toLocaleString()} (UPC not in branded_food.csv or unparseable package_weight)`)
+  console.log(`  docsCandidate:   ${docsCandidate.toLocaleString()}`)
+  console.log(`  docsUpdated:     ${docsUpdated.toLocaleString()} ${live ? '' : '(dry-run, no writes)'}`)
+  if (!live && docsCandidate > 0) {
     console.log(`\n  Re-run with --live to apply.`)
   }
   process.exit(0)
