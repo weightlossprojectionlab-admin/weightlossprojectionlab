@@ -23,13 +23,10 @@
  *     scripts can find related blobs without scanning by content.
  */
 
-import { storage, db, auth } from '@/lib/firebase'
+import { storage, auth } from '@/lib/firebase'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore'
 import { compressImage } from './image-compression'
 import { logger } from '@/lib/logger'
-
-const PRODUCT_DATABASE_COLLECTION = 'product_database'
 
 /**
  * Upload a captured product image, persist its URL onto
@@ -43,11 +40,12 @@ const PRODUCT_DATABASE_COLLECTION = 'product_database'
  *   - Storage path: products/{barcode}/{timestamp}_{sanitizedName}.
  *     Public-read so other users see the image without fetching
  *     through an authed endpoint.
- *   - Catalog write: only sets imageUrl when the doc currently has
- *     none (or holds an empty string). Curated images are never
- *     overwritten — same gentle-write contract as the product-name
- *     endpoint. If no doc exists yet, creates a sparse stub so the
- *     image isn't orphaned.
+ *   - Catalog write: by default (gentle write), only sets imageUrl
+ *     when the doc has none — curated images aren't overwritten by
+ *     drive-by scans. Pass `{ replace: true }` from explicit-intent
+ *     surfaces (Inventory Image tab) to force the new URL onto the
+ *     catalog regardless. If no doc exists yet, creates a sparse
+ *     stub so the image isn't orphaned.
  *
  * Failures: throws on Storage upload failure (the user explicitly
  * asked for an upload to happen, surfacing the error is correct).
@@ -56,7 +54,8 @@ const PRODUCT_DATABASE_COLLECTION = 'product_database'
  */
 export async function addProductImage(
   barcode: string,
-  file: File
+  file: File,
+  options: { replace?: boolean } = {}
 ): Promise<string> {
   const cleaned = (barcode || '').replace(/\D/g, '').trim()
   if (!cleaned) {
@@ -84,50 +83,44 @@ export async function addProductImage(
   await uploadBytes(storageRef, compressedFile)
   const downloadURL = await getDownloadURL(storageRef)
 
-  // Best-effort catalog write. The URL is the primary value the
-  // caller wants (so it can render the image immediately); the
-  // catalog row can be repaired later if this fails.
+  // Catalog write goes through the server endpoint — firestore.rules blocks
+  // direct client writes to product_database (server-only collection). The
+  // endpoint handles the gentle-write vs. replace decision, sparse-stub
+  // creation, and audit-trail logging.
+  //
+  // Best-effort: a 409 (catalog already has an image; replace not requested)
+  // is expected on drive-by scan paths and is not surfaced as an error.
+  // Other failures are logged but don't fail the upload — the URL is the
+  // primary value (so the caller can render the image immediately) and
+  // the catalog row can be reconciled later.
   try {
-    const productRef = doc(db, PRODUCT_DATABASE_COLLECTION, cleaned)
-    const snap = await getDoc(productRef)
-    const now = new Date()
-
-    if (snap.exists()) {
-      const existing = snap.data() as { imageUrl?: string }
-      // Don't overwrite a curated image. Empty string + missing both
-      // count as "needs an image" — anything truthy is left alone.
-      if (!existing.imageUrl) {
-        await updateDoc(productRef, {
-          imageUrl: downloadURL,
-          updatedAt: now,
-        })
-        logger.info('[Product Image] Catalog updated with first image', { barcode: cleaned })
-      } else {
-        logger.info('[Product Image] Catalog already has imageUrl, leaving alone', {
-          barcode: cleaned,
-        })
-      }
-    } else {
-      // Sparse stub — keeps the image from orphaning. Curated fields
-      // (productName, category, nutrition) get filled in by /api/
-      // products/[barcode]/name, the lookup pipeline, or admin tools.
-      await setDoc(productRef, {
-        barcode: cleaned,
-        productName: '',
-        brand: '',
+    const idToken = await auth.currentUser.getIdToken()
+    const res = await fetch(`/api/products/${encodeURIComponent(cleaned)}/image`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({
         imageUrl: downloadURL,
-        category: 'other',
-        quality: {
-          verified: false,
-          verificationCount: 0,
-          dataSource: 'user',
-          confidence: 30,
-        },
-        createdAt: now,
-        updatedAt: now,
-      })
-      logger.info('[Product Image] Created sparse catalog stub with image', {
+        replace: !!options.replace,
+      }),
+    })
+    if (res.status === 409) {
+      logger.info('[Product Image] Catalog already has imageUrl, leaving alone', {
         barcode: cleaned,
+      })
+    } else if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      logger.warn('[Product Image] Catalog write failed (URL still returned)', {
+        barcode: cleaned,
+        status: res.status,
+        error: data?.error,
+      })
+    } else {
+      logger.info('[Product Image] Catalog imageUrl written', {
+        barcode: cleaned,
+        mode: options.replace ? 'replace' : 'first-image',
       })
     }
   } catch (err) {
