@@ -300,6 +300,7 @@ export default function BarcodesManagementPage() {
     }
   }
 
+
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -323,7 +324,7 @@ export default function BarcodesManagementPage() {
             Search, edit, and verify products in the global database
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setShowMigrateConfirm(true)}
             disabled={migratingToUsda || loading}

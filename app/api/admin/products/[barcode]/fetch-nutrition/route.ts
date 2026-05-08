@@ -5,14 +5,23 @@ import { lookupProductHybrid } from '@/lib/product-lookup-server'
 import { errorResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
 import { resolveProductDoc } from '@/lib/barcode-variants'
+import { extractNutritionFromProduct } from '@/lib/nutrition-extraction'
 
 /**
  * POST /api/admin/products/[barcode]/fetch-nutrition
  *
- * Hybrid lookup: USDA FoodData Central for nutrition (authoritative for US
- * branded foods) + OpenFoodFacts for the product image (USDA has none).
- * Falls back to OFF-only when USDA has no record. Source is recorded in
- * quality.dataSource so admins can see where each datum came from.
+ * Auto-cascading nutrition fetch for the admin edit page. Tries USDA first
+ * (authoritative for US branded foods), then falls back to OpenFoodFacts
+ * when USDA has no record — single click, both sources tried. The button
+ * in the admin UI is labeled "Fetch from OpenFoodFacts" because OFF is the
+ * coverage backstop; USDA is the preferred source when available.
+ *
+ * `quality.dataSource` is set from the actual winning source ('usda',
+ * 'openfoodfacts', or 'usda+off' when both contributed) so admins can see
+ * provenance per row.
+ *
+ * Note: the migrate-to-usda batch route uses strict-USDA mode (deletes
+ * non-USDA rows) — different intent. This route is non-strict by design.
  */
 export async function POST(
   request: NextRequest,
@@ -56,56 +65,24 @@ export async function POST(
     const productRef = resolved.ref
     const resolvedBarcode = resolved.resolvedId
 
-    // Hybrid fetch — USDA-only for nutrition + OFF for image. Strict mode
-    // means we don't fall back to OFF nutrition when USDA misses — keeps
-    // the curated product_database free of crowdsourced OFF nutrition data.
-    logger.info(`Fetching USDA-strict hybrid nutrition for barcode ${resolvedBarcode}`)
-    const product = await lookupProductHybrid(resolvedBarcode, { strictUsdaNutrition: true })
+    // Auto-cascade: USDA-first (preferred), OFF as fallback. `strictUsdaNutrition: false`
+    // lets lookupProductHybrid return OFF data when USDA misses. The
+    // product.source field on the returned ProductData tells us which won
+    // ('usda' | 'openfoodfacts' | 'usda+off') and is mirrored to quality.dataSource.
+    logger.info(`Fetching cascading nutrition (USDA → OFF) for barcode ${resolvedBarcode}`)
+    const product = await lookupProductHybrid(resolvedBarcode, { strictUsdaNutrition: false })
 
     if (!product) {
       return NextResponse.json({
-        error: 'Product not found in USDA. To save nutrition data for this product, enter values manually on the edit page.'
+        error: 'Product not found in USDA or OpenFoodFacts. Enter values manually on the edit page.'
       }, { status: 404 })
     }
 
-    const nutriments = product.nutriments || {}
-
-    // Extract nutrition data (prefer per-serving, fallback to per-100g)
-    const calories = nutriments['energy-kcal_serving'] || nutriments['energy-kcal_100g'] || nutriments['energy-kcal'] || 0
-    const protein = nutriments.proteins_serving || nutriments.proteins_100g || nutriments.proteins || 0
-    const carbs = nutriments.carbohydrates_serving || nutriments.carbohydrates_100g || nutriments.carbohydrates || 0
-    const fat = nutriments.fat_serving || nutriments.fat_100g || nutriments.fat || 0
-    const saturatedFat = nutriments['saturated-fat_serving'] || nutriments['saturated-fat_100g'] || nutriments['saturated-fat']
-    const transFat = nutriments['trans-fat_serving'] || nutriments['trans-fat_100g'] || nutriments['trans-fat']
-    const fiber = nutriments.fiber_serving || nutriments.fiber_100g || nutriments.fiber || 0
-    const sugars = nutriments.sugars_serving || nutriments.sugars_100g || nutriments.sugars
-    const sodium = nutriments.sodium_serving || nutriments.sodium_100g || nutriments.sodium || 0
-    const cholesterol = nutriments.cholesterol_serving || nutriments.cholesterol_100g || nutriments.cholesterol
-    const vitaminD = nutriments['vitamin-d_serving'] || nutriments['vitamin-d_100g'] || nutriments['vitamin-d']
-    const calcium = nutriments.calcium_serving || nutriments.calcium_100g || nutriments.calcium
-    const iron = nutriments.iron_serving || nutriments.iron_100g || nutriments.iron
-    const potassium = nutriments.potassium_serving || nutriments.potassium_100g || nutriments.potassium
-
-    // Build nutrition object with optional fields
-    const nutrition: Record<string, any> = {
-      calories: Math.round(calories),
-      protein: Math.round(protein * 10) / 10,
-      carbs: Math.round(carbs * 10) / 10,
-      fat: Math.round(fat * 10) / 10,
-      fiber: Math.round(fiber * 10) / 10,
-      sodium: Math.round(sodium),
-      servingSize: product.serving_size || product.quantity || ''
-    }
-
-    // Add optional nutrition fields only if they exist
-    if (saturatedFat !== undefined) nutrition.saturatedFat = Math.round(saturatedFat * 10) / 10
-    if (transFat !== undefined) nutrition.transFat = Math.round(transFat * 10) / 10
-    if (sugars !== undefined) nutrition.sugars = Math.round(sugars * 10) / 10
-    if (cholesterol !== undefined) nutrition.cholesterol = Math.round(cholesterol * 10) / 10
-    if (vitaminD !== undefined) nutrition.vitaminD = Math.round(vitaminD * 10) / 10
-    if (calcium !== undefined) nutrition.calcium = Math.round(calcium * 10) / 10
-    if (iron !== undefined) nutrition.iron = Math.round(iron * 10) / 10
-    if (potassium !== undefined) nutrition.potassium = Math.round(potassium * 10) / 10
+    // Extract nutrition with proper per-serving math. The shared helper
+    // converts per-100g → per-serving when serving_quantity is known, and
+    // flags the row's basis (`per: '100g' | 'serving'`) when conversion
+    // isn't possible — display layer reads `per` to label correctly.
+    const nutrition: Record<string, any> = extractNutritionFromProduct(product)
 
     // Prepare update data — record exactly which sources contributed
     const updateData: Record<string, any> = {
