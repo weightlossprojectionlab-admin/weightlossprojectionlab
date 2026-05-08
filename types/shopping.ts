@@ -78,6 +78,90 @@ export interface PurchaseHistoryEntry {
   price?: number
 }
 
+/**
+ * Pack tier — the C/U/P hierarchy. The same product family can carry
+ * multiple UPCs, one per pack size: a single bottle (Unit), a 6-pack
+ * (Pack), a 24-case (Case). When the household scans any sibling, the
+ * scan-flow can recognize it as a variant of an existing inventory item
+ * and apply the right multiplier (e.g. scanning a 6-pack adds 6 units).
+ *
+ * v1 stores tier per-row on ShoppingItem. v2 may promote validated
+ * sibling sets to product_database for cross-household reuse.
+ */
+export type PackTier = 'U' | 'P' | 'C'
+
+/**
+ * Categorical reason for an on-hand quantity adjustment. Drives reporting
+ * and downstream behavior — `purchased` may seed purchaseHistory; `used`,
+ * `expired`, `discarded` reduce stock; `count` is a physical recount that
+ * just reconciles the running total.
+ */
+export type AdjustmentReason =
+  | 'purchased'
+  | 'used'
+  | 'expired'
+  | 'discarded'
+  | 'count'
+  | 'other'
+
+/**
+ * One on-hand-quantity adjustment event. Inventory Adjustment tab appends
+ * one of these on each Apply; the array is the audit trail. Each entry
+ * captures who, when, and the delta — the running quantity is on the
+ * containing ShoppingItem (and `resultQuantity` is the post-apply value
+ * for sanity-checking the trail).
+ */
+export interface AdjustmentEntry {
+  /** When this adjustment was applied. */
+  date: Date
+  /**
+   * Total delta in unit terms — positive adds stock, negative removes.
+   * Source of truth for `resultQuantity`. For tier-split adjustments,
+   * computed as `Σ tierDeltas[T] × packQuantityFor(T)`.
+   */
+  delta: number
+  /**
+   * Per-tier deltas — set only on split adjustments. Keys are the tier
+   * codes ('U' | 'P' | 'C'). Values are the count change AT that tier
+   * (e.g. `{ C: 1, U: -2 }` = "+1 case, −2 units"). Each tier's
+   * multiplier is the packQuantity of whichever UPC carries that tier
+   * on the row at apply time.
+   */
+  tierDeltas?: Partial<Record<PackTier, number>>
+  /** Categorical reason. */
+  reason: AdjustmentReason
+  /** Free-text note (optional). */
+  note?: string
+  /** Quantity AFTER applying this delta — consistency check + display. */
+  resultQuantity: number
+  /** userId of who applied — required for audit. */
+  userId?: string
+}
+
+export interface AlternateUpc {
+  /** UPC numeric string, validated 8–14 digits at input time. */
+  barcode: string
+  /** Which tier of the same product family this UPC represents. */
+  packTier: PackTier
+  /**
+   * Per-unit container size for this UPC (e.g. 16 for a 16 fl oz bottle).
+   * Distinct from `packQuantity` — size is the bottle, quantity is how many
+   * bottles ship inside this UPC's pack.
+   */
+  size?: number
+  /** Unit for `size` — defaults to the primary row's containerUnit when not set. */
+  sizeUnit?: QuantityUnit
+  /** Units per pack — 1 for tier 'U', 6/12 etc. for 'P', 24/48 etc. for 'C'. */
+  packQuantity?: number
+  /**
+   * Image of THIS pack tier — a single bottle photo, a 6-pack carton photo,
+   * a case photo. Distinct from the primary row's imageUrl, which is the
+   * primary tier's image. Mirrored from product_database/{barcode}.imageUrl
+   * after upload so the row can render without a per-tier catalog fetch.
+   */
+  imageUrl?: string
+}
+
 export interface ShoppingItem {
   id: string
   userId: string // Legacy: kept for backwards compatibility, now represents household owner
@@ -85,6 +169,29 @@ export interface ShoppingItem {
 
   // Product Info (from OpenFoodFacts or manual entry)
   barcode?: string // Optional: undefined for manual entries from recipes
+  /** Tier of the primary `barcode` — Unit/Pack/Case. Optional for legacy rows. */
+  packTier?: PackTier
+  /**
+   * Units per pack for the PRIMARY UPC. The per-unit size lives in
+   * `containerSize` / `containerUnit` below — those fields existed before
+   * pack-tier shipped and are reused so we don't duplicate state. A 6-pack
+   * of 16 fl oz bottles = packQuantity 6, containerSize 16, containerUnit 'fl oz'.
+   */
+  packQuantity?: number
+  /**
+   * Product-family pack/case sizes (informational, settable on Item Details).
+   * Independent of `packQuantity` (which describes the PRIMARY UPC's tier
+   * specifically) — these answer "how is this product family packaged in
+   * general?" so we can render and reason about pack/case math without
+   * needing the user to add a P-tier or C-tier alternate UPC. Both
+   * optional; null/undefined means "we don't know."
+   *   packSize = units in one pack (e.g., 6 for a 6-pack of bottles)
+   *   caseSize = units in one case (e.g., 24 for a 4×6 case of bottles)
+   */
+  packSize?: number
+  caseSize?: number
+  /** Sibling UPCs for the same product at different pack tiers (see PackTier). */
+  alternateUpcs?: AlternateUpc[]
   productName: string
   brand: string
   imageUrl: string
@@ -153,6 +260,13 @@ export interface ShoppingItem {
   purchasedBy?: string // NEW: userId of person who purchased this item
   discardedBy?: string // NEW: userId of person who discarded/threw away this item
   foundInStore?: boolean // NEW: Whether this item was found in the store during shopping
+
+  /**
+   * Audit trail of on-hand quantity adjustments. Appended on each Apply
+   * in the Inventory Adjustment tab. Item Details displays quantity as
+   * read-only — this array is the source of truth for stock changes.
+   */
+  quantityAdjustments?: AdjustmentEntry[]
 
   // History & Learning
   purchaseHistory: PurchaseHistoryEntry[]
