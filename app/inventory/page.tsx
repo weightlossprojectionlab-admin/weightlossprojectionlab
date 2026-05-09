@@ -142,6 +142,11 @@ function KitchenInventoryContent() {
   // snap receipts, scan barcodes, or apply inventory adjustments.
   const receiptOcrLock = useLockedAction()
   const adjustInventoryLock = useLockedAction()
+  // Inventory writes that aren't tab-specific: Scan Item, search-bar
+  // camera, and the empty-state scan CTA. Same lock state for all
+  // three; they're three faces of one action ("scan + add to
+  // inventory"). One hook, applied at every entry point.
+  const scanItemLock = useLockedAction()
 
   // Real-time inventory hook
   const {
@@ -630,7 +635,7 @@ function KitchenInventoryContent() {
     <div>
       <button
         type="button"
-        onClick={() => {
+        onClick={scanItemLock.isLocked ? scanItemLock.onLockedClick : () => {
           setScanMode('pick-for-tab')
           setShowScanner(true)
         }}
@@ -2249,13 +2254,13 @@ function KitchenInventoryContent() {
             </div>
             <button
               type="button"
-              onClick={() => {
+              onClick={scanItemLock.isLocked ? scanItemLock.onLockedClick : () => {
                 setScanMode('search')
                 setShowScanner(true)
               }}
+              aria-label={scanItemLock.isLocked ? 'Paused — Scan to search catalog' : 'Scan a barcode to search'}
               className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] px-3 rounded-lg border border-border bg-background text-foreground hover:bg-muted transition-colors flex-shrink-0"
-              title="Scan a barcode to search"
-              aria-label="Scan a barcode to search"
+              title={scanItemLock.isLocked ? 'Paused — Scan to search catalog' : 'Scan a barcode to search'}
             >
               {/* Camera icon — represents the action (open camera to scan), not
                   the symbology. Prevents the QR-vs-UPC confusion. */}
@@ -4470,13 +4475,22 @@ function KitchenInventoryContent() {
           <div className="mb-6">
             <button
               type="button"
-              onClick={() => setShowScanContext(true)}
+              onClick={scanItemLock.isLocked ? scanItemLock.onLockedClick : () => setShowScanContext(true)}
               className="w-full bg-primary text-white py-3 px-4 rounded-lg font-semibold hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Scan Item
+              {scanItemLock.isLocked ? (
+                <>
+                  <LockClosedIcon className="w-5 h-5" />
+                  Paused — Scan Item
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Scan Item
+                </>
+              )}
             </button>
           </div>
 

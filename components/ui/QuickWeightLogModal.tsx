@@ -8,6 +8,8 @@ import { medicalOperations } from '@/lib/medical-operations'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import type { PatientProfile } from '@/types/medical'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 
 interface QuickWeightLogModalProps {
   isOpen: boolean
@@ -20,6 +22,7 @@ export function QuickWeightLogModal({ isOpen, onClose, onSuccess, patientId }: Q
   const { user } = useAuth()
   const { profile } = useUserProfile()
   const [patient, setPatient] = useState<PatientProfile | null>(null)
+  const logWeightLock = useLockedAction()
 
   const [weight, setWeight] = useState('')
   const [unit, setUnit] = useState<'lbs' | 'kg'>(profile?.preferences?.units === 'metric' ? 'kg' : 'lbs')
@@ -46,6 +49,10 @@ export function QuickWeightLogModal({ isOpen, onClose, onSuccess, patientId }: Q
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (logWeightLock.isLocked) {
+      logWeightLock.onLockedClick()
+      return
+    }
 
     if (!user) {
       toast.error('You must be logged in to log weight')
@@ -224,10 +231,15 @@ export function QuickWeightLogModal({ isOpen, onClose, onSuccess, patientId }: Q
             </button>
             <button
               type="submit"
-              disabled={loading || !weight || parseFloat(weight) <= 0}
-              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              disabled={(loading || !weight || parseFloat(weight) <= 0) && !logWeightLock.isLocked}
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium inline-flex items-center justify-center gap-2"
             >
-              {loading ? 'Logging...' : 'Log Weight'}
+              {logWeightLock.isLocked && <LockClosedIcon className="w-4 h-4" />}
+              {logWeightLock.isLocked
+                ? 'Paused — Log Weight'
+                : loading
+                  ? 'Logging...'
+                  : 'Log Weight'}
             </button>
           </div>
         </form>

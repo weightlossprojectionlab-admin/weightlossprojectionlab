@@ -42,6 +42,8 @@ import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
 import { getProductLabel, getTooltip } from '@/lib/messaging/terminology'
 import { TrustBadge } from '@/components/ui/TrustBadge'
 import { userProfileOperations } from '@/lib/firebase-operations'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 import ManagedByBanner from '@/components/franchise/ManagedByBanner'
 import { UpgradeRequiredModal } from '@/components/subscription/UpgradeRequiredModal'
 import { FeatureEnabledModal } from '@/components/subscription/FeatureEnabledModal'
@@ -97,6 +99,11 @@ function DashboardContent() {
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [showReminderModal, setShowReminderModal] = useState(false)
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+  // Feature-access gate — Weight is the only quick-action that
+  // opens a write modal directly on the dashboard. The Meal/Meds/
+  // Inventory/Shopping/Gallery quick-actions just navigate to
+  // pages that own their own per-button gates, so no lock here.
+  const logWeightLock = useLockedAction()
 
   // Modal state for feature upgrade flow
   const [showUpgradeRequiredModal, setShowUpgradeRequiredModal] = useState(false)
@@ -629,13 +636,18 @@ function DashboardContent() {
 
           {quickActions.showWeight && (
             <button
-              onClick={() => setShowWeightModal(true)}
-              disabled={!!navigatingTo}
-              className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
-              aria-label="Log weight"
+              onClick={logWeightLock.isLocked ? logWeightLock.onLockedClick : () => setShowWeightModal(true)}
+              disabled={!!navigatingTo && !logWeightLock.isLocked}
+              className="aspect-square bg-white dark:bg-gray-900 rounded shadow hover:shadow-md cursor-pointer active:scale-[0.98] transition-all flex flex-col items-center justify-center gap-0 p-1.5 disabled:opacity-60 disabled:cursor-not-allowed relative"
+              aria-label={logWeightLock.isLocked ? 'Paused — Log Weight' : 'Log weight'}
             >
+              {logWeightLock.isLocked && (
+                <LockClosedIcon className="absolute top-1 right-1 w-3 h-3 text-warning" />
+              )}
               <span className="text-2xl" role="img" aria-label="scale">⚖️</span>
-              <span className="text-[9px] font-medium leading-tight mt-0.5">Weight</span>
+              <span className="text-[9px] font-medium leading-tight mt-0.5">
+                {logWeightLock.isLocked ? 'Paused' : 'Weight'}
+              </span>
             </button>
           )}
 

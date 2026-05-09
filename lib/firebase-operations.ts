@@ -3,6 +3,7 @@
 import { logger } from '@/lib/logger'
 import { auth, db } from './firebase'
 import { getCSRFToken } from '@/lib/csrf'
+import { requireWriteAccess } from '@/lib/access-guards'
 import {
   collection,
   doc,
@@ -58,6 +59,18 @@ const getAuthToken = async () => {
 
 // Helper function to make authenticated API calls
 const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
+  // Subscription gate — second DRY choke point. firebase-operations
+  // has its own raw-fetch path that bypasses lib/api-client.ts, so
+  // weight logs / user-profile writes / etc. are gated here too.
+  // GETs pass through (read-only mode allows reads). When the
+  // subscription is read-only, requireWriteAccess fires the toast +
+  // /pricing redirect AND throws WriteLockedError.
+  const method = (options.method || 'GET').toUpperCase()
+  if (method !== 'GET') {
+    const { requireWriteAccess } = await import('./access-guards')
+    await requireWriteAccess()
+  }
+
   const token = await getAuthToken()
   const csrfToken = getCSRFToken()
 
