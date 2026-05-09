@@ -889,6 +889,52 @@ export const providerOperations = {
 
 // ==================== APPOINTMENT OPERATIONS ====================
 
+// Module-level cache for getAppointments(). Same shape as the
+// patients cache: 30s TTL keyed by user uid + in-flight dedup.
+//
+// Why this matters: /api/appointments GET fetches every
+// appointment for the user from Firestore and filters by
+// patientId / providerId CLIENT-SIDE in the route handler. So 9
+// patient cards calling getAppointments({ patientId: X }) all
+// return the same underlying data — they were 9× redundant by
+// construction. Saves ~5s on the patients page load.
+//
+// Cache key is the date-range filter (or 'all' for no dates).
+// patientId / providerId are applied client-side after the cached
+// fetch lands, matching the API's behavior. If a future API
+// change moves patientId/providerId filtering server-side, this
+// cache would need to key on those too — for now the API itself
+// is the constraint.
+const APPOINTMENTS_CACHE_TTL_MS = 30_000
+
+type AppointmentsCacheKey = string // e.g. 'all' or `${start}|${end}`
+const _appointmentsCache = new Map<string, Map<AppointmentsCacheKey, { data: Appointment[]; fetchedAt: number }>>()
+const _appointmentsInflight = new Map<string, Map<AppointmentsCacheKey, Promise<Appointment[]>>>()
+
+function _appointmentsCacheKey(startDate?: string, endDate?: string): AppointmentsCacheKey {
+  if (!startDate && !endDate) return 'all'
+  return `${startDate || ''}|${endDate || ''}`
+}
+
+function _invalidateAppointmentsCache(): void {
+  const uid = auth.currentUser?.uid
+  if (uid) {
+    _appointmentsCache.delete(uid)
+  } else {
+    _appointmentsCache.clear()
+  }
+  _appointmentsInflight.clear()
+}
+
+async function _fetchAppointmentsLive(startDate?: string, endDate?: string): Promise<Appointment[]> {
+  const params = new URLSearchParams()
+  if (startDate) params.append('startDate', startDate)
+  if (endDate) params.append('endDate', endDate)
+  const qs = params.toString()
+  const url = qs ? `/appointments?${qs}` : '/appointments'
+  return makeAuthenticatedRequest<Appointment[]>(url)
+}
+
 export const appointmentOperations = {
   /**
    * Create a new appointment
@@ -902,6 +948,7 @@ export const appointmentOperations = {
         body: JSON.stringify(appointmentData)
       })
 
+      _invalidateAppointmentsCache()
       logger.info('[MedicalOps] Appointment created successfully', { appointmentId: appointment.id })
       return appointment
     } catch (error) {
@@ -914,23 +961,71 @@ export const appointmentOperations = {
    * Get all appointments (optionally filter by patient or provider)
    */
   async getAppointments(options?: { patientId?: string; providerId?: string; startDate?: string; endDate?: string }): Promise<Appointment[]> {
-    try {
-      logger.debug('[MedicalOps] Fetching appointments', options)
+    const uid = auth.currentUser?.uid
+    const cacheKey = _appointmentsCacheKey(options?.startDate, options?.endDate)
 
-      const params = new URLSearchParams()
-      if (options?.patientId) params.append('patientId', options.patientId)
-      if (options?.providerId) params.append('providerId', options.providerId)
-      if (options?.startDate) params.append('startDate', options.startDate)
-      if (options?.endDate) params.append('endDate', options.endDate)
+    const applyClientFilters = (data: Appointment[]) => {
+      let filtered = data
+      if (options?.patientId) {
+        filtered = filtered.filter(a => a.patientId === options.patientId)
+      }
+      if (options?.providerId) {
+        filtered = filtered.filter(a => a.providerId === options.providerId)
+      }
+      return filtered
+    }
 
-      const appointments = await makeAuthenticatedRequest<Appointment[]>(`/appointments?${params.toString()}`)
+    if (!uid) {
+      // Signed-out path — bypass cache, let the auth layer handle it.
+      try {
+        const data = await _fetchAppointmentsLive(options?.startDate, options?.endDate)
+        return applyClientFilters(data)
+      } catch (error) {
+        logger.error('[MedicalOps] Error fetching appointments', error as Error)
+        throw error
+      }
+    }
 
-      logger.info('[MedicalOps] Appointments fetched successfully', { count: appointments.length })
-      return appointments
-    } catch (error) {
+    const userCache = _appointmentsCache.get(uid)
+    const cached = userCache?.get(cacheKey)
+    if (cached && Date.now() - cached.fetchedAt < APPOINTMENTS_CACHE_TTL_MS) {
+      logger.debug('[MedicalOps] Appointments cache hit', { uid, cacheKey, count: cached.data.length })
+      return applyClientFilters(cached.data)
+    }
+
+    const userInflight = _appointmentsInflight.get(uid)
+    const existingInflight = userInflight?.get(cacheKey)
+    if (existingInflight) {
+      logger.debug('[MedicalOps] Appointments fetch in-flight, awaiting shared promise', { uid, cacheKey })
+      const data = await existingInflight
+      return applyClientFilters(data)
+    }
+
+    const promise = _fetchAppointmentsLive(options?.startDate, options?.endDate).then((data) => {
+      const safe = data || []
+      let bucket = _appointmentsCache.get(uid)
+      if (!bucket) {
+        bucket = new Map()
+        _appointmentsCache.set(uid, bucket)
+      }
+      bucket.set(cacheKey, { data: safe, fetchedAt: Date.now() })
+      return safe
+    }).catch((error) => {
       logger.error('[MedicalOps] Error fetching appointments', error as Error)
       throw error
+    }).finally(() => {
+      _appointmentsInflight.get(uid)?.delete(cacheKey)
+    })
+
+    let inflightBucket = _appointmentsInflight.get(uid)
+    if (!inflightBucket) {
+      inflightBucket = new Map()
+      _appointmentsInflight.set(uid, inflightBucket)
     }
+    inflightBucket.set(cacheKey, promise)
+
+    const data = await promise
+    return applyClientFilters(data)
   },
 
   /**
@@ -962,6 +1057,7 @@ export const appointmentOperations = {
         body: JSON.stringify(updates)
       })
 
+      _invalidateAppointmentsCache()
       logger.info('[MedicalOps] Appointment updated successfully', { appointmentId })
       return appointment
     } catch (error) {
@@ -982,6 +1078,7 @@ export const appointmentOperations = {
         body: JSON.stringify({ status })
       })
 
+      _invalidateAppointmentsCache()
       logger.info('[MedicalOps] Appointment status updated', { appointmentId, status })
       return appointment
     } catch (error) {
@@ -1006,6 +1103,7 @@ export const appointmentOperations = {
         })
       })
 
+      _invalidateAppointmentsCache()
       logger.info('[MedicalOps] Appointment cancelled', { appointmentId })
       return appointment
     } catch (error) {
@@ -1025,6 +1123,7 @@ export const appointmentOperations = {
         method: 'DELETE'
       })
 
+      _invalidateAppointmentsCache()
       logger.info('[MedicalOps] Appointment deleted successfully', { appointmentId })
     } catch (error) {
       logger.error('[MedicalOps] Error deleting appointment', error as Error, { appointmentId })
