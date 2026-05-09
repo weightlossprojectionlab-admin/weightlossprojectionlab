@@ -9,7 +9,7 @@
 
 import { logger } from '@/lib/logger'
 import { apiClient } from '@/lib/api-client'
-import { db } from '@/lib/firebase'
+import { db, auth } from '@/lib/firebase'
 import { collection, query, where, orderBy, onSnapshot, Unsubscribe } from 'firebase/firestore'
 import type {
   PatientProfile,
@@ -56,6 +56,42 @@ const makeAuthenticatedRequest = async <T = any>(url: string, options: RequestIn
 
 // ==================== PATIENT OPERATIONS ====================
 
+// Module-level cache for getPatients(). 30s TTL is long enough to
+// dedupe the AuthRouter→page-mount race (which fires within ~5s
+// of each other) and short enough that out-of-band mutations
+// (e.g., a different tab) get picked up quickly. Mutations
+// through patientOperations.{create,update,delete}Patient
+// invalidate this cache explicitly so the in-app flows see fresh
+// data immediately.
+const PATIENTS_CACHE_TTL_MS = 30_000
+const _patientsCache = new Map<string, { data: PatientProfile[]; fetchedAt: number }>()
+const _patientsInflight = new Map<string, Promise<PatientProfile[]>>()
+
+function _invalidatePatientsCache(): void {
+  const uid = auth.currentUser?.uid
+  if (uid) {
+    _patientsCache.delete(uid)
+  } else {
+    // No user → blow the whole cache. Cheaper than tracking ownership.
+    _patientsCache.clear()
+  }
+  _patientsInflight.clear()
+}
+
+async function _fetchPatientsLive(): Promise<PatientProfile[]> {
+  try {
+    logger.debug('[MedicalOps] Fetching patients (live)')
+    const patients = await makeAuthenticatedRequest<PatientProfile[]>('/patients', {
+      method: 'GET'
+    })
+    logger.debug('[MedicalOps] Patients fetched', { count: patients?.length || 0 })
+    return patients || []
+  } catch (error) {
+    logger.error('[MedicalOps] Error fetching patients', error as Error)
+    throw error
+  }
+}
+
 export const patientOperations = {
   /**
    * Create a new patient profile
@@ -69,6 +105,7 @@ export const patientOperations = {
         body: JSON.stringify(patientData)
       })
 
+      _invalidatePatientsCache()
       logger.info('[MedicalOps] Patient created successfully', { patientId: patient.id })
       return patient
     } catch (error) {
@@ -78,22 +115,55 @@ export const patientOperations = {
   },
 
   /**
-   * Get all patients for the current user
+   * Get all patients for the current user.
+   *
+   * TTL-cached to dedupe the AuthRouter family-plan-check call and
+   * the /patients page-mount call that fire within seconds of each
+   * other on every login. Before the cache, two callers each spent
+   * ~6s on the same `/api/patients` round trip; after, the second
+   * caller gets the cached array instantly. Six other call sites
+   * across the app inherit the same dedup for free.
+   *
+   * Cache key: current Firebase user uid (so a user switch can't
+   * read a stale list from the prior session). TTL: 30s — short
+   * enough that mutations done outside the medicalOperations
+   * surface (e.g., a refresh after a Firestore-rules failure) get
+   * picked up quickly. Mutations through this module (create /
+   * update / delete) invalidate the cache explicitly via
+   * `_invalidatePatientsCache()`.
+   *
+   * In-flight dedup: two callers within the same tick share one
+   * fetch promise, eliminating the race where AuthRouter hasn't
+   * yet populated the cache when the page mounts.
    */
   async getPatients(): Promise<PatientProfile[]> {
-    try {
-      logger.debug('[MedicalOps] Fetching patients')
-
-      const patients = await makeAuthenticatedRequest<PatientProfile[]>('/patients', {
-        method: 'GET'
-      })
-
-      logger.debug('[MedicalOps] Patients fetched', { count: patients?.length || 0 })
-      return patients || []
-    } catch (error) {
-      logger.error('[MedicalOps] Error fetching patients', error as Error)
-      throw error
+    const uid = auth.currentUser?.uid
+    if (!uid) {
+      // No user — fall through to the live fetch and let the auth
+      // layer reject if needed.
+      return _fetchPatientsLive()
     }
+
+    const cached = _patientsCache.get(uid)
+    if (cached && Date.now() - cached.fetchedAt < PATIENTS_CACHE_TTL_MS) {
+      logger.debug('[MedicalOps] Patients cache hit', { uid, count: cached.data.length })
+      return cached.data
+    }
+
+    if (_patientsInflight.has(uid)) {
+      logger.debug('[MedicalOps] Patients fetch in-flight, awaiting shared promise', { uid })
+      return _patientsInflight.get(uid)!
+    }
+
+    const promise = _fetchPatientsLive().then((data) => {
+      _patientsCache.set(uid, { data, fetchedAt: Date.now() })
+      return data
+    }).finally(() => {
+      _patientsInflight.delete(uid)
+    })
+
+    _patientsInflight.set(uid, promise)
+    return promise
   },
 
   /**
@@ -127,6 +197,7 @@ export const patientOperations = {
         body: JSON.stringify(updates)
       })
 
+      _invalidatePatientsCache()
       logger.info('[MedicalOps] Patient updated successfully', { patientId })
       return patient
     } catch (error) {
@@ -146,6 +217,7 @@ export const patientOperations = {
         method: 'DELETE'
       })
 
+      _invalidatePatientsCache()
       logger.info('[MedicalOps] Patient deleted successfully', { patientId })
     } catch (error) {
       logger.error('[MedicalOps] Error deleting patient', error as Error, { patientId })
