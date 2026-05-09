@@ -9,7 +9,9 @@
 
 import { ReactNode, useState } from 'react'
 import { useFeatureGate } from '@/hooks/useFeatureGate'
+import { useCanWrite } from '@/hooks/useFeatureAccess'
 import { FeatureLockedState } from './FeatureLockedState'
+import { FeaturePausedState } from './FeaturePausedState'
 import { UpgradeModal } from './UpgradeModal'
 import { SubscriptionPlan } from '@/types'
 
@@ -38,6 +40,7 @@ export function FeatureGate({
   showBadgeOnly = false
 }: FeatureGateProps) {
   const { canAccess, loading, requiresUpgrade, suggestedPlan } = useFeatureGate(feature)
+  const canWrite = useCanWrite()
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   // Show loading state
@@ -52,6 +55,16 @@ export function FeatureGate({
   // User has access - show content
   if (canAccess) {
     return <>{children}</>
+  }
+
+  // Subscription is paused (terminated). The plan-tier upgrade
+  // prompt is moot — the user can't upgrade a paused subscription.
+  // Defer to the paused state, which matches the persistent banner
+  // semantic (the Reactivate / "ask the owner" CTAs live there).
+  // Without this branch, both the banner AND the upgrade prompt
+  // render on the same page, contradicting each other.
+  if (!canWrite) {
+    return <FeaturePausedState feature={featureName || feature} />
   }
 
   // Badge-only mode - show content with upgrade badge

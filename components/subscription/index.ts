@@ -6,6 +6,7 @@
 
 export { UpgradeModal } from './UpgradeModal'
 export { FeatureLockedState } from './FeatureLockedState'
+export { FeaturePausedState } from './FeaturePausedState'
 export { FeatureGate } from './FeatureGate'
 export { UpgradePrompt } from './UpgradePrompt'
 export { PlanBadge } from './PlanBadge'

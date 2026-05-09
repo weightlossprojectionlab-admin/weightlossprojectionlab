@@ -17,14 +17,30 @@ interface FeatureLockedStateProps {
 }
 
 export function FeatureLockedState({ feature, requiredUpgrade, onUpgrade }: FeatureLockedStateProps) {
+  // Action label names the actual upgrade rather than the generic
+  // "Unlock Feature". The CTA verb varies because the action does:
+  // a Single User upgrading to Family hears "Upgrade to Family
+  // Plan"; a Family user adding a feature add-on hears "Add Family
+  // Features". Vague unlocking copy hides the cost and the change
+  // — semantic intent is to be explicit about both.
   const getUpgradeMessage = () => {
     if (requiredUpgrade.type === 'plan') {
-      return `Upgrade to ${requiredUpgrade.plan === 'family' ? 'Family Plan' : 'Single User Plan'} to unlock ${feature}`
+      return `${feature} is included on the ${requiredUpgrade.plan === 'family' ? 'Family Plan' : 'Single User Plan'}.`
     }
     if (requiredUpgrade.type === 'addon') {
-      return `Add Family Features to unlock ${feature}`
+      return `${feature} is part of the Family Features add-on.`
     }
-    return `Upgrade your plan to access ${feature}`
+    return `${feature} requires a different plan than yours.`
+  }
+
+  const getUpgradeButtonLabel = () => {
+    if (requiredUpgrade.type === 'plan') {
+      return `Upgrade to ${requiredUpgrade.plan === 'family' ? 'Family Plan' : 'Single User Plan'}`
+    }
+    if (requiredUpgrade.type === 'addon') {
+      return 'Add Family Features'
+    }
+    return 'Upgrade plan'
   }
 
   const getUpgradeIcon = () => {
@@ -53,7 +69,7 @@ export function FeatureLockedState({ feature, requiredUpgrade, onUpgrade }: Feat
             onClick={onUpgrade}
             className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium inline-flex items-center gap-2"
           >
-            <span>Unlock Feature</span>
+            <span>{getUpgradeButtonLabel()}</span>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
