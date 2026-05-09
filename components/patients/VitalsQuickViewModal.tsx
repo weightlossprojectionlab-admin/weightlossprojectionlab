@@ -105,7 +105,7 @@ export default function VitalsQuickViewModal({
                   {logVitalsLock.isLocked ? (
                     <>
                       <LockClosedIcon className="w-5 h-5" />
-                      Reactivate to log
+                      Paused — Log Vitals
                     </>
                   ) : (
                     <>

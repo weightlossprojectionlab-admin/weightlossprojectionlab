@@ -512,14 +512,14 @@ export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
               onClick={scanBarcodeLock.isLocked ? scanBarcodeLock.onLockedClick : () => setScannerOpen(true)}
               disabled={scanning && !scanBarcodeLock.isLocked}
               className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-primary rounded-lg hover:bg-primary/10 disabled:opacity-50 min-h-[44px]"
-              aria-label={scanBarcodeLock.isLocked ? 'Reactivate to scan barcodes' : 'Scan barcode'}
+              aria-label={scanBarcodeLock.isLocked ? 'Paused — Scan Barcode' : 'Scan barcode'}
             >
               {scanBarcodeLock.isLocked ? (
                 <LockClosedIcon className="w-4 h-4" />
               ) : (
                 <CameraIcon className="w-4 h-4" />
               )}
-              {scanBarcodeLock.isLocked ? 'Locked' : scanning ? 'Scanning…' : 'Scan'}
+              {scanBarcodeLock.isLocked ? 'Paused' : scanning ? 'Scanning…' : 'Scan'}
             </button>
             <button
               type="button"

@@ -235,7 +235,7 @@ function MedicationsContent() {
             ) : (
               <DocumentTextIcon className="w-5 h-5" />
             )}
-            {medOcrLock.isLocked ? 'Reactivate to scan labels' : 'Photograph Prescription Label'}
+            {medOcrLock.isLocked ? 'Paused — Photograph Prescription Label' : 'Photograph Prescription Label'}
           </button>
         }
       />

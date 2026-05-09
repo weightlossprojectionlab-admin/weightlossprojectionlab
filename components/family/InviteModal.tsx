@@ -432,7 +432,7 @@ export function InviteModal({
                 >
                   {inviteCaregiverLock.isLocked && <LockClosedIcon className="w-4 h-4" />}
                   {inviteCaregiverLock.isLocked
-                    ? 'Reactivate to invite'
+                    ? 'Paused — Send Invitation'
                     : loading
                       ? 'Sending...'
                       : 'Send Invitation'}

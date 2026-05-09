@@ -71,7 +71,7 @@ function AppointmentsContent() {
             ) : (
               <PlusIcon className="w-5 h-5" />
             )}
-            {addAppointmentLock.isLocked ? 'Reactivate to schedule' : 'Schedule Appointment'}
+            {addAppointmentLock.isLocked ? 'Paused — Schedule Appointment' : 'Schedule Appointment'}
           </button>
         </div>
 

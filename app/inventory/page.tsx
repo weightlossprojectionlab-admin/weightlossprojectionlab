@@ -3371,7 +3371,7 @@ function KitchenInventoryContent() {
                     >
                       {adjustInventoryLock.isLocked && <LockClosedIcon className="w-4 h-4" />}
                       {adjustInventoryLock.isLocked
-                        ? 'Reactivate to apply'
+                        ? 'Paused — Apply'
                         : savingAdjustment
                           ? 'Applying…'
                           : 'Apply'}
@@ -3491,7 +3491,7 @@ function KitchenInventoryContent() {
                         <ViewfinderCircleIcon className="w-5 h-5" />
                       )}
                       {receiptOcrLock.isLocked
-                        ? 'Reactivate to snap receipts'
+                        ? 'Paused — Snap receipt'
                         : poProcessing
                           ? 'Reading receipt…'
                           : 'Snap receipt'}

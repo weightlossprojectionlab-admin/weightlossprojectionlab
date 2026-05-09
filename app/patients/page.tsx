@@ -108,7 +108,7 @@ function PatientsContent() {
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
               >
                 <LockClosedIcon className="w-5 h-5" />
-                Reactivate to add
+                Paused — {addButtonText}
               </button>
             ) : (
               <Link

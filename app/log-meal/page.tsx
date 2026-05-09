@@ -2057,7 +2057,7 @@ function LogMealContent() {
               >
                 {logMealLock.isLocked && <LockClosedIcon className="w-4 h-4" />}
                 {logMealLock.isLocked
-                  ? 'Reactivate to log meals'
+                  ? 'Paused — Log Meal'
                   : saving
                     ? 'Logging…'
                     : eaterSelection.length === 0
@@ -2095,7 +2095,7 @@ function LogMealContent() {
                     className="btn btn-primary w-full inline-flex items-center justify-center gap-2"
                   >
                     <LockClosedIcon className="w-4 h-4" />
-                    Reactivate to use AI photo recognition
+                    Paused — Take Photo
                   </button>
                 ) : (
                   <label className="btn btn-primary w-full cursor-pointer">
@@ -2114,12 +2114,12 @@ function LogMealContent() {
                   onClick={logMealLock.isLocked ? logMealLock.onLockedClick : () => setShowBarcodeScanner(true)}
                   className="btn btn-secondary w-full inline-flex items-center justify-center gap-2"
                   disabled={loadingBarcode && !logMealLock.isLocked}
-                  aria-label={logMealLock.isLocked ? 'Reactivate to scan barcode' : 'Scan barcode'}
+                  aria-label={logMealLock.isLocked ? 'Paused — Scan Barcode' : 'Scan barcode'}
                 >
                   {logMealLock.isLocked ? (
                     <>
                       <LockClosedIcon className="w-4 h-4" />
-                      Reactivate to scan barcode
+                      Paused — Scan Barcode
                     </>
                   ) : loadingBarcode ? (
                     <span className="flex items-center justify-center gap-2">
@@ -2133,12 +2133,12 @@ function LogMealContent() {
                 <button
                   onClick={logMealLock.isLocked ? logMealLock.onLockedClick : () => setShowTemplates(!showTemplates)}
                   className="btn btn-secondary w-full inline-flex items-center justify-center gap-2"
-                  aria-label={logMealLock.isLocked ? 'Reactivate to use template' : 'Use saved meal template'}
+                  aria-label={logMealLock.isLocked ? 'Paused — Use Saved Template' : 'Use saved meal template'}
                 >
                   {logMealLock.isLocked ? (
                     <>
                       <LockClosedIcon className="w-4 h-4" />
-                      Reactivate to use template
+                      Paused — Use Saved Template
                     </>
                   ) : (
                     <>⭐ Use Saved Template</>
@@ -2147,12 +2147,12 @@ function LogMealContent() {
                 <button
                   onClick={logMealLock.isLocked ? logMealLock.onLockedClick : () => setShowManualEntry(true)}
                   className="btn btn-secondary w-full inline-flex items-center justify-center gap-2"
-                  aria-label={logMealLock.isLocked ? 'Reactivate to log meal' : 'Enter meal details manually'}
+                  aria-label={logMealLock.isLocked ? 'Paused — Enter Manually' : 'Enter meal details manually'}
                 >
                   {logMealLock.isLocked ? (
                     <>
                       <LockClosedIcon className="w-4 h-4" />
-                      Reactivate to log meal
+                      Paused — Enter Manually
                     </>
                   ) : (
                     <>✏️ Enter Manually</>
