@@ -1,36 +1,51 @@
 /**
- * Patient spreadsheet-import config — Phase 1 of the import wizard.
+ * Spreadsheet-import config — supports both family-member rows
+ * AND weight-log rows in a single CSV via an optional `Type`
+ * column ("patient" | "weight"). When Type is missing, every row
+ * is a patient (the simple-template path; what every customer
+ * does on their first import). When Type is present, the commit
+ * endpoint dispatches per row.
+ *
+ * Why one config rather than two: the user types ONE upload, we
+ * surface ONE wizard. Splitting the import flow into two routes
+ * with two pickers added friction (per the "the one import was
+ * enough" feedback). Keeping both row schemas in this file means
+ * the wizard's column-mapping UI lists every importable field,
+ * the user maps each column once, and per-row dispatch happens
+ * server-side.
  *
  * Three responsibilities live here:
- *   1. Field aliases — every PatientProfile field that's importable
- *      lists the human-friendly column headers it answers to. The
- *      preview endpoint fuzzy-matches uploaded CSV headers against
- *      these to suggest a mapping.
+ *   1. Field aliases — every importable field lists the
+ *      human-friendly column headers it answers to. The preview
+ *      endpoint fuzzy-matches uploaded CSV headers against these
+ *      to suggest a mapping.
  *   2. Per-cell transforms — coerce a raw CSV string into the
- *      shape `createPatient()` expects: ISO dates, lowercased enums,
- *      arrays from comma-separated text, etc.
- *   3. Per-row Zod validator — the same rules that protect the
- *      live form, applied to imported rows so we never write a
- *      shape `medicalOperations.patients.createPatient()` couldn't
- *      take.
- *
- * Phase 2 (weight logs / vitals) will copy this file's shape under
- * a new name. The wizard UI is generic; only the config differs
- * per entity type. Resist the urge to extract a base type until
- * Phase 3 — premature generalization on two examples is a worse
- * outcome than a third concrete config.
+ *      typed shape: ISO dates, lowercased enums, arrays from
+ *      comma-separated text.
+ *   3. Per-row Zod validators — one for patient rows, one for
+ *      weight-log rows. The dispatcher picks the right validator
+ *      based on the row's resolved type.
  */
 
 import { z } from 'zod'
 
-/** Schema fields the wizard knows how to import. Subset of
- *  PatientProfile — only the fields a human realistically maintains
- *  in a spreadsheet. Computed fields (age, lifeStage), runtime
- *  fields (id, userId, createdAt), and complex nested objects
- *  (caregiverStatus, preparationNeeds) are deliberately out of
- *  scope for v1. */
+// ============================================================================
+// Field universe — patient fields + weight-row fields + the row-type column
+// ============================================================================
+
+/**
+ * Every column the wizard knows how to import. The `_rowType`
+ * field is special: it identifies which row type each row is
+ * ('patient' | 'weight'). Skip-or-set just like any other
+ * column. When no column maps to `_rowType`, every row is
+ * treated as a patient (default for the simple template).
+ */
 export type ImportableField =
+  // Row discriminator (advanced template only)
+  | '_rowType'
+  // Shared identifiers
   | 'name'
+  // Patient-specific fields
   | 'type'
   | 'dateOfBirth'
   | 'relationship'
@@ -46,18 +61,23 @@ export type ImportableField =
   | 'height'
   | 'heightUnit'
   | 'weightCheckInFrequency'
+  // Weight-row-specific fields
+  | 'measuredWeight'
+  | 'measuredUnit'
+  | 'loggedAt'
+  | 'notes'
+  | 'bodyFat'
+  | 'tags'
 
-/** A column from the user's spreadsheet either maps to an
- *  ImportableField or is intentionally skipped. */
 export type ColumnMapping = ImportableField | 'skip'
 
-/** Header aliases the auto-detector recognizes (case- and
- *  whitespace-insensitive comparison). The first entry of each
- *  list is the canonical label shown in the mapping UI when the
- *  field is selected manually. */
 const FIELD_ALIASES: Record<ImportableField, string[]> = {
-  name: ['Name', 'Full Name', 'Patient Name', 'Family Member', 'First Name'],
-  type: ['Type', 'Human or Pet', 'Person or Pet'],
+  // Row discriminator
+  _rowType: ['Type', 'Row Type', 'Kind', 'Category', 'Record Type'],
+  // Shared
+  name: ['Name', 'Full Name', 'Patient Name', 'Family Member', 'Person', 'For'],
+  // Patient
+  type: ['Patient Type', 'Person or Pet', 'Human or Pet'],
   dateOfBirth: ['Date of Birth', 'DOB', 'Birth Date', 'Birthday', 'Born', 'Birthdate'],
   relationship: ['Relationship', 'Relation', 'Role'],
   gender: ['Gender', 'Sex'],
@@ -71,14 +91,9 @@ const FIELD_ALIASES: Record<ImportableField, string[]> = {
     'Medical Conditions',
     'Health Issues',
   ],
-  foodAllergies: [
-    'Food Allergies',
-    'Allergies',
-    'Allergens',
-    'Allergic To',
-  ],
-  currentWeight: ['Current Weight', 'Weight', 'Latest Weight'],
-  weightUnit: ['Weight Unit', 'Weight Units'],
+  foodAllergies: ['Food Allergies', 'Allergies', 'Allergens', 'Allergic To'],
+  currentWeight: ['Current Weight', 'Latest Weight'],
+  weightUnit: ['Current Weight Unit', 'Weight Units'],
   targetWeight: ['Target Weight', 'Goal Weight'],
   height: ['Height'],
   heightUnit: ['Height Unit', 'Height Units'],
@@ -88,30 +103,36 @@ const FIELD_ALIASES: Record<ImportableField, string[]> = {
     'Check-In Frequency',
     'Weighing Schedule',
   ],
+  // Weight row — distinct from patient.currentWeight so a single
+  // CSV row can carry both (rare) and the dispatcher knows which
+  // is which without inferring from row position.
+  measuredWeight: ['Weight', 'Body Weight', 'Mass', 'Measured Weight'],
+  measuredUnit: ['Unit', 'Units', 'Weight Unit'],
+  loggedAt: [
+    'Date',
+    'Logged At',
+    'Recorded At',
+    'Date/Time',
+    'Datetime',
+    'When',
+    'Measured At',
+  ],
+  notes: ['Notes', 'Comment', 'Comments', 'Memo'],
+  bodyFat: ['Body Fat', 'Body Fat %', 'BF', 'BFP', 'Body Fat Percent'],
+  tags: ['Tags', 'Labels', 'Time of Day', 'Context'],
 }
 
-const normalize = (s: string): string =>
-  s.toLowerCase().replace(/[\s_\-./]+/g, '')
+const normalize = (s: string): string => s.toLowerCase().replace(/[\s_\-./]+/g, '')
 
-/** Build a flat lookup from normalized alias → ImportableField at
- *  module load time so suggestMapping is O(headers × 1). */
 const ALIAS_LOOKUP: Map<string, ImportableField> = (() => {
   const m = new Map<string, ImportableField>()
   for (const [field, aliases] of Object.entries(FIELD_ALIASES) as Array<[ImportableField, string[]]>) {
-    for (const alias of aliases) {
-      m.set(normalize(alias), field)
-    }
-    // Self-name: 'name' header maps to name field even without alias entry
+    for (const alias of aliases) m.set(normalize(alias), field)
     m.set(normalize(field), field)
   }
   return m
 })()
 
-/**
- * Fuzzy-match each CSV header to an ImportableField. Returns
- * 'skip' for headers we can't recognize — the UI will let the user
- * map them manually or leave them out.
- */
 export function suggestMapping(headers: string[]): Record<string, ColumnMapping> {
   const result: Record<string, ColumnMapping> = {}
   for (const header of headers) {
@@ -121,77 +142,98 @@ export function suggestMapping(headers: string[]): Record<string, ColumnMapping>
   return result
 }
 
-/** Canonical label shown in the mapping dropdown. */
 export function fieldLabel(field: ImportableField): string {
   return FIELD_ALIASES[field][0]
 }
 
-/** All importable fields, in display order, for the manual mapping
- *  dropdown. */
-export const IMPORTABLE_FIELDS: ImportableField[] = Object.keys(
-  FIELD_ALIASES,
-) as ImportableField[]
+export const IMPORTABLE_FIELDS: ImportableField[] = Object.keys(FIELD_ALIASES) as ImportableField[]
 
 // ============================================================================
-// Per-cell transforms — raw CSV string → the shape createPatient wants
+// Per-cell transforms — raw CSV string → typed value
 // ============================================================================
 
-/** Split comma- or semicolon-separated cell into a clean array. */
 function splitList(raw: string): string[] {
-  return raw
-    .split(/[,;]/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
+  return raw.split(/[,;]/).map((s) => s.trim()).filter((s) => s.length > 0)
 }
 
-/** Best-effort date normalization. Accepts ISO, US (M/D/YYYY), EU
- *  (D/M/YYYY), and a few common written forms. Returns ISO 8601
- *  date-only string or null if unparseable.
- *
- *  Ambiguous M/D vs D/M dates default to M/D (US locale). Future
- *  enhancement: detect locale from the spread of values. */
-function parseDate(raw: string): string | null {
+function parseDateOnly(raw: string): string | null {
   const trimmed = raw.trim()
   if (!trimmed) return null
-
-  // ISO date already?
   if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10)
-
-  // Slash- or dash-separated, US default
   const m = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/)
   if (m) {
     const [, a, b, c] = m
-    const month = parseInt(a, 10)
-    const day = parseInt(b, 10)
+    let month = parseInt(a, 10)
+    let day = parseInt(b, 10)
+    if (month > 12 && day <= 12) [month, day] = [day, month]
     let year = parseInt(c, 10)
     if (year < 100) year = year < 30 ? 2000 + year : 1900 + year
     if (month < 1 || month > 12 || day < 1 || day > 31) return null
     return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
   }
-
-  // Fall back to Date.parse for "March 5, 2020" etc.
   const parsed = Date.parse(trimmed)
   if (Number.isNaN(parsed)) return null
   return new Date(parsed).toISOString().slice(0, 10)
 }
 
-/** Per-field transform from raw CSV string to the right type.
- *  Returns undefined for empty cells (so optional fields stay
- *  undefined rather than empty strings). */
-const FIELD_TRANSFORMS: Record<
-  ImportableField,
-  (raw: string) => unknown
-> = {
+function parseDateTime(raw: string): string | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    const parsed = Date.parse(trimmed)
+    return Number.isNaN(parsed) ? null : new Date(parsed).toISOString()
+  }
+  const m = trimmed.match(
+    /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap]m?)?)?$/i,
+  )
+  if (m) {
+    const [, a, b, c, hStr, mStr, sStr, ampm] = m
+    let month = parseInt(a, 10)
+    let day = parseInt(b, 10)
+    if (month > 12 && day <= 12) [month, day] = [day, month]
+    let year = parseInt(c, 10)
+    if (year < 100) year = year < 30 ? 2000 + year : 1900 + year
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null
+    let hours = hStr ? parseInt(hStr, 10) : 12
+    const mins = mStr ? parseInt(mStr, 10) : 0
+    const secs = sStr ? parseInt(sStr, 10) : 0
+    if (ampm) {
+      const lower = ampm.toLowerCase()
+      if (lower.startsWith('p') && hours < 12) hours += 12
+      if (lower.startsWith('a') && hours === 12) hours = 0
+    }
+    return new Date(year, month - 1, day, hours, mins, secs).toISOString()
+  }
+  const parsed = Date.parse(trimmed)
+  return Number.isNaN(parsed) ? null : new Date(parsed).toISOString()
+}
+
+function normalizeWeightUnit(raw: string): string | undefined {
+  const v = raw.trim().toLowerCase()
+  if (['lb', 'lbs', 'pound', 'pounds'].includes(v)) return 'lbs'
+  if (['kg', 'kilo', 'kilos', 'kilogram', 'kilograms'].includes(v)) return 'kg'
+  if (v === 'oz') return 'oz'
+  if (v === 'g') return 'g'
+  return v || undefined
+}
+
+const FIELD_TRANSFORMS: Record<ImportableField, (raw: string) => unknown> = {
+  _rowType: (raw) => {
+    const v = raw.trim().toLowerCase()
+    if (!v) return undefined
+    if (['patient', 'family member', 'person', 'human', 'pet'].includes(v)) return 'patient'
+    if (['weight', 'weight log', 'weigh-in', 'weigh in'].includes(v)) return 'weight'
+    return v // let dispatcher reject
+  },
   name: (raw) => raw.trim() || undefined,
-  nickname: (raw) => raw.trim() || undefined,
   type: (raw) => {
     const v = raw.trim().toLowerCase()
     if (!v) return undefined
     if (['human', 'person', 'people'].includes(v)) return 'human'
     if (['pet', 'animal'].includes(v)) return 'pet'
-    return v // let validator reject
+    return v
   },
-  dateOfBirth: (raw) => parseDate(raw) ?? undefined,
+  dateOfBirth: (raw) => parseDateOnly(raw) ?? undefined,
   relationship: (raw) => raw.trim().toLowerCase() || undefined,
   gender: (raw) => {
     const v = raw.trim().toLowerCase()
@@ -202,6 +244,7 @@ const FIELD_TRANSFORMS: Record<
   },
   species: (raw) => raw.trim().toLowerCase() || undefined,
   breed: (raw) => raw.trim() || undefined,
+  nickname: (raw) => raw.trim() || undefined,
   healthConditions: (raw) => {
     const list = splitList(raw)
     return list.length ? list : undefined
@@ -212,23 +255,16 @@ const FIELD_TRANSFORMS: Record<
   },
   currentWeight: (raw) => {
     const n = parseFloat(raw.trim())
-    return Number.isFinite(n) ? n : undefined
+    return Number.isFinite(n) && n > 0 ? n : undefined
   },
-  weightUnit: (raw) => {
-    const v = raw.trim().toLowerCase()
-    if (['lb', 'lbs', 'pound', 'pounds'].includes(v)) return 'lbs'
-    if (['kg', 'kilo', 'kilos', 'kilogram', 'kilograms'].includes(v)) return 'kg'
-    if (v === 'oz') return 'oz'
-    if (v === 'g') return 'g'
-    return v || undefined
-  },
+  weightUnit: (raw) => normalizeWeightUnit(raw),
   targetWeight: (raw) => {
     const n = parseFloat(raw.trim())
-    return Number.isFinite(n) ? n : undefined
+    return Number.isFinite(n) && n > 0 ? n : undefined
   },
   height: (raw) => {
     const n = parseFloat(raw.trim())
-    return Number.isFinite(n) ? n : undefined
+    return Number.isFinite(n) && n > 0 ? n : undefined
   },
   heightUnit: (raw) => {
     const v = raw.trim().toLowerCase()
@@ -244,13 +280,28 @@ const FIELD_TRANSFORMS: Record<
     if (['monthly', 'every month', 'once a month'].includes(v)) return 'monthly'
     return v || undefined
   },
+  // Weight-row fields
+  measuredWeight: (raw) => {
+    const n = parseFloat(raw.trim())
+    return Number.isFinite(n) && n > 0 ? n : undefined
+  },
+  measuredUnit: (raw) => {
+    const v = normalizeWeightUnit(raw)
+    if (v === 'lbs' || v === 'kg') return v
+    return v || undefined
+  },
+  loggedAt: (raw) => parseDateTime(raw) ?? undefined,
+  notes: (raw) => raw.trim() || undefined,
+  bodyFat: (raw) => {
+    const n = parseFloat(raw.trim().replace('%', ''))
+    return Number.isFinite(n) ? n : undefined
+  },
+  tags: (raw) => {
+    const list = splitList(raw)
+    return list.length ? list : undefined
+  },
 }
 
-/**
- * Apply a column mapping to one raw row from the CSV. Each
- * mapped column's value is run through its field transform; the
- * resulting object is what the row-level Zod validator sees.
- */
 export function transformRow(
   row: Record<string, string>,
   mapping: Record<string, ColumnMapping>,
@@ -259,26 +310,34 @@ export function transformRow(
   for (const [header, field] of Object.entries(mapping)) {
     if (field === 'skip') continue
     const raw = row[header] ?? ''
-    const transform = FIELD_TRANSFORMS[field]
-    const value = transform(raw)
+    const value = FIELD_TRANSFORMS[field](raw)
     if (value !== undefined) out[field] = value
   }
   return out
 }
 
 // ============================================================================
-// Per-row Zod validator
+// Row-type dispatch
 // ============================================================================
 
+export type ResolvedRowType = 'patient' | 'weight'
+
 /**
- * Row-level schema. Mirrors the live patient form's required
- * fields. Optional fields are accepted when present and
- * transform-coerced upstream — Zod only re-asserts shape here.
- *
- * Required: name, type, dateOfBirth, relationship.
- * Pet rows additionally require species (human-only fields like
- * gender stay optional).
+ * Decide what kind of row we're looking at. Default is 'patient'
+ * — if a CSV has no Type column, every row is a patient (the
+ * simple template). When _rowType is set, it overrides.
  */
+export function resolveRowType(transformed: Record<string, unknown>): ResolvedRowType | { error: string } {
+  const raw = transformed._rowType
+  if (raw === undefined) return 'patient'
+  if (raw === 'patient' || raw === 'weight') return raw
+  return { error: `Unknown row type "${String(raw)}". Use "patient" or "weight".` }
+}
+
+// ============================================================================
+// Patient row schema
+// ============================================================================
+
 export const ImportPatientRowSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   type: z.enum(['human', 'pet']),
@@ -297,44 +356,71 @@ export const ImportPatientRowSchema = z.object({
   heightUnit: z.enum(['imperial', 'metric']).optional(),
   weightCheckInFrequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly']).optional(),
 }).superRefine((data, ctx) => {
-  // Pet rows must have species — without it the recipe / nutrition
-  // engine can't reason about the patient.
   if (data.type === 'pet' && !data.species) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['species'],
-      message: 'Species is required for pets',
-    })
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['species'], message: 'Species is required for pets' })
   }
-  // type=pet should have relationship=pet for the live UI to
-  // route the patient to the pet-specific surfaces.
   if (data.type === 'pet' && data.relationship !== 'pet') {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['relationship'],
-      message: "Pets should have relationship 'pet'",
-    })
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['relationship'], message: "Pets should have relationship 'pet'" })
   }
 })
 
 export type ImportPatientRow = z.infer<typeof ImportPatientRowSchema>
 
-/**
- * Validate a transformed row. Returns either a typed row ready
- * for `createPatient()` or a list of human-readable errors keyed
- * by field path so the preview UI can highlight the offending
- * cells.
- */
-export function validateRow(
+// ============================================================================
+// Weight-log row schema
+// ============================================================================
+
+export const ImportWeightRowSchema = z.object({
+  // Reuse `name` as the patient identifier — the wizard's column
+  // mapping has one Name column that serves both patient rows
+  // (creates the patient) and weight rows (matches an existing-or-
+  // just-created patient).
+  name: z.string().min(1, 'Patient name is required'),
+  measuredWeight: z.number().positive('Weight must be positive').max(1500, 'Weight is implausibly high'),
+  measuredUnit: z.enum(['lbs', 'kg']),
+  loggedAt: z.string().refine(
+    (s) => !Number.isNaN(Date.parse(s)),
+    'Date is required and must be a valid date',
+  ),
+  notes: z.string().max(2000).optional(),
+  bodyFat: z.number().min(0).max(100, 'Body fat % must be between 0 and 100').optional(),
+  tags: z.array(z.string()).optional(),
+})
+
+export type ImportWeightRow = z.infer<typeof ImportWeightRowSchema>
+
+// ============================================================================
+// Validate helpers — pick by row type
+// ============================================================================
+
+export function validatePatientRow(
   row: Record<string, unknown>,
 ):
   | { ok: true; data: ImportPatientRow }
   | { ok: false; errors: Array<{ field: string; message: string }> } {
   const result = ImportPatientRowSchema.safeParse(row)
   if (result.success) return { ok: true, data: result.data }
-  const errors = result.error.issues.map((i) => ({
-    field: i.path.join('.') || '_row',
-    message: i.message,
-  }))
-  return { ok: false, errors }
+  return {
+    ok: false,
+    errors: result.error.issues.map((i) => ({
+      field: i.path.join('.') || '_row',
+      message: i.message,
+    })),
+  }
+}
+
+export function validateWeightRow(
+  row: Record<string, unknown>,
+):
+  | { ok: true; data: ImportWeightRow }
+  | { ok: false; errors: Array<{ field: string; message: string }> } {
+  const result = ImportWeightRowSchema.safeParse(row)
+  if (result.success) return { ok: true, data: result.data }
+  return {
+    ok: false,
+    errors: result.error.issues.map((i) => ({
+      field: i.path.join('.') || '_row',
+      message: i.message,
+    })),
+  }
 }

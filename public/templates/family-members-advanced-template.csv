@@ -1,0 +1,11 @@
+Type,Name,Patient Type,Date of Birth,Relationship,Gender,Species,Breed,Nickname,Health Conditions,Food Allergies,Current Weight,Current Weight Unit,Weight,Unit,Date,Body Fat %,Notes,Tags
+patient,Jane Doe,human,1985-04-12,self,female,,,Janie,"hypertension, prediabetes","peanuts, shellfish",165,lbs,,,,,,
+patient,Mike Doe,human,1982-09-30,spouse,male,,,Mike,,gluten,200,lbs,,,,,,
+patient,Emma Doe,human,2014-06-18,child,female,,,Em,asthma,tree nuts,85,lbs,,,,,,
+patient,Buddy,pet,2020-03-22,pet,,dog,golden retriever,,hip dysplasia,chicken,72,lbs,,,,,,
+weight,Jane Doe,,,,,,,,,,,,168,lbs,2025-12-01,28,Pre-holiday baseline,morning
+weight,Jane Doe,,,,,,,,,,,,170,lbs,2025-12-15,,Stress eating,morning
+weight,Jane Doe,,,,,,,,,,,,167,lbs,2026-01-05,27,Back to routine,morning
+weight,Mike Doe,,,,,,,,,,,,205,lbs,2025-12-01,22,,evening
+weight,Mike Doe,,,,,,,,,,,,200,lbs,2026-01-15,21,Cut started,morning;before-meal
+weight,Buddy,,,,,,,,,,,,71,lbs,2026-02-01,,2 lbs down on new food,

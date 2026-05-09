@@ -1,26 +1,31 @@
 /**
- * Spreadsheet Import — Patients Preview
+ * Spreadsheet Import — Preview
  *
  * POST /api/import/patients/preview
- *   Body: { csv: string }
+ *   Body: { csv: string, targetOwnerUserId?: string }
  *   Returns: {
  *     headers: string[],
- *     sampleRows: Record<string, string>[],   // first 5 rows
+ *     sampleRows: Record<string, string>[],
  *     suggestedMapping: Record<string, ColumnMapping>,
  *     totalRows: number,
+ *     householdPatients: Array<{ id, name, nickname?, type }>,
  *   }
  *
- * Read-only — does not write anything to Firestore. The UI uses
- * the response to render the column-mapping wizard and a row
- * preview before the user clicks Import.
+ * Read-only — does not write to Firestore. The wizard uses the
+ * response to render the column-mapping step. The
+ * `householdPatients` list is included so the wizard can warn
+ * about unmatched names in weight rows BEFORE the commit, when
+ * the user can still fix them.
  *
- * Why a separate endpoint from /commit: the preview is cheap and
- * cacheable on the client; the commit is the side-effecting
- * write. Splitting them means the user can fiddle with the
- * mapping without re-uploading the file every keystroke.
+ * NB: route lives at /api/import/patients/preview to match the
+ * commit endpoint's path. The endpoint accepts whatever rows the
+ * spreadsheet contains (patient + weight via Type column);
+ * "patients" is the entry point of the onboarding flow, not the
+ * exclusive content of every file.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { adminDb } from '@/lib/firebase-admin'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/logger'
 import { errorResponse, validationError } from '@/lib/api-response'
@@ -35,14 +40,9 @@ export async function POST(request: NextRequest) {
     const targetOwnerUserId: string | undefined =
       typeof body?.targetOwnerUserId === 'string' ? body.targetOwnerUserId : undefined
 
-    // Authorization + permission check + read-only gate, all in
-    // one helper so the same rule applies on /preview and /commit.
-    // Preview is read-only on Firestore but it costs CPU and is
-    // gated behind the same authority because there's no point
-    // surfacing a column-mapper to a user who can't commit.
     const access = await assertImportAccess(request, targetOwnerUserId)
     if (access instanceof Response) return access
-    const { callerUserId } = access
+    const { callerUserId, ownerUserId } = access
 
     const rateLimitResult = await medicalApiRateLimit.limit(callerUserId)
     if (!rateLimitResult.success) {
@@ -52,12 +52,11 @@ export async function POST(request: NextRequest) {
         { status: 429, headers: getRateLimitHeaders(rateLimitResult) },
       )
     }
+
     if (typeof csv !== 'string' || csv.length === 0) {
       return validationError('CSV content is required')
     }
     if (csv.length > 5_000_000) {
-      // Generous 5 MB ceiling on raw text. The row-count cap below
-      // is the actual limit; this just rejects pathological uploads.
       return validationError('CSV file is too large (max 5 MB)')
     }
 
@@ -69,6 +68,23 @@ export async function POST(request: NextRequest) {
       return validationError(`Import is limited to ${MAX_IMPORT_ROWS} rows per file. Split your spreadsheet and try again.`)
     }
 
+    // Existing household patients — used by the wizard to warn
+    // about unmatched names in weight rows before commit.
+    const patientsSnap = await adminDb
+      .collection('users')
+      .doc(ownerUserId)
+      .collection('patients')
+      .get()
+    const householdPatients = patientsSnap.docs.map((d) => {
+      const data = d.data() as Record<string, unknown>
+      return {
+        id: d.id,
+        name: typeof data.name === 'string' ? data.name : '',
+        nickname: typeof data.nickname === 'string' ? data.nickname : undefined,
+        type: data.type === 'pet' ? 'pet' : 'human',
+      }
+    })
+
     return NextResponse.json({
       success: true,
       data: {
@@ -76,6 +92,7 @@ export async function POST(request: NextRequest) {
         sampleRows: parsed.rows.slice(0, MAX_PREVIEW_ROWS),
         suggestedMapping: suggestMapping(parsed.headers),
         totalRows: parsed.rows.length,
+        householdPatients,
       },
     })
   } catch (error) {
