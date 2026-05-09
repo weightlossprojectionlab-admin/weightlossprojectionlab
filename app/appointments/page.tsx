@@ -11,6 +11,8 @@ import { useAppointments } from '@/hooks/useAppointments'
 import { PageHeader } from '@/components/ui/PageHeader'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { CalendarDaysIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
+import { useLockedAction } from '@/hooks/useLockedAction'
 
 export default function AppointmentsPage() {
   return (
@@ -22,6 +24,9 @@ export default function AppointmentsPage() {
 
 function AppointmentsContent() {
   const router = useRouter()
+  // Feature-access gate — terminated subscribers can view their
+  // appointments but can't schedule new ones.
+  const addAppointmentLock = useLockedAction('add_appointment')
   const { appointments, loading } = useAppointments()
 
   const formatDate = (dateStr: string) => {
@@ -58,11 +63,15 @@ function AppointmentsContent() {
         {/* Add Appointment Button */}
         <div className="mb-6">
           <button
-            onClick={() => router.push('/appointments/new')}
+            onClick={addAppointmentLock.isLocked ? addAppointmentLock.onLockedClick : () => router.push('/appointments/new')}
             className="flex items-center gap-2 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
           >
-            <PlusIcon className="w-5 h-5" />
-            Schedule Appointment
+            {addAppointmentLock.isLocked ? (
+              <LockClosedIcon className="w-5 h-5" />
+            ) : (
+              <PlusIcon className="w-5 h-5" />
+            )}
+            {addAppointmentLock.isLocked ? 'Reactivate to schedule' : 'Schedule Appointment'}
           </button>
         </div>
 
@@ -80,7 +89,7 @@ function AppointmentsContent() {
               Get started by scheduling your first appointment
             </p>
             <button
-              onClick={() => router.push('/appointments/new')}
+              onClick={addAppointmentLock.isLocked ? addAppointmentLock.onLockedClick : () => router.push('/appointments/new')}
               className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
             >
               Schedule Appointment

@@ -14,6 +14,8 @@ import { PERMISSION_PRESETS, PERMISSION_LABELS, getSensitivePermissionWarnings }
 import { RoleSelector } from './RoleSelector'
 import { hasAdminPrivileges, getDefaultPermissionsForRole } from '@/lib/family-roles'
 import type { FamilyMemberPermissions, PatientProfile, FamilyRole } from '@/types/medical'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 
 interface InviteModalProps {
   isOpen: boolean
@@ -34,6 +36,9 @@ export function InviteModal({
 }: InviteModalProps) {
   const { patients } = usePatients()
   const { sendInvitation, revokeInvitation } = useInvitations(false)
+  // Feature-access gate — terminated subscribers can't invite new
+  // caregivers (each invite + accepted seat costs us at scale).
+  const inviteCaregiverLock = useLockedAction('invite_caregiver')
 
   const [recipientEmail, setRecipientEmail] = useState('')
   const [recipientPhone, setRecipientPhone] = useState('')
@@ -420,11 +425,17 @@ export function InviteModal({
             {!existingInvitationId && (
               <div className="flex items-center gap-3 pt-4">
                 <button
-                  type="submit"
-                  disabled={loading || selectedPatients.length === 0}
-                  className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                  type={inviteCaregiverLock.isLocked ? 'button' : 'submit'}
+                  onClick={inviteCaregiverLock.isLocked ? inviteCaregiverLock.onLockedClick : undefined}
+                  disabled={(loading || selectedPatients.length === 0) && !inviteCaregiverLock.isLocked}
+                  className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium inline-flex items-center justify-center gap-2"
                 >
-                  {loading ? 'Sending...' : 'Send Invitation'}
+                  {inviteCaregiverLock.isLocked && <LockClosedIcon className="w-4 h-4" />}
+                  {inviteCaregiverLock.isLocked
+                    ? 'Reactivate to invite'
+                    : loading
+                      ? 'Sending...'
+                      : 'Send Invitation'}
                 </button>
                 <button
                   type="button"

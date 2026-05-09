@@ -7,6 +7,8 @@ import toast from 'react-hot-toast'
 import DOMPurify from 'dompurify'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 import { mealLogOperations, useMealLogsRealtime, mealTemplateOperations, cookingSessionOperations, userProfileOperations } from '@/lib/firebase-operations'
 import { uploadMealPhoto } from '@/lib/storage-upload'
 import { useConfirm } from '@/hooks/useConfirm'
@@ -130,6 +132,11 @@ const detectMealTypeWithSchedule = (mealSchedule?: {
 function LogMealContent() {
   const searchParams = useSearchParams()
   const patientIdParam = searchParams.get('patientId')
+
+  // Feature-access gates — terminated subscribers can view but not log.
+  // The saveMeal button + AI photo capture both gate on these.
+  const logMealLock = useLockedAction('log_meal')
+  const aiMealRecognitionLock = useLockedAction('ai_meal_recognition')
 
   const [userProfile, setUserProfile] = useState<{ profile?: UserProfile; preferences?: UserPreferences } | null>(null)
   const [patientProfile, setPatientProfile] = useState<any>(null)
@@ -2044,16 +2051,19 @@ function LogMealContent() {
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => saveMeal()}
-                disabled={saving || eaterSelection.length === 0}
-                className="btn btn-primary w-full"
+                onClick={logMealLock.isLocked ? logMealLock.onLockedClick : () => saveMeal()}
+                disabled={(saving || eaterSelection.length === 0) && !logMealLock.isLocked}
+                className="btn btn-primary w-full inline-flex items-center justify-center gap-2"
               >
-                {saving
-                  ? 'Logging…'
-                  : eaterSelection.length === 0
-                    ? 'Pick at least one eater'
-                    : eaterSelection.length === 1
-                      ? `Log Meal for ${eaterSelection[0].name}`
+                {logMealLock.isLocked && <LockClosedIcon className="w-4 h-4" />}
+                {logMealLock.isLocked
+                  ? 'Reactivate to log meals'
+                  : saving
+                    ? 'Logging…'
+                    : eaterSelection.length === 0
+                      ? 'Pick at least one eater'
+                      : eaterSelection.length === 1
+                        ? `Log Meal for ${eaterSelection[0].name}`
                       : `Log Meal for ${eaterSelection.length} eaters`}
               </button>
               <button
@@ -2078,17 +2088,28 @@ function LogMealContent() {
 
             {!capturedImage && !showManualEntry && (
               <div className="space-y-4">
-                <label className="btn btn-primary w-full cursor-pointer">
-                  📸 Take Photo
-                  <input
-                    ref={photoInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleCameraCapture}
-                    className="hidden"
-                  />
-                </label>
+                {aiMealRecognitionLock.isLocked ? (
+                  <button
+                    type="button"
+                    onClick={aiMealRecognitionLock.onLockedClick}
+                    className="btn btn-primary w-full inline-flex items-center justify-center gap-2"
+                  >
+                    <LockClosedIcon className="w-4 h-4" />
+                    Reactivate to use AI photo recognition
+                  </button>
+                ) : (
+                  <label className="btn btn-primary w-full cursor-pointer">
+                    📸 Take Photo
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleCameraCapture}
+                      className="hidden"
+                    />
+                  </label>
+                )}
                 <button
                   onClick={() => setShowBarcodeScanner(true)}
                   className="btn btn-secondary w-full"

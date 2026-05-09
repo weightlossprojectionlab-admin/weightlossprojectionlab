@@ -50,6 +50,8 @@ import { OrderReceiptDetail } from '@/components/inventory/OrderReceiptDetail'
 import { extractReceiptFromImages } from '@/lib/ocr-receipt'
 import { saveOrderReceipt } from '@/lib/order-receipts'
 import { useRealtimeOrderReceipts } from '@/hooks/useRealtimeOrderReceipts'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 
 // Dynamic imports
 const BarcodeScanner = dynamic(
@@ -136,6 +138,11 @@ function defaultCaseSizeForCategory(c: ProductCategory): string | null {
 }
 
 function KitchenInventoryContent() {
+  // Feature-access gates — terminated subscribers can view but not
+  // snap receipts, scan barcodes, or apply inventory adjustments.
+  const receiptOcrLock = useLockedAction('ai_receipt_ocr')
+  const adjustInventoryLock = useLockedAction('adjust_inventory')
+
   // Real-time inventory hook
   const {
     fridgeItems,
@@ -3351,16 +3358,23 @@ function KitchenInventoryContent() {
                     </div>
                     <button
                       type="button"
-                      onClick={handleSubmitAdjustment}
+                      onClick={adjustInventoryLock.isLocked ? adjustInventoryLock.onLockedClick : handleSubmitAdjustment}
                       disabled={
-                        savingAdjustment ||
-                        (!adjustUnitDeltaDraft.trim() &&
-                          !adjustPackDeltaDraft.trim() &&
-                          !adjustCaseDeltaDraft.trim())
+                        !adjustInventoryLock.isLocked && (
+                          savingAdjustment ||
+                          (!adjustUnitDeltaDraft.trim() &&
+                            !adjustPackDeltaDraft.trim() &&
+                            !adjustCaseDeltaDraft.trim())
+                        )
                       }
-                      className="btn btn-primary w-full"
+                      className="btn btn-primary w-full inline-flex items-center justify-center gap-2"
                     >
-                      {savingAdjustment ? 'Applying…' : 'Apply'}
+                      {adjustInventoryLock.isLocked && <LockClosedIcon className="w-4 h-4" />}
+                      {adjustInventoryLock.isLocked
+                        ? 'Reactivate to apply'
+                        : savingAdjustment
+                          ? 'Applying…'
+                          : 'Apply'}
                     </button>
                   </div>
 
@@ -3463,12 +3477,24 @@ function KitchenInventoryContent() {
                     </p>
                     <button
                       type="button"
-                      onClick={() => setPoCaptureOpen(true)}
-                      disabled={poProcessing}
+                      onClick={
+                        receiptOcrLock.isLocked
+                          ? receiptOcrLock.onLockedClick
+                          : () => setPoCaptureOpen(true)
+                      }
+                      disabled={poProcessing && !receiptOcrLock.isLocked}
                       className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] bg-primary text-white rounded-lg font-medium text-sm active:bg-primary-dark disabled:opacity-40"
                     >
-                      <ViewfinderCircleIcon className="w-5 h-5" />
-                      {poProcessing ? 'Reading receipt…' : 'Snap receipt'}
+                      {receiptOcrLock.isLocked ? (
+                        <LockClosedIcon className="w-5 h-5" />
+                      ) : (
+                        <ViewfinderCircleIcon className="w-5 h-5" />
+                      )}
+                      {receiptOcrLock.isLocked
+                        ? 'Reactivate to snap receipts'
+                        : poProcessing
+                          ? 'Reading receipt…'
+                          : 'Snap receipt'}
                     </button>
                   </div>
                   <OrderReceiptFeed

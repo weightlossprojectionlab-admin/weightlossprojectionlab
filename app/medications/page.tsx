@@ -10,6 +10,8 @@ import EditMedicationModal from '@/components/health/EditMedicationModal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { medicalOperations } from '@/lib/medical-operations'
 import { PatientProfile, PatientMedication } from '@/types/medical'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import { PlusIcon, FunnelIcon, UserGroupIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
@@ -27,6 +29,9 @@ export default function MedicationsPage() {
 function MedicationsContent() {
   const { user } = useAuth()
   const { profile } = useUserProfile()
+  // Feature-access gates — terminated subscribers can view their
+  // medications but can't scan a new prescription label.
+  const medOcrLock = useLockedAction('ai_medication_ocr')
   const [showLabelCapture, setShowLabelCapture] = useState(false)
   const [filterByCondition, setFilterByCondition] = useState<string | null>(null)
 
@@ -212,17 +217,25 @@ function MedicationsContent() {
         actions={
           <button
             onClick={() => {
+              if (medOcrLock.isLocked) {
+                medOcrLock.onLockedClick()
+                return
+              }
               if (!selectedPatientId) {
                 toast.error('Please select a patient first')
                 return
               }
               setShowLabelCapture(true)
             }}
-            disabled={!selectedPatientId}
+            disabled={!selectedPatientId && !medOcrLock.isLocked}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <DocumentTextIcon className="w-5 h-5" />
-            Photograph Prescription Label
+            {medOcrLock.isLocked ? (
+              <LockClosedIcon className="w-5 h-5" />
+            ) : (
+              <DocumentTextIcon className="w-5 h-5" />
+            )}
+            {medOcrLock.isLocked ? 'Reactivate to scan labels' : 'Photograph Prescription Label'}
           </button>
         }
       />

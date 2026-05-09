@@ -34,6 +34,8 @@ import {
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import { BarcodeScanner } from '@/components/BarcodeScanner'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 
 interface HouseholdShoppingItem {
   id: string
@@ -73,6 +75,11 @@ function formatSyncedAgo(ms: number): string {
 }
 
 export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
+  // Feature-access gates — terminated subscribers can view the
+  // shopping list but can't add new items or scan barcodes.
+  const addItemLock = useLockedAction('add_shopping_item')
+  const scanBarcodeLock = useLockedAction('scan_barcode')
+
   const [data, setData] = useState<ShoppingResponse | null>(null)
   const [householdName, setHouseholdName] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -502,13 +509,17 @@ export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => setScannerOpen(true)}
-              disabled={scanning}
+              onClick={scanBarcodeLock.isLocked ? scanBarcodeLock.onLockedClick : () => setScannerOpen(true)}
+              disabled={scanning && !scanBarcodeLock.isLocked}
               className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-primary rounded-lg hover:bg-primary/10 disabled:opacity-50 min-h-[44px]"
-              aria-label="Scan barcode"
+              aria-label={scanBarcodeLock.isLocked ? 'Reactivate to scan barcodes' : 'Scan barcode'}
             >
-              <CameraIcon className="w-4 h-4" />
-              {scanning ? 'Scanning…' : 'Scan'}
+              {scanBarcodeLock.isLocked ? (
+                <LockClosedIcon className="w-4 h-4" />
+              ) : (
+                <CameraIcon className="w-4 h-4" />
+              )}
+              {scanBarcodeLock.isLocked ? 'Locked' : scanning ? 'Scanning…' : 'Scan'}
             </button>
             <button
               type="button"
@@ -545,11 +556,13 @@ export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
                 Cancel
               </button>
               <button
-                type="submit"
-                disabled={adding || !newItemName.trim()}
-                className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 min-h-[44px]"
+                type={addItemLock.isLocked ? 'button' : 'submit'}
+                onClick={addItemLock.isLocked ? addItemLock.onLockedClick : undefined}
+                disabled={(adding || !newItemName.trim()) && !addItemLock.isLocked}
+                className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 min-h-[44px] inline-flex items-center justify-center gap-1.5"
               >
-                {adding ? 'Adding…' : 'Add to list'}
+                {addItemLock.isLocked && <LockClosedIcon className="w-3.5 h-3.5" />}
+                {addItemLock.isLocked ? 'Reactivate' : adding ? 'Adding…' : 'Add to list'}
               </button>
             </div>
           </form>

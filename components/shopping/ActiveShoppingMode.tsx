@@ -73,6 +73,8 @@ import { ScanItemCard } from './ScanItemCard'
 import { ReceiptCaptureSurface } from './ReceiptCaptureSurface'
 import { ReceiptReviewModal } from './ReceiptReviewModal'
 import { extractReceiptFromImages, type ReceiptOCRResponse } from '@/lib/ocr-receipt'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 
 const BarcodeScanner = dynamic(
   () => import('@/components/BarcodeScanner').then((mod) => ({ default: mod.BarcodeScanner })),
@@ -92,6 +94,11 @@ interface PendingConfirm {
 }
 
 export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingModeProps) {
+  // Feature-access gates — terminated subscribers can view the trip
+  // but can't scan, snap a receipt, or invoke AI features.
+  const scanBarcodeLock = useLockedAction('scan_barcode')
+  const receiptOcrLock = useLockedAction('ai_receipt_ocr')
+
   // The list of items relevant to the active session — frozen on
   // open so newly-added rows mid-session don't shuffle the user's
   // place. Refreshed on every session open.
@@ -892,7 +899,11 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
               quantity: activeItem.quantity || 1,
             }}
             infoRows={buildInfoRows(activeItem)}
-            onScanRequested={() => setScannerOpen(true)}
+            onScanRequested={
+              scanBarcodeLock.isLocked
+                ? scanBarcodeLock.onLockedClick
+                : () => setScannerOpen(true)
+            }
             onPhotoRequested={
               activeItem.barcode
                 ? () => {
@@ -1304,13 +1315,21 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                 type="button"
                 onClick={() => {
                   setTripMenuOpen(false)
+                  if (receiptOcrLock.isLocked) {
+                    receiptOcrLock.onLockedClick()
+                    return
+                  }
                   setReceiptCaptureMode('mid-trip')
                 }}
                 className="w-full px-5 py-4 flex items-center gap-4 text-left border-t border-border active:bg-muted"
               >
-                <CameraIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                {receiptOcrLock.isLocked ? (
+                  <LockClosedIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <CameraIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                )}
                 <span className="flex-1 text-sm font-medium text-foreground">
-                  Snap receipt
+                  {receiptOcrLock.isLocked ? 'Snap receipt (locked)' : 'Snap receipt'}
                 </span>
               </button>
 

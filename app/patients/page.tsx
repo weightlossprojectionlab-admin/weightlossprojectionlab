@@ -15,6 +15,8 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import { usePatientLimit } from '@/hooks/usePatientLimit'
 import { useSubscription } from '@/hooks/useSubscription'
 import { UpgradeModal } from '@/components/subscription/UpgradeModal'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 import { PlanBadge } from '@/components/subscription/PlanBadge'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import {
@@ -48,6 +50,9 @@ export default function PatientsPage() {
 
 function PatientsContent() {
   const { patients, loading, error } = usePatients()
+  // Feature-access gate — terminated subscribers can't add new
+  // patients (existing ones stay viewable; this only blocks creation).
+  const addPatientLock = useLockedAction('add_patient')
   const [filter, setFilter] = useState<'all' | 'human' | 'pet'>('all')
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [selectedPatientForVitalsView, setSelectedPatientForVitalsView] = useState<any>(null)
@@ -96,13 +101,24 @@ function PatientsContent() {
         subtitle={pageSubtitle}
         actions={
           canAdd ? (
-            <Link
-              href="/patients/new"
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-            >
-              <PlusIcon className="w-5 h-5" />
-              {addButtonText}
-            </Link>
+            addPatientLock.isLocked ? (
+              <button
+                type="button"
+                onClick={addPatientLock.onLockedClick}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+              >
+                <LockClosedIcon className="w-5 h-5" />
+                Reactivate to add
+              </button>
+            ) : (
+              <Link
+                href="/patients/new"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+              >
+                <PlusIcon className="w-5 h-5" />
+                {addButtonText}
+              </Link>
+            )
           ) : (
             <button
               onClick={() => setShowUpgradeModal(true)}
