@@ -7,6 +7,7 @@ import { useSubscription } from '@/hooks/useSubscription'
 import { getAuthLoadingMessage } from '@/lib/auth-message-selector'
 import { logger } from '@/lib/logger'
 import { SubscriptionExpiredBanner } from '@/components/subscription/SubscriptionExpiredBanner'
+import { WriteGate } from '@/components/subscription/WriteGate'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -94,13 +95,19 @@ export default function AuthGuard({ children, fallback, requireAdmin = false }: 
   // User is authenticated (and admin if required) → Render children.
   // (Individual pages handle profile/onboarding checks.)
   //
-  // Mount the SubscriptionExpiredBanner above the page content. It
-  // self-suppresses on /pricing /profile /auth and renders only when
-  // subscription is terminated, so the cost on the happy path is one
-  // useSubscription read + an early null return.
+  // SubscriptionExpiredBanner: self-suppresses on /pricing /profile
+  // /auth and renders only when terminated. Cost on the happy path
+  // is one useSubscription read + an early null return.
+  //
+  // WriteGate: global click/submit interceptor for read-only mode.
+  // Renders nothing (returns null) but installs a single document-
+  // level listener that catches `[data-write="true"]` elements.
+  // No-op when subscription is active. Works as the platform-wide
+  // UX backstop on top of the HTTP-layer guards.
   return (
     <>
       <SubscriptionExpiredBanner />
+      <WriteGate />
       {children}
     </>
   )

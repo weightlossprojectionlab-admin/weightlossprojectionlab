@@ -518,6 +518,7 @@ export interface StepLogData {
 export const cookingSessionOperations = {
   // Create a new cooking session
   createCookingSession: async (sessionData: Omit<CookingSession, 'id' | 'userId'>) => {
+    await requireWriteAccess()
     const user = auth.currentUser
     if (!user) throw new FirebaseOperationError('User must be authenticated')
 
@@ -583,6 +584,7 @@ export const cookingSessionOperations = {
 
   // Update cooking session
   updateCookingSession: async (sessionId: string, updates: Partial<CookingSession>) => {
+    await requireWriteAccess()
     const user = auth.currentUser
     if (!user) throw new FirebaseOperationError('User must be authenticated')
 
@@ -600,6 +602,7 @@ export const cookingSessionOperations = {
 
   // Delete cooking session
   deleteCookingSession: async (sessionId: string) => {
+    await requireWriteAccess()
     const user = auth.currentUser
     if (!user) throw new FirebaseOperationError('User must be authenticated')
 
@@ -617,6 +620,7 @@ export const cookingSessionOperations = {
 export const recipeQueueOperations = {
   // Add recipe to queue
   addToQueue: async (queueData: Omit<QueuedRecipe, 'id' | 'userId' | 'addedAt'>) => {
+    await requireWriteAccess()
     const user = auth.currentUser
     if (!user) throw new FirebaseOperationError('User must be authenticated')
 
@@ -659,6 +663,7 @@ export const recipeQueueOperations = {
 
   // Remove from queue
   removeFromQueue: async (queueId: string) => {
+    await requireWriteAccess()
     const user = auth.currentUser
     if (!user) throw new FirebaseOperationError('User must be authenticated')
 
