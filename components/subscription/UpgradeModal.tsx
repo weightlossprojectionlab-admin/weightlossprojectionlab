@@ -10,6 +10,8 @@
 import { useState } from 'react'
 import { SubscriptionPlan, BillingInterval, SUBSCRIPTION_PRICING, SEAT_LIMITS, EXTERNAL_CAREGIVER_LIMITS } from '@/types'
 import { createCheckoutSession } from '@/lib/stripe-client'
+import { useSubscription } from '@/hooks/useSubscription'
+import { getPlanRelationship } from '@/lib/subscription-utils'
 import toast from 'react-hot-toast'
 
 interface UpgradeModalProps {
@@ -29,9 +31,19 @@ export function UpgradeModal({
 }: UpgradeModalProps) {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>(currentBillingInterval)
   const [loading, setLoading] = useState<string | null>(null) // Track which plan is loading
+  // Live subscription state — the canonical source of truth for the
+  // user-to-plan relationship. The `currentPlan` prop is a display
+  // hint, not a gate; using the hook here keeps the gate consistent
+  // with /pricing without requiring every caller to thread status
+  // through as a prop.
+  const { subscription } = useSubscription()
 
   const handleUpgrade = async (planId: SubscriptionPlan) => {
-    if (currentPlan === planId) {
+    // Only block when the user is actively subscribed to this plan.
+    // Trial conversions and reactivations should fall through to
+    // checkout — both are valid "select this plan" intents.
+    const relationship = getPlanRelationship(subscription, planId)
+    if (relationship === 'currently_subscribed') {
       toast('You are already on this plan')
       return
     }

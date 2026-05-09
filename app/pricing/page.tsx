@@ -9,112 +9,49 @@ import { CheckIcon } from '@heroicons/react/24/solid'
 import { auth } from '@/lib/firebase'
 import { getCSRFToken } from '@/lib/csrf'
 import { userProfileOperations } from '@/lib/firebase-operations'
+import {
+  getPlanRelationship,
+  type PlanRelationship,
+} from '@/lib/subscription-utils'
+import { PLANS } from '@/lib/plan-details'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 
-interface PlanFeature {
-  name: string
-  included: boolean
-}
+// PLANS data + Plan/PlanFeature types now live in lib/plan-details.ts
+// so the /profile plan-detail modal (and any future surface) can
+// import the same source. See the comments there for the editing
+// policy + ML/AI terminology guidelines.
 
-interface Plan {
-  id: SubscriptionPlan
-  name: string
-  description: string
-  monthlyPrice: number
-  yearlyPrice: number
-  popular?: boolean
-  features: PlanFeature[]
+/**
+ * Rich descriptions for JSON-LD structured data — invisible to humans
+ * but consumed by search engines and answer engines (Google AI
+ * Overviews, ChatGPT, Perplexity, etc.). These versions explicitly
+ * name the underlying AI/ML technology (Gemini Vision, machine
+ * learning models) so the platform shows up for queries like
+ * "AI meal recognition app" or "machine learning health platform"
+ * even though those keywords don't clutter the human-facing card.
+ *
+ * Updating policy: when you ship a new ML model or AI integration,
+ * add a sentence here for the relevant tier. The visible UI doesn't
+ * need to change — Quad-sync separation keeps marketing copy clean
+ * while metadata stays rich.
+ */
+function schemaDescriptionFor(planId: SubscriptionPlan, baseDescription: string): string {
+  const aiMlContext: Record<SubscriptionPlan, string> = {
+    free: '',
+    single:
+      'Includes AI-powered meal photo recognition built on Gemini Vision, in-store shopping mode with live cart and shared lists, barcode scanning against a 456,000-product national-retailer catalog (offline-cached for dead zones), AI receipt scanning at checkout, curated recipe library with smart scaling and 650+ ingredient substitutions, cooking timers with audio chimes, and machine-learning coaching that personalizes guidance from each user\'s logging history.',
+    single_plus:
+      'Adds clinical-grade health management for individuals managing chronic conditions, medications, or working with caregivers. Includes AI-powered prescription label scanning, AI document OCR for lab reports, insurance cards, and medical records (Gemini Vision), lab-result plausibility checks that catch transcription errors, smart vital reminders with custom schedules, offline medical-data cache for doctor visits, healthcare provider management, shareable health reports, and role-based access for up to three external caregivers.',
+    family_basic:
+      'Whole-family health tracking for up to five members, designed for families managing allergies, dietary restrictions, autism, ADHD, or other special needs. Includes per-member allergen and dietary tracking, special-needs care flags, allergen-aware recipe and meal planning with 650+ smart ingredient substitutions, ML illness-detection engine that monitors vitals and mood patterns to flag when family members may be getting sick, household duty assignment and tracking for meal prep and shopping, real-time shared shopping lists, unified family health dashboard, pet tracking with pet-specific illness detection, and role-based access for up to five external caregivers.',
+    family_plus:
+      'Advanced machine-learning analytics including predictive coaching trained per family member, restock and shopping prediction models, ML-personalized meal recommendations from collaborative filtering on the household\'s logged meal history (allergen and special-needs aware), health trend analysis with statistical confidence intervals, ROI tracking that quantifies health improvement against dietary and lifestyle effort, and access for up to ten family members and ten external caregivers.',
+    family_premium:
+      'Unlimited family members and external caregivers with white-glove onboarding, machine-learning insights at scale, custom health reports, full data export, API access for integrations, early access to new ML and AI features, and a dedicated account manager — designed for large families, multi-generational households, and complex care coordination needs.',
+  }
+  return `${baseDescription} ${aiMlContext[planId] ?? ''}`.trim()
 }
-
-const PLANS: Plan[] = [
-  {
-    id: 'single',
-    name: 'Single User',
-    description: 'Perfect for individual wellness journeys',
-    monthlyPrice: 9.99,
-    yearlyPrice: 99,
-    features: [
-      { name: '1 user account', included: true },
-      { name: 'Meal logging with WPL', included: true },
-      { name: 'Weight & step tracking', included: true },
-      { name: 'Basic recipes', included: true },
-      { name: 'Progress dashboard', included: true },
-      { name: 'Medical tracking', included: false },
-      { name: 'External caregivers', included: false },
-      { name: 'Advanced analytics', included: false },
-    ],
-  },
-  {
-    id: 'single_plus',
-    name: 'Single User Plus',
-    description: 'Medical tracking for comprehensive health management',
-    monthlyPrice: 14.99,
-    yearlyPrice: 149,
-    features: [
-      { name: '1 user account', included: true },
-      { name: 'All Single User features', included: true },
-      { name: 'Medical records tracking', included: true },
-      { name: 'Medications & appointments', included: true },
-      { name: 'Vitals monitoring', included: true },
-      { name: '3 external caregivers', included: true },
-      { name: 'Provider management', included: true },
-      { name: 'Advanced analytics', included: false },
-    ],
-  },
-  {
-    id: 'family_basic',
-    name: 'Family Basic',
-    description: 'Track health for your whole family',
-    monthlyPrice: 19.99,
-    yearlyPrice: 199,
-    features: [
-      { name: 'Up to 5 family members', included: true },
-      { name: 'All Single Plus features', included: true },
-      { name: 'Family meal planning', included: true },
-      { name: 'Shared shopping lists', included: true },
-      { name: '5 external caregivers', included: true },
-      { name: 'Family health dashboard', included: true },
-      { name: 'Pet tracking', included: true },
-      { name: 'Advanced analytics', included: false },
-    ],
-  },
-  {
-    id: 'family_plus',
-    name: 'Family Plus',
-    description: 'Our most popular plan with advanced features',
-    monthlyPrice: 29.99,
-    yearlyPrice: 299,
-    popular: true,
-    features: [
-      { name: 'Up to 10 family members', included: true },
-      { name: 'All Family Basic features', included: true },
-      { name: 'Advanced analytics & insights', included: true },
-      { name: 'Health trend analysis', included: true },
-      { name: 'Predictive WPL coaching', included: true },
-      { name: '10 external caregivers', included: true },
-      { name: 'Enhanced meal suggestions', included: true },
-      { name: 'Priority support', included: true },
-    ],
-  },
-  {
-    id: 'family_premium',
-    name: 'Family Premium',
-    description: 'Unlimited everything for large families',
-    monthlyPrice: 39.99,
-    yearlyPrice: 399,
-    features: [
-      { name: 'Unlimited family members', included: true },
-      { name: 'All Family Plus features', included: true },
-      { name: 'Priority 24hr support', included: true },
-      { name: 'White-glove onboarding', included: true },
-      { name: 'Custom health reports', included: true },
-      { name: 'Data export & API access', included: true },
-      { name: 'Early access to new features', included: true },
-      { name: 'Dedicated account manager', included: true },
-    ],
-  },
-]
 
 export default function PricingPage() {
   const router = useRouter()
@@ -191,8 +128,12 @@ export default function PricingPage() {
       return
     }
 
-    // Allow trialing users to subscribe to their trial plan (converts trial → paid)
-    if (plan === currentPlan && !isTrialing) {
+    // Only block when the user is actively subscribed to this plan.
+    // Trial conversions and reactivations should fall through to
+    // checkout — both are valid "select this plan" intents that
+    // shouldn't be confused with "you're already on it."
+    const relationship = getPlanRelationship(subscription, plan)
+    if (relationship === 'currently_subscribed') {
       alert('You are already on this plan')
       return
     }
@@ -260,14 +201,46 @@ export default function PricingPage() {
   }
 
   // Helper: Determine button text based on current plan and target plan
-  const getButtonText = (targetPlan: SubscriptionPlan, isCurrentPlan: boolean, isLoading: boolean) => {
+  const getButtonText = (
+    targetPlan: SubscriptionPlan,
+    relationship: PlanRelationship,
+    isLoading: boolean,
+  ) => {
     if (isLoading) return 'Loading...'
-    if (isCurrentPlan) return 'Current Plan'
+
+    // Branch on the user-to-plan relationship first — these are the
+    // states where the answer doesn't depend on tier comparison.
+    switch (relationship) {
+      case 'currently_subscribed':
+        return 'Current Plan'
+      case 'previously_subscribed':
+        // Picking up the exact plan they had before.
+        return 'Reactivate'
+      case 'currently_trialing':
+        // Trial → paid conversion on the same plan.
+        return 'Subscribe Now'
+      case 'not_on_plan':
+        // Fall through to the tier-comparison logic below.
+        break
+      default: {
+        // Exhaustiveness check — if PlanRelationship grows, the
+        // compiler points at this default.
+        const _exhaustive: never = relationship
+        return _exhaustive
+      }
+    }
 
     if (!user) return 'Get Started'
 
-    // Trialing users haven't paid yet — every plan is a new subscription
+    // Trialing users haven't paid yet — every other plan is a new subscription
     if (isTrialing) return 'Subscribe Now'
+
+    // Note: terminated users (expired/canceled) fall through to the
+    // tier-comparison logic below. Their `currentPlan` is the plan
+    // they USED to have, so "Upgrade to X" / "Downgrade to X" reads
+    // correctly relative to that — and is more accurate than a flat
+    // "Resubscribe", which doesn't tell them whether they're moving
+    // up, down, or sideways from where they were.
 
     // Plan tier hierarchy: free < single < single_plus < family_basic < family_plus < family_premium
     const planTiers: Record<SubscriptionPlan, number> = {
@@ -285,15 +258,26 @@ export default function PricingPage() {
     // Users without a subscription (free state) can start a trial
     if (!currentPlan || currentPlan === 'free') {
       return 'Start Free Trial'
-    } else if (targetTier > currentTier) {
-      // Upgrading to a higher tier
-      return `Upgrade to ${targetPlan === 'single_plus' ? 'Plus' : targetPlan === 'family_basic' ? 'Family' : targetPlan === 'family_plus' ? 'Plus' : 'Premium'}`
-    } else if (targetTier < currentTier) {
-      // Downgrading to a lower tier
-      return 'Switch Plan'
     }
 
-    return 'Select Plan'
+    // Use the full plan name from the data so buttons disambiguate
+    // between "Single User Plus" and "Family Plus" (both used to read
+    // as "Upgrade to Plus" — friction). PLANS is module-level so the
+    // lookup is cheap.
+    const targetPlanName = PLANS.find((p) => p.id === targetPlan)?.name ?? targetPlan
+
+    if (targetTier > currentTier) {
+      // Upgrading to a higher tier
+      return `Upgrade to ${targetPlanName}`
+    } else if (targetTier < currentTier) {
+      // Picking a lower tier than the current/previous plan. For
+      // active users this is a real downgrade; for terminated users
+      // it's just a different choice. "Switch to" works for both
+      // without falsely framing a fresh signup as a downgrade.
+      return `Switch to ${targetPlanName}`
+    }
+
+    return `Select ${targetPlanName}`
   }
 
   // Helper: Get dynamic headline based on user state
@@ -340,8 +324,58 @@ export default function PricingPage() {
 
   const headline = getHeadline()
 
+  // JSON-LD structured data for Quad-sync (AIO/AEO/NLP/SEO).
+  // Each plan is a Product with an Offer at the chosen billing
+  // interval. The descriptions in metadata are richer than the
+  // visible card descriptions — they include the AI/ML technology
+  // keywords (Gemini Vision, machine learning) for search-engine
+  // and LLM consumption. Visible UI stays clean for humans.
+  const productSchema = {
+    '@context': 'https://schema.org',
+    '@graph': PLANS.map((plan) => {
+      const price = billingInterval === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice
+      const includedFeatures = plan.features.filter((f) => f.included).map((f) => f.name)
+      return {
+        '@type': 'Product',
+        name: `Wellness Projection Lab — ${plan.name}`,
+        description: schemaDescriptionFor(plan.id, plan.description),
+        category: 'Health & Wellness Software',
+        brand: { '@type': 'Brand', name: 'Wellness Projection Lab' },
+        offers: {
+          '@type': 'Offer',
+          price: price.toString(),
+          priceCurrency: 'USD',
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            price: price.toString(),
+            priceCurrency: 'USD',
+            unitCode: billingInterval === 'monthly' ? 'MON' : 'ANN',
+            referenceQuantity: {
+              '@type': 'QuantitativeValue',
+              value: 1,
+              unitCode: billingInterval === 'monthly' ? 'MON' : 'ANN',
+            },
+          },
+          availability: 'https://schema.org/InStock',
+        },
+        additionalProperty: includedFeatures.map((featureName) => ({
+          '@type': 'PropertyValue',
+          name: 'Feature',
+          value: featureName,
+        })),
+      }
+    }),
+  }
+
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
+      {/* Quad-sync structured data — invisible to humans, parsed by
+          search engines + answer engines (AEO/AIO) for citations and
+          rich-result eligibility. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
@@ -381,10 +415,14 @@ export default function PricingPage() {
           {PLANS.map((planData) => {
             const price = billingInterval === 'monthly' ? planData.monthlyPrice : planData.yearlyPrice
             const savings = calculateSavings(planData.monthlyPrice, planData.yearlyPrice)
-            // isCurrentPlan is true only for paid (non-trialing) subscribers on this plan
-            const isCurrentPlan = currentPlan === planData.id && !isTrialing
-            // isTrialPlan: the plan the user is currently trialing
-            const isTrialPlan = currentPlan === planData.id && isTrialing
+
+            // The user's relationship to THIS specific plan. One typed
+            // answer that drives the badge, the gate, the button text,
+            // and the click handler — see getPlanRelationship in
+            // lib/subscription-utils.ts.
+            const relationship = getPlanRelationship(subscription, planData.id)
+            const isCurrentPlan = relationship === 'currently_subscribed'
+            const isTrialPlan = relationship === 'currently_trialing'
 
             return (
               <div
@@ -481,7 +519,7 @@ export default function PricingPage() {
                       : 'bg-primary/10 text-primary hover:bg-primary/20'
                   } disabled:opacity-50`}
                 >
-                  {getButtonText(planData.id, isCurrentPlan, loading === planData.id)}
+                  {getButtonText(planData.id, relationship, loading === planData.id)}
                 </button>
               </div>
             )

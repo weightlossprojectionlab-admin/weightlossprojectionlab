@@ -24,6 +24,8 @@ import { HealthConnectModal } from '@/components/health/HealthConnectModal'
 import { detectPlatform, getHealthAppForPlatform } from '@/lib/health-sync-utils'
 import { logger } from '@/lib/logger'
 import { useSubscription } from '@/hooks/useSubscription'
+import { hasActiveSubscription, isSubscriptionTerminated } from '@/lib/subscription-utils'
+import { PlanDetailModal } from '@/components/subscription/PlanDetailModal'
 import { useNotifications } from '@/hooks/useNotifications'
 import { usePatientLimit } from '@/hooks/usePatientLimit'
 import { PlanBadge } from '@/components/subscription/PlanBadge'
@@ -63,6 +65,9 @@ function ProfileContent() {
   const { patients, loading: patientsLoading, refetch: refetchPatients } = usePatients()
   const { current, max, percentage } = usePatientLimit(patients.length)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  // Plan-detail modal opens from the Current Plan badge tap. Houses
+  // the feature list + the Manage Subscription / Reactivate CTA.
+  const [planDetailOpen, setPlanDetailOpen] = useState(false)
   const { isEnabled: stepTrackingEnabled, enableTracking, disableTracking, isTracking } = useStepTracking()
 
   // Push notification registration (FCM token + permission)
@@ -677,21 +682,57 @@ function ProfileContent() {
             <h2 className="text-lg font-medium text-foreground mb-4">Subscription</h2>
 
             <div className="space-y-4">
-              {/* Current Plan */}
-              <div>
-                <label className="text-label mb-2">Current Plan</label>
+              {/* Terminated-state banner — appears above the plan/usage
+                  panels so the user understands at a glance that the
+                  details below are historical, not currently active. */}
+              {isSubscriptionTerminated(subscription) && (
+                <div className="bg-error/5 border border-error/30 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-error mb-1">
+                    Your subscription has ended
+                  </p>
+                  <p className="text-xs text-foreground/80">
+                    The plan and limits below show what you had on your previous subscription.
+                    Reactivate to restore access.
+                  </p>
+                </div>
+              )}
+
+              {/* Current Plan — visually muted when terminated so the
+                  badge doesn't read as "active high-tier user."
+                  Tap the badge to open the plan-detail modal, which
+                  shows the full feature list + the Manage Subscription
+                  CTA (active) or Reactivate (terminated). This is the
+                  canonical entry point to the Customer Portal now
+                  that the profile-page footer is trialing-only. */}
+              <div className={isSubscriptionTerminated(subscription) ? 'opacity-50' : ''}>
+                <label className="text-label mb-2">
+                  {isSubscriptionTerminated(subscription) ? 'Previous Plan' : 'Current Plan'}
+                </label>
                 <div className="mt-2">
-                  <PlanBadge
-                    plan={subscription.plan}
-                    addons={subscription.addons}
-                    status={subscription.status}
-                    size="lg"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setPlanDetailOpen(true)}
+                    className="rounded-full hover:opacity-90 active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    aria-label={`View ${subscription.plan} plan details and manage subscription`}
+                  >
+                    <PlanBadge
+                      plan={subscription.plan}
+                      addons={subscription.addons}
+                      status={subscription.status}
+                      size="lg"
+                    />
+                  </button>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    Tap to see what&apos;s included{hasActiveSubscription(subscription) ? ' · manage subscription' : ''}
+                  </p>
                 </div>
               </div>
 
-              {/* Usage Stats */}
-              <div>
+              {/* Usage Stats — muted when terminated. The seat counts
+                  reflect the terminated plan's limits and aren't the
+                  user's current entitlements; opacity makes that clear
+                  without hiding history. */}
+              <div className={isSubscriptionTerminated(subscription) ? 'opacity-50' : ''}>
                 <label className="text-label mb-2">Family Members</label>
                 <div className="mt-2">
                   <div className="flex items-center justify-between mb-2">
@@ -785,32 +826,25 @@ function ProfileContent() {
                 </div>
               )}
 
-              {/* Manage Button - Only show if user has a Stripe customer ID */}
-              {subscription.stripeCustomerId && (
-                <button
-                  onClick={async () => {
-                    try {
-                      const { createPortalSession } = await import('@/lib/stripe-client')
-                      await createPortalSession(window.location.href)
-                    } catch (error: any) {
-                      console.error('Failed to open customer portal:', error)
-                      const errorMessage = error?.message || 'Failed to open subscription management. Please try again.'
-                      alert(errorMessage)
-                    }
-                  }}
-                  className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-                >
-                  Manage Subscription
-                </button>
-              )}
-
-              {/* Upgrade or Pricing Button - Show if no Stripe customer ID */}
-              {!subscription.stripeCustomerId && (
+              {/* CTA — only renders for trial/trialing status (the
+                  trial-conversion moment). All other states have
+                  their reactivation/management paths surfaced
+                  elsewhere:
+                    - active: Customer Portal opens from the bell /
+                      contextual surfaces; no profile-level button.
+                    - terminated: limited-access + FOMO mechanics
+                      (deferred — see project_pricing_deferred_features
+                      .md and the limited-access architecture sketch).
+                      Reactivation will happen in-context (locked
+                      affordances → /pricing) rather than via a
+                      profile CTA. Until those FOMO surfaces ship,
+                      terminated users can hit /pricing directly. */}
+              {subscription.status === 'trialing' && (
                 <Link
                   href="/pricing"
                   className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium text-center block"
                 >
-                  {subscription.status === 'trialing' ? 'Subscribe Now' : subscription.plan === 'free' || subscription.plan === 'family_premium' ? 'View Plans' : 'Upgrade Plan'}
+                  Subscribe Now
                 </Link>
               )}
             </div>
@@ -1667,6 +1701,17 @@ function ProfileContent() {
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         currentPlan={subscription?.plan}
+      />
+
+      {/* Plan-detail modal — opens when user taps the Current Plan
+          badge above. Shows feature list for the user's plan and
+          surfaces the Manage Subscription path (active) or Reactivate
+          (terminated). This is the canonical Customer Portal entry
+          point now that the page footer is trialing-only. */}
+      <PlanDetailModal
+        isOpen={planDetailOpen}
+        onClose={() => setPlanDetailOpen(false)}
+        subscription={subscription}
       />
 
       {/* Upgrade Required Modal - Feature Gate */}
