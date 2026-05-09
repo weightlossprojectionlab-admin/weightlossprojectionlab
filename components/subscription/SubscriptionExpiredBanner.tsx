@@ -31,6 +31,7 @@ import { usePathname } from 'next/navigation'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { useSubscription } from '@/hooks/useSubscription'
 import { isSubscriptionTerminated } from '@/lib/subscription-utils'
+import { isCachedSubscriptionMirrored } from '@/lib/feature-gates'
 
 /**
  * Paths where the banner should NOT render.
@@ -54,24 +55,41 @@ export function SubscriptionExpiredBanner() {
   )
   if (isSuppressedPath) return null
 
+  // Family members / caregivers see the same read-only state but
+  // can't reactivate it — only the household owner can. Show the
+  // banner with copy that points them to the owner instead of a
+  // Reactivate button that wouldn't accomplish anything for them.
+  const isMirrored = isCachedSubscriptionMirrored()
+
   return (
     <div className="bg-warning/10 border-b border-warning/30 px-4 py-2.5 text-sm text-warning-foreground">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
           <ExclamationTriangleIcon className="w-5 h-5 text-warning flex-shrink-0" />
-          <p className="text-foreground/90 leading-tight">
-            <strong className="text-foreground">Your subscription has ended.</strong>{' '}
-            <span className="text-foreground/75">
-              You can still see your data, but adding new entries is paused.
-            </span>
-          </p>
+          {isMirrored ? (
+            <p className="text-foreground/90 leading-tight">
+              <strong className="text-foreground">This household's subscription has ended.</strong>{' '}
+              <span className="text-foreground/75">
+                You can still see the family's data, but adding new entries is paused until the account owner reactivates.
+              </span>
+            </p>
+          ) : (
+            <p className="text-foreground/90 leading-tight">
+              <strong className="text-foreground">Your subscription has ended.</strong>{' '}
+              <span className="text-foreground/75">
+                You can still see your data, but adding new entries is paused.
+              </span>
+            </p>
+          )}
         </div>
-        <Link
-          href="/pricing"
-          className="px-3 py-1.5 min-h-[36px] inline-flex items-center justify-center bg-primary text-white rounded-lg text-xs font-semibold active:bg-primary-hover hover:bg-primary-hover transition-colors flex-shrink-0"
-        >
-          Reactivate
-        </Link>
+        {!isMirrored && (
+          <Link
+            href="/pricing"
+            className="px-3 py-1.5 min-h-[36px] inline-flex items-center justify-center bg-primary text-white rounded-lg text-xs font-semibold active:bg-primary-hover hover:bg-primary-hover transition-colors flex-shrink-0"
+          >
+            Reactivate
+          </Link>
+        )}
       </div>
     </div>
   )

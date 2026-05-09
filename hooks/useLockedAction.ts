@@ -29,28 +29,31 @@
  */
 
 import { useRouter } from 'next/navigation'
-import toast from 'react-hot-toast'
+import { handleWriteLocked } from '@/lib/access-guards'
 import { useCanWrite } from './useFeatureAccess'
 
 export interface LockedActionState {
   /** True when writes are blocked for this user. */
   isLocked: boolean
-  /** Click handler to use when isLocked — toasts + routes to /pricing. */
+  /**
+   * Click handler to use when isLocked. Routes through the
+   * single source of truth in handleWriteLocked() — owners get
+   * toast + /pricing redirect, family members (mirrored sub) get
+   * an informational toast and stay where they are. Same UX as
+   * the ops-layer guard.
+   */
   onLockedClick: () => void
 }
 
 export function useLockedAction(): LockedActionState {
   const canWrite = useCanWrite()
-  const router = useRouter()
+  // useRouter retained for parity with prior signature in case a
+  // future caller wants to route somewhere bespoke; the default
+  // path now lives in handleWriteLocked.
+  useRouter()
   const isLocked = !canWrite
   return {
     isLocked,
-    onLockedClick: () => {
-      toast(
-        'Your subscription is read-only. Reactivate to keep building your data.',
-        { icon: '🔒', duration: 4000 },
-      )
-      router.push('/pricing')
-    },
+    onLockedClick: handleWriteLocked,
   }
 }

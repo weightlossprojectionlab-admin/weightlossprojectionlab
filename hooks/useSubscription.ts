@@ -84,7 +84,10 @@ export function useSubscription() {
         if (!ownerSub) return
         const converted = convertTimestamps(ownerSub)
         setSubscription(converted)
-        setCachedSubscription(converted)
+        // isMirrored=true so the write-lock UX knows this caller
+        // can't reactivate — they'll get an informational toast
+        // instead of a /pricing redirect.
+        setCachedSubscription(converted, { isMirrored: true })
       }, (error) => {
         console.error('[useSubscription] Owner listener error:', error)
       })
@@ -101,11 +104,13 @@ export function useSubscription() {
 
       if (ownSub) {
         // Caller has their own subscription — use it, drop any
-        // owner listener we may have set up earlier.
+        // owner listener we may have set up earlier. isMirrored=
+        // false because this caller IS the owner: they're allowed
+        // to reactivate and the lock UX redirects them to /pricing.
         detachOwner()
         const converted = convertTimestamps(ownSub)
         setSubscription(converted)
-        setCachedSubscription(converted)
+        setCachedSubscription(converted, { isMirrored: false })
         return
       }
 

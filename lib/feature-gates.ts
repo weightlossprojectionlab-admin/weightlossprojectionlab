@@ -194,13 +194,28 @@ export function getUserSubscription(user: User | null): UserSubscription | null 
 
 // Subscription cache for client-side use (populated by useSubscription hook)
 let _cachedSubscription: UserSubscription | null = null
+// True when the cached subscription belongs to the household OWNER
+// (mirrored down for a caregiver / family member), false when it's
+// the caller's own subscription. Lets the write-lock UX branch:
+// owners get a Reactivate redirect; family members get an
+// informational toast and stay where they are because only the
+// owner can take the reactivation action.
+let _cachedSubscriptionIsMirrored: boolean = false
 
-export function setCachedSubscription(sub: UserSubscription | null) {
+export function setCachedSubscription(
+  sub: UserSubscription | null,
+  options?: { isMirrored?: boolean },
+) {
   _cachedSubscription = sub
+  _cachedSubscriptionIsMirrored = options?.isMirrored === true
 }
 
 export function getCachedSubscription(): UserSubscription | null {
   return _cachedSubscription
+}
+
+export function isCachedSubscriptionMirrored(): boolean {
+  return _cachedSubscriptionIsMirrored
 }
 
 /**

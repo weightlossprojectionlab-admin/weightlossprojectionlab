@@ -42,7 +42,10 @@
  */
 
 import toast from 'react-hot-toast'
-import { getCachedSubscription } from './feature-gates'
+import {
+  getCachedSubscription,
+  isCachedSubscriptionMirrored,
+} from './feature-gates'
 import { canWrite } from './feature-access'
 
 /**
@@ -59,14 +62,32 @@ export class WriteLockedError extends Error {
 }
 
 /**
- * Side-effect helper: show the read-only toast and route the user
- * to /pricing. Centralized so every write surface — UI gate, ops
- * guard, error boundary — produces the same UX.
+ * Side-effect helper: show the read-only toast and (for owners)
+ * route to /pricing. Centralized so every write surface — UI gate,
+ * ops guard, error boundary — produces the same UX.
+ *
+ * Branches on whether the cached subscription belongs to the
+ * caller (owner) or is mirrored from the household owner (family
+ * member / caregiver / sub-account):
+ *   - Owner: toast + /pricing redirect. They can reactivate.
+ *   - Family member: informational toast only, no redirect. They
+ *     can't reactivate, so sending them to /pricing where the only
+ *     CTAs require billing-owner authority would just be confusing.
+ *     They stay on the page they were on, in read-only mode.
  *
  * Safe to call from server contexts (no-ops if window is undefined).
  */
 export function handleWriteLocked(): void {
   if (typeof window === 'undefined') return
+
+  if (isCachedSubscriptionMirrored()) {
+    toast(
+      "This household's subscription is read-only. Ask the account owner to reactivate.",
+      { icon: '🔒', duration: 5000 },
+    )
+    return
+  }
+
   toast(
     'Your subscription is read-only. Reactivate to keep building your data.',
     { icon: '🔒', duration: 4000 },
