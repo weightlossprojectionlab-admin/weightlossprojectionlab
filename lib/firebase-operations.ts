@@ -67,7 +67,6 @@ const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) 
   // /pricing redirect AND throws WriteLockedError.
   const method = (options.method || 'GET').toUpperCase()
   if (method !== 'GET') {
-    const { requireWriteAccess } = await import('./access-guards')
     await requireWriteAccess()
   }
 
