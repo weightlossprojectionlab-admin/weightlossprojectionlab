@@ -10,6 +10,37 @@ import { adminDb as db } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { errorResponse } from '@/lib/api-response'
 import { SubscriptionPlan } from '@/types'
+import { getPlanFromPriceId } from '@/lib/stripe-price-mapping'
+
+/**
+ * Derive the canonical plan + billing interval from the live Stripe
+ * price on the subscription. Customer Portal upgrades change the
+ * subscription's price but never touch its metadata, so reading
+ * `metadata.plan` alone produces a stale plan name on every plan
+ * change after the initial checkout. The metadata.plan fallback
+ * stays only for legacy subs whose price isn't in our mapping yet.
+ */
+function resolvePlanFromSubscription(subscription: Stripe.Subscription): {
+  plan: SubscriptionPlan | null
+  billingInterval: 'monthly' | 'yearly'
+} {
+  const priceId = subscription.items.data[0]?.price?.id
+  if (priceId) {
+    const mapped = getPlanFromPriceId(priceId)
+    if (mapped) {
+      return { plan: mapped.plan, billingInterval: mapped.billingInterval }
+    }
+  }
+  // Fallback: trust metadata for legacy subs whose price isn't mapped.
+  // This is the path that broke on Customer Portal upgrades — kept as
+  // a safety net but no longer the primary source.
+  const metaPlan = subscription.metadata?.plan as SubscriptionPlan | undefined
+  const intervalRaw = subscription.items.data[0]?.plan?.interval
+  return {
+    plan: metaPlan ?? null,
+    billingInterval: intervalRaw === 'year' ? 'yearly' : 'monthly',
+  }
+}
 
 // Read at request time, not module load — Vercel build env doesn't have it.
 function getWebhookSecret(): string {
@@ -94,20 +125,30 @@ export async function POST(request: NextRequest) {
  * User completed payment - activate their subscription
  */
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const userId = session.metadata?.firebaseUID
-  const plan = session.metadata?.plan as SubscriptionPlan
-  const billingInterval = session.metadata?.billingInterval as 'monthly' | 'yearly'
+  const userId = session.metadata?.firebaseUid
 
-  if (!userId || !plan) {
-    logger.error('Missing metadata in checkout session')
+  if (!userId) {
+    logger.error('Missing firebaseUid in checkout session metadata')
     return
   }
-
-  logger.info(`Checkout completed for user ${userId}, plan: ${plan}`)
 
   // Get subscription details
   const subscriptionId = session.subscription as string
   const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+
+  // Derive plan from the live price (consistent with handleSubscriptionUpdated)
+  // rather than metadata, so portal changes never desync.
+  const { plan, billingInterval } = resolvePlanFromSubscription(subscription)
+  if (!plan) {
+    logger.error('[Stripe Webhook] Could not resolve plan from checkout subscription', undefined, {
+      userId,
+      subscriptionId,
+      priceId: subscription.items.data[0]?.price?.id,
+    })
+    return
+  }
+
+  logger.info(`Checkout completed for user ${userId}, plan: ${plan}`)
 
   // Update user's subscription in Firestore
   await updateUserSubscription(userId, subscription, plan, billingInterval)
@@ -129,39 +170,49 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
 /**
  * Handle customer.subscription.created event
+ * Mostly logged — the actual Firestore write happens via
+ * checkout.session.completed (which has the price details we need).
  */
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.firebaseUID
-  const plan = subscription.metadata?.plan as SubscriptionPlan
+  const userId = subscription.metadata?.firebaseUid
 
-  if (!userId || !plan) {
-    logger.error('Missing metadata in subscription')
+  if (!userId) {
+    logger.error('Missing firebaseUid in subscription metadata')
     return
   }
 
   logger.info(`Subscription created for user ${userId}`)
-
-  // Subscription will be updated by checkout.session.completed
-  // This event is mainly for logging
 }
 
 /**
  * Handle customer.subscription.updated event
  * Subscription was modified (plan change, renewal, etc.)
+ *
+ * IMPORTANT: derive `plan` from the live Stripe price ID, not from
+ * subscription.metadata.plan. Customer Portal plan changes update the
+ * price but leave metadata frozen at the original plan name — reading
+ * metadata.plan would write a stale plan to Firestore on every upgrade.
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.firebaseUID
-  const plan = subscription.metadata?.plan as SubscriptionPlan
+  const userId = subscription.metadata?.firebaseUid
 
-  if (!userId || !plan) {
-    logger.error('Missing metadata in subscription')
+  if (!userId) {
+    logger.error('Missing firebaseUid in subscription metadata')
     return
   }
 
-  logger.info(`Subscription updated for user ${userId}`)
+  const { plan, billingInterval } = resolvePlanFromSubscription(subscription)
 
-  // Determine billing interval from subscription items
-  const billingInterval = subscription.items.data[0]?.plan?.interval === 'year' ? 'yearly' : 'monthly'
+  if (!plan) {
+    logger.error('[Stripe Webhook] Could not resolve plan for subscription', undefined, {
+      userId,
+      subscriptionId: subscription.id,
+      priceId: subscription.items.data[0]?.price?.id,
+    })
+    return
+  }
+
+  logger.info(`Subscription updated for user ${userId} → plan=${plan} interval=${billingInterval}`)
 
   await updateUserSubscription(userId, subscription, plan, billingInterval)
 }
@@ -171,10 +222,10 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
  * User retains access until currentPeriodEnd
  */
 async function handleSubscriptionCanceledAtPeriodEnd(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.firebaseUID
+  const userId = subscription.metadata?.firebaseUid
 
   if (!userId) {
-    logger.error('Missing firebaseUID in subscription metadata')
+    logger.error('Missing firebaseUid in subscription metadata')
     return
   }
 
@@ -200,10 +251,10 @@ async function handleSubscriptionCanceledAtPeriodEnd(subscription: Stripe.Subscr
  * NOTE: This fires when subscription actually ends (after period end if cancel_at_period_end=true)
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.firebaseUID
+  const userId = subscription.metadata?.firebaseUid
 
   if (!userId) {
-    logger.error('Missing firebaseUID in subscription metadata')
+    logger.error('Missing firebaseUid in subscription metadata')
     return
   }
 
@@ -226,10 +277,10 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
  * Payment was successful - renew subscription
  */
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-  const userId = (invoice as any).subscription_details?.metadata?.firebaseUID || invoice.metadata?.firebaseUID
+  const userId = (invoice as any).subscription_details?.metadata?.firebaseUid || invoice.metadata?.firebaseUid
 
   if (!userId) {
-    logger.info('No firebaseUID in invoice metadata, skipping')
+    logger.info('No firebaseUid in invoice metadata, skipping')
     return
   }
 
@@ -247,10 +298,10 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
  * Payment failed - mark subscription as past_due
  */
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  const userId = (invoice as any).subscription_details?.metadata?.firebaseUID || invoice.metadata?.firebaseUID
+  const userId = (invoice as any).subscription_details?.metadata?.firebaseUid || invoice.metadata?.firebaseUid
 
   if (!userId) {
-    logger.info('No firebaseUID in invoice metadata, skipping')
+    logger.info('No firebaseUid in invoice metadata, skipping')
     return
   }
 

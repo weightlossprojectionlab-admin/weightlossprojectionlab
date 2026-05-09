@@ -38,7 +38,11 @@ export type OperationType =
 export interface TransitionParams {
   currentPlan: SubscriptionPlan | null
   currentInterval: BillingInterval | null
-  currentStatus: 'active' | 'trialing' | 'canceled' | 'incomplete' | 'past_due' | null
+  // 'expired' is what handleSubscriptionDeleted writes once a sub fully
+  // ends (vs 'canceled' which is the cancel-at-period-end soft state
+  // before the period rolls). Both are terminal as far as Stripe is
+  // concerned — you can't update price on either, only start fresh.
+  currentStatus: 'active' | 'trialing' | 'canceled' | 'expired' | 'incomplete' | 'past_due' | null
   newPlan: SubscriptionPlan
   newInterval: BillingInterval
 }
@@ -49,9 +53,20 @@ export interface TransitionParams {
 export function determineOperationType(params: TransitionParams): OperationType {
   const { currentPlan, currentInterval, currentStatus, newPlan, newInterval } = params
 
-  // No existing subscription or canceled/incomplete - treat as new
-  if (!currentStatus || currentStatus === 'canceled' || currentStatus === 'incomplete') {
-    return currentStatus === 'canceled' ? 'REACTIVATION' : 'NEW_SUBSCRIPTION'
+  // Terminal or absent statuses → fresh checkout, never an update.
+  // Stripe rejects price updates on canceled/expired subs ("A canceled
+  // subscription can only update its cancellation_details and metadata").
+  // 'expired' must be in this branch — otherwise the tier-change code
+  // below routes to UPGRADE/DOWNGRADE which calls subscriptions.update,
+  // which Stripe refuses.
+  if (
+    !currentStatus
+    || currentStatus === 'canceled'
+    || currentStatus === 'expired'
+    || currentStatus === 'incomplete'
+  ) {
+    if (currentStatus === 'canceled' || currentStatus === 'expired') return 'REACTIVATION'
+    return 'NEW_SUBSCRIPTION'
   }
 
   // Trial conversion (trialing → active paid, same plan & interval)

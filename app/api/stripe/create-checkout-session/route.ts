@@ -90,6 +90,35 @@ export async function POST(request: NextRequest) {
       logger.info('[Stripe Checkout] New customer created', { customerId })
     }
 
+    // Authoritative one-active-sub guard. Refuse to mint a second
+    // checkout session when the customer already has any active /
+    // trialing / past_due / unpaid / incomplete subscription. Plan
+    // changes belong in the Customer Portal, not parallel signups.
+    const liveSubs = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'all',
+      limit: 10,
+    })
+    const blockingStatuses = ['active', 'trialing', 'past_due', 'unpaid', 'incomplete'] as const
+    const blocking = liveSubs.data.filter((s) =>
+      (blockingStatuses as readonly string[]).includes(s.status),
+    )
+    if (blocking.length > 0) {
+      logger.warn('[Stripe Checkout] Refusing duplicate checkout — customer has active sub', {
+        userId,
+        customerId,
+        existingSubscriptionIds: blocking.map((s) => s.id),
+      })
+      return NextResponse.json(
+        {
+          error: 'You already have an active subscription. Use Manage Subscription to change plans.',
+          code: 'ACTIVE_SUBSCRIPTION_EXISTS',
+          existingSubscriptionIds: blocking.map((s) => s.id),
+        },
+        { status: 409 },
+      )
+    }
+
     // Check if user was referred — apply affiliate discount
     const referralData = userDoc.data()?.referral
     const discounts: any[] = []
@@ -114,11 +143,21 @@ export async function POST(request: NextRequest) {
         }
       ],
       ...(discounts.length > 0 ? { discounts } : { allow_promotion_codes: true }),
-      automatic_tax: {
-        enabled: true, // Enable automatic tax calculation
-      },
-      success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/profile?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/profile`,
+      // automatic_tax intentionally disabled pre-launch. Re-enable once
+      // we cross economic-nexus thresholds in any US state (typically
+      // ~$100k revenue or ~200 transactions/year per state). When
+      // re-enabling, also restore `customer_update: { address: 'auto',
+      // name: 'auto' }` and `billing_address_collection: 'required'`
+      // so Stripe can capture the address it needs for tax calc.
+      // Fall back to the requesting origin (not NEXT_PUBLIC_APP_URL) so
+      // dev-on-LAN doesn't redirect to localhost. See the matching
+      // comment in create-checkout/route.ts.
+      success_url:
+        successUrl ||
+        `${request.headers.get('origin') || request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL || ''}/profile?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:
+        cancelUrl ||
+        `${request.headers.get('origin') || request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL || ''}/profile`,
       metadata: {
         firebaseUid: userId,
         ...(referralData?.referredBy ? {

@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import type Stripe from 'stripe'
 import stripe from '@/lib/stripe-config'
 import { adminAuth as auth, adminDb as db } from '@/lib/firebase-admin'
 import { SubscriptionPlan } from '@/types'
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     // 5b. Universal subscription management - handle all transition types
     if (existingSubscription?.stripeSubscriptionId) {
-      const existingStatus = existingSubscription.status as 'active' | 'trialing' | 'canceled' | 'incomplete' | 'past_due' | null
+      const existingStatus = existingSubscription.status as 'active' | 'trialing' | 'canceled' | 'expired' | 'incomplete' | 'past_due' | null
 
       // Determine what type of operation this is
       const transitionParams: TransitionParams = {
@@ -295,7 +296,7 @@ export async function POST(request: NextRequest) {
       const customer = await stripe.customers.create({
         email: userEmail,
         metadata: {
-          firebaseUID: userId,
+          firebaseUid: userId,
         },
       })
       customerId = customer.id
@@ -306,9 +307,57 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 7. Create checkout session
-    const successUrl = `${process.env.NEXT_PUBLIC_APP_URL}/profile?tab=subscription&session_id={CHECKOUT_SESSION_ID}`
-    const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`
+    // 6a. Authoritative one-active-sub guard.
+    //
+    // The Firestore-side check above (step 5b) only sees subs that
+    // Firestore knows about. If a webhook ever dropped, casing was
+    // inconsistent, or a Customer Portal action created a parallel
+    // sub, Firestore can lag behind Stripe's actual state. Before
+    // minting a new Checkout Session, query Stripe directly. If the
+    // customer already has any active/trialing/past_due subscription,
+    // refuse — the right action is Manage Subscription (the portal),
+    // not a second concurrent sub.
+    const liveActive = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'all',
+      limit: 10,
+    })
+    const blockingStatuses: Stripe.Subscription.Status[] = [
+      'active',
+      'trialing',
+      'past_due',
+      'unpaid',
+      'incomplete',
+    ]
+    const blocking = liveActive.data.filter((s) => blockingStatuses.includes(s.status))
+    if (blocking.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            'You already have an active subscription. Use Manage Subscription to change plans.',
+          code: 'ACTIVE_SUBSCRIPTION_EXISTS',
+          existingSubscriptionIds: blocking.map((s) => s.id),
+        },
+        { status: 409 },
+      )
+    }
+
+    // 7. Create checkout session.
+    //
+    // Derive the redirect origin from the request itself rather than
+    // NEXT_PUBLIC_APP_URL. The env var is fine for prod but breaks
+    // dev-on-LAN: phone hits 192.168.x.x:3003, env says localhost:3003,
+    // Stripe redirects to localhost which the phone can't reach.
+    // request.headers.get('origin') reflects whatever the client is
+    // actually using, so dev-on-LAN, ngrok, prod, and Vercel previews
+    // all produce a working redirect without env juggling.
+    const origin =
+      request.headers.get('origin') ||
+      request.nextUrl.origin ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      ''
+    const successUrl = `${origin}/profile?tab=subscription&session_id={CHECKOUT_SESSION_ID}`
+    const cancelUrl = `${origin}/pricing?canceled=true`
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

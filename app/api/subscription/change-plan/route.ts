@@ -138,9 +138,8 @@ export async function POST(request: NextRequest) {
           },
         ],
         proration_behavior: 'create_prorations', // Charge prorated amount immediately
-        automatic_tax: {
-          enabled: true, // Enable automatic tax calculation
-        },
+        // automatic_tax disabled pre-launch — see create-checkout-session/route.ts
+        // for the rationale. Re-enable when crossing economic-nexus thresholds.
         metadata: {
           ...stripeSubscription.metadata,
           plan: newPlan,
@@ -175,9 +174,7 @@ export async function POST(request: NextRequest) {
         ],
         proration_behavior: 'none', // No immediate charge
         billing_cycle_anchor: 'unchanged', // Keep current billing cycle
-        automatic_tax: {
-          enabled: true, // Enable automatic tax calculation
-        },
+        // automatic_tax disabled pre-launch — see create-checkout-session/route.ts.
         metadata: {
           ...stripeSubscription.metadata,
           plan: newPlan,
