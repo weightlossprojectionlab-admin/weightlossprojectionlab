@@ -103,6 +103,12 @@ function AuthContent() {
           } else if (destination.type === 'onboarding') {
             logger.debug('➡️ Redirecting to onboarding:', { reason: destination.reason })
             router.push('/onboarding')
+          } else if (destination.type === 'subscription_expired') {
+            // Authenticated but expired sub — bounce off /auth (which is
+            // for unauthenticated users) and over to /pricing where they
+            // can reactivate.
+            logger.debug('➡️ Redirecting to pricing (subscription expired):', { reason: destination.reason })
+            router.push('/pricing')
           } else if (destination.type === 'stay') {
             logger.debug('⚠️ User authenticated but destination is "stay" - allowing /auth access')
           }

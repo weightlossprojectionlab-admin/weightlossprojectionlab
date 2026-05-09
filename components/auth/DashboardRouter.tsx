@@ -45,6 +45,14 @@ export default function DashboardRouter({ children }: DashboardRouterProps) {
             // Keep checking=true to prevent dashboard render during redirect
             return
 
+          case 'subscription_expired':
+            // Authenticated user with no active sub → recovery surface,
+            // not /auth. Sending to /auth would loop because /auth
+            // bounces signed-in users away.
+            logger.debug('➡️ Redirecting to /pricing (subscription expired):', { reason: destination.reason })
+            router.push('/pricing')
+            return
+
           case 'onboarding':
             logger.debug('➡️ Redirecting to /onboarding:', { reason: destination.reason })
             router.push('/onboarding')

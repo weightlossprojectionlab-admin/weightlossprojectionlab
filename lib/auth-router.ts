@@ -24,8 +24,27 @@ export type UserDestination =
   | { type: 'dashboard', reason?: string }
   | { type: 'patients', reason?: string }
   | { type: 'caregiver', accountOwnerId: string, reason?: string } // Caregiver-only view
+  | {
+      // Authenticated user whose subscription is expired or canceled.
+      // Semantically NOT the same as 'auth' — the user IS signed in,
+      // they just can't access the product without an active sub.
+      // Routing this to /auth produces an infinite loop (auth page sees
+      // signed-in user → bounces to dashboard → DashboardRouter sees
+      // expired → bounces to auth → ...). Consumers route this to
+      // /pricing (or any other dedicated subscription-recovery surface).
+      type: 'subscription_expired',
+      reason?: string,
+    }
   | { type: 'loading' }
   | { type: 'stay', reason?: string } // User can stay where they are
+
+/**
+ * Paths an expired/canceled user is allowed to stay on without redirect.
+ * Centralized so the allow-list isn't duplicated across consumers.
+ *   /pricing  — pick a new plan to reactivate
+ *   /profile  — see current status + open Customer Portal
+ */
+const SUBSCRIPTION_RECOVERY_PATHS = ['/pricing', '/profile']
 
 /**
  * Determine where an authenticated user should be routed
@@ -132,23 +151,49 @@ export async function determineUserDestination(
       }
     }
 
-    // Step 4: Check subscription status (block expired/canceled users)
-    // Skip for super admins / test accounts — they should never be locked out
-    const superAdminEmails = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+    // Step 4: Subscription gate.
+    //
+    // Semantic intent: a user with an expired/canceled subscription is
+    // AUTHENTICATED but can't use the product. This is distinct from
+    // not-signed-in, and routing them to /auth (the sign-in page)
+    // creates an infinite loop because /auth bounces signed-in users
+    // back to dashboard. Instead, route them to /pricing — the
+    // dedicated reactivation surface. Allow them to remain on /pricing
+    // or /profile so they can pick a new plan or open the Customer
+    // Portal to manage / sign out.
+    //
+    // Super admins are exempt so they can never be locked out of
+    // their own product during testing.
+    const superAdminEmails = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || '')
+      .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
     const isSuperAdmin = user.email && superAdminEmails.includes(user.email.toLowerCase())
 
     const subscription = profile.subscription
-    if (!isSuperAdmin && subscription && (subscription.status === 'expired' || subscription.status === 'canceled')) {
-      logger.warn('[AuthRouter] User has expired/canceled subscription - BLOCKING ACCESS', {
+    const subBlocked = !isSuperAdmin
+      && subscription
+      && (subscription.status === 'expired' || subscription.status === 'canceled')
+
+    if (subBlocked) {
+      const onRecoveryPath = SUBSCRIPTION_RECOVERY_PATHS.some(
+        (p) => currentPath === p || currentPath.startsWith(p + '/'),
+      )
+      logger.warn('[AuthRouter] Subscription not active', {
         userId: user.uid,
         status: subscription.status,
-        currentPath
+        currentPath,
+        onRecoveryPath,
       })
 
-      // IMMEDIATELY block access to all protected pages
-      if (currentPath !== '/pricing' && currentPath !== '/auth') {
-        logger.debug('[AuthRouter] Redirecting expired user to /auth')
-        return { type: 'auth', reason: 'Subscription expired - upgrade required' }
+      if (onRecoveryPath) {
+        // User is already on a page where they can fix this — let them
+        // stay so they can subscribe / manage / sign out. Skip all
+        // downstream onboarding/dashboard routing logic so we don't
+        // accidentally re-redirect them.
+        return { type: 'stay', reason: 'Subscription expired - on recovery surface' }
+      }
+      return {
+        type: 'subscription_expired',
+        reason: 'Subscription expired or canceled — redirect to recovery surface',
       }
     }
 
