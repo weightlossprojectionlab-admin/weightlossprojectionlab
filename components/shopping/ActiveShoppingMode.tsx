@@ -70,6 +70,9 @@ import { barcodeVariants } from '@/lib/barcode-variants'
 import { playStepDoneChime } from '@/lib/cook-chime'
 import type { ShoppingItem } from '@/types/shopping'
 import { ScanItemCard } from './ScanItemCard'
+import { ReceiptCaptureSurface } from './ReceiptCaptureSurface'
+import { ReceiptReviewModal } from './ReceiptReviewModal'
+import { extractReceiptFromImages, type ReceiptOCRResponse } from '@/lib/ocr-receipt'
 
 const BarcodeScanner = dynamic(
   () => import('@/components/BarcodeScanner').then((mod) => ({ default: mod.BarcodeScanner })),
@@ -279,6 +282,31 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   // (receipt OCR, in-app chat, share/export); the menu structure defines
   // the IA up front so each feature lands in a known place.
   const [tripMenuOpen, setTripMenuOpen] = useState(false)
+
+  // Receipt capture surface — Phase A of the OCR feature. Opens fullscreen
+  // camera + multi-shot stack; Done returns the captured image array.
+  // Two entry points:
+  //   - 'mid-trip': user opened it via the 3-dot menu. Closing returns to
+  //     the trip view (don't exit the active session).
+  //   - 'post-checkout': auto-opened after handleConfirmPurchase succeeds,
+  //     because the receipt is fresh in the user's hand right at that
+  //     moment. Closing here exits the active shopping session via
+  //     onClose() — the trip is over either way.
+  // Phase A is no-OCR; Phase B will POST captures to /api/ocr/receipt and
+  // surface a results-review screen.
+  const [receiptCaptureMode, setReceiptCaptureMode] = useState<
+    'closed' | 'mid-trip' | 'post-checkout'
+  >('closed')
+  const receiptCaptureOpen = receiptCaptureMode !== 'closed'
+
+  // Phase B — receipt OCR processing state. After capture closes, we POST
+  // the images to /api/ocr/receipt and surface a fullscreen "Reading
+  // receipt…" overlay (Gemini takes 5–30s on multi-shot receipts, so a
+  // toast isn't enough feedback). On success we hold the parsed result
+  // here for Phase C's review-and-apply modal to consume; for now we
+  // surface a summary toast so the user can sanity-check OCR quality.
+  const [receiptOcrProcessing, setReceiptOcrProcessing] = useState(false)
+  const [receiptOcrResult, setReceiptOcrResult] = useState<ReceiptOCRResponse | null>(null)
 
   const confirmRemoveItem = async () => {
     const item = removeConfirmTarget
@@ -643,11 +671,17 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       }
 
       toast.success(
-        `Purchase confirmed — ${foundCount} item${foundCount > 1 ? 's' : ''} added to inventory`
+        `Purchase confirmed — ${foundCount} item${foundCount > 1 ? 's' : ''} added to inventory`,
       )
     } finally {
       setSummarySaving(false)
-      onClose()
+      // Auto-open the receipt capture surface — the receipt is fresh in
+      // the user's hand right now, this is the highest-success-rate
+      // moment to capture it. Skipping (X close) exits the trip; capturing
+      // also exits after Done. The 'post-checkout' mode tells the surface's
+      // close/complete handlers to fire onClose() to leave the active
+      // session rather than just dismissing the surface.
+      setReceiptCaptureMode('post-checkout')
     }
   }
 
@@ -1116,6 +1150,108 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
         </div>
       )}
 
+      {/* Receipt capture (Phase A of OCR feature) — fullscreen camera +
+          multi-shot stack. Done returns base64 image data URLs; Phase B
+          will pipe those to /api/ocr/receipt + show a results review.
+          Two entry modes (see receiptCaptureMode state above): 'mid-trip'
+          dismisses back to the trip view, 'post-checkout' fires
+          onClose() to exit the active session. */}
+      <ReceiptCaptureSurface
+        isOpen={receiptCaptureOpen}
+        onClose={() => {
+          const wasPostCheckout = receiptCaptureMode === 'post-checkout'
+          setReceiptCaptureMode('closed')
+          // Post-checkout exit path — the trip is over regardless of
+          // whether the user captured anything. Mid-trip just dismisses.
+          if (wasPostCheckout) onClose()
+        }}
+        onComplete={async (images) => {
+          logger.info('[Receipt OCR] Sending captures to server', {
+            count: images.length,
+            mode: receiptCaptureMode,
+          })
+          const wasPostCheckout = receiptCaptureMode === 'post-checkout'
+          // Close the camera first so the processing overlay is the only
+          // surface visible while Gemini runs.
+          setReceiptCaptureMode('closed')
+          setReceiptOcrProcessing(true)
+          let reviewOpened = false
+          try {
+            const result = await extractReceiptFromImages(images)
+            logger.info('[Receipt OCR] Extraction complete', {
+              store: result.store,
+              itemCount: result.items.length,
+              totalCents: result.totalCents,
+              confidence: result.confidence,
+            })
+            // v1 only opens the review modal post-checkout. Mid-trip
+            // captures (rare — user keeps shopping after a quick run)
+            // still hit OCR but skip the review/apply step; the trip
+            // itself is still in progress so applying prices then
+            // would race with the post-checkout markItemAsPurchased
+            // sequence. Mid-trip just acknowledges with a toast.
+            if (wasPostCheckout) {
+              setReceiptOcrResult(result)
+              reviewOpened = true
+            } else {
+              const itemCount = result.items.length
+              toast.success(
+                `Receipt saved · ${itemCount} item${itemCount === 1 ? '' : 's'}`,
+                { duration: 4000 },
+              )
+            }
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Receipt OCR failed.'
+            logger.warn('[Receipt OCR] Extraction failed', { message })
+            toast.error(message)
+          } finally {
+            setReceiptOcrProcessing(false)
+            // Post-checkout exit only fires when there's no review modal
+            // to wait on. If the review opened, its own close handler
+            // calls onClose() — we don't want to unmount this component
+            // while the modal still lives inside its tree.
+            if (wasPostCheckout && !reviewOpened) onClose()
+          }
+        }}
+      />
+
+      {/* Receipt OCR processing overlay — fullscreen + same z-index family
+          as the capture surface so it visually replaces it as Gemini
+          runs. Gemini-2.5-flash on multi-shot Costco-length receipts
+          can take 15–30s; a toast wouldn't be enough feedback and the
+          user might double-tap "Snap receipt" thinking nothing
+          happened. Phase C will swap the post-success path for a
+          review modal; for now a summary toast already fired in
+          onComplete. */}
+      {receiptOcrProcessing && (
+        <div className="fixed inset-0 z-[71] bg-black/85 flex items-center justify-center px-6">
+          <div className="bg-card text-foreground rounded-2xl p-6 max-w-sm w-full text-center shadow-xl">
+            <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+            <p className="text-base font-semibold">Reading receipt…</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Long receipts can take up to 30 seconds. Hang tight.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Phase C — Receipt review + match-and-apply. Opens automatically
+          on a successful post-checkout OCR. The modal is responsible
+          for calling onClose() (the parent's exit handler) when the
+          user is done so we don't unmount this component while the
+          modal still lives inside its tree. */}
+      <ReceiptReviewModal
+        isOpen={receiptOcrResult !== null}
+        ocrResult={receiptOcrResult}
+        tripItems={orderedSessionRows.found}
+        onClose={() => {
+          setReceiptOcrResult(null)
+          // Post-checkout review is the trip's exit point — closing the
+          // modal exits the active shopping session.
+          onClose()
+        }}
+      />
+
       {/* Trip overflow menu — bottom sheet on mobile, mid-screen modal on
           desktop. Pre-populated with semantic options; placeholders toast
           for features not yet wired. The structure declares the IA so
@@ -1158,14 +1294,17 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                 )}
               </button>
 
-              {/* Snap receipt — placeholder for the OCR feature we scoped.
-                  Lives here so users see it's coming and the IA slot is
-                  defined; toast for now. */}
+              {/* Snap receipt — Phase A live. Opens the camera surface;
+                  Done returns captured image data URLs. Phase B will
+                  send those to /api/ocr/receipt for parsing; Phase C
+                  will surface a results-review screen that applies
+                  prices to inventory. For now we just acknowledge the
+                  capture so users can validate the flow. */}
               <button
                 type="button"
                 onClick={() => {
                   setTripMenuOpen(false)
-                  toast('Receipt scan — coming soon', { icon: '📷' })
+                  setReceiptCaptureMode('mid-trip')
                 }}
                 className="w-full px-5 py-4 flex items-center gap-4 text-left border-t border-border active:bg-muted"
               >
@@ -1173,7 +1312,6 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                 <span className="flex-1 text-sm font-medium text-foreground">
                   Snap receipt
                 </span>
-                <span className="text-xs text-muted-foreground">Coming soon</span>
               </button>
 
               {/* Message family — placeholder for in-app chat (PRD-in-app-

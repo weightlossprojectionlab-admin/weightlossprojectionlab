@@ -44,6 +44,12 @@ import { patientOperations } from '@/lib/medical-operations'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { useAddSheet } from '@/hooks/useAddSheet'
 import { formatOnHandText } from '@/lib/format-on-hand'
+import { ReceiptCaptureSurface } from '@/components/shopping/ReceiptCaptureSurface'
+import { OrderReceiptFeed } from '@/components/inventory/OrderReceiptFeed'
+import { OrderReceiptDetail } from '@/components/inventory/OrderReceiptDetail'
+import { extractReceiptFromImages } from '@/lib/ocr-receipt'
+import { saveOrderReceipt } from '@/lib/order-receipts'
+import { useRealtimeOrderReceipts } from '@/hooks/useRealtimeOrderReceipts'
 
 // Dynamic imports
 const BarcodeScanner = dynamic(
@@ -139,6 +145,9 @@ function KitchenInventoryContent() {
     loading: inventoryLoading,
     getSummary
   } = useRealtimeInventory()
+
+  // Real-time Order Receipts feed — drives the Purchase History no-item state.
+  const { receipts: orderReceipts, error: orderReceiptsError } = useRealtimeOrderReceipts()
 
   // Real-time expired items hook
   const {
@@ -455,6 +464,18 @@ function KitchenInventoryContent() {
   const [editCaseSize, setEditCaseSize] = useState<string>('')
   const [showHistory, setShowHistory] = useState(false)
   const [savingDetails, setSavingDetails] = useState(false)
+
+  // Order Receipt intake — surfaced on the Purchase History tab when no
+  // item is selected. The user snaps a receipt; OCR runs; we persist a
+  // DRAFT OrderReceipt (no inventory writes yet); the user reviews it
+  // in the detail view and explicitly applies. Draft-first design
+  // protects against duplicate apply when two household members snap
+  // the same physical receipt.
+  const [poCaptureOpen, setPoCaptureOpen] = useState(false)
+  const [poProcessing, setPoProcessing] = useState(false)
+  // Selected receipt id — when set, the no-item state mounts the
+  // detail view instead of the CTA + feed.
+  const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null)
   useEffect(() => {
     if (selectedItem) {
       setEditCategory(selectedItem.category)
@@ -2571,6 +2592,49 @@ function KitchenInventoryContent() {
                       </div>
                     </div>
 
+                    {/* Pricing — three read-only tier slots populated by the
+                        receipt-OCR apply flow (lib/apply-receipt-prices.ts
+                        for trip-flow, lib/apply-purchase-order.ts for the
+                        Purchase History bulk intake). The highlighted row
+                        matches the item's packTier — the others sit
+                        em-dashed until a price is captured at that tier. */}
+                    <div className="rounded-lg border border-border bg-card p-4">
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                        Pricing
+                      </div>
+                      <div className="rounded-md border border-border divide-y divide-border overflow-hidden">
+                        {([
+                          { label: 'Unit', value: selectedItem.unitPriceCents, tier: 'U' as const },
+                          { label: 'Pack', value: selectedItem.packPriceCents, tier: 'P' as const },
+                          { label: 'Case', value: selectedItem.casePriceCents, tier: 'C' as const },
+                        ]).map((row) => {
+                          const has = typeof row.value === 'number' && row.value > 0
+                          const isCurrent = (selectedItem.packTier ?? 'U') === row.tier
+                          return (
+                            <div
+                              key={row.tier}
+                              className={`flex items-center justify-between px-3 py-2 ${isCurrent ? 'bg-primary/5' : 'bg-card'}`}
+                            >
+                              <span className="text-sm text-foreground">
+                                {row.label}
+                                {isCurrent && (
+                                  <span className="ml-1.5 text-[9px] font-semibold text-primary uppercase tracking-wide">
+                                    current
+                                  </span>
+                                )}
+                              </span>
+                              <span className={`text-sm font-semibold tabular-nums ${has ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                {has ? `$${((row.value as number) / 100).toFixed(2)}` : '—'}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-1.5">
+                        Captured from receipt scans
+                      </p>
+                    </div>
+
                     {/* Classification — category + unit of measure + unit size */}
                     <div className="rounded-lg border border-border bg-card p-4 sm:col-span-2 lg:col-span-2">
                       <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
@@ -3369,8 +3433,50 @@ function KitchenInventoryContent() {
 
           {activeTab === 'history' && (
             !selectedItem ? (
-              renderScanPickEmpty(
-                "See when you bought this item, where, what you paid, and a prediction of when you'll likely need it again.",
+              // No-item state on Purchase History — repurposed as the
+              // bulk Purchase Order intake CTA. A receipt IS a purchase
+              // event; this is exactly where it belongs. When the user
+              // taps an item from the list, this slot swaps to the rich
+              // per-item history view below.
+              selectedReceiptId ? (
+                // Detail view — editable line list + lock + apply/void.
+                // Mounts when the user taps a receipt from the feed below.
+                <OrderReceiptDetail
+                  receiptId={selectedReceiptId}
+                  inventory={allInventoryItems}
+                  onClose={() => setSelectedReceiptId(null)}
+                />
+              ) : (
+                // No-item state — CTA on top, feed of receipts below.
+                // Tap any feed row to drill into its detail view.
+                <div className="space-y-4">
+                  <div className="bg-card rounded-lg p-6 sm:p-8 text-center border border-border">
+                    <ClockIcon className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                    <h2 className="text-lg font-semibold text-foreground mb-2">
+                      Add an order receipt
+                    </h2>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
+                      Snap a receipt to capture every line — we&apos;ll match each
+                      one against your inventory and price out the order. Review
+                      and apply when you&apos;re ready. Or pick an item from the
+                      list to see its history.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setPoCaptureOpen(true)}
+                      disabled={poProcessing}
+                      className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] bg-primary text-white rounded-lg font-medium text-sm active:bg-primary-dark disabled:opacity-40"
+                    >
+                      <ViewfinderCircleIcon className="w-5 h-5" />
+                      {poProcessing ? 'Reading receipt…' : 'Snap receipt'}
+                    </button>
+                  </div>
+                  <OrderReceiptFeed
+                    receipts={orderReceipts}
+                    onSelect={(rc) => setSelectedReceiptId(rc.id)}
+                    error={orderReceiptsError}
+                  />
+                </div>
               )
             ) : (() => {
               const history = (selectedItem.purchaseHistory ?? [])
@@ -4797,6 +4903,70 @@ function KitchenInventoryContent() {
             tabs (Details / UPC / Image) now ARE the item editor when an
             item is selected from the list. The component itself stays in
             components/inventory/ for potential reuse on other surfaces. */}
+
+        {/* Purchase Order receipt capture — opens from the Purchase History
+            tab's no-item state CTA. Reuses the same camera surface as the
+            in-trip receipt review (lib/ocr-receipt.ts → /api/ocr/receipt).
+            On Done we hand the parsed OCR result to PurchaseOrderReview,
+            which renders inline in the Purchase History tab body. */}
+        <ReceiptCaptureSurface
+          isOpen={poCaptureOpen}
+          onClose={() => setPoCaptureOpen(false)}
+          onComplete={async (images) => {
+            setPoCaptureOpen(false)
+            setPoProcessing(true)
+            try {
+              const ocr = await extractReceiptFromImages(images)
+              const userId = auth.currentUser?.uid
+              if (!userId) {
+                toast.error('Sign-in not loaded yet — try again in a moment.')
+                return
+              }
+              // Save as DRAFT — no inventory writes happen here. The user
+              // reviews and applies in the OrderReceiptDetail view.
+              const saved = await saveOrderReceipt(ocr, { userId })
+              logger.info('[Inventory] Order receipt saved as draft', {
+                receiptNumber: saved.receiptNumber,
+                isDuplicate: saved.isDuplicate,
+              })
+              if (saved.isDuplicate) {
+                toast(
+                  `${saved.receiptNumber} saved · looks like a duplicate of ${saved.duplicateOfReceiptNumber ?? 'an existing receipt'}`,
+                  { icon: '⚠️', duration: 6000 },
+                )
+              } else {
+                toast.success(`${saved.receiptNumber} saved · review and apply when ready`, {
+                  duration: 4000,
+                })
+              }
+              // Land on Purchase History so the user sees the new draft
+              // in the feed and can tap into the detail view.
+              setActiveTab('history')
+              setSelectedItem(null)
+              // Auto-open the new draft for review — the user just
+              // captured it, this is the natural next moment.
+              setSelectedReceiptId(saved.receiptId)
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'Receipt OCR failed.'
+              logger.warn('[Inventory] OCR/save failed', { message })
+              toast.error(message)
+            } finally {
+              setPoProcessing(false)
+            }
+          }}
+        />
+
+        {poProcessing && (
+          <div className="fixed inset-0 z-[71] bg-black/85 flex items-center justify-center px-6">
+            <div className="bg-card text-foreground rounded-2xl p-6 max-w-sm w-full text-center shadow-xl">
+              <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+              <p className="text-base font-semibold">Reading receipt…</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Long receipts can take up to 30 seconds. Hang tight.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </AuthGuard>
   )

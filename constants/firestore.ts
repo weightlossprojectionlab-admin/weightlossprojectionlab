@@ -51,6 +51,12 @@ export const COLLECTIONS = {
   /** Shopping items (legacy - consider deprecating in favor of subcollection) */
   SHOPPING_ITEMS: 'shopping_items',
 
+  /** OCR-captured receipts as draft → applied/void records. Each doc is
+   *  one receipt with editable lines, a single-editor lock, and a
+   *  fingerprint for duplicate detection. The user reviews the draft
+   *  before applying it to inventory. */
+  ORDER_RECEIPTS: 'order_receipts',
+
   // ===== Health Vitals (HIPAA-sensitive) =====
 
   /** Blood sugar/glucose measurements */

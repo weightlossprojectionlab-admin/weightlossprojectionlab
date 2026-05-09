@@ -275,7 +275,19 @@ export interface ShoppingItem {
 
   // Inventory-Specific Fields (when inStock=true)
   freezeDate?: Date // Date item was frozen
-  purchasePriceCents?: number // Actual purchase price
+  /**
+   * Latest price paid (any tier). Mirrored for legacy readers (/shopping
+   * /submit-order, sequential shopping flow) that pre-date the
+   * tier-specific fields below. Tier-aware UIs should read the
+   * unit/pack/case fields directly.
+   */
+  purchasePriceCents?: number
+  /** Per-Unit price in integer cents (matches packTier === 'U'). */
+  unitPriceCents?: number
+  /** Per-Pack price in integer cents (matches packTier === 'P'). */
+  packPriceCents?: number
+  /** Per-Case price in integer cents (matches packTier === 'C'). */
+  casePriceCents?: number
   lowStockThreshold?: number // Trigger low-stock alert when quantity drops below this
   photoUrl?: string // Photo of product or expiration date
 
@@ -315,6 +327,116 @@ export interface ShoppingListSummary {
   highPriorityItems: number
   expiringItems: number
   lastUpdated: Date
+}
+
+/**
+ * One line on an OrderReceipt. While the receipt is in `draft` state
+ * the line is editable: the user can change the normalized name,
+ * quantity, prices, route, and matched item. Once applied, the
+ * outcome fields (status/createdItemId/matchedItemName/errorMessage)
+ * are populated and the line becomes the audit record.
+ */
+export interface OrderReceiptLine {
+  /** Stable id within the receipt — generated client-side at OCR time
+   *  so per-line edits + reorderings don't lose track of a specific
+   *  row. (Firestore auto-ids only exist on docs, not array elements.) */
+  lineId: string
+  /** Raw text as printed on the receipt — read-only baseline. */
+  rawName: string
+  /** Gemini's normalized form OR a user-edited cleaner name. */
+  normalizedName?: string
+  quantity?: number
+  unitPriceCents?: number
+  totalPriceCents?: number
+  /** Where this line should land. Set to 'inventory' by default after
+   *  OCR; the user can change to 'list' or 'skip' before applying. */
+  route: 'inventory' | 'list' | 'skip'
+  /** When matched against existing inventory, the ShoppingItem id.
+   *  User can override the auto-matcher's pick. */
+  matchedItemId?: string
+  /** Snapshot of the matched item's name at draft time — surfaces in
+   *  the line list so the user can see "merge into [name]" without an
+   *  extra Firestore read per render. */
+  matchedItemName?: string
+  // ----- populated only after apply -----
+  /** Outcome. Undefined while in draft. */
+  status?: 'success' | 'failed' | 'skipped'
+  /** When a fresh inventory row was created, the new ShoppingItem id. */
+  createdItemId?: string
+  /** User-readable failure reason — surfaces in the detail view inline. */
+  errorMessage?: string
+}
+
+/**
+ * OrderReceipt — the canonical record of one OCR-captured receipt.
+ *
+ * Lifecycle:
+ *   1. User snaps a receipt → /api/ocr/receipt parses it → we save a
+ *      `draft` doc with all parsed lines (route default 'inventory'),
+ *      a generated receiptNumber, and a fingerprint for duplicate
+ *      detection.
+ *   2. User opens the receipt in the detail view → claims a single-
+ *      editor lock (editingBy + editingSince).
+ *   3. User edits lines (qty, price, normalizedName, route, match).
+ *   4. User taps Apply → inventory writes execute, doc transitions
+ *      to `applied`, line outcomes are recorded, lock is released.
+ *      OR user taps Void → status becomes `void`, no inventory writes.
+ *
+ * Why no auto-apply: receipts can be duplicates (someone else in the
+ * household already snapped this one), and inventory writes aren't
+ * trivially reversible. The draft step gives the user a chance to
+ * review and dedupe.
+ */
+export interface OrderReceipt {
+  id: string
+  userId: string
+  householdId?: string
+  /** Human-friendly identifier shown in the UI: e.g. "RC-A4F2C1". */
+  receiptNumber: string
+  /** Lifecycle state — drives feed badges + detail-view affordances. */
+  status: 'draft' | 'applied' | 'void'
+  /** Source merchant from OCR. May be null on poor-quality receipts. */
+  store?: string
+  /** Date as printed on the receipt — string for raw display. */
+  receiptDate?: string
+  /** OCR-reported confidence 0-100. */
+  confidence: number
+  /** Receipt totals as parsed (integer cents). */
+  totalCents?: number
+  subtotalCents?: number
+  taxCents?: number
+  items: OrderReceiptLine[]
+
+  /** Stable hash for duplicate detection — `store + total + line count
+   *  + first 3 normalized names`. Two receipts with the same fingerprint
+   *  are flagged as likely duplicates at save time. */
+  fingerprint?: string
+  /** When this draft was flagged as a likely duplicate of an existing
+   *  receipt, the existing receipt's id. Surfaces in the detail view
+   *  so the user can compare before deciding to apply. */
+  duplicateOfId?: string
+
+  // ----- single-editor lock -----
+  /** uid of the user currently editing this receipt. Stale after
+   *  ~5 minutes of no heartbeat. */
+  editingBy?: string
+  /** Display name (or email) of the editor — UI shows "Editing by X". */
+  editingByName?: string
+  /** Last heartbeat timestamp. Stale-lock recovery uses this to allow
+   *  takeover after 5 minutes of no activity. */
+  editingSince?: Date
+
+  // ----- audit fields, populated on apply -----
+  appliedAt?: Date
+  /** Precomputed counts so the feed can render a one-line summary
+   *  without iterating items[]. */
+  inventoryUpdated?: number
+  inventoryCreated?: number
+  listCreated?: number
+  skipped?: number
+  failed?: number
+
+  createdAt: Date
 }
 
 export interface InventorySummary {

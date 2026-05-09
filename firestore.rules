@@ -1152,6 +1152,31 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
     }
 
+    // Order Receipts — OCR'd receipt drafts that transition through
+    // draft → applied (or void). Owner or household member can
+    // read/create/update/delete. Updates are allowed (unlike the older
+    // immutable-audit design) because the draft state is meant to be
+    // edited: line edits, route changes, lock claims/heartbeats, and
+    // the apply/void status transitions all happen via update.
+    match /order_receipts/{receiptId} {
+      allow read: if isAuthenticated() &&
+                     (resource == null ||
+                      resource.data.userId == request.auth.uid ||
+                      (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)));
+
+      allow create: if isAuthenticated() &&
+                      (request.resource.data.userId == request.auth.uid ||
+                       (request.resource.data.householdId != null && isHouseholdMember(request.resource.data.householdId)));
+
+      allow update: if isAuthenticated() &&
+                      (resource.data.userId == request.auth.uid ||
+                       (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)));
+
+      allow delete: if isAuthenticated() &&
+                      (resource.data.userId == request.auth.uid ||
+                       (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)));
+    }
+
     // ============================================
     // GLOBAL PRODUCT DATABASE
     // ============================================

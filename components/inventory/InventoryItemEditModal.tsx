@@ -237,6 +237,55 @@ export function InventoryItemEditModal({ item, isOpen, onClose, onSave }: Invent
                   ))}
                 </select>
               </div>
+
+              {/* Pricing — three read-only tier slots (Unit / Pack /
+                  Case), each populated by the receipt-OCR apply flow
+                  routing prices into the matching tier (lib/apply
+                  -receipt-prices.ts). Em-dash placeholder when a tier
+                  hasn't been captured yet so the user can see the
+                  full price-tier structure of the item at a glance. */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Pricing
+                </label>
+                <div className="rounded-lg border border-border divide-y divide-border overflow-hidden">
+                  {([
+                    { label: 'Unit Price', value: item.unitPriceCents, tier: 'U' as const },
+                    { label: 'Pack Price', value: item.packPriceCents, tier: 'P' as const },
+                    { label: 'Case Price', value: item.casePriceCents, tier: 'C' as const },
+                  ]).map((row) => {
+                    const has = typeof row.value === 'number' && row.value > 0
+                    const isCurrentTier = (item.packTier ?? 'U') === row.tier
+                    return (
+                      <div
+                        key={row.tier}
+                        className={`flex items-center justify-between px-3 py-2 ${
+                          isCurrentTier ? 'bg-primary/5' : 'bg-card'
+                        }`}
+                      >
+                        <span className="text-sm text-foreground">
+                          {row.label}
+                          {isCurrentTier && (
+                            <span className="ml-2 text-[10px] font-semibold text-primary uppercase tracking-wide">
+                              this tier
+                            </span>
+                          )}
+                        </span>
+                        <span
+                          className={`text-sm font-semibold ${
+                            has ? 'text-foreground' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {has ? `$${((row.value as number) / 100).toFixed(2)}` : '—'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Captured from receipt scans. The highlighted row matches this item&apos;s pack tier.
+                </p>
+              </div>
             </div>
           )}
 

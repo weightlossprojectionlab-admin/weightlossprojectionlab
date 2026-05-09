@@ -4,6 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
+import {
+  isCameraSupported,
+  detectPlatform,
+  isSecureContext,
+  permissionErrorMessage,
+} from '@/lib/camera-helpers'
 
 export interface BarcodeScannerProps {
   onScan: (barcode: string) => void
@@ -46,29 +52,10 @@ const SUPPORTED_BARCODE_FORMATS = [
   Html5QrcodeSupportedFormats.QR_CODE
 ]
 
-/**
- * Check if camera API is supported
- */
-function isCameraSupported(): boolean {
-  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
-}
-
-/**
- * Detect user's platform for better error messages
- */
-function detectPlatform(): 'ios' | 'android' | 'desktop' {
-  const userAgent = navigator.userAgent.toLowerCase()
-  if (/iphone|ipad|ipod/.test(userAgent)) return 'ios'
-  if (/android/.test(userAgent)) return 'android'
-  return 'desktop'
-}
-
-/**
- * Check if we're in a secure context (HTTPS or localhost)
- */
-function isSecureContext(): boolean {
-  return window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost'
-}
+// Camera helpers moved to lib/camera-helpers.ts so the new
+// ReceiptCaptureSurface (and any future camera-using components) can
+// share the same secure-context / capability checks instead of
+// duplicating them per file.
 
 /**
  * Barcode Scanner Component
@@ -142,21 +129,12 @@ export function BarcodeScanner({ onScan, onClose, isOpen, context = 'meal', titl
   }, [isOpen])
 
   /**
-   * Show platform-specific permission error
+   * Show platform-specific permission error. Copy comes from the shared
+   * permissionErrorMessage() helper so receipt capture and any future
+   * camera surface get identical wording.
    */
   const showPermissionError = () => {
-    const platform = detectPlatform()
-    let errorMessage = ''
-
-    if (platform === 'ios') {
-      errorMessage = 'Camera access denied. In iOS Settings, go to Safari > Camera and select "Allow". Then refresh this page.'
-    } else if (platform === 'android') {
-      errorMessage = 'Camera access denied. In Chrome, tap the lock icon in the address bar > Permissions > Camera > Allow.'
-    } else {
-      errorMessage = 'Camera access denied. Click the camera icon in your browser\'s address bar to enable camera access.'
-    }
-
-    setError(errorMessage)
+    setError(permissionErrorMessage())
     toast.error('Camera permission denied', { duration: 5000 })
   }
 
