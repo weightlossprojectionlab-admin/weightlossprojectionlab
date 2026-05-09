@@ -37,8 +37,9 @@ import type { OpenFoodFactsProduct } from '@/lib/openfoodfacts-api'
 import { mergeIngredients } from '@/lib/shopping-diff'
 import type { RecipeIngredient } from '@/lib/shopping-diff'
 import type { Store } from '@/types/shopping'
+import { COLLECTIONS } from '@/constants/firestore'
 
-const SHOPPING_ITEMS_COLLECTION = 'shopping_items'
+const SHOPPING_ITEMS_COLLECTION = COLLECTIONS.SHOPPING_ITEMS
 
 export function useShopping() {
   const [items, setItems] = useState<ShoppingItem[]>([])

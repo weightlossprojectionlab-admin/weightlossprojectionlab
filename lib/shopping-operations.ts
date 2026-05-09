@@ -43,8 +43,9 @@ import type { OpenFoodFactsProduct } from './openfoodfacts-api'
 import { mapUsdaCategory } from './usda-category-map'
 import { FirebaseTimestamp, toDate } from '@/types/common'
 import { generateProductKey, findHouseholdItemByProductKey, addOrUpdateHouseholdItem } from './household-shopping-operations'
+import { COLLECTIONS } from '@/constants/firestore'
 
-const SHOPPING_ITEMS_COLLECTION = 'shopping_items'
+const SHOPPING_ITEMS_COLLECTION = COLLECTIONS.SHOPPING_ITEMS
 const STORE_VISITS_COLLECTION = 'store_visits'
 
 /** All ProductCategory enum values, used to validate admin-curated values. */

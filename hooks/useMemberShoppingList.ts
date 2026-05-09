@@ -40,8 +40,9 @@ import {
   markHouseholdItemPurchased
 } from '@/lib/household-shopping-operations'
 import { convertTimestamps } from '@/lib/shopping-operations'
+import { COLLECTIONS } from '@/constants/firestore'
 
-const SHOPPING_ITEMS_COLLECTION = 'shopping_items'
+const SHOPPING_ITEMS_COLLECTION = COLLECTIONS.SHOPPING_ITEMS
 
 interface UseMemberShoppingListOptions {
   householdId: string
