@@ -477,13 +477,17 @@ export async function assertPatientAccess(
     )
   }
 
-  // Step 3: Subscription gate — when this assertion is gating a
-  // WRITE (signaled by requiredPermission), ensure the household
-  // OWNER's subscription allows writes. Reads pass through silently.
-  // This is the DRY trickle-down point: family members, sub-accounts,
-  // and /admin caregivers all resolve to the same ownerUserId here,
-  // so one check covers every write surface for every role.
-  if (requiredPermission) {
+  // Step 3: Subscription gate — gate writes on the household
+  // owner's subscription, let reads through. Signal is the HTTP
+  // method on the request: GET / HEAD / OPTIONS pass; everything
+  // else (POST / PUT / PATCH / DELETE) goes through the owner-sub
+  // check. Using the verb instead of `requiredPermission` because
+  // `requiredPermission` is a permission KEY (viewMealLogs,
+  // editVitals, addPatients) covering both reads and writes — view
+  // permissions on GET endpoints would 402 a legitimate read.
+  const method = request.method?.toUpperCase()
+  const isWriteMethod = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS'
+  if (isWriteMethod) {
     const denied = await assertOwnerCanWrite(ownerUserId)
     if (denied) return denied
   }
