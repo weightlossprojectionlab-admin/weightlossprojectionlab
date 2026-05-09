@@ -9,8 +9,10 @@
 
 import { Dialog } from '@headlessui/react'
 import { XMarkIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 import DailyVitalsSummary from '@/components/vitals/DailyVitalsSummary'
 import { VitalSign } from '@/types/medical'
+import { useLockedAction } from '@/hooks/useLockedAction'
 
 interface VitalsQuickViewModalProps {
   isOpen: boolean
@@ -31,6 +33,7 @@ export default function VitalsQuickViewModal({
   onOpenWizard,
   loading = false
 }: VitalsQuickViewModalProps) {
+  const logVitalsLock = useLockedAction()
   // Filter vitals from today
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -42,6 +45,10 @@ export default function VitalsQuickViewModal({
   })
 
   const handleLogVitals = () => {
+    if (logVitalsLock.isLocked) {
+      logVitalsLock.onLockedClick()
+      return
+    }
     onClose() // Close this modal
     onOpenWizard() // Open the wizard
   }
@@ -95,8 +102,17 @@ export default function VitalsQuickViewModal({
                   onClick={handleLogVitals}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
                 >
-                  <ClipboardDocumentListIcon className="w-5 h-5" />
-                  Log Vitals
+                  {logVitalsLock.isLocked ? (
+                    <>
+                      <LockClosedIcon className="w-5 h-5" />
+                      Reactivate to log
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardDocumentListIcon className="w-5 h-5" />
+                      Log Vitals
+                    </>
+                  )}
                 </button>
               </div>
             )}
@@ -110,10 +126,23 @@ export default function VitalsQuickViewModal({
               </p>
               <button
                 onClick={handleLogVitals}
-                className="flex items-center gap-2 px-4 py-2 bg-success text-white rounded-lg hover:bg-success-dark transition-colors font-medium"
+                className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-colors font-medium ${
+                  logVitalsLock.isLocked
+                    ? 'bg-primary hover:bg-primary-hover'
+                    : 'bg-success hover:bg-success-dark'
+                }`}
               >
-                <ClipboardDocumentListIcon className="w-5 h-5" />
-                Log Vitals
+                {logVitalsLock.isLocked ? (
+                  <>
+                    <LockClosedIcon className="w-5 h-5" />
+                    Reactivate to log
+                  </>
+                ) : (
+                  <>
+                    <ClipboardDocumentListIcon className="w-5 h-5" />
+                    Log Vitals
+                  </>
+                )}
               </button>
             </div>
           )}

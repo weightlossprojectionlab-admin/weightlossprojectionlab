@@ -12,6 +12,7 @@ import { z } from 'zod'
 import { getAuth } from 'firebase/auth'
 import { ErrorHandler } from './utils/error-handler'
 import { getCSRFToken } from './csrf'
+import { requireWriteAccess } from './access-guards'
 
 // ============================================
 // TYPES
@@ -146,6 +147,18 @@ class ApiClient {
     const mergedOptions = { ...this.defaultOptions, ...clientOptions }
     const url = `${this.baseUrl}${endpoint}`
     const method = options.method || 'GET'
+
+    // Subscription gate — single DRY choke point. Every write across
+    // every operations file flows through here, so one insertion
+    // covers vitals/meds/appointments/meals/shopping/inventory/etc.
+    // GETs pass through (read-only mode allows reads). When the
+    // subscription is read-only, requireWriteAccess fires the toast
+    // + /pricing redirect AND throws WriteLockedError so the caller
+    // can short-circuit if it wants.
+    if (method.toUpperCase() !== 'GET') {
+      await requireWriteAccess()
+    }
+
     const headers = await this.buildHeaders(options.headers, method)
 
     try {

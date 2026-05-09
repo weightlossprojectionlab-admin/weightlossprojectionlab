@@ -41,6 +41,7 @@
  * will move enforcement into firestore.rules.
  */
 
+import toast from 'react-hot-toast'
 import { getCachedSubscription } from './feature-gates'
 import { canWrite } from './feature-access'
 
@@ -58,24 +59,46 @@ export class WriteLockedError extends Error {
 }
 
 /**
+ * Side-effect helper: show the read-only toast and route the user
+ * to /pricing. Centralized so every write surface — UI gate, ops
+ * guard, error boundary — produces the same UX.
+ *
+ * Safe to call from server contexts (no-ops if window is undefined).
+ */
+export function handleWriteLocked(): void {
+  if (typeof window === 'undefined') return
+  toast(
+    'Your subscription is read-only. Reactivate to keep building your data.',
+    { icon: '🔒', duration: 4000 },
+  )
+  // Hard navigation rather than next/router.push — this helper is
+  // invoked from lib/ layers that can't call hooks. The pricing page
+  // is intentionally outside the protected app shell, so a full
+  // navigation is fine.
+  window.location.href = '/pricing'
+}
+
+/**
  * Throws WriteLockedError when the current user's subscription is
- * read-only (terminated). Returns silently otherwise (active,
- * trialing, free, unknown all pass).
+ * read-only (terminated). Reads from the cached subscription state
+ * populated by the useSubscription hook. If the cache is empty
+ * (first render, signed-out code path), allows the write silently —
+ * the auth layer will reject unauthenticated Firestore calls and we
+ * don't want a transient load race to block legit writes from a
+ * signed-in active user.
  *
- * Reads from the cached subscription state populated by the
- * useSubscription hook. If the cache is empty (first render before
- * subscription loads, or signed-out code path), allows the write
- * silently — the auth layer will reject unauthenticated Firestore
- * calls and we don't want a transient subscription-load race to
- * block legit writes from a signed-in active user.
- *
- * For call sites that already have the subscription in scope (e.g.,
- * a component that called useSubscription), prefer
- * requireWriteAccessSync(subscription) — no cache lookup needed.
+ * Side effect: when locked, also fires handleWriteLocked() so the
+ * user gets the toast + redirect even if the throwing call site
+ * swallows the error in its catch block. This makes the guard
+ * platform-wide enforcement: any write op that calls this gets the
+ * full UX without per-button wiring.
  */
 export async function requireWriteAccess(): Promise<void> {
   const cached = getCachedSubscription()
-  if (cached && !canWrite(cached)) throw new WriteLockedError()
+  if (cached && !canWrite(cached)) {
+    handleWriteLocked()
+    throw new WriteLockedError()
+  }
 }
 
 /**
@@ -86,5 +109,8 @@ export async function requireWriteAccess(): Promise<void> {
 export function requireWriteAccessSync(
   subscription: { status?: string | null; plan?: string | null } | null | undefined,
 ): void {
-  if (!canWrite(subscription)) throw new WriteLockedError()
+  if (!canWrite(subscription)) {
+    handleWriteLocked()
+    throw new WriteLockedError()
+  }
 }
