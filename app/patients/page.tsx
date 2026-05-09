@@ -111,13 +111,22 @@ function PatientsContent() {
                 Paused — {addButtonText}
               </button>
             ) : (
-              <Link
-                href="/patients/new"
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-              >
-                <PlusIcon className="w-5 h-5" />
-                {addButtonText}
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/onboarding/import"
+                  className="hidden sm:inline-flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors font-medium text-foreground"
+                  title="Import family members from a spreadsheet"
+                >
+                  Import
+                </Link>
+                <Link
+                  href="/patients/new"
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+                >
+                  <PlusIcon className="w-5 h-5" />
+                  {addButtonText}
+                </Link>
+              </div>
             )
           ) : (
             <button
