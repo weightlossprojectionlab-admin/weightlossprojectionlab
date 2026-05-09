@@ -2111,12 +2111,17 @@ function LogMealContent() {
                   </label>
                 )}
                 <button
-                  onClick={() => setShowBarcodeScanner(true)}
-                  className="btn btn-secondary w-full"
-                  disabled={loadingBarcode}
-                  aria-label="Scan barcode"
+                  onClick={logMealLock.isLocked ? logMealLock.onLockedClick : () => setShowBarcodeScanner(true)}
+                  className="btn btn-secondary w-full inline-flex items-center justify-center gap-2"
+                  disabled={loadingBarcode && !logMealLock.isLocked}
+                  aria-label={logMealLock.isLocked ? 'Reactivate to scan barcode' : 'Scan barcode'}
                 >
-                  {loadingBarcode ? (
+                  {logMealLock.isLocked ? (
+                    <>
+                      <LockClosedIcon className="w-4 h-4" />
+                      Reactivate to scan barcode
+                    </>
+                  ) : loadingBarcode ? (
                     <span className="flex items-center justify-center gap-2">
                       <Spinner size="sm" />
                       Looking up product...
@@ -2126,18 +2131,32 @@ function LogMealContent() {
                   )}
                 </button>
                 <button
-                  onClick={() => setShowTemplates(!showTemplates)}
-                  className="btn btn-secondary w-full"
-                  aria-label="Use saved meal template"
+                  onClick={logMealLock.isLocked ? logMealLock.onLockedClick : () => setShowTemplates(!showTemplates)}
+                  className="btn btn-secondary w-full inline-flex items-center justify-center gap-2"
+                  aria-label={logMealLock.isLocked ? 'Reactivate to use template' : 'Use saved meal template'}
                 >
-                  ⭐ Use Saved Template
+                  {logMealLock.isLocked ? (
+                    <>
+                      <LockClosedIcon className="w-4 h-4" />
+                      Reactivate to use template
+                    </>
+                  ) : (
+                    <>⭐ Use Saved Template</>
+                  )}
                 </button>
                 <button
-                  onClick={() => setShowManualEntry(true)}
-                  className="btn btn-secondary w-full"
-                  aria-label="Enter meal details manually"
+                  onClick={logMealLock.isLocked ? logMealLock.onLockedClick : () => setShowManualEntry(true)}
+                  className="btn btn-secondary w-full inline-flex items-center justify-center gap-2"
+                  aria-label={logMealLock.isLocked ? 'Reactivate to log meal' : 'Enter meal details manually'}
                 >
-                  ✏️ Enter Manually
+                  {logMealLock.isLocked ? (
+                    <>
+                      <LockClosedIcon className="w-4 h-4" />
+                      Reactivate to log meal
+                    </>
+                  ) : (
+                    <>✏️ Enter Manually</>
+                  )}
                 </button>
               </div>
             )}
