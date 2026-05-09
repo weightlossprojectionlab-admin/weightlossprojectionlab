@@ -492,3 +492,48 @@
     animation: shimmer 2s infinite linear;
   }
 }
+
+/*
+ * Subscription paused — global visual treatment for write buttons.
+ *
+ * <html> gets the .subscription-paused class from WriteGate when
+ * the household subscription is read-only. Every element marked
+ * with `data-write="true"` then renders with a paused look:
+ *   - reduced opacity so the user reads it as "not active right now"
+ *   - not-allowed cursor so the affordance matches
+ *   - lock-icon badge in the top-right corner so the why is visible
+ *
+ * This is the DRY visual layer. Authors mark a write button with
+ * `data-write="true"` once. The CSS does the painting. WriteGate
+ * intercepts the click. No per-button conditional rendering, no
+ * locked-variant JSX to forget on the next new write surface.
+ *
+ * Buttons that should stay visually-active (Cancel, Close, Back,
+ * navigation, plan selectors, etc.) leave the attribute off and
+ * render normally.
+ */
+.subscription-paused [data-write="true"] {
+  position: relative;
+  opacity: 0.55;
+  cursor: not-allowed !important;
+  filter: grayscale(0.3);
+}
+
+.subscription-paused [data-write="true"]:hover,
+.subscription-paused [data-write="true"]:active {
+  /* No hover bump under paused state — feedback would suggest the
+     button is doing something it isn't. */
+  opacity: 0.55;
+  transform: none;
+}
+
+.subscription-paused [data-write="true"]::after {
+  content: "🔒";
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.75rem;
+  line-height: 1;
+  opacity: 0.85;
+  pointer-events: none;
+}

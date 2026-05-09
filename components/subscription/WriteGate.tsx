@@ -52,6 +52,15 @@ export function WriteGate() {
   const locked = isSubscriptionTerminated(subscription)
 
   useEffect(() => {
+    if (typeof document === 'undefined') return
+
+    // Toggle a class on <html> so the global CSS can paint every
+    // [data-write="true"] element with the paused style — opacity,
+    // not-allowed cursor, lock-icon badge — without each component
+    // having to render its own locked-state JSX. Authors mark a
+    // button as a write with one attribute; the visual is free.
+    document.documentElement.classList.toggle('subscription-paused', locked)
+
     if (!locked) return
 
     const onClick = (event: MouseEvent) => {
@@ -77,6 +86,7 @@ export function WriteGate() {
     return () => {
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('submit', onSubmit, true)
+      document.documentElement.classList.remove('subscription-paused')
     }
   }, [locked])
 

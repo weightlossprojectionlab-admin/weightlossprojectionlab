@@ -748,6 +748,7 @@ function PatientDetailContent() {
                   {/* Vitals Wizard */}
                   {visibleTabs.includes('vitals') && (
                     <button
+                      data-write="true"
                       onClick={() => {
                         setShowVitalsWizard(true)
                       }}
@@ -761,6 +762,7 @@ function PatientDetailContent() {
                   {/* Appointments Wizard */}
                   {visibleTabs.includes('appointments') && (
                     <button
+                      data-write="true"
                       onClick={() => {
                         setShowAppointmentWizard(true)
                       }}
@@ -1434,6 +1436,7 @@ function PatientDetailContent() {
                         Use the "Vitals" quick action to record vital signs with our guided wizard.
                       </p>
                       <button
+                        data-write="true"
                         onClick={() => setShowVitalsWizard(true)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                       >
@@ -1677,6 +1680,7 @@ function PatientDetailContent() {
                     Schedule New Appointment
                   </h2>
                   <button
+                    data-write="true"
                     onClick={() => setShowAppointmentWizard(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                   >
@@ -2010,6 +2014,7 @@ function PatientDetailContent() {
                       {/* Invite Button */}
                       {canManageFamily && (
                         <button
+                          data-write="true"
                           onClick={() => setShowInviteModal(true)}
                           className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium"
                         >
@@ -2107,6 +2112,7 @@ function PatientDetailContent() {
                       Archiving will hide this patient from your family members list. All health data will be preserved for 30 days before permanent deletion. This action requires confirmation.
                     </p>
                     <button
+                      data-write="true"
                       onClick={() => setShowArchiveModal(true)}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
                     >
@@ -2136,6 +2142,7 @@ function PatientDetailContent() {
                   <div className="text-center py-4">
                     <p className="text-sm text-muted-foreground mb-2">Track breastfeeding and formula feeds</p>
                     <button
+                      data-write="true"
                       onClick={() => {
                         setAutoOpenFeedingModal(true)
                         setActiveTab('feeding')
@@ -2386,6 +2393,7 @@ function PatientDetailContent() {
                   <p className="text-sm text-muted-foreground mb-2">No documents yet</p>
                   {canUploadDocuments && (
                     <button
+                      data-write="true"
                       onClick={() => setShowDocumentUpload(true)}
                       className="inline-flex items-center justify-center gap-1.5 w-full px-4 py-3 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors"
                     >
