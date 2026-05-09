@@ -222,6 +222,24 @@ function UploadStep({ onFile, busy }: { onFile: (f: File) => void; busy: boolean
             }}
           />
         </label>
+
+        <div className="mt-6 pt-6 border-t border-border">
+          <p className="text-sm text-muted-foreground mb-3">
+            Don't have a spreadsheet ready?
+          </p>
+          <a
+            href="/templates/family-members-template.csv"
+            download="family-members-template.csv"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors font-medium text-foreground"
+          >
+            Download template (.csv)
+          </a>
+          <p className="text-xs text-muted-foreground mt-3">
+            The template lists every supported column with example rows for
+            humans and pets. Fill in your data, then upload it here.
+          </p>
+        </div>
+
         <p className="text-xs text-muted-foreground mt-6">
           Required columns: name, type (human or pet), date of birth, relationship.
           <br />

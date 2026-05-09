@@ -1,0 +1,7 @@
+Name,Type,Date of Birth,Relationship,Gender,Species,Breed,Nickname,Health Conditions,Food Allergies,Current Weight,Weight Unit,Target Weight,Height,Height Unit,Weight Check-In Frequency
+Jane Doe,human,1985-04-12,self,female,,,Janie,"hypertension, prediabetes","peanuts, shellfish",165,lbs,150,65,imperial,weekly
+Mike Doe,human,1982-09-30,spouse,male,,,Mike,,gluten,200,lbs,180,71,imperial,weekly
+Emma Doe,human,2014-06-18,child,female,,,Em,"asthma","tree nuts","85",lbs,,52,imperial,monthly
+Grandma Sue,human,1948-11-04,grandparent,female,,,Sue,"diabetes type 2, arthritis",dairy,142,lbs,135,62,imperial,daily
+Buddy,pet,2020-03-22,pet,,dog,golden retriever,,hip dysplasia,chicken,72,lbs,68,,,monthly
+Whiskers,pet,2019-08-15,pet,,cat,maine coon,,,,12,lbs,,,,monthly
