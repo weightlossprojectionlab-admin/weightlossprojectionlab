@@ -12,6 +12,8 @@ import { useProviders } from '@/hooks/useProviders'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { ProviderCard } from '@/components/providers/ProviderCard'
 import AuthGuard from '@/components/auth/AuthGuard'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 import type { Provider } from '@/types/medical'
 
 export default function ProvidersPage() {
@@ -26,8 +28,17 @@ function ProvidersContent() {
   const router = useRouter()
   const { providers, loading, deleteProvider } = useProviders()
   const [filterType, setFilterType] = useState<string>('all')
+  // Feature-access gate — read-only subscribers can browse the
+  // provider list but cannot add or remove. Edit lives on a
+  // separate page that owns its own gate.
+  const addProviderLock = useLockedAction()
+  const removeProviderLock = useLockedAction()
 
   const handleDelete = async (provider: Provider) => {
+    if (removeProviderLock.isLocked) {
+      removeProviderLock.onLockedClick()
+      return
+    }
     if (confirm(`Delete ${provider.name}? This action cannot be undone.`)) {
       await deleteProvider(provider.id)
     }
@@ -46,10 +57,17 @@ function ProvidersContent() {
         subtitle="Manage doctors, specialists, pharmacies, and more"
         actions={
           <button
-            onClick={() => router.push('/providers/new')}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+            onClick={addProviderLock.isLocked ? addProviderLock.onLockedClick : () => router.push('/providers/new')}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors inline-flex items-center gap-2"
           >
-            + Add Provider
+            {addProviderLock.isLocked ? (
+              <>
+                <LockClosedIcon className="w-4 h-4" />
+                Paused — Add Provider
+              </>
+            ) : (
+              '+ Add Provider'
+            )}
           </button>
         }
       />
@@ -97,10 +115,17 @@ function ProvidersContent() {
                 : `No ${filterType.replace('_', ' ')} providers found`}
             </p>
             <button
-              onClick={() => router.push('/providers/new')}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+              onClick={addProviderLock.isLocked ? addProviderLock.onLockedClick : () => router.push('/providers/new')}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors inline-flex items-center gap-2"
             >
-              Add Your First Provider
+              {addProviderLock.isLocked ? (
+                <>
+                  <LockClosedIcon className="w-4 h-4" />
+                  Paused — Add Provider
+                </>
+              ) : (
+                'Add Your First Provider'
+              )}
             </button>
           </div>
         ) : (

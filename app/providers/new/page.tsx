@@ -15,8 +15,10 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import type { ProviderType } from '@/types/medical'
 import type { ExtractedProviderInfo } from '@/lib/ocr-provider'
 import { CameraIcon } from '@heroicons/react/24/outline'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 import toast from 'react-hot-toast'
 import { PhoneInput } from '@/components/form/PhoneInput'
+import { useLockedAction } from '@/hooks/useLockedAction'
 
 const ProviderScanner = dynamic(() => import('@/components/providers/ProviderScanner').then(mod => ({ default: mod.ProviderScanner })), {
   loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>,
@@ -36,6 +38,10 @@ function NewProviderContent() {
   const { createProvider } = useProviders({ autoFetch: false })
   const [loading, setLoading] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+  // Feature-access gate — read-only subscribers can browse the
+  // provider form (legitimate read), but Scan Document and the
+  // submit button are write entry points and need the paused state.
+  const addProviderLock = useLockedAction()
 
   const [formData, setFormData] = useState({
     type: 'physician' as ProviderType,
@@ -76,6 +82,10 @@ function NewProviderContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (addProviderLock.isLocked) {
+      addProviderLock.onLockedClick()
+      return
+    }
     setLoading(true)
 
     try {
@@ -105,14 +115,27 @@ function NewProviderContent() {
           <div className="mb-6 pb-6 border-b border-border">
             <button
               type="button"
-              onClick={() => setShowScanner(true)}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-colors font-medium"
+              onClick={addProviderLock.isLocked ? addProviderLock.onLockedClick : () => setShowScanner(true)}
+              className={`w-full flex items-center justify-center gap-3 px-6 py-4 text-white rounded-lg transition-colors font-medium ${
+                addProviderLock.isLocked
+                  ? 'bg-primary hover:bg-primary-hover'
+                  : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
+              }`}
             >
-              <CameraIcon className="w-6 h-6" />
-              <div className="text-left">
-                <div className="font-semibold">Scan Provider Document</div>
-                <div className="text-sm text-blue-100">Auto-fill from business card or appointment card</div>
-              </div>
+              {addProviderLock.isLocked ? (
+                <>
+                  <LockClosedIcon className="w-6 h-6" />
+                  <span className="font-semibold">Paused — Scan Provider Document</span>
+                </>
+              ) : (
+                <>
+                  <CameraIcon className="w-6 h-6" />
+                  <div className="text-left">
+                    <div className="font-semibold">Scan Provider Document</div>
+                    <div className="text-sm text-blue-100">Auto-fill from business card or appointment card</div>
+                  </div>
+                </>
+              )}
             </button>
           </div>
 
@@ -303,10 +326,15 @@ function NewProviderContent() {
             <div className="flex items-center gap-3 pt-4">
               <button
                 type="submit"
-                disabled={loading}
-                className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                disabled={loading && !addProviderLock.isLocked}
+                className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium inline-flex items-center justify-center gap-2"
               >
-                {loading ? 'Adding...' : 'Add Provider'}
+                {addProviderLock.isLocked && <LockClosedIcon className="w-4 h-4" />}
+                {addProviderLock.isLocked
+                  ? 'Paused — Add Provider'
+                  : loading
+                    ? 'Adding...'
+                    : 'Add Provider'}
               </button>
               <button
                 type="button"

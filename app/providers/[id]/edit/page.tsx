@@ -14,6 +14,8 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import toast from 'react-hot-toast'
 import { PROVIDER_SPECIALTIES, PROVIDER_TITLES } from '@/types/providers'
 import { PhoneInput } from '@/components/form/PhoneInput'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 
 export default function ProviderEditPage() {
   return (
@@ -30,6 +32,9 @@ function ProviderEditContent() {
   const { providers, loading: providersLoading, updateProvider } = useProviders()
 
   const provider = providers.find(p => p.id === providerId)
+  // Feature-access gate — read-only subscribers can view the
+  // provider record but can't save edits.
+  const editProviderLock = useLockedAction()
 
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -70,6 +75,10 @@ function ProviderEditContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (editProviderLock.isLocked) {
+      editProviderLock.onLockedClick()
+      return
+    }
 
     if (!formData.name.trim()) {
       toast.error('Provider name is required')
@@ -338,10 +347,15 @@ function ProviderEditContent() {
           <div className="flex gap-3 pt-4 border-t border-border">
             <button
               type="submit"
-              disabled={loading}
-              className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading && !editProviderLock.isLocked}
+              className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {editProviderLock.isLocked && <LockClosedIcon className="w-4 h-4" />}
+              {editProviderLock.isLocked
+                ? 'Paused — Save Changes'
+                : loading
+                  ? 'Saving...'
+                  : 'Save Changes'}
             </button>
             <button
               type="button"
