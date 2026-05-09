@@ -1,0 +1,9 @@
+Patient,Date,Weight,Unit,Body Fat %,Notes,Tags
+Jane Doe,2025-12-01,168,lbs,28,Pre-holiday baseline,morning
+Jane Doe,2025-12-15,170,lbs,,Stress eating,morning
+Jane Doe,2026-01-05,167,lbs,27,Back to routine,morning
+Mike Doe,2025-12-01,205,lbs,22,,evening
+Mike Doe,2026-01-15,200,lbs,21,Cut started,morning;before-meal
+Emma Doe,2026-01-10,86,lbs,,Pediatrician visit,
+Buddy,2025-11-15,73,lbs,,Vet checkup baseline,
+Buddy,2026-02-01,71,lbs,,2 lbs down on new food,
