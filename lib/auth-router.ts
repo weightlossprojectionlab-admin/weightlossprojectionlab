@@ -151,61 +151,32 @@ export async function determineUserDestination(
       }
     }
 
-    // Step 4: Subscription gate (limited-access mode).
+    // Step 4: Subscription state — informational only, no special
+    // routing.
     //
     // Semantic intent: a user with an expired/canceled subscription
-    // keeps READ access to all their accumulated data — that's the
-    // moat (per-household ML personalization is trained on it).
-    // What they lose is the WRITE surface: adding new entries,
-    // editing, AI calls. The action-level gate lives in
-    // lib/feature-access.ts. The persistent FOMO banner
-    // (SubscriptionExpiredBanner, mounted in AuthGuard) does the
-    // in-context conversion work.
+    // keeps READ access to all their accumulated data and is allowed
+    // INTO the app on every surface, including the entry points
+    // (/auth, /onboarding). The platform-wide write-lock layers
+    // handle the rest:
+    //   - SubscriptionExpiredBanner (mounted in AuthGuard) makes the
+    //     terminated state continuously visible at the top of every
+    //     page, with copy that branches for owners vs family members.
+    //   - useLockedAction + handleWriteLocked (lib/access-guards.ts)
+    //     gate every write button: owners get a /pricing redirect,
+    //     family members get an informational toast and stay put.
+    //   - api-client + assertPatientAccess + assertOwnerCanWrite gate
+    //     every mutation server-side.
     //
-    // Routing implication: terminated users are NOT redirected away
-    // from protected pages. They're allowed in the app, see their
-    // data, and the banner + locked actions drive reactivation.
-    //
-    // The only routes that DO redirect terminated users:
-    //   - /auth and /onboarding — entry points where a terminated
-    //     session doesn't logically belong. Send them to /pricing
-    //     once so they see the reactivation surface.
-    //
-    // Super admins are exempt to avoid lock-out during testing.
-    const superAdminEmails = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || '')
-      .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-    const isSuperAdmin = user.email && superAdminEmails.includes(user.email.toLowerCase())
-
-    const subscription = profile.subscription
-    const subBlocked = !isSuperAdmin
-      && subscription
-      && (subscription.status === 'expired' || subscription.status === 'canceled')
-
-    if (subBlocked) {
-      // Only entry-point pages redirect; everywhere else, stay put
-      // and let the banner + feature-access gates do the work.
-      const isEntryPoint = currentPath === '/auth' || currentPath === '/onboarding'
-      logger.info('[AuthRouter] Limited-access mode (subscription terminated)', {
-        userId: user.uid,
-        status: subscription.status,
-        currentPath,
-        isEntryPoint,
-      })
-
-      if (isEntryPoint) {
-        return {
-          type: 'subscription_expired',
-          reason: 'Subscription terminated — redirect from auth/onboarding entry point',
-        }
-      }
-      // Stay on the current protected page in read-only mode.
-      // The action-level gates and the persistent banner make the
-      // terminated state visible without yanking the user away.
-      return {
-        type: 'stay',
-        reason: 'Subscription terminated — read-only mode, banner visible',
-      }
-    }
+    // Earlier versions of this file kicked terminated users to
+    // /pricing from /auth and /onboarding. That was over-eager once
+    // the banner + per-button gates landed: it forced owners through
+    // a friction surface they could navigate to themselves at any
+    // time, and outright misrouted family members (who can't act on
+    // /pricing because only the owner can reactivate). Removing the
+    // entry-point redirect lets every user — owner or family member,
+    // active or terminated — sign in and land on their normal home
+    // page with the banner doing the conversion work in-context.
 
     // Step 5: Check onboarding completion status
     const isOnboardingCompleted = profile.profile?.onboardingCompleted === true
