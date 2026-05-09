@@ -21,31 +21,37 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuthToken } from '@/lib/rbac-middleware'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/logger'
-import { errorResponse, unauthorizedResponse, validationError } from '@/lib/api-response'
+import { errorResponse, validationError } from '@/lib/api-response'
 import { suggestMapping } from '@/lib/import/patient-import-config'
 import { parseCsvText, MAX_PREVIEW_ROWS, MAX_IMPORT_ROWS } from '@/lib/import/csv-parser'
+import { assertImportAccess } from '@/lib/import/assert-import-access'
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    const authResult = await verifyAuthToken(authHeader)
-    if (!authResult) return unauthorizedResponse()
-    const userId = authResult.userId
+    const body = await request.json()
+    const csv: unknown = body?.csv
+    const targetOwnerUserId: string | undefined =
+      typeof body?.targetOwnerUserId === 'string' ? body.targetOwnerUserId : undefined
 
-    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    // Authorization + permission check + read-only gate, all in
+    // one helper so the same rule applies on /preview and /commit.
+    // Preview is read-only on Firestore but it costs CPU and is
+    // gated behind the same authority because there's no point
+    // surfacing a column-mapper to a user who can't commit.
+    const access = await assertImportAccess(request, targetOwnerUserId)
+    if (access instanceof Response) return access
+    const { callerUserId } = access
+
+    const rateLimitResult = await medicalApiRateLimit.limit(callerUserId)
     if (!rateLimitResult.success) {
-      logger.warn('[API /import/patients/preview] Rate limit exceeded', { userId })
+      logger.warn('[API /import/patients/preview] Rate limit exceeded', { callerUserId })
       return NextResponse.json(
         createRateLimitResponse(rateLimitResult),
         { status: 429, headers: getRateLimitHeaders(rateLimitResult) },
       )
     }
-
-    const body = await request.json()
-    const csv: unknown = body?.csv
     if (typeof csv !== 'string' || csv.length === 0) {
       return validationError('CSV content is required')
     }

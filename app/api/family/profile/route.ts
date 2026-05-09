@@ -42,7 +42,8 @@ function createDefaultProfile(userId: string, email: string, name?: string): Omi
       inviteOthers: false,
       viewSensitiveInfo: false,
       editPatientProfile: false,
-      deletePatient: false
+      deletePatient: false,
+      importPatients: false
     },
     availabilityStatus: 'offline' as AvailabilityStatus,
     weeklySchedule: DEFAULT_WEEKLY_AVAILABILITY,

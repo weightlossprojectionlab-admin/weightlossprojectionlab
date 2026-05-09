@@ -19,6 +19,7 @@ import { useLockedAction } from '@/hooks/useLockedAction'
 import { LockClosedIcon } from '@heroicons/react/24/solid'
 import { PlanBadge } from '@/components/subscription/PlanBadge'
 import { useUserProfile } from '@/hooks/useUserProfile'
+import { useCanImport } from '@/hooks/useCanImport'
 import {
   transformWizardDataToVitals,
   hasAnyVitalMeasurement
@@ -53,6 +54,11 @@ function PatientsContent() {
   // Feature-access gate — terminated subscribers can't add new
   // patients (existing ones stay viewable; this only blocks creation).
   const addPatientLock = useLockedAction()
+  // Permission gate for the Import button — account holders +
+  // co-admins + caregivers granted importPatients see it; everyone
+  // else doesn't. Mirrors lib/import/assert-import-access.ts which
+  // is the server-side authority.
+  const { canImport } = useCanImport()
   const [filter, setFilter] = useState<'all' | 'human' | 'pet'>('all')
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [selectedPatientForVitalsView, setSelectedPatientForVitalsView] = useState<any>(null)
@@ -112,13 +118,15 @@ function PatientsContent() {
               </button>
             ) : (
               <div className="flex items-center gap-2">
-                <Link
-                  href="/onboarding/import"
-                  className="hidden sm:inline-flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors font-medium text-foreground"
-                  title="Import family members from a spreadsheet"
-                >
-                  Import
-                </Link>
+                {canImport && (
+                  <Link
+                    href="/onboarding/import"
+                    className="hidden sm:inline-flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors font-medium text-foreground"
+                    title="Import family members from a spreadsheet"
+                  >
+                    Import
+                  </Link>
+                )}
                 <Link
                   href="/patients/new"
                   className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"

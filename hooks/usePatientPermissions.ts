@@ -46,7 +46,8 @@ const DEFAULT_PERMISSIONS: FamilyMemberPermissions = {
   inviteOthers: false,
   viewSensitiveInfo: false,
   editPatientProfile: false,
-  deletePatient: false
+  deletePatient: false,
+  importPatients: false
 }
 
 export function usePatientPermissions(patientId: string | undefined): PatientPermissionsResult {

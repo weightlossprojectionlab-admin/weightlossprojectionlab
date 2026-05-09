@@ -668,6 +668,16 @@ export interface FamilyMemberPermissions {
   viewSensitiveInfo: boolean // SSN, full insurance Member ID
   editPatientProfile: boolean
   deletePatient: boolean
+  /**
+   * Run the spreadsheet-import wizard against this household.
+   * Account owner + co-admins have it implicitly via FULL_ACCESS.
+   * Caregivers default to false; the owner can grant it in the
+   * caregiver-permissions UI when they want a trusted member to
+   * help with bulk onboarding (e.g., a nanny adding all the
+   * children's profiles, a practitioner's assistant migrating a
+   * client family from another system).
+   */
+  importPatients: boolean
 }
 
 export interface FamilyMemberNotificationPreferences {

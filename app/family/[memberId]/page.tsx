@@ -97,7 +97,8 @@ function ProfileContent() {
             inviteOthers: true,
             viewSensitiveInfo: false,
             editPatientProfile: false,
-            deletePatient: false
+            deletePatient: false,
+            importPatients: false
           },
           availabilityStatus: 'available',
           weeklySchedule: {

@@ -29,12 +29,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
-import { verifyAuthToken } from '@/lib/rbac-middleware'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/logger'
-import { errorResponse, unauthorizedResponse, validationError } from '@/lib/api-response'
+import { errorResponse, validationError } from '@/lib/api-response'
 import { transformRow, validateRow, type ColumnMapping } from '@/lib/import/patient-import-config'
 import { parseCsvText, MAX_IMPORT_ROWS } from '@/lib/import/csv-parser'
+import { assertImportAccess } from '@/lib/import/assert-import-access'
 import { v4 as uuidv4 } from 'uuid'
 import type { PatientProfile } from '@/types/medical'
 
@@ -50,23 +50,29 @@ interface RowSkip {
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    const authResult = await verifyAuthToken(authHeader)
-    if (!authResult) return unauthorizedResponse()
-    const userId = authResult.userId
+    const body = await request.json()
+    const csv: unknown = body?.csv
+    const mapping: unknown = body?.mapping
+    const targetOwnerUserId: string | undefined =
+      typeof body?.targetOwnerUserId === 'string' ? body.targetOwnerUserId : undefined
 
-    const rateLimitResult = await medicalApiRateLimit.limit(userId)
+    // Auth + permission + read-only gate. assertImportAccess
+    // resolves which household the import writes into (the
+    // caller's own, or another household where the caller has
+    // been granted the importPatients permission).
+    const access = await assertImportAccess(request, targetOwnerUserId)
+    if (access instanceof Response) return access
+    const { callerUserId, ownerUserId, via } = access
+
+    const rateLimitResult = await medicalApiRateLimit.limit(callerUserId)
     if (!rateLimitResult.success) {
-      logger.warn('[API /import/patients/commit] Rate limit exceeded', { userId })
+      logger.warn('[API /import/patients/commit] Rate limit exceeded', { callerUserId })
       return NextResponse.json(
         createRateLimitResponse(rateLimitResult),
         { status: 429, headers: getRateLimitHeaders(rateLimitResult) },
       )
     }
 
-    const body = await request.json()
-    const csv: unknown = body?.csv
-    const mapping: unknown = body?.mapping
     if (typeof csv !== 'string' || csv.length === 0) {
       return validationError('CSV content is required')
     }
@@ -92,13 +98,17 @@ export async function POST(request: NextRequest) {
     const skipped: RowSkip[] = []
     let imported = 0
 
-    // Reuse the user's own /users/{uid}/patients subcollection —
-    // same path createPatient via the API would write to. Going
-    // through adminDb directly skips the API round-trip and lets
-    // us batch a series of writes inside one request.
+    // Write into the household owner's /users/{ownerUserId}/patients
+    // subcollection — same path createPatient via the API would
+    // write to. Going through adminDb directly skips the API
+    // round-trip and lets us batch a series of writes inside one
+    // request. ownerUserId may equal callerUserId (account holder
+    // importing into own household) or differ (caregiver with
+    // importPatients permission importing into the owner's
+    // household).
     const patientsCollection = adminDb
       .collection('users')
-      .doc(userId)
+      .doc(ownerUserId)
       .collection('patients')
 
     for (let i = 0; i < parsed.rows.length; i++) {
@@ -123,8 +133,13 @@ export async function POST(request: NextRequest) {
       const patientId = uuidv4()
       const profile: Partial<PatientProfile> & { id: string; userId: string; addedAt: string } = {
         id: patientId,
-        userId,
-        addedBy: userId,
+        // Patient.userId points to the household owner — that's
+        // who "owns" the record for query / RBAC purposes, even
+        // when a caregiver did the import.
+        userId: ownerUserId,
+        // addedBy preserves the caller for audit ("imported by Jane
+        // on 5/9 at 2:14 PM"), separately from ownership.
+        addedBy: callerUserId,
         addedAt: importedAt,
         ...validation.data,
         // Source tags — used by a future undo flow to roll back
@@ -133,6 +148,8 @@ export async function POST(request: NextRequest) {
           source: 'spreadsheet-import',
           importBatchId: batchId,
           importedAt,
+          importedBy: callerUserId,
+          importedVia: via,
         } as Record<string, string>),
       }
 
@@ -141,7 +158,8 @@ export async function POST(request: NextRequest) {
         imported++
       } catch (writeError) {
         logger.error('[API /import/patients/commit] Write failed', writeError as Error, {
-          userId,
+          callerUserId,
+          ownerUserId,
           rowIndex: i + 2,
         })
         errors.push({
@@ -152,7 +170,9 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('[API /import/patients/commit] Import complete', {
-      userId,
+      callerUserId,
+      ownerUserId,
+      via,
       batchId,
       imported,
       errorCount: errors.length,

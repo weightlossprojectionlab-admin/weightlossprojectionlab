@@ -54,7 +54,8 @@ const DEFAULT_PERMISSIONS: FamilyMemberPermissions = {
   inviteOthers: false,
   viewSensitiveInfo: false, // No sensitive info access by default
   editPatientProfile: true,
-  deletePatient: false
+  deletePatient: false,
+  importPatients: false // Off by default; account owner can grant
 }
 
 export function EditMemberModal({
@@ -167,7 +168,8 @@ export function EditMemberModal({
     inviteOthers: 'Invite Others',
     viewSensitiveInfo: 'View Sensitive Info',
     editPatientProfile: 'Edit Patient Profile',
-    deletePatient: 'Delete Patient'
+    deletePatient: 'Delete Patient',
+    importPatients: 'Import Family Members'
   }
 
   return (

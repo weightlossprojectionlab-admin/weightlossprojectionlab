@@ -24,7 +24,8 @@ export const PERMISSION_PRESETS: Record<string, FamilyMemberPermissions> = {
     inviteOthers: true,
     viewSensitiveInfo: true,
     editPatientProfile: true,
-    deletePatient: true
+    deletePatient: true,
+    importPatients: true
   },
   VIEW_ONLY: {
     viewPatientProfile: true,
@@ -41,7 +42,8 @@ export const PERMISSION_PRESETS: Record<string, FamilyMemberPermissions> = {
     inviteOthers: false,
     viewSensitiveInfo: false,
     editPatientProfile: false,
-    deletePatient: false
+    deletePatient: false,
+    importPatients: false
   },
   LIMITED_EDIT: {
     viewPatientProfile: true,
@@ -58,7 +60,8 @@ export const PERMISSION_PRESETS: Record<string, FamilyMemberPermissions> = {
     inviteOthers: false,
     viewSensitiveInfo: false,
     editPatientProfile: false,
-    deletePatient: false
+    deletePatient: false,
+    importPatients: false
   },
   CAREGIVER: {
     viewPatientProfile: true,
@@ -75,7 +78,12 @@ export const PERMISSION_PRESETS: Record<string, FamilyMemberPermissions> = {
     inviteOthers: false,
     viewSensitiveInfo: false, // No sensitive info access
     editPatientProfile: true,
-    deletePatient: false
+    deletePatient: false,
+    // Default off for caregivers — bulk import is sensitive
+    // (creates household members, can't be partially undone). The
+    // account owner can flip this to true for trusted caregivers
+    // in the per-caregiver permissions UI.
+    importPatients: false
   }
 }
 
@@ -96,7 +104,8 @@ export const PERMISSION_LABELS: Record<keyof FamilyMemberPermissions, string> = 
   inviteOthers: 'Invite Other Family Members',
   viewSensitiveInfo: 'View Sensitive Info (SSN, Insurance)',
   editPatientProfile: 'Edit Patient Profile',
-  deletePatient: 'Delete Patient Records'
+  deletePatient: 'Delete Patient Records',
+  importPatients: 'Import Family Members from Spreadsheet'
 }
 
 // ==================== PERMISSION DESCRIPTIONS ====================
@@ -116,7 +125,8 @@ export const PERMISSION_DESCRIPTIONS: Record<keyof FamilyMemberPermissions, stri
   inviteOthers: 'Can invite additional family members to access this patient',
   viewSensitiveInfo: 'Can view SSN, full insurance member IDs, and other sensitive information',
   editPatientProfile: 'Can edit patient name, date of birth, and other profile information',
-  deletePatient: 'Can permanently delete patient profiles and all associated data (owner-only privilege)'
+  deletePatient: 'Can permanently delete patient profiles and all associated data (owner-only privilege)',
+  importPatients: 'Can bulk-import family members from a spreadsheet (CSV). Imported rows are tagged for owner review and can be undone as a batch.'
 }
 
 // ==================== UTILITY FUNCTIONS ====================

@@ -82,7 +82,8 @@ function EditProfileContent() {
             inviteOthers: true,
             viewSensitiveInfo: true,
             editPatientProfile: true,
-            deletePatient: true
+            deletePatient: true,
+            importPatients: true
           },
           availabilityStatus: 'available',
           weeklySchedule: {

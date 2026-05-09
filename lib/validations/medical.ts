@@ -511,7 +511,8 @@ export const familyMemberPermissionsSchema = z.object({
   inviteOthers: z.boolean().default(false),
   viewSensitiveInfo: z.boolean().default(false),
   editPatientProfile: z.boolean().default(false),
-  deletePatient: z.boolean().default(false)
+  deletePatient: z.boolean().default(false),
+  importPatients: z.boolean().default(false) // Off by default; account owner grants explicitly
 })
 
 export const notificationPreferencesSchema = z.object({
