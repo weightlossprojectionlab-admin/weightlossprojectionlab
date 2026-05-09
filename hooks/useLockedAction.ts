@@ -1,57 +1,53 @@
 'use client'
 
 /**
- * useLockedAction — DRY helper for gating create/edit/delete buttons
- * on terminated subscriptions.
+ * useLockedAction — DRY helper for gating write buttons on
+ * read-only (terminated) subscriptions.
  *
- * The pattern repeats at every action surface:
- *   1. Check feature access
- *   2. If 'locked', disable the button + show a lock icon + intercept
- *      click to route the user to /pricing (with a toast cue)
- *   3. If 'full', the original onClick fires
+ * The pattern at every write surface:
+ *   1. Check whether the current account can write
+ *   2. If read-only, disable the button + show a lock icon +
+ *      intercept click to toast + route to /pricing
+ *   3. If writable, the original onClick fires
  *
- * Without this hook, that's 4-5 lines at every call site. With it,
- * usage is:
+ * Usage:
  *
- *   const { isLocked, onLockedClick } = useLockedAction('add_patient')
+ *   const { isLocked, onLockedClick } = useLockedAction()
  *   <button
  *     disabled={isLocked}
- *     onClick={isLocked ? onLockedClick : handleAdd}
+ *     onClick={isLocked ? onLockedClick : actualHandler}
  *   >
- *     {isLocked && <LockClosedIcon className="w-4 h-4" />}
- *     Add Patient
+ *     {isLocked && <LockClosedIcon />}
+ *     {isLocked ? 'Reactivate to add' : 'Add Patient'}
  *   </button>
  *
- * The toast + redirect is consistent across surfaces — one copy of
- * the reactivation message, one source of /pricing routing.
- *
- * Note: this only handles 'locked' state. 'read_only' (editors of
- * existing data) needs different UI treatment (form opens, Save
- * button locks) and should be wired per-surface via useFeatureAccess
- * directly.
+ * No feature parameter needed — the gate is the same for every
+ * write action. If a per-feature distinction ever becomes useful
+ * (e.g., grace-period writes for some specific actions),
+ * lib/feature-access.ts grows back its FeatureKey shape; until
+ * then, simple is the win.
  */
 
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { useFeatureAccess } from './useFeatureAccess'
-import type { FeatureKey } from '@/lib/feature-access'
+import { useCanWrite } from './useFeatureAccess'
 
 export interface LockedActionState {
-  /** True when the feature is 'locked' for this user. */
+  /** True when writes are blocked for this user. */
   isLocked: boolean
   /** Click handler to use when isLocked — toasts + routes to /pricing. */
   onLockedClick: () => void
 }
 
-export function useLockedAction(feature: FeatureKey): LockedActionState {
-  const access = useFeatureAccess(feature)
+export function useLockedAction(): LockedActionState {
+  const canWrite = useCanWrite()
   const router = useRouter()
-  const isLocked = access === 'locked'
+  const isLocked = !canWrite
   return {
     isLocked,
     onLockedClick: () => {
       toast(
-        'Your subscription has ended. Reactivate to keep building your data.',
+        'Your subscription is read-only. Reactivate to keep building your data.',
         { icon: '🔒', duration: 4000 },
       )
       router.push('/pricing')

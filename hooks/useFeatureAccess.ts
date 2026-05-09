@@ -1,42 +1,43 @@
 'use client'
 
 /**
- * useFeatureAccess — resolve the access state for a specific
- * action feature, given the current user's subscription.
+ * useCanWrite — boolean predicate. True when the user can perform
+ * write actions; false when their subscription is read-only
+ * (terminated). Wraps lib/feature-access.canWrite and the
+ * useSubscription hook.
  *
- * Usage in a component:
+ *   const canWrite = useCanWrite()
+ *   <button disabled={!canWrite} onClick={...}>Save</button>
  *
- *   const access = useFeatureAccess('add_patient')
- *   if (access === 'locked') return <ReactivatePrompt />
- *   return <button disabled={access === 'read_only'}>...</button>
+ * For lock-icon affordance + toast + redirect, prefer
+ * useLockedAction — this hook is for places where you only need
+ * the boolean (e.g., to disable a form field, hide a section).
  *
- * Or: useFeatureAccess() with no arg returns a getter so a
- * single component checking many features doesn't subscribe
- * multiple times:
- *
- *   const access = useFeatureAccess()
- *   if (access('add_patient') === 'locked') ...
- *   if (access('log_meal') === 'locked') ...
- *
- * Why a hook on top of the predicate: components shouldn't
- * have to thread `subscription` everywhere or call
- * `useSubscription()` + import the predicate. The hook bundles
- * both into the contract a UI consumer cares about.
+ * useFeatureAccess is kept as a deprecated alias of useCanWrite for
+ * any straggler imports during the simplification — remove the alias
+ * in a follow-up cleanup.
  */
 
 import { useSubscription } from './useSubscription'
-import { getFeatureAccess, type FeatureAccess, type FeatureKey } from '@/lib/feature-access'
+import { canWrite, isReadOnly } from '@/lib/feature-access'
 
-/** Overload: no arg returns a getter for many features in one render. */
-export function useFeatureAccess(): (feature: FeatureKey) => FeatureAccess
-/** Overload: with a key returns the resolved access for that feature. */
-export function useFeatureAccess(feature: FeatureKey): FeatureAccess
-export function useFeatureAccess(
-  feature?: FeatureKey,
-): FeatureAccess | ((feature: FeatureKey) => FeatureAccess) {
+export function useCanWrite(): boolean {
   const { subscription } = useSubscription()
-  if (feature === undefined) {
-    return (f: FeatureKey) => getFeatureAccess(subscription, f)
-  }
-  return getFeatureAccess(subscription, feature)
+  return canWrite(subscription)
+}
+
+export function useIsReadOnly(): boolean {
+  const { subscription } = useSubscription()
+  return isReadOnly(subscription)
+}
+
+/**
+ * @deprecated Use useCanWrite or useLockedAction. The FeatureKey
+ * parameter is ignored — every write follows the same policy
+ * (read-only when terminated). Kept temporarily to avoid breaking
+ * any stragglers from the FeatureKey-era; clean up in a follow-up.
+ */
+export function useFeatureAccess(_feature?: string): 'full' | 'locked' {
+  const isWritable = useCanWrite()
+  return isWritable ? 'full' : 'locked'
 }

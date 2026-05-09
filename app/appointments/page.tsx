@@ -26,7 +26,7 @@ function AppointmentsContent() {
   const router = useRouter()
   // Feature-access gate — terminated subscribers can view their
   // appointments but can't schedule new ones.
-  const addAppointmentLock = useLockedAction('add_appointment')
+  const addAppointmentLock = useLockedAction()
   const { appointments, loading } = useAppointments()
 
   const formatDate = (dateStr: string) => {

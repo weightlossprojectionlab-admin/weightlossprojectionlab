@@ -96,8 +96,8 @@ interface PendingConfirm {
 export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingModeProps) {
   // Feature-access gates — terminated subscribers can view the trip
   // but can't scan, snap a receipt, or invoke AI features.
-  const scanBarcodeLock = useLockedAction('scan_barcode')
-  const receiptOcrLock = useLockedAction('ai_receipt_ocr')
+  const scanBarcodeLock = useLockedAction()
+  const receiptOcrLock = useLockedAction()
 
   // The list of items relevant to the active session — frozen on
   // open so newly-added rows mid-session don't shuffle the user's

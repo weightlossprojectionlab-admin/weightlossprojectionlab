@@ -135,8 +135,8 @@ function LogMealContent() {
 
   // Feature-access gates — terminated subscribers can view but not log.
   // The saveMeal button + AI photo capture both gate on these.
-  const logMealLock = useLockedAction('log_meal')
-  const aiMealRecognitionLock = useLockedAction('ai_meal_recognition')
+  const logMealLock = useLockedAction()
+  const aiMealRecognitionLock = useLockedAction()
 
   const [userProfile, setUserProfile] = useState<{ profile?: UserProfile; preferences?: UserPreferences } | null>(null)
   const [patientProfile, setPatientProfile] = useState<any>(null)

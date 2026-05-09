@@ -19,6 +19,8 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useShopping } from '@/hooks/useShopping'
 import { useMemberShoppingList } from '@/hooks/useMemberShoppingList'
+import { useLockedAction } from '@/hooks/useLockedAction'
+import { LockClosedIcon } from '@heroicons/react/24/solid'
 import { simplifyProduct } from '@/lib/openfoodfacts-api'
 import { lookupBarcodeWithCache } from '@/lib/cached-product-lookup'
 import { getCategoryMetadata, detectCategory, formatQuantityDisplay } from '@/lib/product-categories'
@@ -171,6 +173,12 @@ function ShoppingListContent() {
     addStore,
     refresh
   } = shoppingData
+
+  // Feature-access gates — terminated subscribers can view their
+  // shopping list but can't scan, mark items purchased, or delete.
+  const scanBarcodeLock = useLockedAction()
+  const markPurchasedLock = useLockedAction()
+  const deleteItemLock = useLockedAction()
 
   const [showScanner, setShowScanner] = useState(false)
   const [showExpirationPicker, setShowExpirationPicker] = useState(false)
@@ -654,9 +662,16 @@ function ShoppingListContent() {
   }
 
   /**
-   * Toggle item needed status
+   * Toggle item needed status. The "mark purchased" UI affordance
+   * (the green check) calls this — it transitions an item from
+   * needed → not-needed AND seeds an inventory entry. That's a
+   * real write side-effect, gated for terminated subs.
    */
   const handleToggleNeeded = async (itemId: string, currentStatus: boolean) => {
+    if (markPurchasedLock.isLocked) {
+      markPurchasedLock.onLockedClick()
+      return
+    }
     try {
       await toggleNeeded(itemId, !currentStatus)
       toast.success(currentStatus ? 'Removed from list' : 'Added to list')
@@ -666,9 +681,15 @@ function ShoppingListContent() {
   }
 
   /**
-   * Delete item - show confirmation modal
+   * Delete item - show confirmation modal. Gated for terminated
+   * subs: tapping the trash icon prompts reactivation rather than
+   * letting them remove their accumulated list data.
    */
   const handleDeleteItem = (itemId: string, itemName: string) => {
+    if (deleteItemLock.isLocked) {
+      deleteItemLock.onLockedClick()
+      return
+    }
     setItemToDelete({ id: itemId, name: itemName })
     setShowDeleteConfirm(true)
   }
@@ -834,13 +855,17 @@ function ShoppingListContent() {
           <div className="mb-6 flex gap-3">
             <button
               type="button"
-              onClick={() => setShowScanner(true)}
+              onClick={scanBarcodeLock.isLocked ? scanBarcodeLock.onLockedClick : () => setShowScanner(true)}
               className="flex-1 bg-primary text-white py-3 px-4 rounded-lg font-semibold hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Scan Item
+              {scanBarcodeLock.isLocked ? (
+                <LockClosedIcon className="w-5 h-5" />
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              )}
+              {scanBarcodeLock.isLocked ? 'Reactivate to scan' : 'Scan Item'}
             </button>
             <button
               type="button"

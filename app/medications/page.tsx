@@ -31,7 +31,7 @@ function MedicationsContent() {
   const { profile } = useUserProfile()
   // Feature-access gates — terminated subscribers can view their
   // medications but can't scan a new prescription label.
-  const medOcrLock = useLockedAction('ai_medication_ocr')
+  const medOcrLock = useLockedAction()
   const [showLabelCapture, setShowLabelCapture] = useState(false)
   const [filterByCondition, setFilterByCondition] = useState<string | null>(null)
 

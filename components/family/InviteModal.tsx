@@ -38,7 +38,7 @@ export function InviteModal({
   const { sendInvitation, revokeInvitation } = useInvitations(false)
   // Feature-access gate — terminated subscribers can't invite new
   // caregivers (each invite + accepted seat costs us at scale).
-  const inviteCaregiverLock = useLockedAction('invite_caregiver')
+  const inviteCaregiverLock = useLockedAction()
 
   const [recipientEmail, setRecipientEmail] = useState('')
   const [recipientPhone, setRecipientPhone] = useState('')

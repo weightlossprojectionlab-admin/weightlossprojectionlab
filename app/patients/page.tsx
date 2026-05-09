@@ -52,7 +52,7 @@ function PatientsContent() {
   const { patients, loading, error } = usePatients()
   // Feature-access gate — terminated subscribers can't add new
   // patients (existing ones stay viewable; this only blocks creation).
-  const addPatientLock = useLockedAction('add_patient')
+  const addPatientLock = useLockedAction()
   const [filter, setFilter] = useState<'all' | 'human' | 'pet'>('all')
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [selectedPatientForVitalsView, setSelectedPatientForVitalsView] = useState<any>(null)

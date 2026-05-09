@@ -140,8 +140,8 @@ function defaultCaseSizeForCategory(c: ProductCategory): string | null {
 function KitchenInventoryContent() {
   // Feature-access gates — terminated subscribers can view but not
   // snap receipts, scan barcodes, or apply inventory adjustments.
-  const receiptOcrLock = useLockedAction('ai_receipt_ocr')
-  const adjustInventoryLock = useLockedAction('adjust_inventory')
+  const receiptOcrLock = useLockedAction()
+  const adjustInventoryLock = useLockedAction()
 
   // Real-time inventory hook
   const {

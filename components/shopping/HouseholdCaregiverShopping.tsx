@@ -77,8 +77,8 @@ function formatSyncedAgo(ms: number): string {
 export function HouseholdCaregiverShopping({ householdId, dutyId }: Props) {
   // Feature-access gates — terminated subscribers can view the
   // shopping list but can't add new items or scan barcodes.
-  const addItemLock = useLockedAction('add_shopping_item')
-  const scanBarcodeLock = useLockedAction('scan_barcode')
+  const addItemLock = useLockedAction()
+  const scanBarcodeLock = useLockedAction()
 
   const [data, setData] = useState<ShoppingResponse | null>(null)
   const [householdName, setHouseholdName] = useState<string>('')
