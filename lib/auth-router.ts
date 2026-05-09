@@ -38,13 +38,13 @@ export type UserDestination =
   | { type: 'loading' }
   | { type: 'stay', reason?: string } // User can stay where they are
 
-/**
- * Paths an expired/canceled user is allowed to stay on without redirect.
- * Centralized so the allow-list isn't duplicated across consumers.
- *   /pricing  — pick a new plan to reactivate
- *   /profile  — see current status + open Customer Portal
- */
-const SUBSCRIPTION_RECOVERY_PATHS = ['/pricing', '/profile']
+// Note: SUBSCRIPTION_RECOVERY_PATHS used to live here as the allow-list
+// for terminated users. Removed when limited-access mode shipped —
+// terminated users are now allowed on EVERY protected path, not just
+// /pricing + /profile. The persistent SubscriptionExpiredBanner
+// (mounted in AuthGuard) suppresses itself on /pricing /profile /auth
+// so it doesn't compete with better-targeted prompts on those surfaces;
+// see components/subscription/SubscriptionExpiredBanner.tsx.
 
 /**
  * Determine where an authenticated user should be routed
@@ -151,19 +151,27 @@ export async function determineUserDestination(
       }
     }
 
-    // Step 4: Subscription gate.
+    // Step 4: Subscription gate (limited-access mode).
     //
-    // Semantic intent: a user with an expired/canceled subscription is
-    // AUTHENTICATED but can't use the product. This is distinct from
-    // not-signed-in, and routing them to /auth (the sign-in page)
-    // creates an infinite loop because /auth bounces signed-in users
-    // back to dashboard. Instead, route them to /pricing — the
-    // dedicated reactivation surface. Allow them to remain on /pricing
-    // or /profile so they can pick a new plan or open the Customer
-    // Portal to manage / sign out.
+    // Semantic intent: a user with an expired/canceled subscription
+    // keeps READ access to all their accumulated data — that's the
+    // moat (per-household ML personalization is trained on it).
+    // What they lose is the WRITE surface: adding new entries,
+    // editing, AI calls. The action-level gate lives in
+    // lib/feature-access.ts. The persistent FOMO banner
+    // (SubscriptionExpiredBanner, mounted in AuthGuard) does the
+    // in-context conversion work.
     //
-    // Super admins are exempt so they can never be locked out of
-    // their own product during testing.
+    // Routing implication: terminated users are NOT redirected away
+    // from protected pages. They're allowed in the app, see their
+    // data, and the banner + locked actions drive reactivation.
+    //
+    // The only routes that DO redirect terminated users:
+    //   - /auth and /onboarding — entry points where a terminated
+    //     session doesn't logically belong. Send them to /pricing
+    //     once so they see the reactivation surface.
+    //
+    // Super admins are exempt to avoid lock-out during testing.
     const superAdminEmails = (process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || '')
       .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
     const isSuperAdmin = user.email && superAdminEmails.includes(user.email.toLowerCase())
@@ -174,26 +182,28 @@ export async function determineUserDestination(
       && (subscription.status === 'expired' || subscription.status === 'canceled')
 
     if (subBlocked) {
-      const onRecoveryPath = SUBSCRIPTION_RECOVERY_PATHS.some(
-        (p) => currentPath === p || currentPath.startsWith(p + '/'),
-      )
-      logger.warn('[AuthRouter] Subscription not active', {
+      // Only entry-point pages redirect; everywhere else, stay put
+      // and let the banner + feature-access gates do the work.
+      const isEntryPoint = currentPath === '/auth' || currentPath === '/onboarding'
+      logger.info('[AuthRouter] Limited-access mode (subscription terminated)', {
         userId: user.uid,
         status: subscription.status,
         currentPath,
-        onRecoveryPath,
+        isEntryPoint,
       })
 
-      if (onRecoveryPath) {
-        // User is already on a page where they can fix this — let them
-        // stay so they can subscribe / manage / sign out. Skip all
-        // downstream onboarding/dashboard routing logic so we don't
-        // accidentally re-redirect them.
-        return { type: 'stay', reason: 'Subscription expired - on recovery surface' }
+      if (isEntryPoint) {
+        return {
+          type: 'subscription_expired',
+          reason: 'Subscription terminated — redirect from auth/onboarding entry point',
+        }
       }
+      // Stay on the current protected page in read-only mode.
+      // The action-level gates and the persistent banner make the
+      // terminated state visible without yanking the user away.
       return {
-        type: 'subscription_expired',
-        reason: 'Subscription expired or canceled — redirect to recovery surface',
+        type: 'stay',
+        reason: 'Subscription terminated — read-only mode, banner visible',
       }
     }
 

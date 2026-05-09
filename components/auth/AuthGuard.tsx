@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useSubscription } from '@/hooks/useSubscription'
 import { getAuthLoadingMessage } from '@/lib/auth-message-selector'
 import { logger } from '@/lib/logger'
+import { SubscriptionExpiredBanner } from '@/components/subscription/SubscriptionExpiredBanner'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -90,7 +91,17 @@ export default function AuthGuard({ children, fallback, requireAdmin = false }: 
     )
   }
 
-  // User is authenticated (and admin if required) → Render children
-  // (Individual pages will handle profile/onboarding checks)
-  return <>{children}</>
+  // User is authenticated (and admin if required) → Render children.
+  // (Individual pages handle profile/onboarding checks.)
+  //
+  // Mount the SubscriptionExpiredBanner above the page content. It
+  // self-suppresses on /pricing /profile /auth and renders only when
+  // subscription is terminated, so the cost on the happy path is one
+  // useSubscription read + an early null return.
+  return (
+    <>
+      <SubscriptionExpiredBanner />
+      {children}
+    </>
+  )
 }
