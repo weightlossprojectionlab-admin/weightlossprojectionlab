@@ -2,7 +2,19 @@
  * useSubscription Hook
  *
  * Provides access to the user's subscription with admin override and dev simulation support
- * Includes real-time Firestore listener for webhook updates
+ * Includes real-time Firestore listener for webhook updates.
+ *
+ * Family-member trickle-down: when the caller is a household member
+ * (caregiver / sub-account) without their own subscription record,
+ * the hook falls back to the household OWNER's subscription via
+ * users/{uid}.caregiverOf[0].accountOwnerId. This way the locked
+ * banner + "Reactivate" buttons render for the family member when
+ * the owner's plan ends — matching the server-side gate which
+ * always evaluates the owner's subscription on writes.
+ *
+ * Multi-household caregivers (rare) fall back to the first entry in
+ * caregiverOf for client UX. The server-side gate is the source of
+ * truth for the actually-active household at write time.
  */
 
 'use client'
@@ -12,7 +24,22 @@ import { useAuth } from './useAuth'
 import { UserSubscription } from '@/types'
 import { getUserSubscription, isAdmin, setCachedSubscription } from '@/lib/feature-gates'
 import { db } from '@/lib/firebase'
-import { doc, onSnapshot } from 'firebase/firestore'
+import { doc, onSnapshot, type Unsubscribe } from 'firebase/firestore'
+
+function convertTimestamps(sub: UserSubscription): UserSubscription {
+  return {
+    ...sub,
+    trialEndsAt: sub.trialEndsAt && typeof sub.trialEndsAt === 'object' && 'toDate' in sub.trialEndsAt
+      ? (sub.trialEndsAt as any).toDate()
+      : sub.trialEndsAt,
+    currentPeriodEnd: sub.currentPeriodEnd && typeof sub.currentPeriodEnd === 'object' && 'toDate' in sub.currentPeriodEnd
+      ? (sub.currentPeriodEnd as any).toDate()
+      : sub.currentPeriodEnd,
+    currentPeriodStart: sub.currentPeriodStart && typeof sub.currentPeriodStart === 'object' && 'toDate' in sub.currentPeriodStart
+      ? (sub.currentPeriodStart as any).toDate()
+      : sub.currentPeriodStart,
+  }
+}
 
 export function useSubscription() {
   const { user } = useAuth()
@@ -36,32 +63,61 @@ export function useSubscription() {
     setIsAdminUser(isAdmin(user as any))
     setLoading(false)
 
-    // Real-time listener for subscription changes from Firestore
-    // This catches webhook updates from Stripe
-    // Real-time Firestore listener for subscription updates
+    // Owner-doc listener for family-member trickle-down. Set up
+    // when the caller has no subscription of their own but is a
+    // caregiver of another account. Cleared when the caller has
+    // their own sub.
+    let unsubscribeOwner: Unsubscribe | null = null
+    const detachOwner = () => {
+      if (unsubscribeOwner) {
+        unsubscribeOwner()
+        unsubscribeOwner = null
+      }
+    }
+
+    const attachOwnerListener = (ownerUserId: string) => {
+      detachOwner()
+      const ownerRef = doc(db, 'users', ownerUserId)
+      unsubscribeOwner = onSnapshot(ownerRef, (snap) => {
+        if (!snap.exists()) return
+        const ownerSub = snap.data()?.subscription as UserSubscription | undefined
+        if (!ownerSub) return
+        const converted = convertTimestamps(ownerSub)
+        setSubscription(converted)
+        setCachedSubscription(converted)
+      }, (error) => {
+        console.error('[useSubscription] Owner listener error:', error)
+      })
+    }
+
+    // Real-time listener on the caller's user doc. If they have
+    // their own subscription, use it. Otherwise check caregiverOf
+    // and fall back to the owner's subscription (DRY trickle-down).
     const userDocRef = doc(db, 'users', user.uid)
     const unsubscribeFirestore = onSnapshot(userDocRef, (docSnapshot) => {
-      if (docSnapshot.exists()) {
-        const userData = docSnapshot.data()
-        const updatedSubscription = userData?.subscription as UserSubscription | undefined
-        // Subscription updated from Firestore
-        if (updatedSubscription) {
-          // Convert Firestore Timestamps to Date objects for proper rendering
-          const converted = {
-            ...updatedSubscription,
-            trialEndsAt: updatedSubscription.trialEndsAt && typeof updatedSubscription.trialEndsAt === 'object' && 'toDate' in updatedSubscription.trialEndsAt
-              ? (updatedSubscription.trialEndsAt as any).toDate()
-              : updatedSubscription.trialEndsAt,
-            currentPeriodEnd: updatedSubscription.currentPeriodEnd && typeof updatedSubscription.currentPeriodEnd === 'object' && 'toDate' in updatedSubscription.currentPeriodEnd
-              ? (updatedSubscription.currentPeriodEnd as any).toDate()
-              : updatedSubscription.currentPeriodEnd,
-            currentPeriodStart: updatedSubscription.currentPeriodStart && typeof updatedSubscription.currentPeriodStart === 'object' && 'toDate' in updatedSubscription.currentPeriodStart
-              ? (updatedSubscription.currentPeriodStart as any).toDate()
-              : updatedSubscription.currentPeriodStart,
-          }
-          setSubscription(converted)
-          setCachedSubscription(converted)
-        }
+      if (!docSnapshot.exists()) return
+      const userData = docSnapshot.data()
+      const ownSub = userData?.subscription as UserSubscription | undefined
+
+      if (ownSub) {
+        // Caller has their own subscription — use it, drop any
+        // owner listener we may have set up earlier.
+        detachOwner()
+        const converted = convertTimestamps(ownSub)
+        setSubscription(converted)
+        setCachedSubscription(converted)
+        return
+      }
+
+      // No own subscription. If caller is a caregiver of another
+      // account, mirror the owner's subscription state.
+      const caregiverOf: Array<{ accountOwnerId?: string }> =
+        Array.isArray(userData?.caregiverOf) ? userData.caregiverOf : []
+      const ownerUserId = caregiverOf[0]?.accountOwnerId
+      if (ownerUserId) {
+        attachOwnerListener(ownerUserId)
+      } else {
+        detachOwner()
       }
     }, (error) => {
       console.error('[useSubscription] Firestore listener error:', error)
@@ -82,6 +138,7 @@ export function useSubscription() {
     return () => {
       // Cleanup
       unsubscribeFirestore()
+      detachOwner()
       // Remove simulation listener
       window.removeEventListener('subscription-simulation-changed', handleSimulationChange)
     }

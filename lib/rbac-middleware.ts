@@ -11,6 +11,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import type { FamilyMember, FamilyMemberPermissions, FamilyRole } from '@/types/medical'
 import { isAccountOwner, hasAdminPrivileges, ROLE_CAPABILITIES } from '@/lib/family-roles'
+import { assertOwnerCanWrite } from '@/lib/owner-subscription-guard'
 
 export type UserRole = 'owner' | 'family'
 
@@ -474,6 +475,17 @@ export async function assertPatientAccess(
       }),
       { status: 404, headers: { 'Content-Type': 'application/json' } }
     )
+  }
+
+  // Step 3: Subscription gate — when this assertion is gating a
+  // WRITE (signaled by requiredPermission), ensure the household
+  // OWNER's subscription allows writes. Reads pass through silently.
+  // This is the DRY trickle-down point: family members, sub-accounts,
+  // and /admin caregivers all resolve to the same ownerUserId here,
+  // so one check covers every write surface for every role.
+  if (requiredPermission) {
+    const denied = await assertOwnerCanWrite(ownerUserId)
+    if (denied) return denied
   }
 
   logger.info('[RBAC] Patient access assertion successful', {

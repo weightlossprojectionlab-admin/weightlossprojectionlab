@@ -23,6 +23,8 @@
  */
 
 import { getAdminDb } from '@/lib/firebase-admin'
+import { verifyAuthToken } from '@/lib/rbac-middleware'
+import { assertOwnerCanWrite } from '@/lib/owner-subscription-guard'
 
 export interface HouseholdAccessResult {
   /** True if the caller can read the household. */
@@ -92,4 +94,63 @@ export async function checkHouseholdAccess(
   }
 
   return { exists: true, isMember: false, ownerUserId, household }
+}
+
+/**
+ * Write-flavored wrapper around `checkHouseholdAccess`.
+ *
+ * Single helper that every household-write API route should call.
+ * It bundles the three checks every write needs:
+ *   1. Auth token verification
+ *   2. Household membership (caller is a member of this household)
+ *   3. Owner subscription is not read-only (the DRY trickle-down —
+ *      family members inherit the owner's plan state)
+ *
+ * Returns a ready-to-return Response on any failure, or a typed
+ * success object the caller can destructure. Mirrors the pattern of
+ * `assertPatientAccess` so the two helpers feel like one API.
+ */
+export type AssertHouseholdWriteResult = {
+  callerUserId: string
+  ownerUserId: string
+  household: FirebaseFirestore.DocumentData
+}
+
+export async function assertHouseholdWriteAccess(
+  request: Request,
+  householdId: string,
+): Promise<AssertHouseholdWriteResult | Response> {
+  const auth = await verifyAuthToken(request.headers.get('Authorization'))
+  if (!auth) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Unauthorized' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  const access = await checkHouseholdAccess(householdId, auth.userId)
+
+  if (!access.exists) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Household not found' }),
+      { status: 404, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  if (!access.isMember || !access.ownerUserId) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Forbidden' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  // DRY trickle-down: gate writes on the owner's subscription state.
+  const denied = await assertOwnerCanWrite(access.ownerUserId)
+  if (denied) return denied
+
+  return {
+    callerUserId: auth.userId,
+    ownerUserId: access.ownerUserId,
+    household: access.household,
+  }
 }
