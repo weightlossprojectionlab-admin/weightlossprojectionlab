@@ -14,6 +14,12 @@ import { logger } from '@/lib/logger'
 import { ErrorHandler } from '@/lib/utils/error-handler'
 import { errorResponse } from '@/lib/api-response'
 import { rateLimit } from '@/lib/rate-limit'
+import {
+  detectPromptInjection,
+  checkOutputSafety,
+  checkCrisisRedirect,
+  SAFE_FALLBACK_RESPONSE,
+} from '@/lib/ai/coach-guardrails'
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -51,6 +57,27 @@ export async function POST(request: NextRequest) {
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
         { error: 'Invalid request: message is required' },
+        { status: 400 }
+      )
+    }
+
+    // T3.7 #8 input gate — block prompt-injection attempts before
+    // they reach Gemini. Conservative: refuse rather than sanitize,
+    // because medical context makes false-negatives costlier than
+    // false-positives. Logs structurally (no message content in
+    // logs to keep PHI out of telemetry).
+    const injection = detectPromptInjection(message)
+    if (injection.detected) {
+      logger.warn('[AI Chat] Prompt-injection attempt blocked', {
+        userId,
+        pattern: injection.pattern,
+      })
+      return NextResponse.json(
+        {
+          error:
+            "I can't process that as written. If you're asking a real nutrition or wellness question, please rephrase it directly.",
+          code: 'INPUT_REJECTED',
+        },
         { status: 400 }
       )
     }
@@ -143,13 +170,43 @@ export async function POST(request: NextRequest) {
     // Send message and get response
     const result = await chat.sendMessage(fullPrompt)
     const response = result.response
-    const responseText = response.text()
+    const rawResponseText = response.text()
+
+    // T3.7 #8 output gates — run BEFORE persisting / returning so
+    // a model that emitted unsafe content never reaches the user.
+    let responseText = rawResponseText
+    let safetyTrip: string | undefined
+
+    const safety = checkOutputSafety(rawResponseText)
+    if (!safety.safe) {
+      safetyTrip = safety.concern
+      responseText = SAFE_FALLBACK_RESPONSE
+    }
+
+    // Crisis redirect — if user mentioned self-harm and the model
+    // didn't redirect, swap in the fallback (which DOES redirect).
+    const crisis = checkCrisisRedirect(message, responseText)
+    if (crisis.triggered && !crisis.redirected) {
+      safetyTrip = (safetyTrip ?? '') + '+missing-crisis-redirect'
+      responseText = SAFE_FALLBACK_RESPONSE
+    }
+
+    if (safetyTrip) {
+      logger.warn('[AI Chat] Output safety gate triggered — fallback substituted', {
+        userId,
+        concern: safetyTrip,
+        // Preview only (first 200 chars) so the audit log records
+        // enough to investigate without dumping unbounded model output.
+        rawPreview: rawResponseText.substring(0, 200),
+      })
+    }
 
     logger.debug('Generated AI chat response', {
-      preview: responseText.substring(0, 100)
+      preview: responseText.substring(0, 100),
+      safetyTripped: !!safetyTrip,
     })
 
-    // Save assistant response
+    // Save assistant response (the safe one, not the raw model output).
     const assistantMessage: Omit<ChatMessage, 'id'> = {
       userId,
       role: 'assistant',
