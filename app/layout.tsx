@@ -168,10 +168,22 @@ export default async function RootLayout({
       <body className="h-full font-sans antialiased flex flex-col">
         <CsrfInitializer />
         <UpdateChecker />
-        <div className="flex-grow">
-          <ConditionalProviders tenantSlug={tenantSlug}>{children}</ConditionalProviders>
-        </div>
-        <ConditionalFooter />
+        {/*
+         * ConditionalFooter MUST be inside ConditionalProviders so
+         * it can read the auth + subscription context. When it
+         * sat outside, useUser returned loading=true forever and
+         * the footer's loading-branch rendered the marketing
+         * <Footer /> on every page — including authenticated paid
+         * surfaces where the rule says "hide." One DRY mount
+         * point, inside the provider tree, means the rule
+         * (public/trial/free → show; active paid → hide;
+         * task-mode routes → always hide) applies on every
+         * surface without per-page wiring.
+         */}
+        <ConditionalProviders tenantSlug={tenantSlug}>
+          <div className="flex-grow">{children}</div>
+          <ConditionalFooter />
+        </ConditionalProviders>
         <SpeedInsights />
       </body>
     </html>
