@@ -18,7 +18,7 @@ import type {
   ExtractedMedicationEntry
 } from '@/types/medical'
 import { DocumentExtractionResponseSchema } from '@/lib/validations/medical'
-import { checkLabPlausibility } from '@/lib/lab-plausibility'
+import { filterImplausibleLabs } from '@/lib/lab-plausibility'
 import { generateGeminiJSON, validateGeminiConfig } from '@/lib/ai/gemini-client'
 
 /**
@@ -139,40 +139,6 @@ Rules:
 - If the document is not a medical document, set documentType to "other" and return minimal data
 - Do NOT fabricate data not present in the text
 - Return valid JSON only, no markdown`
-}
-
-/**
- * Walk lab results and drop ones whose numeric value falls outside
- * the plausibility bounds in lib/lab-plausibility.ts. Logs a sample
- * of the drops (capped at 5) for telemetry. Caller should pass the
- * already-shaped list (post-coercion to strings).
- */
-function filterImplausibleLabs(shaped: LabResultEntry[]): LabResultEntry[] {
-  const samples: Array<{ testName: string; value: string; reason: string; matched?: string }> = []
-
-  const kept = shaped.filter((lr) => {
-    const check = checkLabPlausibility(lr.testName, lr.value)
-    if (check.inRange) return true
-    if (samples.length < 5) {
-      samples.push({
-        testName: lr.testName,
-        value: lr.value,
-        reason: check.reason ?? 'unknown',
-        matched: check.matchedKeyword,
-      })
-    }
-    return false
-  })
-
-  if (kept.length !== shaped.length) {
-    logger.warn('[DocumentExtractor] Dropped implausible lab results', {
-      droppedCount: shaped.length - kept.length,
-      keptCount: kept.length,
-      samples,
-    })
-  }
-
-  return kept
 }
 
 /**

@@ -160,3 +160,45 @@ export function checkLabPlausibility(
     reason: inRange ? undefined : 'out-of-range',
   }
 }
+
+/**
+ * Walk a list of lab results and drop ones whose numeric value falls
+ * outside the per-test plausibility bounds. Logs a sample of drops
+ * (capped at 5) for telemetry.
+ *
+ * The T3.8 plausibility gate. Lives in this module rather than
+ * lib/document-data-extractor so the gate can be tested without
+ * pulling firebase-admin / jose / Gemini transitively. Don't
+ * inline-rewrite without updating the regression suite at
+ * __tests__/lib/lab-plausibility.test.ts.
+ */
+import { logger } from '@/lib/logger'
+import type { LabResultEntry } from '@/types/medical'
+
+export function filterImplausibleLabs(shaped: LabResultEntry[]): LabResultEntry[] {
+  const samples: Array<{ testName: string; value: string; reason: string; matched?: string }> = []
+
+  const kept = shaped.filter((lr) => {
+    const check = checkLabPlausibility(lr.testName, lr.value)
+    if (check.inRange) return true
+    if (samples.length < 5) {
+      samples.push({
+        testName: lr.testName,
+        value: lr.value,
+        reason: check.reason ?? 'unknown',
+        matched: check.matchedKeyword,
+      })
+    }
+    return false
+  })
+
+  if (kept.length !== shaped.length) {
+    logger.warn('[LabPlausibility] Dropped implausible lab results', {
+      droppedCount: shaped.length - kept.length,
+      keptCount: kept.length,
+      samples,
+    })
+  }
+
+  return kept
+}
