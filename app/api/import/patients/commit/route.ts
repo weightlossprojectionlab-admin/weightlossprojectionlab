@@ -53,6 +53,7 @@ import {
   validateWeightRow,
   validateImmunizationRow,
   validateEquipmentRow,
+  validateFamilyHistoryRow,
   type ColumnMapping,
 } from '@/lib/import/patient-import-config'
 import { parseCsvText, MAX_IMPORT_ROWS } from '@/lib/import/csv-parser'
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
     type Resolved = {
       rowIndex: number
       transformed: Record<string, unknown>
-      type: 'patient' | 'weight' | 'immunization' | 'equipment'
+      type: 'patient' | 'weight' | 'immunization' | 'equipment' | 'family_history'
     }
     const resolvedRows: Resolved[] = []
     for (let i = 0; i < parsed.rows.length; i++) {
@@ -462,6 +463,75 @@ export async function POST(request: NextRequest) {
         imported++
       } catch (writeError) {
         logger.error('[API /import/patients/commit] Equipment write failed', writeError as Error, {
+          callerUserId,
+          ownerUserId,
+          rowIndex: r.rowIndex,
+        })
+        errors.push({
+          rowIndex: r.rowIndex,
+          errors: [{ field: '_row', message: 'Failed to save — please try again' }],
+        })
+      }
+    }
+
+    // ============= Pass 5: family-history rows =============
+
+    for (const r of resolvedRows.filter((r) => r.type === 'family_history')) {
+      const validation = validateFamilyHistoryRow(r.transformed)
+      if (!validation.ok) {
+        errors.push({ rowIndex: r.rowIndex, errors: validation.errors })
+        continue
+      }
+
+      const match = matchPatientByName(validation.data.name, candidates)
+      if (!match.patientId) {
+        errors.push({
+          rowIndex: r.rowIndex,
+          errors: [
+            {
+              field: 'name',
+              message:
+                match.reason === 'ambiguous'
+                  ? `"${validation.data.name}" matches more than one family member. Use the exact name or nickname.`
+                  : `Family member "${validation.data.name}" not found. Add a patient row in this file or import family members first.`,
+            },
+          ],
+        })
+        continue
+      }
+
+      const entryId = uuidv4()
+      const entry = {
+        id: entryId,
+        patientId: match.patientId,
+        userId: ownerUserId,
+        relativeRelationship: validation.data.relativeRelationship,
+        condition: validation.data.condition,
+        ...(validation.data.ageOfOnset !== undefined ? { ageOfOnset: validation.data.ageOfOnset } : {}),
+        ...(validation.data.isLiving !== undefined ? { isLiving: validation.data.isLiving } : {}),
+        ...(validation.data.causeOfDeath ? { causeOfDeath: validation.data.causeOfDeath } : {}),
+        ...(validation.data.notes ? { notes: validation.data.notes } : {}),
+        source: 'spreadsheet-import' as const,
+        addedAt: importedAt,
+        addedBy: callerUserId,
+        importBatchId: batchId,
+        importedAt,
+        importedBy: callerUserId,
+        importedVia: via,
+      }
+
+      try {
+        await adminDb
+          .collection('users')
+          .doc(ownerUserId)
+          .collection('patients')
+          .doc(match.patientId)
+          .collection('family-history')
+          .doc(entryId)
+          .set(entry)
+        imported++
+      } catch (writeError) {
+        logger.error('[API /import/patients/commit] Family history write failed', writeError as Error, {
           callerUserId,
           ownerUserId,
           rowIndex: r.rowIndex,

@@ -247,6 +247,16 @@ service cloud.firestore {
           allow delete: if isOwner(userId);
         }
 
+        // Family medical history subcollection — genetic risk factors from relatives
+        match /family-history/{entryId} {
+          allow read: if isOwner(userId) || isTenantOfUser(userId);
+          allow create: if isOwner(userId) &&
+                          request.resource.data.patientId == patientId &&
+                          request.resource.data.userId == userId;
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
+
         // Vaccinations subcollection (pet health records)
         match /vaccinations/{vaccinationId} {
           allow read: if isOwner(userId);

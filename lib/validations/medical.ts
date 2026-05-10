@@ -322,6 +322,53 @@ export const medicalEquipmentFormSchema = medicalEquipmentSchema.omit({
 
 export type MedicalEquipmentForm = z.infer<typeof medicalEquipmentFormSchema>
 
+// ==================== FAMILY MEDICAL HISTORY ====================
+
+/**
+ * Schema for family-medical-history entries (relative + condition
+ * + age of onset). Required: relationship + condition. Everything
+ * else optional — patients often don't know specifics.
+ */
+export const familyRelationshipSchema = z.enum([
+  'mother',
+  'father',
+  'sibling',
+  'maternal_grandparent',
+  'paternal_grandparent',
+  'aunt_uncle',
+  'child',
+  'other',
+])
+
+export const familyHistoryEntrySchema = z.object({
+  id: z.string().uuid(),
+  patientId: z.string().min(1),
+  userId: z.string().min(1),
+  relativeRelationship: familyRelationshipSchema,
+  condition: z.string().min(1, 'Condition is required').max(200),
+  ageOfOnset: z.number().int().min(0).max(150).optional(),
+  isLiving: z.boolean().optional(),
+  causeOfDeath: z.string().max(200).optional(),
+  notes: z.string().max(2000).optional(),
+  source: z.enum(['manual', 'spreadsheet-import', 'ocr']).default('manual'),
+  addedAt: z.string().datetime(),
+  addedBy: z.string().min(1),
+  importBatchId: z.string().optional(),
+})
+
+/** Form-input shape — drops system-managed fields. */
+export const familyHistoryFormSchema = familyHistoryEntrySchema.omit({
+  id: true,
+  patientId: true,
+  userId: true,
+  source: true,
+  addedAt: true,
+  addedBy: true,
+  importBatchId: true,
+})
+
+export type FamilyHistoryForm = z.infer<typeof familyHistoryFormSchema>
+
 export const providerSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().min(1),

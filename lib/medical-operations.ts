@@ -25,7 +25,8 @@ import type {
   PatientMedication,
   PatientDocument,
   Immunization,
-  MedicalEquipment
+  MedicalEquipment,
+  FamilyHistoryEntry
 } from '@/types/medical'
 
 // Helper: Make authenticated API request (uses unified API client)
@@ -1800,6 +1801,67 @@ export const equipmentOperations = {
   },
 }
 
+// ==================== FAMILY HISTORY OPERATIONS ====================
+// Phase D of the medical-binder gap close. Genetic risk factors —
+// what the patient's relatives had. Storage path:
+//   users/{ownerUserId}/patients/{patientId}/family-history/{id}
+//
+// Reads/writes go through the canonical /api/patients/[patientId]/
+// family-history route, which uses assertPatientAccess for RBAC.
+export const familyHistoryOperations = {
+  /** List a patient's family-history entries, newest first. */
+  async getFamilyHistory(patientId: string): Promise<FamilyHistoryEntry[]> {
+    try {
+      logger.debug('[MedicalOps] Fetching family history', { patientId })
+      const records = await makeAuthenticatedRequest<FamilyHistoryEntry[]>(`/patients/${patientId}/family-history`)
+      logger.debug('[MedicalOps] Family history fetched', { patientId, count: records?.length || 0 })
+      return records || []
+    } catch (error) {
+      logger.error('[MedicalOps] Error fetching family history', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /** Create a new family-history entry. */
+  async createFamilyHistory(
+    patientId: string,
+    data: Omit<FamilyHistoryEntry, 'id' | 'patientId' | 'userId' | 'addedAt' | 'addedBy' | 'source'> & {
+      source?: 'manual' | 'spreadsheet-import' | 'ocr'
+    },
+  ): Promise<FamilyHistoryEntry> {
+    try {
+      logger.info('[MedicalOps] Creating family history', {
+        patientId,
+        condition: data.condition,
+        relationship: data.relativeRelationship,
+      })
+      const record = await makeAuthenticatedRequest<FamilyHistoryEntry>(`/patients/${patientId}/family-history`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      logger.info('[MedicalOps] Family history created', { patientId, id: record.id })
+      return record
+    } catch (error) {
+      logger.error('[MedicalOps] Error creating family history', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /** Delete a family-history entry by id. */
+  async deleteFamilyHistory(patientId: string, id: string): Promise<void> {
+    try {
+      logger.info('[MedicalOps] Deleting family history', { patientId, id })
+      await makeAuthenticatedRequest<void>(`/patients/${patientId}/family-history/${id}`, {
+        method: 'DELETE',
+      })
+      logger.info('[MedicalOps] Family history deleted', { patientId, id })
+    } catch (error) {
+      logger.error('[MedicalOps] Error deleting family history', error as Error, { patientId, id })
+      throw error
+    }
+  },
+}
+
 export const medicalOperations = {
   patients: patientOperations,
   vitals: vitalOperations,
@@ -1813,5 +1875,6 @@ export const medicalOperations = {
   documents: documentOperations,
   immunizations: immunizationOperations,
   equipment: equipmentOperations,
+  familyHistory: familyHistoryOperations,
   createAuditLog: auditOperations.createAuditLog
 }

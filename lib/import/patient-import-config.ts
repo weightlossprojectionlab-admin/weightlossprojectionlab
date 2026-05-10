@@ -85,6 +85,12 @@ export type ImportableField =
   | 'prescribedBy'
   | 'acquiredAt'
   | 'nextMaintenanceAt'
+  // Family-history-row-specific fields
+  | 'relativeRelationship'
+  | 'condition'
+  | 'ageOfOnset'
+  | 'isLiving'
+  | 'causeOfDeath'
 
 export type ColumnMapping = ImportableField | 'skip'
 
@@ -154,6 +160,12 @@ const FIELD_ALIASES: Record<ImportableField, string[]> = {
   prescribedBy: ['Prescribed By', 'Rx By', 'Ordered By'],
   acquiredAt: ['Acquired', 'Date Acquired', 'Date Received', 'Purchase Date'],
   nextMaintenanceAt: ['Next Maintenance', 'Maintenance Due', 'Service Due', 'Next Service'],
+  // Family-history row
+  relativeRelationship: ['Relative', 'Relationship', 'Family Member Relation', 'Relative Type'],
+  condition: ['Condition', 'Diagnosis', 'Family Condition', 'Disease'],
+  ageOfOnset: ['Age of Onset', 'Onset Age', 'Age Diagnosed', 'Diagnosed At Age'],
+  isLiving: ['Living', 'Alive', 'Living Status'],
+  causeOfDeath: ['Cause of Death', 'COD', 'Died Of'],
 }
 
 const normalize = (s: string): string => s.toLowerCase().replace(/[\s_\-./]+/g, '')
@@ -259,6 +271,7 @@ const FIELD_TRANSFORMS: Record<ImportableField, (raw: string) => unknown> = {
     if (['weight', 'weight log', 'weigh-in', 'weigh in'].includes(v)) return 'weight'
     if (['immunization', 'vaccine', 'vaccination', 'shot'].includes(v)) return 'immunization'
     if (['equipment', 'medical equipment', 'device'].includes(v)) return 'equipment'
+    if (['family history', 'family_history', 'familyhistory', 'family-history', 'family medical history'].includes(v)) return 'family_history'
     return v // let dispatcher reject
   },
   name: (raw) => raw.trim() || undefined,
@@ -363,6 +376,32 @@ const FIELD_TRANSFORMS: Record<ImportableField, (raw: string) => unknown> = {
   prescribedBy: (raw) => raw.trim() || undefined,
   acquiredAt: (raw) => parseDateOnly(raw) ?? undefined,
   nextMaintenanceAt: (raw) => parseDateOnly(raw) ?? undefined,
+  // Family-history-row fields
+  relativeRelationship: (raw) => {
+    const v = raw.trim().toLowerCase().replace(/[\s-]+/g, '_')
+    if (!v) return undefined
+    if (['mom', 'mother', 'mum'].includes(v)) return 'mother'
+    if (['dad', 'father', 'pa'].includes(v)) return 'father'
+    if (['brother', 'sister', 'sibling'].includes(v)) return 'sibling'
+    if (['maternal_grandparent', 'maternal_grandma', 'maternal_grandpa', 'mat_grandparent'].includes(v)) return 'maternal_grandparent'
+    if (['paternal_grandparent', 'paternal_grandma', 'paternal_grandpa', 'pat_grandparent'].includes(v)) return 'paternal_grandparent'
+    if (['aunt', 'uncle', 'aunt_uncle'].includes(v)) return 'aunt_uncle'
+    if (['son', 'daughter', 'child'].includes(v)) return 'child'
+    return v // let validator reject
+  },
+  condition: (raw) => raw.trim() || undefined,
+  ageOfOnset: (raw) => {
+    const n = parseInt(raw.trim(), 10)
+    return Number.isFinite(n) && n >= 0 ? n : undefined
+  },
+  isLiving: (raw) => {
+    const v = raw.trim().toLowerCase()
+    if (!v) return undefined
+    if (['true', 'yes', 'y', 'living', 'alive', '1'].includes(v)) return true
+    if (['false', 'no', 'n', 'deceased', 'dead', '0'].includes(v)) return false
+    return undefined
+  },
+  causeOfDeath: (raw) => raw.trim() || undefined,
 }
 
 export function transformRow(
@@ -383,7 +422,7 @@ export function transformRow(
 // Row-type dispatch
 // ============================================================================
 
-export type ResolvedRowType = 'patient' | 'weight' | 'immunization' | 'equipment'
+export type ResolvedRowType = 'patient' | 'weight' | 'immunization' | 'equipment' | 'family_history'
 
 /**
  * Decide what kind of row we're looking at. Default is 'patient'
@@ -393,8 +432,16 @@ export type ResolvedRowType = 'patient' | 'weight' | 'immunization' | 'equipment
 export function resolveRowType(transformed: Record<string, unknown>): ResolvedRowType | { error: string } {
   const raw = transformed._rowType
   if (raw === undefined) return 'patient'
-  if (raw === 'patient' || raw === 'weight' || raw === 'immunization' || raw === 'equipment') return raw
-  return { error: `Unknown row type "${String(raw)}". Use "patient", "weight", "immunization", or "equipment".` }
+  if (
+    raw === 'patient' ||
+    raw === 'weight' ||
+    raw === 'immunization' ||
+    raw === 'equipment' ||
+    raw === 'family_history'
+  ) return raw
+  return {
+    error: `Unknown row type "${String(raw)}". Use "patient", "weight", "immunization", "equipment", or "family_history".`,
+  }
 }
 
 // ============================================================================
@@ -550,6 +597,48 @@ export function validateEquipmentRow(
   | { ok: true; data: ImportEquipmentRow }
   | { ok: false; errors: Array<{ field: string; message: string }> } {
   const result = ImportEquipmentRowSchema.safeParse(row)
+  if (result.success) return { ok: true, data: result.data }
+  return {
+    ok: false,
+    errors: result.error.issues.map((i) => ({
+      field: i.path.join('.') || '_row',
+      message: i.message,
+    })),
+  }
+}
+
+// ============================================================================
+// Family-history-row schema
+// ============================================================================
+
+export const ImportFamilyHistoryRowSchema = z.object({
+  // Reuse `name` as the patient identifier — same matching strategy.
+  name: z.string().min(1, 'Patient name is required'),
+  relativeRelationship: z.enum([
+    'mother',
+    'father',
+    'sibling',
+    'maternal_grandparent',
+    'paternal_grandparent',
+    'aunt_uncle',
+    'child',
+    'other',
+  ]),
+  condition: z.string().min(1, 'Condition is required').max(200),
+  ageOfOnset: z.number().int().min(0).max(150).optional(),
+  isLiving: z.boolean().optional(),
+  causeOfDeath: z.string().max(200).optional(),
+  notes: z.string().max(2000).optional(),
+})
+
+export type ImportFamilyHistoryRow = z.infer<typeof ImportFamilyHistoryRowSchema>
+
+export function validateFamilyHistoryRow(
+  row: Record<string, unknown>,
+):
+  | { ok: true; data: ImportFamilyHistoryRow }
+  | { ok: false; errors: Array<{ field: string; message: string }> } {
+  const result = ImportFamilyHistoryRowSchema.safeParse(row)
   if (result.success) return { ok: true, data: result.data }
   return {
     ok: false,

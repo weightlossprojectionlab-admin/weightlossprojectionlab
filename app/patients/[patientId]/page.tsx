@@ -16,7 +16,7 @@ import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { useInvitations } from '@/hooks/useInvitations'
 import { useUserProfile } from '@/hooks/useUserProfile'
-import { PatientProfile, VitalType, VitalSign, VitalUnit, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication, Immunization, MedicalEquipment } from '@/types/medical'
+import { PatientProfile, VitalType, VitalSign, VitalUnit, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication, Immunization, MedicalEquipment, FamilyHistoryEntry, FamilyRelationship } from '@/types/medical'
 import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
 import DailyVitalsSummary from '@/components/vitals/DailyVitalsSummary'
@@ -34,6 +34,7 @@ import { MedicationForm } from '@/components/patients/MedicationForm'
 import { MedicationList } from '@/components/patients/MedicationList'
 import ImmunizationForm from '@/components/patients/ImmunizationForm'
 import MedicalEquipmentForm from '@/components/patients/MedicalEquipmentForm'
+import FamilyHistoryForm from '@/components/patients/FamilyHistoryForm'
 import { AIHealthReport } from '@/components/patients/AIHealthReport'
 import DocumentUpload from '@/components/patients/DocumentUpload'
 import DocumentDetailModal from '@/components/documents/DocumentDetailModal'
@@ -154,6 +155,10 @@ function PatientDetailContent() {
   const [loadingEquipment, setLoadingEquipment] = useState(false)
   const [showEquipmentForm, setShowEquipmentForm] = useState(false)
   const [deletingEquipment, setDeletingEquipment] = useState<MedicalEquipment | null>(null)
+  const [familyHistory, setFamilyHistory] = useState<FamilyHistoryEntry[]>([])
+  const [loadingFamilyHistory, setLoadingFamilyHistory] = useState(false)
+  const [showFamilyHistoryForm, setShowFamilyHistoryForm] = useState(false)
+  const [deletingFamilyHistory, setDeletingFamilyHistory] = useState<FamilyHistoryEntry | null>(null)
   const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'episodes' | 'settings' | 'feeding' | 'activity' | 'grooming' | 'health-records'>(tabParam || 'vitals')
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
   const [autoOpenFeedingModal, setAutoOpenFeedingModal] = useState(false)
@@ -550,6 +555,53 @@ function PatientDetailContent() {
       await fetchEquipment()
     } catch (error: any) {
       logger.error('[PatientDetail] Error deleting equipment', error)
+      toast.error('Could not remove — please try again')
+    }
+  }
+
+  // Fetch family medical history using API
+  const fetchFamilyHistory = async () => {
+    if (!patientId) {
+      setLoadingFamilyHistory(false)
+      return
+    }
+    try {
+      setLoadingFamilyHistory(true)
+      const records = await medicalOperations.familyHistory.getFamilyHistory(patientId)
+      setFamilyHistory(records)
+    } catch (error: any) {
+      logger.error('[PatientDetail] Error fetching family history', error)
+    } finally {
+      setLoadingFamilyHistory(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchFamilyHistory()
+  }, [patientId])
+
+  const handleAddFamilyHistory = async (data: {
+    relativeRelationship: FamilyRelationship
+    condition: string
+    ageOfOnset?: number
+    isLiving?: boolean
+    causeOfDeath?: string
+    notes?: string
+  }) => {
+    await medicalOperations.familyHistory.createFamilyHistory(patientId, data)
+    toast.success('Family history added')
+    await fetchFamilyHistory()
+  }
+
+  const confirmDeleteFamilyHistory = async () => {
+    if (!deletingFamilyHistory) return
+    try {
+      await medicalOperations.familyHistory.deleteFamilyHistory(patientId, deletingFamilyHistory.id)
+      toast.success('Family history removed')
+      setDeletingFamilyHistory(null)
+      await fetchFamilyHistory()
+    } catch (error: any) {
+      logger.error('[PatientDetail] Error deleting family history', error)
       toast.error('Could not remove — please try again')
     }
   }
@@ -2408,10 +2460,76 @@ function PatientDetailContent() {
                 )}
               </div>
 
-              {/* Family Medical History placeholder — Phase D */}
-              <div className="bg-card rounded-lg shadow-sm p-6 opacity-60">
-                <h2 className="text-lg font-bold text-foreground mb-1">Family Medical History</h2>
-                <p className="text-sm text-muted-foreground italic">Coming soon — genetic risk factors from relatives.</p>
+              {/* Family Medical History card */}
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="text-lg font-bold text-foreground">Family Medical History</h2>
+                  <button
+                    type="button"
+                    data-write="true"
+                    onClick={() => setShowFamilyHistoryForm(true)}
+                    className="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+                  >
+                    + Add
+                  </button>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Genetic risk factors from relatives — informs surveillance plans.
+                </p>
+
+                {loadingFamilyHistory ? (
+                  <p className="text-sm text-muted-foreground italic py-4 text-center">Loading...</p>
+                ) : familyHistory.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic py-4 text-center">
+                    No family history recorded yet.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {familyHistory.map((entry) => {
+                      const relLabel = entry.relativeRelationship.replace(/_/g, ' ')
+                      return (
+                        <li key={entry.id} className="py-3 flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground capitalize">
+                              {relLabel}
+                              <span className="ml-2 text-sm text-muted-foreground font-normal">
+                                — {entry.condition}
+                              </span>
+                            </p>
+                            {entry.ageOfOnset !== undefined && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Onset at age {entry.ageOfOnset}
+                              </p>
+                            )}
+                            {entry.isLiving === false && entry.causeOfDeath && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Deceased — cause: {entry.causeOfDeath}
+                              </p>
+                            )}
+                            {entry.isLiving === false && !entry.causeOfDeath && (
+                              <p className="text-xs text-muted-foreground mt-0.5">Deceased</p>
+                            )}
+                            {entry.isLiving === true && (
+                              <p className="text-xs text-muted-foreground mt-0.5">Living</p>
+                            )}
+                            {entry.notes && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">{entry.notes}</p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            data-write="true"
+                            onClick={() => setDeletingFamilyHistory(entry)}
+                            className="text-xs text-error hover:underline shrink-0"
+                            aria-label={`Delete ${relLabel} ${entry.condition}`}
+                          >
+                            Delete
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
               </div>
             </div>
           )}
@@ -3091,6 +3209,28 @@ function PatientDetailContent() {
         onConfirm={confirmDeleteEquipment}
         title="Remove Medical Equipment"
         message={`Remove the ${deletingEquipment?.name} record? This action cannot be undone.`}
+        confirmText="Remove"
+        cancelText="Cancel"
+        variant="danger"
+      />
+
+      {/* Add Family History Modal */}
+      {showFamilyHistoryForm && patient && (
+        <FamilyHistoryForm
+          patientId={patientId}
+          patientName={patient.name}
+          onClose={() => setShowFamilyHistoryForm(false)}
+          onSubmit={handleAddFamilyHistory}
+        />
+      )}
+
+      {/* Delete Family History Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deletingFamilyHistory}
+        onClose={() => setDeletingFamilyHistory(null)}
+        onConfirm={confirmDeleteFamilyHistory}
+        title="Remove Family History"
+        message={`Remove the ${deletingFamilyHistory?.relativeRelationship.replace(/_/g, ' ') ?? ''} — ${deletingFamilyHistory?.condition ?? ''} record? This action cannot be undone.`}
         confirmText="Remove"
         cancelText="Cancel"
         variant="danger"

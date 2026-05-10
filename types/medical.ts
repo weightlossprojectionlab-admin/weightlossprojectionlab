@@ -545,6 +545,68 @@ export interface MedicalEquipment {
   importBatchId?: string
 }
 
+// ==================== FAMILY MEDICAL HISTORY ====================
+
+/**
+ * Genetic / familial health history — what the patient's relatives
+ * had, which informs the patient's own risk picture (cancer
+ * screenings, cardiovascular surveillance, etc.).
+ *
+ * Distinct from the patient's own conditions (those live on
+ * PatientProfile.healthConditions) and from family-as-household
+ * (those are separate Patient records). This is "my mother had
+ * breast cancer at 52" stored as structured data, not a free-form
+ * note.
+ *
+ * Storage: users/{ownerUserId}/patients/{patientId}/family-history/{id}
+ */
+export type FamilyRelationship =
+  | 'mother'
+  | 'father'
+  | 'sibling'
+  | 'maternal_grandparent'
+  | 'paternal_grandparent'
+  | 'aunt_uncle'
+  | 'child'
+  | 'other'
+
+export interface FamilyHistoryEntry {
+  id: string
+  patientId: string
+  userId: string // Household owner uid
+
+  /** Which relative this entry is about. */
+  relativeRelationship: FamilyRelationship
+
+  /** The condition (free-form). Examples: 'heart disease',
+   *  'type 2 diabetes', 'breast cancer', 'Alzheimer's'. */
+  condition: string
+
+  /** Age the relative was when the condition was diagnosed.
+   *  Important for risk stratification — early onset matters. */
+  ageOfOnset?: number
+
+  /** Whether the relative is still alive. Optional — sometimes
+   *  the patient genuinely doesn't know. */
+  isLiving?: boolean
+
+  /** If deceased, what they died of (may differ from the
+   *  condition above). */
+  causeOfDeath?: string
+
+  /** Free-form notes (specifics of the condition, treatments,
+   *  family-line patterns). */
+  notes?: string
+
+  /** Audit + source tracking. */
+  source: 'manual' | 'spreadsheet-import' | 'ocr'
+  addedAt: string
+  addedBy: string
+
+  /** Set if imported as part of a batch. */
+  importBatchId?: string
+}
+
 // ==================== PROVIDERS ====================
 
 export type ProviderType =

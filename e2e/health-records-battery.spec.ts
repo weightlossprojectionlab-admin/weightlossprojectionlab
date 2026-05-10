@@ -1,12 +1,13 @@
 /**
- * Health Records battery — semantic-intent test for Phases B + C.
+ * Health Records battery — semantic-intent test for Phases B + C + D.
  *
  * Models how a real caregiver uses the Health Records page:
  *   1. Adds several immunizations (vaccine series, multiple shots)
  *   2. Adds several pieces of medical equipment (varied categories)
- *   3. Verifies all of them coexist in the UI at once
- *   4. Verifies every record persisted to Firestore with every field
- *   5. Deletes each one via the per-row affordance and confirms gone
+ *   3. Adds several family-history entries (relatives + conditions)
+ *   4. Verifies all of them coexist in the UI at once
+ *   5. Verifies every record persisted to Firestore with every field
+ *   6. Deletes each one via the per-row affordance and confirms gone
  *      from both UI and Firestore
  *
  * Multi-record coverage catches bugs the single-record tests can't:
@@ -40,12 +41,32 @@ interface EquipmentFixture {
   notes: string
 }
 
-test.describe('Health Records — Phase B + C battery @battery', () => {
-  // Six add+delete round-trips at human pace + cold-compile waits
-  // exceed the default 2-minute per-test timeout. Give it 15.
-  test.setTimeout(15 * 60_000)
+interface FamilyHistoryFixture {
+  /** Visible label in the UI (matches the select option text). */
+  relationshipLabel: string
+  /** Persisted enum value for Firestore. */
+  relationshipValue:
+    | 'mother'
+    | 'father'
+    | 'sibling'
+    | 'maternal_grandparent'
+    | 'paternal_grandparent'
+    | 'aunt_uncle'
+    | 'child'
+    | 'other'
+  condition: string
+  ageOfOnset: string
+  livingStatus: 'unknown' | 'living' | 'deceased'
+  causeOfDeath: string
+  notes: string
+}
 
-  test('add several immunizations + equipment, verify, delete all', async ({
+test.describe('Health Records — Phase B + C + D battery @battery', () => {
+  // Many add+delete round-trips at human pace + cold-compile waits
+  // exceed the default 2-minute per-test timeout. Give it 20.
+  test.setTimeout(20 * 60_000)
+
+  test('add several immunizations + equipment + family history, verify, delete all', async ({
     page,
     patientId,
     ownerUserId,
@@ -120,6 +141,36 @@ test.describe('Health Records — Phase B + C battery @battery', () => {
       },
     ]
 
+    const familyHistory: FamilyHistoryFixture[] = [
+      {
+        relationshipLabel: 'Mother',
+        relationshipValue: 'mother',
+        condition: `Breast cancer-${stamp}`,
+        ageOfOnset: '52',
+        livingStatus: 'living',
+        causeOfDeath: '',
+        notes: 'In remission since 2024',
+      },
+      {
+        relationshipLabel: 'Father',
+        relationshipValue: 'father',
+        condition: `Heart disease-${stamp}`,
+        ageOfOnset: '60',
+        livingStatus: 'deceased',
+        causeOfDeath: 'Heart attack',
+        notes: 'Two stents at 58',
+      },
+      {
+        relationshipLabel: 'Paternal grandparent',
+        relationshipValue: 'paternal_grandparent',
+        condition: `Type 2 diabetes-${stamp}`,
+        ageOfOnset: '65',
+        livingStatus: 'unknown',
+        causeOfDeath: '',
+        notes: 'Late-onset',
+      },
+    ]
+
     await gotoPatientTab('health-records')
 
     const immunizationsCard = page.locator('div.bg-card', {
@@ -128,9 +179,13 @@ test.describe('Health Records — Phase B + C battery @battery', () => {
     const equipmentCard = page.locator('div.bg-card', {
       has: page.getByRole('heading', { name: 'Medical Equipment', exact: true }),
     })
+    const familyHistoryCard = page.locator('div.bg-card', {
+      has: page.getByRole('heading', { name: 'Family Medical History', exact: true }),
+    })
 
     await expect(immunizationsCard).toBeVisible({ timeout: 30_000 })
     await expect(equipmentCard).toBeVisible({ timeout: 10_000 })
+    await expect(familyHistoryCard).toBeVisible({ timeout: 10_000 })
 
     // ============= Add all immunizations =============
     for (const imm of immunizations) {
@@ -180,6 +235,33 @@ test.describe('Health Records — Phase B + C battery @battery', () => {
       await expect(page.locator('li', { hasText: eq.name })).toBeVisible({ timeout: 10_000 })
     }
 
+    // ============= Add all family-history entries =============
+    for (const fh of familyHistory) {
+      await familyHistoryCard.getByRole('button', { name: '+ Add', exact: true }).click()
+      await expect(
+        page.getByRole('heading', { name: 'Add Family History', exact: true }),
+      ).toBeVisible()
+
+      await page.getByLabel('Relative *').selectOption({ label: fh.relationshipLabel })
+      await page.getByLabel('Condition *').pressSequentially(fh.condition, { delay: 40 })
+      if (fh.ageOfOnset) await page.getByLabel(/^Age of onset/).fill(fh.ageOfOnset)
+      if (fh.livingStatus !== 'unknown') {
+        await page
+          .getByLabel(/^Living status/)
+          .selectOption(fh.livingStatus === 'living' ? 'living' : 'deceased')
+      }
+      if (fh.livingStatus === 'deceased' && fh.causeOfDeath) {
+        await page.getByLabel(/^Cause of death/).fill(fh.causeOfDeath)
+      }
+      await page.getByLabel(/^Notes/).fill(fh.notes)
+      await page.getByRole('button', { name: 'Add', exact: true }).click()
+
+      await expect(
+        page.getByRole('heading', { name: 'Add Family History', exact: true }),
+      ).not.toBeVisible({ timeout: 60_000 })
+      await expect(page.locator('li', { hasText: fh.condition })).toBeVisible({ timeout: 10_000 })
+    }
+
     // ============= Coexistence: every row visible at once =============
     for (const imm of immunizations) {
       await expect(page.locator('li', { hasText: imm.vaccineName })).toBeVisible()
@@ -187,8 +269,11 @@ test.describe('Health Records — Phase B + C battery @battery', () => {
     for (const eq of equipment) {
       await expect(page.locator('li', { hasText: eq.name })).toBeVisible()
     }
+    for (const fh of familyHistory) {
+      await expect(page.locator('li', { hasText: fh.condition })).toBeVisible()
+    }
 
-    // ============= Firestore persistence (all records, all fields) ============
+    // ============= Firestore persistence =============
     const immunizationsCol = firestore
       .collection('users').doc(ownerUserId)
       .collection('patients').doc(patientId)
@@ -197,10 +282,15 @@ test.describe('Health Records — Phase B + C battery @battery', () => {
       .collection('users').doc(ownerUserId)
       .collection('patients').doc(patientId)
       .collection('equipment')
+    const familyHistoryCol = firestore
+      .collection('users').doc(ownerUserId)
+      .collection('patients').doc(patientId)
+      .collection('family-history')
 
-    const persistedDocIds: { immunizations: string[]; equipment: string[] } = {
+    const persistedDocIds: { immunizations: string[]; equipment: string[]; familyHistory: string[] } = {
       immunizations: [],
       equipment: [],
+      familyHistory: [],
     }
 
     for (const imm of immunizations) {
@@ -231,7 +321,23 @@ test.describe('Health Records — Phase B + C battery @battery', () => {
       persistedDocIds.equipment.push(snap.docs[0].id)
     }
 
-    // ============= Delete all immunizations =============
+    for (const fh of familyHistory) {
+      const snap = await familyHistoryCol.where('condition', '==', fh.condition).get()
+      expect(snap.size, `one Firestore doc for ${fh.condition}`).toBe(1)
+      const data = snap.docs[0].data()
+      expect(data.relativeRelationship).toBe(fh.relationshipValue)
+      expect(data.condition).toBe(fh.condition)
+      if (fh.ageOfOnset) expect(data.ageOfOnset).toBe(parseInt(fh.ageOfOnset, 10))
+      if (fh.livingStatus === 'living') expect(data.isLiving).toBe(true)
+      if (fh.livingStatus === 'deceased') {
+        expect(data.isLiving).toBe(false)
+        if (fh.causeOfDeath) expect(data.causeOfDeath).toBe(fh.causeOfDeath)
+      }
+      expect(data.notes).toBe(fh.notes)
+      persistedDocIds.familyHistory.push(snap.docs[0].id)
+    }
+
+    // ============= Delete everything =============
     for (const imm of immunizations) {
       const row = page.locator('li', { hasText: imm.vaccineName })
       await row.getByRole('button', { name: /^delete/i }).click()
@@ -240,13 +346,19 @@ test.describe('Health Records — Phase B + C battery @battery', () => {
         timeout: 60_000,
       })
     }
-
-    // ============= Delete all equipment =============
     for (const eq of equipment) {
       const row = page.locator('li', { hasText: eq.name })
       await row.getByRole('button', { name: /^delete/i }).click()
       await page.getByRole('button', { name: 'Remove', exact: true }).click()
       await expect(page.getByText(eq.name, { exact: false })).toHaveCount(0, {
+        timeout: 60_000,
+      })
+    }
+    for (const fh of familyHistory) {
+      const row = page.locator('li', { hasText: fh.condition })
+      await row.getByRole('button', { name: /^delete/i }).click()
+      await page.getByRole('button', { name: 'Remove', exact: true }).click()
+      await expect(page.getByText(fh.condition, { exact: false })).toHaveCount(0, {
         timeout: 60_000,
       })
     }
@@ -259,6 +371,10 @@ test.describe('Health Records — Phase B + C battery @battery', () => {
     for (const id of persistedDocIds.equipment) {
       const doc = await equipmentCol.doc(id).get()
       expect(doc.exists, `equipment ${id} removed from Firestore`).toBe(false)
+    }
+    for (const id of persistedDocIds.familyHistory) {
+      const doc = await familyHistoryCol.doc(id).get()
+      expect(doc.exists, `family history ${id} removed from Firestore`).toBe(false)
     }
 
     if (process.env.KEEP_OPEN !== '0') {
