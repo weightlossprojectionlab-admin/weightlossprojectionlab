@@ -58,7 +58,7 @@ export async function GET(
       stepLogs = stepLogs.filter((log) => log.date <= endDate)
     }
 
-    return NextResponse.json({ data: stepLogs })
+    return NextResponse.json({ success: true, data: stepLogs })
   } catch (error) {
     return errorResponse(error, {
       route: '/api/patients/[patientId]/step-logs',

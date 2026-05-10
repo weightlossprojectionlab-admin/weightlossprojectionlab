@@ -57,7 +57,7 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ data: filteredLogs })
+    return NextResponse.json({ success: true, data: filteredLogs })
   } catch (error) {
     return errorResponse(error, {
       route: '/api/patients/[patientId]/weight-logs',
