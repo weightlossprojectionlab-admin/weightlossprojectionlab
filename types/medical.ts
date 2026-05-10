@@ -100,6 +100,15 @@ export interface PatientProfile {
   healthConditions?: string[] // e.g., ['diabetes', 'hypertension', 'celiac']
   foodAllergies?: string[] // e.g., ['peanuts', 'shellfish', 'dairy']
 
+  /**
+   * Blood type for emergency identification (transfusion
+   * compatibility). Surfaced on the patient profile edit form +
+   * the family-member onboarding wizard. 'unknown' is a real
+   * answer, not a missing value, so users without records can
+   * record that they don't know.
+   */
+  bloodType?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-' | 'unknown'
+
   // ===== Family-meal PRD additions (Commit A foundation) =====
   // All optional — existing patients get defaults via absence.
   // Onboarding flow capture lands in Commit B / F.

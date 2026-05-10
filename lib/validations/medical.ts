@@ -52,6 +52,10 @@ export const patientProfileSchema = z.object({
   // Human-specific fields
   gender: z.enum(['male', 'female', 'other', 'prefer-not-to-say']).optional(),
   emergencyContacts: z.array(emergencyContactSchema).optional(),
+  // Emergency identification — transfusion compatibility. 'unknown'
+  // is a valid stored value (not a missing field) so users who
+  // genuinely don't know can record that explicitly.
+  bloodType: z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'unknown']).optional(),
 
   // Metadata
   createdAt: z.string().datetime(),

@@ -23,20 +23,20 @@ export const DEFAULT_PET_VITALS: VitalType[] = ['weight']
 
 // Dashboard tabs visible for each species
 export const PET_TAB_VISIBILITY: Record<string, string[]> = {
-  Dog: ['info', 'vitals', 'feeding', 'activity', 'medications', 'appointments', 'grooming', 'settings'],
-  Cat: ['info', 'vitals', 'feeding', 'activity', 'medications', 'appointments', 'grooming', 'settings'],
-  Bird: ['info', 'vitals', 'feeding', 'medications', 'appointments', 'settings'],
+  Dog: ['info', 'vitals', 'feeding', 'activity', 'medications', 'appointments', 'health-records', 'grooming', 'settings'],
+  Cat: ['info', 'vitals', 'feeding', 'activity', 'medications', 'appointments', 'health-records', 'grooming', 'settings'],
+  Bird: ['info', 'vitals', 'feeding', 'medications', 'appointments', 'health-records', 'settings'],
   Fish: ['info', 'vitals', 'feeding', 'settings'], // Fish rarely need vet appointments
-  Rabbit: ['info', 'vitals', 'feeding', 'medications', 'appointments', 'grooming', 'settings'],
-  'Guinea Pig': ['info', 'vitals', 'feeding', 'medications', 'appointments', 'grooming', 'settings'],
+  Rabbit: ['info', 'vitals', 'feeding', 'medications', 'appointments', 'health-records', 'grooming', 'settings'],
+  'Guinea Pig': ['info', 'vitals', 'feeding', 'medications', 'appointments', 'health-records', 'grooming', 'settings'],
   Hamster: ['info', 'vitals', 'feeding', 'medications', 'settings'], // Hamsters rarely need vet visits
-  Reptile: ['info', 'vitals', 'feeding', 'medications', 'appointments', 'settings'],
+  Reptile: ['info', 'vitals', 'feeding', 'medications', 'appointments', 'health-records', 'settings'],
   Other: ['info', 'vitals', 'feeding', 'medications', 'settings']
 }
 
 // Human dashboard tabs for reference
 export const HUMAN_TAB_VISIBILITY: string[] = [
-  'info', 'vitals', 'meals', 'steps', 'medications', 'recipes', 'appointments', 'settings'
+  'info', 'vitals', 'meals', 'steps', 'medications', 'recipes', 'appointments', 'health-records', 'settings'
 ]
 
 // Species-specific label overrides
@@ -131,6 +131,7 @@ function getDefaultTabLabel(tab: string): string {
     medications: '💊 Medications', // For humans
     recipes: '📖 Recipes',
     appointments: '📅 Appt',
+    'health-records': '📋 Records',
     grooming: '✂️ Groom',
     settings: '⚙️ Settings'
   }

@@ -455,6 +455,7 @@ interface FamilyMemberData {
   dateOfBirth: string
   relationship: string
   gender: string
+  bloodType: string
 
   // Step 2: Vitals
   heightFeet: string
@@ -514,6 +515,7 @@ export default function FamilyMemberOnboardingWizard() {
     dateOfBirth: '',
     relationship: '',
     gender: '',
+    bloodType: '',
     heightFeet: '',
     heightInches: '',
     heightCm: '',
@@ -778,6 +780,12 @@ export default function FamilyMemberOnboardingWizard() {
           if (data.breathingSupport) patientData.breathingSupport = true
           if (data.kangarooCare) patientData.kangarooCare = true
         }
+      }
+
+      // Blood type — applies to humans + pets equally (transfusion
+      // compatibility matters for pets too).
+      if (data.bloodType) {
+        patientData.bloodType = data.bloodType
       }
 
       // Add vitals if provided
@@ -1985,6 +1993,29 @@ export default function FamilyMemberOnboardingWizard() {
             })()}
           </div>
         )}
+
+        {/* Blood type — optional for humans + pets. Useful for
+            emergency identification. 'Unknown' is a valid stored
+            value (the user genuinely doesn't know). */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Blood Type (optional)</label>
+          <select
+            value={data.bloodType || ''}
+            onChange={(e) => setData({ ...data, bloodType: e.target.value })}
+            className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
+          >
+            <option value="">— Skip —</option>
+            <option value="A+">A+</option>
+            <option value="A-">A−</option>
+            <option value="B+">B+</option>
+            <option value="B-">B−</option>
+            <option value="AB+">AB+</option>
+            <option value="AB-">AB−</option>
+            <option value="O+">O+</option>
+            <option value="O-">O−</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
 
         {/* Option: Scan Driver's License (only for 17+) */}
         {!isPet && (() => {

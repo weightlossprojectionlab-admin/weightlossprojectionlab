@@ -50,6 +50,7 @@ export type ImportableField =
   | 'dateOfBirth'
   | 'relationship'
   | 'gender'
+  | 'bloodType'
   | 'species'
   | 'breed'
   | 'nickname'
@@ -81,6 +82,7 @@ const FIELD_ALIASES: Record<ImportableField, string[]> = {
   dateOfBirth: ['Date of Birth', 'DOB', 'Birth Date', 'Birthday', 'Born', 'Birthdate'],
   relationship: ['Relationship', 'Relation', 'Role'],
   gender: ['Gender', 'Sex'],
+  bloodType: ['Blood Type', 'ABO Type'],
   species: ['Species', 'Animal Type', 'Pet Type'],
   breed: ['Breed'],
   nickname: ['Nickname', 'Preferred Name', 'Goes By', 'Called'],
@@ -242,6 +244,14 @@ const FIELD_TRANSFORMS: Record<ImportableField, (raw: string) => unknown> = {
     if (v.startsWith('f')) return 'female'
     return v
   },
+  bloodType: (raw) => {
+    const v = raw.trim().toUpperCase().replace(/\s+/g, '')
+    if (!v) return undefined
+    // Accept canonical (A+, O-, AB+) and 'UNKNOWN' literal.
+    const valid = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'UNKNOWN']
+    if (valid.includes(v)) return v === 'UNKNOWN' ? 'unknown' : v
+    return v // let validator reject
+  },
   species: (raw) => raw.trim().toLowerCase() || undefined,
   breed: (raw) => raw.trim() || undefined,
   nickname: (raw) => raw.trim() || undefined,
@@ -344,6 +354,7 @@ export const ImportPatientRowSchema = z.object({
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date of birth must be a valid date'),
   relationship: z.enum(['self', 'spouse', 'parent', 'child', 'sibling', 'grandparent', 'pet']),
   gender: z.enum(['male', 'female', 'other', 'prefer-not-to-say']).optional(),
+  bloodType: z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'unknown']).optional(),
   species: z.string().optional(),
   breed: z.string().optional(),
   nickname: z.string().max(100).optional(),

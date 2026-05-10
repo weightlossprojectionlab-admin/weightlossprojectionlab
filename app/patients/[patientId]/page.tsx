@@ -144,7 +144,7 @@ function PatientDetailContent() {
   const [medications, setMedications] = useState<PatientMedication[]>([])
   const [loadingMedications, setLoadingMedications] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
-  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'episodes' | 'settings' | 'feeding' | 'activity' | 'grooming'>(tabParam || 'vitals')
+  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'episodes' | 'settings' | 'feeding' | 'activity' | 'grooming' | 'health-records'>(tabParam || 'vitals')
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
   const [autoOpenFeedingModal, setAutoOpenFeedingModal] = useState(false)
   const [showQuickWeightModal, setShowQuickWeightModal] = useState(false)
@@ -828,6 +828,29 @@ function PatientDetailContent() {
                     >
                       <span className="text-5xl lg:text-xl">📋</span>
                       <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">{isPet ? 'View Vet Appts' : 'View Appointments'}</span>
+                    </button>
+                  )}
+
+                  {/* Health Records — consolidated static medical
+                      records: blood type, immunizations, equipment,
+                      family history. Each phase B–D drops a card
+                      into this tab. */}
+                  {visibleTabs.includes('health-records') && (
+                    <button
+                      onClick={() => {
+                        setActiveTab('health-records')
+                        setTimeout(() => {
+                          document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }, 100)
+                      }}
+                      className={`w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 ${
+                        activeTab === 'health-records'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted hover:bg-muted/80 text-foreground'
+                      }`}
+                    >
+                      <span className="text-5xl lg:text-xl">📋</span>
+                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Health Records</span>
                     </button>
                   )}
                   {/* Shopping - Always visible */}
@@ -2078,6 +2101,47 @@ function PatientDetailContent() {
               )}
             </div>
           </div>
+          )}
+
+          {/* Health Records Tab — static medical records that don't
+              change daily. Phase A scaffold renders Blood Type now;
+              Phases B–D add Immunizations, Equipment, Family History
+              cards into this same tab. */}
+          {activeTab === 'health-records' && (
+            <div className="overflow-y-auto max-h-[calc(100vh-200px)] space-y-6">
+              {/* Blood Type card */}
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-bold text-foreground mb-1">Blood Type</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Useful for emergency identification (transfusion compatibility).
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="text-3xl font-bold text-foreground">
+                    {patient.bloodType
+                      ? (patient.bloodType === 'unknown' ? 'Unknown' : patient.bloodType)
+                      : <span className="text-base font-normal text-muted-foreground italic">Not recorded</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Immunizations placeholder — Phase B fills this card */}
+              <div className="bg-card rounded-lg shadow-sm p-6 opacity-60">
+                <h2 className="text-lg font-bold text-foreground mb-1">Immunizations</h2>
+                <p className="text-sm text-muted-foreground italic">Coming next — vaccine records with dates and next-due tracking.</p>
+              </div>
+
+              {/* Medical Equipment placeholder — Phase C fills this */}
+              <div className="bg-card rounded-lg shadow-sm p-6 opacity-60">
+                <h2 className="text-lg font-bold text-foreground mb-1">Medical Equipment</h2>
+                <p className="text-sm text-muted-foreground italic">Coming soon — CPAP, glucose monitor, and other devices.</p>
+              </div>
+
+              {/* Family Medical History placeholder — Phase D */}
+              <div className="bg-card rounded-lg shadow-sm p-6 opacity-60">
+                <h2 className="text-lg font-bold text-foreground mb-1">Family Medical History</h2>
+                <p className="text-sm text-muted-foreground italic">Coming soon — genetic risk factors from relatives.</p>
+              </div>
+            </div>
           )}
 
           {/* Settings Tab */}
