@@ -69,6 +69,13 @@ export type ImportableField =
   | 'notes'
   | 'bodyFat'
   | 'tags'
+  // Immunization-row-specific fields
+  | 'vaccineName'
+  | 'administeredAt'
+  | 'doseNumber'
+  | 'lotNumber'
+  | 'administeredBy'
+  | 'nextDueAt'
 
 export type ColumnMapping = ImportableField | 'skip'
 
@@ -122,6 +129,13 @@ const FIELD_ALIASES: Record<ImportableField, string[]> = {
   notes: ['Notes', 'Comment', 'Comments', 'Memo'],
   bodyFat: ['Body Fat', 'Body Fat %', 'BF', 'BFP', 'Body Fat Percent'],
   tags: ['Tags', 'Labels', 'Time of Day', 'Context'],
+  // Immunization row
+  vaccineName: ['Vaccine', 'Vaccine Name', 'Immunization', 'Shot'],
+  administeredAt: ['Date Administered', 'Administered At', 'Date Given', 'Vaccine Date', 'Shot Date'],
+  doseNumber: ['Dose', 'Dose #', 'Dose Number', 'Shot #'],
+  lotNumber: ['Lot', 'Lot #', 'Lot Number', 'Vial Lot'],
+  administeredBy: ['Administered By', 'Given By', 'Provider', 'Clinic', 'Pharmacy'],
+  nextDueAt: ['Next Due', 'Next Dose Due', 'Booster Due', 'Next Vaccine Date'],
 }
 
 const normalize = (s: string): string => s.toLowerCase().replace(/[\s_\-./]+/g, '')
@@ -225,6 +239,7 @@ const FIELD_TRANSFORMS: Record<ImportableField, (raw: string) => unknown> = {
     if (!v) return undefined
     if (['patient', 'family member', 'person', 'human', 'pet'].includes(v)) return 'patient'
     if (['weight', 'weight log', 'weigh-in', 'weigh in'].includes(v)) return 'weight'
+    if (['immunization', 'vaccine', 'vaccination', 'shot'].includes(v)) return 'immunization'
     return v // let dispatcher reject
   },
   name: (raw) => raw.trim() || undefined,
@@ -310,6 +325,16 @@ const FIELD_TRANSFORMS: Record<ImportableField, (raw: string) => unknown> = {
     const list = splitList(raw)
     return list.length ? list : undefined
   },
+  // Immunization-row fields
+  vaccineName: (raw) => raw.trim() || undefined,
+  administeredAt: (raw) => parseDateOnly(raw) ?? undefined,
+  doseNumber: (raw) => {
+    const n = parseInt(raw.trim(), 10)
+    return Number.isFinite(n) && n > 0 ? n : undefined
+  },
+  lotNumber: (raw) => raw.trim() || undefined,
+  administeredBy: (raw) => raw.trim() || undefined,
+  nextDueAt: (raw) => parseDateOnly(raw) ?? undefined,
 }
 
 export function transformRow(
@@ -330,7 +355,7 @@ export function transformRow(
 // Row-type dispatch
 // ============================================================================
 
-export type ResolvedRowType = 'patient' | 'weight'
+export type ResolvedRowType = 'patient' | 'weight' | 'immunization'
 
 /**
  * Decide what kind of row we're looking at. Default is 'patient'
@@ -340,8 +365,8 @@ export type ResolvedRowType = 'patient' | 'weight'
 export function resolveRowType(transformed: Record<string, unknown>): ResolvedRowType | { error: string } {
   const raw = transformed._rowType
   if (raw === undefined) return 'patient'
-  if (raw === 'patient' || raw === 'weight') return raw
-  return { error: `Unknown row type "${String(raw)}". Use "patient" or "weight".` }
+  if (raw === 'patient' || raw === 'weight' || raw === 'immunization') return raw
+  return { error: `Unknown row type "${String(raw)}". Use "patient", "weight", or "immunization".` }
 }
 
 // ============================================================================
@@ -426,6 +451,41 @@ export function validateWeightRow(
   | { ok: true; data: ImportWeightRow }
   | { ok: false; errors: Array<{ field: string; message: string }> } {
   const result = ImportWeightRowSchema.safeParse(row)
+  if (result.success) return { ok: true, data: result.data }
+  return {
+    ok: false,
+    errors: result.error.issues.map((i) => ({
+      field: i.path.join('.') || '_row',
+      message: i.message,
+    })),
+  }
+}
+
+// ============================================================================
+// Immunization-row schema
+// ============================================================================
+
+export const ImportImmunizationRowSchema = z.object({
+  // Reuse `name` as the patient identifier — same matching strategy
+  // as weight rows (existing patient or just-created in pass 1).
+  name: z.string().min(1, 'Patient name is required'),
+  vaccineName: z.string().min(1, 'Vaccine name is required').max(200),
+  administeredAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date administered must be a valid date'),
+  doseNumber: z.number().int().positive().optional(),
+  lotNumber: z.string().max(100).optional(),
+  administeredBy: z.string().max(200).optional(),
+  nextDueAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Next due must be a valid date').optional(),
+  notes: z.string().max(2000).optional(),
+})
+
+export type ImportImmunizationRow = z.infer<typeof ImportImmunizationRowSchema>
+
+export function validateImmunizationRow(
+  row: Record<string, unknown>,
+):
+  | { ok: true; data: ImportImmunizationRow }
+  | { ok: false; errors: Array<{ field: string; message: string }> } {
+  const result = ImportImmunizationRowSchema.safeParse(row)
   if (result.success) return { ok: true, data: result.data }
   return {
     ok: false,

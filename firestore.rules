@@ -227,6 +227,16 @@ service cloud.firestore {
           allow delete: if isOwner(userId);
         }
 
+        // Immunizations subcollection — vaccine records with dates/dose/next-due
+        match /immunizations/{immunizationId} {
+          allow read: if isOwner(userId) || isTenantOfUser(userId);
+          allow create: if isOwner(userId) &&
+                          request.resource.data.patientId == patientId &&
+                          request.resource.data.userId == userId;
+          allow update: if isOwner(userId);
+          allow delete: if isOwner(userId);
+        }
+
         // Vaccinations subcollection (pet health records)
         match /vaccinations/{vaccinationId} {
           allow read: if isOwner(userId);

@@ -243,6 +243,45 @@ export const visitFrequencySchema = z.object({
   unit: z.enum(['days', 'weeks', 'months', 'years'])
 })
 
+// ==================== IMMUNIZATIONS ====================
+
+/**
+ * Schema for the structured immunization record. Mirrors the
+ * Immunization interface in types/medical.ts. Required: vaccine
+ * name + administered date. Everything else optional so a user
+ * who only knows "I got a tetanus shot last year" can still
+ * record it.
+ */
+export const immunizationSchema = z.object({
+  id: z.string().uuid(),
+  patientId: z.string().min(1),
+  userId: z.string().min(1),
+  vaccineName: z.string().min(1, 'Vaccine name is required').max(200),
+  administeredAt: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Administered date must be a valid date'),
+  doseNumber: z.number().int().positive().optional(),
+  lotNumber: z.string().max(100).optional(),
+  administeredBy: z.string().max(200).optional(),
+  nextDueAt: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Next-due date must be a valid date').optional(),
+  notes: z.string().max(2000).optional(),
+  source: z.enum(['manual', 'spreadsheet-import', 'ocr']).default('manual'),
+  addedAt: z.string().datetime(),
+  addedBy: z.string().min(1),
+  importBatchId: z.string().optional(),
+})
+
+/** Form-input shape — drops system-managed fields. */
+export const immunizationFormSchema = immunizationSchema.omit({
+  id: true,
+  patientId: true,
+  userId: true,
+  source: true,
+  addedAt: true,
+  addedBy: true,
+  importBatchId: true,
+})
+
+export type ImmunizationForm = z.infer<typeof immunizationFormSchema>
+
 export const providerSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().min(1),

@@ -23,7 +23,8 @@ import type {
   MealLog,
   StepLog,
   PatientMedication,
-  PatientDocument
+  PatientDocument,
+  Immunization
 } from '@/types/medical'
 
 // Helper: Make authenticated API request (uses unified API client)
@@ -1682,6 +1683,64 @@ export const auditOperations = {
   }
 }
 
+// ==================== IMMUNIZATION OPERATIONS ====================
+// Phase B of the medical-binder gap close. Structured vaccine
+// records — distinct from immunization-card photos (which live as
+// PatientDocument). Storage path:
+//   users/{ownerUserId}/patients/{patientId}/immunizations/{id}
+//
+// Reads/writes go through the canonical /api/patients/[patientId]/
+// immunizations route, which uses assertPatientAccess for RBAC.
+export const immunizationOperations = {
+  /** List a patient's immunizations, newest first. */
+  async getImmunizations(patientId: string): Promise<Immunization[]> {
+    try {
+      logger.debug('[MedicalOps] Fetching immunizations', { patientId })
+      const records = await makeAuthenticatedRequest<Immunization[]>(`/patients/${patientId}/immunizations`)
+      logger.debug('[MedicalOps] Immunizations fetched', { patientId, count: records?.length || 0 })
+      return records || []
+    } catch (error) {
+      logger.error('[MedicalOps] Error fetching immunizations', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /** Create a new immunization record. */
+  async createImmunization(
+    patientId: string,
+    data: Omit<Immunization, 'id' | 'patientId' | 'userId' | 'addedAt' | 'addedBy' | 'source'> & {
+      source?: 'manual' | 'spreadsheet-import' | 'ocr'
+    },
+  ): Promise<Immunization> {
+    try {
+      logger.info('[MedicalOps] Creating immunization', { patientId, vaccineName: data.vaccineName })
+      const record = await makeAuthenticatedRequest<Immunization>(`/patients/${patientId}/immunizations`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      logger.info('[MedicalOps] Immunization created', { patientId, id: record.id })
+      return record
+    } catch (error) {
+      logger.error('[MedicalOps] Error creating immunization', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /** Delete an immunization by id. */
+  async deleteImmunization(patientId: string, id: string): Promise<void> {
+    try {
+      logger.info('[MedicalOps] Deleting immunization', { patientId, id })
+      await makeAuthenticatedRequest<void>(`/patients/${patientId}/immunizations/${id}`, {
+        method: 'DELETE',
+      })
+      logger.info('[MedicalOps] Immunization deleted', { patientId, id })
+    } catch (error) {
+      logger.error('[MedicalOps] Error deleting immunization', error as Error, { patientId, id })
+      throw error
+    }
+  },
+}
+
 export const medicalOperations = {
   patients: patientOperations,
   vitals: vitalOperations,
@@ -1693,5 +1752,6 @@ export const medicalOperations = {
   stepLogs: stepLogOperations,
   medications: medicationOperations,
   documents: documentOperations,
+  immunizations: immunizationOperations,
   createAuditLog: auditOperations.createAuditLog
 }

@@ -434,6 +434,58 @@ export interface VitalSign {
   modificationHistory?: VitalModification[] // History of all modifications
 }
 
+// ==================== IMMUNIZATIONS ====================
+
+/**
+ * Structured vaccine record for a patient. Distinct from
+ * PatientDocument (which stores the immunization-card photo) —
+ * this is the queryable, reminder-driving structured form.
+ *
+ * Storage: users/{ownerUserId}/patients/{patientId}/immunizations/{id}
+ */
+export interface Immunization {
+  id: string
+  patientId: string
+  userId: string // Household owner uid
+
+  /** Vaccine name (free-form). Examples: 'Tetanus', 'MMR',
+   *  'Influenza', 'COVID-19', 'Rabies' (pets). */
+  vaccineName: string
+
+  /** ISO 8601 date the vaccine was administered. */
+  administeredAt: string
+
+  /** Dose number in a multi-dose series (e.g., 2 of 3 for
+   *  Hepatitis B). Optional — single-dose vaccines omit. */
+  doseNumber?: number
+
+  /** Lot / batch number from the vial — clinically relevant for
+   *  tracing if a recall happens. Optional. */
+  lotNumber?: string
+
+  /** Provider name or pharmacy / clinic that administered. */
+  administeredBy?: string
+
+  /** When the next dose is due (drives reminders + the
+   *  "due soon" highlighting on the Health Records card).
+   *  ISO 8601 date. Optional. */
+  nextDueAt?: string
+
+  /** Free-form notes (reactions, special handling, etc.). */
+  notes?: string
+
+  /** Audit + source tracking. 'manual' = added via the form.
+   *  'spreadsheet-import' = bulk-imported. 'ocr' = future
+   *  Gemini-extracted from an immunization-card photo. */
+  source: 'manual' | 'spreadsheet-import' | 'ocr'
+  addedAt: string
+  addedBy: string
+
+  /** Set if imported as part of a batch — supports the future
+   *  undo-import flow. */
+  importBatchId?: string
+}
+
 // ==================== PROVIDERS ====================
 
 export type ProviderType =

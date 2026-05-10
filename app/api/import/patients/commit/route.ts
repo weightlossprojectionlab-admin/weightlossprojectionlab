@@ -51,6 +51,7 @@ import {
   resolveRowType,
   validatePatientRow,
   validateWeightRow,
+  validateImmunizationRow,
   type ColumnMapping,
 } from '@/lib/import/patient-import-config'
 import { parseCsvText, MAX_IMPORT_ROWS } from '@/lib/import/csv-parser'
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
     type Resolved = {
       rowIndex: number
       transformed: Record<string, unknown>
-      type: 'patient' | 'weight'
+      type: 'patient' | 'weight' | 'immunization'
     }
     const resolvedRows: Resolved[] = []
     for (let i = 0; i < parsed.rows.length; i++) {
@@ -318,6 +319,76 @@ export async function POST(request: NextRequest) {
         imported++
       } catch (writeError) {
         logger.error('[API /import/patients/commit] Weight log write failed', writeError as Error, {
+          callerUserId,
+          ownerUserId,
+          rowIndex: r.rowIndex,
+        })
+        errors.push({
+          rowIndex: r.rowIndex,
+          errors: [{ field: '_row', message: 'Failed to save — please try again' }],
+        })
+      }
+    }
+
+    // ============= Pass 3: immunization rows =============
+
+    for (const r of resolvedRows.filter((r) => r.type === 'immunization')) {
+      const validation = validateImmunizationRow(r.transformed)
+      if (!validation.ok) {
+        errors.push({ rowIndex: r.rowIndex, errors: validation.errors })
+        continue
+      }
+
+      const match = matchPatientByName(validation.data.name, candidates)
+      if (!match.patientId) {
+        errors.push({
+          rowIndex: r.rowIndex,
+          errors: [
+            {
+              field: 'name',
+              message:
+                match.reason === 'ambiguous'
+                  ? `"${validation.data.name}" matches more than one family member. Use the exact name or nickname.`
+                  : `Family member "${validation.data.name}" not found. Add a patient row in this file or import family members first.`,
+            },
+          ],
+        })
+        continue
+      }
+
+      const immunizationId = uuidv4()
+      const immunization = {
+        id: immunizationId,
+        patientId: match.patientId,
+        userId: ownerUserId,
+        vaccineName: validation.data.vaccineName,
+        administeredAt: validation.data.administeredAt,
+        ...(validation.data.doseNumber !== undefined ? { doseNumber: validation.data.doseNumber } : {}),
+        ...(validation.data.lotNumber ? { lotNumber: validation.data.lotNumber } : {}),
+        ...(validation.data.administeredBy ? { administeredBy: validation.data.administeredBy } : {}),
+        ...(validation.data.nextDueAt ? { nextDueAt: validation.data.nextDueAt } : {}),
+        ...(validation.data.notes ? { notes: validation.data.notes } : {}),
+        source: 'spreadsheet-import' as const,
+        addedAt: importedAt,
+        addedBy: callerUserId,
+        importBatchId: batchId,
+        importedAt,
+        importedBy: callerUserId,
+        importedVia: via,
+      }
+
+      try {
+        await adminDb
+          .collection('users')
+          .doc(ownerUserId)
+          .collection('patients')
+          .doc(match.patientId)
+          .collection('immunizations')
+          .doc(immunizationId)
+          .set(immunization)
+        imported++
+      } catch (writeError) {
+        logger.error('[API /import/patients/commit] Immunization write failed', writeError as Error, {
           callerUserId,
           ownerUserId,
           rowIndex: r.rowIndex,

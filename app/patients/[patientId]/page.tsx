@@ -16,7 +16,7 @@ import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { useInvitations } from '@/hooks/useInvitations'
 import { useUserProfile } from '@/hooks/useUserProfile'
-import { PatientProfile, VitalType, VitalSign, VitalUnit, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication } from '@/types/medical'
+import { PatientProfile, VitalType, VitalSign, VitalUnit, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication, Immunization } from '@/types/medical'
 import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
 import DailyVitalsSummary from '@/components/vitals/DailyVitalsSummary'
@@ -32,6 +32,7 @@ import { MealLogForm } from '@/components/patients/MealLogForm'
 import { StepLogForm } from '@/components/patients/StepLogForm'
 import { MedicationForm } from '@/components/patients/MedicationForm'
 import { MedicationList } from '@/components/patients/MedicationList'
+import ImmunizationForm from '@/components/patients/ImmunizationForm'
 import { AIHealthReport } from '@/components/patients/AIHealthReport'
 import DocumentUpload from '@/components/patients/DocumentUpload'
 import DocumentDetailModal from '@/components/documents/DocumentDetailModal'
@@ -144,6 +145,10 @@ function PatientDetailContent() {
   const [medications, setMedications] = useState<PatientMedication[]>([])
   const [loadingMedications, setLoadingMedications] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null)
+  const [immunizations, setImmunizations] = useState<Immunization[]>([])
+  const [loadingImmunizations, setLoadingImmunizations] = useState(false)
+  const [showImmunizationForm, setShowImmunizationForm] = useState(false)
+  const [deletingImmunization, setDeletingImmunization] = useState<Immunization | null>(null)
   const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'episodes' | 'settings' | 'feeding' | 'activity' | 'grooming' | 'health-records'>(tabParam || 'vitals')
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
   const [autoOpenFeedingModal, setAutoOpenFeedingModal] = useState(false)
@@ -444,6 +449,55 @@ function PatientDetailContent() {
   useEffect(() => {
     fetchMedications()
   }, [patientId])
+
+  // Fetch immunizations using API
+  const fetchImmunizations = async () => {
+    if (!patientId) {
+      setLoadingImmunizations(false)
+      return
+    }
+
+    try {
+      setLoadingImmunizations(true)
+      const records = await medicalOperations.immunizations.getImmunizations(patientId)
+      setImmunizations(records)
+    } catch (error: any) {
+      logger.error('[PatientDetail] Error fetching immunizations', error)
+    } finally {
+      setLoadingImmunizations(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchImmunizations()
+  }, [patientId])
+
+  const handleAddImmunization = async (data: {
+    vaccineName: string
+    administeredAt: string
+    doseNumber?: number
+    lotNumber?: string
+    administeredBy?: string
+    nextDueAt?: string
+    notes?: string
+  }) => {
+    await medicalOperations.immunizations.createImmunization(patientId, data)
+    toast.success('Immunization added')
+    await fetchImmunizations()
+  }
+
+  const confirmDeleteImmunization = async () => {
+    if (!deletingImmunization) return
+    try {
+      await medicalOperations.immunizations.deleteImmunization(patientId, deletingImmunization.id)
+      toast.success('Immunization removed')
+      setDeletingImmunization(null)
+      await fetchImmunizations()
+    } catch (error: any) {
+      logger.error('[PatientDetail] Error deleting immunization', error)
+      toast.error('Could not remove — please try again')
+    }
+  }
 
   const handleEdit = (member: FamilyMember) => {
     setEditingMember(member)
@@ -2124,10 +2178,89 @@ function PatientDetailContent() {
                 </div>
               </div>
 
-              {/* Immunizations placeholder — Phase B fills this card */}
-              <div className="bg-card rounded-lg shadow-sm p-6 opacity-60">
-                <h2 className="text-lg font-bold text-foreground mb-1">Immunizations</h2>
-                <p className="text-sm text-muted-foreground italic">Coming next — vaccine records with dates and next-due tracking.</p>
+              {/* Immunizations card */}
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="text-lg font-bold text-foreground">Immunizations</h2>
+                  <button
+                    type="button"
+                    data-write="true"
+                    onClick={() => setShowImmunizationForm(true)}
+                    className="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+                  >
+                    + Add
+                  </button>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Vaccine records with dates and next-due tracking.
+                </p>
+
+                {loadingImmunizations ? (
+                  <p className="text-sm text-muted-foreground italic py-4 text-center">Loading...</p>
+                ) : immunizations.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic py-4 text-center">
+                    No immunizations recorded yet.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {immunizations.map((imm) => {
+                      const administeredDate = new Date(imm.administeredAt)
+                      const nextDueDate = imm.nextDueAt ? new Date(imm.nextDueAt) : null
+                      const today = new Date()
+                      today.setHours(0, 0, 0, 0)
+                      const dueSoon =
+                        nextDueDate &&
+                        nextDueDate.getTime() - today.getTime() < 30 * 24 * 60 * 60 * 1000
+                      const overdue = nextDueDate && nextDueDate < today
+
+                      return (
+                        <li key={imm.id} className="py-3 flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground">
+                              {imm.vaccineName}
+                              {imm.doseNumber ? (
+                                <span className="ml-2 text-xs text-muted-foreground font-normal">
+                                  Dose #{imm.doseNumber}
+                                </span>
+                              ) : null}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Administered {administeredDate.toLocaleDateString()}
+                              {imm.administeredBy ? ` • ${imm.administeredBy}` : ''}
+                              {imm.lotNumber ? ` • Lot ${imm.lotNumber}` : ''}
+                            </p>
+                            {nextDueDate && (
+                              <p
+                                className={`text-xs mt-0.5 ${
+                                  overdue
+                                    ? 'text-red-600 font-medium'
+                                    : dueSoon
+                                      ? 'text-amber-600 font-medium'
+                                      : 'text-muted-foreground'
+                                }`}
+                              >
+                                {overdue ? 'Overdue: ' : 'Next due: '}
+                                {nextDueDate.toLocaleDateString()}
+                              </p>
+                            )}
+                            {imm.notes && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">{imm.notes}</p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            data-write="true"
+                            onClick={() => setDeletingImmunization(imm)}
+                            className="text-xs text-error hover:underline shrink-0"
+                            aria-label={`Delete ${imm.vaccineName}`}
+                          >
+                            Delete
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
               </div>
 
               {/* Medical Equipment placeholder — Phase C fills this */}
@@ -2778,6 +2911,28 @@ function PatientDetailContent() {
         confirmText="Remove"
         cancelText="Cancel"
         variant="warning"
+      />
+
+      {/* Add Immunization Modal */}
+      {showImmunizationForm && patient && (
+        <ImmunizationForm
+          patientId={patientId}
+          patientName={patient.name}
+          onClose={() => setShowImmunizationForm(false)}
+          onSubmit={handleAddImmunization}
+        />
+      )}
+
+      {/* Delete Immunization Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deletingImmunization}
+        onClose={() => setDeletingImmunization(null)}
+        onConfirm={confirmDeleteImmunization}
+        title="Remove Immunization"
+        message={`Remove the ${deletingImmunization?.vaccineName} record? This action cannot be undone.`}
+        confirmText="Remove"
+        cancelText="Cancel"
+        variant="danger"
       />
 
       {/* Vitals Wizard Integration */}

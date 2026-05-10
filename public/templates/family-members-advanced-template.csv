@@ -1,11 +1,14 @@
-Type,Name,Patient Type,Date of Birth,Relationship,Gender,Species,Breed,Nickname,Health Conditions,Food Allergies,Current Weight,Current Weight Unit,Weight,Unit,Date,Body Fat %,Notes,Tags
-patient,Jane Doe,human,1985-04-12,self,female,,,Janie,"hypertension, prediabetes","peanuts, shellfish",165,lbs,,,,,,
-patient,Mike Doe,human,1982-09-30,spouse,male,,,Mike,,gluten,200,lbs,,,,,,
-patient,Emma Doe,human,2014-06-18,child,female,,,Em,asthma,tree nuts,85,lbs,,,,,,
-patient,Buddy,pet,2020-03-22,pet,,dog,golden retriever,,hip dysplasia,chicken,72,lbs,,,,,,
-weight,Jane Doe,,,,,,,,,,,,168,lbs,2025-12-01,28,Pre-holiday baseline,morning
-weight,Jane Doe,,,,,,,,,,,,170,lbs,2025-12-15,,Stress eating,morning
-weight,Jane Doe,,,,,,,,,,,,167,lbs,2026-01-05,27,Back to routine,morning
-weight,Mike Doe,,,,,,,,,,,,205,lbs,2025-12-01,22,,evening
-weight,Mike Doe,,,,,,,,,,,,200,lbs,2026-01-15,21,Cut started,morning;before-meal
-weight,Buddy,,,,,,,,,,,,71,lbs,2026-02-01,,2 lbs down on new food,
+Type,Name,Patient Type,Date of Birth,Relationship,Gender,Blood Type,Species,Breed,Nickname,Health Conditions,Food Allergies,Current Weight,Current Weight Unit,Weight,Unit,Date,Body Fat %,Vaccine,Date Administered,Dose,Lot,Administered By,Next Due,Notes,Tags
+patient,Jane Doe,human,1985-04-12,self,female,A+,,,Janie,"hypertension, prediabetes","peanuts, shellfish",165,lbs,,,,,,,,,,,,
+patient,Mike Doe,human,1982-09-30,spouse,male,O+,,,Mike,,gluten,200,lbs,,,,,,,,,,,,
+patient,Emma Doe,human,2014-06-18,child,female,A-,,,Em,asthma,tree nuts,85,lbs,,,,,,,,,,,,
+patient,Buddy,pet,2020-03-22,pet,,,dog,golden retriever,,hip dysplasia,chicken,72,lbs,,,,,,,,,,,,
+weight,Jane Doe,,,,,,,,,,,,,168,lbs,2025-12-01,28,,,,,,,Pre-holiday baseline,morning
+weight,Jane Doe,,,,,,,,,,,,,170,lbs,2025-12-15,,,,,,,,Stress eating,morning
+weight,Jane Doe,,,,,,,,,,,,,167,lbs,2026-01-05,27,,,,,,,Back to routine,morning
+weight,Mike Doe,,,,,,,,,,,,,205,lbs,2025-12-01,22,,,,,,,,evening
+weight,Mike Doe,,,,,,,,,,,,,200,lbs,2026-01-15,21,,,,,,,Cut started,morning;before-meal
+weight,Buddy,,,,,,,,,,,,,71,lbs,2026-02-01,,,,,,,,2 lbs down on new food,
+immunization,Jane Doe,,,,,,,,,,,,,,,,,Tetanus,2024-03-12,,L42-998,Walgreens,2034-03-12,Booster,
+immunization,Emma Doe,,,,,,,,,,,,,,,,,MMR,2015-12-04,2,,Pediatric Associates,,Series complete,
+immunization,Buddy,,,,,,,,,,,,,,,,,Rabies,2025-04-08,,RB-2025-771,VetPlus Clinic,2026-04-08,Annual,
