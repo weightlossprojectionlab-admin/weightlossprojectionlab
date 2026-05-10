@@ -374,6 +374,7 @@ export function AppointmentForm({
       <div className="flex items-center gap-3 pt-4">
         <button
           type="submit"
+          data-write="true"
           disabled={loading || patients.length === 0 || providers.length === 0}
           className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
         >

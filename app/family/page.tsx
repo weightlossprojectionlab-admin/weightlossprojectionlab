@@ -366,12 +366,14 @@ function InvitationCard({
         {invitation.status === 'pending' && type === 'received' && (
           <>
             <button
+              data-write="true"
               onClick={onAccept}
               className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium"
             >
               Accept
             </button>
             <button
+              data-write="true"
               onClick={onDecline}
               className="px-4 py-2 text-error hover:bg-error-light dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm"
             >
@@ -382,12 +384,14 @@ function InvitationCard({
         {invitation.status === 'pending' && type === 'sent' && (
           <>
             <button
+              data-write="true"
               onClick={onResend}
               className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium"
             >
               Resend Email
             </button>
             <button
+              data-write="true"
               onClick={onRevoke}
               className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 transition-colors text-sm font-medium"
             >

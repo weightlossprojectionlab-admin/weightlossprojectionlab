@@ -230,6 +230,7 @@ function LogWeightContent() {
               </button>
               <button
                 type="submit"
+                data-write="true"
                 disabled={loading || !weight || parseFloat(weight) <= 0}
                 className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >

@@ -1127,6 +1127,7 @@ export function CreateEpisodeModal({ isOpen, onClose, patients, onSubmit }: Crea
             {step === 3 && (
               <button
                 type="button"
+                data-write="true"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
                 className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"

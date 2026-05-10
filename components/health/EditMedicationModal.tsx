@@ -399,6 +399,7 @@ export default function EditMedicationModal({
             </button>
             <button
               type="submit"
+              data-write="true"
               disabled={saving}
               className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
