@@ -280,6 +280,43 @@ export function canAccessFeature(user: User | null, feature: string): boolean {
 }
 
 /**
+ * Canonical patient cap by plan name. Source of truth — the
+ * `subscription.maxPatients` field stored on user docs is
+ * informational (records what the user signed up with) but the
+ * runtime check derives the cap from this map keyed by plan id.
+ *
+ * Why: changing a plan's cap (e.g., Family Premium 999 → 20)
+ * shouldn't require a Firestore backfill on every existing
+ * subscription doc. Reading by plan name means the new cap
+ * applies to all current and future subscriptions immediately,
+ * with the stored field as a safety fallback for unrecognized
+ * plans.
+ */
+const PLAN_PATIENT_LIMITS: Record<string, number> = {
+  free: 1,
+  single: 1,
+  single_plus: 1,
+  family_basic: 5,
+  family_plus: 10,
+  family_premium: 20,
+}
+
+/**
+ * Resolve the patient cap for a given subscription. Prefers the
+ * canonical plan-name lookup; falls back to stored
+ * maxPatients/maxSeats for forward-compat with plans that haven't
+ * been added to the map yet (e.g., a future Practitioner /
+ * White-label tier).
+ */
+function resolveMaxPatients(subscription: UserSubscription): number {
+  const planName = subscription.plan
+  if (planName && PLAN_PATIENT_LIMITS[planName] !== undefined) {
+    return PLAN_PATIENT_LIMITS[planName]
+  }
+  return subscription.maxPatients ?? subscription.maxSeats ?? 1
+}
+
+/**
  * Check if user can add another patient
  */
 export function canAddPatient(user: User | null, currentPatientCount: number): boolean {
@@ -290,8 +327,7 @@ export function canAddPatient(user: User | null, currentPatientCount: number): b
 
   // Grandfathered users bypass expiration checks
   if (subscription.isGrandfathered) {
-    const maxPatients = subscription.maxPatients ?? subscription.maxSeats ?? 1
-    return currentPatientCount < maxPatients
+    return currentPatientCount < resolveMaxPatients(subscription)
   }
 
   // Can't add patients if subscription expired/canceled
@@ -299,8 +335,7 @@ export function canAddPatient(user: User | null, currentPatientCount: number): b
     return false
   }
 
-  const maxPatients = subscription.maxPatients ?? subscription.maxSeats ?? 1
-  return currentPatientCount < maxPatients
+  return currentPatientCount < resolveMaxPatients(subscription)
 }
 
 /**
@@ -342,7 +377,9 @@ export function hasAddon(user: User | null, addonName: keyof NonNullable<UserSub
 }
 
 /**
- * Get patient limit info
+ * Get patient limit info. Uses the canonical PLAN_PATIENT_LIMITS
+ * map (above) so changes to a plan's cap apply immediately to
+ * every user on that plan — no Firestore backfill needed.
  */
 export function getPatientLimitInfo(user: User | null, currentPatientCount: number) {
   const subscription = getUserSubscription(user)
@@ -356,7 +393,7 @@ export function getPatientLimitInfo(user: User | null, currentPatientCount: numb
     }
   }
 
-  const maxPatients = subscription.maxPatients ?? subscription.maxSeats ?? 1
+  const maxPatients = resolveMaxPatients(subscription)
   return {
     current: currentPatientCount,
     max: maxPatients,

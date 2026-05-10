@@ -76,9 +76,26 @@ const forbidden = (message: string, code?: string) =>
  * routed differently and the white-label tier is multi-member by
  * definition.
  */
+/** Same canonical lookup as lib/feature-gates.ts. Kept inline
+ *  here to avoid pulling the client-side feature-gates module
+ *  into a server-only path (loadOwnerSubscription is admin-SDK
+ *  based; feature-gates expects a client-shaped User). Update
+ *  both maps if a plan's cap changes. */
+const PLAN_PATIENT_LIMITS: Record<string, number> = {
+  free: 1,
+  single: 1,
+  single_plus: 1,
+  family_basic: 5,
+  family_plus: 10,
+  family_premium: 20,
+}
+
 async function assertPlanSupportsImport(ownerUserId: string): Promise<Response | null> {
   const sub = await loadOwnerSubscription(ownerUserId)
-  const maxPatients = sub?.maxPatients ?? sub?.maxSeats ?? 1
+  // Canonical plan-name lookup first; fall back to stored field
+  // for unrecognized plans (e.g., a future Practitioner tier).
+  const canonicalMax = sub?.plan ? PLAN_PATIENT_LIMITS[sub.plan] : undefined
+  const maxPatients = canonicalMax ?? sub?.maxPatients ?? sub?.maxSeats ?? 1
   if (maxPatients > 1) return null
 
   return new Response(

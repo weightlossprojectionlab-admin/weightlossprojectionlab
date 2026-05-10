@@ -175,7 +175,15 @@ export async function POST(request: NextRequest) {
     const newPatientCount = resolvedRows.filter((r) => r.type === 'patient').length
     if (newPatientCount > 0) {
       const ownerSub = await loadOwnerSubscription(ownerUserId)
-      const maxPatients = ownerSub?.maxPatients ?? ownerSub?.maxSeats ?? 1
+      // Canonical plan-name lookup so users on stale subscription
+      // docs (created before a cap change) still see the current
+      // cap. Falls back to stored fields for unrecognized plans.
+      const PLAN_CAPS: Record<string, number> = {
+        free: 1, single: 1, single_plus: 1,
+        family_basic: 5, family_plus: 10, family_premium: 20,
+      }
+      const canonicalMax = ownerSub?.plan ? PLAN_CAPS[ownerSub.plan] : undefined
+      const maxPatients = canonicalMax ?? ownerSub?.maxPatients ?? ownerSub?.maxSeats ?? 1
       const existingPatientCount = candidates.length
 
       if (existingPatientCount + newPatientCount > maxPatients) {
