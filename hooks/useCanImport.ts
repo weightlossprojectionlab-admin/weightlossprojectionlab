@@ -6,19 +6,23 @@
  *
  * Mirrors the server-side rule in lib/import/assert-import-access.ts:
  *
- *   - Account holders (own subscription) → allowed (their household)
- *   - Co-admins / family members with importPatients=true → allowed
- *   - Franchise admins → allowed
+ *   - Account holders on a multi-member plan → allowed
+ *   - Co-admins / family members with importPatients=true on a
+ *     multi-member household → allowed
+ *   - Franchise admins → allowed (white-label tier is multi-member
+ *     by definition)
+ *   - Single User Plan customers → not allowed (the feature has no
+ *     value when the cap is 1; gating it removes friction)
  *   - Everyone else → not allowed
  *
- * Used to hide the Import button on /patients header for users
- * who would just get a 403. Server is still the source of truth —
- * a user who somehow reaches the wizard URL directly will be
- * rejected by the endpoints. This hook is UX polish.
+ * Plan-tier gate: the server-side helper checks the owner's
+ * subscription `maxPatients ?? maxSeats ?? 1` and rejects when
+ * <= 1. We mirror the same rule here so the Import button hides
+ * on Single User Plan rather than appearing and 403-ing on click.
  *
- * Reads from useUserProfile (which already loads the user's own
- * doc) — no new fetch. caregiverOf + permissions are surfaced by
- * the same hook the rest of the app uses for membership routing.
+ * Server is still the source of truth — a user who reaches the
+ * wizard URL directly will be rejected by the endpoints. This
+ * hook is UX polish.
  */
 
 import { useMemo } from 'react'
@@ -37,6 +41,18 @@ interface UseCanImportResult {
     | 'caregiver_with_grant'
     | 'caregiver_no_grant'
     | 'no_household'
+    | 'plan_too_small'
+}
+
+interface SubscriptionShape {
+  maxPatients?: number
+  maxSeats?: number
+}
+
+function planSupportsMultiMember(sub: SubscriptionShape | undefined | null): boolean {
+  if (!sub) return false
+  const max = sub.maxPatients ?? sub.maxSeats ?? 1
+  return max > 1
 }
 
 export function useCanImport(): UseCanImportResult {
@@ -52,21 +68,27 @@ export function useCanImport(): UseCanImportResult {
     }
 
     // Franchise admin (white-label tier) — token claim takes
-    // precedence over the consumer permission system.
+    // precedence; bypasses the plan-tier check.
     const tenantRole = (user as { tenantRole?: string }).tenantRole
     if (tenantRole === 'franchise_admin') {
       return { canImport: true, reason: 'franchise_admin' }
     }
 
-    // Account holder — own subscription means own household.
+    // Account holder — must be on a multi-member plan.
     if (profile?.subscription) {
+      if (!planSupportsMultiMember(profile.subscription as SubscriptionShape)) {
+        return { canImport: false, reason: 'plan_too_small' }
+      }
       return { canImport: true, reason: 'account_holder' }
     }
 
-    // Caregiver path — surface the importPatients flag from any of
-    // the households the caller is a member of. The server
-    // resolves which household to write into; for the UI button
-    // visibility, we just need ANY positive answer.
+    // Caregiver path — must have importPatients permission. The
+    // server-side helper additionally checks the OWNER'S plan; we
+    // can't see that from the caregiver's user doc. The Import
+    // button shows; if the owner is on a small plan, the server
+    // will return 403 with a clear message. Acceptable trade-off
+    // because most caregivers operate within multi-member
+    // households by definition.
     const caregiverOf: Array<{ permissions?: { importPatients?: boolean } }> =
       Array.isArray((profile as Record<string, unknown>)?.caregiverOf)
         ? (profile as Record<string, unknown>).caregiverOf as Array<{ permissions?: { importPatients?: boolean } }>

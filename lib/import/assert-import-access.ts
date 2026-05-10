@@ -31,7 +31,7 @@
 
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { assertOwnerCanWrite } from '@/lib/owner-subscription-guard'
+import { assertOwnerCanWrite, loadOwnerSubscription } from '@/lib/owner-subscription-guard'
 import { hasAdminPrivileges } from '@/lib/family-roles'
 import type { FamilyRole } from '@/types/medical'
 
@@ -58,6 +58,40 @@ const forbidden = (message: string, code?: string) =>
     JSON.stringify({ success: false, error: 'Forbidden', message, ...(code ? { code } : {}) }),
     { status: 403, headers: { 'Content-Type': 'application/json' } },
   )
+
+/**
+ * The import feature is only useful on plans that hold more than
+ * one family member. A Single User Plan (cap = 1) gets nothing
+ * out of bulk import, and surfacing the wizard on those plans
+ * just creates friction. Family / Family Premium / Practitioner /
+ * Franchise plans all allow >1 members and pass.
+ *
+ * Read the owner's subscription, fall through to the same
+ * `subscription.maxPatients ?? subscription.maxSeats ?? 1`
+ * resolution the live patient limit uses (lib/feature-gates.ts).
+ * If <= 1, the household isn't on a plan that supports the
+ * feature.
+ *
+ * Franchise admins bypass this — their tenant households are
+ * routed differently and the white-label tier is multi-member by
+ * definition.
+ */
+async function assertPlanSupportsImport(ownerUserId: string): Promise<Response | null> {
+  const sub = await loadOwnerSubscription(ownerUserId)
+  const maxPatients = sub?.maxPatients ?? sub?.maxSeats ?? 1
+  if (maxPatients > 1) return null
+
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: 'Plan does not support import',
+      code: 'PLAN_DOES_NOT_SUPPORT_IMPORT',
+      message:
+        'Bulk import is available on Family Plan and up. Upgrade your plan to import multiple family members at once.',
+    }),
+    { status: 403, headers: { 'Content-Type': 'application/json' } },
+  )
+}
 
 /**
  * Verify the caller's auth token and resolve their import context.
@@ -98,6 +132,8 @@ export async function assertImportAccess(
     const ownerUserId = targetOwnerUserId || callerUserId
     const denied = await assertOwnerCanWrite(ownerUserId)
     if (denied) return denied
+    // Franchise admins bypass the plan-tier check — white-label
+    // tier is multi-member by definition.
     return { callerUserId, ownerUserId, via: 'franchise_admin' }
   }
 
@@ -153,6 +189,8 @@ export async function assertImportAccess(
   if (ownerUserId === callerUserId) {
     const denied = await assertOwnerCanWrite(ownerUserId)
     if (denied) return denied
+    const planTooSmall = await assertPlanSupportsImport(ownerUserId)
+    if (planTooSmall) return planTooSmall
     return { callerUserId, ownerUserId, via: 'self' }
   }
 
@@ -200,6 +238,9 @@ export async function assertImportAccess(
 
   const denied = await assertOwnerCanWrite(ownerUserId)
   if (denied) return denied
+
+  const planTooSmall = await assertPlanSupportsImport(ownerUserId)
+  if (planTooSmall) return planTooSmall
 
   return { callerUserId, ownerUserId, via: 'co_admin_or_caregiver_grant' }
 }

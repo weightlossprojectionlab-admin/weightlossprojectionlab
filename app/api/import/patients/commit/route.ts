@@ -55,6 +55,7 @@ import {
 } from '@/lib/import/patient-import-config'
 import { parseCsvText, MAX_IMPORT_ROWS } from '@/lib/import/csv-parser'
 import { assertImportAccess } from '@/lib/import/assert-import-access'
+import { loadOwnerSubscription } from '@/lib/owner-subscription-guard'
 import { matchPatientByName } from '@/lib/import/match-patient'
 import { v4 as uuidv4 } from 'uuid'
 import type { PatientProfile } from '@/types/medical'
@@ -162,6 +163,42 @@ export async function POST(request: NextRequest) {
         continue
       }
       resolvedRows.push({ rowIndex: rowNumber, transformed, type: typeOrError })
+    }
+
+    // ============= Plan-capacity gate =============
+    // Reject the whole batch if it would exceed the household
+    // owner's plan's patient cap. Hard-fail rather than partial-
+    // import so the user sees a clear "upgrade or remove rows"
+    // outcome instead of "imported 3 of 10 — figure out which 7
+    // got dropped." Weight rows don't count (they don't add new
+    // patients).
+    const newPatientCount = resolvedRows.filter((r) => r.type === 'patient').length
+    if (newPatientCount > 0) {
+      const ownerSub = await loadOwnerSubscription(ownerUserId)
+      const maxPatients = ownerSub?.maxPatients ?? ownerSub?.maxSeats ?? 1
+      const existingPatientCount = candidates.length
+
+      if (existingPatientCount + newPatientCount > maxPatients) {
+        logger.info('[API /import/patients/commit] Patient cap exceeded — rejecting batch', {
+          callerUserId,
+          ownerUserId,
+          existingPatientCount,
+          newPatientCount,
+          maxPatients,
+        })
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Patient limit exceeded',
+            code: 'PATIENT_LIMIT_EXCEEDED',
+            message: `Your plan allows ${maxPatients} family member${
+              maxPatients === 1 ? '' : 's'
+            }. You already have ${existingPatientCount} and this import would add ${newPatientCount}. Upgrade your plan or remove patient rows from the file.`,
+            data: { maxPatients, existingPatientCount, newPatientCount },
+          }),
+          { status: 402, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
     }
 
     // ============= Pass 1: patient rows =============

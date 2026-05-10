@@ -28,8 +28,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { useCanImport } from '@/hooks/useCanImport'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { ArrowUpTrayIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
@@ -77,6 +79,7 @@ export default function ImportPage() {
 function ImportContent() {
   const router = useRouter()
   const { user } = useAuth()
+  const { canImport, reason } = useCanImport()
   const [step, setStep] = useState<Step>('upload')
   const [csvText, setCsvText] = useState<string>('')
   const [preview, setPreview] = useState<PreviewData | null>(null)
@@ -253,11 +256,15 @@ function ImportContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
-        {step === 'upload' && (
+        {!canImport && reason !== 'loading' && (
+          <NotAllowedStep reason={reason} />
+        )}
+
+        {canImport && step === 'upload' && (
           <UploadStep onFile={handleFile} busy={busy} />
         )}
 
-        {step === 'map' && preview && (
+        {canImport && step === 'map' && preview && (
           <MapStep
             preview={preview}
             mapping={mapping}
@@ -271,14 +278,14 @@ function ImportContent() {
           />
         )}
 
-        {step === 'importing' && (
+        {canImport && step === 'importing' && (
           <div className="bg-card rounded-lg shadow-sm p-12 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Importing {preview?.totalRows ?? 0} rows…</p>
           </div>
         )}
 
-        {step === 'result' && result && (
+        {canImport && step === 'result' && result && (
           <ResultStep
             result={result}
             onDone={() => router.push('/patients')}
@@ -286,6 +293,54 @@ function ImportContent() {
           />
         )}
       </main>
+    </div>
+  )
+}
+
+function NotAllowedStep({ reason }: { reason: string }) {
+  // Match the server-side rejection codes one-to-one so the UX
+  // for "I just got 403'd" matches "I clicked the link but it
+  // never let me upload."
+  const content = (() => {
+    if (reason === 'plan_too_small') {
+      return {
+        title: 'Bulk import is on Family Plan and up',
+        body: "Single User Plan covers one family member, so the import wizard isn't useful here. Upgrade to Family Plan to bring in multiple members at once.",
+        cta: { href: '/pricing', label: 'See plans' },
+      }
+    }
+    if (reason === 'caregiver_no_grant') {
+      return {
+        title: 'Import permission required',
+        body: "Your caregiver permissions don't include importing. Ask the account owner to grant 'Import Family Members from Spreadsheet' on your permissions.",
+      }
+    }
+    if (reason === 'no_household') {
+      return {
+        title: 'No household yet',
+        body: 'Sign up for a plan or accept a caregiver invitation before using the import wizard.',
+        cta: { href: '/pricing', label: 'See plans' },
+      }
+    }
+    return {
+      title: 'Import not available',
+      body: 'You need an active account on a plan that supports multiple members to use the import wizard.',
+      cta: { href: '/pricing', label: 'See plans' },
+    }
+  })()
+
+  return (
+    <div className="bg-card rounded-lg shadow-sm p-8 text-center max-w-md mx-auto">
+      <h2 className="text-xl font-bold text-foreground mb-2">{content.title}</h2>
+      <p className="text-muted-foreground mb-6">{content.body}</p>
+      {content.cta && (
+        <Link
+          href={content.cta.href}
+          className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+        >
+          {content.cta.label}
+        </Link>
+      )}
     </div>
   )
 }
