@@ -35,6 +35,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
+  // Per-test timeout — 2 minutes so Turbopack's first-compile cost
+  // on a fresh dev server doesn't fail the test on a cold start.
+  timeout: 2 * 60_000,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL,
@@ -42,17 +45,39 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    // Watch the suite run by default. Set HEADLESS=1 to flip back.
+    headless: process.env.HEADLESS === '1',
+    // Slow-motion lets a human watch each action. SLOWMO_MS=0 turns
+    // it off (e.g. for CI).
+    launchOptions: {
+      slowMo: process.env.SLOWMO_MS ? parseInt(process.env.SLOWMO_MS, 10) : 1500,
+      // Fixed window position + size so the human watching the run
+      // doesn't have to chase a randomly-placed browser window.
+      // Pinned to the left half of a 1080p screen so VS Code can
+      // own the right half.
+      args: ['--window-position=0,0', '--window-size=960,1040'],
+    },
+    viewport: { width: 960, height: 940 },
   },
   projects: [
     {
       name: 'setup',
       testMatch: /auth\.setup\.ts/,
+      // Setup runs headed so the user can complete Google OAuth
+      // (or any non-automated auth flow) themselves once. The saved
+      // storage state is reused by the chromium project after.
+      use: { headless: false },
     },
     {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'e2e/.auth/user.json',
+        // Override the viewport that Desktop Chrome sets (1280x720)
+        // so it matches the launch args' window size. Otherwise the
+        // outer window resizes mid-launch and the human watching
+        // sees the browser jump.
+        viewport: { width: 960, height: 940 },
       },
       dependencies: ['setup'],
       testIgnore: /auth\.setup\.ts/,
