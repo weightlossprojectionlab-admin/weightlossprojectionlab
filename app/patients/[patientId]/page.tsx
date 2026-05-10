@@ -16,7 +16,7 @@ import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { useInvitations } from '@/hooks/useInvitations'
 import { useUserProfile } from '@/hooks/useUserProfile'
-import { PatientProfile, VitalType, VitalSign, VitalUnit, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication, Immunization } from '@/types/medical'
+import { PatientProfile, VitalType, VitalSign, VitalUnit, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication, Immunization, MedicalEquipment } from '@/types/medical'
 import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
 import DailyVitalsSummary from '@/components/vitals/DailyVitalsSummary'
@@ -33,6 +33,7 @@ import { StepLogForm } from '@/components/patients/StepLogForm'
 import { MedicationForm } from '@/components/patients/MedicationForm'
 import { MedicationList } from '@/components/patients/MedicationList'
 import ImmunizationForm from '@/components/patients/ImmunizationForm'
+import MedicalEquipmentForm from '@/components/patients/MedicalEquipmentForm'
 import { AIHealthReport } from '@/components/patients/AIHealthReport'
 import DocumentUpload from '@/components/patients/DocumentUpload'
 import DocumentDetailModal from '@/components/documents/DocumentDetailModal'
@@ -149,6 +150,10 @@ function PatientDetailContent() {
   const [loadingImmunizations, setLoadingImmunizations] = useState(false)
   const [showImmunizationForm, setShowImmunizationForm] = useState(false)
   const [deletingImmunization, setDeletingImmunization] = useState<Immunization | null>(null)
+  const [equipment, setEquipment] = useState<MedicalEquipment[]>([])
+  const [loadingEquipment, setLoadingEquipment] = useState(false)
+  const [showEquipmentForm, setShowEquipmentForm] = useState(false)
+  const [deletingEquipment, setDeletingEquipment] = useState<MedicalEquipment | null>(null)
   const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'episodes' | 'settings' | 'feeding' | 'activity' | 'grooming' | 'health-records'>(tabParam || 'vitals')
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
   const [autoOpenFeedingModal, setAutoOpenFeedingModal] = useState(false)
@@ -495,6 +500,56 @@ function PatientDetailContent() {
       await fetchImmunizations()
     } catch (error: any) {
       logger.error('[PatientDetail] Error deleting immunization', error)
+      toast.error('Could not remove — please try again')
+    }
+  }
+
+  // Fetch medical equipment using API
+  const fetchEquipment = async () => {
+    if (!patientId) {
+      setLoadingEquipment(false)
+      return
+    }
+    try {
+      setLoadingEquipment(true)
+      const records = await medicalOperations.equipment.getEquipment(patientId)
+      setEquipment(records)
+    } catch (error: any) {
+      logger.error('[PatientDetail] Error fetching equipment', error)
+    } finally {
+      setLoadingEquipment(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchEquipment()
+  }, [patientId])
+
+  const handleAddEquipment = async (data: {
+    name: string
+    type?: string
+    manufacturer?: string
+    model?: string
+    serialNumber?: string
+    prescribedBy?: string
+    acquiredAt?: string
+    nextMaintenanceAt?: string
+    notes?: string
+  }) => {
+    await medicalOperations.equipment.createEquipment(patientId, data)
+    toast.success('Equipment added')
+    await fetchEquipment()
+  }
+
+  const confirmDeleteEquipment = async () => {
+    if (!deletingEquipment) return
+    try {
+      await medicalOperations.equipment.deleteEquipment(patientId, deletingEquipment.id)
+      toast.success('Equipment removed')
+      setDeletingEquipment(null)
+      await fetchEquipment()
+    } catch (error: any) {
+      logger.error('[PatientDetail] Error deleting equipment', error)
       toast.error('Could not remove — please try again')
     }
   }
@@ -2263,10 +2318,94 @@ function PatientDetailContent() {
                 )}
               </div>
 
-              {/* Medical Equipment placeholder — Phase C fills this */}
-              <div className="bg-card rounded-lg shadow-sm p-6 opacity-60">
-                <h2 className="text-lg font-bold text-foreground mb-1">Medical Equipment</h2>
-                <p className="text-sm text-muted-foreground italic">Coming soon — CPAP, glucose monitor, and other devices.</p>
+              {/* Medical Equipment card */}
+              <div className="bg-card rounded-lg shadow-sm p-6">
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="text-lg font-bold text-foreground">Medical Equipment</h2>
+                  <button
+                    type="button"
+                    data-write="true"
+                    onClick={() => setShowEquipmentForm(true)}
+                    className="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+                  >
+                    + Add
+                  </button>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  CPAP, glucose monitor, hearing aids, mobility devices.
+                </p>
+
+                {loadingEquipment ? (
+                  <p className="text-sm text-muted-foreground italic py-4 text-center">Loading...</p>
+                ) : equipment.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic py-4 text-center">
+                    No equipment recorded yet.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {equipment.map((eq) => {
+                      const acquiredDate = eq.acquiredAt ? new Date(eq.acquiredAt) : null
+                      const maintDate = eq.nextMaintenanceAt ? new Date(eq.nextMaintenanceAt) : null
+                      const today = new Date()
+                      today.setHours(0, 0, 0, 0)
+                      const dueSoon =
+                        maintDate &&
+                        maintDate.getTime() - today.getTime() < 30 * 24 * 60 * 60 * 1000
+                      const overdue = maintDate && maintDate < today
+
+                      return (
+                        <li key={eq.id} className="py-3 flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground">
+                              {eq.name}
+                              {eq.type ? (
+                                <span className="ml-2 text-xs text-muted-foreground font-normal">
+                                  {eq.type}
+                                </span>
+                              ) : null}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {[eq.manufacturer, eq.model].filter(Boolean).join(' ')}
+                              {eq.serialNumber ? ` • SN ${eq.serialNumber}` : ''}
+                              {eq.prescribedBy ? ` • Prescribed by ${eq.prescribedBy}` : ''}
+                            </p>
+                            {acquiredDate && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Acquired {acquiredDate.toLocaleDateString()}
+                              </p>
+                            )}
+                            {maintDate && (
+                              <p
+                                className={`text-xs mt-0.5 ${
+                                  overdue
+                                    ? 'text-red-600 font-medium'
+                                    : dueSoon
+                                      ? 'text-amber-600 font-medium'
+                                      : 'text-muted-foreground'
+                                }`}
+                              >
+                                {overdue ? 'Maintenance overdue: ' : 'Next maintenance: '}
+                                {maintDate.toLocaleDateString()}
+                              </p>
+                            )}
+                            {eq.notes && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">{eq.notes}</p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            data-write="true"
+                            onClick={() => setDeletingEquipment(eq)}
+                            className="text-xs text-error hover:underline shrink-0"
+                            aria-label={`Delete ${eq.name}`}
+                          >
+                            Delete
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
               </div>
 
               {/* Family Medical History placeholder — Phase D */}
@@ -2930,6 +3069,28 @@ function PatientDetailContent() {
         onConfirm={confirmDeleteImmunization}
         title="Remove Immunization"
         message={`Remove the ${deletingImmunization?.vaccineName} record? This action cannot be undone.`}
+        confirmText="Remove"
+        cancelText="Cancel"
+        variant="danger"
+      />
+
+      {/* Add Medical Equipment Modal */}
+      {showEquipmentForm && patient && (
+        <MedicalEquipmentForm
+          patientId={patientId}
+          patientName={patient.name}
+          onClose={() => setShowEquipmentForm(false)}
+          onSubmit={handleAddEquipment}
+        />
+      )}
+
+      {/* Delete Medical Equipment Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deletingEquipment}
+        onClose={() => setDeletingEquipment(null)}
+        onConfirm={confirmDeleteEquipment}
+        title="Remove Medical Equipment"
+        message={`Remove the ${deletingEquipment?.name} record? This action cannot be undone.`}
         confirmText="Remove"
         cancelText="Cancel"
         variant="danger"

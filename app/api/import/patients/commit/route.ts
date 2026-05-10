@@ -52,6 +52,7 @@ import {
   validatePatientRow,
   validateWeightRow,
   validateImmunizationRow,
+  validateEquipmentRow,
   type ColumnMapping,
 } from '@/lib/import/patient-import-config'
 import { parseCsvText, MAX_IMPORT_ROWS } from '@/lib/import/csv-parser'
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
     type Resolved = {
       rowIndex: number
       transformed: Record<string, unknown>
-      type: 'patient' | 'weight' | 'immunization'
+      type: 'patient' | 'weight' | 'immunization' | 'equipment'
     }
     const resolvedRows: Resolved[] = []
     for (let i = 0; i < parsed.rows.length; i++) {
@@ -389,6 +390,78 @@ export async function POST(request: NextRequest) {
         imported++
       } catch (writeError) {
         logger.error('[API /import/patients/commit] Immunization write failed', writeError as Error, {
+          callerUserId,
+          ownerUserId,
+          rowIndex: r.rowIndex,
+        })
+        errors.push({
+          rowIndex: r.rowIndex,
+          errors: [{ field: '_row', message: 'Failed to save — please try again' }],
+        })
+      }
+    }
+
+    // ============= Pass 4: equipment rows =============
+
+    for (const r of resolvedRows.filter((r) => r.type === 'equipment')) {
+      const validation = validateEquipmentRow(r.transformed)
+      if (!validation.ok) {
+        errors.push({ rowIndex: r.rowIndex, errors: validation.errors })
+        continue
+      }
+
+      const match = matchPatientByName(validation.data.name, candidates)
+      if (!match.patientId) {
+        errors.push({
+          rowIndex: r.rowIndex,
+          errors: [
+            {
+              field: 'name',
+              message:
+                match.reason === 'ambiguous'
+                  ? `"${validation.data.name}" matches more than one family member. Use the exact name or nickname.`
+                  : `Family member "${validation.data.name}" not found. Add a patient row in this file or import family members first.`,
+            },
+          ],
+        })
+        continue
+      }
+
+      const equipmentId = uuidv4()
+      const equipment = {
+        id: equipmentId,
+        patientId: match.patientId,
+        userId: ownerUserId,
+        name: validation.data.equipmentName,
+        ...(validation.data.equipmentType ? { type: validation.data.equipmentType } : {}),
+        ...(validation.data.manufacturer ? { manufacturer: validation.data.manufacturer } : {}),
+        ...(validation.data.model ? { model: validation.data.model } : {}),
+        ...(validation.data.serialNumber ? { serialNumber: validation.data.serialNumber } : {}),
+        ...(validation.data.prescribedBy ? { prescribedBy: validation.data.prescribedBy } : {}),
+        ...(validation.data.acquiredAt ? { acquiredAt: validation.data.acquiredAt } : {}),
+        ...(validation.data.nextMaintenanceAt ? { nextMaintenanceAt: validation.data.nextMaintenanceAt } : {}),
+        ...(validation.data.notes ? { notes: validation.data.notes } : {}),
+        source: 'spreadsheet-import' as const,
+        addedAt: importedAt,
+        addedBy: callerUserId,
+        importBatchId: batchId,
+        importedAt,
+        importedBy: callerUserId,
+        importedVia: via,
+      }
+
+      try {
+        await adminDb
+          .collection('users')
+          .doc(ownerUserId)
+          .collection('patients')
+          .doc(match.patientId)
+          .collection('equipment')
+          .doc(equipmentId)
+          .set(equipment)
+        imported++
+      } catch (writeError) {
+        logger.error('[API /import/patients/commit] Equipment write failed', writeError as Error, {
           callerUserId,
           ownerUserId,
           rowIndex: r.rowIndex,

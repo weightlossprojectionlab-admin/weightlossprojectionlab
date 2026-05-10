@@ -24,7 +24,8 @@ import type {
   StepLog,
   PatientMedication,
   PatientDocument,
-  Immunization
+  Immunization,
+  MedicalEquipment
 } from '@/types/medical'
 
 // Helper: Make authenticated API request (uses unified API client)
@@ -1741,6 +1742,64 @@ export const immunizationOperations = {
   },
 }
 
+// ==================== MEDICAL EQUIPMENT OPERATIONS ====================
+// Phase C of the medical-binder gap close. Durable medical
+// equipment (CPAP, glucose monitor, hearing aids, mobility
+// devices, etc.). Storage path:
+//   users/{ownerUserId}/patients/{patientId}/equipment/{id}
+//
+// Reads/writes go through the canonical /api/patients/[patientId]/
+// equipment route, which uses assertPatientAccess for RBAC.
+export const equipmentOperations = {
+  /** List a patient's medical equipment, newest first. */
+  async getEquipment(patientId: string): Promise<MedicalEquipment[]> {
+    try {
+      logger.debug('[MedicalOps] Fetching equipment', { patientId })
+      const records = await makeAuthenticatedRequest<MedicalEquipment[]>(`/patients/${patientId}/equipment`)
+      logger.debug('[MedicalOps] Equipment fetched', { patientId, count: records?.length || 0 })
+      return records || []
+    } catch (error) {
+      logger.error('[MedicalOps] Error fetching equipment', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /** Create a new equipment record. */
+  async createEquipment(
+    patientId: string,
+    data: Omit<MedicalEquipment, 'id' | 'patientId' | 'userId' | 'addedAt' | 'addedBy' | 'source'> & {
+      source?: 'manual' | 'spreadsheet-import' | 'ocr'
+    },
+  ): Promise<MedicalEquipment> {
+    try {
+      logger.info('[MedicalOps] Creating equipment', { patientId, name: data.name })
+      const record = await makeAuthenticatedRequest<MedicalEquipment>(`/patients/${patientId}/equipment`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+      logger.info('[MedicalOps] Equipment created', { patientId, id: record.id })
+      return record
+    } catch (error) {
+      logger.error('[MedicalOps] Error creating equipment', error as Error, { patientId })
+      throw error
+    }
+  },
+
+  /** Delete an equipment record by id. */
+  async deleteEquipment(patientId: string, id: string): Promise<void> {
+    try {
+      logger.info('[MedicalOps] Deleting equipment', { patientId, id })
+      await makeAuthenticatedRequest<void>(`/patients/${patientId}/equipment/${id}`, {
+        method: 'DELETE',
+      })
+      logger.info('[MedicalOps] Equipment deleted', { patientId, id })
+    } catch (error) {
+      logger.error('[MedicalOps] Error deleting equipment', error as Error, { patientId, id })
+      throw error
+    }
+  },
+}
+
 export const medicalOperations = {
   patients: patientOperations,
   vitals: vitalOperations,
@@ -1753,5 +1812,6 @@ export const medicalOperations = {
   medications: medicationOperations,
   documents: documentOperations,
   immunizations: immunizationOperations,
+  equipment: equipmentOperations,
   createAuditLog: auditOperations.createAuditLog
 }

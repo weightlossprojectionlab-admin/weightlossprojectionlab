@@ -282,6 +282,46 @@ export const immunizationFormSchema = immunizationSchema.omit({
 
 export type ImmunizationForm = z.infer<typeof immunizationFormSchema>
 
+// ==================== MEDICAL EQUIPMENT ====================
+
+/**
+ * Schema for durable medical equipment (CPAP, glucose monitor,
+ * etc.). Mirrors MedicalEquipment in types/medical.ts. Required:
+ * device name. Everything else optional — a user who only knows
+ * "we have a nebulizer" can still record it.
+ */
+export const medicalEquipmentSchema = z.object({
+  id: z.string().uuid(),
+  patientId: z.string().min(1),
+  userId: z.string().min(1),
+  name: z.string().min(1, 'Equipment name is required').max(200),
+  type: z.string().max(100).optional(),
+  manufacturer: z.string().max(200).optional(),
+  model: z.string().max(200).optional(),
+  serialNumber: z.string().max(200).optional(),
+  prescribedBy: z.string().max(200).optional(),
+  acquiredAt: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Acquired date must be a valid date').optional(),
+  nextMaintenanceAt: z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Maintenance date must be a valid date').optional(),
+  notes: z.string().max(2000).optional(),
+  source: z.enum(['manual', 'spreadsheet-import', 'ocr']).default('manual'),
+  addedAt: z.string().datetime(),
+  addedBy: z.string().min(1),
+  importBatchId: z.string().optional(),
+})
+
+/** Form-input shape — drops system-managed fields. */
+export const medicalEquipmentFormSchema = medicalEquipmentSchema.omit({
+  id: true,
+  patientId: true,
+  userId: true,
+  source: true,
+  addedAt: true,
+  addedBy: true,
+  importBatchId: true,
+})
+
+export type MedicalEquipmentForm = z.infer<typeof medicalEquipmentFormSchema>
+
 export const providerSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().min(1),

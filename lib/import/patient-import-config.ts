@@ -76,6 +76,15 @@ export type ImportableField =
   | 'lotNumber'
   | 'administeredBy'
   | 'nextDueAt'
+  // Equipment-row-specific fields
+  | 'equipmentName'
+  | 'equipmentType'
+  | 'manufacturer'
+  | 'model'
+  | 'serialNumber'
+  | 'prescribedBy'
+  | 'acquiredAt'
+  | 'nextMaintenanceAt'
 
 export type ColumnMapping = ImportableField | 'skip'
 
@@ -136,6 +145,15 @@ const FIELD_ALIASES: Record<ImportableField, string[]> = {
   lotNumber: ['Lot', 'Lot #', 'Lot Number', 'Vial Lot'],
   administeredBy: ['Administered By', 'Given By', 'Provider', 'Clinic', 'Pharmacy'],
   nextDueAt: ['Next Due', 'Next Dose Due', 'Booster Due', 'Next Vaccine Date'],
+  // Equipment row
+  equipmentName: ['Device', 'Equipment', 'Equipment Name', 'Device Name'],
+  equipmentType: ['Category', 'Equipment Category', 'Device Category', 'Device Type'],
+  manufacturer: ['Manufacturer', 'Brand', 'Maker'],
+  model: ['Model', 'Model Number', 'Model Name'],
+  serialNumber: ['Serial', 'Serial #', 'Serial Number', 'SN'],
+  prescribedBy: ['Prescribed By', 'Rx By', 'Ordered By'],
+  acquiredAt: ['Acquired', 'Date Acquired', 'Date Received', 'Purchase Date'],
+  nextMaintenanceAt: ['Next Maintenance', 'Maintenance Due', 'Service Due', 'Next Service'],
 }
 
 const normalize = (s: string): string => s.toLowerCase().replace(/[\s_\-./]+/g, '')
@@ -240,6 +258,7 @@ const FIELD_TRANSFORMS: Record<ImportableField, (raw: string) => unknown> = {
     if (['patient', 'family member', 'person', 'human', 'pet'].includes(v)) return 'patient'
     if (['weight', 'weight log', 'weigh-in', 'weigh in'].includes(v)) return 'weight'
     if (['immunization', 'vaccine', 'vaccination', 'shot'].includes(v)) return 'immunization'
+    if (['equipment', 'medical equipment', 'device'].includes(v)) return 'equipment'
     return v // let dispatcher reject
   },
   name: (raw) => raw.trim() || undefined,
@@ -335,6 +354,15 @@ const FIELD_TRANSFORMS: Record<ImportableField, (raw: string) => unknown> = {
   lotNumber: (raw) => raw.trim() || undefined,
   administeredBy: (raw) => raw.trim() || undefined,
   nextDueAt: (raw) => parseDateOnly(raw) ?? undefined,
+  // Equipment-row fields
+  equipmentName: (raw) => raw.trim() || undefined,
+  equipmentType: (raw) => raw.trim().toLowerCase() || undefined,
+  manufacturer: (raw) => raw.trim() || undefined,
+  model: (raw) => raw.trim() || undefined,
+  serialNumber: (raw) => raw.trim() || undefined,
+  prescribedBy: (raw) => raw.trim() || undefined,
+  acquiredAt: (raw) => parseDateOnly(raw) ?? undefined,
+  nextMaintenanceAt: (raw) => parseDateOnly(raw) ?? undefined,
 }
 
 export function transformRow(
@@ -355,7 +383,7 @@ export function transformRow(
 // Row-type dispatch
 // ============================================================================
 
-export type ResolvedRowType = 'patient' | 'weight' | 'immunization'
+export type ResolvedRowType = 'patient' | 'weight' | 'immunization' | 'equipment'
 
 /**
  * Decide what kind of row we're looking at. Default is 'patient'
@@ -365,8 +393,8 @@ export type ResolvedRowType = 'patient' | 'weight' | 'immunization'
 export function resolveRowType(transformed: Record<string, unknown>): ResolvedRowType | { error: string } {
   const raw = transformed._rowType
   if (raw === undefined) return 'patient'
-  if (raw === 'patient' || raw === 'weight' || raw === 'immunization') return raw
-  return { error: `Unknown row type "${String(raw)}". Use "patient", "weight", or "immunization".` }
+  if (raw === 'patient' || raw === 'weight' || raw === 'immunization' || raw === 'equipment') return raw
+  return { error: `Unknown row type "${String(raw)}". Use "patient", "weight", "immunization", or "equipment".` }
 }
 
 // ============================================================================
@@ -486,6 +514,42 @@ export function validateImmunizationRow(
   | { ok: true; data: ImportImmunizationRow }
   | { ok: false; errors: Array<{ field: string; message: string }> } {
   const result = ImportImmunizationRowSchema.safeParse(row)
+  if (result.success) return { ok: true, data: result.data }
+  return {
+    ok: false,
+    errors: result.error.issues.map((i) => ({
+      field: i.path.join('.') || '_row',
+      message: i.message,
+    })),
+  }
+}
+
+// ============================================================================
+// Equipment-row schema
+// ============================================================================
+
+export const ImportEquipmentRowSchema = z.object({
+  // Reuse `name` as the patient identifier — same matching strategy.
+  name: z.string().min(1, 'Patient name is required'),
+  equipmentName: z.string().min(1, 'Equipment name is required').max(200),
+  equipmentType: z.string().max(100).optional(),
+  manufacturer: z.string().max(200).optional(),
+  model: z.string().max(200).optional(),
+  serialNumber: z.string().max(200).optional(),
+  prescribedBy: z.string().max(200).optional(),
+  acquiredAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Acquired date must be a valid date').optional(),
+  nextMaintenanceAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Maintenance date must be a valid date').optional(),
+  notes: z.string().max(2000).optional(),
+})
+
+export type ImportEquipmentRow = z.infer<typeof ImportEquipmentRowSchema>
+
+export function validateEquipmentRow(
+  row: Record<string, unknown>,
+):
+  | { ok: true; data: ImportEquipmentRow }
+  | { ok: false; errors: Array<{ field: string; message: string }> } {
+  const result = ImportEquipmentRowSchema.safeParse(row)
   if (result.success) return { ok: true, data: result.data }
   return {
     ok: false,

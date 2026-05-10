@@ -486,6 +486,65 @@ export interface Immunization {
   importBatchId?: string
 }
 
+// ==================== MEDICAL EQUIPMENT ====================
+
+/**
+ * Durable medical equipment a patient uses (CPAP, glucose monitor,
+ * hearing aids, mobility devices, nebulizer, etc.). Tracks the
+ * device + provenance + maintenance schedule so the family knows
+ * when filters / batteries / calibration are due.
+ *
+ * Distinct from medications (consumed, recurring) and from
+ * documents (proof-of-purchase paper). This is the device itself
+ * as an entity.
+ *
+ * Storage: users/{ownerUserId}/patients/{patientId}/equipment/{id}
+ */
+export interface MedicalEquipment {
+  id: string
+  patientId: string
+  userId: string // Household owner uid
+
+  /** Common name of the device. Examples: 'CPAP Machine',
+   *  'Glucose Monitor', 'Hearing Aid (left)', 'Walker'. */
+  name: string
+
+  /** Free-form category for grouping in the UI. Examples:
+   *  'respiratory', 'monitoring', 'mobility', 'hearing'. */
+  type?: string
+
+  /** Manufacturer (e.g., 'ResMed', 'Dexcom'). */
+  manufacturer?: string
+
+  /** Model name or number. */
+  model?: string
+
+  /** Serial number for warranty / support / recall lookup. */
+  serialNumber?: string
+
+  /** Provider who prescribed or recommended the device. */
+  prescribedBy?: string
+
+  /** ISO 8601 date the device was acquired / received. */
+  acquiredAt?: string
+
+  /** When the next maintenance is due (filter change, battery
+   *  replacement, calibration). Drives "due soon" highlighting
+   *  on the Health Records card. ISO 8601 date. */
+  nextMaintenanceAt?: string
+
+  /** Free-form notes (rental vs owned, supplier contact, etc.). */
+  notes?: string
+
+  /** Audit + source tracking. */
+  source: 'manual' | 'spreadsheet-import' | 'ocr'
+  addedAt: string
+  addedBy: string
+
+  /** Set if imported as part of a batch. */
+  importBatchId?: string
+}
+
 // ==================== PROVIDERS ====================
 
 export type ProviderType =
