@@ -12,6 +12,7 @@ import { generateJobsFromCodebase } from '@/lib/ai/job-generator'
 import { logger } from '@/lib/logger'
 import type { JobPosting } from '@/types/jobs'
 import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
+import { isSuperAdmin } from '@/lib/admin/permissions'
 
 /**
  * Generate jobs from codebase analysis
@@ -33,12 +34,17 @@ export async function POST(request: NextRequest) {
       return unauthorizedResponse('Invalid token')
     }
 
-    // Verify admin role
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get()
-    const userData = userDoc.data()
-
-    if (!userData?.role || userData.role !== 'admin') {
-      return forbiddenResponse('Admin access required')
+    // Verify admin role. Super-admin status is authoritative from
+    // SUPER_ADMIN_EMAILS — accept it as a parallel path so a super
+    // admin without a Firestore role doc still gets through (the
+    // role doc is no longer auto-written on sign-in; see
+    // hooks/useAdminAuth.ts).
+    if (!isSuperAdmin(decodedToken.email)) {
+      const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get()
+      const userData = userDoc.data()
+      if (!userData?.role || userData.role !== 'admin') {
+        return forbiddenResponse('Admin access required')
+      }
     }
 
     // Parse request body

@@ -73,13 +73,7 @@ export const test = baseTest.extend<AppFixtures>({
         text.includes('Failed to load resource') ||
         text.includes('Hot Module Replacement') ||
         text.includes('[Fast Refresh]') ||
-        text.includes('Download the React DevTools') ||
-        // Known pre-existing issue: FamiliesAuthGuard tries to write
-        // a super-admin role doc client-side; Firestore rules block
-        // it. Surfaced by the test battery 2026-05-10. TODO: move
-        // the write server-side or relax the rule. Filtered here so
-        // the rest of the suite doesn't go red until that lands.
-        text.includes('Error updating super admin role')
+        text.includes('Download the React DevTools')
       ) return
       consoleErrors.push(text)
     })

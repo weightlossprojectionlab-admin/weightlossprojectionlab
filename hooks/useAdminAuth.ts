@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './useAuth'
 import { db } from '@/lib/firebase'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { logger } from '@/lib/logger'
 import { isSuperAdmin as isSuperAdminCheck } from '@/lib/admin/permissions'
 
@@ -46,23 +46,14 @@ export const useAdminAuth = (): AdminAuthState => {
         const userDoc = await getDoc(doc(db, 'users', user.uid))
 
         if (!userDoc.exists()) {
-          // Super admins get admin role even without Firestore doc
-          if (isSuper) {
-            setRole('admin')
-            // Auto-create admin profile for super admins
-            try {
-              await setDoc(doc(db, 'users', user.uid), {
-                email: user.email,
-                role: 'admin',
-                createdAt: new Date(),
-                lastActiveAt: new Date(),
-              }, { merge: true })
-            } catch (err) {
-              logger.error('Error creating super admin profile:', err as Error)
-            }
-          } else {
-            setRole(null)
-          }
+          // Super admins get admin role even without Firestore doc.
+          // The doc itself is intentionally NOT auto-created from the
+          // client — Firestore rules block users from setting their
+          // own `role` field (correctly, prevents privilege
+          // escalation). Server-side endpoints honor super-admin
+          // status via SUPER_ADMIN_EMAILS rather than reading a role
+          // doc the client wrote, so the doc is unnecessary.
+          setRole(isSuper ? 'admin' : null)
           setLoading(false)
           return
         }
@@ -70,20 +61,11 @@ export const useAdminAuth = (): AdminAuthState => {
         const userData = userDoc.data()
         let userRole = userData?.role as AdminRole
 
-        // Super admins always have admin role
+        // Super admins always have admin role — no Firestore write
+        // attempted (see comment above). The local state below is
+        // what the rest of the hook consumes.
         if (isSuper) {
           userRole = 'admin'
-          // Update Firestore if not already set
-          if (userData?.role !== 'admin') {
-            try {
-              await setDoc(doc(db, 'users', user.uid), {
-                role: 'admin',
-                lastActiveAt: new Date(),
-              }, { merge: true })
-            } catch (err) {
-              logger.error('Error updating super admin role:', err as Error)
-            }
-          }
         }
 
         // Valid admin roles: admin, moderator, support
