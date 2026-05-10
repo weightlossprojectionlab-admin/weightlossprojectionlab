@@ -248,7 +248,7 @@ export const HOUSEHOLD_LIMITS = {
   single_plus: 2,       // Single+: 2 households (your home + parent's home)
   family_basic: 3,      // Family Basic: 3 households
   family_plus: 5,       // Family Plus: 5 households (complex families)
-  family_premium: 999,  // Family Premium: Unlimited households
+  family_premium: 10,   // Family Premium: 10 households (sandwich-generation cap)
 } as const
 
 // Household Duty Limits by Subscription Tier

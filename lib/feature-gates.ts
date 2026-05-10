@@ -464,11 +464,17 @@ export function getSimulationPresets(): Record<string, UserSubscription> {
       billingInterval: 'yearly',
       addons: { familyFeatures: true },
       status: 'active',
-      maxSeats: 999,
+      // Bounded numbers (was 999 / unlimited): 20 members per
+      // household × 10 households = 200 max, 50 external caregivers.
+      // Doubling pattern from Family Plus (10 / 5 / 10), gives a
+      // sandwich-generation power-user budget without inviting
+      // bulk-scraping abuse. Beyond this is Practitioner / White-
+      // label territory.
+      maxSeats: 20,
       currentSeats: 0,
-      maxExternalCaregivers: 999,
+      maxExternalCaregivers: 50,
       currentExternalCaregivers: 0,
-      maxPatients: 999,
+      maxPatients: 20,
       maxHouseholds: HOUSEHOLD_LIMITS.family_premium,
       currentHouseholds: 0,
       maxDutiesPerHousehold: HOUSEHOLD_DUTY_LIMITS.family_premium,

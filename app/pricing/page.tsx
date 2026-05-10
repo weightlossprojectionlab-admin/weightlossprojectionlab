@@ -48,7 +48,7 @@ function schemaDescriptionFor(planId: SubscriptionPlan, baseDescription: string)
     family_plus:
       'Advanced machine-learning analytics including predictive coaching trained per family member, restock and shopping prediction models, ML-personalized meal recommendations from collaborative filtering on the household\'s logged meal history (allergen and special-needs aware), health trend analysis with statistical confidence intervals, ROI tracking that quantifies health improvement against dietary and lifestyle effort, and access for up to ten family members and ten external caregivers.',
     family_premium:
-      'Unlimited family members and external caregivers with white-glove onboarding, machine-learning insights at scale, custom health reports, full data export, API access for integrations, early access to new ML and AI features, and a dedicated account manager — designed for large families, multi-generational households, and complex care coordination needs.',
+      'Up to 20 family members per household across up to 10 households (built for sandwich-generation caregivers managing your home, your parents, your in-laws, and your adult kids) plus up to 50 external caregivers, white-glove onboarding, machine-learning insights at scale, custom health reports, full data export, API access for integrations, early access to new ML and AI features, and a dedicated account manager.',
   }
   return `${baseDescription} ${aiMlContext[planId] ?? ''}`.trim()
 }

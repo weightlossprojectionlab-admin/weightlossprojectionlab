@@ -165,13 +165,17 @@ export const PLANS: Plan[] = [
     id: 'family_premium',
     name: 'Family Premium',
     description:
-      'For large families and households that want concierge support and full data access. Unlimited members, unlimited caregivers, and a dedicated account manager.',
+      'For sandwich-generation households juggling multiple homes — your home, your parents, your in-laws, your grown kids. Up to 20 members per household across up to 10 households, with concierge support and full data access.',
     monthlyPrice: 39.99,
     yearlyPrice: 399,
     features: [
-      // 1. Audience anchor — "unlimited" IS the headline
-      { name: 'Unlimited family members', included: true },
-      { name: 'Unlimited external caregivers', included: true },
+      // 1. Audience anchor — bounded numbers are more honest than
+      // "unlimited" and prevent abuse/scraping vectors. The
+      // doubling pattern (5/3 → 10/5 → 20/10) tells the customer
+      // exactly what they're buying.
+      { name: 'Up to 20 family members per household', included: true },
+      { name: 'Up to 10 households', included: true },
+      { name: 'Up to 50 external caregivers', included: true },
       { name: 'Everything in Family Plus', included: true },
       // 2. Concierge-tier differentiators (service)
       { name: 'White-glove onboarding', included: true },

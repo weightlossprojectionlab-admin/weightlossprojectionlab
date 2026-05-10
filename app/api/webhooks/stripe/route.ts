@@ -415,7 +415,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     single_plus: 1,
     family_basic: 5,
     family_plus: 10,
-    family_premium: 999,
+    family_premium: 20,
   }
 
   const caregiverLimits: Record<string, number> = {
@@ -424,7 +424,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     single_plus: 3,
     family_basic: 5,
     family_plus: 10,
-    family_premium: 999,
+    family_premium: 50,
   }
 
   const subscriptionData = {

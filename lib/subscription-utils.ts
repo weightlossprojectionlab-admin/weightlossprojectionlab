@@ -219,7 +219,7 @@ export function getPlanLimits(plan: SubscriptionPlan): {
     single_plus: 1,
     family_basic: 5,
     family_plus: 10,
-    family_premium: 999,
+    family_premium: 20,
   }
 
   const caregiverLimits: Record<SubscriptionPlan, number> = {
@@ -228,7 +228,7 @@ export function getPlanLimits(plan: SubscriptionPlan): {
     single_plus: 3,
     family_basic: 5,
     family_plus: 10,
-    family_premium: 999,
+    family_premium: 50,
   }
 
   return {
