@@ -35,9 +35,43 @@ export const emergencyContactSchema = z.object({
   notes: z.string().optional()
 })
 
+// ============================================================
+// Household — operational unit of care (nuclear / parents / etc.)
+// ============================================================
+
+export const householdTypeSchema = z.enum([
+  'nuclear',
+  'parents',
+  'grandparents',
+  'kids',
+  'extended',
+  'other',
+])
+
+export const householdSchema = z.object({
+  id: z.string().min(1),
+  userId: z.string().min(1),
+  name: z.string().min(1).max(200),
+  type: householdTypeSchema,
+  notes: z.string().max(1000).optional(),
+  createdAt: z.string().datetime(),
+  createdBy: z.string().min(1),
+})
+
+export const householdFormSchema = householdSchema.omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  createdBy: true,
+})
+
 export const patientProfileSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().min(1, 'User ID is required'),
+  /** Household assignment — optional during the migration period
+   *  for patients created before the household model. New patients
+   *  always get one (auto-derived from relationship). */
+  householdId: z.string().min(1).optional(),
   type: z.enum(['human', 'pet']),
   name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
   photo: z.string().url('Invalid photo URL').optional(),
