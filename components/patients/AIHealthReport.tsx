@@ -1,7 +1,16 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { PatientProfile, PatientMedication, VitalSign, PatientDocument } from '@/types/medical'
+import {
+  PatientProfile,
+  PatientMedication,
+  VitalSign,
+  PatientDocument,
+  Immunization,
+  MedicalEquipment,
+  FamilyHistoryEntry,
+  Appointment,
+} from '@/types/medical'
 import { SparklesIcon, ArrowPathIcon, PrinterIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
@@ -22,6 +31,13 @@ interface AIHealthReportProps {
   todayMeals: any[]
   weightData: any[]
   stepsData: any[]
+  // Phase B–E entities — wired in 2026-05-10 to close the gap
+  // where the report ignored everything from the medical-binder
+  // gap close (immunizations, equipment, family history, visits).
+  immunizations?: Immunization[]
+  equipment?: MedicalEquipment[]
+  familyHistory?: FamilyHistoryEntry[]
+  appointments?: Appointment[]
 }
 
 export function AIHealthReport({
@@ -31,7 +47,11 @@ export function AIHealthReport({
   documents,
   todayMeals,
   weightData,
-  stepsData
+  stepsData,
+  immunizations = [],
+  equipment = [],
+  familyHistory = [],
+  appointments = [],
 }: AIHealthReportProps) {
   const { user } = useAuth()
   const [generating, setGenerating] = useState(false)
@@ -63,7 +83,12 @@ export function AIHealthReport({
           documents: documents.slice(0, 10),
           todayMeals,
           weightData: weightData.slice(0, 30),
-          stepsData: stepsData.slice(0, 30)
+          stepsData: stepsData.slice(0, 30),
+          // Phase B–E — full lists; small enough that slicing isn't needed.
+          immunizations,
+          equipment,
+          familyHistory,
+          appointments,
         })
       })
 

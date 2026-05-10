@@ -186,6 +186,13 @@ function PatientDetailContent() {
   // fetches the patient-scoped list separately; firing two parallel
   // requests on mount was burning the per-user rate limit.
   const { createAppointment } = useAppointments({ autoFetch: false })
+  // Patient-scoped appointment list — used by the AI Health Report
+  // to surface upcoming visits + recent post-visit summaries. Same
+  // hook, separate instance scoped to this patient.
+  const { appointments: patientAppointments } = useAppointments({
+    patientId,
+    autoFetch: true,
+  })
   const { providers, refetch: refetchProviders } = useProviders()
   const { createSchedule } = useVitalSchedules({ patientId, autoFetch: false })
 
@@ -1968,6 +1975,10 @@ function PatientDetailContent() {
                 todayMeals={todayMeals || []}
                 weightData={weightData || []}
                 stepsData={stepsData || []}
+                immunizations={immunizations}
+                equipment={equipment}
+                familyHistory={familyHistory}
+                appointments={patientAppointments}
               />
             )}
 

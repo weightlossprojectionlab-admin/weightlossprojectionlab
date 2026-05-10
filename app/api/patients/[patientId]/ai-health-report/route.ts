@@ -37,6 +37,11 @@ export async function POST(
       todayMeals,
       weightData,
       stepsData,
+      // Phase B–E entities (medical-binder gap close)
+      immunizations,
+      equipment,
+      familyHistory,
+      appointments,
       // Pet-specific data
       feedingData,
       vaccinations
@@ -53,6 +58,11 @@ export async function POST(
       weightData,
       stepsData,
       todayMeals,
+      // Phase B–E entities passed through to formatter
+      immunizations,
+      equipment,
+      familyHistory,
+      appointments,
       // Pet-specific fields
       feedingData,
       vaccinations
@@ -76,6 +86,11 @@ export async function POST(
       petFeedingAnalysis: analyses.petFeedingAnalysis,
       petVaccinationAnalysis: analyses.petVaccinationAnalysis,
       documentsCount: documents?.length || 0,
+      // Phase B–E raw data — formatter renders structured sections.
+      immunizations,
+      equipment,
+      familyHistory,
+      appointments,
       analyses: analyses
     })
 
@@ -99,6 +114,10 @@ export async function POST(
           stepLogs: stepsData?.length || 0,
           meals: todayMeals?.length || 0,
           documents: documents?.length || 0,
+          immunizations: immunizations?.length || 0,
+          equipment: equipment?.length || 0,
+          familyHistory: familyHistory?.length || 0,
+          appointments: appointments?.length || 0,
           feedingLogs: feedingData?.length || 0,
           vaccinations: vaccinations?.length || 0
         }
@@ -130,6 +149,11 @@ function generateHealthReport(data: any): string {
     petFeedingAnalysis,
     petVaccinationAnalysis,
     documentsCount,
+    // Phase B–E entities
+    immunizations,
+    equipment,
+    familyHistory,
+    appointments,
     analyses
   } = data
 
@@ -248,6 +272,11 @@ function generateHealthReport(data: any): string {
   report += `| Age | ${ageDisplay} |\n`
   if (!isPet && patient.gender) {
     report += `| Gender | ${patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)} |\n`
+  }
+  // Blood type — emergency identification (Phase A).
+  if (!isPet && patient.bloodType) {
+    const bloodLabel = patient.bloodType === 'unknown' ? 'Unknown' : patient.bloodType
+    report += `| Blood Type | ${bloodLabel} |\n`
   }
   if (patient.relationship) {
     report += `| Relationship | ${lifeStageLabel} |\n`
@@ -476,6 +505,124 @@ function generateHealthReport(data: any): string {
         const icon = alert.severity === 'critical' ? '🔴' : alert.severity === 'warning' ? '🟡' : 'ℹ️'
         report += `${icon} ${alert.message}\n\n`
       })
+    }
+  }
+
+  // ========== Phase B — Immunizations ==========
+  if (Array.isArray(immunizations) && immunizations.length > 0) {
+    report += `## IMMUNIZATIONS\n\n`
+    report += `| Vaccine | Date Administered | Dose # | Next Due |\n`
+    report += `|---------|-------------------|--------|----------|\n`
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    for (const imm of immunizations) {
+      const administered = imm.administeredAt
+        ? new Date(imm.administeredAt).toLocaleDateString()
+        : '—'
+      const doseStr = imm.doseNumber ? `#${imm.doseNumber}` : '—'
+      let nextDue = '—'
+      if (imm.nextDueAt) {
+        const nextDate = new Date(imm.nextDueAt)
+        const isOverdue = nextDate < today
+        const isDueSoon =
+          !isOverdue && nextDate.getTime() - today.getTime() < 30 * 24 * 60 * 60 * 1000
+        const flag = isOverdue ? ' ⚠️ Overdue' : isDueSoon ? ' 🟡 Due Soon' : ''
+        nextDue = `${nextDate.toLocaleDateString()}${flag}`
+      }
+      report += `| ${imm.vaccineName} | ${administered} | ${doseStr} | ${nextDue} |\n`
+    }
+    report += `\n`
+  }
+
+  // ========== Phase C — Medical Equipment ==========
+  if (Array.isArray(equipment) && equipment.length > 0) {
+    report += `## MEDICAL EQUIPMENT\n\n`
+    report += `| Device | Category | Manufacturer / Model | Next Maintenance |\n`
+    report += `|--------|----------|----------------------|------------------|\n`
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    for (const eq of equipment) {
+      const mfg = [eq.manufacturer, eq.model].filter(Boolean).join(' ') || '—'
+      let nextMaint = '—'
+      if (eq.nextMaintenanceAt) {
+        const nextDate = new Date(eq.nextMaintenanceAt)
+        const isOverdue = nextDate < today
+        const isDueSoon =
+          !isOverdue && nextDate.getTime() - today.getTime() < 30 * 24 * 60 * 60 * 1000
+        const flag = isOverdue ? ' ⚠️ Overdue' : isDueSoon ? ' 🟡 Due Soon' : ''
+        nextMaint = `${nextDate.toLocaleDateString()}${flag}`
+      }
+      report += `| ${eq.name} | ${eq.type || '—'} | ${mfg} | ${nextMaint} |\n`
+    }
+    report += `\n`
+  }
+
+  // ========== Phase D — Family Medical History ==========
+  if (!isPet && Array.isArray(familyHistory) && familyHistory.length > 0) {
+    report += `## FAMILY MEDICAL HISTORY\n\n`
+    report += `*Genetic risk factors — informs surveillance plans.*\n\n`
+    report += `| Relative | Condition | Age of Onset | Status |\n`
+    report += `|----------|-----------|--------------|--------|\n`
+    for (const fh of familyHistory) {
+      const relative = (fh.relativeRelationship || '').replace(/_/g, ' ')
+      const onset = fh.ageOfOnset !== undefined ? `${fh.ageOfOnset}` : '—'
+      const status =
+        fh.isLiving === true
+          ? 'Living'
+          : fh.isLiving === false
+            ? fh.causeOfDeath
+              ? `Deceased — ${fh.causeOfDeath}`
+              : 'Deceased'
+            : 'Unknown'
+      report += `| ${relative} | ${fh.condition} | ${onset} | ${status} |\n`
+    }
+    report += `\n`
+  }
+
+  // ========== Phase E — Appointments (recent + upcoming) ==========
+  if (Array.isArray(appointments) && appointments.length > 0) {
+    const now = new Date()
+    const upcoming = appointments
+      .filter((a: any) => a.status !== 'completed' && new Date(a.dateTime) >= now)
+      .sort((a: any, b: any) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
+    const recentCompleted = appointments
+      .filter((a: any) => a.status === 'completed')
+      .sort((a: any, b: any) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+      .slice(0, 5)
+
+    if (upcoming.length > 0 || recentCompleted.length > 0) {
+      report += `## APPOINTMENTS\n\n`
+
+      if (upcoming.length > 0) {
+        report += `### Upcoming\n\n`
+        report += `| Date | Provider | Specialty | Reason |\n`
+        report += `|------|----------|-----------|--------|\n`
+        for (const apt of upcoming.slice(0, 5)) {
+          const date = new Date(apt.dateTime).toLocaleDateString()
+          report += `| ${date} | ${apt.providerName || '—'} | ${apt.specialty || '—'} | ${apt.reason || '—'} |\n`
+        }
+        report += `\n`
+      }
+
+      if (recentCompleted.length > 0) {
+        report += `### Recent Completed Visits\n\n`
+        for (const apt of recentCompleted) {
+          const date = new Date(apt.dateTime).toLocaleDateString()
+          report += `**${date} — ${apt.providerName || 'Visit'}${apt.specialty ? ` (${apt.specialty})` : ''}**  \n`
+          if (apt.diagnosisGiven) report += `- Diagnosis: ${apt.diagnosisGiven}  \n`
+          if (Array.isArray(apt.testsOrdered) && apt.testsOrdered.length > 0) {
+            report += `- Tests ordered: ${apt.testsOrdered.join(', ')}  \n`
+          }
+          if (apt.treatmentPlan) report += `- Treatment plan: ${apt.treatmentPlan}  \n`
+          if (apt.followUpNeeded) {
+            const nextStr = apt.nextAppointmentDate
+              ? new Date(apt.nextAppointmentDate).toLocaleDateString()
+              : 'date TBD'
+            report += `- Follow-up needed (${nextStr})  \n`
+          }
+          report += `\n`
+        }
+      }
     }
   }
 

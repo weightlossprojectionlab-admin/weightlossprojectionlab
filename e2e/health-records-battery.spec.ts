@@ -171,6 +171,16 @@ test.describe('Health Records — Phase B + C + D battery @battery', () => {
       },
     ]
 
+    // Phase A — set bloodType on the patient profile so the
+    // health summary / info aggregates have it. Idempotent merge.
+    if (process.env.KEEP_DATA === '1') {
+      await firestore
+        .collection('users').doc(ownerUserId)
+        .collection('patients').doc(patientId)
+        .set({ bloodType: 'A+' }, { merge: true })
+      console.log('[battery] Phase A — bloodType=A+ set on patient profile.')
+    }
+
     await gotoPatientTab('health-records')
 
     const immunizationsCard = page.locator('div.bg-card', {
@@ -337,44 +347,51 @@ test.describe('Health Records — Phase B + C + D battery @battery', () => {
       persistedDocIds.familyHistory.push(snap.docs[0].id)
     }
 
-    // ============= Delete everything =============
-    for (const imm of immunizations) {
-      const row = page.locator('li', { hasText: imm.vaccineName })
-      await row.getByRole('button', { name: /^delete/i }).click()
-      await page.getByRole('button', { name: 'Remove', exact: true }).click()
-      await expect(page.getByText(imm.vaccineName, { exact: false })).toHaveCount(0, {
-        timeout: 60_000,
-      })
-    }
-    for (const eq of equipment) {
-      const row = page.locator('li', { hasText: eq.name })
-      await row.getByRole('button', { name: /^delete/i }).click()
-      await page.getByRole('button', { name: 'Remove', exact: true }).click()
-      await expect(page.getByText(eq.name, { exact: false })).toHaveCount(0, {
-        timeout: 60_000,
-      })
-    }
-    for (const fh of familyHistory) {
-      const row = page.locator('li', { hasText: fh.condition })
-      await row.getByRole('button', { name: /^delete/i }).click()
-      await page.getByRole('button', { name: 'Remove', exact: true }).click()
-      await expect(page.getByText(fh.condition, { exact: false })).toHaveCount(0, {
-        timeout: 60_000,
-      })
-    }
+    // ============= Delete everything (unless KEEP_DATA=1) =============
+    // KEEP_DATA=1 lets the test seed records and walk away, so the
+    // human can inspect downstream surfaces (health summary, info
+    // tab aggregates) that consume these records.
+    if (process.env.KEEP_DATA === '1') {
+      console.log('[battery] KEEP_DATA=1 — skipping deletes; seeded records remain in Firestore.')
+    } else {
+      for (const imm of immunizations) {
+        const row = page.locator('li', { hasText: imm.vaccineName })
+        await row.getByRole('button', { name: /^delete/i }).click()
+        await page.getByRole('button', { name: 'Remove', exact: true }).click()
+        await expect(page.getByText(imm.vaccineName, { exact: false })).toHaveCount(0, {
+          timeout: 60_000,
+        })
+      }
+      for (const eq of equipment) {
+        const row = page.locator('li', { hasText: eq.name })
+        await row.getByRole('button', { name: /^delete/i }).click()
+        await page.getByRole('button', { name: 'Remove', exact: true }).click()
+        await expect(page.getByText(eq.name, { exact: false })).toHaveCount(0, {
+          timeout: 60_000,
+        })
+      }
+      for (const fh of familyHistory) {
+        const row = page.locator('li', { hasText: fh.condition })
+        await row.getByRole('button', { name: /^delete/i }).click()
+        await page.getByRole('button', { name: 'Remove', exact: true }).click()
+        await expect(page.getByText(fh.condition, { exact: false })).toHaveCount(0, {
+          timeout: 60_000,
+        })
+      }
 
-    // ============= Firestore cleanup verified =============
-    for (const id of persistedDocIds.immunizations) {
-      const doc = await immunizationsCol.doc(id).get()
-      expect(doc.exists, `immunization ${id} removed from Firestore`).toBe(false)
-    }
-    for (const id of persistedDocIds.equipment) {
-      const doc = await equipmentCol.doc(id).get()
-      expect(doc.exists, `equipment ${id} removed from Firestore`).toBe(false)
-    }
-    for (const id of persistedDocIds.familyHistory) {
-      const doc = await familyHistoryCol.doc(id).get()
-      expect(doc.exists, `family history ${id} removed from Firestore`).toBe(false)
+      // ============= Firestore cleanup verified =============
+      for (const id of persistedDocIds.immunizations) {
+        const doc = await immunizationsCol.doc(id).get()
+        expect(doc.exists, `immunization ${id} removed from Firestore`).toBe(false)
+      }
+      for (const id of persistedDocIds.equipment) {
+        const doc = await equipmentCol.doc(id).get()
+        expect(doc.exists, `equipment ${id} removed from Firestore`).toBe(false)
+      }
+      for (const id of persistedDocIds.familyHistory) {
+        const doc = await familyHistoryCol.doc(id).get()
+        expect(doc.exists, `family history ${id} removed from Firestore`).toBe(false)
+      }
     }
 
     if (process.env.KEEP_OPEN !== '0') {

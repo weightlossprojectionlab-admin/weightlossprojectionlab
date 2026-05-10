@@ -35,6 +35,14 @@ export interface HealthSummaryInput<T = any> {
   weightData?: WeightLog[]
   stepsData?: StepLog[]
   todayMeals?: MealLog[]
+  // Phase B–E entities (medical-binder gap close).
+  // Raw data passed through to the report formatter; no
+  // analyzer step yet — the formatter renders structured
+  // sections directly.
+  immunizations?: any[]
+  equipment?: any[]
+  familyHistory?: any[]
+  appointments?: any[]
   // Pet-specific data (optional)
   feedingData?: T[]
   vaccinations?: T[]

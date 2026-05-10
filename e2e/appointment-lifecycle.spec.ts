@@ -296,12 +296,20 @@ test.describe('Appointment lifecycle — pre + post visit @phase-e', () => {
     } finally {
       // Cleanup: delete both the seeded parent and the auto-created
       // follow-up so reruns don't pile up. Each delete is best-effort.
-      const parentDoc = await appointmentsCol.doc(appointmentId).get().catch(() => null)
-      const followUpId = parentDoc?.exists
-        ? (parentDoc.data()?.followUpAppointmentId as string | undefined)
-        : undefined
-      if (followUpId) await appointmentsCol.doc(followUpId).delete().catch(() => {})
-      await appointmentsCol.doc(appointmentId).delete().catch(() => {})
+      // Skipped when KEEP_DATA=1 so the human can inspect downstream
+      // consumers (health summary, calendar, etc.).
+      if (process.env.KEEP_DATA === '1') {
+        console.log(
+          '[appointment-lifecycle] KEEP_DATA=1 — skipping deletes; seeded appointment + follow-up remain in Firestore.',
+        )
+      } else {
+        const parentDoc = await appointmentsCol.doc(appointmentId).get().catch(() => null)
+        const followUpId = parentDoc?.exists
+          ? (parentDoc.data()?.followUpAppointmentId as string | undefined)
+          : undefined
+        if (followUpId) await appointmentsCol.doc(followUpId).delete().catch(() => {})
+        await appointmentsCol.doc(appointmentId).delete().catch(() => {})
+      }
     }
   })
 })
