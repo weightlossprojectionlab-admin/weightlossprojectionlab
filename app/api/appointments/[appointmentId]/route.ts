@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { appointmentFormSchema } from '@/lib/validations/medical'
 import type { Appointment } from '@/types/medical'
+import { v4 as uuidv4 } from 'uuid'
 
 export async function GET(
   request: NextRequest,
@@ -117,7 +118,61 @@ export async function PUT(
       ...updatedDoc.data()
     } as Appointment
 
-    console.log(`Appointment updated: ${appointmentId}`)
+    // ============= Auto-create follow-up appointment =============
+    // When a completion-edit comes in with followUpNeeded=true and a
+    // nextAppointmentDate, materialize a tentative follow-up so it
+    // shows up on the family calendar instead of being a stranded
+    // field on the parent record. Idempotent: skip if a follow-up
+    // already exists (followUpAppointmentId set on the parent).
+    let followUpAppointmentId: string | undefined
+    if (
+      updatedAppointment.status === 'completed' &&
+      updatedAppointment.followUpNeeded === true &&
+      updatedAppointment.nextAppointmentDate &&
+      !updatedAppointment.followUpAppointmentId
+    ) {
+      followUpAppointmentId = uuidv4()
+      const nowIso = new Date().toISOString()
+      const followUp: Appointment = {
+        id: followUpAppointmentId,
+        userId: updatedAppointment.userId,
+        patientId: updatedAppointment.patientId,
+        patientName: updatedAppointment.patientName,
+        providerId: updatedAppointment.providerId,
+        providerName: updatedAppointment.providerName,
+        ...(updatedAppointment.specialty ? { specialty: updatedAppointment.specialty } : {}),
+        dateTime: updatedAppointment.nextAppointmentDate,
+        duration: updatedAppointment.duration ?? 30,
+        type: 'follow-up',
+        reason: `Follow-up to ${updatedAppointment.reason}`,
+        ...(updatedAppointment.location ? { location: updatedAppointment.location } : {}),
+        status: 'scheduled',
+        createdFrom: 'manual',
+        requiresDriver: false,
+        driverStatus: 'not-needed',
+        createdAt: nowIso,
+        createdBy: userId,
+        updatedAt: nowIso,
+        parentAppointmentId: appointmentId,
+      }
+
+      await adminDb
+        .collection('users')
+        .doc(userId)
+        .collection('appointments')
+        .doc(followUpAppointmentId)
+        .set(followUp)
+
+      // Backlink on the parent so we don't recreate the follow-up
+      // if the user re-saves the visit summary.
+      await appointmentRef.update({ followUpAppointmentId })
+      updatedAppointment.followUpAppointmentId = followUpAppointmentId
+    }
+
+    console.log(
+      `Appointment updated: ${appointmentId}` +
+        (followUpAppointmentId ? ` (auto-created follow-up ${followUpAppointmentId})` : ''),
+    )
 
     return NextResponse.json({
       success: true,

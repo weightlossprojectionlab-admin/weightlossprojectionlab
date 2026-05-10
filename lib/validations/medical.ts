@@ -546,9 +546,18 @@ export const appointmentSchema = z.object({
   // Optional advanced features
   reminderSettings: reminderSettingsSchema.optional(),
   travelTime: z.number().min(0).optional(),
+
+  // Visit lifecycle (Phase E) — pre/post structured fields
+  preVisitNotes: z.string().max(4000).optional(),
+  preVisitQuestions: z.array(z.string().min(1).max(500)).max(20).optional(),
   visitSummary: z.string().max(2000).optional(),
+  diagnosisGiven: z.string().max(1000).optional(),
+  testsOrdered: z.array(z.string().min(1).max(200)).max(20).optional(),
+  treatmentPlan: z.string().max(2000).optional(),
   followUpNeeded: z.boolean().optional(),
-  nextAppointmentDate: z.string().datetime().optional()
+  nextAppointmentDate: z.string().datetime().optional(),
+  followUpAppointmentId: z.string().optional(),
+  parentAppointmentId: z.string().optional()
 }).refine(
   (data) => {
     // If cancelled, cancellation reason should be provided

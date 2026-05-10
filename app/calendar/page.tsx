@@ -6,7 +6,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useAppointments } from '@/hooks/useAppointments'
 import { usePatients } from '@/hooks/usePatients'
@@ -24,12 +24,18 @@ export default function CalendarPage() {
 
 function CalendarContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
   const { appointments, loading } = useAppointments()
   const { patients } = usePatients()
 
+  // Honor ?patientId=<id> as the initial filter — the patient
+  // detail page deep-links here to show that person's schedule.
+  // Falls back to 'all' when absent.
+  const initialPatientFilter = searchParams.get('patientId') ?? 'all'
+
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [filterPatientId, setFilterPatientId] = useState<string>('all')
+  const [filterPatientId, setFilterPatientId] = useState<string>(initialPatientFilter)
   const [filterDriver, setFilterDriver] = useState<'all' | 'me' | 'pending'>('all')
 
   // Get current month details
@@ -148,6 +154,7 @@ function CalendarContent() {
             <div className="flex items-center gap-4">
               <button
                 onClick={goToPreviousMonth}
+                aria-label="Previous month"
                 className="p-2 hover:bg-muted rounded-lg transition-colors"
               >
                 <ChevronLeftIcon className="w-5 h-5 text-muted-foreground" />
@@ -157,6 +164,7 @@ function CalendarContent() {
               </h2>
               <button
                 onClick={goToNextMonth}
+                aria-label="Next month"
                 className="p-2 hover:bg-muted rounded-lg transition-colors"
               >
                 <ChevronRightIcon className="w-5 h-5 text-muted-foreground" />

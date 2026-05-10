@@ -773,9 +773,31 @@ export interface Appointment {
     hoursBefore?: number[]
   }
   travelTime?: number // estimated minutes from home
+
+  // ========== Visit lifecycle (Phase E) ==========
+  // Pre-visit prep — what the caregiver wants the patient to ask
+  // / discuss / show the provider. Editable up until the
+  // appointment is marked completed.
+  preVisitNotes?: string
+  preVisitQuestions?: string[]
+
+  // Post-visit summary — captured when status flips to completed.
+  // visitSummary, followUpNeeded, nextAppointmentDate predate
+  // Phase E and stay; the four below are the structured additions.
   visitSummary?: string
+  diagnosisGiven?: string
+  testsOrdered?: string[]
+  treatmentPlan?: string
   followUpNeeded?: boolean
   nextAppointmentDate?: string // ISO 8601
+
+  // Follow-up linkage — when a completed appointment has
+  // followUpNeeded=true + nextAppointmentDate, the API auto-
+  // creates a tentative follow-up appointment. We track the
+  // parent↔child linkage to (a) prevent duplicate creation on
+  // re-saves and (b) let the UI show "this is a follow-up to ..."
+  followUpAppointmentId?: string // on the completed parent
+  parentAppointmentId?: string // on the auto-created child
 }
 
 // ==================== APPOINTMENT RECOMMENDATIONS ====================
