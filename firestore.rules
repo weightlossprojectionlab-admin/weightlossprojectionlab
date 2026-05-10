@@ -218,8 +218,12 @@ service cloud.firestore {
         }
 
         // Documents subcollection (insurance cards, medical records, etc.)
+        // Read access mirrors immunizations / equipment subcollections —
+        // the household owner plus tenant-shared caregivers (see
+        // isTenantOfUser). This allows client-side onSnapshot listeners
+        // for caregivers viewing the patient detail page.
         match /documents/{documentId} {
-          allow read: if isOwner(userId);
+          allow read: if isOwner(userId) || isTenantOfUser(userId);
           allow create: if isOwner(userId) &&
                           request.resource.data.patientId == patientId &&
                           request.resource.data.userId == userId;

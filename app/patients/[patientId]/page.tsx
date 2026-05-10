@@ -8,7 +8,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { auth } from '@/lib/firebase'
+import { auth, db } from '@/lib/firebase'
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useVitals } from '@/hooks/useVitals'
 import { usePatientPermissions } from '@/hooks/usePatientPermissions'
@@ -417,7 +418,11 @@ function PatientDetailContent() {
     }
   }, [isNewbornOrInfant, activeTab])
 
-  // Fetch documents
+  // One-shot fetch — used as the initial-state seed before the
+  // realtime listener attaches (the listener depends on the patient
+  // profile having loaded so we know the household-owner uid). Also
+  // serves as a fallback for any imperative refresh callsites
+  // (post-upload, post-delete).
   const fetchDocuments = async () => {
     try {
       setLoadingDocuments(true)
@@ -433,6 +438,44 @@ function PatientDetailContent() {
   useEffect(() => {
     fetchDocuments()
   }, [patientId])
+
+  // Realtime listener for documents — fixes the stuck-spinner bug
+  // where uploads finished OCR server-side but the Recent Documents
+  // card never re-rendered. Subscribes to the household-owner's
+  // documents subcollection (firestore.rules grants read to owner +
+  // tenant caregivers) and updates the documents state on every
+  // status flip (pending → processing → completed/failed).
+  useEffect(() => {
+    if (!patient?.userId || !patientId) return
+
+    const docsRef = collection(
+      db,
+      'users',
+      patient.userId,
+      'patients',
+      patientId,
+      'documents',
+    )
+    const q = query(docsRef, orderBy('uploadedAt', 'desc'))
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        if (snapshot.metadata.hasPendingWrites) return
+        const docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as PatientDocument[]
+        setDocuments(docs)
+        setLoadingDocuments(false)
+      },
+      (err) => {
+        logger.error('[PatientDetail] Document listener error', err as Error, {
+          patientId,
+          ownerUserId: patient.userId,
+        })
+      },
+    )
+
+    return () => unsubscribe()
+  }, [patient?.userId, patientId])
 
   // Fetch medications using API
   const fetchMedications = async () => {
