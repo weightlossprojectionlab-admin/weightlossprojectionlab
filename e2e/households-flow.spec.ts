@@ -283,6 +283,16 @@ test.describe('Households flow — single-source-of-truth invariant @households'
       page.getByRole('dialog').getByText(new RegExp(`Will move from ${houseA.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}`)),
     ).toBeVisible({ timeout: 10_000 })
 
+    // Lock in the destructive-action visual treatment: the row's
+    // outer label should carry the amber background class. Catches
+    // a regression where the affordance text stays but the visual
+    // emphasis degrades silently.
+    const willMoveRow = page
+      .getByRole('dialog')
+      .locator('label', { hasText: patientName })
+      .first()
+    await expect(willMoveRow).toHaveClass(/bg-amber-50/)
+
     await fillHouseholdName(page, houseB)
     await submitAddHousehold(page)
     await expect(page.getByText(/household added/i)).toBeVisible({ timeout: 15_000 })

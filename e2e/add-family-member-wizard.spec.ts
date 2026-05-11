@@ -133,6 +133,11 @@ async function fillAdultBasicInfo(page: Page, p: AdultPersona) {
     page.getByRole('heading', { name: 'Who is this person?', level: 2 }),
   ).toBeVisible({ timeout: 30_000 })
 
+  // Step indicator: "Step 1 of 3" — verifies the wizard slim (E2.1)
+  // didn't regress and re-add the conditions step. If this ever
+  // reads "of 4" or "of 5", a step came back unexpectedly.
+  await expect(page.getByText(/^Step 1 of 3$/)).toBeVisible()
+
   // NameInput is blur-commit; fill then blur explicitly.
   await page.getByPlaceholder('Enter name').fill(p.name)
   await page.getByPlaceholder('Enter name').blur()
@@ -154,6 +159,9 @@ async function fillAdultVitals(page: Page, p: AdultPersona) {
     page.getByRole('heading', { name: 'Current weight', level: 2 }),
   ).toBeVisible({ timeout: 30_000 })
 
+  // Step 2 of 3 on the slim wizard.
+  await expect(page.getByText(/^Step 2 of 3$/)).toBeVisible()
+
   // Slim vitals step: only currentWeight is collected at the wizard.
   // Height, activity level, weight goal, target weight all moved to
   // the patient detail page Info tab (PatientFieldEditor) — edited
@@ -173,6 +181,7 @@ async function reviewAndCreate(page: Page, p: AdultPersona) {
   await expect(
     page.getByRole('heading', { name: 'Review & create', level: 2 }),
   ).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText(/^Step 3 of 3$/)).toBeVisible()
   await expect(page.getByText(p.name, { exact: false })).toBeVisible()
   await page.getByRole('button', { name: /^Create Family Member$/ }).click()
 }

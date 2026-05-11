@@ -210,6 +210,12 @@ test.describe('Patient detail Info tab — editor cells @patient-editors', () =>
     const data = await readPatient(firestore, ownerUserId, patientId)
     expect(data.preferredFoods).toEqual(expect.arrayContaining(['rice', 'pasta', 'applesauce']))
     expect((data.preferredFoods as string[]).length).toBe(3)
+
+    // Tone styling — positive tone uses success/green palette. Verifies
+    // the chip CSS class actually applies; a tone regression would
+    // otherwise slip through since the data round-trip already passed.
+    const positiveChip = findCell(page, 'Preferred (safe) foods').locator('span').filter({ hasText: 'rice' }).first()
+    await expect(positiveChip).toHaveClass(/bg-success/)
   })
 
   test('preferredFoods (tag-input) — × button + Backspace both remove a tag', async ({
@@ -264,6 +270,12 @@ test.describe('Patient detail Info tab — editor cells @patient-editors', () =>
     // Display mode (not editing) should show the ⚠ prefix on each chip.
     await expect(cell.getByText(/⚠ mushrooms/)).toBeVisible()
     await expect(cell.getByText(/⚠ cilantro/)).toBeVisible()
+
+    // Tone styling — negative tone uses error/red palette. Locks in
+    // the visual semantic so a refactor of the chip styling can't
+    // silently degrade the avoid-list affordance.
+    const negativeChip = cell.locator('span').filter({ hasText: 'mushrooms' }).first()
+    await expect(negativeChip).toHaveClass(/bg-error/)
   })
 
   // ============================================================
